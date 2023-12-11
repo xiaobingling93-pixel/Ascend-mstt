@@ -32,10 +32,10 @@ except ImportError:
 else:
     is_gpu = False
 
-from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,\
-    CompareException
-from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,\
-    print_error_log
+from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,
+                    CompareException)
+from ..common.utils import (print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,
+                            get_md5_for_tensor, print_error_log)
 from ..dump.utils import check_writable
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
 
@@ -84,11 +84,14 @@ api_list = APIList()
 
 
 class DataInfo(object):
-    def __init__(self, save_data, summary_data, dtype, shape):
+    def __init__(self, save_data, summary_data, dtype, shape, md5=None):
+        if md5 is None:
+            md5 = []
         self.save_data = save_data
         self.summary_data = summary_data
         self.dtype = dtype
         self.shape = shape
+        self.md5 = md5
 
 
 def get_not_float_tensor_info(data):
@@ -113,6 +116,8 @@ def get_scalar_data_info(data):
 
 
 def get_float_tensor_info(data):
+    if DumpUtil.summary_mode == "md5":
+        return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
     tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
     tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
     tensor_mean = torch._C._VariableFunctionsClass.mean(data).cpu().detach().float().numpy().tolist()
@@ -123,7 +128,7 @@ def get_float_tensor_info(data):
 def get_tensor_data_info(data, *tensor_args):
     summary_data = []
     summary_data.extend([*tensor_args])
-    if not DumpUtil.summary_only:
+    if DumpUtil.summary_mode == "all":
         saved_tensor = data.contiguous().cpu().detach()
         if data.dtype == torch.bfloat16:
             saved_numpy = saved_tensor.to(torch.float32).numpy()
@@ -165,10 +170,10 @@ def dump_data(dump_step, prefix, data_info):
         output_path = os.path.join(DumpUtil.dump_data_dir, f'{prefix}.npy')
         check_path_length(output_path)
         check_path_pattern_vaild(output_path)
-        if not DumpUtil.summary_only:
+        if DumpUtil.summary_mode == "all":
             np.save(output_path, data_info.save_data)
             change_mode(output_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        api_list.append([prefix, dump_step, [], data_info.dtype, data_info.shape, data_info.summary_data])
+        api_list.append([prefix, dump_step, data_info.md5, data_info.dtype, data_info.shape, data_info.summary_data])
         print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
     except Exception as e:
         print_warn_log("Dump data failed, error: {}".format(e))
@@ -275,7 +280,7 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
     if DumpUtil.dump_init_enable:
         DumpUtil.dump_init_enable = False
         DumpUtil.dump_data_dir = make_dump_data_dir(dump_file) \
-            if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and not DumpUtil.summary_only else ""
+            if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and DumpUtil.summary_mode == "all" else ""
         if os.path.exists(dump_file) and not os.path.isdir(dump_file):
             check_writable(dump_file)
             try:
