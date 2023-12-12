@@ -12,37 +12,22 @@
     现本插件已经上传到pypi社区，用户可在python环境下直接通过以下pip指令进行安装：\
     `pip install torch-tb-profiler-ascend`
 
-  2. 插件离线方式安装
-     * 插件下载地址 \
-       https://mindstudio-sample.obs.cn-north-4.myhuaweicloud.com/torch-tb-profiler-ascend/v0.4.0.3/torch_tb_profiler_ascend-0.4.0.3-py3-none-any.whl
-
-     * 插件形式为whl包，使用指令安装（此处{version}为whl包实际版本）
-
-       `pip install torch-tb-profiler_ascend_{version}_py3_none_any.whl`
-     * 离线包完整性校验
-
-        通过SHA256算法生成的哈希值进行完整性校验，校验方式如下，表格中xxx.whl代表下载的离线包：
-
-        | 操作系统 | 查看哈希值指令 | 预期哈希值 |
-        |--------|--------------|----------|
-        | Windows | certutil -hashfile xxx.whl SHA256 | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
-        | Linux | sha256sum xxx.whl | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
-
-  3. 从源代码安装
+  2. 从源代码安装
      * 从仓库下载源码:
 
        `git clone https://gitee.com/ascend/att.git`
 
-     *  进入目录 `/plugins/tensorboard_plugins/tb_plugin` 下.
+     * 进入目录 `/plugins/tensorboard_plugins/tb_plugin` 下.
 
-     *  执行安装命令:
+     * 执行安装命令可直接安装:
        `pip install .`
-     * 构建whl包
+     * 或： 构建whl包安装
        - `python setup.py build_fe sdist bdist_wheel` \
-        注意: build_fe步骤需要安装yarn和Node.js环境
-       - `python setup.py sdist bdist_wheel`
+        **注意**: build_fe步骤需要安装yarn和Node.js环境
 
-       在 `/tb_plugins/profiling/tb_plugin/dist` 目录下取出whl包，使用方式2进行安装
+       在 `/tb_plugins/profiling/tb_plugin/dist` 目录下取出whl包，使用以下指令安装（此处{version}为whl包实际版本）
+
+       `pip install torch-tb-profiler-ascend-{version}-py3-none-any.whl`
 
 ### 解析数据说明
 
