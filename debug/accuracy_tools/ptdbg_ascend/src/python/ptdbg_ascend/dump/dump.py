@@ -109,7 +109,6 @@ def json_dump_condition(prefix):
 
 
 def dump_tensor(x, prefix, dump_step):
-    global data_info
     if isinstance(x, (tuple, list)) and x:
         for i, item in enumerate(x):
             dump_tensor(item, "{}.{}".format(prefix, i), dump_step)

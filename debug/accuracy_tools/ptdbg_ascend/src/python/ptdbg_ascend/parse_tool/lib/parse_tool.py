@@ -108,9 +108,9 @@ class ParseTool:
     def do_parse_pkl(self, argv=None):
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            '-f', '--file', dest='file_name', default=None,  required=True, help='PKL file path')
+            '-f', '--file', dest='file_name', default=None, required=True, help='PKL file path')
         parser.add_argument(
-            '-n', '--name', dest='api_name', default=None,  required=True, help='API name')
+            '-n', '--name', dest='api_name', default=None, required=True, help='API name')
         args = parser.parse_args(argv)
         self.visual.parse_pkl(args.file_name, args.api_name)
 

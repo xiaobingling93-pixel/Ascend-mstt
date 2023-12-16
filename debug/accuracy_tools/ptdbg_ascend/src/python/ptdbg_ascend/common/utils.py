@@ -108,7 +108,8 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter"]
+    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+                    "_reduce_scatter_base", "_all_gather_base"]
 
 
 class CompareConst:
@@ -224,6 +225,7 @@ class CompareException(Exception):
 
     def __str__(self):
         return self.error_info
+
 
 class DumpException(CompareException):
     pass
@@ -434,7 +436,7 @@ def check_file_size(input_file, max_size):
         file_size = os.path.getsize(input_file)
     except OSError as os_error:
         print_error_log('Failed to open "%s". %s' % (input_file, str(os_error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from os_error
     if file_size > max_size:
         print_error_log('The size (%d) of %s exceeds (%d) bytes, tools not support.'
                         % (file_size, input_file, max_size))
@@ -510,7 +512,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
 
 
 def execute_command(cmd):
@@ -626,18 +628,18 @@ def check_seed_all(seed, mode):
 def get_process_rank(model):
     print_info_log("Rank id is not provided. Trying to get the rank id of the model.")
     try:
-        device = next(model.parameters()).device
+        local_device = next(model.parameters()).device
     except StopIteration:
         print_warn_log('There is no parameter in the model. Fail to get rank id.')
         return 0, False
-    if device.type == 'cpu':
+    if local_device.type == 'cpu':
         print_warn_log("Warning: the debugger is unable to get the rank id. "
             "This may cause the dumpped data to be corrupted in the "
             "case of distributed training. (You may ignore this if you are using only one card.) "
             "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
         return 0, False
     else:
-        return device.index, True
+        return local_device.index, True
 
 
 def parameter_adapter(func):
@@ -645,24 +647,24 @@ def parameter_adapter(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
-            input = args[0]
+            input_tensor = args[0]
             indices = args[1]
             if indices.dtype == torch.uint8:
                 indices = indices.bool()
             if indices.dtype == torch.bool:
-                if indices.shape == input.shape:
-                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input, indices)
+                if indices.shape == input_tensor.shape:
+                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input_tensor, indices)
                 else:
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
-                    return getattr(torch._C._TensorBase, "__getitem__")(input, indices)
+                    return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
             elif indices.dtype != torch.bool:
                 if len(indices.shape) == 1:
-                    return func(self, input, indices.tolist())
+                    return func(self, input_tensor, indices.tolist())
                 elif len(indices.shape) == 2:
-                    result = [func(self, input, index) for index in indices.tolist()]
+                    result = [func(self, input_tensor, index) for index in indices.tolist()]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(result, 0)
                 else:
-                    res = [input[tensor_index] for tensor_index in indices]
+                    res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
         return func(self, *args, **kwargs)
     return inner

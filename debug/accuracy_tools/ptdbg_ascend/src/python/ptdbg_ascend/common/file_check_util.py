@@ -298,7 +298,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
 
 
 def change_mode(path, mode):
@@ -308,4 +308,5 @@ def change_mode(path, mode):
         os.chmod(path, mode)
     except PermissionError as ex:
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
+
