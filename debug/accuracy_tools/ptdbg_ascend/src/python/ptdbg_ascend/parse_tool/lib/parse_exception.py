@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import logging
+from ...common.file_check_util import FileCheckException
 
 
 class ParseException(Exception):
@@ -45,6 +46,8 @@ def catch_exception(func):
         except OSError:
             log.error("%s: command not found" % line)
         except ParseException:
+            log.error("Command execution failed")
+        except FileCheckException:
             log.error("Command execution failed")
         except SystemExit:
             log.warning("Please enter the correct command")

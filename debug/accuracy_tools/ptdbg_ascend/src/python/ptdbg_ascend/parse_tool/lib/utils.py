@@ -23,6 +23,9 @@ import numpy as np
 from .config import Const
 from .file_desc import DumpDecodeFileDesc, FileDesc
 from .parse_exception import ParseException
+from ...common.file_check_util import change_mode, check_other_user_writable,\
+    check_path_executable, check_path_owner_consistent
+from ...common.file_check_util import FileCheckConst
 
 try:
     from rich.traceback import install
@@ -69,6 +72,12 @@ class Util:
     def _gen_numpy_file_info(name, math, dir_path):
         return FileDesc(name, dir_path)
 
+    @staticmethod
+    def check_executable_file(path):
+        check_path_owner_consistent(path)
+        check_other_user_writable(path)
+        check_path_executable(path)
+
     def execute_command(self, cmd):
         if not cmd:
             self.log.error("Commond is None")
@@ -88,7 +97,10 @@ class Util:
             self.print(Panel(content, title=title))
 
     def check_msaccucmp(self, target_file):
-        self.log.info("Try to auto detect file with name: %s.", target_file)
+        if os.path.split(target_file)[-1] != Const.MS_ACCU_CMP_FILE_NAME:
+            self.log.error(
+                "Check msaccucmp failed in dir %s. This is not a correct msaccucmp file" % target_file)
+            raise ParseException(ParseException.PARSE_MSACCUCMP_ERROR)
         result = subprocess.run(
             [self.python, target_file, "--help"], stdout=subprocess.PIPE)
         if result.returncode == 0:
@@ -128,6 +140,7 @@ class Util:
             pad_array = np.zeros((align - data.size % align,))
             data = np.append(data, pad_array)
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+        change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def list_convert_files(self, path, external_pattern=""):
         return self._list_file_with_pattern(
@@ -176,7 +189,7 @@ class Util:
             if path.endswith(Const.NPY_SUFFIX) and file_size > Const.TEN_GB:
                 self.log.error('The file {} size is greater than 10GB.'.format(path))
                 raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-            
+
     def check_files_in_path(self, path):
         if os.path.isdir(path) and len(os.listdir(path)) == 0:
             self.log.error("No files in %s." % path)
@@ -221,7 +234,7 @@ class Util:
         else:
             self.log.error("The file path %s is invalid" % path)
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        
+
     def check_path_name(self, path):
         if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
                 Const.FILE_NAME_LENGTH:
