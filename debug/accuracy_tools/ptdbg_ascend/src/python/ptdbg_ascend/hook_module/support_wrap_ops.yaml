@@ -272,7 +272,6 @@ tensor:
   - deg2rad
   - deg2rad_
   - det
-  - detach
   - diag
   - diag_embed
   - diagflat
@@ -891,6 +890,7 @@ torch:
   - normal
   - not_equal
   - nuclear_norm
+  - ones_like
   - outer
   - pairwise_distance
   - pdist
