@@ -50,9 +50,6 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         if not pkl_path:
             print_error_log(f'No file is found in dump dir {dirname}. ')
             raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
-        if dump_data_dir == '':
-            print_error_log(f'No directory is found in dump dir {dirname}. ')
-            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
         name_body, ext = os.path.splitext(pkl_name)
         pattern = re.compile(f'{name_body}$')
         match = pattern.match(dump_data_dirname)
