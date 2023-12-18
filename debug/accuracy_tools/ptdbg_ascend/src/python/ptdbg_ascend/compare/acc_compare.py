@@ -28,7 +28,8 @@ from .match import graph_mapping
 from ..advisor.advisor import Advisor
 from ..common.utils import check_compare_param, add_time_as_suffix, \
     print_warn_log, print_error_log, CompareException, Const,\
-    CompareConst, format_value, check_file_not_exists
+    CompareConst, format_value, check_file_not_exists, check_configuration_param, \
+    is_summary_compare
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
@@ -104,7 +105,7 @@ def get_max_abs_err(n_value, b_value):
     return format_value(max_value), ""
 
 
-def get_max_relative_err(n_value, b_value):
+def get_relative_err(n_value, b_value):
     np.seterr(divide='ignore', invalid='ignore')
     if b_value.dtype in CompareConst.FLOAT_TYPE:
         zero_mask = (b_value == 0)
@@ -116,11 +117,23 @@ def get_max_relative_err(n_value, b_value):
         b_value[zero_mask] += np.finfo(float).eps
         n_value[zero_mask] += np.finfo(float).eps
     relative_err = np.divide((n_value - b_value), b_value)
+    return np.abs(relative_err)
+
+
+def get_max_relative_err(n_value, b_value, input_relative_err=None):
+    if input_relative_err is None:
+        relative_err = get_relative_err(n_value, b_value)
+    else:
+        relative_err = input_relative_err
     max_relative_err = np.max(np.abs(relative_err))
     if np.isnan(max_relative_err):
         message = 'Cannot compare by MaxRelativeError, the data contains nan in dump data.'
         return CompareConst.NAN, message
     return format_value(max_relative_err), ""
+
+
+def rel_err_ratio(relative_err, threshold):
+    return format_value(np.sum(relative_err < threshold) / np.size(relative_err))
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -280,7 +293,7 @@ def match_op(npu_queue, bench_queue, fuzzy_match):
     return -1, -1
 
 
-def get_accuracy(result, n_dict, b_dict):
+def get_accuracy(result, n_dict, b_dict, summary_compare=False):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
         npu_stack_info = n_dict.get("stack_info", None)
@@ -292,12 +305,25 @@ def get_accuracy(result, n_dict, b_dict):
             n_struct = n_dict[key][index]
             b_struct = b_dict[key][index]
             err_msg = ""
-            result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], " ", " ", " "]
+            if summary_compare:
+                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                               " ", " ", " ", " "]
+            else:
+                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                               " ", " ", " ", " ", " "]
 
-            summery_data = n_dict.get("summery")[n_start + index]
-            result_item.extend(summery_data)
-            summery_data = b_dict.get("summery")[b_start + index]
-            result_item.extend(summery_data)
+            npu_summery_data = n_dict.get("summery")[n_start + index]
+            result_item.extend(npu_summery_data)
+            bench_summery_data = b_dict.get("summery")[b_start + index]
+            result_item.extend(bench_summery_data)
+
+            if summary_compare:
+                start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
+                for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
+                    if isinstance(val[0], (float, int)) and isinstance(val[1], (float, int)):
+                        result_item[start_idx + i] = val[0] - val[1]
+                    else:
+                        result_item[start_idx + i] = "Nan"
 
             result_item.append(CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
@@ -311,7 +337,7 @@ def get_accuracy(result, n_dict, b_dict):
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
                 result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                               n_struct[1], CompareConst.NAN, " ", " ", " "]
+                               n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
                 summery_data = n_dict.get("summery")[n_start + index]
                 result_item.extend(summery_data)
                 summery_data = [CompareConst.NAN for _ in range(len(n_dict.get("summery")[0]))]
@@ -402,21 +428,25 @@ def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_p
     max_err_result = []
     max_relative_err_result = []
     err_mess = []
+    one_thousand_err_ratio_result = []
+    five_thousand_err_ratio_result = []
     is_print_compare_log = input_parma.get("is_print_compare_log")
     for i, op_name in enumerate(fusion_op_names):
         if is_print_compare_log:
             print("start compare: {}".format(op_name))
-        cos_sim, max_abs_err, max_relative_err, err_msg = compare_by_op(op_name, dump_path_dict, input_parma)
+        cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
         if is_print_compare_log:
-            print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg))
+            print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
         cos_result.append(cos_sim)
         max_err_result.append(max_abs_err)
         max_relative_err_result.append(max_relative_err)
         err_mess.append(err_msg)
-    _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, result_path, lock)
+        one_thousand_err_ratio_result.append(one_thousand_err_ratio)
+        five_thousand_err_ratio_result.append(five_thousand_err_ratio)
+    _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_path, lock)
 
 
-def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, result_path, lock):
+def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_path, lock):
     lock.acquire()
     try:
         csv_pd = pd.read_csv(result_path, dtype=str)
@@ -429,6 +459,8 @@ def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, e
             csv_pd.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = max_relative_err_result[i]
             csv_pd.loc[process_index, CompareConst.ERROR_MESSAGE] = err_msg[i]
             csv_pd.loc[process_index, CompareConst.ACCURACY] = check_accuracy(cos_result[i], max_err_result[i])
+            csv_pd.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = one_thousand_err_ratio_result[i]
+            csv_pd.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = five_thousand_err_ratio_result[i]
         csv_pd.to_csv(result_path, index=False)
     except FileNotFoundError as e:
         print_error_log('{} file is not found.'.format(result_path))
@@ -462,7 +494,7 @@ def check_accuracy(cos, max_abs_err):
 def compare_by_op(op_name, op_name_mapping_dict, input_parma):
     npu_bench_name_list = op_name_mapping_dict[op_name]
     if npu_bench_name_list[1] == CompareConst.NAN:
-        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, CompareConst.NO_BENCH
+        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, CompareConst.NO_BENCH, CompareConst.NAN, CompareConst.NAN
     try:
         n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0] + ".npy")
         b_path = os.path.join(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1] + ".npy")
@@ -475,18 +507,19 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
         n_value = np.load(n_path)
         b_value = np.load(b_path)
     except IOError as error:
-        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, "Dump file: {} not found.".format(error.filename)
+        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, "Dump file: {} not found.".format(error.filename), CompareConst.NAN, CompareConst.NAN
+    relative_err = get_relative_err(n_value, b_value)
     if len(n_value.shape) == 0:
         if n_value.dtype == bool:
             n_value = n_value.astype(float)
             b_value = b_value.astype(float)
         max_abs_err, _ = get_max_abs_err(n_value, b_value)
-        max_relative_err, _ = get_max_relative_err(n_value, b_value)
-        return "unsupported", max_abs_err, max_relative_err, "This is type of scalar data, can not compare."
+        max_relative_err, _ = get_max_relative_err(n_value, b_value, input_relative_err=relative_err)
+        return "unsupported", max_abs_err, max_relative_err, "This is type of scalar data, can not compare.", CompareConst.NAN, CompareConst.NAN
     if n_value.size == 0:
-        return "unsupported", 0, 0, "This is empty data, can not compare."
+        return "unsupported", 0, 0, "This is empty data, can not compare.", 0, 0
     if n_value.shape != b_value.shape:
-        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, "Shape of NPU and bench Tensor do not match. Skipped."
+        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, "Shape of NPU and bench Tensor do not match. Skipped.", CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH
     if n_value.dtype != b_value.dtype:
         print_warn_log("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
         err_msg = " Dtype of NPU and bench Tensor do not match."
@@ -495,15 +528,18 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
 
     n_value, b_value = handle_inf_nan(n_value, b_value)
     if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
-        return "N/A", "N/A", "N/A",  "The position of inf or nan in NPU and bench Tensor do not match."
+        return "N/A", "N/A", "N/A", "The position of inf or nan in NPU and bench Tensor do not match.", "N/A", "N/A"
 
     n_value = n_value.reshape(-1).astype(float)
     b_value = b_value.reshape(-1).astype(float)
     err_msg = ""
     cos_sim, message = cosine_similarity(n_value, b_value)
 
-    max_abs_err, _ = get_max_abs_err(n_value, b_value)
-    max_relative_err, message = get_max_relative_err(n_value, b_value)
+    abs_err = np.abs(n_value - b_value)
+    max_abs_err = format_value(np.max(abs_err))
+    max_relative_err, message = get_max_relative_err(n_value, b_value, input_relative_err=relative_err)
+    one_thousand_err_ratio = rel_err_ratio(relative_err, 0.001)
+    five_thousand_err_ratio = rel_err_ratio(relative_err, 0.005)
 
     if not err_msg:
         err_msg += message
@@ -512,7 +548,7 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
 
     if npu_bench_name_list[0] != npu_bench_name_list[1]:
         err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
-    return cos_sim, max_abs_err, max_relative_err, err_msg
+    return cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio
 
 
 def handle_inf_nan(n_value, b_value):
@@ -534,36 +570,29 @@ def handle_inf_nan(n_value, b_value):
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
-        npu_pkl, bench_pkl = check_compare_param(input_parma, output_path, stack_mode,
-                                                 auto_analyze, fuzzy_match)
+        summary_compare = is_summary_compare(input_parma)
+        check_compare_param(input_parma, output_path, stack_mode, summary_compare)
+        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
     except CompareException as error:
         print_error_log('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
-    compare_core(input_parma, output_path, npu_pkl, bench_pkl, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match)
+    compare_core(input_parma, output_path, stack_mode=stack_mode,
+                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare)
 
 
-def compare_core(input_parma, output_path, npu_pkl, bench_pkl, stack_mode=False, auto_analyze=True,
-                 suffix='', fuzzy_match=False):
-    result = compare_process(npu_pkl, bench_pkl, stack_mode, fuzzy_match)
-    npu_pkl.close()
-    bench_pkl.close()
-
-    columns = [CompareConst.NPU_NAME, CompareConst.BENCH_NAME, CompareConst.NPU_DTYPE, CompareConst.BENCH_DTYPE,
-                CompareConst.NPU_SHAPE, CompareConst.BENCH_SHAPE, CompareConst.COSINE, CompareConst.MAX_ABS_ERR,
-                   CompareConst.MAX_RELATIVE_ERR]
-    columns.extend([CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN])
-    columns.extend([CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN])
-    columns.extend([CompareConst.ACCURACY, CompareConst.ERROR_MESSAGE])
-    if stack_mode:
-        columns.extend([CompareConst.STACK])
-    result_df = pd.DataFrame(result, columns=columns)
-
+def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
+                 suffix='', fuzzy_match=False, summary_compare=False):
     file_name = add_time_as_suffix("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
-    with os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') as fout:
-        result_df.to_csv(fout, index=False)
+
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
+         FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl, \
+         os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') \
+         as fout:
+        compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare)
+        if summary_compare:
+            return
 
     _do_multi_process(input_parma, file_path)
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -607,7 +636,8 @@ def parse(pkl_file, module_name_prefix):
                 print(summery_info)
 
 
-def compare_process(npu_pkl_handle, bench_pkl_handle, stack_mode, fuzzy_match):
+def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False):
+    npu_pkl_handle, bench_pkl_handle, output_csv_handle = file_handles
     if fuzzy_match:
         print_warn_log("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
     npu_ops_queue = []
@@ -627,13 +657,23 @@ def compare_process(npu_pkl_handle, bench_pkl_handle, stack_mode, fuzzy_match):
         un_match_data = npu_ops_queue[0: n_match_point]
         for npu_data in un_match_data:
             get_un_match_accuracy(result, npu_data)
-        get_accuracy(result, n_match_data, b_match_data)
+        get_accuracy(result, n_match_data, b_match_data, summary_compare)
         del npu_ops_queue[0: n_match_point + 1]
         del bench_ops_queue[0: b_match_point + 1]
     if npu_ops_queue:
         for npu_data in npu_ops_queue:
             get_un_match_accuracy(result, npu_data)
-    return result
+
+    header = CompareConst.COMPARE_RESULT_HEADER[:] \
+        if not summary_compare else CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+    if stack_mode:
+        header.append(CompareConst.STACK)
+    result_df = pd.DataFrame(result, columns=header)
+    if summary_compare:
+        header.remove(CompareConst.ACCURACY)
+        header.remove(CompareConst.ERROR_MESSAGE)
+        result_df = result_df[header]
+    result_df.to_csv(output_csv_handle, index=False)
 
 
 def get_un_match_accuracy(result, n_dict):
@@ -649,10 +689,11 @@ def get_un_match_accuracy(result, n_dict):
         err_msg = CompareConst.NO_BENCH
         accuracy_check_res = CompareConst.NAN
 
-        result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape, " ", " ", " "]
+        result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
+        result_item.extend([CompareConst.NAN] * 5)
         summery_data = n_dict.get("summery")[index]
         result_item.extend(summery_data)
-        summery_data = [CompareConst.NAN]*3
+        summery_data = [CompareConst.NAN] * 3
         result_item.extend(summery_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)

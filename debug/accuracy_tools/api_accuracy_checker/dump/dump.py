@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,6 +32,20 @@ def set_dump_switch(switch):
     DumpUtil.set_dump_switch(switch)
 
 
+def start():
+    if not DumpUtil.get_dump_switch() and not msCheckerConfig.enable_dataloader:
+        DumpUtil.incr_iter_num_maybe_exit()
+
+
+def stop():
+    DumpUtil.set_dump_switch("OFF")
+
+
+def step():
+    if not msCheckerConfig.enable_dataloader:
+        DumpUtil.call_num += 1
+
+
 class DumpUtil(object):
     dump_switch = None
     call_num = 0
@@ -49,10 +63,9 @@ class DumpUtil(object):
         if DumpUtil.call_num in msCheckerConfig.target_iter:
             set_dump_switch("ON")
         elif DumpUtil.call_num > max(msCheckerConfig.target_iter):
-            raise Exception("Model pretest: exit after iteration {}".format(DumpUtil.call_num))
+            raise Exception("Model pretest: exit after iteration {}".format(DumpUtil.call_num - 1))
         else:
             set_dump_switch("OFF")
-        DumpUtil.call_num += 1
 
 
 class DumpConst:

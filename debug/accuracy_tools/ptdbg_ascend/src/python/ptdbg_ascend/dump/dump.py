@@ -20,6 +20,7 @@ import json
 import os
 import threading
 from pathlib import Path
+from collections import defaultdict
 
 import numpy as np
 import torch
@@ -32,7 +33,7 @@ else:
     is_gpu = False
 
 from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist
-from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op
+from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst
 from ..dump.utils import check_writable
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
 
@@ -46,6 +47,7 @@ thread_lock = threading.Lock()
 pkl_name = ""
 rank = os.getpid()
 multi_output_apis = ["_sort_", "npu_flash_attention"]
+module_count = defaultdict(int)
 
 
 class DataInfo(object):
@@ -69,11 +71,11 @@ def get_not_float_tensor_info(data):
         tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
         tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
         tensor_mean = torch._C._VariableFunctionsClass.mean(data.float()).cpu().detach().float().numpy().tolist()
-    return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean)
+    return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, CompareConst.NAN)
 
 
 def get_scalar_data_info(data):
-    summary_data = [data, data, data]
+    summary_data = [data, data, data, data]
     return DataInfo(data, summary_data, str(type(data)), str([]))
 
 
@@ -81,12 +83,13 @@ def get_float_tensor_info(data):
     tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
     tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
     tensor_mean = torch._C._VariableFunctionsClass.mean(data).cpu().detach().float().numpy().tolist()
-    return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean)
+    tensor_norm = torch._C._VariableFunctionsClass.norm(data).cpu().detach().float().numpy().tolist()
+    return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, tensor_norm)
 
 
-def get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean):
+def get_tensor_data_info(data, *tensor_args):
     summary_data = []
-    summary_data.extend([tensor_max, tensor_min, tensor_mean])
+    summary_data.extend([*tensor_args])
     if not DumpUtil.summary_only:
         saved_tensor = data.contiguous().cpu().detach()
         if data.dtype == torch.bfloat16:
@@ -106,7 +109,6 @@ def json_dump_condition(prefix):
 
 
 def dump_tensor(x, prefix, dump_step):
-    global data_info
     if isinstance(x, (tuple, list)) and x:
         for i, item in enumerate(x):
             dump_tensor(item, "{}.{}".format(prefix, i), dump_step)
@@ -222,6 +224,8 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
     dump_file = modify_dump_path(dump_file, DumpUtil.dump_switch_mode)
     if DumpUtil.dump_switch_mode == Const.API_LIST and not check_if_in_api_list(name):
         return
+    if DumpUtil.dump_switch_mode in [Const.LIST, Const.ACL, Const.RANGE, Const.STACK] and not DumpUtil.check_switch_scope(name):
+        return
     if DumpUtil.get_dump_switch():
         global rank
         dump_dir, dump_filename = os.path.split(dump_file)
@@ -258,7 +262,10 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
                 if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and not DumpUtil.summary_only else ""
             if os.path.exists(dump_file) and not os.path.isdir(dump_file):
                 check_writable(dump_file)
-                os.remove(dump_file)
+                try:
+                    os.remove(dump_file)
+                except FileNotFoundError as e:
+                    print_warn_log("The file does not exist, error: {}".format(e))
 
         name_prefix = name
         name_template = f"{name_prefix}" + "_{}"
@@ -267,7 +274,7 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
         elif DumpUtil.dump_switch_mode == Const.API_STACK:
             dump_api_tensor(dump_step, in_feat, name_template, out_feat)
             dump_stack_info(name_template)
-        elif DumpUtil.check_switch_scope(name_prefix):
+        else:
             if DumpUtil.dump_switch_mode == Const.ACL:
                 acl_dump(module, name, name_prefix)
             elif DumpUtil.dump_switch_mode != Const.STACK:
@@ -353,6 +360,16 @@ def acc_cmp_dump(name, **kwargs):
         return RuntimeError("Not get the specified process pid.")
 
     def acc_cmp_hook(module, in_feat, out_feat=None):
+        nonlocal name
+        if "_{}_" in name:
+            module_name = name.split("_")[1]
+            if Const.BACKWARD in name:
+                index = module_count[module_name] - 1
+                module_count[module_name] = index
+            else:
+                index = module_count[module_name]
+                module_count[module_name] = index + 1
+            name = name.format(index)
         if pid == os.getpid():
             dump_acc_cmp(name, in_feat, out_feat, dump_step, module)
         if hasattr(module, "input_args"):

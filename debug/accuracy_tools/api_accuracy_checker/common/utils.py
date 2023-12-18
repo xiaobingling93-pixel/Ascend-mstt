@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -91,9 +91,9 @@ class Const:
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 
     RAISE_PRECISION = {
-        "torch.float16" : "torch.float32",
-        "torch.bfloat16" : "torch.float32",
-        "torch.float32" : "torch.float64"
+        torch.float16: torch.float32,
+        torch.bfloat16: torch.float32,
+        torch.float32: torch.float64
     }
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
@@ -378,19 +378,18 @@ def modify_dump_path(dump_path, mode):
 def create_directory(dir_path):
     """
     Function Description:
-        creating a directory with specified permissions
+        creating a directory with specified permissions in a thread-safe manner
     Parameter:
         dir_path: directory path
     Exception Description:
         when invalid data throw exception
     """
-    if not os.path.exists(dir_path):
-        try:
-            os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
-        except OSError as ex:
-            print_error_log(
-                'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
+    try:
+        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+    except OSError as ex:
+        print_error_log(
+            'Failed to create {}. Please check the path permission or disk space. {}'.format(dir_path, str(ex)))
+        raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
 
 
 def execute_command(cmd):
@@ -518,7 +517,15 @@ def get_process_rank(model):
 
 def get_json_contents(file_path):
     ops = get_file_content_bytes(file_path)
-    return json.loads(ops)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        print_error_log('Failed to load "%s". %s' % (file_path, str(error)))
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        print_error_log('Json file %s, content is not a dictionary!' % file_path)
+        raise CompareException(CompareException.INVALID_FILE_ERROR)
+    return json_obj
 
 
 def get_file_content_bytes(file):

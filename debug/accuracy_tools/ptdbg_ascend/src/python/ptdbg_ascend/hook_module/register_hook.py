@@ -70,7 +70,10 @@ def register_hook(model, hook, **kwargs):
     if dump_mode == 'acl':
         DumpUtil.dump_switch_mode = dump_mode
         DumpUtil.set_acl_config(dump_config_file)
-    register_hook_core(hook)
+    if dump_mode == 'model':
+        register_hook_core(hook, model)
+    else:
+        register_hook_core(hook)
 
 
 def init_overflow_nums(overflow_nums):
@@ -91,7 +94,7 @@ def check_register_hook(hook, **kwargs):
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
-def register_hook_core(hook):
+def register_hook_core(hook, model=None):
     global make_dir_flag
 
     pid = os.getpid()
@@ -101,6 +104,9 @@ def register_hook_core(hook):
         make_dir_flag = False
     hook_name = hook.__name__
 
+    if "overflow_check" in hook_name and model is not None:
+        print_error_log("Overflow check does not support model dump mode")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if "overflow_check" in hook_name and not is_gpu:
         if hasattr(torch_npu._C, "_enable_overflow_npu"):
             torch_npu._C._enable_overflow_npu()
@@ -117,8 +123,18 @@ def register_hook_core(hook):
     hook = functools.partial(hook, dump_step=0, pid=pid)
     print_info_log("The {} hook function is successfully mounted to the model.".format(hook_name))
 
-    api_register.initialize_hook(hook)
-    api_register.api_modularity()
+    if model is not None:
+        if not isinstance(model, torch.nn.Module):
+            print_error_log("The argument model must be an object of torch.nn.Module")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
+        for _, module in model.named_modules():
+            if "torch.nn.modules" in str(module.__class__):
+                prefix = "Module_" + module.__class__.__name__
+                module.register_forward_hook(hook(prefix + "_{}_" + "forward"))
+                module.register_backward_hook(hook(prefix + "_{}_" + "backward"))
+    else:
+        api_register.initialize_hook(hook)
+        api_register.api_modularity()
 
     if "acc_cmp_dump" in hook_name:
         remove_dropout()

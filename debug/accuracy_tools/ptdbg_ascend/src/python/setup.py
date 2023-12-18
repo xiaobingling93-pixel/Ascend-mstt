@@ -31,7 +31,7 @@ def generate_ptdbg_ascend_version():
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     modes = stat.S_IWUSR | stat.S_IRUSR
     with os.fdopen(os.open(version_path, flags, modes), 'w') as f:
-        f.write("__version__ = '{version}'\n".format(version = VERSION))
+        f.write("__version__ = '{version}'\n".format(version=VERSION))
 
 generate_ptdbg_ascend_version()
 
@@ -40,7 +40,7 @@ setuptools.setup(name='ptdbg_ascend',
     description='This is a pytorch precision comparison tools',
     long_description='This is a pytorch precision comparison tools, include overflow detect tool',
     packages=setuptools.find_packages(),
-    install_requires = [
+    install_requires=[
         "wheel",
         "numpy",
         "pandas >= 1.3.5",

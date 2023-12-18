@@ -1,13 +1,14 @@
 import unittest
 import numpy as np
+import torch
 from api_accuracy_checker.compare import algorithm as alg
 from api_accuracy_checker.compare.algorithm import CompareColumn
 
 class TestAlgorithmMethods(unittest.TestCase):
 
     def test_compare_torch_tensor(self):
-        cpu_output = np.array([1.0, 2.0, 3.0])
-        npu_output = np.array([1.0, 2.0, 3.0])
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
         status, compare_column, message = alg.compare_torch_tensor(cpu_output, npu_output, compare_column)
         self.assertEqual(status, "pass")
@@ -65,9 +66,11 @@ class TestAlgorithmMethods(unittest.TestCase):
         self.assertEqual(alg.compare_uint8_data(b_value, n_value), (1, True))
 
     def test_compare_builtin_type(self):
+        compare_column = CompareColumn()
         bench_out = 1
         npu_out = 1
-        self.assertEqual(alg.compare_builtin_type(bench_out, npu_out), (True, 'pass', ''))
+        status, compare_result, message = alg.compare_builtin_type(bench_out, npu_out, compare_column)
+        self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))
 
     def test_flatten_compare_result(self):
         result = [[1, 2], [3, 4]]

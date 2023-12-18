@@ -103,10 +103,10 @@ class FileChecker:
         功能：用户校验基本文件权限：软连接、文件长度、是否存在、读写权限、文件属组、文件特殊字符
         注意：文件后缀的合法性，非通用操作，可使用其他独立接口实现
         """
+        check_path_exists(self.file_path)
         check_link(self.file_path)
         self.file_path = os.path.realpath(self.file_path)
         check_path_length(self.file_path)
-        check_path_exists(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
         check_path_owner_consistent(self.file_path)
@@ -210,6 +210,20 @@ def check_path_writability(path):
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
 
 
+def check_path_executable(path):
+    if not os.access(path, os.X_OK):
+        print_error_log('The file path %s is not executable.' % path)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+
+
+def check_other_user_writable(path):
+    st = os.stat(path)
+    if st.st_mode & 0o002:
+        _user_interactive_confirm(
+            'The file path %s may be insecure because other users have write permissions. '
+            'Do you want to continue?' % path)
+
+
 def _user_interactive_confirm(message):
     while True:
         check_message = input(message + " Enter 'c' to continue or enter 'e' to exit: ")
@@ -284,7 +298,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
 
 
 def change_mode(path, mode):
@@ -294,5 +308,5 @@ def change_mode(path, mode):
         os.chmod(path, mode)
     except PermissionError as ex:
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
 

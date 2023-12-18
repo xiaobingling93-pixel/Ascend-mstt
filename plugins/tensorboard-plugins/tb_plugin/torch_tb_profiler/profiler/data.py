@@ -27,6 +27,7 @@ import tempfile
 from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
 
+from .op_tree import OpTreeBuilder
 from .. import io, utils
 from ..utils import href
 from . import trace
@@ -163,6 +164,15 @@ class RunProfileData(object):
                 break
 
         profile = RunProfileData(worker, span, trace_json)
+        with utils.timing('EventParser.parse'):
+            parser = EventParser()
+            with utils.timing('EventParser: parse nodes'):
+                tid2list, tid2zero_rt_list, staled_device_nodes, _ = parser.parse_nodes(profile.events)
+
+            with utils.timing('EventParser: build operator tree'):
+                builder = OpTreeBuilder()
+                profile.tid2tree = builder.build_tree(tid2list, tid2zero_rt_list, staled_device_nodes,
+                                                      fwd_bwd_map=profile.forward_backward_events, is_ascend=True)
         profile.trace_file_path = trace_path
         profile.has_trace = has_trace
         if math.isinf(profile.profiler_start_ts):

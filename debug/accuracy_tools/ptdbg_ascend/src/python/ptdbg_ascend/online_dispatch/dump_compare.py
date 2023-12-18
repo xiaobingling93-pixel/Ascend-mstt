@@ -20,7 +20,7 @@ class DispatchRunParam:
         self.root_npu_path = root_npu_path
         self.root_cpu_path = root_cpu_path
         self.process_num = process_num
-        self.process_flag = None
+        self.process_flag = False
         self.func_name = None
         self.func_namespace = None
         self.aten_api = None
@@ -113,13 +113,13 @@ def save_summery(run_param, npu_data, cpu_data, prefix, summery_list, compute_fl
         data_dict[CompareConst.BENCH_SHAPE] = str(list(cpu_data.shape))
         # the same process can not call torch api which may capture by torch_dispatch
         if run_param.process_flag:
-            data_dict[CompareConst.NPU_MAX] = torch.max(npu_data.float()).numpy().tolist()
-            data_dict[CompareConst.NPU_MIN] = torch.min(npu_data.float()).numpy().tolist()
-            data_dict[CompareConst.NPU_MEAN] = torch.mean(npu_data.float()).numpy().tolist()
+            data_dict[CompareConst.NPU_MAX] = np.max(npu_data.numpy()).tolist()
+            data_dict[CompareConst.NPU_MIN] = np.min(npu_data.numpy()).tolist()
+            data_dict[CompareConst.NPU_MEAN] = np.mean(npu_data.numpy()).tolist()
             if compute_flag:
-                data_dict[CompareConst.BENCH_MAX] = torch.max(cpu_data.float()).numpy().tolist()
-                data_dict[CompareConst.BENCH_MIN] = torch.min(cpu_data.float()).numpy().tolist()
-                data_dict[CompareConst.BENCH_MEAN] = torch.mean(cpu_data.float()).numpy().tolist()
+                data_dict[CompareConst.BENCH_MAX] = np.max(cpu_data.numpy()).tolist()
+                data_dict[CompareConst.BENCH_MIN] = np.min(cpu_data.numpy()).tolist()
+                data_dict[CompareConst.BENCH_MEAN] = np.mean(cpu_data.numpy()).tolist()
             else:
                 data_dict[CompareConst.BENCH_MAX] = data_dict[CompareConst.NPU_MAX]
                 data_dict[CompareConst.BENCH_MIN] = data_dict[CompareConst.NPU_MIN]
@@ -209,10 +209,7 @@ def save_temp_summery(api_index, single_api_summery, path, lock):
     lock.release()
 
 
-def dispatch_workflow(run_param, cpu_args, cpu_kwargs, all_summery, func, npu_out_cpu, lock):
-    with TimeStatistics("CPU RUN", run_param):
-        cpu_out = func(*cpu_args, **cpu_kwargs)
-
+def dispatch_workflow(run_param, cpu_args, cpu_kwargs, all_summery, func, npu_out_cpu, cpu_out, lock):
     single_api_summery = []
 
     prefix_input = f'{run_param.aten_api}_{run_param.single_api_index}_input'
@@ -260,12 +257,12 @@ def get_torch_func(run_param):
     return None
 
 
-def dispatch_multiprocess(run_param, cpu_args, cpu_kwargs, all_summery, npu_out_cpu, lock):
+def dispatch_multiprocess(run_param, cpu_args, cpu_kwargs, all_summery, npu_out_cpu, cpu_out, lock):
     torch_func = get_torch_func(run_param)
     if torch_func is None:
         logger_error(f'can not find suitable call api:{run_param.aten_api}')
     else:
-        dispatch_workflow(run_param, cpu_args, cpu_kwargs, all_summery, torch_func, npu_out_cpu, lock)
+        dispatch_workflow(run_param, cpu_args, cpu_kwargs, all_summery, torch_func, npu_out_cpu, cpu_out, lock)
 
 
 def error_call(err):

@@ -23,7 +23,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         max_diff = abs(args_params[0].max() - max_value)
         min_diff = abs(args_params[0].min() - min_value)
         self.assertEqual(len(args_params), 1)
-        self.assertEqual(args_params[0].dtype, torch.float16)
+        self.assertEqual(args_params[0].dtype, torch.float32)
         self.assertLessEqual(max_diff, 0.001)
         self.assertLessEqual(min_diff, 0.001)
         self.assertEqual(args_params[0].shape, torch.Size([2, 2560, 24, 24]))
@@ -34,7 +34,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         max_diff = abs(args_result[0].max() - max_value)
         min_diff = abs(args_result[0].min() - min_value)
         self.assertEqual(len(args_result), 1)
-        self.assertEqual(args_result[0].dtype, torch.float16)
+        self.assertEqual(args_result[0].dtype, torch.float32)
         self.assertLessEqual(max_diff, 0.001)
         self.assertLessEqual(min_diff, 0.001)
         self.assertEqual(args_result[0].shape, torch.Size([2, 2560, 24, 24]))
@@ -43,7 +43,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         data = gen_data(api_info_dict.get('args')[0], True, None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
-        self.assertEqual(data.dtype, torch.float16)
+        self.assertEqual(data.dtype, torch.float32)
         self.assertEqual(data.requires_grad, True)
         self.assertLessEqual(max_diff, 0.001)
         self.assertLessEqual(min_diff, 0.001)
@@ -55,15 +55,15 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(kwargs_params, {'inplace': False})
         
     def test_gen_kwargs_device(self):
-        k_dict = {"kwargs": {"device": {"type": "torch.device", "value": "npu:0"}}}
+        k_dict = {"kwargs": {"device": {"type": "torch.device", "value": "cpu"}}}
         kwargs_params = gen_kwargs(k_dict, None)
-        self.assertEqual(str(kwargs_params), "{'device': device(type='npu', index=0)}")
+        self.assertEqual(str(kwargs_params), "{'device': device(type='cpu')}")
     
     def test_gen_kwargs_1(self):
-        k_dict = {"device": {"type": "torch.device", "value": "npu:0"}}
+        k_dict = {"device": {"type": "torch.device", "value": "cpu"}}
         for key, value in k_dict.items():
             gen_torch_kwargs(k_dict, key, value)
-        self.assertEqual(str(k_dict), "{'device': device(type='npu', index=0)}")
+        self.assertEqual(str(k_dict), "{'device': device(type='cpu')}")
         
     def test_gen_kwargs_2(self):
         k_dict = {"inplace": {"type": "bool", "value": "False"}}
@@ -75,7 +75,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         data = gen_random_tensor(api_info_dict.get('args')[0], None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
-        self.assertEqual(data.dtype, torch.float16)
+        self.assertEqual(data.dtype, torch.float32)
         self.assertEqual(data.requires_grad, False)
         self.assertLessEqual(max_diff, 0.001)
         self.assertLessEqual(min_diff, 0.001)
@@ -89,7 +89,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         data = gen_common_tensor(low, high, shape, data_dtype, None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
-        self.assertEqual(data.dtype, torch.float16)
+        self.assertEqual(data.dtype, torch.float32)
         self.assertEqual(data.requires_grad, False)
         self.assertLessEqual(max_diff, 0.001)
         self.assertLessEqual(min_diff, 0.001)

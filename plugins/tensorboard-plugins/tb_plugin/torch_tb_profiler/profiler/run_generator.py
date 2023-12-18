@@ -93,7 +93,6 @@ class RunGenerator(object):
                 self.profile_data.gpu_metrics_parser.get_gpu_metrics_data_tooltip(
                     gpu_infos, self.profile_data.tc_ratio)
 
-            profile_run.tid2tree = self.profile_data.tid2tree
             profile_run.pl_tid2tree = self.profile_data.pl_tid2tree
 
             profile_run.module_stats = aggegate_module_view(self.profile_data.tid2tree, self.profile_data.events)
@@ -131,6 +130,7 @@ class RunGenerator(object):
                 profile_run.step_to_overlap = self._npu_get_overlap()
                 profile_run.step_to_wait, profile_run.comm_op = self._npu_get_wait_table()
 
+        profile_run.tid2tree = self.profile_data.tid2tree
         if self.profile_data.has_trace:
             profile_run.views.append(consts.TRACE_VIEW)
             profile_run.trace_file_path = self.profile_data.trace_file_path

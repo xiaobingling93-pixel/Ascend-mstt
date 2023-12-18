@@ -21,6 +21,7 @@ import os
 class Const:
 
     MS_ACCU_CMP_PATH = '/usr/local/Ascend/ascend-toolkit/latest/tools/operator_cmp/compare/msaccucmp.py'
+    MS_ACCU_CMP_FILE_NAME = 'msaccucmp.py'
     ROOT_DIR = ""
     LOG_LEVEL = "NOTSET"
     DATA_ROOT_DIR = os.path.join(ROOT_DIR, 'parse_data')
@@ -37,10 +38,10 @@ class Const:
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     ONE_GB = 1 * 1024 * 1024 * 1024
     TEN_GB = 10 * 1024 * 1024 * 1024
-    HEADER = r"""    ____                     
-       / __ \____ ______________ 
+    HEADER = r"""    ____
+       / __ \____ ______________
       / /_/ / __ `/ ___/ ___/ _ \
      / ____/ /_/ / /  (__  )  __/
-    /_/    \__,_/_/  /____/\___/ 
-    
+    /_/    \__,_/_/  /____/\___/
+
     """

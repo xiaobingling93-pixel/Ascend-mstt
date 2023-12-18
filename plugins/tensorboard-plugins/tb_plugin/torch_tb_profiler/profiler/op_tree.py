@@ -1,6 +1,7 @@
 # -------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # -------------------------------------------------------------------------
+import math
 import sys
 from collections import defaultdict
 from typing import Dict, Iterable, List, Optional, Tuple
@@ -25,10 +26,11 @@ class OpTreeBuilder:
                    tid2list: Dict[int, List[OperatorNode]],
                    tid2zero_rt_list: Dict[int, List[RuntimeNode]],
                    staled_device_nodes: List[DeviceNode],
-                   fwd_bwd_map: Dict[int, int]):
+                   fwd_bwd_map: Dict[int, int],
+                   is_ascend=False):
         """Construct the BackwardNode and replace the original backward nodes
         """
-        self.tid2tree = self._build_tree(tid2list, tid2zero_rt_list, staled_device_nodes)
+        self.tid2tree = self._build_tree(tid2list, tid2zero_rt_list, staled_device_nodes, is_ascend)
 
         # if could not find any forward/backward association, skip the processing
         if not fwd_bwd_map:
@@ -55,7 +57,7 @@ class OpTreeBuilder:
 
         return self.tid2tree
 
-    def _build_tree(self, tid2list: Dict[int, List[OperatorNode]], tid2zero_rt_list, staled_device_nodes):
+    def _build_tree(self, tid2list: Dict[int, List[OperatorNode]], tid2zero_rt_list, staled_device_nodes, is_ascend):
         tid2tree = {}
 
         for tid, op_list in tid2list.items():
@@ -66,9 +68,9 @@ class OpTreeBuilder:
             if main_tid:
                 # only append the staled device nodes into main thread
                 self.main_tid = op_list[0].tid
-                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes)
+                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes, is_ascend)
             else:
-                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, [])
+                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, [], is_ascend)
             tid2tree[int(tid)] = root_node
 
         return tid2tree
@@ -95,7 +97,7 @@ class OpTreeBuilder:
 
         return None
 
-    def _build_tree_internal(self, host_node_list, zero_rt_list, tid, staled_device_nodes):
+    def _build_tree_internal(self, host_node_list, zero_rt_list, tid, staled_device_nodes, is_ascend):
         """host_node_list: list of OperatorNode and ProfilerStepNode.
         zero_rt_list: list of RuntimeNode with external_id=0."""
 
@@ -125,7 +127,8 @@ class OpTreeBuilder:
                 while True:  # break loop when the node is inserted.
                     tail_node = node_stack[-1]
                     if node.start_time < tail_node.end_time:
-                        if node.end_time <= tail_node.end_time:
+                        if node.end_time <= tail_node.end_time or (
+                                is_ascend and math.isclose(node.end_time, tail_node.end_time, rel_tol=1)):
                             tail_node.children.append(node)
                             # node.parent_node = weakref.ref(tail_node)
                             node_stack.append(node)

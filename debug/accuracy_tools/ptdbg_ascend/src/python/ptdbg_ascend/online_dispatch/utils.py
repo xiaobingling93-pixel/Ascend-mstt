@@ -39,11 +39,11 @@ CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
                    CompareConst.BENCH_DTYPE,
                    CompareConst.NPU_SHAPE, 
                    CompareConst.BENCH_SHAPE,
-                   CompareConst.NPU_MAX, 
-                   CompareConst.NPU_MIN, 
+                   CompareConst.NPU_MAX,
+                   CompareConst.NPU_MIN,
                    CompareConst.NPU_MEAN,
-                   CompareConst.BENCH_MAX, 
-                   CompareConst.BENCH_MIN, 
+                   CompareConst.BENCH_MAX,
+                   CompareConst.BENCH_MIN,
                    CompareConst.BENCH_MEAN,
                    CompareConst.COSINE, 
                    CompareConst.MAX_ABS_ERR, 
@@ -84,7 +84,7 @@ def data_to_cpu(data, deep, data_cpu):
             tensor_copy = data.clone().detach()
         else:
             tensor_copy = data.cpu().detach()
-        if tensor_copy.dtype in [torch.float16, torch.half]:
+        if tensor_copy.dtype in [torch.float16, torch.half, torch.bfloat16]:
             tensor_copy = tensor_copy.float()
         
         if deep == 0:
@@ -92,13 +92,13 @@ def data_to_cpu(data, deep, data_cpu):
         return tensor_copy
     elif isinstance(data, list):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep+1, data_cpu))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu))
         if deep == 0:
             data_cpu.append(list_cpu)
         return list_cpu
     elif isinstance(data, tuple):
         for v in data:
-            list_cpu.append(data_to_cpu(v, deep+1, data_cpu))
+            list_cpu.append(data_to_cpu(v, deep + 1, data_cpu))
         tuple_cpu = tuple(list_cpu)
         if deep == 0:
             data_cpu.append(tuple_cpu)
@@ -106,7 +106,7 @@ def data_to_cpu(data, deep, data_cpu):
     elif isinstance(data, dict):
         dict_cpu = {}
         for k, v in data.items():
-            dict_cpu[k] = data_to_cpu(v, deep+1, data_cpu)
+            dict_cpu[k] = data_to_cpu(v, deep + 1, data_cpu)
         if deep == 0:
             data_cpu.append(dict_cpu)
         return dict_cpu

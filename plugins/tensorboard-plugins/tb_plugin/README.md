@@ -14,11 +14,19 @@
 
   2. 插件离线方式安装
      * 插件下载地址 \
-       https://mindstudio-sample.obs.cn-north-4.myhuaweicloud.com/torch-tb-profiler-ascend/v0.4.0.2/torch_tb_profiler_ascend-0.4.0.2-py3-none-any.whl
+       https://mindstudio-sample.obs.cn-north-4.myhuaweicloud.com/torch-tb-profiler-ascend/v0.4.0.3/torch_tb_profiler_ascend-0.4.0.3-py3-none-any.whl
 
      * 插件形式为whl包，使用指令安装（此处{version}为whl包实际版本）
 
        `pip install torch-tb-profiler_ascend_{version}_py3_none_any.whl`
+     * 离线包完整性校验
+
+        通过SHA256算法生成的哈希值进行完整性校验，校验方式如下，表格中xxx.whl代表下载的离线包：
+
+        | 操作系统 | 查看哈希值指令 | 预期哈希值 |
+        |--------|--------------|----------|
+        | Windows | certutil -hashfile xxx.whl SHA256 | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
+        | Linux | sha256sum xxx.whl | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
 
   3. 从源代码安装
      * 从仓库下载源码:

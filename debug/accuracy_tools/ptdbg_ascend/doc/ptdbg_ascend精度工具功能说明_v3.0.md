@@ -566,7 +566,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   仅支持NPU环境。
 
-- 示例11：dump指定API的ACL级别溢出数据
+- 示例11：dump溢出API的ACL级别数据
 
   ```python
   debugger.configure_hook(mode="acl", acl_config="./dump.json")
@@ -615,6 +615,7 @@ debugger.stop()
   ```python
   from ptdbg_ascend import *
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0,2], enable_dataloader=True)
+  # 请勿将以上初始化流程插入到循环代码中
   ```
   
 - 示例2：开启溢出检测dump
@@ -622,6 +623,7 @@ debugger.stop()
   ```python
   from ptdbg_ascend import *
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0,2], enable_dataloader=True)
+  # 请勿将以上初始化流程插入到循环代码中
   ```
 
 ### 示例代码（手动模式）
@@ -632,7 +634,8 @@ debugger.stop()
 
   ```python
   from ptdbg_ascend import *
-  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump")
+  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
+  # 请勿将以上初始化流程插入到循环代码中
   
   # 模型初始化
   # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
@@ -653,7 +656,8 @@ debugger.stop()
 
   ```python
   from ptdbg_ascend import *
-  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check")
+  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
+  # 请勿将以上初始化流程插入到循环代码中
   
   # 模型初始化
   # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()

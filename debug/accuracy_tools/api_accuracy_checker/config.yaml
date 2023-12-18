@@ -5,4 +5,6 @@ dump_step: 1000
 error_data_path: './'
 target_iter: [1]
 precision: 14
+white_list: []
+enable_dataloader: True
  

@@ -17,7 +17,7 @@ lock = threading.Lock()
 def write_api_info_json(api_info):
     from api_accuracy_checker.dump.dump import DumpUtil
     dump_path = msCheckerConfig.dump_path
-    dump_path = os.path.join(msCheckerConfig.dump_path, "step" + str(DumpUtil.call_num - 1))
+    dump_path = os.path.join(msCheckerConfig.dump_path, "step" + str((DumpUtil.call_num - 1) if msCheckerConfig.enable_dataloader else DumpUtil.call_num)) 
     check_path_before_create(dump_path)
     create_directory(dump_path)
     rank = api_info.rank

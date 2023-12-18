@@ -27,28 +27,23 @@ class Compare:
         self.util = Util()
         self.log = self.util.log
         self.vector_compare_result = {}
-        self.msaccucmp = None
 
-    @property
-    def call_msaccucmp(self):
-        if not self.msaccucmp:
-            self.msaccucmp = self.util.check_msaccucmp(Const.MS_ACCU_CMP_PATH)
-        return self.msaccucmp
-
-    def npu_vs_npu_compare(self, my_dump_path, golden_dump_path, result_dir):
+    def npu_vs_npu_compare(self, my_dump_path, golden_dump_path, result_dir, msaccucmp_path):
         self.log.info("Start Compare ...............")
-        self.compare_vector(my_dump_path, golden_dump_path, result_dir)
+        self.compare_vector(my_dump_path, golden_dump_path, result_dir, msaccucmp_path)
         self.log.info("Compare finished!!")
 
-    def compare_vector(self, my_dump_path, golden_dump_path, result_dir):
+    def compare_vector(self, my_dump_path, golden_dump_path, result_dir, msaccucmp_path):
         self.util.create_dir(result_dir)
         self.util.check_path_valid(result_dir)
+        call_msaccucmp = self.util.check_msaccucmp(msaccucmp_path)
         cmd = '%s %s compare -m %s -g %s -out %s' % (
-            self.util.python, self.call_msaccucmp, my_dump_path, golden_dump_path, result_dir
+            self.util.python, call_msaccucmp, my_dump_path, golden_dump_path, result_dir
         )
         return self.util.execute_command(cmd)
 
-    def convert_dump_to_npy(self, dump_file, data_format, output):
+    def convert_dump_to_npy(self, dump_file, data_format, output, msaccucmp_path):
+        dump_file = self.util.path_strip(dump_file)
         file_name = ""
         if os.path.isfile(dump_file):
             self.log.info("Covert file is: %s", dump_file)
@@ -57,8 +52,7 @@ class Compare:
             self.log.info("Convert all files in path: %s", dump_file)
             file_name = ""
         output = output if output else Const.DUMP_CONVERT_DIR
-        self.util.check_path_valid(output)
-        convert = self.convert(dump_file, data_format, output)
+        convert = self.convert(dump_file, data_format, output, msaccucmp_path)
         if convert == 0:
             convert_files = self.util.list_convert_files(output, file_name)
 
@@ -67,16 +61,17 @@ class Compare:
                 summary_txt.append(" - %s" % convert_file.file_name)
             self.util.print_panel("\n".join(summary_txt))
 
-    def convert(self, dump_file, data_format, output):
+    def convert(self, dump_file, data_format, output, msaccucmp_path):
         self.util.create_dir(output)
         self.util.check_path_valid(output)
+        call_msaccucmp = self.util.check_msaccucmp(msaccucmp_path)
         if data_format:
             cmd = '%s %s convert -d %s -out %s -f %s' % (
-                self.util.python, self.call_msaccucmp, dump_file, output, data_format
+                self.util.python, call_msaccucmp, dump_file, output, data_format
             )
         else:
             cmd = '%s %s convert -d %s -out %s' % (
-                self.util.python, self.call_msaccucmp, dump_file, output
+                self.util.python, call_msaccucmp, dump_file, output
             )
         return self.util.execute_command(cmd)
 
@@ -149,7 +144,7 @@ class Compare:
                 err_cnt += 1
         if total_cnt == 0:
             err_percent = float(0)
-        else:  
+        else:
             err_percent = float(err_cnt / total_cnt)
         self.util.print(self.util.create_columns([err_table, top_table]))
         return total_cnt, all_close, cos_sim, err_percent

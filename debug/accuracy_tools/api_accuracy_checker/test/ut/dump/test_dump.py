@@ -15,7 +15,7 @@ class TestDumpUtil(unittest.TestCase):
         self.assertFalse(DumpUtil.get_dump_switch())
 
     def test_incr_iter_num_maybe_exit(self):
-        msCheckerConfig.target_iter = 5
+        msCheckerConfig.target_iter = [5]
         msCheckerConfig.enable_dataloader = True
 
         DumpUtil.call_num = 6

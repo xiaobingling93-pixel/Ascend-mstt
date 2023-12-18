@@ -174,12 +174,13 @@ def compare_uint8_data(b_value, n_value):
         return 0, False
 
 
-def compare_builtin_type(bench_out, npu_out):
+def compare_builtin_type(bench_out, npu_out, compare_column):
     if not isinstance(bench_out, (bool, int, float, str)):
-        return CompareConst.NA, CompareConst.PASS, ""
+        return CompareConst.PASS, compare_column, ""
     if bench_out != npu_out:
-        return CompareConst.NA, CompareConst.ERROR, ""
-    return True, CompareConst.PASS, ""
+        return CompareConst.ERROR, compare_column, ""
+    compare_column.error_rate = 0
+    return CompareConst.PASS, compare_column, ""
 
 
 def flatten_compare_result(result):

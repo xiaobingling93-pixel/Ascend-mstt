@@ -53,8 +53,8 @@ class ParseTool:
             required=False
         )
         parser.add_argument(
-            "-asc", "--ascend_path", dest="ascend_path", default=None,
-            help="<Optional> the Ascend home path",
+            "-cmp_path", "--msaccucmp_path", dest="msaccucmp_path", default=None,
+            help="<Optional> the msaccucmp.py file path",
             required=False
         )
         args = parser.parse_args(argv)
@@ -71,10 +71,10 @@ class ParseTool:
         if not os.path.isdir(my_dump_path) or not os.path.isdir(golden_dump_path):
             self.util.log.error("Please enter a directory not a file")
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if args.ascend_path:
-            Const.MS_ACCU_CMP_PATH = self.util.path_strip(args.ascend_path)
-            self.util.check_path_valid(Const.MS_ACCU_CMP_PATH)
-        self.compare.npu_vs_npu_compare(my_dump_path, golden_dump_path, result_dir)
+        msaccucmp_path = self.util.path_strip(args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
+        self.util.check_path_valid(msaccucmp_path)
+        self.util.check_executable_file(msaccucmp_path)
+        self.compare.npu_vs_npu_compare(my_dump_path, golden_dump_path, result_dir, msaccucmp_path)
 
     @catch_exception
     def do_convert_dump(self, argv=None):
@@ -86,15 +86,15 @@ class ParseTool:
         parser.add_argument(
             '-out', '--output_path', dest='output_path', required=False, default=None, help='output path')
         parser.add_argument(
-            "-asc", "--ascend_path", dest="ascend_path", default=None, help="<Optional> the Ascend home path",
-            required=False)
+            "-cmp_path", "--msaccucmp_path", dest="msaccucmp_path", default=None,
+            help="<Optional> the msaccucmp.py file path", required=False)
         args = parser.parse_args(argv)
         self.util.check_path_valid(args.path)
         self.util.check_files_in_path(args.path)
-        if args.ascend_path:
-            Const.MS_ACCU_CMP_PATH = self.util.path_strip(args.ascend_path)
-            self.util.check_path_valid(Const.MS_ACCU_CMP_PATH)
-        self.compare.convert_dump_to_npy(args.path, args.format, args.output_path)
+        msaccucmp_path = self.util.path_strip(args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
+        self.util.check_path_valid(msaccucmp_path)
+        self.util.check_executable_file(msaccucmp_path)
+        self.compare.convert_dump_to_npy(args.path, args.format, args.output_path, msaccucmp_path)
 
     @catch_exception
     def do_print_data(self, argv=None):
@@ -108,9 +108,9 @@ class ParseTool:
     def do_parse_pkl(self, argv=None):
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            '-f', '--file', dest='file_name', default=None,  required=True, help='PKL file path')
+            '-f', '--file', dest='file_name', default=None, required=True, help='PKL file path')
         parser.add_argument(
-            '-n', '--name', dest='api_name', default=None,  required=True, help='API name')
+            '-n', '--name', dest='api_name', default=None, required=True, help='API name')
         args = parser.parse_args(argv)
         self.visual.parse_pkl(args.file_name, args.api_name)
 

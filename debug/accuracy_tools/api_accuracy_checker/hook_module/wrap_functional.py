@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -22,12 +22,9 @@ import yaml
 
 from api_accuracy_checker.hook_module.hook_module import HOOKModule
 from api_accuracy_checker.common.utils import torch_device_guard
+from api_accuracy_checker.common.config import msCheckerConfig
+from api_accuracy_checker.hook_module.utils import WrapFunctionalOps
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
-
-cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapFunctionalOps = yaml.safe_load(f).get('functional')
 
 for f in dir(torch.nn.functional):
     locals().update({f: getattr(torch.nn.functional, f)})
@@ -36,7 +33,10 @@ for f in dir(torch.nn.functional):
 def get_functional_ops():
     global WrapFunctionalOps
     _all_functional_ops = dir(torch.nn.functional)
-    return set(WrapFunctionalOps) & set(_all_functional_ops)
+    if msCheckerConfig.white_list:
+        return set(WrapFunctionalOps) & set(_all_functional_ops) & set(msCheckerConfig.white_list)
+    else:
+        return set(WrapFunctionalOps) & set(_all_functional_ops) 
 
 
 class HOOKFunctionalOP(object):

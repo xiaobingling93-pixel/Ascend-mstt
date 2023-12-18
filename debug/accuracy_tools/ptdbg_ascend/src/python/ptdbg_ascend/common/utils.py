@@ -68,7 +68,7 @@ class Const:
     DUMP_RATIO_MAX = 100
     SUMMERY_DATA_NUMS = 256
     FLOAT_EPSILON = np.finfo(float).eps
-    SUPPORT_DUMP_MODE = ['api', 'acl']
+    SUPPORT_DUMP_MODE = ['api', 'acl', 'model']
     ON = 'ON'
     OFF = 'OFF'
     BACKWARD = 'backward'
@@ -108,7 +108,8 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter"]
+    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+                    "_reduce_scatter_base", "_all_gather_base"]
 
 
 class CompareConst:
@@ -125,15 +126,34 @@ class CompareConst:
     NPU_MAX = "NPU max"
     NPU_MIN = "NPU min"
     NPU_MEAN = "NPU mean"
+    NPU_NORM = "NPU l2norm"
     BENCH_MAX = "Bench max"
     BENCH_MIN = "Bench min"
     BENCH_MEAN = "Bench mean"
+    BENCH_NORM = "Bench l2norm"
+    MAX_DIFF = "Max diff"
+    MIN_DIFF = "Min diff"
+    MEAN_DIFF = "Mean diff"
+    NORM_DIFF = "L2norm diff"
     COSINE = "Cosine"
     MAX_ABS_ERR = "MaxAbsErr"
     MAX_RELATIVE_ERR = "MaxRelativeErr"
     ACCURACY = "Accuracy Reached or Not"
     STACK = "NPU_Stack_Info"
     ERROR_MESSAGE = "Err_message"
+    ONE_THOUSANDTH_ERR_RATIO = "One Thousandth Err Ratio"
+    FIVE_THOUSANDTHS_ERR_RATIO = "Five Thousandths Err Ratio"
+
+    COMPARE_RESULT_HEADER = [
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
+        ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
+        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
+    ]
+
+    SUMMARY_COMPARE_RESULT_HEADER = [
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
+        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
+    ]
 
     # compare result data
     NAN = 'Nan'
@@ -205,6 +225,7 @@ class CompareException(Exception):
 
     def __str__(self):
         return self.error_info
+
 
 class DumpException(CompareException):
     pass
@@ -324,26 +345,41 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, stack_mode=False, auto_analyze=True,
-                        fuzzy_match=False):  # 添加默认值来让不传参时能通过参数检查
-    if not (isinstance(input_parma, dict) and isinstance(output_path, str)
-            and isinstance(stack_mode, bool) and isinstance(fuzzy_match, bool)):
+def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False):  # 添加默认值来让不传参时能通过参数检查
+    if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
         print_error_log("Invalid input parameters")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    if not isinstance(auto_analyze, bool):
-        print_error_log("Params auto_analyze only support True or False.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
     check_file_or_directory_path(input_parma.get("npu_pkl_path"), False)
     check_file_or_directory_path(input_parma.get("bench_pkl_path"), False)
-    check_file_or_directory_path(input_parma.get("npu_dump_data_dir"), True)
-    check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
+    if not summary_compare:
+        check_file_or_directory_path(input_parma.get("npu_dump_data_dir"), True)
+        check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    npu_pkl = open(input_parma.get("npu_pkl_path"), "r")
-    bench_pkl = open(input_parma.get("bench_pkl_path"), "r")
-    check_file_mode(npu_pkl.name, bench_pkl.name, stack_mode)
-    _check_pkl(npu_pkl, input_parma.get("npu_pkl_path"))
-    _check_pkl(bench_pkl, input_parma.get("bench_pkl_path"))
-    return npu_pkl, bench_pkl
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
+         FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
+        check_pkl_file(input_parma, npu_pkl, bench_pkl, stack_mode)
+
+
+def is_summary_compare(input_param):
+    npu_pkl_path = input_param.get("npu_pkl_path", None)
+    bench_pkl_path = input_param.get("bench_pkl_path", None)
+    npu_dump_data_dir = input_param.get("npu_dump_data_dir", None)
+    bench_dump_data_dir = input_param.get("bench_dump_data_dir", None)
+    if not npu_pkl_path or not bench_pkl_path:
+        print_error_log(f"Please check the pkl path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    if not (npu_dump_data_dir and bench_dump_data_dir):
+        return True
+    if npu_dump_data_dir and bench_dump_data_dir:
+        return False
+    print_error_log(f"Please check the dump data dir is valid.")
+    raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
+    if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
+        print_error_log("Invalid input parameters which should be only bool type.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
 def check_file_or_directory_path(path, isdir=False):
@@ -375,9 +411,9 @@ def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
 
-def check_file_mode(npu_pkl, bench_pkl, stack_mode):
-    npu_pkl_name = os.path.split(npu_pkl)[-1]
-    bench_pkl_name = os.path.split(bench_pkl)[-1]
+def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
+    npu_pkl_name = os.path.split(npu_pkl.name)[-1]
+    bench_pkl_name = os.path.split(bench_pkl.name)[-1]
 
     if not is_starts_with(npu_pkl_name, prefixes) and not is_starts_with(bench_pkl_name, prefixes):
         if stack_mode:
@@ -391,13 +427,16 @@ def check_file_mode(npu_pkl, bench_pkl, stack_mode):
         print_error_log("The dump mode of the two files is not same, please check the dump files")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
 
+    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
+    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
+
 
 def check_file_size(input_file, max_size):
     try:
         file_size = os.path.getsize(input_file)
     except OSError as os_error:
         print_error_log('Failed to open "%s". %s' % (input_file, str(os_error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from os_error
     if file_size > max_size:
         print_error_log('The size (%d) of %s exceeds (%d) bytes, tools not support.'
                         % (file_size, input_file, max_size))
@@ -473,7 +512,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
 
 
 def execute_command(cmd):
@@ -589,18 +628,18 @@ def check_seed_all(seed, mode):
 def get_process_rank(model):
     print_info_log("Rank id is not provided. Trying to get the rank id of the model.")
     try:
-        device = next(model.parameters()).device
+        local_device = next(model.parameters()).device
     except StopIteration:
         print_warn_log('There is no parameter in the model. Fail to get rank id.')
         return 0, False
-    if device.type == 'cpu':
+    if local_device.type == 'cpu':
         print_warn_log("Warning: the debugger is unable to get the rank id. "
             "This may cause the dumpped data to be corrupted in the "
             "case of distributed training. (You may ignore this if you are using only one card.) "
             "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
         return 0, False
     else:
-        return device.index, True
+        return local_device.index, True
 
 
 def parameter_adapter(func):
@@ -608,24 +647,24 @@ def parameter_adapter(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
-            input = args[0]
+            input_tensor = args[0]
             indices = args[1]
             if indices.dtype == torch.uint8:
                 indices = indices.bool()
             if indices.dtype == torch.bool:
-                if indices.shape == input.shape:
-                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input, indices)
+                if indices.shape == input_tensor.shape:
+                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input_tensor, indices)
                 else:
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
-                    return getattr(torch._C._TensorBase, "__getitem__")(input, indices)
+                    return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
             elif indices.dtype != torch.bool:
                 if len(indices.shape) == 1:
-                    return func(self, input, indices.tolist())
+                    return func(self, input_tensor, indices.tolist())
                 elif len(indices.shape) == 2:
-                    result = [func(self, input, index) for index in indices.tolist()]
+                    result = [func(self, input_tensor, index) for index in indices.tolist()]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(result, 0)
                 else:
-                    res = [input[tensor_index] for tensor_index in indices]
+                    res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
         return func(self, *args, **kwargs)
     return inner

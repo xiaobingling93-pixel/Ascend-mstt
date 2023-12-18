@@ -223,7 +223,7 @@ def write_json(file_path, data, indent=None):
                 f.write(',\n')
             f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
         except Exception as e:
-            raise ValueError(f"Json save failed:{e}")
+            raise ValueError(f"Json save failed:{e}") from e
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
             lock.release()

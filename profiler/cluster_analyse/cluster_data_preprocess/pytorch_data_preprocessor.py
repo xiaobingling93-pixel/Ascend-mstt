@@ -23,17 +23,12 @@ class PytorchDataPreprocessor:
     PROFILER_INFO_HEAD = 'profiler_info_'
     PROFILER_INFO_EXTENSION = '.json'
 
-    def __init__(self, path: str):
-        self.path = PathManager.get_realpath(path)
+    def __init__(self, path_list: str):
+        self.path_list = path_list
 
     def get_data_map(self) -> dict:
-        ascend_pt_dirs = []
-        for root, dirs, files in os.walk(self.path):
-            for dir_name in dirs:
-                if dir_name.endswith("ascend_pt"):
-                    ascend_pt_dirs.append(os.path.join(root, dir_name))
         rank_id_map = defaultdict(list)
-        for dir_name in ascend_pt_dirs:
+        for dir_name in self.path_list:
             rank_id = self.get_rank_id(dir_name)
             if rank_id < 0:
                 print('[Error]fail to get rankid or rankid invalid.')
@@ -44,7 +39,7 @@ class PytorchDataPreprocessor:
         try:
             for (rank_id, dir_list) in rank_id_map.items():
                 dir_list.sort(key=lambda x: x.split('_')[-3])
-                ret_dict[rank_id] = os.path.join(self.path, dir_list[0])
+                ret_dict[rank_id] = dir_list[0]
         except Exception as e:
             raise RuntimeError("Found invalid directory name!") from e
         return ret_dict

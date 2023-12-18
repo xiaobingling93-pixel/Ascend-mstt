@@ -137,6 +137,7 @@ functional:
   - unfold
   - fold
   - multi_head_attention_forward
+  - scaled_dot_product_attention
 
 tensor:
   - __add__
@@ -271,6 +272,7 @@ tensor:
   - deg2rad
   - deg2rad_
   - det
+  - detach
   - diag
   - diag_embed
   - diagflat
@@ -564,6 +566,7 @@ torch:
   - _aminmax
   - _batch_norm_impl_index
   - _convolution
+  - _softmax_backward_data
   - abs
   - abs_
   - absolute
@@ -642,6 +645,7 @@ torch:
   - bmm
   - broadcast_tensors
   - broadcast_to
+  - bucketize
   - cartesian_prod
   - cat
   - cdist
@@ -667,6 +671,8 @@ torch:
   - clone
   - column_stack
   - combinations
+  - concat
+  - concatenate
   - constant_pad_nd
   - conv1d
   - conv2d
@@ -684,6 +690,7 @@ torch:
   - cosine_embedding_loss
   - cosine_similarity
   - count_nonzero
+  - cov
   - cross
   - ctc_loss
   - cummax
@@ -784,6 +791,7 @@ torch:
   - index_put_
   - index_select
   - instance_norm
+  - inverse
   - isclose
   - isfinite
   - isinf
@@ -832,6 +840,7 @@ torch:
   - lstsq
   - lt
   - lu_solve
+  - lu_unpack
   - masked_fill
   - margin_ranking_loss
   - masked_scatter
@@ -877,13 +886,15 @@ torch:
   - negative_
   - nextafter
   - nonzero
+  - norm
   - norm_except_dim
   - normal
   - not_equal
   - nuclear_norm
-  - ones_like
+  - outer
   - pairwise_distance
   - pdist
+  - permute
   - pinverse
   - pixel_shuffle
   - pixel_unshuffle
@@ -894,8 +905,9 @@ torch:
   - pow
   - prelu
   - prod
+  - qr
+  - quantile
   - rad2deg
-  - promote_types
   - rad2deg_
   - range
   - ravel
@@ -945,6 +957,7 @@ torch:
   - sort
   - sparse_coo_tensor
   - square
+  - split
   - split_with_sizes
   - spmm
   - sqrt
@@ -955,6 +968,7 @@ torch:
   - stack
   - std
   - std_mean
+  - stft
   - sub
   - subtract
   - sum
@@ -964,6 +978,7 @@ torch:
   - symeig
   - t
   - take
+  - take_along_dim
   - tan
   - tan_
   - tanh
@@ -1054,6 +1069,11 @@ torch_npu:
   - npu_roi_alignbk
   - npu_ptiou
   - npu_fusion_attention
+  - npu_dropout_with_add_softmax
+  - npu_random_choice_with_mask
+  - npu_rotated_iou
+  - npu_conv2d
+  - npu_softmax_cross_entropy_with_logits
 
 aten:
   - signbit

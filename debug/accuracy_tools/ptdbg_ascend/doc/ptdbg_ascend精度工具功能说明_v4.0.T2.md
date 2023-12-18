@@ -451,7 +451,7 @@ PrecisionDebugger(dump_path=None, hook_name=None, rank=None, step=[], enable_dat
 | dump_path         | 设置dump数据目录路径，参数示例："./dump_path"。<br/>默认在dump_path目录下生成`ptdbg_dump_{version}`目录，并在该目录下生成`dump.pkl`文件以及`dump`数据文件保存目录。<br/>当**configure_hook**函数配置了mode参数时，`dump.pkl`文件以及`dump`数据文件保存目录名称添加mode参数值为前缀，详情请参见“**dump数据存盘说明**”。<br/>未配置dump_path时，也可以通过环境变量ASCEND_WORK_PATH配置dump路径，此时dump数据将落盘在${ASCEND_WORK_PATH}/dump_data下，自定义配置dump_path优先级高于环境变量，dump_path和环境变量需要二选一。 | 否       |
 | hook_name         | dump模式，可取值dump和overflow_check，表示dump和溢出检测功能，二选一。 | 是       |
 | rank              | 指定对某张卡上的数据进行dump或溢出检测，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0~7，实际训练运行0~3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。 | 否       |
-| step              | 指定dump某个step的数据，默认未配置，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[1,2,3]；也可以配置step范围，例如：step=list(range(1,10))，表示dump第1到第10个step。 | 否       |
+| step              | 指定dump某个step的数据，默认未配置，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]；也可以配置step范围，例如：step=list(range(0,9))，表示dump第0到第8个step。 | 否       |
 | enable_dataloader | 自动控制开关，可取值True（开启）或False（关闭），默认为False。配置为True后自动识别dump step参数指定的迭代，并在该迭代执行完成后退出训练，此时start和stop函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据；配置为False则需要配置start和stop函数，并在最后一个stop函数后或一个step结束的位置添加debugger.step()。 | 否       |
 
 ### configure_hook函数（可选）
@@ -574,7 +574,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   仅支持NPU环境。
 
-- 示例11：dump指定API的ACL级别溢出数据
+- 示例11：dump溢出API的ACL级别数据
 
   ```python
   debugger.configure_hook(mode="acl", acl_config="./dump.json")
@@ -623,6 +623,7 @@ debugger.stop()
   ```python
   from ptdbg_ascend import *
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0,2], enable_dataloader=True)
+  # 请勿将以上初始化流程插入到循环代码中
   ```
   
 - 示例2：开启溢出检测dump
@@ -630,6 +631,7 @@ debugger.stop()
   ```python
   from ptdbg_ascend import *
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0,2], enable_dataloader=True)
+  # 请勿将以上初始化流程插入到循环代码中
   ```
 
 ### 示例代码（手动模式）
@@ -640,7 +642,8 @@ debugger.stop()
 
   ```python
   from ptdbg_ascend import *
-  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump")
+  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
+  # 请勿将以上初始化流程插入到循环代码中
   
   # 模型初始化
   # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
@@ -661,7 +664,8 @@ debugger.stop()
 
   ```python
   from ptdbg_ascend import *
-  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check")
+  debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
+  # 请勿将以上初始化流程插入到循环代码中
   
   # 模型初始化
   # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
@@ -1207,6 +1211,7 @@ import os
 import torch
 import torch.nn as nn
 import torch_npu
+import torch.nn.functional as F
 from ptdbg_ascend import *
 
 torch.npu.set_device("npu:0")
@@ -1214,21 +1219,20 @@ torch.npu.set_device("npu:0")
 class ModuleOP(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.linear_1 = nnLinear(in_features=2, out_features=2)
-        self.linear_2 = nnLinear(in_features=2, out_features=1)
-        self.relu = nn.Relu()
+        self.linear_1 = nn.Linear(in_features=2, out_features=2)
+        self.linear_2 = nn.Linear(in_features=2, out_features=1)
     def forward(self, x):
         x1 = self.linear_1(x)
-        x1 = self.linear_2(x1)
-        r1 = self.relu(x2)
+        x2 = self.linear_2(x1)
+        r1 = F.relu(x2)
         return r1
     
 if __name__ == "__main__":
-    module = ModeleOP
+    module = ModuleOP()
     
     # 注册工具
     set_dump_path("./dump_data/npu")
-    set_dump_wwitch("ON")
+    set_dump_switch("ON")
     register_hook(module, acc_cmp_dump)
     
     x = torch.randn(2, 2)
@@ -1237,8 +1241,8 @@ if __name__ == "__main__":
     out = module(x)
     module_dump_end()    # 结束模块级精度数据dump
     loss = out.sum()
-    loss.bachward()
-    set_dump_wwitch("OFF")
+    loss.backward()
+    set_dump_switch("OFF")
 ```
 
 ## dump数据存盘说明

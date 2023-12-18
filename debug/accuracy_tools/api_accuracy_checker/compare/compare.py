@@ -1,6 +1,5 @@
 # 进行比对及结果展示
 import os
-import time
 from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.compare.algorithm import compare_core
@@ -10,22 +9,22 @@ from api_accuracy_checker.common.config import msCheckerConfig
 
 
 class Comparator:
-    TEST_FILE_NAME = "accuracy_checking_result_" + time.strftime("%Y%m%d%H%M%S") + ".csv"
-    DETAIL_TEST_FILE_NAME = "accuracy_checking_details_" + time.strftime("%Y%m%d%H%M%S") + ".csv"
-
     # consts for result csv
     COLUMN_API_NAME = "API name"
     COLUMN_FORWARD_SUCCESS = "Forward Test Success"
     COLUMN_BACKWARD_SUCCESS = "Backward Test Success"
     COLUMN_STACK_INFO = "Traceback callstack info"
 
-    def __init__(self, result_save_path, stack_info_json_path=None):
-        self.save_path = os.path.join(result_save_path, self.TEST_FILE_NAME)
-        if os.path.exists(self.save_path):
-            raise ValueError(f"file {self.save_path} already exists, please remove it first or use a new dump path")
-        self.detail_save_path = os.path.join(result_save_path, self.DETAIL_TEST_FILE_NAME)
-        if os.path.exists(self.detail_save_path):
-            raise ValueError(f"file {self.detail_save_path} already exists, please remove it first or use a new dump path")
+    def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, test_result_cnt=None, stack_info_json_path=None):
+        self.save_path = result_csv_path
+        self.detail_save_path = details_csv_path
+        if not is_continue_run_ut:
+            if os.path.exists(self.save_path):
+                raise ValueError(f"file {self.save_path} already exists, please remove it first or use a new dump path")
+            if os.path.exists(self.detail_save_path):
+                raise ValueError(
+                    f"file {self.detail_save_path} already exists, please remove it first or use a new dump path")
+            self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
         else:
@@ -34,9 +33,7 @@ class Comparator:
         self.test_result_cnt = {
             "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
             "total_num": 0, "forward_or_backward_fail_num": 0
-        }
-        self.result_save_path = result_save_path
-        self.write_csv_title()
+        } if not test_result_cnt else test_result_cnt
 
     def print_pretest_result(self):
         if self.test_result_cnt.get("total_num") != 0:
@@ -76,7 +73,7 @@ class Comparator:
             "Npu Name", "Bench Dtype", "NPU Dtype", "Shape",
             "Cosine Similarity",
             "Max Abs Error",
-            "Relative Error (hundredth)",
+            "Relative Error (dual hundredth)",
             "Relative Error (dual thousandth)",
             "Relative Error (dual ten thousandth)",
             "Error Rate",

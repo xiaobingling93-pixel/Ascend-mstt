@@ -41,7 +41,7 @@ class Visualization:
         summary = ['[yellow]%s[/yellow]' % self.util.gen_npy_info_txt(np_data), 'Path: %s' % target_file,
                    "TextFile: %s.txt" % target_file]
         self.util.print_panel(self.util.create_columns([table, "\n".join(summary)]), target_file)
-        self.util.save_npy_to_txt(np_data, target_file + "txt")
+        self.util.save_npy_to_txt(np_data, target_file + ".txt")
 
     def print_npy_data(self, file_name):
         file_name = self.util.path_strip(file_name)

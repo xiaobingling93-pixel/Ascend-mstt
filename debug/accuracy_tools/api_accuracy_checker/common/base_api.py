@@ -2,6 +2,7 @@ import os
 import torch
 from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
+from api_accuracy_checker.common.config import msCheckerConfig
 
 
 class BaseAPIInfo:
@@ -57,12 +58,12 @@ class BaseAPIInfo:
             api_args = self.api_name + '.' + str(self.args_num)
             from api_accuracy_checker.dump.dump import DumpUtil
             if self.is_forward:
-                forward_real_data_path = os.path.join(self.save_path, "step" + str(DumpUtil.call_num - 1), self.forward_path, "rank" + str(self.rank))
+                forward_real_data_path = os.path.join(self.save_path, "step" + str((DumpUtil.call_num - 1) if msCheckerConfig.enable_dataloader else DumpUtil.call_num), self.forward_path, "rank" + str(self.rank))
                 check_path_before_create(forward_real_data_path)
                 create_directory(forward_real_data_path)
                 file_path = os.path.join(forward_real_data_path, f'{api_args}.pt')
             else:
-                backward_real_data_path = os.path.join(self.save_path, "step" + str(DumpUtil.call_num - 1), self.backward_path, "rank" + str(self.rank))
+                backward_real_data_path = os.path.join(self.save_path, "step" + str((DumpUtil.call_num - 1) if msCheckerConfig.enable_dataloader else DumpUtil.call_num), self.backward_path, "rank" + str(self.rank))
                 check_path_before_create(backward_real_data_path)
                 create_directory(backward_real_data_path)
                 file_path = os.path.join(backward_real_data_path, f'{api_args}.pt')
