@@ -32,18 +32,28 @@ def set_dump_switch(switch):
     DumpUtil.set_dump_switch(switch)
 
 
+def check_dataloader_status():
+    if msCheckerConfig.enable_dataloader:
+        error_info = ("If you want to use this  function, set enable_dataloader "
+                        "in the accuracy_tools/api_accuracy_check/config.yaml "
+                        "to False first")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
+
+
 def start():
-    if not DumpUtil.get_dump_switch() and not msCheckerConfig.enable_dataloader:
+    check_dataloader_status()
+    if not DumpUtil.get_dump_switch():
         DumpUtil.incr_iter_num_maybe_exit()
 
 
 def stop():
+    check_dataloader_status()
     DumpUtil.set_dump_switch("OFF")
 
 
 def step():
-    if not msCheckerConfig.enable_dataloader:
-        DumpUtil.call_num += 1
+    check_dataloader_status()
+    DumpUtil.call_num += 1
 
 
 class DumpUtil(object):

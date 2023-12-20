@@ -1,10 +1,9 @@
 dump_path: './'
-jit_compile: True
 real_data: False
-dump_step: 1000
-error_data_path: './'
-target_iter: [1]
-precision: 14
-white_list: []
 enable_dataloader: True
+target_iter: [1]
+white_list: []
+error_data_path: './'
+jit_compile: True
+precision: 14
  

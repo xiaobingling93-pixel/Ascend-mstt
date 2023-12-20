@@ -17,14 +17,13 @@ class Config:
     def validate(self, key, value):
         validators = {
             'dump_path': str,
-            'jit_compile': bool,
             'real_data': bool,
-            'dump_step': int,
-            'error_data_path': str,
+            'enable_dataloader': bool,
             'target_iter': list,
-            'precision': int,
             'white_list': list,
-            'enable_dataloader': bool
+            'error_data_path': str,
+            'jit_compile': bool,
+            'precision': int
         }
         if not isinstance(value, validators.get(key)):
             raise ValueError(f"{key} must be {validators[key].__name__} type")
