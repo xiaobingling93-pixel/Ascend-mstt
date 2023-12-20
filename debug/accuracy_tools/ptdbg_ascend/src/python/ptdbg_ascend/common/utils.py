@@ -411,24 +411,42 @@ def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
 
-def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
-    npu_pkl_name = os.path.split(npu_pkl.name)[-1]
-    bench_pkl_name = os.path.split(bench_pkl.name)[-1]
+def check_stack_mode(pkl_fp):
+    api_prefix = ""
+    api_pattern = r'\[\"([0-9a-zA-Z_]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    is_stack_mode = False
+    for index, line in enumerate(pkl_fp):
+        if index == 0:
+            api_match = re.search(api_pattern, line)
+            api_prefix = api_match.group(1)
+        elif api_prefix and line.startswith(f'["{api_prefix}'):
+            if line.startswith(f'["{api_prefix}_stack_info'):
+                is_stack_mode = True
+                break
+        else:
+            break
+    pkl_fp.seek(0, 0)
+    return is_stack_mode
 
-    if not is_starts_with(npu_pkl_name, prefixes) and not is_starts_with(bench_pkl_name, prefixes):
+
+def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
+    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
+    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
+
+    npu_pkl_stack_mode = check_stack_mode(npu_pkl)
+    bench_pkl_stack_mode = check_stack_mode(bench_pkl)
+
+    if not npu_pkl_stack_mode and not bench_pkl_stack_mode:
         if stack_mode:
             print_error_log("The current file does not contain stack information, please turn off the stack_mode")
             raise CompareException(CompareException.INVALID_COMPARE_MODE)
-    elif is_starts_with(npu_pkl_name, prefixes) and is_starts_with(bench_pkl_name, prefixes):
+    elif npu_pkl_stack_mode and bench_pkl_stack_mode:
         if not stack_mode:
             print_error_log("The current file contains stack information, please turn on the stack_mode")
             raise CompareException(CompareException.INVALID_COMPARE_MODE)
     else:
         print_error_log("The dump mode of the two files is not same, please check the dump files")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
-
-    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
-    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
 
 
 def check_file_size(input_file, max_size):
