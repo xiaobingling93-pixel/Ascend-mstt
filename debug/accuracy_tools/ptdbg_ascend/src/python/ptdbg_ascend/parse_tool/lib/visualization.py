@@ -53,6 +53,7 @@ class Visualization:
         path = self.util.path_strip(path)
         self.util.check_path_valid(path)
         self.util.check_path_format(path, Const.PKL_SUFFIX)
+        self.util.check_str_param(api_name)
         with open(path, "r") as pkl_handle:
             title_printed = False
             while True:

@@ -243,3 +243,11 @@ class Util:
         if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
             self.log.error('The file path {} contains special characters.'.format(path))
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
+
+    def check_str_param(self, param):
+        if len(param) > Const.FILE_NAME_LENGTH:
+            self.log.error('The parameter length exceeds limit')
+            raise ParseException(ParseException.PARSE_INVALID_PARAM_ERROR)
+        if not re.match(Const.FILE_PATTERN, param):
+            self.log.error('The parameter {} contains special characters.'.format(param))
+            raise ParseException(ParseException.PARSE_INVALID_PARAM_ERROR)
