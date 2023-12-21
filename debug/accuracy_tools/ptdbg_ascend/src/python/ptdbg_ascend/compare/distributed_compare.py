@@ -53,7 +53,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         name_body, ext = os.path.splitext(pkl_name)
         pattern = re.compile(f'{name_body}$')
         match = pattern.match(dump_data_dirname)
-        if match is None:
+        if dump_data_dir and match is None:
             print_error_log('The names of pkl and directory do not match! '
                 f'Please check the names and remove irrelevant files in {dirname}. ')
             raise CompareException(CompareException.INVALID_FILE_ERROR)
