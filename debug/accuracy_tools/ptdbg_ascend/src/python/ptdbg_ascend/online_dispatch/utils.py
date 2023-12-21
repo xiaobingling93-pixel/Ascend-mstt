@@ -165,3 +165,15 @@ def get_sys_info():
                f'Used: {mem.used / 1024 / 1024:.2f} MB '\
                f'CPU: {cpu_percent}% '
     return sys_info
+
+
+class DispatchException(Exception):
+    INVALID_PARAMETER = 0
+
+    def __init__(self, err_code, err_msg=""):
+        super(DispatchException, self).__init__()
+        self.err_code = err_code
+        self.err_msg = err_msg
+
+    def __str__(self):
+        return self.err_msg
