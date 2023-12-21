@@ -499,9 +499,9 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
         n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0] + ".npy")
         b_path = os.path.join(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1] + ".npy")
         n_path_checker = FileChecker(n_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.NUMPY_SUFFIX)
+                                     FileCheckConst.NUMPY_SUFFIX, False)
         b_path_checker = FileChecker(b_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.NUMPY_SUFFIX)
+                                     FileCheckConst.NUMPY_SUFFIX, False)
         n_path = n_path_checker.common_check()
         b_path = b_path_checker.common_check()
         n_value = np.load(n_path)
@@ -582,6 +582,7 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
 
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
                  suffix='', fuzzy_match=False, summary_compare=False):
+    print_warn_log("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_as_suffix("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)

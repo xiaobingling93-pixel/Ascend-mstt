@@ -85,11 +85,12 @@ class FileChecker:
         ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
         file_type(str): The correct file type for file
     """
-    def __init__(self, file_path, path_type, ability=None, file_type=None):
+    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
         self.ability = ability
         self.file_type = file_type
+        self.is_script = is_script
 
     @staticmethod
     def _check_path_type(path_type):
@@ -109,7 +110,8 @@ class FileChecker:
         check_path_length(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
-        check_path_owner_consistent(self.file_path)
+        if self.is_script:
+            check_path_owner_consistent(self.file_path)
         check_path_pattern_vaild(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
