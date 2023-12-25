@@ -13,7 +13,6 @@ except ImportError:
 else:
     is_gpu = False
     current_device = "npu"
-import yaml
 import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
@@ -216,7 +215,7 @@ def run_torch_api(api_full_name, api_setting_dict, backward_content, api_info_di
         cpu_args_out = (cpu_args, out)
         device_args_out = (device_args, device_out)
         (grad_out, grad), (device_grad_out, device_grad) = run_backward(backward_args, cpu_args_out, device_args_out)
-                                                 
+
     if grad_index is not None:
         return UtDataInfo(grad_out, device_grad_out, device_out[grad_index], out[grad_index], grad, in_fwd_data_list)
     return UtDataInfo(grad_out, device_grad_out, device_out, out, grad, in_fwd_data_list)
