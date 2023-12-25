@@ -220,66 +220,67 @@ def rename_():
 
 
 def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
-    dump_file = DumpUtil.get_dump_path()
-    dump_file = modify_dump_path(dump_file, DumpUtil.dump_switch_mode)
+    if not DumpUtil.get_dump_switch():
+        return
     if DumpUtil.dump_switch_mode == Const.API_LIST and not check_if_in_api_list(name):
         return
     if DumpUtil.dump_switch_mode in [Const.LIST, Const.ACL, Const.RANGE, Const.STACK] and not DumpUtil.check_switch_scope(name):
         return
-    if DumpUtil.get_dump_switch():
-        global rank
-        dump_dir, dump_filename = os.path.split(dump_file)
-        if DumpUtil.target_iter:
-            dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
-            if not os.path.exists(dump_dir):
-                Path(dump_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-            dump_file = os.path.join(dump_dir, dump_filename)
-        rank_this = get_tensor_rank(in_feat, out_feat)
-        DumpUtil.dump_root = os.path.dirname(DumpUtil.dump_path)
-        if rank_this is not None and rank != rank_this:
-            rank = rank_this
-            rename_()
-            if not DumpUtil.dump_init_enable:
-                if '.pkl' in dump_filename:
-                    npy_dir = dump_filename[:-4]
-                else:
-                    npy_dir = dump_filename
-                if DumpUtil.target_iter:
-                    DumpUtil.dump_data_dir = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(rank), npy_dir)
-                else:
-                    DumpUtil.dump_data_dir = os.path.join(DumpUtil.dump_root, "rank{}".format(rank), npy_dir)
-        if DumpUtil.target_rank is not None:
-            if rank != DumpUtil.target_rank:
-                return
-        dump_file = create_dirs_if_not_exist(rank, dump_file)
-        check_path_pattern_vaild(dump_file)
-        check_path_length(dump_file)
-        global pkl_name
-        pkl_name = dump_file
-        if DumpUtil.dump_init_enable:
-            DumpUtil.dump_init_enable = False
-            DumpUtil.dump_data_dir = make_dump_data_dir(dump_file) \
-                if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and not DumpUtil.summary_only else ""
-            if os.path.exists(dump_file) and not os.path.isdir(dump_file):
-                check_writable(dump_file)
-                try:
-                    os.remove(dump_file)
-                except FileNotFoundError as e:
-                    print_warn_log("The file does not exist, error: {}".format(e))
+    dump_file = DumpUtil.get_dump_path()
+    dump_file = modify_dump_path(dump_file, DumpUtil.dump_switch_mode)
+    global rank
+    dump_dir, dump_filename = os.path.split(dump_file)
+    if DumpUtil.target_iter:
+        dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
+        if not os.path.exists(dump_dir):
+            Path(dump_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+        dump_file = os.path.join(dump_dir, dump_filename)
+    rank_this = get_tensor_rank(in_feat, out_feat)
+    DumpUtil.dump_root = os.path.dirname(DumpUtil.dump_path)
+    if rank_this is not None and rank != rank_this:
+        rank = rank_this
+        rename_()
+        if not DumpUtil.dump_init_enable:
+            if '.pkl' in dump_filename:
+                npy_dir = dump_filename[:-4]
+            else:
+                npy_dir = dump_filename
+            if DumpUtil.target_iter:
+                DumpUtil.dump_data_dir = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(rank), npy_dir)
+            else:
+                DumpUtil.dump_data_dir = os.path.join(DumpUtil.dump_root, "rank{}".format(rank), npy_dir)
+    if DumpUtil.target_rank is not None:
+        if rank != DumpUtil.target_rank:
+            return
+    dump_file = create_dirs_if_not_exist(rank, dump_file)
+    check_path_pattern_vaild(dump_file)
+    check_path_length(dump_file)
+    global pkl_name
+    pkl_name = dump_file
+    if DumpUtil.dump_init_enable:
+        DumpUtil.dump_init_enable = False
+        DumpUtil.dump_data_dir = make_dump_data_dir(dump_file) \
+            if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and not DumpUtil.summary_only else ""
+        if os.path.exists(dump_file) and not os.path.isdir(dump_file):
+            check_writable(dump_file)
+            try:
+                os.remove(dump_file)
+            except FileNotFoundError as e:
+                print_warn_log("The file does not exist, error: {}".format(e))
 
-        name_prefix = name
-        name_template = f"{name_prefix}" + "_{}"
-        if DumpUtil.dump_switch_mode in [Const.ALL, Const.API_LIST]:
+    name_prefix = name
+    name_template = f"{name_prefix}" + "_{}"
+    if DumpUtil.dump_switch_mode in [Const.ALL, Const.API_LIST]:
+        dump_api_tensor(dump_step, in_feat, name_template, out_feat)
+    elif DumpUtil.dump_switch_mode == Const.API_STACK:
+        dump_api_tensor(dump_step, in_feat, name_template, out_feat)
+        dump_stack_info(name_template)
+    else:
+        if DumpUtil.dump_switch_mode == Const.ACL:
+            acl_dump(module, name, name_prefix)
+        elif DumpUtil.dump_switch_mode != Const.STACK:
             dump_api_tensor(dump_step, in_feat, name_template, out_feat)
-        elif DumpUtil.dump_switch_mode == Const.API_STACK:
-            dump_api_tensor(dump_step, in_feat, name_template, out_feat)
-            dump_stack_info(name_template)
-        else:
-            if DumpUtil.dump_switch_mode == Const.ACL:
-                acl_dump(module, name, name_prefix)
-            elif DumpUtil.dump_switch_mode != Const.STACK:
-                dump_api_tensor(dump_step, in_feat, name_template, out_feat)
-            dump_stack_info(name_template)
+        dump_stack_info(name_template)
 
 
 def acl_dump(module, module_name, name_prefix):
