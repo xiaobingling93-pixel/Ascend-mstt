@@ -571,8 +571,8 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
         summary_compare = is_summary_compare(input_parma)
-        check_compare_param(input_parma, output_path, stack_mode, summary_compare)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+        check_compare_param(input_parma, output_path, stack_mode, summary_compare)
     except CompareException as error:
         print_error_log('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)

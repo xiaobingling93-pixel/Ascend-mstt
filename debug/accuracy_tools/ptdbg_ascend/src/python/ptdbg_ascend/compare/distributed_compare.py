@@ -63,6 +63,9 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get('suffix'):
         print_error_log("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    stack_mode = kwargs.get('stack_mode', False)
+    auto_analyze = kwargs.get('auto_analyze', True)
+    fuzzy_match = kwargs.get('fuzzy_match', False)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
@@ -85,8 +88,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         }
         try:
             summary_compare = is_summary_compare(dump_result_param)
-            check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, **kwargs)
-            check_configuration_param(**kwargs)
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+            check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
         except CompareException as error:
             print_error_log('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
