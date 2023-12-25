@@ -22,7 +22,9 @@ class BaseAPIInfo:
             out = []
             for item in element:
                 out.append(self.analyze_element(item))
-        elif isinstance(element, dict):
+            return out
+
+        if isinstance(element, dict):
             out = {}
             for key, value in element.items():
                 if key in self.torch_object_key.keys():
@@ -30,18 +32,18 @@ class BaseAPIInfo:
                     out[key] = fun(value)
                 else:
                     out[key] = self.analyze_element(value)
+            return out
 
-        elif isinstance(element, torch.Tensor):
-            out = self.analyze_tensor(element)
+        if isinstance(element, torch.Tensor):
+            return self.analyze_tensor(element)
 
-        elif self.is_builtin_class(element):
-            out = self.analyze_builtin(element)
-        else:
-            msg = f"Type {type(element)} is unsupported at analyze_element"
-            print_error_log(msg)
+        if self.is_builtin_class(element):
+            return self.analyze_builtin(element)
 
-            raise NotImplementedError(msg)
-        return out
+        msg = f"Type {type(element)} is unsupported at analyze_element"
+        print_error_log(msg)
+
+        raise NotImplementedError(msg)
 
     def analyze_tensor(self, arg):
         single_arg = {}

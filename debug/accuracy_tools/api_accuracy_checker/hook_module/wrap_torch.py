@@ -70,10 +70,10 @@ class TorchOPTemplate(HOOKModule):
                 if n >= 26 and n < 52:
                     return chr(ord('a') + n - 26)
                 raise ValueError('einsum(): subscript in subscript list is not within the valid range [0, 52]')
-            equation = ','.join(''.join(parse_subscript(s) for s in l) for l in args[1::2])
+            equation = ','.join(''.join(parse_subscript(script) for script in arg) for arg in args[1::2])
 
             if len(args) % 2 == 1:
-                equation += '->' + ''.join(parse_subscript(s) for s in args[-1])
+                equation += '->' + ''.join(parse_subscript(script) for script in args[-1])
                 operands = args[:-1:2]
             else:
                 operands = args[::2]

@@ -19,9 +19,9 @@ class TestBaseAPI(unittest.TestCase):
     def test_analyze_tensor(self):
         tensor = torch.tensor([1, 2, 3], dtype=torch.float32, requires_grad=True)
         result = self.api.analyze_tensor(tensor)
-        self.assertEqual(result['type'], 'torch.Tensor')
-        self.assertEqual(result['requires_grad'], True)
-        self.assertTrue(os.path.exists(result['datapath']))
+        self.assertEqual(result.get('type'), 'torch.Tensor')
+        self.assertTrue(result.get('requires_grad'))
+        self.assertTrue(os.path.exists(result.get('datapath')))
 
     def test_analyze_builtin(self):
         arg = slice(1, 10, 2)
