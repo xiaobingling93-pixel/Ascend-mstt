@@ -43,10 +43,6 @@ class TestDump(unittest.TestCase):
         self.assertEqual(data_info.dtype, 'torch.float32')
         self.assertEqual(data_info.shape, (3,))
 
-    def test_json_dump_condition(self):
-        result = json_dump_condition(self.prefix)
-        self.assertEqual(result, False)
-
     def test_get_pkl_file_path(self):
         result = get_pkl_file_path()
         self.assertEqual(result, "")
