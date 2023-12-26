@@ -25,6 +25,8 @@ class Config:
             'jit_compile': bool,
             'precision': int
         }
+        if key not in validators:
+            raise ValueError(f"{key} must be one of {validators.keys()}")
         if not isinstance(value, validators.get(key)):
             raise ValueError(f"{key} must be {validators[key].__name__} type")
         if key == 'target_iter':
