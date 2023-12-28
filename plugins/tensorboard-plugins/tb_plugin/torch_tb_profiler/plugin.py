@@ -577,8 +577,11 @@ class TorchProfilerPlugin(base_plugin.TBPlugin):
             # Currently, assume run data is immutable, so just load once
             loader = RunLoader(name, run_dir['name'], self._cache, run_dir['device_target'])
             run = loader.load()
-            logger.info('Run %s loaded', name)
-            self._queue.put(run)
+            if run.profiles:
+                self._queue.put(run)
+                logger.info('Run %s loaded', name)
+            else:
+                logger.warning(f'Run {name} skipped')
         except Exception as ex:
             logger.warning('Failed to load run %s. Exception=%s', ex, name, exc_info=True)
 
