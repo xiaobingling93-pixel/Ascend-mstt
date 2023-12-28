@@ -141,6 +141,8 @@ class RunProfileData(object):
     @staticmethod
     def parse_gpu(worker, span, path, cache_dir):
         trace_path, trace_json = RunProfileData._preprocess_file(path, cache_dir, 'GPU')
+        if not trace_json:
+            return None
 
         profile = RunProfileData.from_json(worker, span, trace_json)
         profile.trace_file_path = trace_path
@@ -243,9 +245,13 @@ class RunProfileData(object):
                     str_data = data.decode('utf-8')
                     # only replace the N/A without surrounding double quote
                     fout.write(re.sub(r'(?<!")N/A(?!")', "\"N/A\"", str_data))
-                    trace_json = json.loads(fout.getvalue())
-                    logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
-                    json_reencode = True
+                    try:
+                        trace_json = json.loads(fout.getvalue())
+                        logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
+                        json_reencode = True
+                    except JSONDecodeError:
+                        logger.error(f'File "{trace_path}" is not in a legal JSON format and will be skipped.')
+                        return trace_path, {}
 
         # work-around to remove the 'Record Window End' events to avoid the huge end timestamp
         if device_target == 'Ascend':

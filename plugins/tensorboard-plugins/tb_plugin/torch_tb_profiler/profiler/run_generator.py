@@ -146,19 +146,22 @@ class RunGenerator(object):
         title = [x.lower() for x in data[0]]
         title_name = RunGenerator._check_overlap_data(title)
         if not title_name:
-            logger.error("Incomplete content of CSV file.")
+            logger.error(f"Incomplete content of CSV file {path}.")
             return overlap_by_steps
 
-        for step in data[1:]:
-            key = step[0]
-            if key == '':
-                key = 'all'
-            overlap = [float(step[int(title_name[0])]), float(step[int(title_name[1])]),
-                       float(step[int(title_name[2])]), float(step[int(title_name[3])])]
-            if key in overlap_by_steps:
-                overlap_by_steps[key] = list(np.add(overlap, overlap_by_steps[key]))
-            else:
-                overlap_by_steps[key] = list(overlap)
+        for idx, step in enumerate(data[1:]):
+            try:
+                key = step[0]
+                if key == '':
+                    key = 'all'
+                overlap = [float(step[int(title_name[0])]), float(step[int(title_name[1])]),
+                           float(step[int(title_name[2])]), float(step[int(title_name[3])])]
+                if key in overlap_by_steps:
+                    overlap_by_steps[key] = list(np.add(overlap, overlap_by_steps[key]))
+                else:
+                    overlap_by_steps[key] = list(overlap)
+            except (ValueError, IndexError):
+                logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
         return overlap_by_steps
 
     @staticmethod
@@ -182,6 +185,8 @@ class RunGenerator(object):
         if not io.exists(path):
             raise FileNotFoundError(path)
         data = io.read(path)
+        wait_by_step: Dict[str, Dict[str, float]] = OrderedDict()
+        table_ops: Dict[str, List[float]] = OrderedDict()
         try:
             communication_json = json.loads(data, strict=False)
         except JSONDecodeError as e:
@@ -192,11 +197,13 @@ class RunGenerator(object):
                     str_data = data.decode('utf-8')
                     # only replace the N/A without surrounding double quote
                     fout.write(re.sub(r'(?<!")N/A(?!")', "\"N/A\"", str_data))
-                    communication_json = json.loads(fout.getvalue())
-                    logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
+                    try:
+                        communication_json = json.loads(fout.getvalue())
+                        logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
+                    except JSONDecodeError:
+                        logger.error(f'File "{path}" is not in a legal JSON format and will be skipped.')
+                        return wait_by_step, table_ops
 
-        wait_by_step: Dict[str, Dict[str, float]] = OrderedDict()
-        table_ops: Dict[str, List[float]] = OrderedDict()
         if len(communication_json) <= 0:
             return wait_by_step, table_ops
         for step in communication_json:
@@ -206,8 +213,13 @@ class RunGenerator(object):
             data = communication_json.get(step)
             collection_ops = data.get("collective")
             p2p_ops = data.get("p2p")
-            coll_total_trans, coll_total_synchronize = RunGenerator._get_wait_table_by_ops(collection_ops, table_ops)
-            p2p_total_trans, p2p_total_synchronize = RunGenerator._get_wait_table_by_ops(p2p_ops, table_ops)
+            try:
+                coll_total_trans, coll_total_synchronize = RunGenerator._get_wait_table_by_ops(collection_ops,
+                                                                                               table_ops)
+                p2p_total_trans, p2p_total_synchronize = RunGenerator._get_wait_table_by_ops(p2p_ops, table_ops)
+            except ValueError:
+                logger.error(f'Time and size info must be number, please check file "{path}"')
+                return wait_by_step, table_ops
 
             wait_by_step[step_id] = {
                 "trans": coll_total_trans + p2p_total_trans,
@@ -242,16 +254,15 @@ class RunGenerator(object):
         datas = RunGenerator._get_csv_data(path)
         if len(datas) <= 1:
             return operator_by_name, operator_by_name_and_input_shapes
-        for ls in datas[1:]:
+        for idx, ls in enumerate(datas[1:]):
             try:
                 temp: list = [ls[0], RunGenerator._trans_shape(str(ls[1])), ls[2], float(ls[3]), float(ls[4]),
                               float(ls[5]), float(ls[6]), float(ls[7]), float(ls[8])]
+                operator_by_name[ls[0]].append(temp)
+                key = "{}###{}".format(str(ls[0]), RunGenerator._trans_shape(str(ls[1])))
+                operator_by_name_and_input_shapes[key].append(temp)
             except (ValueError, IndexError):
-                logger.error('Data in file "operator_details.csv" has wrong format.')
-                return operator_by_name, operator_by_name_and_input_shapes
-            operator_by_name[ls[0]].append(temp)
-            key = "{}###{}".format(str(ls[0]), RunGenerator._trans_shape(str(ls[1])))
-            operator_by_name_and_input_shapes[key].append(temp)
+                logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
         return operator_by_name, operator_by_name_and_input_shapes
 
     def _get_operator_table_by_name(self, group_by_input_shape=False):
@@ -431,15 +442,18 @@ class RunGenerator(object):
                 else:
                     # Convert time metric
                     table['columns'].append({'name': column.replace('(us)', '(ms)'), 'type': 'number'})
-        for ls in datas[1:]:
+        for idx, ls in enumerate(datas[1:]):
             device_type = ls[self.device_type_form_idx]
             # convert time metric 'us' to 'ms'
             # some operators may not have the following columns
-            nums = [ls[0] if ls[0] else '<unknown>', abs(float(ls[1])),
-                    round((float(ls[2]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[2] else None,
-                    round((float(ls[3]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[3] else None,
-                    round(float(ls[4]) / 1000, 3) if ls[4] else None]
-            display_datas[device_type].append(nums)
+            try:
+                nums = [ls[0] if ls[0] else '<unknown>', abs(float(ls[1])),
+                        round((float(ls[2]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[2] else None,
+                        round((float(ls[3]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[3] else None,
+                        round(float(ls[4]) / 1000, 3) if ls[4] else None]
+                display_datas[device_type].append(nums)
+            except ValueError:
+                logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
         table['rows'] = display_datas
         for name in display_datas:
             devices_type.append(name)
@@ -566,7 +580,8 @@ class RunGenerator(object):
     def _handle_memory_data(self):
         process_data = defaultdict()
         pta_or_ge_data = defaultdict()
-        datas = RunGenerator._get_csv_data(self.profile_data.memory_curve_path)
+        path = self.profile_data.memory_curve_path
+        datas = RunGenerator._get_csv_data(path)
         required_column_idxs = {
             'Component': -1,
             'Device Type': -1,
@@ -579,21 +594,26 @@ class RunGenerator(object):
         if column_exist_count < len(required_column_idxs):
             logger.error('Required column is missing in file "memory_record.csv"')
         else:
-            for ls in datas[1:]:
-                time_column = round((float(ls[time_idx]) - self.profile_data.profiler_start_ts) / 1000, 3)
-                device_type = ls[device_type_idx]
-                if ls[tag_type_idx] == 'PTA+GE':
-                    process_data.setdefault(device_type, {}).setdefault('Allocated', []).append(
-                        [time_column, round(float(ls[allocated_idx]), 3)])
-                    process_data.setdefault(device_type, {}).setdefault('Reserved', []).append(
-                        [time_column, round(float(ls[reserved_idx]), 3)])
-                elif ls[tag_type_idx] == 'APP':
-                    line_chart_data = [time_column, None, round(float(ls[reserved_idx]), 3)]
-                    pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(line_chart_data)
-                elif ls[tag_type_idx] in ('PTA', 'GE'):
-                    line_chart_data = [time_column, round(float(ls[allocated_idx]), 3),
-                                       round(float(ls[reserved_idx]), 3)]
-                    pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(line_chart_data)
+            for idx, ls in enumerate(datas[1:]):
+                try:
+                    time_column = round((float(ls[time_idx]) - self.profile_data.profiler_start_ts) / 1000, 3)
+                    device_type = ls[device_type_idx]
+                    if ls[tag_type_idx] == 'PTA+GE':
+                        process_data.setdefault(device_type, {}).setdefault('Allocated', []).append(
+                            [time_column, round(float(ls[allocated_idx]), 3)])
+                        process_data.setdefault(device_type, {}).setdefault('Reserved', []).append(
+                            [time_column, round(float(ls[reserved_idx]), 3)])
+                    elif ls[tag_type_idx] == 'APP':
+                        line_chart_data = [time_column, None, round(float(ls[reserved_idx]), 3)]
+                        pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(
+                            line_chart_data)
+                    elif ls[tag_type_idx] in ('PTA', 'GE'):
+                        line_chart_data = [time_column, round(float(ls[allocated_idx]), 3),
+                                           round(float(ls[reserved_idx]), 3)]
+                        pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(
+                            line_chart_data)
+                except ValueError:
+                    logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
 
         return process_data, pta_or_ge_data
 
@@ -608,7 +628,8 @@ class RunGenerator(object):
                         {'name': 'Time(ms)', 'type': 'number'}]
         }
         peak_memory_rows = defaultdict(list)
-        component_datas = RunGenerator._get_csv_data(self.profile_data.memory_component_path)
+        path = self.profile_data.memory_component_path
+        component_datas = RunGenerator._get_csv_data(path)
         if component_datas:
             required_column_idxs = {
                 'Component': -1,
@@ -619,16 +640,19 @@ class RunGenerator(object):
             (tag_type_idx, time_idx, reserved_idx, device_type_idx), column_exist_count = \
                 RunGenerator._check_csv_columns(component_datas[0], required_column_idxs)
             if column_exist_count < len(required_column_idxs):
-                logger.error('Required column is missing in file "npm_module_mem.csv"')
+                logger.error(f'Required column is missing in file "{path}"')
             else:
-                for ls in component_datas[1:]:
+                for idx, ls in enumerate(component_datas[1:]):
                     memory_curve_id_dict = {
                         'device_type_idx': device_type_idx,
                         'reserved_idx': reserved_idx,
                         'tag_type_idx': tag_type_idx,
                         'time_idx': time_idx
                     }
-                    self._handle_peak_memory_rows(memory_curve_id_dict, ls, peak_memory_rows)
+                    try:
+                        self._handle_peak_memory_rows(memory_curve_id_dict, ls, peak_memory_rows)
+                    except (ValueError, TypeError):
+                        logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
         peak_memory_events['rows'] = peak_memory_rows
         return peak_memory_events
 
@@ -1023,7 +1047,7 @@ class RunGenerator(object):
                 else:
                     table['columns'].append({'type': 'string', 'name': column})
 
-            self._handle_kernel_table_rows(name_idx, duration_idx, core_type_idx, datas[1:])
+            self._handle_kernel_table_rows(name_idx, duration_idx, core_type_idx, datas[1:], path)
         table['rows'] = datas[1:]
         return result
 
@@ -1057,8 +1081,11 @@ class RunGenerator(object):
 
         mem = device_prop.get('totalGlobalMem')
         if mem is not None:
-            gpu_info['Memory'] = '{} GB'.format(round(float(mem) / 1024 / 1024 / 1024, 2))
-            gpu_info['Memory Raw'] = mem
+            try:
+                gpu_info['Memory'] = '{} GB'.format(round(float(mem) / 1024 / 1024 / 1024, 2))
+                gpu_info['Memory Raw'] = mem
+            except ValueError:
+                logger.warning('The value of "totalGlobalMem" must be number in the JSON, please check it.')
 
         major = device_prop.get('computeMajor')
         minor = device_prop.get('computeMinor')
@@ -1067,10 +1094,15 @@ class RunGenerator(object):
 
         return gpu_info
 
-    def _handle_kernel_table_rows(self, name_idx, duration_idx, core_type_idx, rows):
-        for row in rows:
+    def _handle_kernel_table_rows(self, name_idx, duration_idx, core_type_idx, rows, path):
+        for idx, row in enumerate(rows):
             call_name = row[name_idx]
-            call_duration = float(row[duration_idx])
+            try:
+                call_duration = float(row[duration_idx])
+            except ValueError:
+                logger.error(
+                    f'File "{path}" has wrong data format in row {idx + 2} in Duration column and will skip the row.')
+                continue
             call_type = row[core_type_idx]
             if self.accelerator_data.get(call_type) is not None:
                 self.accelerator_data[call_type] += call_duration

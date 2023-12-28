@@ -123,6 +123,10 @@ class RunLoader(object):
                 data = RunProfileData.parse_npu(worker, span, local_file, self.caches.cache_dir)
             else:
                 data = RunProfileData.parse_gpu(worker, span, local_file, self.caches.cache_dir)
+                if not data:
+                    self.queue.put((None, None))
+                    logger.debug('finishing process data')
+                    return
             if data.trace_file_path != local_file:
                 self.caches.add_file(local_file, data.trace_file_path)
 
