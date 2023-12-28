@@ -101,9 +101,13 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        DumpUtil.dump_init_enable = True
-        DumpUtil.iter_num += 1
-        HOOKModule.module_count = {}
+        if not cls.config.enable_dataloader:
+            DumpUtil.dump_init_enable = True
+            DumpUtil.iter_num += 1
+            HOOKModule.module_count = {}
+        else:
+            print_error_log("step() only support enable_dataloader False.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
     @staticmethod
     def incr_iter_num_maybe_exit():
