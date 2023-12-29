@@ -40,7 +40,7 @@ class TestAPIInfo(unittest.TestCase):
     def test_is_builtin_class(self):
         element = 10
         result = self.api.is_builtin_class(element)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_analyze_device_in_kwargs(self):
         element = torch.device('cuda:0')
