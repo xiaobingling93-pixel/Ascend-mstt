@@ -17,6 +17,7 @@ class PrecisionDebugger:
     hook_func = None
     config = None
     model = None
+    enable_dataloader = False
 
     def __init__(self, dump_path=None, hook_name=None, rank=None, step=None, enable_dataloader=False, model=None):
         if hook_name is None:
@@ -32,6 +33,7 @@ class PrecisionDebugger:
         set_dump_path(self.config.dump_path)
         PrecisionDebugger.hook_func = overflow_check if self.config.hook_name == "overflow_check" else acc_cmp_dump
         PrecisionDebugger.model = model
+        PrecisionDebugger.enable_dataloader = enable_dataloader
         if not isinstance(enable_dataloader, bool):
             print_error_log("Params enable_dataloader only support True or False.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -101,7 +103,7 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        if not cls.config.enable_dataloader:
+        if not cls.enable_dataloader:
             DumpUtil.dump_init_enable = True
             DumpUtil.iter_num += 1
             HOOKModule.module_count = {}
