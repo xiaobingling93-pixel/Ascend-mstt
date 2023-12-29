@@ -18,6 +18,7 @@
 #
 # Modifications: Add visualization of PyTorch Ascend profiling.
 # --------------------------------------------------------------------------
+import enum
 import re
 from collections import namedtuple
 
@@ -34,6 +35,7 @@ WORKER_SPAN_PATTERN = re.compile(r"""([^\\]*)_(\d+(\.\d+)?)_ascend_pt$""")
 NODE_PROCESS_PATTERN = re.compile(r"""^(.*)_(\d+)""")
 MONITOR_RUN_REFRESH_INTERNAL_IN_SECONDS = 10
 MAX_GPU_PER_NODE = 64
+MAX_FILE_SIZE = 500 * 1024 * 1024
 
 View = namedtuple('View', 'id, name, display_name')
 OVERALL_VIEW = View(1, 'overall', 'Overview')
@@ -98,3 +100,16 @@ TOOLTIP_OP_TC_SELF_AICORE = \
     'Time of Device Self Duration With AICore / Device Self Duration.'
 TOOLTIP_OP_TC_TOTAL_AICORE = \
     'Time of Device Total Duration With AICore / Device Total Duration.'
+
+
+class InputFilesType(enum.Enum):
+    KERNEL_DETAILS_CSV = 'kernel_details.csv'
+    MEMORY_RECORD_CSV = 'memory_record.csv'
+    MEMORY_OPERATOR_CSV = 'operator_memory.csv'
+    MEMORY_COMPONENT_CSV = 'npu_module_mem.csv'
+    OPERATOR_DETAILS_CSV = 'operator_details.csv'
+    DISTRIBUTED_STEP_CSV = 'step_trace_time.csv'
+    DISTRIBUTED_COMMUNICATION_JSON = 'communication.json'
+
+
+INPUT_FILE_LIST = [e.value for e in InputFilesType]

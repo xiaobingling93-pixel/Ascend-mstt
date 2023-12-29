@@ -51,9 +51,7 @@ class RunLoader(object):
                         io.join(self.run_dir, path, 'ASCEND_PROFILER_OUTPUT')):
                     data_path = io.join(self.run_dir, path, 'ASCEND_PROFILER_OUTPUT')
                     for file in io.listdir(data_path):
-                        if utils.is_npu_trace_path(file) or str(file) in (
-                                'kernel_details.csv', 'memory_record.csv', 'operator_memory.csv',
-                                'operator_details.csv'):
+                        if utils.is_npu_trace_path(file) or str(file) in consts.INPUT_FILE_LIST:
                             match = consts.WORKER_SPAN_PATTERN.match(path)
                             worker = match.group(1)
                             span = match.group(2)
@@ -67,6 +65,11 @@ class RunLoader(object):
                     continue
                 match = consts.WORKER_PATTERN.match(path)
                 if not match:
+                    continue
+                absolute_path = io.join(self.run_dir, path)
+                if io.stat(absolute_path).length > consts.MAX_FILE_SIZE:
+                    logger.warning(
+                        f'File "{absolute_path}" exceeds the maximum limit size of 500MB and will be skipped.')
                     continue
 
                 worker = match.group(1)
