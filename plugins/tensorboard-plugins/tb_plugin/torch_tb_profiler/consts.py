@@ -26,10 +26,9 @@ PLUGIN_NAME = 'pytorch_profiler'
 
 WORKER_PATTERN = re.compile(r"""^(.*?) # worker name
         (\.\d+)? # optional timestamp like 1619499959628 used as span name
-        \.pt\.trace\.json # the ending suffix
-        (?:\.gz)?$""", re.X)  # optional .gz extension
+        \.pt\.trace\.json$""", re.X)
 
-TRACE_PATTERN = re.compile(r"""^trace_view\.json(\.gz)?$""")
+TRACE_PATTERN = re.compile(r"""^trace_view\.json$""")
 WORKER_SPAN_PATTERN = re.compile(r"""([^\\]*)_(\d+(\.\d+)?)_ascend_pt$""")
 
 NODE_PROCESS_PATTERN = re.compile(r"""^(.*)_(\d+)""")
