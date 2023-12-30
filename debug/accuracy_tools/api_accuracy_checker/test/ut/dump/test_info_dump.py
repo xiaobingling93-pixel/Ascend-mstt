@@ -16,7 +16,7 @@ class TestInfoDump(unittest.TestCase):
             mock_write_json.assert_called_with(f'./step2/backward_info_{rank}.json', api_info.grad_info_struct)
 
     def test_write_api_info_json_invalid_type(self):
-        api_info = APIInfo("test_api", True, True, "save_path")
+        api_info = APIInfo("test_api", "save_path", "forward_real_data")
         with self.assertRaises(ValueError):
             write_api_info_json(api_info)
     
