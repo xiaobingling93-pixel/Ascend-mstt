@@ -32,10 +32,36 @@ def transfer_types(data, dtype):
         return float(data)
 
 
+def is_builtin_class(element):
+    return True if element is None or isinstance(element, (bool, int, float, str, slice)) else False
+
+
+def analyze_device_in_kwargs(element):
+    single_arg = {}
+    single_arg.update({'type': 'torch.device'})
+    if not isinstance(element, str):
+        if hasattr(element, "index"):
+            device_value = element.type + ":" + str(element.index)
+        else:
+            device_value = element.type
+        single_arg.update({'value': device_value})
+    else:
+        single_arg.update({'value': element})
+    return single_arg
+
+
+def analyze_dtype_in_kwargs(element):
+    single_arg = {}
+    single_arg.update({'type': 'torch.dtype'})
+    single_arg.update({'value': str(element)})
+    return single_arg
+
+
 class APIInfo:
     def __init__(self, api_name, save_path, is_save_data):
         self.api_name = api_name
-        self.torch_object_key = {'device': self.analyze_device_in_kwargs, 'dtype': self.analyze_dtype_in_kwargs}
+        self.torch_object_key = {'device': analyze_device_in_kwargs, 'dtype': analyze_dtype_in_kwargs}
+        self.rank = os.getpid()
         self.is_save_data = is_save_data
         self.save_path = save_path
         self.args_num = 0
@@ -49,31 +75,6 @@ class APIInfo:
             return os.path.join(save_path, step_dir, dir_name, rank_dir)
         else:
             return os.path.join(save_path, dir_name)
-
-    @staticmethod
-    def is_builtin_class(element):
-        return True if element is None or isinstance(element, (bool, int, float, str, slice)) else False
-
-    @staticmethod
-    def analyze_device_in_kwargs(element):
-        single_arg = {}
-        single_arg.update({'type': 'torch.device'})
-        if not isinstance(element, str):
-            if hasattr(element, "index"):
-                device_value = element.type + ":" + str(element.index)
-            else:
-                device_value = element.type
-            single_arg.update({'value': device_value})
-        else:
-            single_arg.update({'value': element})
-        return single_arg
-
-    @staticmethod
-    def analyze_dtype_in_kwargs(element):
-        single_arg = {}
-        single_arg.update({'type': 'torch.dtype'})
-        single_arg.update({'value': str(element)})
-        return single_arg
 
     def analyze_element(self, element):
         if isinstance(element, (list, tuple)):
@@ -93,16 +94,16 @@ class APIInfo:
             return out_dict
 
         if isinstance(element, torch.Tensor):
-            return self.analyze_tensor(element)
+            return self._analyze_tensor(element)
 
-        if self.is_builtin_class(element):
-            return self.analyze_builtin(element)
+        if is_builtin_class(element):
+            return self._analyze_builtin(element)
 
         msg = f"Type {type(element)} is unsupported at analyze_element"
         print_error_log(msg)
         raise NotImplementedError(msg)
 
-    def analyze_tensor(self, arg):
+    def _analyze_tensor(self, arg):
         single_arg = {}
         if not self.is_save_data:
             single_arg.update({'type': 'torch.Tensor'})
@@ -123,7 +124,7 @@ class APIInfo:
             single_arg.update({'requires_grad': arg.requires_grad})
         return single_arg
 
-    def analyze_builtin(self, arg):
+    def _analyze_builtin(self, arg):
         single_arg = {}
         if self.is_save_data:
             self.args_num += 1
