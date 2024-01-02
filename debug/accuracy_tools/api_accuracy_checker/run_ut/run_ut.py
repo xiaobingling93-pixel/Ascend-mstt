@@ -24,7 +24,8 @@ from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplat
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst
-from api_accuracy_checker.common.base_api import BaseAPIInfo
+from api_accuracy_checker.dump.api_info import APIInfo
+
 
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link
@@ -172,19 +173,14 @@ def run_ut(config):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        save_path = msCheckerConfig.error_data_path
         api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
-            BaseAPIInfo(api_full_name + '.forward.input', save_path, UT_ERROR_DATA_DIR).analyze_element(element)
-        BaseAPIInfo(api_full_name + '.forward.output.bench', save_path, UT_ERROR_DATA_DIR)\
-            .analyze_element(data_info.bench_out)
-        BaseAPIInfo(api_full_name + '.forward.output.device', save_path, UT_ERROR_DATA_DIR)\
-            .analyze_element(data_info.device_out)
-        BaseAPIInfo(api_full_name + '.backward.input', save_path, UT_ERROR_DATA_DIR).analyze_element(data_info.grad_in)
-        BaseAPIInfo(api_full_name + '.backward.output.bench', save_path, UT_ERROR_DATA_DIR)\
-            .analyze_element(data_info.bench_grad_out)
-        BaseAPIInfo(api_full_name + '.backward.output.device', save_path, UT_ERROR_DATA_DIR)\
-            .analyze_element(data_info.device_grad_out)
+            UtAPIInfo(api_full_name + '.forward.input', element)
+        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
+        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_out)
+        UtAPIInfo(api_full_name + '.backward.input', data_info.grad_in)
+        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
+        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
 
 
 def run_torch_api(api_full_name, api_setting_dict, backward_content, api_info_dict):
@@ -402,6 +398,14 @@ class UtDataInfo:
         self.bench_out = bench_out
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
+
+
+class UtAPIInfo(APIInfo):
+    def __init__(self, api_name, element):
+        super().__init__(api_name,
+                         save_path=self.get_full_save_path(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR, False),
+                         is_save_data=True)
+        self.analyze_element(element)
 
 
 if __name__ == '__main__':
