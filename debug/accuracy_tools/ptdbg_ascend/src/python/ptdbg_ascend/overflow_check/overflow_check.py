@@ -16,6 +16,7 @@ from .utils import OverFlowUtil, dump_overflow, check_overflow_npu, clear_overfl
 from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist
 from .info_dump import write_api_info_json, ForwardAPIInfo, BackwardAPIInfo
 from ..dump import dump
+from ..common.file_check_util import FileCheckConst
 
 backward_init_status = False
 api_overflow = []
@@ -91,12 +92,11 @@ def overflow_check(name, **kwargs):
             return
         dump_file = DumpUtil.get_dump_path()
         global rank
-        if DumpUtil.target_iter:
-            dump_dir, dump_filename = os.path.split(dump_file)
-            dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
-            if not os.path.exists(dump_dir):
-                Path(dump_dir).mkdir(mode=0o750, exist_ok=True)
-            dump_file = os.path.join(dump_dir, dump_filename)
+        dump_dir, dump_filename = os.path.split(dump_file)
+        dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
+        if not os.path.exists(dump_dir):
+            Path(dump_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+        dump_file = os.path.join(dump_dir, dump_filename)
         rank_this = get_tensor_rank(in_feat, out_feat)
         DumpUtil.dump_root = os.path.dirname(DumpUtil.dump_path)
         if rank_this is not None and rank != rank_this:
