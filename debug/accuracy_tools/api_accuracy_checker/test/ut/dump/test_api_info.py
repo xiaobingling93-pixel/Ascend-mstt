@@ -2,7 +2,8 @@ import os
 import shutil
 import unittest
 import torch
-from api_accuracy_checker.dump.api_info import APIInfo, ForwardAPIInfo, BackwardAPIInfo
+from api_accuracy_checker.dump.api_info import APIInfo, ForwardAPIInfo, BackwardAPIInfo, transfer_types, \
+    get_tensor_extremum, get_type_name
 from api_accuracy_checker.common.config import msCheckerConfig
 
 
@@ -10,8 +11,7 @@ class TestAPIInfo(unittest.TestCase):
     def setUp(self):
         if os.path.exists('./step-1'):
             shutil.rmtree('./step-1')
-        self.api = APIInfo("test_api", "./", "forward")
-        self.api.save_real_data = True
+        self.api = APIInfo("test_api", APIInfo.get_full_save_path("./", "forward", True), True)
 
     def test_analyze_element(self):
         element = [1, 2, 3]
@@ -34,7 +34,7 @@ class TestAPIInfo(unittest.TestCase):
     def test_transfer_types(self):
         data = 10
         dtype = 'int'
-        result = self.api.transfer_types(data, dtype)
+        result = transfer_types(data, dtype)
         self.assertEqual(result, 10)
 
     def test_is_builtin_class(self):
@@ -54,20 +54,21 @@ class TestAPIInfo(unittest.TestCase):
 
     def test_get_tensor_extremum(self):
         data = torch.tensor([1, 2, 3])
-        result_max = self.api.get_tensor_extremum(data, 'max')
-        result_min = self.api.get_tensor_extremum(data, 'min')
+        result_max = get_tensor_extremum(data, 'max')
+        result_min = get_tensor_extremum(data, 'min')
         self.assertEqual(result_max, 3)
         self.assertEqual(result_min, 1)
 
     def test_get_type_name(self):
         name = "<class 'int'>"
-        result = self.api.get_type_name(name)
+        result = get_type_name(name)
         self.assertEqual(result, 'int')
 
     def test_ForwardAPIInfo(self):
         forward_api_info = ForwardAPIInfo("test_forward_api", [1, 2, 3], {"a": 1, "b": 2})
         self.assertEqual(forward_api_info.api_name, "test_forward_api")
-        self.assertEqual(forward_api_info.save_path, msCheckerConfig.dump_path)
+        self.assertEqual(forward_api_info.save_path,
+                         APIInfo.get_full_save_path(msCheckerConfig.dump_path, 'forward_real_data', True))
         self.assertEqual(forward_api_info.api_info_struct, {"test_forward_api": {
             "args": [{'type': 'int', 'value': 1}, {'type': 'int', 'value': 2}, {'type': 'int', 'value': 3}, ],
             "kwargs": {'a': {'type': 'int', 'value': 1}, 'b': {'type': 'int', 'value': 2}}}})
@@ -75,7 +76,8 @@ class TestAPIInfo(unittest.TestCase):
     def test_BackwardAPIInfo(self):
         backward_api_info = BackwardAPIInfo("test_backward_api", [1, 2, 3])
         self.assertEqual(backward_api_info.api_name, "test_backward_api")
-        self.assertEqual(backward_api_info.save_path, msCheckerConfig.dump_path)
+        self.assertEqual(backward_api_info.save_path,
+                         APIInfo.get_full_save_path(msCheckerConfig.dump_path, 'backward_real_data', True))
         self.assertEqual(backward_api_info.grad_info_struct, {
             "test_backward_api": [{'type': 'int', 'value': 1}, {'type': 'int', 'value': 2},
                                   {'type': 'int', 'value': 3}]})
