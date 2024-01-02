@@ -3,17 +3,57 @@ import os
 import inspect
 import torch
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.common.base_api import BaseAPIInfo
+from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
-class APIInfo(BaseAPIInfo):
-    def __init__(self, api_name, save_path, save_dir_name):
-        super().__init__(api_name, save_path, save_dir_name)
+def get_tensor_extremum(data, operator):
+    if data.dtype is torch.bool:
+        if operator == 'max':
+            return True in data
+        elif operator == 'min':
+            return False not in data
+    if operator == 'max':
+        return torch._C._VariableFunctionsClass.max(data.float()).item()
+    else:
+        return torch._C._VariableFunctionsClass.min(data.float()).item()
+
+
+def get_type_name(name):
+    left = name.index("'")
+    right = name.rindex("'")
+    return name[left + 1: right]
+
+
+def transfer_types(data, dtype):
+    if 'int' in dtype or 'bool' in dtype:
+        return int(data)
+    else:
+        return float(data)
+
+
+class APIInfo:
+    def __init__(self, api_name, save_path, is_save_data):
+        self.api_name = api_name
         self.torch_object_key = {'device': self.analyze_device_in_kwargs, 'dtype': self.analyze_dtype_in_kwargs}
         self.rank = os.getpid()
-        self.save_real_data = msCheckerConfig.real_data
+        self.is_save_data = is_save_data
         self.save_path = save_path
-        self.save_dir_name = save_dir_name
+        self.args_num = 0
+
+    @staticmethod
+    def get_full_save_path(save_path, dir_name, contain_step):
+        if contain_step:
+            from api_accuracy_checker.dump.dump import DumpUtil
+            step_dir = "step" + str(DumpUtil.call_num - 1 if msCheckerConfig.enable_dataloader else DumpUtil.call_num)
+            rank_dir = f"rank{os.getpid()}"
+            return os.path.join(save_path, step_dir, dir_name, rank_dir)
+        else:
+            return os.path.join(save_path, dir_name)
+
+    @staticmethod
+    def is_builtin_class(element):
+        return True if element is None or isinstance(element, (bool, int, float, str, slice)) else False
 
     @staticmethod
     def analyze_device_in_kwargs(element):
@@ -36,46 +76,49 @@ class APIInfo(BaseAPIInfo):
         single_arg.update({'value': str(element)})
         return single_arg
 
-    @staticmethod
-    def get_tensor_extremum(data, operator):
-        if data.dtype is torch.bool:
-            if operator == 'max':
-                return True in data
-            elif operator == 'min':
-                return False not in data
-        if operator == 'max':
-            return torch._C._VariableFunctionsClass.max(data.float()).item()
-        else:
-            return torch._C._VariableFunctionsClass.min(data.float()).item()
+    def analyze_element(self, element):
+        if isinstance(element, (list, tuple)):
+            out = []
+            for item in element:
+                out.append(self.analyze_element(item))
+            return out
 
-    @staticmethod
-    def get_type_name(name):
-        left = name.index("'")
-        right = name.rindex("'")
-        return name[left + 1: right]
+        if isinstance(element, dict):
+            out = {}
+            for key, value in element.items():
+                if key in self.torch_object_key.keys():
+                    fun = self.torch_object_key[key]
+                    out[key] = fun(value)
+                else:
+                    out[key] = self.analyze_element(value)
+            return out
 
-    @staticmethod
-    def transfer_types(data, dtype):
-        if 'int' in dtype or 'bool' in dtype:
-            return int(data)
-        else:
-            return float(data)
+        if isinstance(element, torch.Tensor):
+            return self.analyze_tensor(element)
+
+        if self.is_builtin_class(element):
+            return self.analyze_builtin(element)
+
+        msg = f"Type {type(element)} is unsupported at analyze_element"
+        print_error_log(msg)
+        raise NotImplementedError(msg)
 
     def analyze_tensor(self, arg):
         single_arg = {}
-        if not self.save_real_data:
+        if not self.is_save_data:
             single_arg.update({'type': 'torch.Tensor'})
             single_arg.update({'dtype': str(arg.dtype)})
             single_arg.update({'shape': arg.shape})
-            single_arg.update({'Max': self.transfer_types(self.get_tensor_extremum(arg, 'max'), str(arg.dtype))})
-            single_arg.update({'Min': self.transfer_types(self.get_tensor_extremum(arg, 'min'), str(arg.dtype))})
+            single_arg.update({'Max': transfer_types(get_tensor_extremum(arg, 'max'), str(arg.dtype))})
+            single_arg.update({'Min': transfer_types(get_tensor_extremum(arg, 'min'), str(arg.dtype))})
             single_arg.update({'requires_grad': arg.requires_grad})
         else:
-            from api_accuracy_checker.dump.dump import DumpUtil
-            step_dir = "step" + str(DumpUtil.call_num - 1 if msCheckerConfig.enable_dataloader else DumpUtil.call_num)
-            rank_dir = f"rank{self.rank}"
-            self.full_save_path = os.path.join(self.save_path, step_dir, self.save_dir_name, rank_dir)
-            pt_path = super().analyze_tensor(arg)
+            api_args = self.api_name + '.' + str(self.args_num)
+            check_path_before_create(self.save_path)
+            create_directory(self.save_path)
+            file_path = os.path.join(self.save_path, f'{api_args}.pt')
+            pt_path = write_pt(file_path, arg.contiguous().cpu().detach())
+            self.args_num += 1
             single_arg.update({'type': 'torch.Tensor'})
             single_arg.update({'datapath': pt_path})
             single_arg.update({'requires_grad': arg.requires_grad})
@@ -83,20 +126,21 @@ class APIInfo(BaseAPIInfo):
 
     def analyze_builtin(self, arg):
         single_arg = {}
-        if self.save_real_data:
+        if self.is_save_data:
             self.args_num += 1
         if isinstance(arg, slice):
             single_arg.update({'type': "slice"})
             single_arg.update({'value': [arg.start, arg.stop, arg.step]})
         else:
-            single_arg.update({'type': self.get_type_name(str(type(arg)))})
+            single_arg.update({'type': get_type_name(str(type(arg)))})
             single_arg.update({'value': arg})
         return single_arg
 
 
 class ForwardAPIInfo(APIInfo):
     def __init__(self, name, args, kwargs):
-        super().__init__(name, save_path=msCheckerConfig.dump_path, save_dir_name='forward_real_data')
+        super().__init__(name, self.get_full_save_path(msCheckerConfig.dump_path, 'forward_real_data', True),
+                         msCheckerConfig.real_data)
         self.api_info_struct = {}
         self.stack_info_struct = {}
         self.analyze_api_input(args, kwargs)
@@ -121,7 +165,8 @@ class ForwardAPIInfo(APIInfo):
 
 class BackwardAPIInfo(APIInfo):
     def __init__(self, name, grads):
-        super().__init__(name, save_path=msCheckerConfig.dump_path, save_dir_name='backward_real_data')
+        super().__init__(name, self.get_full_save_path(msCheckerConfig.dump_path, 'backward_real_data', True),
+                         msCheckerConfig.real_data)
         self.grad_info_struct = {}
         self.analyze_api_input(grads)
 
