@@ -36,7 +36,6 @@ class APIInfo:
     def __init__(self, api_name, save_path, is_save_data):
         self.api_name = api_name
         self.torch_object_key = {'device': self.analyze_device_in_kwargs, 'dtype': self.analyze_dtype_in_kwargs}
-        self.rank = os.getpid()
         self.is_save_data = is_save_data
         self.save_path = save_path
         self.args_num = 0
