@@ -3,7 +3,7 @@ import shutil
 import unittest
 import torch
 from api_accuracy_checker.dump.api_info import APIInfo, ForwardAPIInfo, BackwardAPIInfo, transfer_types, \
-    get_tensor_extremum, get_type_name
+    get_tensor_extremum, get_type_name, is_builtin_class, analyze_device_in_kwargs, analyze_dtype_in_kwargs
 from api_accuracy_checker.common.config import msCheckerConfig
 
 
@@ -21,14 +21,14 @@ class TestAPIInfo(unittest.TestCase):
 
     def test_analyze_tensor(self):
         tensor = torch.tensor([1, 2, 3], dtype=torch.float32, requires_grad=True)
-        result = self.api.analyze_tensor(tensor)
+        result = self.api._analyze_tensor(tensor)
         self.assertEqual(result.get('type'), 'torch.Tensor')
         self.assertTrue(result.get('requires_grad'))
         self.assertTrue(os.path.exists(result.get('datapath')))
 
     def test_analyze_builtin(self):
         arg = slice(1, 10, 2)
-        result = self.api.analyze_builtin(arg)
+        result = self.api._analyze_builtin(arg)
         self.assertEqual(result, {'type': 'slice', 'value': [1, 10, 2]})
 
     def test_transfer_types(self):
@@ -39,17 +39,17 @@ class TestAPIInfo(unittest.TestCase):
 
     def test_is_builtin_class(self):
         element = 10
-        result = self.api.is_builtin_class(element)
+        result = is_builtin_class(element)
         self.assertTrue(result)
 
     def test_analyze_device_in_kwargs(self):
         element = torch.device('cuda:0')
-        result = self.api.analyze_device_in_kwargs(element)
+        result = analyze_device_in_kwargs(element)
         self.assertEqual(result, {'type': 'torch.device', 'value': 'cuda:0'})
 
     def test_analyze_dtype_in_kwargs(self):
         element = torch.float32
-        result = self.api.analyze_dtype_in_kwargs(element)
+        result = analyze_dtype_in_kwargs(element)
         self.assertEqual(result, {'type': 'torch.dtype', 'value': 'torch.float32'})
 
     def test_get_tensor_extremum(self):
