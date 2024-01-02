@@ -84,14 +84,14 @@ class APIInfo:
             return out
 
         if isinstance(element, dict):
-            out = {}
+            out_dict = {}
             for key, value in element.items():
                 if key in self.torch_object_key.keys():
                     fun = self.torch_object_key[key]
-                    out[key] = fun(value)
+                    out_dict[key] = fun(value)
                 else:
-                    out[key] = self.analyze_element(value)
-            return out
+                    out_dict[key] = self.analyze_element(value)
+            return out_dict
 
         if isinstance(element, torch.Tensor):
             return self.analyze_tensor(element)
