@@ -403,7 +403,7 @@ class UtDataInfo:
 class UtAPIInfo(APIInfo):
     def __init__(self, api_name, element):
         super().__init__(api_name,
-                         save_path=self.get_full_save_path(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR, False),
+                         save_path=self.get_full_save_path(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR),
                          is_save_data=True)
         self.analyze_element(element)
 
