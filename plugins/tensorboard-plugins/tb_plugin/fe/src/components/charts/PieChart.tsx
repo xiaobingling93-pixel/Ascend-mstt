@@ -85,8 +85,8 @@ export const PieChart: React.FC<IProps> = (props) => {
         formatter: (data) => {
           const typedData = data as echarts.DefaultLabelFormatterCallbackParams
           const index = typedData.name.indexOf('_')
-          return `${index > -1 ? typedData.name.slice(index + 1) :
-            typedData.name}<br /><b>${tooltip_mode === 'both' ?
+          const safeName = typedData.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${tooltip_mode === 'both' ?
               typedData.value : ''}(${typedData.percent}%)<b />`
         },
         confine: true,
@@ -117,8 +117,9 @@ export const PieChart: React.FC<IProps> = (props) => {
             const currentItem = rowsWithUniqueName.find(item => item.name === data.name)
             const index = data.name.indexOf('_')
             const percent = ((currentItem?.value || 0) * 100 / totalValue).toFixed(2)
-            return `${index > -1 ? data.name.slice(index + 1) : data.name}<br /><b>${tooltip_mode === 'both' ?
-              (currentItem?.value || 0) : ''}(${percent}%)<b />`
+            const safeName = data.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            return `${index > -1 ? safeName.slice(index + 1) :
+              safeName}<br /><b>${tooltip_mode === 'both' ? (currentItem?.value || 0) : ''}(${percent}%)<b />`
           }
         }
       },
