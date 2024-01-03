@@ -3,7 +3,7 @@ import os
 import inspect
 import torch
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory
+from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
@@ -33,7 +33,7 @@ def transfer_types(data, dtype):
 
 
 def is_builtin_class(element):
-    return True if element is None or isinstance(element, (bool, int, float, str, slice)) else False
+    return element is None or isinstance(element, (bool, int, float, str, slice))
 
 
 def analyze_device_in_kwargs(element):
@@ -58,7 +58,7 @@ def analyze_dtype_in_kwargs(element):
 
 
 class APIInfo:
-    def __init__(self, api_name, save_path, is_save_data):
+    def __init__(self, api_name, save_path, is_save_data=False):
         self.api_name = api_name
         self.torch_object_key = {'device': analyze_device_in_kwargs, 'dtype': analyze_dtype_in_kwargs}
         self.rank = os.getpid()
@@ -67,7 +67,7 @@ class APIInfo:
         self.args_num = 0
 
     @staticmethod
-    def get_full_save_path(save_path, dir_name, contain_step):
+    def get_full_save_path(save_path, dir_name, contain_step=False):
         if contain_step:
             from api_accuracy_checker.dump.dump import DumpUtil
             step_dir = "step" + str(DumpUtil.call_num - 1 if msCheckerConfig.enable_dataloader else DumpUtil.call_num)
@@ -101,7 +101,7 @@ class APIInfo:
 
         msg = f"Type {type(element)} is unsupported at analyze_element"
         print_error_log(msg)
-        raise NotImplementedError(msg)
+        raise DumpException(DumpException.INVALID_DATA_ERROR)
 
     def _analyze_tensor(self, arg):
         single_arg = {}
@@ -139,8 +139,9 @@ class APIInfo:
 
 class ForwardAPIInfo(APIInfo):
     def __init__(self, name, args, kwargs):
-        super().__init__(name, self.get_full_save_path(msCheckerConfig.dump_path, 'forward_real_data', True),
-                         msCheckerConfig.real_data)
+        super().__init__(name,
+                         self.get_full_save_path(msCheckerConfig.dump_path, 'forward_real_data', contain_step=True),
+                         is_save_data=msCheckerConfig.real_data)
         self.api_info_struct = {}
         self.stack_info_struct = {}
         self.analyze_api_input(args, kwargs)
@@ -165,8 +166,9 @@ class ForwardAPIInfo(APIInfo):
 
 class BackwardAPIInfo(APIInfo):
     def __init__(self, name, grads):
-        super().__init__(name, self.get_full_save_path(msCheckerConfig.dump_path, 'backward_real_data', True),
-                         msCheckerConfig.real_data)
+        super().__init__(name,
+                         self.get_full_save_path(msCheckerConfig.dump_path, 'backward_real_data', contain_step=True),
+                         is_save_data=msCheckerConfig.real_data)
         self.grad_info_struct = {}
         self.analyze_api_input(grads)
 
