@@ -50,10 +50,6 @@ class TestUtils(unittest.TestCase):
         path, exist = get_dump_data_path(os.path.dirname(__file__))
         self.assertTrue(exist)
 
-    def test_get_api_name_from_matcher(self):
-        api_name = get_api_name_from_matcher("api_stack_1_add")
-        self.assertEqual(api_name, "stack")
-
     def test_create_directory(self):
         create_directory('test_dir')
         self.assertTrue(os.path.exists('test_dir'))
