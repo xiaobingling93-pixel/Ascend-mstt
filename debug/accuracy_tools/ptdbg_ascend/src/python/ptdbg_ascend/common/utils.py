@@ -87,7 +87,6 @@ class Const:
     AUTO = "auto"
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
 
-    API_PATTERN = r"^[A-Za-z0-9]+[_]+([A-Za-z0-9]+[_]*[A-Za-z0-9]+)[_]+[0-9]+[_]+[A-Za-z0-9]+"
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 
@@ -499,12 +498,6 @@ def get_dump_data_path(dump_dir):
             break
         dump_data_path = dir_path
     return dump_data_path, file_is_exist
-
-
-def get_api_name_from_matcher(name):
-    api_matcher = re.compile(Const.API_PATTERN)
-    match = api_matcher.match(name)
-    return match.group(1) if match else ""
 
 
 def modify_dump_path(dump_path, mode):
