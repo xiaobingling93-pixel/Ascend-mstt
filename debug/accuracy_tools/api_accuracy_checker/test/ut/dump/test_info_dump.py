@@ -1,10 +1,9 @@
 import unittest
 import os
-import fcntl
 from unittest.mock import patch
-from api_accuracy_checker.dump.api_info import APIInfo, ForwardAPIInfo, BackwardAPIInfo
-from api_accuracy_checker.dump.info_dump import write_api_info_json, write_json, initialize_output_json
-from api_accuracy_checker.common.utils import check_file_or_directory_path, initialize_save_path
+from api_accuracy_checker.dump.api_info import APIInfo, BackwardAPIInfo
+from api_accuracy_checker.dump.info_dump import write_api_info_json
+
 
 class TestInfoDump(unittest.TestCase):
 
@@ -16,10 +15,11 @@ class TestInfoDump(unittest.TestCase):
             mock_write_json.assert_called_with(f'./step2/backward_info_{rank}.json', api_info.grad_info_struct)
 
     def test_write_api_info_json_invalid_type(self):
-        api_info = APIInfo("test_api", True, True, "save_path")
+        api_info = APIInfo("test_api", APIInfo.get_full_save_path("save_path", "forward_real_data", contain_step=True),
+                           is_save_data=True)
         with self.assertRaises(ValueError):
             write_api_info_json(api_info)
-    
+
     def tearDown(self):
         rank = os.getpid()
         files = [f'./step2/backward_info_{rank}.json']
