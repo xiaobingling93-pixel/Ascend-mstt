@@ -1074,6 +1074,7 @@ torch_npu:
   - npu_rotated_iou
   - npu_conv2d
   - npu_softmax_cross_entropy_with_logits
+  - npu_all_gather_base_mm
 
 aten:
   - signbit
