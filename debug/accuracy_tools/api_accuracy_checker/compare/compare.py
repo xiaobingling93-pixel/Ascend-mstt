@@ -18,12 +18,7 @@ class Comparator:
     def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, test_result_cnt=None, stack_info_json_path=None):
         self.save_path = result_csv_path
         self.detail_save_path = details_csv_path
-        if not is_continue_run_ut:
-            if os.path.exists(self.save_path):
-                raise ValueError(f"file {self.save_path} already exists, please remove it first or use a new dump path")
-            if os.path.exists(self.detail_save_path):
-                raise ValueError(
-                    f"file {self.detail_save_path} already exists, please remove it first or use a new dump path")
+        if not is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
             self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
