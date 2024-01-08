@@ -12,45 +12,34 @@ from ..hook_module.hook_module import HOOKModule
 from .debugger_config import DebuggerConfig
 
 
-class SingletonMeta(type):
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-
-class PrecisionDebugger(metaclass=SingletonMeta):
+class PrecisionDebugger:
+    first_start = True
     hook_func = None
     config = None
     model = None
     enable_dataloader = False
 
     def __init__(self, dump_path=None, hook_name=None, rank=None, step=None, enable_dataloader=False, model=None):
-        if not hasattr(self, 'first_start'):
-            self.first_start = True
-            if hook_name is None:
-                err_msg = "You must provide hook_name argument to PrecisionDebugger\
-                                when config is not provided."
-                raise Exception(err_msg)
-            step = step or []
-            self.config = DebuggerConfig(dump_path, hook_name, rank, step)
-            self.configure_hook = self.get_configure_hook(self.config.hook_name)
-            self.configure_hook()
-            DumpUtil.target_iter = self.config.step
-            DumpUtil.target_rank = self.config.rank
-            set_dump_path(self.config.dump_path)
-            PrecisionDebugger.hook_func = overflow_check if self.config.hook_name == "overflow_check" else acc_cmp_dump
-            PrecisionDebugger.model = model
-            PrecisionDebugger.enable_dataloader = enable_dataloader
-            if not isinstance(enable_dataloader, bool):
-                print_error_log("Params enable_dataloader only support True or False.")
-                raise CompareException(CompareException.INVALID_PARAM_ERROR)
-            if enable_dataloader:
-                DumpUtil.iter_num -= 1
-                torch.utils.data.dataloader._BaseDataLoaderIter.__next__ = iter_tracer(torch.utils.data.dataloader._BaseDataLoaderIter.__next__)
+        if hook_name is None:
+            err_msg = "You must provide hook_name argument to PrecisionDebugger\
+                            when config is not provided."
+            raise Exception(err_msg)
+        step = step or []
+        self.config = DebuggerConfig(dump_path, hook_name, rank, step)
+        self.configure_hook = self.get_configure_hook(self.config.hook_name)
+        self.configure_hook()
+        DumpUtil.target_iter = self.config.step
+        DumpUtil.target_rank = self.config.rank
+        set_dump_path(self.config.dump_path)
+        PrecisionDebugger.hook_func = overflow_check if self.config.hook_name == "overflow_check" else acc_cmp_dump
+        PrecisionDebugger.model = model
+        PrecisionDebugger.enable_dataloader = enable_dataloader
+        if not isinstance(enable_dataloader, bool):
+            print_error_log("Params enable_dataloader only support True or False.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
+        if enable_dataloader:
+            DumpUtil.iter_num -= 1
+            torch.utils.data.dataloader._BaseDataLoaderIter.__next__ = iter_tracer(torch.utils.data.dataloader._BaseDataLoaderIter.__next__)
 
     def get_configure_hook(self, hook_name):
         hook_dict = {"dump": self.configure_full_dump, "overflow_check": self.configure_overflow_dump}
