@@ -94,7 +94,8 @@ class ParseTool:
         msaccucmp_path = self.util.path_strip(args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
         self.util.check_path_valid(msaccucmp_path)
         self.util.check_executable_file(msaccucmp_path)
-        self.util.check_str_param(args.format)
+        if args.format:
+            self.util.check_str_param(args.format)
         self.compare.convert_dump_to_npy(args.path, args.format, args.output_path, msaccucmp_path)
 
     @catch_exception
