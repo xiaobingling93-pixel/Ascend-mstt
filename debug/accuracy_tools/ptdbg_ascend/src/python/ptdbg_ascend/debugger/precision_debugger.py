@@ -26,7 +26,7 @@ class PrecisionDebugger:
         return cls._instance
 
     def __init__(self, dump_path=None, hook_name=None, rank=None, step=None, enable_dataloader=False, model=None):
-        if not hasattr(self, 'initialized'):  # 只初始化一次
+        if not hasattr(self, 'initialized'):
             self.initialized = True
             if hook_name is None:
                 err_msg = "You must provide hook_name argument to PrecisionDebugger\
@@ -84,20 +84,24 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls):
-        if DumpUtil.iter_num in DumpUtil.target_iter or len(DumpUtil.target_iter) == 0:
-            if cls.first_start:
-                register_hook_core(cls.hook_func, cls.model)
-                cls.first_start = False
-            DumpUtil.dump_switch = "ON"
-            OverFlowUtil.overflow_check_switch = "ON"
-            dump_path_str = generate_dump_path_str()
-            set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
-        elif len(DumpUtil.target_iter) != 0:
-            if DumpUtil.iter_num > max(DumpUtil.target_iter):
-                PrecisionDebugger.stop()
-                raise Exception("ptdbg: exit after iteration {}".format(DumpUtil.target_iter))
+        instance = cls._instance
+        if instance is not None:
+            if DumpUtil.iter_num in DumpUtil.target_iter or len(DumpUtil.target_iter) == 0:
+                if instance.first_start:
+                    register_hook_core(instance.hook_func, instance.model)
+                    instance.first_start = False
+                DumpUtil.dump_switch = "ON"
+                OverFlowUtil.overflow_check_switch = "ON"
+                dump_path_str = generate_dump_path_str()
+                set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
+            elif len(DumpUtil.target_iter) != 0:
+                if DumpUtil.iter_num > max(DumpUtil.target_iter):
+                    cls.stop()
+                    raise Exception("ptdbg: exit after iteration {}".format(DumpUtil.target_iter))
+            else:
+                cls.stop()
         else:
-            cls.stop()
+            raise Exception("No instance of PrecisionDebugger found.")
 
     @classmethod
     def stop(cls):
@@ -111,7 +115,8 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        if not cls.enable_dataloader:
+        instance = cls._instance
+        if instance is not None and not instance.enable_dataloader:
             DumpUtil.dump_init_enable = True
             DumpUtil.iter_num += 1
             HOOKModule.module_count = {}
