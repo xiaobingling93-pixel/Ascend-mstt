@@ -116,13 +116,14 @@ class PrecisionDebugger:
     @classmethod
     def step(cls):
         instance = cls._instance
-        if instance is not None and not instance.enable_dataloader:
-            DumpUtil.dump_init_enable = True
+        if instance is None:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if not instance.enable_dataloader:
             DumpUtil.iter_num += 1
+            DumpUtil.dump_init_enable = True
             HOOKModule.module_count = {}
         else:
-            print_error_log("step() only support enable_dataloader False.")
-            raise CompareException(CompareException.INVALID_PARAM_ERROR)
+            print_error_log("DataLoader is enabled, step() skipped.")
 
     @staticmethod
     def incr_iter_num_maybe_exit():
