@@ -85,23 +85,21 @@ class PrecisionDebugger:
     @classmethod
     def start(cls):
         instance = cls._instance
-        if instance is not None:
-            if DumpUtil.iter_num in DumpUtil.target_iter or len(DumpUtil.target_iter) == 0:
-                if instance.first_start:
-                    register_hook_core(instance.hook_func, instance.model)
-                    instance.first_start = False
-                DumpUtil.dump_switch = "ON"
-                OverFlowUtil.overflow_check_switch = "ON"
-                dump_path_str = generate_dump_path_str()
-                set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
-            elif len(DumpUtil.target_iter) != 0:
-                if DumpUtil.iter_num > max(DumpUtil.target_iter):
-                    cls.stop()
-                    raise Exception("ptdbg: exit after iteration {}".format(DumpUtil.target_iter))
-            else:
-                cls.stop()
-        else:
+        if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
+        if DumpUtil.iter_num in DumpUtil.target_iter or not DumpUtil.target_iter:
+            if instance.first_start:
+                register_hook_core(instance.hook_func, instance.model)
+                instance.first_start = False
+            DumpUtil.dump_switch = "ON"
+            OverFlowUtil.overflow_check_switch = "ON"
+            dump_path_str = generate_dump_path_str()
+            set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
+        elif DumpUtil.target_iter and DumpUtil.iter_num > max(DumpUtil.target_iter):
+            cls.stop()
+            raise Exception("ptdbg: exit after iteration {}".format(max(DumpUtil.target_iter)))
+        else:
+            cls.stop()
 
     @classmethod
     def stop(cls):
@@ -116,7 +114,7 @@ class PrecisionDebugger:
     @classmethod
     def step(cls):
         instance = cls._instance
-        if instance is None:
+        if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
         if not instance.enable_dataloader:
             DumpUtil.iter_num += 1
