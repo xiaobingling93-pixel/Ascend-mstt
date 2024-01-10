@@ -87,29 +87,38 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
-        if DumpUtil.iter_num in DumpUtil.target_iter or not DumpUtil.target_iter:
-            if instance.first_start:
-                register_hook_core(instance.hook_func, instance.model)
-                instance.first_start = False
-            DumpUtil.dump_switch = "ON"
-            OverFlowUtil.overflow_check_switch = "ON"
-            dump_path_str = generate_dump_path_str()
-            set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
-        elif DumpUtil.target_iter and DumpUtil.iter_num > max(DumpUtil.target_iter):
-            cls.stop()
-            raise Exception("ptdbg: exit after iteration {}".format(max(DumpUtil.target_iter)))
+        if instance.enable_dataloader:
+            print_warn_log("DataLoader is enabled, start() skipped.")
         else:
-            cls.stop()
+            if DumpUtil.iter_num in DumpUtil.target_iter or not DumpUtil.target_iter:
+                if instance.first_start:
+                    register_hook_core(instance.hook_func, instance.model)
+                    instance.first_start = False
+                DumpUtil.dump_switch = "ON"
+                OverFlowUtil.overflow_check_switch = "ON"
+                dump_path_str = generate_dump_path_str()
+                set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
+            elif DumpUtil.target_iter and DumpUtil.iter_num > max(DumpUtil.target_iter):
+                cls.stop()
+                raise Exception("ptdbg: exit after iteration {}".format(max(DumpUtil.target_iter)))
+            else:
+                cls.stop()
 
     @classmethod
     def stop(cls):
-        DumpUtil.dump_switch = "OFF"
-        OverFlowUtil.overflow_check_switch = "OFF"
-        dump_path_str = generate_dump_path_str()
-        set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
-        write_to_disk()
-        if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
-            generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
+        instance = cls._instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if instance.enable_dataloader:
+            print_warn_log("DataLoader is enabled, stop() skipped.")
+        else:
+            DumpUtil.dump_switch = "OFF"
+            OverFlowUtil.overflow_check_switch = "OFF"
+            dump_path_str = generate_dump_path_str()
+            set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
+            write_to_disk()
+            if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
+                generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
 
     @classmethod
     def step(cls):
