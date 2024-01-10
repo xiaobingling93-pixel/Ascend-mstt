@@ -43,7 +43,7 @@ def get_version(rel_path):
 
 INSTALL_REQUIRED = [
     "pandas >= 1.0.0",
-    "tensorboard >= 1.15, !=2.1.0"
+    "tensorboard >= 2.11.0"
 ]
 
 TESTS_REQUIRED = INSTALL_REQUIRED + [
