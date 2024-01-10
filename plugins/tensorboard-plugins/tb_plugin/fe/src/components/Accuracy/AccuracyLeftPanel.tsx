@@ -185,12 +185,7 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
   }
 
   const addFile = (fileName: string, fileContent: string) => {
-    // 限制文件后缀为.log或.txt
     const fileLength = fileName.length
-    if (fileLength <= 4 || !['.txt', '.log'].includes(fileName.slice(fileLength - 4).toLowerCase())) {
-      message.warn('Please select a file with the extension of "txt" or "log"')
-      return
-    }
     const tempList: FileInfo[] = JSON.parse(JSON.stringify(fileList))
     // 上传同名文件加上(1~最大文件数减1)标识
     if (!!tempList.find(item => item.fileName === fileName)) {
@@ -312,7 +307,6 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
             id='accComparisonSelectFile'
             style={{ display: 'none' }}
             type='file'
-            accept='.txt,.log'
             onChange={uploadFile}
           />
         </div>
