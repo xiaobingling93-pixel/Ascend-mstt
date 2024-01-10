@@ -1,7 +1,7 @@
 import os
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
-    CompareException
+    CompareException, print_warn_log
 from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
@@ -121,7 +121,7 @@ class PrecisionDebugger:
             DumpUtil.dump_init_enable = True
             HOOKModule.module_count = {}
         else:
-            print_error_log("DataLoader is enabled, step() skipped.")
+            print_warn_log("DataLoader is enabled, step() skipped.")
 
     @staticmethod
     def incr_iter_num_maybe_exit():
