@@ -598,6 +598,7 @@ configure_hook可配置多种dump模式，示例如下：
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
   debugger.configure_hook(mode="acl", acl_config="./dump.json")
+  ```
 ```
   
 该场景会在原有数据基础上，额外在dump.json文件配置的dump_path目录下生成一份ACL算子数据，该数据可通过“**ptdbg_ascend.parse**”工具进行解析。
@@ -614,7 +615,7 @@ dump或溢出检测启动函数。
 
 **原型**
 
-```python
+​```python
 debugger.start()
 ```
 
@@ -1242,8 +1243,8 @@ torch.npu.set_device("npu:0")
 class ModuleOP(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.linear_1 = nn.Linear(in_features=2, out_features=2)
-        self.linear_2 = nn.Linear(in_features=2, out_features=1)
+        self.linear_1 = nn.Linear(in_features=8, out_features=4)
+        self.linear_2 = nn.Linear(in_features=4, out_features=2)
     def forward(self, x):
         x1 = self.linear_1(x)
         x2 = self.linear_2(x1)
@@ -1254,18 +1255,16 @@ if __name__ == "__main__":
     module = ModuleOP()
 
     # 注册工具
-    set_dump_path("./dump_data/npu")
-    set_dump_switch("ON")
-    register_hook(module, acc_cmp_dump)
+    pdbg = PrecisionDebuggerr("./dump_data/npu", hook_name="dump")
+	pdbg.start()
 
-    x = torch.randn(2, 2)
-
-    module_dump(module, "MyModule")    # 开启模块级精度数据dump
+    x = torch.randn(10, 8)
+    module_dump(module, "MyModuleOP")    # 开启模块级精度数据dump
     out = module(x)
     module_dump_end()    # 结束模块级精度数据dump
     loss = out.sum()
     loss.backward()
-    set_dump_switch("OFF")
+    pdbg.stop()
 ```
 
 ## dump数据存盘说明
@@ -1275,66 +1274,58 @@ dump结果目录结构示例如下：
 ```bash
 ├── dump_path
 │   └── ptdbg_dump_{version}
-│       ├── rank0
-│       │   ├── dump
-|       |   |    ├── Tensor_permute_1_forward.npy
-|       |   |    ├── MyModule_0_forward_input.npy    # 开启模块级精度数据dump时存在模块级的dump数据文件
-|       |   |    ...
-|       |   |    └── Fcuntion_linear_5_backward_output.npy
-│       │   └── dump.pkl
-│       ├── rank1
-|       |   ├── dump
-|       |   |   └── ...
-|       |   └── dump.pkl
-│       ├── ...
-│       |
-|       └── rank7
+│       ├── step0
+│       |   ├── rank0
+│       |   │   ├── dump
+|       |   |   |    ├── Tensor_permute_1_forward.npy
+|       |   |   |    ├── MyModule_0_forward_input.npy    # 开启模块级精度数据dump时存在模块级的dump数据文件
+|       |   |   |    ...
+|       |   |   |    └── Fcuntion_linear_5_backward_output.npy
+│       |   │   └── dump.pkl
+│       |   ├── rank1
+|       |   |   ├── dump
+|       |   |   |   └── ...
+|       |   |   └── dump.pkl
+│       |   ├── ...
+│       |   |
+|       |   └── rank7
+│       ├── step1
+│       |   ├── ...
+│       ├── step2
 ```
 
 dump过程中，npy文件在对应算子或者模块被执行后就会落盘，而pkl文件则需要在正常执行PrecisionDebugger.stop()或set_dump_switch("OFF")后才会被落盘保存，异常的程序终止会保存终止前被执行算子的相关npy文件，但是不会生成pkl文件。
 
-其中ptdbg_dump_{version}为未设置set_dump_path的dump_tag参数时的默认命名；rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
-
-当使用debugger方式dump数据时，配置了PrecisionDebugger模块的step=[]参数，dump结果目录则以step为父目录，例如配置step=[0,1,2]时，dump结果目录为：
-
-```
-├── dump_path
-│   └── step0
-│   |  └── ptdbg_dump_{version}
-│   |  |   ├── rank0
-│   |  |   ├── ...
-│   |  |   ├── rank7
-|   ├── step1
-|   |  |   ├── ...
-│   └── step2
-```
+其中`ptdbg_dump_{version}`为未设置set_dump_path的dump_tag参数时的默认命名，若使用debugger方式dump，则仅支持默认文件名`ptdbg_dump_{version}`；rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
 
 **精度比对dump场景**
 
 精度比对dump场景的结果如下：
 
-* dump.pkl文件：包含dump数据的API名称、dtype、 shape以及各数据的max、min、mean统计信息。
+* dump.pkl文件：包含dump数据的API名称（命名格式为：`{api_type}_{API调用次数}_{前向反向}_{参数序号}`）、dtype、 shape以及各数据的max、min、mean统计信息。
 
 * dump目录：目录下为npy格式的dump数据。
 
    npy文件保存的前缀和PyTorch对应关系如下
 
-   | 前缀       | Torch模块           |
-   | ---------- | ------------------- |
-   | Tensor     | torch.Tensor        |
-   | Torch      | torch               |
-   | Functional | torch.nn.functional |
-   | NPU        | NPU亲和算子         |
-   | VF         | torch._VF           |
+   | 前缀        | Torch模块           |
+   | ----------- | ------------------- |
+   | Tensor      | torch.Tensor        |
+   | Torch       | torch               |
+   | Functional  | torch.nn.functional |
+   | NPU         | NPU亲和算子         |
+   | VF          | torch._VF           |
+   | Aten        | torch.ops.aten      |
+   | Distributed | torch.distributed   |
 
-当set_dump_switch或configure_hook配置mode参数（例如：mode="api_stack" ）时，dump结果的文件名会添加api_stack前缀，dump结果如下：
+当configure_hook或set_dump_switch配置mode参数（例如：mode="api_stack" ）时，dump结果的文件名会添加api_stack前缀，dump结果如下：
 
 * api_stack_dump.pkl
 * api_stack_dump目录
 
 **溢出检测dump场景**
 
-register_hook设置了overflow_check时，检测API溢出，dump结果的文件名格式为：`{api_type}___{api_name}___{API调用次数}_{前向反向}_{当前溢出次数}`，dump结果示例如下：
+hook_name或register_hook设置了overflow_check时，检测API溢出，dump结果的文件名格式为：`{api_type}___{api_name}___{API调用次数}_{前向反向}_{当前溢出次数}`，dump结果示例如下：
 
 * `Tensor___add___1_forward_1.pkl`
 * `Tensor___add___1_forward_1`目录
