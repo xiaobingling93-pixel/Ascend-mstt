@@ -2,6 +2,7 @@
 import os
 import inspect
 import torch
+import numpy as np
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
@@ -92,6 +93,10 @@ class APIInfo:
                 else:
                     out_dict[key] = self.analyze_element(value)
             return out_dict
+        
+        converted_numpy = self._convert_numpy_to_builtin(element)
+        if converted_numpy is not element:
+            return self._analyze_builtin(converted_numpy)
 
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element)
@@ -135,6 +140,21 @@ class APIInfo:
             single_arg.update({'type': get_type_name(str(type(arg)))})
             single_arg.update({'value': arg})
         return single_arg
+    
+    def _convert_numpy_to_builtin(self, arg):
+        type_mapping = {
+            np.integer: int,
+            np.floating: float,
+            np.bool_: bool,
+            np.complexfloating: complex,
+            np.str_: str,
+            np.bytes_: bytes,
+            np.unicode_: str
+        }
+        for numpy_type, native_type in type_mapping.items():
+            if isinstance(arg, numpy_type):
+                return native_type(arg)
+        return arg
 
 
 class ForwardAPIInfo(APIInfo):
