@@ -1,7 +1,7 @@
 import os
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
-    CompareException
+    CompareException, print_warn_log
 from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
@@ -13,31 +13,41 @@ from .debugger_config import DebuggerConfig
 
 
 class PrecisionDebugger:
-    first_start = True
-    hook_func = None
-    config = None
-    model = None
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
+            cls._instance.first_start = True
+            cls._instance.hook_func = None
+            cls._instance.config = None
+            cls._instance.model = None
+            cls._instance.enable_dataloader = False
+        return cls._instance
 
     def __init__(self, dump_path=None, hook_name=None, rank=None, step=None, enable_dataloader=False, model=None):
-        if hook_name is None:
-            err_msg = "You must provide hook_name argument to PrecisionDebugger\
-                            when config is not provided."
-            raise Exception(err_msg)
-        step = step or []
-        self.config = DebuggerConfig(dump_path, hook_name, rank, step)
-        self.configure_hook = self.get_configure_hook(self.config.hook_name)
-        self.configure_hook()
-        DumpUtil.target_iter = self.config.step
-        DumpUtil.target_rank = self.config.rank
-        set_dump_path(self.config.dump_path)
-        PrecisionDebugger.hook_func = overflow_check if self.config.hook_name == "overflow_check" else acc_cmp_dump
-        PrecisionDebugger.model = model
-        if not isinstance(enable_dataloader, bool):
-            print_error_log("Params enable_dataloader only support True or False.")
-            raise CompareException(CompareException.INVALID_PARAM_ERROR)
-        if enable_dataloader:
-            DumpUtil.iter_num -= 1
-            torch.utils.data.dataloader._BaseDataLoaderIter.__next__ = iter_tracer(torch.utils.data.dataloader._BaseDataLoaderIter.__next__)
+        if not hasattr(self, 'initialized'):
+            self.initialized = True
+            if hook_name is None:
+                err_msg = "You must provide hook_name argument to PrecisionDebugger\
+                                when config is not provided."
+                raise Exception(err_msg)
+            step = step or []
+            self.config = DebuggerConfig(dump_path, hook_name, rank, step)
+            self.configure_hook = self.get_configure_hook(self.config.hook_name)
+            self.configure_hook()
+            DumpUtil.target_iter = self.config.step
+            DumpUtil.target_rank = self.config.rank
+            set_dump_path(self.config.dump_path)
+            self.hook_func = overflow_check if self.config.hook_name == "overflow_check" else acc_cmp_dump
+            self.model = model
+            self.enable_dataloader = enable_dataloader
+            if not isinstance(enable_dataloader, bool):
+                print_error_log("Params enable_dataloader only support True or False.")
+                raise CompareException(CompareException.INVALID_PARAM_ERROR)
+            if enable_dataloader:
+                DumpUtil.iter_num -= 1
+                torch.utils.data.dataloader._BaseDataLoaderIter.__next__ = iter_tracer(torch.utils.data.dataloader._BaseDataLoaderIter.__next__)
 
     def get_configure_hook(self, hook_name):
         hook_dict = {"dump": self.configure_full_dump, "overflow_check": self.configure_overflow_dump}
@@ -74,36 +84,53 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls):
-        if DumpUtil.iter_num in DumpUtil.target_iter or len(DumpUtil.target_iter) == 0:
-            if cls.first_start:
-                register_hook_core(cls.hook_func, cls.model)
-                cls.first_start = False
-            DumpUtil.dump_switch = "ON"
-            OverFlowUtil.overflow_check_switch = "ON"
-            dump_path_str = generate_dump_path_str()
-            set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
-        elif len(DumpUtil.target_iter) != 0:
-            if DumpUtil.iter_num > max(DumpUtil.target_iter):
-                PrecisionDebugger.stop()
-                raise Exception("ptdbg: exit after iteration {}".format(DumpUtil.target_iter))
+        instance = cls._instance
+        if not instance:
+            raise Exception("No instance of PrecisionDebugger found.")
+        if instance.enable_dataloader:
+            print_warn_log("DataLoader is enabled, start() skipped.")
         else:
-            cls.stop()
+            if DumpUtil.iter_num in DumpUtil.target_iter or not DumpUtil.target_iter:
+                if instance.first_start:
+                    register_hook_core(instance.hook_func, instance.model)
+                    instance.first_start = False
+                DumpUtil.dump_switch = "ON"
+                OverFlowUtil.overflow_check_switch = "ON"
+                dump_path_str = generate_dump_path_str()
+                set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
+            elif DumpUtil.target_iter and DumpUtil.iter_num > max(DumpUtil.target_iter):
+                cls.stop()
+                raise Exception("ptdbg: exit after iteration {}".format(max(DumpUtil.target_iter)))
+            else:
+                cls.stop()
 
     @classmethod
     def stop(cls):
-        DumpUtil.dump_switch = "OFF"
-        OverFlowUtil.overflow_check_switch = "OFF"
-        dump_path_str = generate_dump_path_str()
-        set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
-        write_to_disk()
-        if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
-            generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
+        instance = cls._instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if instance.enable_dataloader:
+            print_warn_log("DataLoader is enabled, stop() skipped.")
+        else:
+            DumpUtil.dump_switch = "OFF"
+            OverFlowUtil.overflow_check_switch = "OFF"
+            dump_path_str = generate_dump_path_str()
+            set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
+            write_to_disk()
+            if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
+                generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
 
     @classmethod
     def step(cls):
-        DumpUtil.dump_init_enable = True
-        DumpUtil.iter_num += 1
-        HOOKModule.module_count = {}
+        instance = cls._instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if not instance.enable_dataloader:
+            DumpUtil.iter_num += 1
+            DumpUtil.dump_init_enable = True
+            HOOKModule.module_count = {}
+        else:
+            print_warn_log("DataLoader is enabled, step() skipped.")
 
     @staticmethod
     def incr_iter_num_maybe_exit():
