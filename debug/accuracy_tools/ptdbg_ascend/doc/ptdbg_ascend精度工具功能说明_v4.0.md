@@ -1256,7 +1256,7 @@ if __name__ == "__main__":
 
     # 注册工具
     pdbg = PrecisionDebugger("./dump_data/npu", hook_name="dump")
-	pdbg.start()
+    pdbg.start()
 
     x = torch.randn(10, 8)
     module_dump(module, "MyModuleOP")    # 开启模块级精度数据dump
