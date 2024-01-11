@@ -1255,7 +1255,7 @@ if __name__ == "__main__":
     module = ModuleOP()
 
     # 注册工具
-    pdbg = PrecisionDebuggerr("./dump_data/npu", hook_name="dump")
+    pdbg = PrecisionDebugger("./dump_data/npu", hook_name="dump")
 	pdbg.start()
 
     x = torch.randn(10, 8)
