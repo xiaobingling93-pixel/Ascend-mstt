@@ -526,14 +526,14 @@ configure_hook可配置多种dump模式，示例如下：
   debugger.configure_hook(mode="acl", scope=["Tensor_permute_1_forward"], acl_config="./dump.json")
   ```
 
-- 示例4：dump指定反向API的ACL级别数据
+- 示例5：dump指定反向API的ACL级别数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(mode="acl", scope=["Functional_conv2d_1_backward"], acl_config="./dump.json", backward_input=["./npu_dump/dump_conv2d_v2.0/rank0/dump/Functional_conv2d_1_backward_input.0.npy"])
   ```
 
-- 示例5：dump指定某一类API的API级别输入输出数据
+- 示例6：dump指定某一类API的API级别输入输出数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -542,7 +542,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   mode="api_list"时不配置scope。
 
-- 示例6：dump全部API级别输入输出数据以及相应堆栈信息
+- 示例7：dump全部API级别输入输出数据以及相应堆栈信息
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -551,7 +551,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   mode="api_stack"时不配置scope。
 
-- 示例7： dump全部API级别输入输出数据并包含bool和整型的tensor以及浮点、bool和整型的标量，配置为OFF，会dump bool和整型数据
+- 示例8： dump全部API级别输入输出数据并包含bool和整型的tensor以及浮点、bool和整型的标量，配置为OFF，会dump bool和整型数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -560,21 +560,21 @@ configure_hook可配置多种dump模式，示例如下：
 
   配置filter_switch="OFF"同时也可以配置mode、scope和api_list，除dump ACL级别数据。
 
-- 示例8：仅保存dump的数据文件名包含“backward”的反向.npy文件
+- 示例9：仅保存dump的数据文件名包含“backward”的反向.npy文件
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(input_output_mode=["backward"])
   ```
 
-- 示例9：仅dump pkl文件
+- 示例10：仅dump pkl文件
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(summary_only=True)
   ```
 
-- 示例10：溢出检测dump
+- 示例11：溢出检测dump
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
