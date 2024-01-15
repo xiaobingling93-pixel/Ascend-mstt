@@ -630,3 +630,27 @@ def write_pt(file_path, tensor):
     full_path = os.path.realpath(file_path)
     file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
     return full_path
+
+
+def get_real_data_path(file_path):
+    targets = ['forward_real_data', 'backward_real_data']
+    pattern = re.compile(r'(.*)(step\d+/)(?=({}))'.format('|'.join(targets)))
+    match = pattern.search(file_path)
+    if match:
+        base_path = match.group(1) + match.group(2)
+        target_path = file_path[len(base_path):]
+        return target_path
+    else:
+        raise DumpException(DumpException.INVALID_PATH_ERROR)
+
+
+def check_real_data_mode(data_path, real_data_path):
+    if data_path and not real_data_path:
+        error_log = "The current mode is real data. The root directory of real data must be configured."
+        raise CompareException(CompareException.INVALID_COMPARE_MODE, error_log)
+    elif data_path and real_data_path:
+        data_path = os.path.join(real_data_path, data_path)
+        return os.path.realpath(data_path)
+    elif not data_path and real_data_path:
+        print_warn_log("The current mode is random data. The root directory of real data is not used.")
+        return data_path
