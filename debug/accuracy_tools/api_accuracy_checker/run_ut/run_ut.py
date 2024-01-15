@@ -212,12 +212,17 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         grad_index = grad_input_index.get('grad_index')
 
     if need_backward:
-        grad_out, device_grad_out, grad, device_grad = run_backward(
-            api_full_name, cpu_args, backward_content, grad_index, device_args, device_out, out, real_data_path)
+        backward_args = backward_content[api_full_name]
+        grad = gen_args(backward_args, real_data_path=real_data_path)[0]
+        bench_grad, _ = generate_cpu_params(grad, {}, False)
+        bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
+        device_grad = grad.clone().detach().to(current_device)
+        device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
     if grad_index is not None:
-        return UtDataInfo(grad_out, device_grad_out, device_out[grad_index], out[grad_index], grad, in_fwd_data_list)
-    return UtDataInfo(grad_out, device_grad_out, device_out, out, grad, in_fwd_data_list)
+        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad, 
+                          in_fwd_data_list)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
@@ -229,32 +234,21 @@ def get_api_info(api_info_dict, api_name, real_data_path):
     return args, kwargs, need_grad
 
 
-def run_backward(api_full_name, args, backward_content, grad_index, device_args, device_out, out, real_data_path):
-    backward_args = backward_content[api_full_name]
-    grad = gen_args(backward_args, real_data_path=real_data_path)[0]
-    cpu_grad, _ = generate_cpu_params(grad, {}, False)
+def run_backward(args, grad, grad_index, out):
+    
     if grad_index is not None:
-        out[grad_index].backward(cpu_grad)
+        out[grad_index].backward(grad)
     elif isinstance(out, (list, tuple)):
         raise NotImplementedError("Multiple backward is not supported.")
     else:
-        out.backward(cpu_grad)
+        out.backward(grad)
     args_grad = []
     for arg in args:
         if isinstance(arg, torch.Tensor):
             args_grad.append(arg.grad)
     grad_out = args_grad
-    device_grad = grad.clone().detach().to(current_device)
-    if grad_index is not None:
-        device_out[grad_index].backward(device_grad)
-    else:
-        device_out.backward(device_grad)
-    device_args_grad = []
-    for arg in device_args:
-        if isinstance(arg, torch.Tensor):
-            device_args_grad.append(arg.grad)
-    device_grad_out = device_args_grad
-    return grad_out, device_grad_out, grad, device_grad
+
+    return grad_out
 
 
 def initialize_save_error_data():

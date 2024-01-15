@@ -633,11 +633,11 @@ def write_pt(file_path, tensor):
 
 
 def get_real_data_path(file_path):
-    targets = ['forward_real_data', 'backward_real_data']
-    pattern = re.compile(r'(.*)(step\d+/)(?=({}))'.format('|'.join(targets)))
+    targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
+    pattern = re.compile(r'(.*?)(?=({}))'.format('|'.join(targets)))
     match = pattern.search(file_path)
     if match:
-        base_path = match.group(1) + match.group(2)
+        base_path = match.group(1)
         target_path = file_path[len(base_path):]
         return target_path
     else:
@@ -645,12 +645,13 @@ def get_real_data_path(file_path):
 
 
 def check_real_data_mode(data_path, real_data_path):
-    if data_path and not real_data_path:
-        error_log = "The current mode is real data. The root directory of real data must be configured."
-        raise CompareException(CompareException.INVALID_COMPARE_MODE, error_log)
-    elif data_path and real_data_path:
-        data_path = os.path.join(real_data_path, data_path)
-        return os.path.realpath(data_path)
-    elif not data_path and real_data_path:
+    if not data_path:
         print_warn_log("The current mode is random data. The root directory of real data is not used.")
         return data_path
+
+    if not real_data_path:
+        error_log = "The current mode is real data. The root directory of real data must be configured."
+        raise CompareException(CompareException.INVALID_COMPARE_MODE, error_log)
+    
+    full_data_path = os.path.join(real_data_path, data_path)
+    return os.path.realpath(full_data_path)
