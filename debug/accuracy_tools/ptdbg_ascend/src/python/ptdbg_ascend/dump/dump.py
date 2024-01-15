@@ -40,12 +40,45 @@ from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, chec
 forward_init_status = False
 backward_init_status = False
 
-api_list = []
 thread_lock = threading.Lock()
 pkl_name = ""
 rank = os.getpid()
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = defaultdict(int)
+
+
+class APIList(list):
+    threshold = 1000
+
+    def __init__(self, *args):
+        self.dump_count = 0
+        self.pkl_mode_changed = False
+        super().__init__(*args)
+
+    def flush(self):
+        pkl_path = get_pkl_file_path()
+        if len(self) == 0 or pkl_path == "":
+            return
+        with FileOpen(pkl_path, 'a') as f:
+            try:
+                f.write('\n'.join(json.dumps(item) for item in self))
+                f.write('\n')
+            except IOError as ex:
+                raise Exception("write to disk failed") from ex
+        self.dump_count += 1
+        print_info_log(f"write {len(self)} items to {pkl_path} the {self.dump_count} time")
+        if not self.pkl_mode_changed:
+            change_mode(pkl_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            self.pkl_mode_changed = True
+        self.clear()
+
+    def append(self, data):
+        list.append(self, data)
+        if len(self) >= APIList.threshold:
+            self.flush()
+
+
+api_list = APIList()
 
 
 class DataInfo(object):
@@ -362,16 +395,7 @@ def acc_cmp_dump(name, **kwargs):
 
 
 def write_to_disk():
-    global api_list
-    if api_list:
-        with FileOpen(pkl_name, 'a') as f:
-            try:
-                f.write('\n'.join(json.dumps(item) for item in api_list))
-                f.write('\n')
-            except:
-                raise Exception("write to disk failed")
-        change_mode(pkl_name, FileCheckConst.DATA_FILE_AUTHORITY)
-        api_list = []
+    api_list.flush()
 
 
 def get_pkl_file_path():
