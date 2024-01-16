@@ -201,13 +201,13 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         del kwargs["device"]
     cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward)
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward)
-    grad_out, device_grad_out = None, None
+    bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
     device_out = exec_api(api_type, api_name, device_args, device_kwargs)
     api_setting_dict = get_json_contents("torch_ut_setting.json")
     grad_input_index = api_setting_dict.get(api_name)
     grad_index = None
-    grad = None
+    grad, bench_grad = None, None
     if grad_input_index is not None:
         grad_index = grad_input_index.get('grad_index')
 

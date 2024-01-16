@@ -646,7 +646,6 @@ def get_real_data_path(file_path):
 
 def check_real_data_mode(data_path, real_data_path):
     if not data_path:
-        print_warn_log("The current mode is random data. The root directory of real data is not used.")
         return data_path
 
     if not real_data_path:
