@@ -14,6 +14,7 @@ from api_accuracy_checker.run_ut.run_ut import get_statistics_from_result_csv
 from api_accuracy_checker.dump.info_dump import write_json
 from api_accuracy_checker.common.utils import print_error_log
 
+
 def split_json_file(input_file, num_splits):
     with FileOpen(input_file, 'r') as file:
         data = json.load(file)
@@ -30,7 +31,8 @@ def split_json_file(input_file, num_splits):
         split_filename = os.path.join("./", f"temp_part{i}.json")
         if os.path.exists(split_filename):
             os.remove(split_filename)
-        with open(split_filename, 'w') as split_file:
+        fd = os.open(split_filename, os.O_WRONLY | os.O_CREAT, 0o644)
+        with os.fdopen(fd, 'w') as split_file:
             json.dump(dict(items[start:end]), split_file)
         split_files.append(split_filename)
 
@@ -41,9 +43,17 @@ def merge_csv_files(csv_paths):
     if not csv_paths:
         raise ValueError("No CSV paths provided for merging.")
     details_files = [path.replace('result', 'details') for path in csv_paths]
+    for csv_path, details_path in zip(csv_paths, details_files):
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(f"The CSV file {csv_path} does not exist.")
+        if not os.path.exists(details_path):
+            raise FileNotFoundError(f"The details file {details_path} does not exist.")
+        if not csv_path.replace('result', 'details') == details_path:
+            raise ValueError(f"The CSV file {csv_path} does not match the details file {details_path}.")
 
     def merge_files(file_paths, output_file):
-        with open(output_file, 'a', newline='') as merged_file:
+        fd = os.open(output_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+        with os.fdopen(fd, 'a', newline='') as merged_file:
             writer = csv.writer(merged_file)
             for file_path in file_paths[1:]:
                 with open(file_path, 'r') as read_file:
