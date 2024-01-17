@@ -140,7 +140,7 @@ def main():
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
     parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, help='Number of splits for parallel processing. Range: 1-64')
-    parser.add_argument('-d', '--device', nargs='+', type=int, default=[0], help='Device IDs for running tests. Default is 0 to 7.')
+    parser.add_argument('-d', '--device', nargs='+', type=int, default=[0], help='Device IDs for running tests. Default is 0.')
     parser.add_argument('-csv_path', '--result_csv_path', nargs='+', help='<optional> Paths of multiple accuracy_checking_result_{timestamp}.csv files to be merged.', required=False)
     args = parser.parse_args()
     check_link(args.forward_input_file)
