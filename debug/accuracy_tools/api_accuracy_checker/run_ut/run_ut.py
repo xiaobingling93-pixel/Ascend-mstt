@@ -166,6 +166,8 @@ def run_ut(config):
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+        finally:
+            torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
