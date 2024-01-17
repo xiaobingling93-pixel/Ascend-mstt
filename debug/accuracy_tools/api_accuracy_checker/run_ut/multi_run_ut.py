@@ -10,7 +10,7 @@ from itertools import cycle
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
-from api_accuracy_checker.run_ut.run_ut import get_statistics_from_result_csv, _run_ut_parser
+from api_accuracy_checker.run_ut.run_ut import get_statistics_from_result_csv
 from api_accuracy_checker.dump.info_dump import write_json
 from api_accuracy_checker.common.utils import print_error_log
 
@@ -30,44 +30,37 @@ def split_json_file(input_file, num_splits):
         split_filename = os.path.join("./", f"temp_part{i}.json")
         if os.path.exists(split_filename):
             os.remove(split_filename)
-        for item in items[start:end]:
-            write_json(split_filename, {item[0]: item[1]})
+        with open(split_filename, 'w') as split_file:
+            json.dump(dict(items[start:end]), split_file)
         split_files.append(split_filename)
 
     return split_files
 
 
-def merge_csv_files(csv_path, output_csv_path):
-    if not csv_path:
+def merge_csv_files(csv_paths):
+    if not csv_paths:
         raise ValueError("No CSV paths provided for merging.")
-    details_files = [path.replace('result', 'details') for path in csv_path]
-    output_details_path = output_csv_path.replace('result', 'details')
-    with open(csv_path[0], 'a', newline='') as merged_file:
-        writer = csv.writer(merged_file)
-        for csv_path in csv_path[1:]:
-            with open(csv_path, 'r') as read_file:
-                reader = csv.reader(read_file)
-                header = next(reader)
-                for row in reader:
-                    writer.writerow(row)
-            os.remove(csv_path)
+    details_files = [path.replace('result', 'details') for path in csv_paths]
 
-    with open(details_files[0], 'a', newline='') as merged_file:
-        writer = csv.writer(merged_file)
-        for details_file in details_files[1:]:
-            with open(details_file, 'r') as read_file:
-                reader = csv.reader(read_file)
-                header = next(reader)
-                for row in reader:
-                    writer.writerow(row)
-            os.remove(details_file)
+    def merge_files(file_paths, output_file):
+        with open(output_file, 'a', newline='') as merged_file:
+            writer = csv.writer(merged_file)
+            for file_path in file_paths[1:]:
+                with open(file_path, 'r') as read_file:
+                    reader = csv.reader(read_file)
+                    next(reader)
+                    writer.writerows(reader)
+                os.remove(file_path)
 
-ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_ids', 'result_csv_path'])
+    merge_files(csv_paths, csv_paths[0])
+    merge_files(details_files, details_files[0])
+
+ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device', 'result_csv_path'])
 
 
 def run_parallel_ut(config):
     processes = []
-    device_id_cycle = cycle(config.device_ids)
+    device_id_cycle = cycle(config.device)
 
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
@@ -121,9 +114,23 @@ def process_csv_and_print_results(out_path, result_csv_path=None):
 
 def main():
     parser = argparse.ArgumentParser(description='Run UT in parallel')
-    _run_ut_parser(parser)
-    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=64, help='Number of splits for parallel processing. Range: 1-64')
-    parser.add_argument('-d', '--device_ids', nargs='+', type=int, default=[0, 1, 2, 3, 4, 5, 6, 7], help='Device IDs for running tests. Default is 0 to 7.')
+    parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
+                        help="<Required> The api param tool forward result file: generate from api param tool, "
+                             "a json file.",
+                        required=True)
+    parser.add_argument("-backward", "--backward_input_file", dest="backward_input_file", default="", type=str,
+                        help="<Required> The api param tool backward result file: generate from api param tool, "
+                             "a json file.",
+                        required=False)
+    parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
+                        help="<optional> The ut task result out path.",
+                        required=False)
+    parser.add_argument('-save_error_data', dest="save_error_data", action="store_true",
+                        help="<optional> Save compare failed api output.", required=False)
+    parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
+                        help="<optional> whether to turn on jit compile", required=False)
+    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, help='Number of splits for parallel processing. Range: 1-64')
+    parser.add_argument('-d', '--device', nargs='+', type=int, default=[0], help='Device IDs for running tests. Default is 0 to 7.')
     parser.add_argument('-csv_path', '--result_csv_path', nargs='+', help='<optional> Paths of multiple accuracy_checking_result_{timestamp}.csv files to be merged.', required=False)
     args = parser.parse_args()
     check_link(args.forward_input_file)
@@ -137,11 +144,11 @@ def main():
     forward_splits = split_json_file(args.forward_input_file, args.num_splits)
     backward_splits = [backward_file] * args.num_splits if backward_file else [None] * args.num_splits
     if args.result_csv_path and len(args.result_csv_path) > 1:
-        merge_csv_files(args.result_csv_path, args.result_csv_path[0])
+        merge_csv_files(args.result_csv_path)
         result_csv_path = args.result_csv_path[0]
     else:
         result_csv_path = args.result_csv_path if args.result_csv_path else None
-    config = ParallelUTConfig(forward_splits, backward_splits, args.out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_ids, result_csv_path)
+    config = ParallelUTConfig(forward_splits, backward_splits, args.out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device, result_csv_path)
     run_parallel_ut(config)
 
 if __name__ == '__main__':
