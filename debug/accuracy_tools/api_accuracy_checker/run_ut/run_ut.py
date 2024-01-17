@@ -333,7 +333,7 @@ def _run_ut_parser(parser):
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
                         required=False)
-    parser.add_argument("-real_data_path", dest="real_data_path", default="", type=str,
+    parser.add_argument("-real_data_path", dest="real_data_path", nargs="?", const="", default="", type=str,
                         help="<optional> In real data mode, the root directory for storing real data "
                              "must be configured.",
                         required=False)
