@@ -1075,6 +1075,22 @@ torch_npu:
   - npu_conv2d
   - npu_softmax_cross_entropy_with_logits
   - npu_all_gather_base_mm
+  - npu_swiglu
+  - npu_rms_norm
+  - npu_mm_reduce_scatter_base
+  - npu_mm_all_reduce_base
+  - npu_conv_transpose2d
+  - npu_convolution
+  - npu_convolution_transpose
+  - npu_min
+  - npu_nms_rotated
+  - npu_reshape
+  - npu_rotated_box_decode
+  - npu_rotated_box_encode
+  - npu_rotated_overlaps
+  - npu_silu
+  - npu_fused_attention_score
+  - npu_multi_head_attention
 
 aten:
   - signbit
