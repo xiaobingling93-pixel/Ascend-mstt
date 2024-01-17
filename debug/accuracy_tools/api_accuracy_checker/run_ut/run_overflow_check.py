@@ -44,12 +44,12 @@ def check_data_overflow(x):
         return check_tensor_overflow(x)
 
 
-def run_overflow_check(forward_file, real_data_path):
+def run_overflow_check(forward_file):
     print_info_log("start UT test")
     forward_content = get_json_contents(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
         try:
-            run_torch_api(api_full_name, api_info_dict, real_data_path)
+            run_torch_api(api_full_name, api_info_dict)
         except Exception as err:
             api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
             if "not implemented for 'Half'" in str(err):
@@ -62,11 +62,11 @@ def run_overflow_check(forward_file, real_data_path):
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
 
 
-def run_torch_api(api_full_name, api_info_dict, real_data_path):
+def run_torch_api(api_full_name, api_info_dict):
     torch.npu.clear_npu_overflow_flag()
     api_type = api_full_name.split("_")[0]
     api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
+    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path='')
     if not need_grad:
         print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
@@ -89,10 +89,6 @@ def _run_ut_parser(parser):
                         help="<Required> The api param tool forward result file: generate from api param tool, "
                              "a json file.",
                         required=True)
-    parser.add_argument("-real_data_path", dest="real_data_path", default="", type=str,
-                        help="<optional> In real data mode, the root directory for storing real data "
-                             "must be configured.",
-                        required=True)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", help="<optional> whether to turn on jit compile",
                         default=False, required=False)
     parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set NPU device id to run ut",
@@ -112,7 +108,7 @@ def _run_overflow_check():
     except Exception as error:
         print_error_log(f"Set NPU device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    run_overflow_check(forward_file, args.real_data_path)
+    run_overflow_check(forward_file)
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import inspect
 import fcntl
 import os
 import threading
-import re
+
 import json
 import numpy as np
 import torch
@@ -27,18 +27,6 @@ def write_npy(file_path, tensor):
     full_path = os.path.abspath(file_path)
     return full_path
 
-
-def get_real_data_path(file_path):
-    targets = ['forward_real_data(_\d+_\d+)?', 'backward_real_data(_\d+_\d+)?']
-    pattern = re.compile(r'(.*?)(?=({}))'.format('|'.join(targets)))
-    match = pattern.search(file_path)
-    if match:
-        base_path = match.group(1)
-        target_path = file_path[len(base_path):]
-        return target_path
-    else:
-        raise Exception("The save path is incorrect.")
-    
 
 class APIInfo:
     def __init__(self, api_name, is_forward, save_real_data=False):
@@ -105,9 +93,8 @@ class APIInfo:
                 file_path = os.path.join(backward_real_data_path, f'{api_args}.npy')
             self.args_num += 1
             npy_path = write_npy(file_path, arg)
-            real_data_path = get_real_data_path(npy_path)
             single_arg.update({'type': 'torch.Tensor'})
-            single_arg.update({'datapath': real_data_path})
+            single_arg.update({'datapath': npy_path})
             single_arg.update({'requires_grad': arg.requires_grad})
         return single_arg
 

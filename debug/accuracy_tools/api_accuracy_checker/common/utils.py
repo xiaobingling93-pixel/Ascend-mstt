@@ -647,10 +647,5 @@ def get_real_data_path(file_path):
 def check_real_data_mode(data_path, real_data_path):
     if not data_path:
         return data_path
-
-    if not real_data_path:
-        error_log = "The current mode is real data. The root directory of real data must be configured."
-        raise CompareException(CompareException.INVALID_COMPARE_MODE, error_log)
-    
     full_data_path = os.path.join(real_data_path, data_path)
     return os.path.realpath(full_data_path)
