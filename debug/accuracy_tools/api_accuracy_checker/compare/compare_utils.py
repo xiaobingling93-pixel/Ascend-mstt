@@ -8,6 +8,9 @@ class CompareConst:
     PASS = 'pass'
     WARNING = 'warning'
     ERROR = 'error'
+    SKIP = 'SKIP'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
 
 
 def check_dtype_comparable(x, y):
@@ -24,4 +27,4 @@ def check_dtype_comparable(x, y):
             return True 
         return False
     print_warn_log(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
-    return False 
+    return False

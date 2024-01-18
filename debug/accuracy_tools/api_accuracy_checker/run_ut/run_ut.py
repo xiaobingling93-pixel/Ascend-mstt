@@ -35,7 +35,7 @@ UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'test_result_cnt'])
+                                         'save_error_data', 'is_continue_run_ut'])
 not_backward_list = ['repeat_interleave']
 
 tqdm_params = {
@@ -135,9 +135,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward):
 
 def run_ut(config):
     print_info_log("start UT test")
+    print_info_log(f"UT task result will be saved in {config.result_csv_path}")
+    print_info_log(f"UT task details will be saved in {config.details_csv_path}")
+    if config.save_error_data:
+        print_info_log(f"UT task error_datas will be saved in "
+                       f"{os.path.join(os.path.dirname(config.result_csv_path), UT_ERROR_DATA_DIR)}")
     api_setting_dict = get_json_contents("torch_ut_setting.json")
-    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut,
-                         config.test_result_cnt)
+    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
         csv_reader = csv.reader(file)
         next(csv_reader)
@@ -285,38 +289,6 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
-def get_statistics_from_result_csv(validated_result_csv_path):
-    test_result_cnt = {
-        "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-        "total_num": 0, "forward_or_backward_fail_num": 0
-    }
-    with FileOpen(validated_result_csv_path, 'r') as file:
-        reader = csv.reader(file)
-        result_csv_rows = [row for row in reader]
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    for item in result_csv_rows[1:]:
-        if not isinstance(item, list) or len(item) < 3:
-            raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-        if item[1] not in ['True', 'False', CompareConst.NA, 'SKIP'] \
-                or item[2] not in ['True', 'False', CompareConst.NA, 'SKIP']:
-            raise ValueError("The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE or N/A"
-                             % result_csv_name)
-        if item[1] == 'SKIP':
-            continue
-        test_result_cnt["total_num"] += 1
-        if item[1] == 'True' and item[2] in ['True', 'N/A']:
-            test_result_cnt['success_num'] += 1
-        elif item[1] == 'False' and item[2] == 'False':
-            test_result_cnt['forward_and_backward_fail_num'] += 1
-        elif item[1] == 'False':
-            test_result_cnt['forward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-        else:
-            test_result_cnt['backward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-    return test_result_cnt
-
-
 def _run_ut_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
                         help="<Required> The api param tool forward result file: generate from api param tool, "
@@ -372,11 +344,9 @@ def _run_ut():
         backward_content = get_json_contents(backward_file)
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
-    test_result_cnt = None
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path)
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-        test_result_cnt = get_statistics_from_result_csv(result_csv_path)
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
@@ -386,7 +356,7 @@ def _run_ut():
             UT_ERROR_DATA_DIR = ut_error_data_dir_path
         initialize_save_error_data()
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, test_result_cnt)
+                                args.result_csv_path)
     run_ut(run_ut_config)
 
 
