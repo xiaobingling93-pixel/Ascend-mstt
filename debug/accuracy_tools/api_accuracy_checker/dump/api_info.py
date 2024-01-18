@@ -94,9 +94,9 @@ class APIInfo:
                     out_dict[key] = self.analyze_element(value)
             return out_dict
         
-        converted_numpy = self._convert_numpy_to_builtin(element)
+        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
-            return self._analyze_builtin(converted_numpy)
+            return self._analyze_numpy(converted_numpy, numpy_type)
 
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element)
@@ -141,6 +141,14 @@ class APIInfo:
             single_arg.update({'value': arg})
         return single_arg
     
+    def _analyze_numpy(self, value, numpy_type):
+        single_arg = {}
+        if self.is_save_data:
+            self.args_num += 1
+        single_arg.update({'type': numpy_type})
+        single_arg.update({'value': value})
+        return single_arg
+    
     def _convert_numpy_to_builtin(self, arg):
         type_mapping = {
             np.integer: int,
@@ -153,8 +161,8 @@ class APIInfo:
         }
         for numpy_type, builtin_type in type_mapping.items():
             if isinstance(arg, numpy_type):
-                return builtin_type(arg)
-        return arg
+                return builtin_type(arg), get_type_name(str(type(arg)))
+        return arg, ''
 
 
 class ForwardAPIInfo(APIInfo):

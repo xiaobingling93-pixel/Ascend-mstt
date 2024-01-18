@@ -17,7 +17,7 @@
 
 import os
 import torch
-import numpy as np
+import numpy
 
 from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, print_error_log, \
     CompareException
@@ -50,6 +50,9 @@ def gen_data(info, need_grad, convert_type):
             temp_data = data * 1
             data = temp_data.type_as(data)
             data.retain_grad()
+    elif data_type.startswith("numpy"):
+        data = info.get("value")
+        data = eval(data_type)(data)
     else:
         data = info.get('value')
         if info.get("type") == "slice":
@@ -73,7 +76,7 @@ def gen_real_tensor(data_path, convert_type):
     if data_path.endswith('.pt'):
         data = torch.load(data_path)
     else:
-        data_np = np.load(data_path)
+        data_np = numpy.load(data_path)
         data = torch.from_numpy(data_np)
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]
@@ -193,7 +196,7 @@ def gen_kwargs(api_info, convert_type=None):
     for key, value in kwargs_params.items():
         if isinstance(value, (list, tuple)):
             kwargs_params[key] = gen_list_kwargs(value, convert_type)
-        elif value.get('type') in TENSOR_DATA_LIST:
+        elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
             kwargs_params[key] = gen_data(value, False, convert_type)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
