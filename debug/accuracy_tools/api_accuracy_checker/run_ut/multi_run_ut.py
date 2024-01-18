@@ -31,8 +31,7 @@ def split_json_file(input_file, num_splits):
         split_filename = os.path.join("./", f"temp_part{i}.json")
         if os.path.exists(split_filename):
             os.remove(split_filename)
-        fd = os.open(split_filename, os.O_WRONLY | os.O_CREAT, 0o644)
-        with os.fdopen(fd, 'w') as split_file:
+        with FileOpen(split_filename, 'w') as split_file:
             json.dump(dict(items[start:end]), split_file)
         split_files.append(split_filename)
 
@@ -52,11 +51,10 @@ def merge_csv_files(csv_paths):
             raise ValueError(f"The CSV file {csv_path} does not match the details file {details_path}.")
 
     def merge_files(file_paths, output_file):
-        fd = os.open(output_file, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
-        with os.fdopen(fd, 'a', newline='') as merged_file:
+        with FileOpen(output_file, 'a') as merged_file:
             writer = csv.writer(merged_file)
             for file_path in file_paths[1:]:
-                with open(file_path, 'r') as read_file:
+                with FileOpen(file_path, 'r') as read_file:
                     reader = csv.reader(read_file)
                     next(reader)
                     writer.writerows(reader)
