@@ -16,7 +16,7 @@ from ..dump.utils import DumpUtil, make_dump_data_dir
 
 class OverFlowUtil(object):
     overflow_check_switch = None
-    overflow_filter_switch = None
+    overflow_filter_switch = Const.OFF
     real_overflow_dump_times = 0
     overflow_nums = 1
 
