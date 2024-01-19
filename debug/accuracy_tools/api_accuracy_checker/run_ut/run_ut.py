@@ -138,8 +138,8 @@ def run_ut(config):
     print_info_log(f"UT task result will be saved in {config.result_csv_path}")
     print_info_log(f"UT task details will be saved in {config.details_csv_path}")
     if config.save_error_data:
-        print_info_log(f"UT task error_datas will be saved in "
-                       f"{os.path.join(os.path.dirname(config.result_csv_path), UT_ERROR_DATA_DIR)}")
+        error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
+        print_info_log(f"UT task error_datas will be saved in {error_data_path}")
     api_setting_dict = get_json_contents("torch_ut_setting.json")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
@@ -350,10 +350,8 @@ def _run_ut():
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
-            ut_error_data_dir_name = 'ut_error_data' + time_info
-            ut_error_data_dir_path = os.path.join(os.path.dirname(result_csv_path), ut_error_data_dir_name)
             global UT_ERROR_DATA_DIR
-            UT_ERROR_DATA_DIR = ut_error_data_dir_path
+            UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         initialize_save_error_data()
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
                                 args.result_csv_path)
