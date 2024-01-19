@@ -19,16 +19,13 @@ def split_json_file(input_file, num_splits):
 
     items = list(data.items())
     total_items = len(items)
-
     chunk_size = total_items // num_splits
     split_files = []
 
     for i in range(num_splits):
         start = i * chunk_size
         end = (i + 1) * chunk_size if i < num_splits - 1 else total_items
-        split_filename = os.path.join("./", f"temp_part{i}.json")
-        if os.path.exists(split_filename):
-            os.remove(split_filename)
+        split_filename = f"temp_part{i}.json"
         with FileOpen(split_filename, 'w') as split_file:
             json.dump(dict(items[start:end]), split_file)
         split_files.append(split_filename)
@@ -58,7 +55,8 @@ def run_parallel_ut(config):
 
     for fwd, bwd in zip(config.forward_files, config.backward_files):
         cmd = create_cmd(fwd, bwd, next(device_id_cycle))
-        processes.append(subprocess.Popen(cmd))
+        process = subprocess.Popen(cmd)
+        processes.append(process)
 
     try:
         for process in processes:
@@ -70,17 +68,12 @@ def run_parallel_ut(config):
             process.wait()
     finally:
         for file in config.forward_files:
-            if os.path.exists(file):
-                os.remove(file)
+            os.remove(file)
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Run UT in parallel')
-    _run_ut_parser(parser)
-    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, help='Number of splits for parallel processing. Range: 1-64')
-    args = parser.parse_args()
+def prepare_config(args):
     check_link(args.forward_input_file)
-    check_link(args.backward_input_file)
+    check_link(args.backward_input_file) if args.backward_input_file else None
     forward_file = os.path.realpath(args.forward_input_file)
     backward_file = os.path.realpath(args.backward_input_file) if args.backward_input_file else None
     check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
@@ -89,15 +82,18 @@ def main():
     out_path = out_path_checker.common_check()
     forward_splits = split_json_file(args.forward_input_file, args.num_splits)
     backward_splits = [backward_file] * args.num_splits if backward_file else [None] * args.num_splits
+    result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
-        current_time = time.strftime("%Y%m%d%H%M%S")
-        result_csv_path = os.path.join(out_path, "accuracy_checking_result_{}.csv".format(current_time))
-        details_csv_path = os.path.join(out_path, "accuracy_checking_details_{}.csv".format(current_time))
+        details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
-        args.result_csv_path = result_csv_path
-    else:
-        result_csv_path = args.result_csv_path
-    config = ParallelUTConfig(forward_splits, backward_splits, args.out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path)
+    return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path)
+
+def main():
+    parser = argparse.ArgumentParser(description='Run UT in parallel')
+    _run_ut_parser(parser)
+    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, help='Number of splits for parallel processing. Range: 1-64')
+    args = parser.parse_args()
+    config = prepare_config(args)
     run_parallel_ut(config)
 
 if __name__ == '__main__':
