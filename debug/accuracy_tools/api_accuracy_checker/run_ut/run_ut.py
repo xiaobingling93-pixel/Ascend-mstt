@@ -335,8 +335,17 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, help="<optional> set device id to run ut",
-                        default=[0], required=False)
+    def check_device_ids(device_ids):
+        if len(device_ids) != len(set(device_ids)):
+            raise ValueError("device id must be unique")
+        for device_id in device_ids:
+            if not 0 <= device_id <= 7:
+                raise ValueError("device id must be in range 0-7")
+        return device_ids
+
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        default=[0], required=False, action='store', type=check_device_ids)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
