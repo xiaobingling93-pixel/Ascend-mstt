@@ -92,7 +92,7 @@ def run_parallel_ut(config):
             processes.append(subprocess.Popen(cmd))
 
         for process in processes:
-            process.communicate()
+            process.communicate(timeout=None)
     except KeyboardInterrupt: 
         print_error_log("Interrupted by user, terminating processes...")
         for process in processes:
@@ -155,7 +155,7 @@ def main():
         merge_csv_files(args.result_csv_path)
         result_csv_path = args.result_csv_path[0]
     else:
-        result_csv_path = args.result_csv_path if args.result_csv_path else None
+        result_csv_path = args.result_csv_path[0] if args.result_csv_path else None
     config = ParallelUTConfig(forward_splits, backward_splits, args.out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device, result_csv_path)
     run_parallel_ut(config)
 
