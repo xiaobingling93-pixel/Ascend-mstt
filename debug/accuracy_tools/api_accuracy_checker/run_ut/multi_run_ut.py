@@ -49,7 +49,7 @@ def run_parallel_ut(config):
             '-d', str(dev_id),
             *(['-j'] if config.jit_compile_flag else []),
             *(['-save_error_data'] if config.save_error_data_flag else []),
-            *(['-csv_path', config.result_csv_path] if config.result_csv_path else [])
+            '-csv_path', config.result_csv_path
         ]
         return cmd
 
