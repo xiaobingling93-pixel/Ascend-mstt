@@ -91,7 +91,7 @@ def run_parallel_ut(config):
                 print_warn_log(f"Result CSV file not found: {config.result_csv_path}.")
             except Exception as e:
                 print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
-            time.sleep(1)
+            time.sleep(10)
 
         for process in processes:
             process.communicate(timeout=None)
