@@ -26,6 +26,9 @@ TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
 FLOAT_TYPE = ['torch.float32', 'torch.float', 'torch.float64', 'torch.double', 'torch.float16',
               'torch.half', 'torch.bfloat16']
+NUMPY_TYPE = ["numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
+              "numpy.uint64", "numpy.float16", "numpy.float32", "numpy.float64", "numpy.float128", "numpy.complex64", 
+              "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"]
 
 
 def gen_data(info, need_grad, convert_type):
@@ -52,7 +55,10 @@ def gen_data(info, need_grad, convert_type):
             data.retain_grad()
     elif data_type.startswith("numpy"):
         data = info.get("value")
-        data = eval(data_type)(data)
+        try:
+            data = eval(data_type)(data)
+        except Exception as err:
+            print_error_log("Failed to convert the type to numpy: %s" % str(err))
     else:
         data = info.get('value')
         if info.get("type") == "slice":
