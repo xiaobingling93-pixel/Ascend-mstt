@@ -50,9 +50,10 @@ def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
     if config.save_error_data_flag:
-        print_info_log(f"UT task error_datas will be saved")
+        print_info_log(f"UT task error datas will be saved")
     print_info_log(f"Starting parallel UT with {config.num_splits} processes")
     progress_bar = tqdm(total=len(config.forward_files), desc="Total Progress", unit="file")
+
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
             sys.executable, 'run_ut.py',
