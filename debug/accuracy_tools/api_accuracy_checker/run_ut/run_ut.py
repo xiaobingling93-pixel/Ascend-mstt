@@ -335,6 +335,7 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
+    
     class UniqueDeviceAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             unique_values = set(values)

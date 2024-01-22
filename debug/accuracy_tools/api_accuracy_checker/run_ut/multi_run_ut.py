@@ -7,12 +7,12 @@ import time
 import signal
 from collections import namedtuple
 from itertools import cycle
+from tqdm import tqdm
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path
 from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log
-from tqdm import tqdm
 
 
 def split_json_file(input_file, num_splits):
@@ -49,9 +49,9 @@ ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_fi
 def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
-    print_info_log("start parallel ut")
     if config.save_error_data_flag:
         print_info_log(f"UT task error_datas will be saved")
+    print_info_log(f"Starting parallel UT with {config.num_splits} processes")
     progress_bar = tqdm(total=len(config.forward_files), desc="Total Progress", unit="file")
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
