@@ -32,7 +32,7 @@ def split_json_file(input_file, num_splits):
             json.dump(dict(items[start:end]), split_file)
         split_files.append(split_filename)
 
-    return split_files
+    return split_files, total_items
 
 
 def signal_handler(signum, frame):
@@ -43,7 +43,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path'])
+ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path', 'total_items'])
 
 
 def run_parallel_ut(config):
@@ -52,7 +52,7 @@ def run_parallel_ut(config):
     if config.save_error_data_flag:
         print_info_log(f"UT task error datas will be saved")
     print_info_log(f"Starting parallel UT with {config.num_splits} processes")
-    progress_bar = tqdm(total=len(config.forward_files), desc="Total Progress", unit="file")
+    progress_bar = tqdm(total=config.total_items, desc="Total items", unit="items")
 
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
@@ -82,9 +82,19 @@ def run_parallel_ut(config):
             os.remove(file)
 
     try:
+        while any(process.poll() is None for process in processes):
+            try:
+                with open(config.result_csv_path, 'r') as result_file:
+                    completed_items = len(result_file.readlines()) - 1
+                    progress_bar.update(completed_items - progress_bar.n)
+            except FileNotFoundError:
+                print_warn_log(f"Result CSV file not found: {config.result_csv_path}.")
+            except Exception as e:
+                print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
+            time.sleep(1)
+
         for process in processes:
             process.communicate(timeout=None)
-            progress_bar.update(1)
     except KeyboardInterrupt: 
         print_warn_log("Interrupted by user, terminating processes and clear up...")
     except Exception as e:
@@ -109,7 +119,7 @@ def prepare_config(args):
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
-    forward_splits = split_json_file(args.forward_input_file, args.num_splits)
+    forward_splits, total_items = split_json_file(args.forward_input_file, args.num_splits)
     backward_splits = [backward_file] * args.num_splits if backward_file else [None] * args.num_splits
     result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
@@ -122,7 +132,7 @@ def prepare_config(args):
         details_csv_path = get_validated_details_csv_path(result_csv_path)
         print_info_log(f"UT task result will be saved in {result_csv_path}")
         print_info_log(f"UT task details will be saved in {details_csv_path}")
-    return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path)
+    return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path, total_items)
 
 
 def main():
