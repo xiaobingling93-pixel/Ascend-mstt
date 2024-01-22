@@ -88,6 +88,7 @@ def prepare_config(args):
         comparator = Comparator(result_csv_path, details_csv_path, False)
     return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path)
 
+
 def main():
     parser = argparse.ArgumentParser(description='Run UT in parallel')
     _run_ut_parser(parser)
