@@ -32,8 +32,10 @@ except ImportError:
 else:
     is_gpu = False
 
-from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist
-from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst
+from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,\
+    CompareException
+from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,\
+    print_error_log
 from ..dump.utils import check_writable
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
 
@@ -44,7 +46,7 @@ thread_lock = threading.Lock()
 pkl_name = ""
 rank = os.getpid()
 multi_output_apis = ["_sort_", "npu_flash_attention"]
-module_count = defaultdict(int)
+module_count = {}
 
 
 class APIList(list):
@@ -367,22 +369,38 @@ def dump_mode_backward_acl_dump(module, module_name, grad_path):
     print_info_log("Dump %s op file." % module_name)
 
 
+def module_count_func(name, name_template):
+    module_name = name.split("_")[-3]
+    if Const.FORWARD in name_template:
+        if module_name not in module_count:
+            module_count[module_name] = [0, [0]]
+        else:
+            if module_count[module_name][-1] and \
+                    module_count[module_name][0] != module_count[module_name][-1][-1]:
+                module_count[module_name][-1].pop()
+            module_count[module_name][0] += 1
+            module_count[module_name][-1].append(module_count[module_name][0])
+        index = module_count[module_name][0]
+    else:
+        index = module_count[module_name][-1].pop()
+    return index
+
+
 def acc_cmp_dump(name, **kwargs):
     dump_step = kwargs.get('dump_step', 1)
     pid = kwargs.get('pid')
+    name_template = name
     if not pid:
         return RuntimeError("Not get the specified process pid.")
 
     def acc_cmp_hook(module, in_feat, out_feat=None):
-        nonlocal name
-        if "_{}_" in name:
-            module_name = name.split("_")[1]
-            if Const.BACKWARD in name:
-                index = module_count[module_name] - 1
-                module_count[module_name] = index
-            else:
-                index = module_count[module_name]
-                module_count[module_name] = index + 1
+        nonlocal name, name_template
+        if "_{}_" in name_template:
+            try:
+                index = module_count_func(name, name_template)
+            except IndexError as e:
+                print_error_log(f"Get module {name_template} index failed.")
+                raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
             name = name.format(index)
         if pid == os.getpid():
             dump_acc_cmp(name, in_feat, out_feat, dump_step, module)

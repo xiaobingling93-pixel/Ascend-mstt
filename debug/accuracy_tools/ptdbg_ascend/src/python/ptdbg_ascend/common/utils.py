@@ -68,7 +68,7 @@ class Const:
     DUMP_RATIO_MAX = 100
     SUMMERY_DATA_NUMS = 256
     FLOAT_EPSILON = np.finfo(float).eps
-    SUPPORT_DUMP_MODE = ['api', 'acl', 'model']
+    SUPPORT_DUMP_MODE = ['api', 'acl']
     ON = 'ON'
     OFF = 'OFF'
     BACKWARD = 'backward'
