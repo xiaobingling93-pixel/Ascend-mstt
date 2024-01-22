@@ -4,13 +4,15 @@ import os
 import sys
 import argparse
 import time
+import signal
 from collections import namedtuple
 from itertools import cycle
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
-from api_accuracy_checker.run_ut.run_ut import _run_ut_parser
-from api_accuracy_checker.common.utils import print_error_log
+from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path
+from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log
+from tqdm import tqdm
 
 
 def split_json_file(input_file, num_splits):
@@ -33,13 +35,24 @@ def split_json_file(input_file, num_splits):
     return split_files
 
 
+def signal_handler(signum, frame):
+    print_warn_log(f'Signal handler called with signal {signum}')
+    raise KeyboardInterrupt()
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+
 ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path'])
 
 
 def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
-
+    print_info_log("start parallel ut")
+    if config.save_error_data_flag:
+        print_info_log(f"UT task error_datas will be saved")
+    progress_bar = tqdm(total=len(config.forward_files), desc="Total Progress", unit="file")
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
             sys.executable, 'run_ut.py',
@@ -55,20 +68,35 @@ def run_parallel_ut(config):
 
     for fwd, bwd in zip(config.forward_files, config.backward_files):
         cmd = create_cmd(fwd, bwd, next(device_id_cycle))
-        process = subprocess.Popen(cmd)
+        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         processes.append(process)
+
+    def clean_up():
+        progress_bar.close()
+        for process in processes:
+            if process.poll() is None:
+                process.terminate()
+                process.wait()
+        for file in config.forward_files:
+            os.remove(file)
 
     try:
         for process in processes:
             process.communicate(timeout=None)
+            progress_bar.update(1)
     except KeyboardInterrupt: 
-        print_error_log("Interrupted by user, terminating processes...")
-        for process in processes:
-            process.terminate()
-            process.wait()
+        print_warn_log("Interrupted by user, terminating processes and clear up...")
+    except Exception as e:
+        print_error_log(f"An unexpected error occurred: {e}")
     finally:
-        for file in config.forward_files:
-            os.remove(file)
+        clean_up()
+    try:
+        comparator = Comparator(config.result_csv_path, config.result_csv_path, False)
+        comparator.print_pretest_result()
+    except FileNotFoundError as e:
+        print_error_log(f"Error: {e}")
+    except Exception as e:
+        print_error_log(f"An unexpected error occurred: {e}")
 
 
 def prepare_config(args):
@@ -86,6 +114,13 @@ def prepare_config(args):
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
+        print_info_log(f"UT task result will be saved in {result_csv_path}")
+        print_info_log(f"UT task details will be saved in {details_csv_path}")
+    else:
+        result_csv_path = get_validated_result_csv_path(args.result_csv_path)
+        details_csv_path = get_validated_details_csv_path(result_csv_path)
+        print_info_log(f"UT task result will be saved in {result_csv_path}")
+        print_info_log(f"UT task details will be saved in {details_csv_path}")
     return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path)
 
 
