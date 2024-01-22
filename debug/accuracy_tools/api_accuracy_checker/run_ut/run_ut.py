@@ -166,6 +166,8 @@ def run_ut(config):
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+        finally:
+            torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -333,8 +335,20 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set device id to run ut",
-                        default=0, required=False)
+    
+    class UniqueDeviceAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            unique_values = set(values)
+            if len(values) != len(unique_values):
+                parser.error("device id must be unique")
+            for device_id in values:
+                if not 0 <= device_id <= 7:
+                    parser.error("device id must be in range 0-7")
+            setattr(namespace, self.dest, values)
+
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
@@ -347,7 +361,7 @@ def _run_ut():
     args = parser.parse_args(sys.argv[1:])
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
-    used_device = current_device + ":" + str(args.device_id)
+    used_device = current_device + ":" + str(args.device_id[0])
     try:
         if is_gpu:
             torch.cuda.set_device(used_device)
