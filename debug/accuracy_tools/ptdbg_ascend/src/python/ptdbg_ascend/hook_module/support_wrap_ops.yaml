@@ -1073,6 +1073,7 @@ torch_npu:
   - npu_random_choice_with_mask
   - npu_rotated_iou
   - npu_conv2d
+  - npu_conv3d
   - npu_softmax_cross_entropy_with_logits
   - npu_all_gather_base_mm
   - npu_swiglu
