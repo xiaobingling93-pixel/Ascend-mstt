@@ -17,7 +17,7 @@
 
 import os
 import torch
-import numpy as np
+import numpy
 
 from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, print_error_log, \
     CompareException
@@ -26,6 +26,9 @@ TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
 FLOAT_TYPE = ['torch.float32', 'torch.float', 'torch.float64', 'torch.double', 'torch.float16',
               'torch.half', 'torch.bfloat16']
+NUMPY_TYPE = ["numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
+              "numpy.uint64", "numpy.float16", "numpy.float32", "numpy.float64", "numpy.float128", "numpy.complex64", 
+              "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"]
 
 
 def gen_data(info, need_grad, convert_type):
@@ -50,6 +53,14 @@ def gen_data(info, need_grad, convert_type):
             temp_data = data * 1
             data = temp_data.type_as(data)
             data.retain_grad()
+    elif data_type.startswith("numpy"):
+        if data_type not in NUMPY_TYPE:
+            raise Exception("{} is not supported now".format(data_type))
+        data = info.get("value")
+        try:
+            data = eval(data_type)(data)
+        except Exception as err:
+            print_error_log("Failed to convert the type to numpy: %s" % str(err))
     else:
         data = info.get('value')
         if info.get("type") == "slice":
@@ -73,7 +84,7 @@ def gen_real_tensor(data_path, convert_type):
     if data_path.endswith('.pt'):
         data = torch.load(data_path)
     else:
-        data_np = np.load(data_path)
+        data_np = numpy.load(data_path)
         data = torch.from_numpy(data_np)
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]
@@ -193,7 +204,7 @@ def gen_kwargs(api_info, convert_type=None):
     for key, value in kwargs_params.items():
         if isinstance(value, (list, tuple)):
             kwargs_params[key] = gen_list_kwargs(value, convert_type)
-        elif value.get('type') in TENSOR_DATA_LIST:
+        elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
             kwargs_params[key] = gen_data(value, False, convert_type)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
