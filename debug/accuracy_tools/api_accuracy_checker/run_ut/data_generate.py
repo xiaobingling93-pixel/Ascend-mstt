@@ -54,6 +54,8 @@ def gen_data(info, need_grad, convert_type):
             data = temp_data.type_as(data)
             data.retain_grad()
     elif data_type.startswith("numpy"):
+        if data_type not in NUMPY_TYPE:
+            raise Exception("{} is not supported now".format(data_type))
         data = info.get("value")
         try:
             data = eval(data_type)(data)
