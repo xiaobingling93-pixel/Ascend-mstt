@@ -20,7 +20,7 @@ import torch
 import numpy as np
 
 from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
-    print_error_log, check_real_data_mode, CompareException
+    print_error_log, get_full_data_path, CompareException
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
@@ -40,7 +40,7 @@ def gen_data(info, need_grad, convert_type, real_data_path=None):
     check_object_type(info, dict)
     data_type = info.get('type')
     data_path = info.get('datapath')
-    data_path = check_real_data_mode(data_path, real_data_path)
+    data_path = get_full_data_path(data_path, real_data_path)
     if data_type in TENSOR_DATA_LIST:
         if data_path:
             data = gen_real_tensor(data_path, convert_type)

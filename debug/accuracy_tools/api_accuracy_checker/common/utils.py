@@ -634,17 +634,17 @@ def write_pt(file_path, tensor):
 
 def get_real_data_path(file_path):
     targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
-    pattern = re.compile(r'(.*?)(?=({}))'.format('|'.join(targets)))
+    pattern = re.compile(r'({})'.format('|'.join(targets)))
     match = pattern.search(file_path)
     if match:
-        base_path = match.group(1)
-        target_path = file_path[len(base_path):]
+        target_index = match.start()
+        target_path = file_path[target_index:]
         return target_path
     else:
         raise DumpException(DumpException.INVALID_PATH_ERROR)
 
 
-def check_real_data_mode(data_path, real_data_path):
+def get_full_data_path(data_path, real_data_path):
     if not data_path:
         return data_path
     full_data_path = os.path.join(real_data_path, data_path)
