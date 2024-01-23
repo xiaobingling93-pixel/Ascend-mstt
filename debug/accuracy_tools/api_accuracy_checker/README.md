@@ -246,8 +246,6 @@ python multi_run_ut.py -forward ./forward_info_0.json -backward ./backward_info_
 
 某些场景下（如推理），可以不指定backward_info_0.json，不影响预检功能。
 
-**该模式下可能因不在同一时刻启动run_ut操作而生成2到3份连续的csv文件。**
-
 | 参数名称                         | 说明                                                         | 是否必选                           |
 | -------------------------------- | ------------------------------------------------------------ | ---------------------------------- |
 | -forward或--forward_input_file   | 指定前向API信息文件forward_info_{pid}.json。                 | 是                                 |
