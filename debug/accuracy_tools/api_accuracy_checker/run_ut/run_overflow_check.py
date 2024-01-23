@@ -66,9 +66,10 @@ def run_torch_api(api_full_name, api_info_dict):
     torch.npu.clear_npu_overflow_flag()
     api_type = api_full_name.split("_")[0]
     api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name)
+    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path='')
     if not need_grad:
-        print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." % api_full_name)
+        print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." 
+                       % api_full_name)
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False)
     if kwargs.get("device"):
         del kwargs["device"]
