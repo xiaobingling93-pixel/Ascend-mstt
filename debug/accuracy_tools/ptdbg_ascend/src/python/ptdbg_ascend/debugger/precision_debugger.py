@@ -2,7 +2,7 @@ import os
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
     CompareException, print_warn_log
-from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path
+from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
 from ..overflow_check.utils import OverFlowUtil
@@ -55,6 +55,9 @@ class PrecisionDebugger:
 
     def configure_full_dump(self, mode='api_stack', scope=None, api_list=None, filter_switch=Const.OFF,
             input_output_mode=[Const.ALL], acl_config=None, backward_input=None, summary_only=False, summary_mode=None):
+        if mode == "acl" and self.model is not None:
+            print_error_log("Init dump does not support ACL dump mode.")
+            raise CompareException(CompareException.INVALID_DUMP_MODE)
         scope = scope or [] 
         api_list = api_list or []
         backward_input = backward_input or []
@@ -139,6 +142,7 @@ class PrecisionDebugger:
             DumpUtil.iter_num += 1
             DumpUtil.dump_init_enable = True
             HOOKModule.module_count = {}
+            reset_module_count()
         else:
             print_warn_log("DataLoader is enabled, step() skipped.")
 
