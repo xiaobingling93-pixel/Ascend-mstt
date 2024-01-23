@@ -54,15 +54,25 @@ class PrecisionDebugger:
         return hook_dict.get(hook_name, lambda: ValueError("hook name {} is not in ['dump', 'overflow_check']".format(hook_name)))
 
     def configure_full_dump(self, mode='api_stack', scope=None, api_list=None, filter_switch=Const.OFF,
-            input_output_mode=[Const.ALL], acl_config=None, backward_input=None, summary_only=False):
+            input_output_mode=[Const.ALL], acl_config=None, backward_input=None, summary_only=False, summary_mode=None):
         if mode == "acl" and self.model is not None:
             print_error_log("Init dump does not support ACL dump mode.")
             raise CompareException(CompareException.INVALID_DUMP_MODE)
-        scope = scope or []
+        scope = scope or [] 
         api_list = api_list or []
         backward_input = backward_input or []
+
+        if summary_only:
+            if summary_mode is not None:
+                raise ValueError("summary_mode can not be used with summary_only")
+            print_warn_log("Argument 'summary_only' will be deprecated, it would be better to use 'summary_mode'")
+            summary_mode = "summary"
+        elif summary_mode is None:
+            summary_mode = "all"
+
         set_dump_switch_config(mode=mode, scope=scope, api_list=api_list,
-                               filter_switch=filter_switch, dump_mode=input_output_mode, summary_only=summary_only)
+                               filter_switch=filter_switch, dump_mode=input_output_mode, summary_only=summary_only,
+                               summary_mode=summary_mode)
         if mode == 'acl':
             DumpUtil.set_acl_config(acl_config)
             if not scope or not isinstance(scope, list) or len(scope) != 1:

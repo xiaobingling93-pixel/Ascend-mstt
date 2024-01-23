@@ -18,7 +18,7 @@ class TestRunUtMethods(unittest.TestCase):
     def test_exec_api(self):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
-        args, kwargs, need_grad = get_api_info(api_info, api_name)
+        args, kwargs, need_grad = get_api_info(api_info, api_name, None)
         cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
         out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
         self.assertEqual(out.dtype, torch.float64)
@@ -52,7 +52,7 @@ class TestRunUtMethods(unittest.TestCase):
     def test_generate_cpu_params(self):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
-        args, kwargs, need_grad = get_api_info(api_info, api_name)
+        args, kwargs, need_grad = get_api_info(api_info, api_name, None)
         cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
         self.assertEqual(len(cpu_args), 1)
         self.assertEqual(cpu_args[0].dtype, torch.float64)

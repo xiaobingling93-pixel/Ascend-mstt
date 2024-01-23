@@ -11,7 +11,7 @@ class TestAPIInfo(unittest.TestCase):
     def setUp(self):
         if os.path.exists('./step-1'):
             shutil.rmtree('./step-1')
-        self.api = APIInfo("test_api", APIInfo.get_full_save_path("./", "forward", True), True)
+        self.api = APIInfo("test_api", APIInfo.get_full_save_path("./", "forward_real_data", True), True)
 
     def test_analyze_element(self):
         element = [1, 2, 3]
@@ -24,7 +24,8 @@ class TestAPIInfo(unittest.TestCase):
         result = self.api._analyze_tensor(tensor)
         self.assertEqual(result.get('type'), 'torch.Tensor')
         self.assertTrue(result.get('requires_grad'))
-        self.assertTrue(os.path.exists(result.get('datapath')))
+        datapath = result.get('datapath')
+        self.assertTrue(datapath.startswith('forward_real_data') or datapath.startswith('backward_real_data'))
 
     def test_analyze_builtin(self):
         arg = slice(1, 10, 2)
