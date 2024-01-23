@@ -20,7 +20,6 @@ import json
 import os
 import threading
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 import torch
@@ -401,7 +400,7 @@ def acc_cmp_dump(name, **kwargs):
             except IndexError as e:
                 print_error_log(f"Get module {name_template} index failed.")
                 raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-            name = name.format(index)
+            name = name_template.format(index)
         if pid == os.getpid():
             dump_acc_cmp(name, in_feat, out_feat, dump_step, module)
         if hasattr(module, "input_args"):
@@ -418,3 +417,8 @@ def write_to_disk():
 
 def get_pkl_file_path():
     return pkl_name
+
+
+def reset_module_count():
+    global module_count
+    module_count = {}
