@@ -1073,7 +1073,7 @@ register_hook(model, hook, overflow_nums=overflow_nums, dump_mode=dump_mode, dum
 | hook          | 注册工具的dump和溢出检测钩子。可取值overflow_check（表示溢出检测）和acc_cmp_dump（表示dump数据），二选一。 | 是       |
 | overflow_nums | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
 | dump_mode     | 控制针对溢出API的dump模式，可取值"acl"或"api"。配置acl时，表示dump ACL级别的溢出数据，此时set_dump_path参数不生效，dump数据目录由dump_config的.json文件配置。参数示例：dump_mode="acl"。默认不配置，即dump API级别的溢出数据。 | 否       |
-| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"或"model"时，该参数不选。参数示例：dump_config='./dump.json'。 | 否       |
+| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"时，该参数不选。参数示例：dump_config='./dump.json'。 | 否       |
 
 **函数示例**
 
