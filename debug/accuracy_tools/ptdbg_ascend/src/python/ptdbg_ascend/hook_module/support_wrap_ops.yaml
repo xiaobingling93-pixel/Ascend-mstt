@@ -1092,6 +1092,11 @@ torch_npu:
   - npu_silu
   - npu_fused_attention_score
   - npu_multi_head_attention
+  - npu_gru
+  - npu_incre_flash_attention
+  - npu_prompt_flash_attention
+  - npu_lstm
+  - npu_apply_adam
 
 aten:
   - signbit
