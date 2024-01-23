@@ -68,7 +68,7 @@ class Const:
     DUMP_RATIO_MAX = 100
     SUMMERY_DATA_NUMS = 256
     FLOAT_EPSILON = np.finfo(float).eps
-    SUPPORT_DUMP_MODE = ['api', 'acl', 'model']
+    SUPPORT_DUMP_MODE = ['api', 'acl']
     ON = 'ON'
     OFF = 'OFF'
     BACKWARD = 'backward'
@@ -412,7 +412,7 @@ def is_starts_with(string, prefix_list):
 
 def check_stack_mode(pkl_fp):
     api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
     is_stack_mode = False
     for index, line in enumerate(pkl_fp):
         if index == 0:

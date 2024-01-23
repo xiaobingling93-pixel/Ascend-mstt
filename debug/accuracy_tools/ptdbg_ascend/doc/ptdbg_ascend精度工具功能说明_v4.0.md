@@ -1,6 +1,6 @@
 # **PyTorch精度工具使用指南**
 
-本文主要介绍PyTorch精度工具精度工具ptdbg_ascend的使用以及精度比对场景示例。
+本文主要介绍PyTorch精度工具ptdbg_ascend的使用以及精度比对场景示例。
 
 ptdbg_ascend工具的原理及安装请参见《[PyTorch精度工具](https://gitee.com/ascend/att/blob/master/debug/accuracy_tools/ptdbg_ascend/README.md)》。
 
@@ -297,12 +297,6 @@ register_hook需要在set_dump_path之后调用，也需要在每个进程上被
 通信类API数据可以使用全量dump方式获取，若只dump通信类API数据，可以使用如下示例：
 
 ```python
-debugger.configure_hook(mode="api_list", api_list=["distributed"])
-```
-
-或
-
-```python
 set_dump_switch("ON", mode="api_list", api_list=["distributed"])
 ```
 
@@ -460,7 +454,7 @@ PrecisionDebugger(dump_path=None, hook_name=None, rank=None, step=[], enable_dat
 | rank              | 指定对某张卡上的数据进行dump或溢出检测，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0~7，实际训练运行0~3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。 | 否       |
 | step              | 指定dump某个step的数据，默认未配置，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]；也可以配置step范围，例如：step=list(range(0,9))，表示dump第0到第8个step。 | 否       |
 | enable_dataloader | 自动控制开关，可取值True（开启）或False（关闭），默认为False。配置为True后自动识别dump step参数指定的迭代，并在该迭代执行完成后退出训练，此时start和stop函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据；配置为False则需要配置start和stop函数，并在最后一个stop函数后或一个step结束的位置添加debugger.step()。 | 否       |
-| model             | 开启model模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.model类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。<br/>该模式不支持“溢出检测”和“模块级精度数据dump”。 | 否       |
+| model             | 开启init dump模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.Module类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。<br/>该模式不支持“溢出检测”和“模块级精度数据dump”。此模式下dump文件名前缀为网络中定义的模块名或层名。 | 否       |
 
 ### configure_hook函数（可选）
 
@@ -532,14 +526,14 @@ configure_hook可配置多种dump模式，示例如下：
   debugger.configure_hook(mode="acl", scope=["Tensor_permute_1_forward"], acl_config="./dump.json")
   ```
 
-- 示例4：dump指定反向API的ACL级别数据
+- 示例5：dump指定反向API的ACL级别数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(mode="acl", scope=["Functional_conv2d_1_backward"], acl_config="./dump.json", backward_input=["./npu_dump/dump_conv2d_v2.0/rank0/dump/Functional_conv2d_1_backward_input.0.npy"])
   ```
 
-- 示例5：dump指定某一类API的API级别输入输出数据
+- 示例6：dump指定某一类API的API级别输入输出数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -548,7 +542,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   mode="api_list"时不配置scope。
 
-- 示例6：dump全部API级别输入输出数据以及相应堆栈信息
+- 示例7：dump全部API级别输入输出数据以及相应堆栈信息
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -557,7 +551,7 @@ configure_hook可配置多种dump模式，示例如下：
 
   mode="api_stack"时不配置scope。
 
-- 示例7： dump全部API级别输入输出数据并包含bool和整型的tensor以及浮点、bool和整型的标量，配置为OFF，会dump bool和整型数据
+- 示例8： dump全部API级别输入输出数据并包含bool和整型的tensor以及浮点、bool和整型的标量，配置为OFF，会dump bool和整型数据
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
@@ -566,21 +560,21 @@ configure_hook可配置多种dump模式，示例如下：
 
   配置filter_switch="OFF"同时也可以配置mode、scope和api_list，除dump ACL级别数据。
 
-- 示例8：仅保存dump的数据文件名包含“backward”的反向.npy文件
+- 示例9：仅保存dump的数据文件名包含“backward”的反向.npy文件
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(input_output_mode=["backward"])
   ```
 
-- 示例9：仅dump pkl文件
+- 示例10：仅dump pkl文件
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="dump", step=[0])
   debugger.configure_hook(summary_only=True)
   ```
 
-- 示例10：溢出检测dump
+- 示例11：溢出检测dump
 
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
@@ -598,10 +592,10 @@ configure_hook可配置多种dump模式，示例如下：
   ```python
   debugger = PrecisionDebugger(dump_path="./dump_path", hook_name="overflow_check", step=[0])
   debugger.configure_hook(mode="acl", acl_config="./dump.json")
-```
-  
-该场景会在原有数据基础上，额外在dump.json文件配置的dump_path目录下生成一份ACL算子数据，该数据可通过“**ptdbg_ascend.parse**”工具进行解析。
-  
+  ```
+
+  该场景会在原有数据基础上，额外在dump.json文件配置的dump_path目录下生成一份ACL算子数据，该数据可通过“**ptdbg_ascend.parse**”工具进行解析。
+
   仅支持NPU环境。
 
 ### start函数（可选）
@@ -704,11 +698,11 @@ debugger.stop()
   debugger.step()
   ```
 
-## CPU或GPU及NPU精度数据dump
+## register_hook方式dump和溢出检测
 
 ### 总体说明
 
-- 本节主要介绍CPU或GPU及NPU精度数据dump所需要的函数以及示例。
+- 本节主要介绍CPU或GPU及NPU精度数据dump和溢出检测所需要的函数以及示例。
 
 - ptdbg_ascend工具默认情况下仅dump PyTorch模型的API输入输出数据进行精度比对，若在比对结果中发现某个API下可能存在ACL的精度问题，那么可以选择dump该API的ACL级别数据进行精度分析。
 
@@ -732,7 +726,7 @@ debugger.stop()
 
 固定随机数。通过固定随机数保证模型的输入或输出一致。在训练主函数开始前调用，避免随机数固定不全。
 
-dump操作必选。
+使用form ptdbg import *后自动导入该函数，代码无需再次添加，若需要修改随机数种子和确定性计算模式，则需要通过添加该函数修改。
 
 **函数原型**
 
@@ -860,8 +854,8 @@ register_hook(model, hook, overflow_nums=overflow_nums, dump_mode=dump_mode, dum
 | model         | 传入网络模型实例化的对象。参数示例： model=net，net为网络模型实例化的对象名称。 | 是       |
 | hook          | 注册工具的dump和溢出检测钩子。可取值overflow_check（表示溢出检测）和acc_cmp_dump（表示dump数据），二选一。 | 是       |
 | overflow_nums | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
-| dump_mode     | 控制针对溢出API的dump模式，可取值"model"、"acl"或"api"。配置为"model"时，表示开启model模式，dump操作仅dump网络中init方法里调用的方法（nn.model类），不会对所有API进行dump，不支持“溢出检测”和“模块级精度数据dump”；配置acl时，表示dump ACL级别的溢出数据，此时set_dump_path参数不生效，dump数据目录由dump_config的.json文件配置。参数示例：dump_mode="acl"。默认不配置，即dump API级别的溢出数据。 | 否       |
-| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"时，该参数不选。参数示例：dump_config='./dump.json'。 | 否       |
+| dump_mode     | 控制针对溢出API的dump模式，可取值"acl"或"api"。配置acl时，表示dump ACL级别的溢出数据，此时set_dump_path参数不生效，dump数据目录由dump_config的.json文件配置。参数示例：dump_mode="acl"。默认不配置，即dump API级别的溢出数据。 | 否       |
+| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"或"model"时，该参数不选。参数示例：dump_config='./dump.json'。 | 否       |
 
 **函数示例**
 
@@ -1242,8 +1236,8 @@ torch.npu.set_device("npu:0")
 class ModuleOP(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.linear_1 = nn.Linear(in_features=2, out_features=2)
-        self.linear_2 = nn.Linear(in_features=2, out_features=1)
+        self.linear_1 = nn.Linear(in_features=8, out_features=4)
+        self.linear_2 = nn.Linear(in_features=4, out_features=2)
     def forward(self, x):
         x1 = self.linear_1(x)
         x2 = self.linear_2(x1)
@@ -1254,18 +1248,16 @@ if __name__ == "__main__":
     module = ModuleOP()
 
     # 注册工具
-    set_dump_path("./dump_data/npu")
-    set_dump_switch("ON")
-    register_hook(module, acc_cmp_dump)
+    pdbg = PrecisionDebugger("./dump_data/npu", hook_name="dump")
+    pdbg.start()
 
-    x = torch.randn(2, 2)
-
-    module_dump(module, "MyModule")    # 开启模块级精度数据dump
+    x = torch.randn(10, 8)
+    module_dump(module, "MyModuleOP")    # 开启模块级精度数据dump
     out = module(x)
     module_dump_end()    # 结束模块级精度数据dump
     loss = out.sum()
     loss.backward()
-    set_dump_switch("OFF")
+    pdbg.stop()
 ```
 
 ## dump数据存盘说明
@@ -1275,66 +1267,60 @@ dump结果目录结构示例如下：
 ```bash
 ├── dump_path
 │   └── ptdbg_dump_{version}
-│       ├── rank0
-│       │   ├── dump
-|       |   |    ├── Tensor_permute_1_forward.npy
-|       |   |    ├── MyModule_0_forward_input.npy    # 开启模块级精度数据dump时存在模块级的dump数据文件
-|       |   |    ...
-|       |   |    └── Fcuntion_linear_5_backward_output.npy
-│       │   └── dump.pkl
-│       ├── rank1
-|       |   ├── dump
-|       |   |   └── ...
-|       |   └── dump.pkl
-│       ├── ...
-│       |
-|       └── rank7
+│       ├── step0
+│       |   ├── rank0
+│       |   │   ├── dump
+|       |   |   |    ├── Tensor_permute_1_forward.npy
+|       |   |   |    ├── MyModule_0_forward_input.npy    # 开启模块级精度数据dump时存在模块级的dump数据文件
+|       |   |   |    ...
+|       |   |   |    └── Fcuntion_linear_5_backward_output.npy
+│       |   │   └── dump.pkl
+│       |   ├── rank1
+|       |   |   ├── dump
+|       |   |   |   └── ...
+|       |   |   └── dump.pkl
+│       |   ├── ...
+│       |   |
+|       |   └── rank7
+│       ├── step1
+│       |   ├── ...
+│       ├── step2
 ```
 
 dump过程中，npy文件在对应算子或者模块被执行后就会落盘，而pkl文件则需要在正常执行PrecisionDebugger.stop()或set_dump_switch("OFF")后才会被落盘保存，异常的程序终止会保存终止前被执行算子的相关npy文件，但是不会生成pkl文件。
 
-其中ptdbg_dump_{version}为未设置set_dump_path的dump_tag参数时的默认命名；rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
-
-当使用debugger方式dump数据时，配置了PrecisionDebugger模块的step=[]参数，dump结果目录则以step为父目录，例如配置step=[0,1,2]时，dump结果目录为：
-
-```
-├── dump_path
-│   └── step0
-│   |  └── ptdbg_dump_{version}
-│   |  |   ├── rank0
-│   |  |   ├── ...
-│   |  |   ├── rank7
-|   ├── step1
-|   |  |   ├── ...
-│   └── step2
-```
+其中`ptdbg_dump_{version}`为默认命名，debugger方式dump不支持修改该文件夹名称，使用set_dump_path函数则支持通过dump_tag参数修改文件夹名称；rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
 
 **精度比对dump场景**
 
 精度比对dump场景的结果如下：
 
-* dump.pkl文件：包含dump数据的API名称、dtype、 shape以及各数据的max、min、mean统计信息。
+* dump.pkl文件：包含dump数据的API名称（命名格式为：`{api_type}_{api_name}_{API调用次数}_{前向反向}_{input/output}.{参数序号}`）、dtype、 shape以及各数据的max、min、mean统计信息。
+
+   其中，“参数序号”表示该API下的第n个参数，例如1，则为第一个参数，若该参数为list格式，则根据list继续排序，例如1.1，表示该API的第1个参数的第1个子参数。
 
 * dump目录：目录下为npy格式的dump数据。
 
    npy文件保存的前缀和PyTorch对应关系如下
 
-   | 前缀       | Torch模块           |
-   | ---------- | ------------------- |
-   | Tensor     | torch.Tensor        |
-   | Torch      | torch               |
-   | Functional | torch.nn.functional |
-   | NPU        | NPU亲和算子         |
-   | VF         | torch._VF           |
+   | 前缀        | Torch模块           |
+   | ----------- | ------------------- |
+   | Tensor      | torch.Tensor        |
+   | Torch       | torch               |
+   | Functional  | torch.nn.functional |
+   | NPU         | NPU亲和算子         |
+   | VF          | torch._VF           |
+   | Aten        | torch.ops.aten      |
+   | Distributed | torch.distributed   |
 
-当set_dump_switch或configure_hook配置mode参数（例如：mode="api_stack" ）时，dump结果的文件名会添加api_stack前缀，dump结果如下：
+当configure_hook或set_dump_switch配置mode参数（例如：mode="api_stack" ）时，dump结果的文件名会添加api_stack前缀，dump结果如下：
 
 * api_stack_dump.pkl
 * api_stack_dump目录
 
 **溢出检测dump场景**
 
-register_hook设置了overflow_check时，检测API溢出，dump结果的文件名格式为：`{api_type}___{api_name}___{API调用次数}_{前向反向}_{当前溢出次数}`，dump结果示例如下：
+PrecisionDebugger模块的hook_name参数或register_hook函数设置了overflow_check时，检测API溢出，dump结果的文件名格式为：`{api_type}___{api_name}___{API调用次数}_{前向反向}_{当前溢出次数}`，dump结果示例如下：
 
 * `Tensor___add___1_forward_1.pkl`
 * `Tensor___add___1_forward_1`目录

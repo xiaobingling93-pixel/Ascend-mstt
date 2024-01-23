@@ -35,7 +35,7 @@ UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'test_result_cnt'])
+                                         'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
 
 tqdm_params = {
@@ -135,8 +135,12 @@ def generate_cpu_params(input_args, input_kwargs, need_backward):
 
 def run_ut(config):
     print_info_log("start UT test")
-    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut,
-                         config.test_result_cnt)
+    print_info_log(f"UT task result will be saved in {config.result_csv_path}")
+    print_info_log(f"UT task details will be saved in {config.details_csv_path}")
+    if config.save_error_data:
+        error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
+        print_info_log(f"UT task error_datas will be saved in {error_data_path}")
+    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
         csv_reader = csv.reader(file)
         next(csv_reader)
@@ -165,6 +169,8 @@ def run_ut(config):
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+        finally:
+            torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -279,38 +285,6 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
-def get_statistics_from_result_csv(validated_result_csv_path):
-    test_result_cnt = {
-        "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-        "total_num": 0, "forward_or_backward_fail_num": 0
-    }
-    with FileOpen(validated_result_csv_path, 'r') as file:
-        reader = csv.reader(file)
-        result_csv_rows = [row for row in reader]
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    for item in result_csv_rows[1:]:
-        if not isinstance(item, list) or len(item) < 3:
-            raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-        if item[1] not in ['True', 'False', CompareConst.NA, 'SKIP'] \
-                or item[2] not in ['True', 'False', CompareConst.NA, 'SKIP']:
-            raise ValueError("The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE or N/A"
-                             % result_csv_name)
-        if item[1] == 'SKIP':
-            continue
-        test_result_cnt["total_num"] += 1
-        if item[1] == 'True' and item[2] in ['True', 'N/A']:
-            test_result_cnt['success_num'] += 1
-        elif item[1] == 'False' and item[2] == 'False':
-            test_result_cnt['forward_and_backward_fail_num'] += 1
-        elif item[1] == 'False':
-            test_result_cnt['forward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-        else:
-            test_result_cnt['backward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-    return test_result_cnt
-
-
 def _run_ut_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
                         help="<Required> The api param tool forward result file: generate from api param tool, "
@@ -327,8 +301,20 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set device id to run ut",
-                        default=0, required=False)
+    
+    class UniqueDeviceAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            unique_values = set(values)
+            if len(values) != len(unique_values):
+                parser.error("device id must be unique")
+            for device_id in values:
+                if not 0 <= device_id <= 7:
+                    parser.error("device id must be in range 0-7")
+            setattr(namespace, self.dest, values)
+
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
@@ -345,7 +331,7 @@ def _run_ut():
     args = parser.parse_args(sys.argv[1:])
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
-    used_device = current_device + ":" + str(args.device_id)
+    used_device = current_device + ":" + str(args.device_id[0])
     try:
         if is_gpu:
             torch.cuda.set_device(used_device)
@@ -370,21 +356,17 @@ def _run_ut():
         backward_content = get_json_contents(backward_file)
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
-    test_result_cnt = None
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path)
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-        test_result_cnt = get_statistics_from_result_csv(result_csv_path)
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
-            ut_error_data_dir_name = 'ut_error_data' + time_info
-            ut_error_data_dir_path = os.path.join(os.path.dirname(result_csv_path), ut_error_data_dir_name)
             global UT_ERROR_DATA_DIR
-            UT_ERROR_DATA_DIR = ut_error_data_dir_path
+            UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         initialize_save_error_data()
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, args.real_data_path, test_result_cnt)
+                                args.result_csv_path, args.real_data_path)
     run_ut(run_ut_config)
 
 

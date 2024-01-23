@@ -32,20 +32,55 @@ except ImportError:
 else:
     is_gpu = False
 
-from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist
-from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst
+from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,\
+    CompareException
+from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,\
+    print_error_log
 from ..dump.utils import check_writable
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
 
 forward_init_status = False
 backward_init_status = False
 
-api_list = []
 thread_lock = threading.Lock()
 pkl_name = ""
 rank = os.getpid()
 multi_output_apis = ["_sort_", "npu_flash_attention"]
-module_count = defaultdict(int)
+module_count = {}
+
+
+class APIList(list):
+    threshold = 1000
+
+    def __init__(self, *args):
+        self.dump_count = 0
+        self.pkl_mode_changed = False
+        super().__init__(*args)
+
+    def flush(self):
+        pkl_path = get_pkl_file_path()
+        if len(self) == 0 or pkl_path == "":
+            return
+        with FileOpen(pkl_path, 'a') as f:
+            try:
+                f.write('\n'.join(json.dumps(item) for item in self))
+                f.write('\n')
+            except IOError as ex:
+                raise Exception("write to disk failed") from ex
+        self.dump_count += 1
+        print_info_log(f"write {len(self)} items to {pkl_path} the {self.dump_count} time")
+        if not self.pkl_mode_changed:
+            change_mode(pkl_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            self.pkl_mode_changed = True
+        self.clear()
+
+    def append(self, data):
+        list.append(self, data)
+        if len(self) >= APIList.threshold:
+            self.flush()
+
+
+api_list = APIList()
 
 
 class DataInfo(object):
@@ -334,22 +369,38 @@ def dump_mode_backward_acl_dump(module, module_name, grad_path):
     print_info_log("Dump %s op file." % module_name)
 
 
+def module_count_func(name, name_template):
+    module_name = name.split("_")[-3]
+    if Const.FORWARD in name_template:
+        if module_name not in module_count:
+            module_count[module_name] = [0, [0]]
+        else:
+            if module_count[module_name][-1] and \
+                    module_count[module_name][0] != module_count[module_name][-1][-1]:
+                module_count[module_name][-1].pop()
+            module_count[module_name][0] += 1
+            module_count[module_name][-1].append(module_count[module_name][0])
+        index = module_count[module_name][0]
+    else:
+        index = module_count[module_name][-1].pop()
+    return index
+
+
 def acc_cmp_dump(name, **kwargs):
     dump_step = kwargs.get('dump_step', 1)
     pid = kwargs.get('pid')
+    name_template = name
     if not pid:
         return RuntimeError("Not get the specified process pid.")
 
     def acc_cmp_hook(module, in_feat, out_feat=None):
-        nonlocal name
-        if "_{}_" in name:
-            module_name = name.split("_")[1]
-            if Const.BACKWARD in name:
-                index = module_count[module_name] - 1
-                module_count[module_name] = index
-            else:
-                index = module_count[module_name]
-                module_count[module_name] = index + 1
+        nonlocal name, name_template
+        if "_{}_" in name_template:
+            try:
+                index = module_count_func(name, name_template)
+            except IndexError as e:
+                print_error_log(f"Get module {name_template} index failed.")
+                raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
             name = name.format(index)
         if pid == os.getpid():
             dump_acc_cmp(name, in_feat, out_feat, dump_step, module)
@@ -362,16 +413,7 @@ def acc_cmp_dump(name, **kwargs):
 
 
 def write_to_disk():
-    global api_list
-    if api_list:
-        with FileOpen(pkl_name, 'a') as f:
-            try:
-                f.write('\n'.join(json.dumps(item) for item in api_list))
-                f.write('\n')
-            except:
-                raise Exception("write to disk failed")
-        change_mode(pkl_name, FileCheckConst.DATA_FILE_AUTHORITY)
-        api_list = []
+    api_list.flush()
 
 
 def get_pkl_file_path():
