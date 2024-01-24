@@ -27,7 +27,7 @@ import pandas as pd
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
 from ..common.utils import check_compare_param, add_time_as_suffix, \
-    print_warn_log, print_error_log, CompareException, Const, \
+    print_info_log, print_warn_log, print_error_log, CompareException, Const, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
     is_summary_compare, is_md5_compare
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
@@ -329,7 +329,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
                     if isinstance(val[0], (float, int)) and isinstance(val[1], (float, int)):
-                        result_item[start_idx + i] = val[0] - val[1]
+                        result_item[start_idx + i] = val[0] - val[1] if not any(np.isinf(val)) else np.inf
                     else:
                         result_item[start_idx + i] = "Nan"
 
@@ -609,6 +609,7 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
                     as fout:
         compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
         if summary_compare:
+            print_info_log(f"Summary compare result is {file_path}")
             return
 
     if not md5_compare:
@@ -674,13 +675,13 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
         b_match_data = bench_ops_queue[b_match_point]
         un_match_data = npu_ops_queue[0: n_match_point]
         for npu_data in un_match_data:
-            get_un_match_accuracy(result, npu_data, md5_compare)
+            get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
         get_accuracy(result, n_match_data, b_match_data, summary_compare, md5_compare)
         del npu_ops_queue[0: n_match_point + 1]
         del bench_ops_queue[0: b_match_point + 1]
     if npu_ops_queue:
         for npu_data in npu_ops_queue:
-            get_un_match_accuracy(result, npu_data, md5_compare)
+            get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
 
     header = []
     if md5_compare:
@@ -699,18 +700,18 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     result_df.to_csv(output_csv_handle, index=False)
 
 
-def get_un_match_accuracy(result, n_dict, md5_compare):
+def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.NAN, CompareConst.NAN, CompareConst.NAN
+    err_msg = CompareConst.NO_BENCH
+    accuracy_check_res = CompareConst.NAN
     for index, n_name in enumerate(n_dict["op_name"]):
         if n_name.find("input") != -1:
             n_struct = n_dict["input_struct"][index]
         else:
             n_struct = n_dict["output_struct"][index_out]
             index_out += 1
-        err_msg = CompareConst.NO_BENCH
-        accuracy_check_res = CompareConst.NAN
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
         if md5_compare:
@@ -719,10 +720,13 @@ def get_un_match_accuracy(result, n_dict, md5_compare):
                 result_item.extend(npu_stack_info)
             result.append(result_item)
             continue
-        result_item.extend([CompareConst.NAN] * 5)
+        if summary_compare:
+            result_item.extend([CompareConst.NAN] * 4)
+        else:
+            result_item.extend([CompareConst.NAN] * 5)
         summery_data = n_dict.get("summery")[index]
         result_item.extend(summery_data)
-        summery_data = [CompareConst.NAN] * 3
+        summery_data = [CompareConst.NAN] * 4
         result_item.extend(summery_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
