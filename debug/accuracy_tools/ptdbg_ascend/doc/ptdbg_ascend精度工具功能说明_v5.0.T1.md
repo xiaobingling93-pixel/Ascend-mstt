@@ -787,7 +787,61 @@ PrecisionDebugger(dump_path=None, hook_name=None, rank=None, step=[], enable_dat
 | rank              | 指定对某张卡上的数据进行dump或溢出检测，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0~7，实际训练运行0~3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。 | 否       |
 | step              | 指定dump某个step的数据，默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]；也可以配置step范围，例如：step=list(range(0,9))，表示dump第0到第8个step。 | 否       |
 | enable_dataloader | 自动控制开关，可取值True（开启）或False（关闭），默认为False。配置为True后自动识别dump step参数指定的迭代，并在该迭代执行完成后退出训练，此时start和stop函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据；配置为False则需要配置start和stop函数，并在最后一个stop函数后或一个step结束的位置添加debugger.step()。 | 否       |
-| model             | 开启init dump模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.Module类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。<br/>该模式不支持“溢出检测”和“模块级精度数据dump”。此模式下dump文件名前缀为网络中定义的模块名或层名。 | 否       |
+| model             | 开启init dump模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.Module类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。<br/>该模式不支持“溢出检测”、”ACL级别数据dump“和“模块级精度数据dump”。此模式下dump文件名前缀为网络中定义的模块名或层名。 | 否       |
+
+#### init dump模式示例代码和数据落盘说明
+
+**示例代码**
+
+```python
+import os
+import torch
+import torch.nn as nn
+import torch_npu
+from ptdbg_ascend import *
+
+torch.npu.set_device("npu:0")
+
+
+class Net(nn.Module):
+
+    def __init__(self):
+        super(Net, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=5, stride=1, padding=2)
+        self.relu1 = nn.ReLU()
+        self.bn1 = nn.BatchNorm2d(16)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        output = self.relu1(x)
+        return output
+
+if __name__ == "__main__":
+    net = Net().npu()
+    # model参数传入net, 开启init dump 功能
+    debugger = PrecisionDebugger(dump_path="./dump", hook_name="dump", model=net) 
+    debugger.configure_hook(mode="api_stack")
+    debugger.start()
+    x = torch.randn(1, 1, 28, 28).npu()
+    out = net(x)
+    loss = out.sum()
+    loss.backward()
+    debugger.stop()
+```
+
+**落盘数据说明**
+
+该模式下dump数据命名格式为：`{Layer_name}_{Module_name}_{call_num}_{forward/backward}_{input/output}.npy`
+
+```
+# 按照上述用例代码进行dump，落盘数据命名示例如下：
+conv1_Conv2d_0_forward_input.0.npy
+conv1_Conv2d_0_forward_output.npy
+relu1_ReLU_0_forward_input.0.npy
+.......
+bn1_BatchNorm2d_0_backward_output.2.npy
+```
 
 ### configure_hook函数（可选）
 
