@@ -74,7 +74,7 @@ def run_parallel_ut(config):
             output = process.stdout.readline()
             if output == '':
                 break
-            if 'ERROR' in output:
+            if '[ERROR]' in output:
                 print(output, end='')
     
     def update_progress_bar(progress_bar, result_csv_path):
@@ -94,7 +94,7 @@ def run_parallel_ut(config):
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
-    
+
     progress_bar_thread = threading.Thread(target=update_progress_bar, args=(progress_bar, config.result_csv_path))
     progress_bar_thread.start()
 
