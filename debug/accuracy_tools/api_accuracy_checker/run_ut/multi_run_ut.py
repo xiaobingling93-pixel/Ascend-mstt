@@ -5,6 +5,7 @@ import sys
 import argparse
 import time
 import signal
+import threading
 from collections import namedtuple
 from itertools import cycle
 from tqdm import tqdm
@@ -43,7 +44,7 @@ signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path', 'total_items','real_data_path'])
+ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path', 'total_items', 'real_data_path'])
 
 
 def run_parallel_ut(config):
@@ -64,14 +65,38 @@ def run_parallel_ut(config):
             *(['-j'] if config.jit_compile_flag else []),
             *(['-save_error_data'] if config.save_error_data_flag else []),
             '-csv_path', config.result_csv_path,
-            *(['-real_data_path'] if config.real_data_path else [])
+            *(['-real_data_path', config.real_data_path] if config.real_data_path else [])
         ]
         return cmd
 
+    def read_process_output(process):
+        while True:
+            output = process.stdout.readline()
+            if output == '':
+                break
+            if 'ERROR' in output:
+                print(output, end='')
+    
+    def update_progress_bar(progress_bar, result_csv_path):
+        while any(process.poll() is None for process in processes):
+            try:
+                with open(result_csv_path, 'r') as result_file:
+                    completed_items = len(result_file.readlines()) - 1
+                    progress_bar.update(completed_items - progress_bar.n)
+            except FileNotFoundError:
+                print_warn_log(f"Result CSV file not found: {result_csv_path}.")
+            except Exception as e:
+                print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
+            time.sleep(10)
+    
     for fwd, bwd in zip(config.forward_files, config.backward_files):
         cmd = create_cmd(fwd, bwd, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         processes.append(process)
+        threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
+    
+    progress_bar_thread = threading.Thread(target=update_progress_bar, args=(progress_bar, config.result_csv_path))
+    progress_bar_thread.start()
 
     def clean_up():
         progress_bar.close()
@@ -83,17 +108,6 @@ def run_parallel_ut(config):
             os.remove(file)
 
     try:
-        while any(process.poll() is None for process in processes):
-            try:
-                with open(config.result_csv_path, 'r') as result_file:
-                    completed_items = len(result_file.readlines()) - 1
-                    progress_bar.update(completed_items - progress_bar.n)
-            except FileNotFoundError:
-                print_warn_log(f"Result CSV file not found: {config.result_csv_path}.")
-            except Exception as e:
-                print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
-            time.sleep(10)
-
         for process in processes:
             process.communicate(timeout=None)
     except KeyboardInterrupt: 
@@ -102,6 +116,7 @@ def run_parallel_ut(config):
         print_error_log(f"An unexpected error occurred: {e}")
     finally:
         clean_up()
+        progress_bar_thread.join()
     try:
         comparator = Comparator(config.result_csv_path, config.result_csv_path, False)
         comparator.print_pretest_result()
