@@ -91,7 +91,7 @@ def run_parallel_ut(config):
     
     for fwd, bwd in zip(config.forward_files, config.backward_files):
         cmd = create_cmd(fwd, bwd, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
     
@@ -105,7 +105,10 @@ def run_parallel_ut(config):
                 process.terminate()
                 process.wait()
         for file in config.forward_files:
-            os.remove(file)
+            try:
+                os.remove(file)
+            except FileNotFoundError:
+                print_warn_log(f"File not found and could not be deleted: {file}")
 
     try:
         for process in processes:
