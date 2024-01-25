@@ -16,7 +16,6 @@
 """
 
 import os
-import numpy as np
 
 
 class Const:
@@ -28,8 +27,6 @@ class Const:
     DATA_ROOT_DIR = os.path.join(ROOT_DIR, 'parse_data')
     DUMP_CONVERT_DIR = os.path.join(DATA_ROOT_DIR, 'dump_convert')
     COMPARE_DIR = os.path.join(DATA_ROOT_DIR, 'compare_result')
-    BATCH_DUMP_CONVERT_DIR = os.path.join(DATA_ROOT_DIR, 'batch_dump_convert')
-    BATCH_COMPARE_DIR = os.path.join(DATA_ROOT_DIR, 'batch_compare_result')
     OFFLINE_DUMP_CONVERT_PATTERN = \
         r"^([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)\.([0-9]+)(\.[0-9]+)?\.([0-9]{1,255})" \
         r"\.([a-z]+)\.([0-9]{1,255})(\.[x0-9]+)?\.npy$"
@@ -41,7 +38,6 @@ class Const:
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     ONE_GB = 1 * 1024 * 1024 * 1024
     TEN_GB = 10 * 1024 * 1024 * 1024
-    FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     HEADER = r"""    ____
        / __ \____ ______________
       / /_/ / __ `/ ___/ ___/ _ \
