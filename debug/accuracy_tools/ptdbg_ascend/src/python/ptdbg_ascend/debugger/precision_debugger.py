@@ -17,7 +17,7 @@ class PrecisionDebugger:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.first_start = True
             cls._instance.hook_func = None
             cls._instance.config = None
@@ -32,8 +32,7 @@ class PrecisionDebugger:
                 err_msg = "You must provide hook_name argument to PrecisionDebugger\
                                 when config is not provided."
                 raise Exception(err_msg)
-            step = step or []
-            self.config = DebuggerConfig(dump_path, hook_name, rank, step)
+            self.config = DebuggerConfig(dump_path, hook_name, rank, step or [])
             self.configure_hook = self.get_configure_hook(self.config.hook_name)
             self.configure_hook()
             DumpUtil.target_iter = self.config.step
@@ -154,8 +153,12 @@ class PrecisionDebugger:
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        PrecisionDebugger.stop()
+        debugger_instance = PrecisionDebugger._instance
+        temp_enable_dataloader = debugger_instance.enable_dataloader
+        debugger_instance.enable_dataloader = False
+        debugger_instance.stop()
         result = func(*args, **kwargs)
-        PrecisionDebugger.incr_iter_num_maybe_exit()
+        debugger_instance.incr_iter_num_maybe_exit()
+        debugger_instance.enable_dataloader = temp_enable_dataloader
         return result
     return func_wrapper
