@@ -17,7 +17,7 @@ class PrecisionDebugger:
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
+            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
             cls._instance.first_start = True
             cls._instance.hook_func = None
             cls._instance.config = None
@@ -32,7 +32,8 @@ class PrecisionDebugger:
                 err_msg = "You must provide hook_name argument to PrecisionDebugger\
                                 when config is not provided."
                 raise Exception(err_msg)
-            self.config = DebuggerConfig(dump_path, hook_name, rank, step or [])
+            step = step or []
+            self.config = DebuggerConfig(dump_path, hook_name, rank, step)
             self.configure_hook = self.get_configure_hook(self.config.hook_name)
             self.configure_hook()
             DumpUtil.target_iter = self.config.step
