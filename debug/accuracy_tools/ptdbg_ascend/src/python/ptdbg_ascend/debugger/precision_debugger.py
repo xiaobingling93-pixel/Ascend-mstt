@@ -154,8 +154,12 @@ class PrecisionDebugger:
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        PrecisionDebugger.stop()
+        debugger_instance = PrecisionDebugger._instance
+        temp_enable_dataloader = debugger_instance.enable_dataloader
+        debugger_instance.enable_dataloader = False
+        debugger_instance.stop()
         result = func(*args, **kwargs)
-        PrecisionDebugger.incr_iter_num_maybe_exit()
+        debugger_instance.incr_iter_num_maybe_exit()
+        debugger_instance.enable_dataloader = temp_enable_dataloader
         return result
     return func_wrapper
