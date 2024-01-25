@@ -52,7 +52,7 @@ class InteractiveCli(cmd.Cmd):
         self.util.execute_command(line)
 
     def do_vc(self, line=""):
-        self.parse_tool.do_compare_converted_dir(self._parse_argv(line))
+        self.parse_tool.do_vector_compare(self._parse_argv(line))
 
     def do_dc(self, line=""):
         self.parse_tool.do_convert_dump(self._parse_argv(line))
@@ -65,7 +65,3 @@ class InteractiveCli(cmd.Cmd):
 
     def do_cn(self, line=''):
         self.parse_tool.do_compare_data(self._parse_argv(line))
-
-    def do_cad(self, line=''):
-        self.parse_tool.do_convert_api_dir(self._parse_argv(line))
-
