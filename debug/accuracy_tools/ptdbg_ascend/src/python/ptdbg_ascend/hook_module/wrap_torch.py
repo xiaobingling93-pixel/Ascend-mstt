@@ -32,8 +32,11 @@ with FileOpen(yaml_path, 'r') as f:
 
 def get_torch_ops():
     global WrapTorchOps
-    _torch_ops = dir(torch._C._VariableFunctionsClass)
+    _torch_ops = dir(torch)
     return set(WrapTorchOps) & set(_torch_ops)
+
+
+TorchOps = {op: getattr(torch, op) for op in get_torch_ops()}
 
 
 class HOOKTorchOP(object):
@@ -47,52 +50,9 @@ class TorchOPTemplate(HOOKModule):
         self.prefix_op_name_ = "Torch_" + str(op_name) + "_"
         super().__init__(hook)
 
-    def input_param_need_adapt(self):
-        special_op_list = ["broadcast_tensors", "block_diag"]
-        for item in special_op_list:
-            if item in self.op_name_:
-                return True
-        return False
-
-    def einsum_adapt(self, *args):
-        if len(args) < 2:
-            raise ValueError('einsum(): must specify the equation string and at least one operand, '
-                             'or at least one operand and its subscripts list')
-        equation = None
-        operands = None
-        if isinstance(args[0], torch.Tensor):
-            def parse_subscript(n: int) -> str:
-                if n == Ellipsis:
-                    return '...'
-                if n >= 0 and n < 26:
-                    return chr(ord('A') + n)
-                if n >= 26 and n < 52:
-                    return chr(ord('a') + n - 26)
-                raise ValueError('einsum(): subscript in subscript list is not within the valid range [0, 52]')
-            equation = ','.join(''.join(parse_subscript(s) for s in l) for l in args[1::2])
-
-            if len(args) % 2 == 1:
-                equation += '->' + ''.join(parse_subscript(s) for s in args[-1])
-                operands = args[:-1:2]
-            else:
-                operands = args[::2]
-        else:
-            equation = args[0]
-            operands = args[1:]
-
-        if len(operands) == 1 and isinstance(operands[0], (list, tuple)):
-            _operands = operands[0]
-            return self.einsum_adapt(equation, *_operands)
-        return equation, operands
-
     @torch_device_guard
     def forward(self, *args, **kwargs):
-        if self.input_param_need_adapt():
-            return getattr(torch._C._VariableFunctionsClass, str(self.op_name_))(args, **kwargs)
-        else:
-            if self.op_name_ == 'einsum':
-                args = self.einsum_adapt(*args)
-            return getattr(torch._C._VariableFunctionsClass, str(self.op_name_))(*args, **kwargs)
+        return TorchOps[str(self.op_name_)](*args, **kwargs)
 
 
 def wrap_torch_op(op_name, hook):
