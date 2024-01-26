@@ -96,8 +96,8 @@ def generate_device_params(input_args, input_kwargs, need_backward, api_name):
 
     is_detach = api_name not in not_detach_set
     device_args = recursive_arg_to_device(input_args, is_detach)
-    device_kwargs = {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in 
-                     input_kwargs.items()}
+    device_kwargs = \
+        {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return device_args, device_kwargs
 
 
