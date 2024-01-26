@@ -1810,6 +1810,18 @@ compare(dump_result_param, "./output", stack_mode=True)
 
 若使用**compare**或**compare_distributed**函数创建的比对脚本中，input_param参数只配置了npu_pkl_path和bench_pkl_path或使用summary_only方式dump时，可以进行pkl文件的比对，此时比对dump.pkl文件中的统计值，开启后的比对结果文件生成Max diff、Min diff和Mean diff，表示NPU dump数据中API的输入或输出与标杆数据输入或输出的最大最小平均值的差。可以通过该值判断API是否存在精度问题：当某个API的输入和输出的Max diff、Min diff、Mean diff和L2norm diff均为0或无限趋于0，那么可以判断该API无精度问题，反之则可能存在精度问题。
 
+**比对脚本示例**
+
+```python
+from ptdbg_ascend import compare
+dump_result_param={
+"npu_pkl_path": "./npu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl",
+"bench_pkl_path": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl",
+"is_print_compare_log": True
+}
+compare(dump_result_param, "./output", stack_mode=True)
+```
+
 ### parse
 
 **功能说明**
