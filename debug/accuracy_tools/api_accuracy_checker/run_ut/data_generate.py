@@ -164,6 +164,8 @@ def gen_bool_tensor(low, high, shape):
         shape:The shape of Tensor
     """
     low, high = int(low), int(high)
+    if low > high:
+        low, high = high, low
     tensor = torch.randint(low, high + 1, shape)
     data = torch.gt(tensor, 0)
     return data

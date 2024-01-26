@@ -70,7 +70,7 @@ def run_torch_api(api_full_name, api_info_dict):
     if not need_grad:
         print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
-    npu_args, npu_kwargs = generate_device_params(args, kwargs, False)
+    npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
         del kwargs["device"]
     out = exec_api(api_type, api_name, args, kwargs)

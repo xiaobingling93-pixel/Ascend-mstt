@@ -11,6 +11,8 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 
 def get_tensor_extremum(data, operator):
     if data.dtype is torch.bool:
+        if data.numel() == 0:
+            return False
         if operator == 'max':
             return True in data
         elif operator == 'min':

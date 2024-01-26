@@ -37,6 +37,7 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
+not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -77,8 +78,8 @@ def deal_dtype(arg, raise_dtype=None):
     return arg.type(raise_dtype)
 
 
-def generate_device_params(input_args, input_kwargs, need_backward):
-    def recursive_arg_to_device(arg_in, to_detach=True):
+def generate_device_params(input_args, input_kwargs, need_backward, api_name):
+    def recursive_arg_to_device(arg_in, to_detach):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -93,13 +94,15 @@ def generate_device_params(input_args, input_kwargs, need_backward):
         else:
             return arg_in
 
-    device_args = recursive_arg_to_device(input_args)
-    device_kwargs = {key: recursive_arg_to_device(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    device_args = recursive_arg_to_device(input_args, is_detach)
+    device_kwargs = \
+        {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return device_args, device_kwargs
 
 
-def generate_cpu_params(input_args, input_kwargs, need_backward):
-    def recursive_arg_to_cpu(arg_in, to_detach=True, raise_dtype=None):
+def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
+    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -128,8 +131,9 @@ def generate_cpu_params(input_args, input_kwargs, need_backward):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
-    cpu_args = recursive_arg_to_cpu(input_args, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
 
 
@@ -205,8 +209,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
-    cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward)
-    device_args, device_kwargs = generate_device_params(args, kwargs, need_backward)
+    cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
+    device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
     device_out = exec_api(api_type, api_name, device_args, device_kwargs)
@@ -220,7 +224,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if need_backward:
         backward_args = backward_content[api_full_name]
         grad = gen_args(backward_args, real_data_path=real_data_path)[0]
-        bench_grad, _ = generate_cpu_params(grad, {}, False)
+        bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
         bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
         device_grad = grad.clone().detach().to(current_device)
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)

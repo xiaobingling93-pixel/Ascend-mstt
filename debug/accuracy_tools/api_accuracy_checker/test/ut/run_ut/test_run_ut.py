@@ -19,7 +19,7 @@ class TestRunUtMethods(unittest.TestCase):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
         args, kwargs, need_grad = get_api_info(api_info, api_name, None)
-        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
+        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True, '')
         out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
         self.assertEqual(out.dtype, torch.float64)
         self.assertTrue(out.requires_grad)
@@ -42,7 +42,7 @@ class TestRunUtMethods(unittest.TestCase):
             mocks['retain_grad'].return_value = None
             mocks['to'].return_value = mock_tensor
             
-            device_args, device_kwargs = generate_device_params([mock_tensor], {'inplace': False}, True)
+            device_args, device_kwargs = generate_device_params([mock_tensor], {'inplace': False}, True, '')
             self.assertEqual(len(device_args), 1)
             self.assertEqual(device_args[0].dtype, torch.float32)
             self.assertTrue(device_args[0].requires_grad)
@@ -53,7 +53,7 @@ class TestRunUtMethods(unittest.TestCase):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
         args, kwargs, need_grad = get_api_info(api_info, api_name, None)
-        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
+        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True, '')
         self.assertEqual(len(cpu_args), 1)
         self.assertEqual(cpu_args[0].dtype, torch.float64)
         self.assertTrue(cpu_args[0].requires_grad)
