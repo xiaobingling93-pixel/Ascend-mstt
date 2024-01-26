@@ -876,7 +876,7 @@ debugger.configure_hook(mode=None, acl_config=None, overflow_nums=1, need_replic
 | backward_input    | 该输入文件为首次运行训练dump得到反向API输入的.npy文件。例如若需要dump Functional_conv2d_1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional_conv2d_1、backward和input字段的.npy文件。 | 否       |
 | input_output_mode | dump数据过滤。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。参数示例input_output_mode=["backward"]或input_output_mode=["forward", "backward"]。默认为all，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。 | 否       |
 | summary_only      | dump npy文件过滤，可取值True或False，配置为True后仅dump保存API统计信息的pkl文件，参数示例：summary_only=False，默认为False。 | 否       |
-| summary_mode      | 控制dump文件输出的模式，可取值md5（dump仅输出包含md5值的pkl文件，用于验证数据的完整性）、summary（dump仅输出包含API统计信息的pkl文件）、all（dump输出包含API统计信息的pkl文件以及具体的npy文件），参数示例：summary_mode=md5，默认为all。summary_only=True时，该参数不生效。 | 否       |
+| summary_mode      | 控制dump文件输出的模式，可取值md5（dump仅输出包含md5值的pkl文件，用于验证数据的完整性）、summary（dump仅输出包含API统计信息的pkl文件）、all（dump输出包含API统计信息的pkl文件以及具体的npy文件），参数示例：summary_mode=md5，默认为all。summary_only=True时，不允许配置该参数。 | 否       |
 | overflow_nums     | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
 | need_replicate    | 过程dump数据生成开关，执行溢出检测时，dump目录下会生成forward_real_data和backward_real_data的过程dump数据目录，可取值True（生成）或False（不生成），默认不生成。 | 否       |
 
