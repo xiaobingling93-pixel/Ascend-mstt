@@ -79,7 +79,7 @@ def deal_dtype(arg, raise_dtype=None):
 
 
 def generate_device_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_device(arg_in, to_detach=api_name not in not_detach_set):
+    def recursive_arg_to_device(arg_in, to_detach):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -94,13 +94,15 @@ def generate_device_params(input_args, input_kwargs, need_backward, api_name):
         else:
             return arg_in
 
-    device_args = recursive_arg_to_device(input_args)
-    device_kwargs = {key: recursive_arg_to_device(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    device_args = recursive_arg_to_device(input_args, is_detach)
+    device_kwargs = {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in 
+                     input_kwargs.items()}
     return device_args, device_kwargs
 
 
 def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_cpu(arg_in, to_detach=api_name not in not_detach_set, raise_dtype=None):
+    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -129,8 +131,9 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
-    cpu_args = recursive_arg_to_cpu(input_args, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
 
 
