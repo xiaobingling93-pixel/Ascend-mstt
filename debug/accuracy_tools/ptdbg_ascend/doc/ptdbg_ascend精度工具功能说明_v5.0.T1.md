@@ -1803,7 +1803,7 @@ dump_result_param={
 "bench_dump_data_dir": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump",
 "is_print_compare_log": True
 }
-compare(dump_result_param, "./output", stack_mode=True)
+compare(dump_result_param, output_path="./output", stack_mode=True)
 ```
 
 ### pkl文件比对
@@ -1819,7 +1819,7 @@ dump_result_param={
 "bench_pkl_path": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl",
 "is_print_compare_log": True
 }
-compare(dump_result_param, "./output", stack_mode=True)
+compare(dump_result_param, output_path="./output", stack_mode=True)
 ```
 
 ### parse
