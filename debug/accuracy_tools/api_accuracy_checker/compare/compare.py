@@ -10,7 +10,8 @@ from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
     detail_test_rows, XlsxSheetWriter, precision_configs
 from api_accuracy_checker.compare.algorithm import get_absolute_threshold, get_distribution_ratio, get_rmse, \
-    get_small_value_error, get_error_balance, get_max_rel_err, get_mean_rel_err, get_rel_err, get_abs_err
+    get_small_value_error, get_error_balance, get_max_rel_err, get_mean_rel_err, get_rel_err, get_abs_err, \
+    get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -166,12 +167,12 @@ class Comparator:
         test_final_success = True
         status, compare_result, message = self._compare_core(bench_output, device_output)
         if not isinstance(status, list):
-            detailed_result_total.append(compare_result.to_column_value())
+            detailed_result_total.append(compare_result.to_column_value(status, message))
             if status in [CompareConst.ERROR, CompareConst.WARNING]:
                 test_final_success = False
         else:
             for item, item_status in enumerate(status):
-                detailed_result_total.append(compare_result[item].to_column_value())
+                detailed_result_total.append(compare_result[item].to_column_value(item_status, message[item]))
                 if item_status in [CompareConst.ERROR, CompareConst.WARNING]:
                     test_final_success = False
         return test_final_success, detailed_result_total
@@ -218,7 +219,7 @@ class Comparator:
             compare_column.bench_dtype = str(type(bench_output))
             compare_column.npu_dtype = str(type(device_output))
             compare_column.shape = str(type(device_output))
-            compare_result = self._compare_builtin_type(bench_output, device_output, compare_column)
+            status, compare_result, message  = self._compare_builtin_type(bench_output, device_output, compare_column)
         elif bench_output is None:
             return CompareConst.PASS, compare_column, "Output is None."
         else:
@@ -251,16 +252,18 @@ class Comparator:
             compare_column.error_rate = err_rate
             return status, compare_column, message
         else:
-            compare_column = self._compare_float_tensor(bench_output, device_output, compare_column, npu_dtype)
+            status, compare_column, message = self._compare_float_tensor(bench_output, device_output, compare_column, npu_dtype)
+            return status, compare_column, message
 
-        return CompareConst.PASS, compare_column, message
 
     @staticmethod
     def _compare_builtin_type(bench_output, device_output, compare_column):
+        if not isinstance(bench_output, (bool, int, float, str)):
+            return CompareConst.PASS, compare_column, ""
         if bench_output != device_output:
-            compare_column.builtin = 0
-        compare_column.builtin = 1
-        return compare_column
+            return CompareConst.ERROR, compare_column, ""
+        compare_column.error_rate = 0
+        return CompareConst.PASS, compare_column, ""
 
     @staticmethod
     def _flatten_compare_result(result):
@@ -276,13 +279,14 @@ class Comparator:
     def _compare_bool_tensor(bench_output, device_output):
         error_nums = (bench_output != device_output).sum()
         if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not cpu calculation result."
+            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
         error_rate = float(error_nums / bench_output.size)
         result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
         return error_rate, result, ""
     
     @staticmethod
     def _compare_float_tensor(bench_output, device_output, compare_column, dtype):
+        message = ""
         dtype_config = precision_configs.get(dtype)
         eps = np.finfo(bench_output.dtype).eps
         abs_bench = np.abs(bench_output)
@@ -291,28 +295,12 @@ class Comparator:
         bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
         both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
         inf_nan_mask = np.logical_not(both_finite_mask)
-        #inf/nan处理
-        if np.sum(inf_nan_mask) == 0:
-            compare_column.inf_or_nan = 0
-        else:
-            compare_column.inf_or_nan = np.sum(inf_nan_mask)
-            compare_column.inf_or_nan = check_inf_nan_value(bench_output, device_output, inf_nan_mask, abs_bench_with_eps)
-
+                                              abs_bench_with_eps)
         #小值域
         abs_err = get_abs_err(bench_output, device_output)
         small_value_mask = np.less_equal(np.abs(bench_output), dtype_config['small_value'][0])
         small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
-        abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
-        
-        compare_column.xiaozhiyu = get_small_value_error(small_value_mask, abs_err_greater_mask)
-
         rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-
-        #误差分布
-        for attr, start, end in dtype_config['error_distribution']:
-            setattr(compare_column, attr, get_distribution_ratio(rel_err, start, end))
-
-        compare_column.jueduiyuzhi = get_absolute_threshold(rel_err, abs_err)
         
         compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
 
@@ -320,4 +308,39 @@ class Comparator:
         compare_column.Max_rel_error = get_max_rel_err(rel_err)
         compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
-        return compare_column
+        #cos
+        cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
+        compare_column.cosine_sim = cos_res
+        message += msg + "\n"
+        if not cos_status:
+            return CompareConst.ERROR, compare_column, message
+
+        #max abs err
+        max_abs_res, max_abs_status = get_max_abs_err(abs_err)
+        compare_column.max_abs_err = max_abs_res
+        if max_abs_status:
+            return CompareConst.PASS, compare_column, message
+        
+        #rel error
+        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
+        if dtype in [torch.float16, torch.bfloat16]:
+            hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
+            compare_column.rel_err_hundredth = hundred_res
+            if not hundred_status:
+                return CompareConst.ERROR, compare_column, message
+        thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+        compare_column.rel_err_thousandth = thousand_res
+        if dtype in [torch.float16, torch.bfloat16]:
+            if thousand_status:
+                return CompareConst.PASS, compare_column, message
+            return CompareConst.WARNING, compare_column, message
+        ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, 0.0001)
+        compare_column.rel_err_ten_thousandth = ten_thousand_res
+        if dtype in [torch.float32, torch.float64]:
+            if not thousand_status:
+                return CompareConst.ERROR, compare_column, message
+            if not ten_thousand_status:
+                return CompareConst.WARNING, compare_column, message
+        
+
+        return CompareConst.PASS, compare_column, message
