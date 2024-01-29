@@ -328,10 +328,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
-                    if isinstance(val[0], (float, int)) and isinstance(val[1], (float, int)):
-                        result_item[start_idx + i] = val[0] - val[1] if not any(np.isinf(val)) else np.inf
+                    if all(isinstance(value, (float, int)) for value in val):
+                        result_item[start_idx + i] = val[0] - val[1]
                     else:
-                        result_item[start_idx + i] = "Nan"
+                        result_item[start_idx + i] = CompareConst.NAN
+                replace_res = map(lambda x: f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x,
+                                  result_item[start_idx:])
+                result_item[start_idx:] = list(replace_res)
 
             result_item.append(CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
