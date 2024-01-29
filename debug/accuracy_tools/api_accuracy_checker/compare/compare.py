@@ -9,9 +9,8 @@ from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
     detail_test_rows, precision_configs
-from api_accuracy_checker.compare.algorithm import get_absolute_threshold, get_distribution_ratio, get_rmse, \
-    get_small_value_error, get_error_balance, get_max_rel_err, get_mean_rel_err, get_rel_err, get_abs_err, \
-    get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin
+from api_accuracy_checker.compare.algorithm import  get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
+    get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
