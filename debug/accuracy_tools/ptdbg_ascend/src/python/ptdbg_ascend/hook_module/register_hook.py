@@ -135,7 +135,7 @@ def register_hook_core(hook, model=None):
         api_register.initialize_hook(hook)
         api_register.api_modularity()
 
-    if "acc_cmp_dump" in hook_name:
+    if "acc_cmp_dump" in hook_name and DumpUtil.dump_switch_mode != 'acl':
         remove_dropout()
 
 
