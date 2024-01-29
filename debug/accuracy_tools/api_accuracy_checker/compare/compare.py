@@ -295,7 +295,7 @@ class Comparator:
         bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
         both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
         inf_nan_mask = np.logical_not(both_finite_mask)
-                                              abs_bench_with_eps)
+
         #小值域
         abs_err = get_abs_err(bench_output, device_output)
         small_value_mask = np.less_equal(np.abs(bench_output), dtype_config['small_value'][0])
