@@ -139,14 +139,18 @@ class FileOpen:
     SUPPORT_WRITE_MODE = ["w", "wb", "a", "ab"]
     SUPPORT_READ_WRITE_MODE = ["r+", "rb+", "w+", "wb+", "a+", "ab+"]
 
-    def __init__(self, file_path, mode):
+    def __init__(self, file_path, mode, encoding='utf-8'):
         self.file_path = file_path
         self.mode = mode
+        self.encoding = encoding
         self._handle = None
 
     def __enter__(self):
         self.check_file_path()
-        self._handle = open(self.file_path, self.mode)
+        if "b" not in self.mode:
+            self._handle = open(self.file_path, self.mode, encoding=self.encoding)
+        else:
+            self._handle = open(self.file_path, self.mode)
         return self._handle
 
     def __exit__(self, exc_type, exc_val, exc_tb):
