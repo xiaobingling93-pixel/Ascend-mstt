@@ -3,7 +3,7 @@ import torch
 from api_accuracy_checker.common.utils import Const, print_warn_log
 
 
-detail_test_rows = [[
+DETAIL_TEST_ROWS = [[
             "API Name", "Bench Dtype", "NPU Dtype", "Shape",
             "余弦相似度",
             "最大绝对误差",

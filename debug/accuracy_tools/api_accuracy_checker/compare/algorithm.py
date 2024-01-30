@@ -36,6 +36,7 @@ def cosine_sim(cpu_output, npu_output):
             msg = "Dump data has NaN when comparing with Cosine Similarity."
         return cos, cos > 0.99, msg
 
+
 #rmse
 def get_rmse(abs_err, inf_nan_mask):
     masked_ae = np.where(inf_nan_mask, 0, abs_err)
@@ -55,6 +56,7 @@ def get_error_balance(bench_data, device_data):
     return error_balance
 
 
+#小值域错误占比
 def get_small_value_err_ratio(small_value_mask, abs_err_greater_mask):
     err_mask = np.logical_and(small_value_mask, abs_err_greater_mask)
     small_value_err_num = np.sum(err_mask)
@@ -88,6 +90,7 @@ def get_max_abs_err(abs_err):
 #相对误差最大值
 def get_max_rel_err(rel_err):
     return np.max(rel_err)
+
 
 #相对误差均值
 def get_mean_rel_err(rel_err):

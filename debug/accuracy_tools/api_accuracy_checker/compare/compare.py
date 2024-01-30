@@ -8,7 +8,7 @@ from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
-    detail_test_rows, precision_configs
+    DETAIL_TEST_ROWS, precision_configs
 from api_accuracy_checker.compare.algorithm import  get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio
@@ -99,10 +99,11 @@ class Comparator:
                 self.test_result_cnt['forward_or_backward_fail_num'] += 1
 
     def write_csv_title(self):
-        summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, self.COLUMN_BACKWARD_SUCCESS, "Message"]]
+        summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, 
+                              self.COLUMN_BACKWARD_SUCCESS, "Message"]]
         write_csv(summary_test_rows, self.save_path)
 
-        write_csv(detail_test_rows, self.detail_save_path)
+        write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
 
     def write_summary_csv(self, test_result):
         test_rows = []
@@ -128,12 +129,14 @@ class Comparator:
         if isinstance(fwd_result, list):
             for i, test_subject in enumerate(fwd_result):
                 subject = subject_prefix + ".forward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision) if isinstance(item, float) else item for item in test_subject]
+                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision) 
+                                if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
         if isinstance(bwd_result, list):
             for i, test_subject in enumerate(bwd_result):
                 subject = subject_prefix + ".backward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision) if isinstance(item, float) else item for item in test_subject]
+                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision) 
+                                if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
 
         write_csv(test_rows, self.detail_save_path)
@@ -177,7 +180,6 @@ class Comparator:
                     test_final_success = False
         return test_final_success, detailed_result_total
 
-
     def _compare_dropout(self, bench_output, device_output):
         tensor_num = bench_output.numel()
         if tensor_num >= 100:
@@ -206,7 +208,8 @@ class Comparator:
             if b_keys != n_keys:
                 return CompareConst.ERROR, compare_column, "bench and npu output dict keys are different."
             else:
-                status, compare_result, message = self._compare_core(list(bench_output.values()), list(device_output.values()))
+                status, compare_result, message = self._compare_core(list(bench_output.values()), 
+                                                                     list(device_output.values()))
         elif isinstance(bench_output, torch.Tensor):
             copy_bench_out = bench_output.detach().clone()
             copy_device_output = device_output.detach().clone()
@@ -223,10 +226,10 @@ class Comparator:
         elif bench_output is None:
             return CompareConst.PASS, compare_column, "Output is None."
         else:
-            return CompareConst.PASS, compare_column, "Unexpected output type in compare_core: {}".format(type(bench_output))
+            return CompareConst.PASS, compare_column, 
+        "Unexpected output type in compare_core: {}".format(type(bench_output))
 
         return status, compare_result, message
-
 
     def _compare_torch_tensor(self, bench_output, device_output, compare_column):
         cpu_shape = bench_output.shape
@@ -244,7 +247,8 @@ class Comparator:
             return CompareConst.ERROR, compare_column, f"Bench out dtype is {bench_output.dtype} but " \
                                                     f"npu output dtype is {device_output.dtype}, cannot compare."
         message = ""
-        if bench_output.dtype in [bool, np.uint8, np.int8, np.int16, np.uint16, np.uint32, np.int32, np.int64, np.uint64]:
+        if bench_output.dtype in [bool, np.uint8, np.int8, np.int16, np.uint16, np.uint32, np.int32, 
+                                  np.int64, np.uint64]:
             message += f"Compare algorithm cosine_sim is not supported for {bench_output.dtype} data. " \
                     f"Only judged by Error Rate."
             err_rate, status, msg = self._compare_bool_tensor(bench_output, device_output)
@@ -252,9 +256,9 @@ class Comparator:
             compare_column.error_rate = err_rate
             return status, compare_column, message
         else:
-            status, compare_column, message = self._compare_float_tensor(bench_output, device_output, compare_column, npu_dtype)
+            status, compare_column, message = self._compare_float_tensor(bench_output, device_output, 
+                                                                         compare_column, npu_dtype)
             return status, compare_column, message
-
 
     @staticmethod
     def _compare_builtin_type(bench_output, device_output, compare_column):
@@ -305,8 +309,8 @@ class Comparator:
 
         rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
         
+        #rmse、eb、max_rel_err、mean_rel_err
         compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
-
         compare_column.EB = get_error_balance(bench_output, device_output)
         compare_column.Max_rel_error = get_max_rel_err(rel_err)
         compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
