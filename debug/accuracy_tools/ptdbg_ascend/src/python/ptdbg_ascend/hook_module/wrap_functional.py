@@ -25,38 +25,46 @@ from ..common.utils import torch_device_guard, print_info_log
 from ..common.file_check_util import FileOpen
 
 
-def remove_dropout():
+def remove_dropout(hook=None):
     if torch.__version__ > "1.8":
         print_info_log("For precision comparison, the probability p in the dropout method is set to 0.")
         import torch.nn.functional as F
         from torch import _VF
         from torch.overrides import has_torch_function_unary, handle_torch_function
 
+        original_dropout = F.dropout
+        original_dropout2d = F.dropout2d
+        original_dropout3d = F.dropout3d
+
         def function_dropout(input: torch.Tensor, p: float = 0.5, training: bool = True,
                              inplace: bool = False) -> torch.Tensor:
+            if hook is not None:
+                hook(input)
             if has_torch_function_unary(input):
                 return handle_torch_function(function_dropout, (input,), input, p=0., training=training, inplace=inplace)
             if p < 0.0 or p > 1.0:
                 raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
-            return _VF.dropout_(input, 0., training) if inplace else _VF.dropout(input, 0., training)
-
+            return original_dropout(input, 0., training, inplace)
 
         def function_dropout2d(input: torch.Tensor, p: float = 0.5, training: bool = True,
                                inplace: bool = False) -> torch.Tensor:
+            if hook is not None:
+                hook(input)
             if has_torch_function_unary(input):
                 return handle_torch_function(function_dropout2d, (input,), input, p=0., training=training, inplace=inplace)
             if p < 0.0 or p > 1.0:
                 raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
-            return _VF.feature_dropout_(input, 0., training) if inplace else _VF.feature_dropout(input, 0., training)
-
+            return original_dropout2d(input, 0., training, inplace)
 
         def function_dropout3d(input: torch.Tensor, p: float = 0.5, training: bool = True,
                                inplace: bool = False) -> torch.Tensor:
+            if hook is not None:
+                hook(input)
             if has_torch_function_unary(input):
                 return handle_torch_function(function_dropout3d, (input,), input, p=0., training=training, inplace=inplace)
             if p < 0.0 or p > 1.0:
                 raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
-            return _VF.feature_dropout_(input, 0., training) if inplace else _VF.feature_dropout(input, 0., training)
+            return original_dropout3d(input, 0., training, inplace)
 
         F.dropout = function_dropout
         F.dropout2d = function_dropout2d
