@@ -10,7 +10,8 @@ from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
     detail_test_rows, precision_configs
 from api_accuracy_checker.compare.algorithm import  get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
-    get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin
+    get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
+    get_small_value_err_ratio
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -299,6 +300,9 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         small_value_mask = np.less_equal(np.abs(bench_output), dtype_config['small_value'][0])
         small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
+        abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
+        compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
+
         rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
         
         compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
