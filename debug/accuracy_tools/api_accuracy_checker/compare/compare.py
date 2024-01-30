@@ -348,6 +348,5 @@ class Comparator:
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
                 return CompareConst.WARNING, compare_column, message
-        
 
         return CompareConst.PASS, compare_column, message
