@@ -55,6 +55,13 @@ def get_error_balance(bench_data, device_data):
     return error_balance
 
 
+def get_small_value_err_ratio(small_value_mask, abs_err_greater_mask):
+    err_mask = np.logical_and(small_value_mask, abs_err_greater_mask)
+    small_value_err_num = np.sum(err_mask)
+    small_value_num = np.sum(small_value_mask)
+    return 0 if small_value_num == 0 else small_value_err_num / small_value_num
+
+
 def get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask):
     rel_err_tmp = abs_err / abs_bench_with_eps
     rel_err_mask = np.logical_or(small_value_mask, inf_nan_mask)
