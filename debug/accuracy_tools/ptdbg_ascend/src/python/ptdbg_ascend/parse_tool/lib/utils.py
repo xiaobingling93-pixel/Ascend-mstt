@@ -16,9 +16,13 @@
 """
 import logging
 import os
+import io
 import re
 import sys
 import subprocess
+import hashlib
+import csv
+import time
 import numpy as np
 from .config import Const
 from .file_desc import DumpDecodeFileDesc, FileDesc
@@ -26,6 +30,7 @@ from .parse_exception import ParseException
 from ...common.file_check_util import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from ...common.file_check_util import FileCheckConst
+from ...common.file_check_util import FileOpen
 
 try:
     from rich.traceback import install
@@ -33,6 +38,7 @@ try:
     from rich.table import Table
     from rich import print as rich_print
     from rich.columns import Columns
+
     install()
 except ImportError as err:
     install = None
@@ -40,7 +46,8 @@ except ImportError as err:
     Table = None
     Columns = None
     rich_print = None
-    print("[Warning] Failed to import rich, Some features may not be available. Please run 'pip install rich' to fix it.")
+    print(
+        "[Warning] Failed to import rich, Some features may not be available. Please run 'pip install rich' to fix it.")
 
 
 class Util:
@@ -126,7 +133,7 @@ class Util:
         shape, dtype, max_data, min_data, mean = \
             self.npy_info(source_data)
         return \
-            '[Shape: %s] [Dtype: %s] [Max: %s] [Min: %s] [Mean: %s]' % (shape, dtype, max_data, min_data, mean)
+                '[Shape: %s] [Dtype: %s] [Max: %s] [Min: %s] [Mean: %s]' % (shape, dtype, max_data, min_data, mean)
 
     def save_npy_to_txt(self, data, dst_file='', align=0):
         if os.path.exists(dst_file):
@@ -189,6 +196,7 @@ class Util:
             if path.endswith(Const.NPY_SUFFIX) and file_size > Const.TEN_GB:
                 self.log.error('The file {} size is greater than 10GB.'.format(path))
                 raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
+        return True
 
     def check_files_in_path(self, path):
         if os.path.isdir(path) and len(os.listdir(path)) == 0:
@@ -251,3 +259,88 @@ class Util:
         if not re.match(Const.FILE_PATTERN, param):
             self.log.error('The parameter {} contains special characters.'.format(param))
             raise ParseException(ParseException.PARSE_INVALID_PARAM_ERROR)
+
+    def get_subdir_count(self, directory):
+        subdir_count = 0
+        for root, dirs, files in os.walk(directory):
+            subdir_count += len(dirs)
+            break
+        return subdir_count
+
+    def get_subfiles_count(self, directory):
+        file_count = 0
+        for root, dirs, files in os.walk(directory):
+            file_count += len(files)
+        return file_count
+
+    def is_subdir_count_equal(self, dir1, dir2):
+        dir1_count = self.get_subdir_count(dir1)
+        dir2_count = self.get_subdir_count(dir2)
+        return dir1_count == dir2_count
+
+    def get_sorted_subdirectories_names(self, directory):
+        subdirectories = []
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
+            if os.path.isdir(item_path):
+                subdirectories.append(item)
+        return sorted(subdirectories)
+
+    def get_sorted_files_names(self, directory):
+        files = []
+        for item in os.listdir(directory):
+            item_path = os.path.join(directory, item)
+            if os.path.isfile(item_path):
+                files.append(item)
+        return sorted(files)
+
+    def check_npy_files_valid_in_dir(self, dir_path):
+        for file_name in os.listdir(dir_path):
+            file_path = os.path.join(dir_path, file_name)
+            if not self.check_path_valid(file_path):
+                return False
+            _, file_extension = os.path.splitext(file_path)
+            if not file_extension == '.npy':
+                return False
+        return True
+
+    def get_md5_for_numpy(self, obj):
+        np_bytes = obj.tobytes()
+        md5_hash = hashlib.md5(np_bytes)
+        return md5_hash.hexdigest()
+
+    def write_csv(self, data, filepath):
+        with FileOpen(filepath, 'a') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+
+    def deal_with_dir_or_file_inconsistency(self, output_path):
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        raise ParseException("Inconsistent directory structure or file.")
+
+    def deal_with_value_if_has_zero(self, data):
+        if data.dtype in Const.FLOAT_TYPE:
+            zero_mask = (data == 0)
+            # 给0的地方加上eps防止除0
+            data[zero_mask] += np.finfo(data.dtype).eps
+        else:
+            # int type + float eps 会报错，所以这里要强转
+            data = data.astype(float)
+            zero_mask = (data == 0)
+            data[zero_mask] += np.finfo(float).eps
+        return data
+    
+    def dir_contains_only(self, path, endfix):
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if not file.endswith(endfix):
+                    return False
+        return True
+    
+    def localtime_str(self):
+        return time.strftime("%Y%m%d%H%M%S", time.localtime())
+    
+    def change_filemode_safe(self, path):
+        change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
+
