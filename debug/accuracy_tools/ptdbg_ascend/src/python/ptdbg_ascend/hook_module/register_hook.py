@@ -136,7 +136,7 @@ def register_hook_core(hook, model=None):
         api_register.api_modularity()
 
     if "acc_cmp_dump" in hook_name:
-        remove_dropout(hook)
+        remove_dropout()
 
 
 def init_dump_config(kwargs):
