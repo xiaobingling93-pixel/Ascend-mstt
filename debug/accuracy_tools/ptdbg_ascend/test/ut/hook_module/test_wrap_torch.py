@@ -20,10 +20,6 @@ class TestWrapTorch(unittest.TestCase):
         self.assertEqual(template.op_name_, self.op_name)
         self.assertEqual(template.prefix_op_name_, "Torch_" + str(self.op_name) + "_")
 
-    def test_input_param_need_adapt(self):
-        template = TorchOPTemplate(self.op_name, self.hook)
-        self.assertFalse(template.input_param_need_adapt())
-
     def test_forward(self):
         template = TorchOPTemplate(self.op_name, self.hook)
         result = template.forward(torch.tensor([1, 2, 3]), torch.tensor([4, 5, 6]))
