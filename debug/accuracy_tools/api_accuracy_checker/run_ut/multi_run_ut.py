@@ -106,9 +106,11 @@ def read_process_output(process):
     def clean_up():
         progress_bar.close()
         for process in processes:
-            if process.poll() is None:
+            try:
                 process.terminate()
-                process.wait()
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                process.kill()
         for file in config.forward_files:
             try:
                 os.remove(file)
