@@ -2,13 +2,17 @@
 import os
 import inspect
 import torch
+import numpy as np
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException
+from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException, \
+    get_real_data_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
 def get_tensor_extremum(data, operator):
     if data.dtype is torch.bool:
+        if data.numel() == 0:
+            return False
         if operator == 'max':
             return True in data
         elif operator == 'min':
@@ -92,6 +96,10 @@ class APIInfo:
                 else:
                     out_dict[key] = self.analyze_element(value)
             return out_dict
+        
+        converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
+        if converted_numpy is not element:
+            return self._analyze_numpy(converted_numpy, numpy_type)
 
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element)
@@ -119,8 +127,9 @@ class APIInfo:
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
             pt_path = write_pt(file_path, arg.contiguous().cpu().detach())
             self.args_num += 1
+            real_data_path = get_real_data_path(pt_path)
             single_arg.update({'type': 'torch.Tensor'})
-            single_arg.update({'datapath': pt_path})
+            single_arg.update({'datapath': real_data_path})
             single_arg.update({'requires_grad': arg.requires_grad})
         return single_arg
 
@@ -135,6 +144,29 @@ class APIInfo:
             single_arg.update({'type': get_type_name(str(type(arg)))})
             single_arg.update({'value': arg})
         return single_arg
+    
+    def _analyze_numpy(self, value, numpy_type):
+        single_arg = {}
+        if self.is_save_data:
+            self.args_num += 1
+        single_arg.update({'type': numpy_type})
+        single_arg.update({'value': value})
+        return single_arg
+    
+    def _convert_numpy_to_builtin(self, arg):
+        type_mapping = {
+            np.integer: int,
+            np.floating: float,
+            np.bool_: bool,
+            np.complexfloating: complex,
+            np.str_: str,
+            np.bytes_: bytes,
+            np.unicode_: str
+        }
+        for numpy_type, builtin_type in type_mapping.items():
+            if isinstance(arg, numpy_type):
+                return builtin_type(arg), get_type_name(str(type(arg)))
+        return arg, ''
 
 
 class ForwardAPIInfo(APIInfo):

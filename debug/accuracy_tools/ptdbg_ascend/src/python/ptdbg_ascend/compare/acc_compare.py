@@ -27,9 +27,9 @@ import pandas as pd
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
 from ..common.utils import check_compare_param, add_time_as_suffix, \
-    print_warn_log, print_error_log, CompareException, Const,\
+    print_info_log, print_warn_log, print_error_log, CompareException, Const, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
-    is_summary_compare
+    is_summary_compare, is_md5_compare
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
@@ -241,9 +241,9 @@ def merge_tensor(tensor_list):
             break
         op_dict["op_name"].append(tensor[0])
         if tensor[0].find("input") != -1:
-            op_dict["input_struct"].append((tensor[3], tensor[4]))
+            op_dict["input_struct"].append((tensor[3], tensor[4], tensor[2]))
         elif tensor[0].find("output") != -1:
-            op_dict["output_struct"].append((tensor[3], tensor[4]))
+            op_dict["output_struct"].append((tensor[3], tensor[4], tensor[2]))
 
         if tensor[1] <= Const.DUMP_RATIO_MAX:
             op_dict["summery"].append(tensor[5])
@@ -293,7 +293,7 @@ def match_op(npu_queue, bench_queue, fuzzy_match):
     return -1, -1
 
 
-def get_accuracy(result, n_dict, b_dict, summary_compare=False):
+def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=False):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
         npu_stack_info = n_dict.get("stack_info", None)
@@ -305,6 +305,14 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False):
             n_struct = n_dict[key][index]
             b_struct = b_dict[key][index]
             err_msg = ""
+            if md5_compare:
+                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                               n_struct[2], b_struct[2], n_struct[2] == b_struct[2]]
+                if has_stack and index == 0 and key == "input_struct":
+                    result_item.extend(npu_stack_info)
+                result.append(result_item)
+                continue
+
             if summary_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                " ", " ", " ", " "]
@@ -320,10 +328,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False):
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
-                    if isinstance(val[0], (float, int)) and isinstance(val[1], (float, int)):
+                    if all(isinstance(value, (float, int)) for value in val):
                         result_item[start_idx + i] = val[0] - val[1]
                     else:
-                        result_item[start_idx + i] = "Nan"
+                        result_item[start_idx + i] = CompareConst.NAN
+                replace_res = map(lambda x: f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x,
+                                  result_item[start_idx:])
+                result_item[start_idx:] = list(replace_res)
 
             result_item.append(CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
@@ -336,6 +347,11 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False):
             for index in range(b_len, n_len):
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
+                if md5_compare:
+                    result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
+                                   n_struct[1], CompareConst.NAN, n_struct[2], CompareConst.NAN, CompareConst.NAN]
+                    result.append(result_item)
+                    continue
                 result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
                                n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
                 summery_data = n_dict.get("summery")[n_start + index]
@@ -443,7 +459,8 @@ def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_p
         err_mess.append(err_msg)
         one_thousand_err_ratio_result.append(one_thousand_err_ratio)
         five_thousand_err_ratio_result.append(five_thousand_err_ratio)
-    _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_path, lock)
+    _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result,
+                     five_thousand_err_ratio_result, result_path, lock)
 
 
 def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_path, lock):
@@ -571,31 +588,35 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
         summary_compare = is_summary_compare(input_parma)
+        md5_compare = is_md5_compare(input_parma)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         check_compare_param(input_parma, output_path, stack_mode, summary_compare)
     except CompareException as error:
         print_error_log('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
     compare_core(input_parma, output_path, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare)
+                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
+                 md5_compare=md5_compare)
 
 
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
-                 suffix='', fuzzy_match=False, summary_compare=False):
+                 suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
     print_warn_log("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_as_suffix("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
 
     with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
-         FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl, \
-         os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') \
-         as fout:
-        compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare)
+            FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl, \
+            os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') \
+                    as fout:
+        compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
         if summary_compare:
+            print_info_log(f"Summary compare result is {file_path}")
             return
 
-    _do_multi_process(input_parma, file_path)
+    if not md5_compare:
+        _do_multi_process(input_parma, file_path)
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
     if auto_analyze:
         advisor = Advisor(file_path, output_path)
@@ -637,7 +658,7 @@ def parse(pkl_file, module_name_prefix):
                 print(summery_info)
 
 
-def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False):
+def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
     npu_pkl_handle, bench_pkl_handle, output_csv_handle = file_handles
     if fuzzy_match:
         print_warn_log("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
@@ -657,44 +678,58 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
         b_match_data = bench_ops_queue[b_match_point]
         un_match_data = npu_ops_queue[0: n_match_point]
         for npu_data in un_match_data:
-            get_un_match_accuracy(result, npu_data)
-        get_accuracy(result, n_match_data, b_match_data, summary_compare)
+            get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
+        get_accuracy(result, n_match_data, b_match_data, summary_compare, md5_compare)
         del npu_ops_queue[0: n_match_point + 1]
         del bench_ops_queue[0: b_match_point + 1]
     if npu_ops_queue:
         for npu_data in npu_ops_queue:
-            get_un_match_accuracy(result, npu_data)
+            get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
 
-    header = CompareConst.COMPARE_RESULT_HEADER[:] \
-        if not summary_compare else CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+    header = []
+    if md5_compare:
+        header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
+    elif summary_compare:
+        header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+    else:
+        header = CompareConst.COMPARE_RESULT_HEADER[:]
     if stack_mode:
         header.append(CompareConst.STACK)
     result_df = pd.DataFrame(result, columns=header)
-    if summary_compare:
+    if summary_compare and not md5_compare:
         header.remove(CompareConst.ACCURACY)
         header.remove(CompareConst.ERROR_MESSAGE)
         result_df = result_df[header]
     result_df.to_csv(output_csv_handle, index=False)
 
 
-def get_un_match_accuracy(result, n_dict):
+def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.NAN, CompareConst.NAN, CompareConst.NAN
+    err_msg = CompareConst.NO_BENCH
+    accuracy_check_res = CompareConst.NAN
     for index, n_name in enumerate(n_dict["op_name"]):
         if n_name.find("input") != -1:
             n_struct = n_dict["input_struct"][index]
         else:
             n_struct = n_dict["output_struct"][index_out]
             index_out += 1
-        err_msg = CompareConst.NO_BENCH
-        accuracy_check_res = CompareConst.NAN
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
-        result_item.extend([CompareConst.NAN] * 5)
+        if md5_compare:
+            result_item.extend([CompareConst.NAN] * 3)
+            if npu_stack_info and index == 0:
+                result_item.extend(npu_stack_info)
+            result.append(result_item)
+            continue
+        if summary_compare:
+            result_item.extend([CompareConst.NAN] * 4)
+        else:
+            result_item.extend([CompareConst.NAN] * 5)
         summery_data = n_dict.get("summery")[index]
         result_item.extend(summery_data)
-        summery_data = [CompareConst.NAN] * 3
+        summery_data = [CompareConst.NAN] * 4
         result_item.extend(summery_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)

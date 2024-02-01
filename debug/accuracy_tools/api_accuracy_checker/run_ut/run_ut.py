@@ -35,8 +35,9 @@ UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'test_result_cnt'])
+                                         'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
+not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -77,8 +78,8 @@ def deal_dtype(arg, raise_dtype=None):
     return arg.type(raise_dtype)
 
 
-def generate_device_params(input_args, input_kwargs, need_backward):
-    def recursive_arg_to_device(arg_in, to_detach=True):
+def generate_device_params(input_args, input_kwargs, need_backward, api_name):
+    def recursive_arg_to_device(arg_in, to_detach):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -93,13 +94,15 @@ def generate_device_params(input_args, input_kwargs, need_backward):
         else:
             return arg_in
 
-    device_args = recursive_arg_to_device(input_args)
-    device_kwargs = {key: recursive_arg_to_device(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    device_args = recursive_arg_to_device(input_args, is_detach)
+    device_kwargs = \
+        {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return device_args, device_kwargs
 
 
-def generate_cpu_params(input_args, input_kwargs, need_backward):
-    def recursive_arg_to_cpu(arg_in, to_detach=True, raise_dtype=None):
+def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
+    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
         if isinstance(arg_in, (list, tuple)):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
@@ -128,16 +131,20 @@ def generate_cpu_params(input_args, input_kwargs, need_backward):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
-    cpu_args = recursive_arg_to_cpu(input_args, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out") for key, value in input_kwargs.items()}
+    is_detach = api_name not in not_detach_set
+    cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
 
 
 def run_ut(config):
     print_info_log("start UT test")
-    api_setting_dict = get_json_contents("torch_ut_setting.json")
-    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut,
-                         config.test_result_cnt)
+    print_info_log(f"UT task result will be saved in {config.result_csv_path}")
+    print_info_log(f"UT task details will be saved in {config.details_csv_path}")
+    if config.save_error_data:
+        error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
+        print_info_log(f"UT task error_datas will be saved in {error_data_path}")
+    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
         csv_reader = csv.reader(file)
         next(csv_reader)
@@ -150,7 +157,7 @@ def run_ut(config):
                 [_, api_name, _] = api_full_name.split("*")
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
-            data_info = run_torch_api(api_full_name, api_setting_dict, config.backward_content, api_info_dict)
+            data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name,
                                                                     data_info.bench_out,
                                                                     data_info.device_out,
@@ -166,6 +173,8 @@ def run_ut(config):
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+        finally:
+            torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -183,10 +192,10 @@ def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
 
 
-def run_torch_api(api_full_name, api_setting_dict, backward_content, api_info_dict):
+def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     [api_type, api_name, _] = api_full_name.split("*")
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name)
+    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
@@ -200,61 +209,56 @@ def run_torch_api(api_full_name, api_setting_dict, backward_content, api_info_di
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
-    cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward)
-    device_args, device_kwargs = generate_device_params(args, kwargs, need_backward)
-    grad_out, device_grad_out = None, None
+    cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
+    device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
+    bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
     device_out = exec_api(api_type, api_name, device_args, device_kwargs)
+    api_setting_dict = get_json_contents("torch_ut_setting.json")
     grad_input_index = api_setting_dict.get(api_name)
     grad_index = None
-    grad = None
+    grad, bench_grad = None, None
     if grad_input_index is not None:
         grad_index = grad_input_index.get('grad_index')
 
     if need_backward:
-        grad_out, device_grad_out, grad, device_grad = run_backward(
-            api_full_name, cpu_args, backward_content, grad_index, device_args, device_out, out)
+        backward_args = backward_content[api_full_name]
+        grad = gen_args(backward_args, real_data_path=real_data_path)[0]
+        bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
+        bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
+        device_grad = grad.clone().detach().to(current_device)
+        device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
     if grad_index is not None:
-        return UtDataInfo(grad_out, device_grad_out, device_out[grad_index], out[grad_index], grad, in_fwd_data_list)
-    return UtDataInfo(grad_out, device_grad_out, device_out, out, grad, in_fwd_data_list)
+        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad, 
+                          in_fwd_data_list)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
 
-def get_api_info(api_info_dict, api_name):
+def get_api_info(api_info_dict, api_name, real_data_path):
     convert_type, api_info_dict = api_info_preprocess(api_name, api_info_dict)
     need_grad = True
     if api_info_dict.get("kwargs") and "out" in api_info_dict.get("kwargs"):
         need_grad = False
-    args, kwargs = gen_api_params(api_info_dict, need_grad, convert_type)
+    args, kwargs = gen_api_params(api_info_dict, need_grad, convert_type, real_data_path)
     return args, kwargs, need_grad
 
 
-def run_backward(api_full_name, args, backward_content, grad_index, device_args, device_out, out):
-    backward_args = backward_content[api_full_name]
-    grad = gen_args(backward_args)[0]
-    cpu_grad, _ = generate_cpu_params(grad, {}, False)
+def run_backward(args, grad, grad_index, out):
+    
     if grad_index is not None:
-        out[grad_index].backward(cpu_grad)
+        out[grad_index].backward(grad)
     elif isinstance(out, (list, tuple)):
         raise NotImplementedError("Multiple backward is not supported.")
     else:
-        out.backward(cpu_grad)
+        out.backward(grad)
     args_grad = []
     for arg in args:
         if isinstance(arg, torch.Tensor):
             args_grad.append(arg.grad)
     grad_out = args_grad
-    device_grad = grad.clone().detach().to(current_device)
-    if grad_index is not None:
-        device_out[grad_index].backward(device_grad)
-    else:
-        device_out.backward(device_grad)
-    device_args_grad = []
-    for arg in device_args:
-        if isinstance(arg, torch.Tensor):
-            device_args_grad.append(arg.grad)
-    device_grad_out = device_args_grad
-    return grad_out, device_grad_out, grad, device_grad
+
+    return grad_out
 
 
 def initialize_save_error_data():
@@ -285,38 +289,6 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
-def get_statistics_from_result_csv(validated_result_csv_path):
-    test_result_cnt = {
-        "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-        "total_num": 0, "forward_or_backward_fail_num": 0
-    }
-    with FileOpen(validated_result_csv_path, 'r') as file:
-        reader = csv.reader(file)
-        result_csv_rows = [row for row in reader]
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    for item in result_csv_rows[1:]:
-        if not isinstance(item, list) or len(item) < 3:
-            raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-        if item[1] not in ['True', 'False', CompareConst.NA, 'SKIP'] \
-                or item[2] not in ['True', 'False', CompareConst.NA, 'SKIP']:
-            raise ValueError("The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE or N/A"
-                             % result_csv_name)
-        if item[1] == 'SKIP':
-            continue
-        test_result_cnt["total_num"] += 1
-        if item[1] == 'True' and item[2] in ['True', 'N/A']:
-            test_result_cnt['success_num'] += 1
-        elif item[1] == 'False' and item[2] == 'False':
-            test_result_cnt['forward_and_backward_fail_num'] += 1
-        elif item[1] == 'False':
-            test_result_cnt['forward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-        else:
-            test_result_cnt['backward_fail_num'] += 1
-            test_result_cnt['forward_or_backward_fail_num'] += 1
-    return test_result_cnt
-
-
 def _run_ut_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
                         help="<Required> The api param tool forward result file: generate from api param tool, "
@@ -333,11 +305,27 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    parser.add_argument("-d", "--device", dest="device_id", type=int, help="<optional> set device id to run ut",
-                        default=0, required=False)
+    
+    class UniqueDeviceAction(argparse.Action):
+        def __call__(self, parser, namespace, values, option_string=None):
+            unique_values = set(values)
+            if len(values) != len(unique_values):
+                parser.error("device id must be unique")
+            for device_id in values:
+                if not 0 <= device_id <= 7:
+                    parser.error("device id must be in range 0-7")
+            setattr(namespace, self.dest, values)
+
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
+                        required=False)
+    parser.add_argument("-real_data_path", dest="real_data_path", nargs="?", const="", default="", type=str,
+                        help="<optional> In real data mode, the root directory for storing real data "
+                             "must be configured.",
                         required=False)
 
 
@@ -347,7 +335,7 @@ def _run_ut():
     args = parser.parse_args(sys.argv[1:])
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
-    used_device = current_device + ":" + str(args.device_id)
+    used_device = current_device + ":" + str(args.device_id[0])
     try:
         if is_gpu:
             torch.cuda.set_device(used_device)
@@ -372,21 +360,17 @@ def _run_ut():
         backward_content = get_json_contents(backward_file)
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
-    test_result_cnt = None
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path)
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-        test_result_cnt = get_statistics_from_result_csv(result_csv_path)
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
-            ut_error_data_dir_name = 'ut_error_data' + time_info
-            ut_error_data_dir_path = os.path.join(os.path.dirname(result_csv_path), ut_error_data_dir_name)
             global UT_ERROR_DATA_DIR
-            UT_ERROR_DATA_DIR = ut_error_data_dir_path
+            UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         initialize_save_error_data()
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, test_result_cnt)
+                                args.result_csv_path, args.real_data_path)
     run_ut(run_ut_config)
 
 

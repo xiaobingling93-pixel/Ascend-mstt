@@ -41,6 +41,7 @@ EventTypeMap = {
     'cpu_op': EventTypes.OPERATOR,
     'operator': EventTypes.OPERATOR,
     'runtime': EventTypes.RUNTIME,
+    'cuda_runtime': EventTypes.RUNTIME,
     'kernel': EventTypes.KERNEL,
     'memcpy': EventTypes.MEMCPY,
     'gpu_memcpy': EventTypes.MEMCPY,

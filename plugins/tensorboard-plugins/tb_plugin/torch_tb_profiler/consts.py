@@ -29,7 +29,7 @@ WORKER_PATTERN = re.compile(r"""^(.*?) # worker name
         \.pt\.trace\.json$""", re.X)
 
 TRACE_PATTERN = re.compile(r"""^trace_view\.json$""")
-WORKER_SPAN_PATTERN = re.compile(r"""([^\\]*)_(\d+(\.\d+)?)_ascend_pt$""")
+WORKER_SPAN_PATTERN = re.compile(r"""^(.*?)_(\d+(\.\d+)?)_ascend_pt$""")
 
 NODE_PROCESS_PATTERN = re.compile(r"""^(.*)_(\d+)""")
 MONITOR_RUN_REFRESH_INTERNAL_IN_SECONDS = 10

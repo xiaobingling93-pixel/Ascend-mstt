@@ -18,7 +18,7 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare
+    check_configuration_param, is_summary_compare, is_md5_compare
 from .acc_compare import compare_core
 
 
@@ -88,9 +88,11 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         }
         try:
             summary_compare = is_summary_compare(dump_result_param)
+            md5_compare = is_md5_compare(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
         except CompareException as error:
             print_error_log('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
-        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare, **kwargs)
+        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+                     md5_compare=md5_compare, **kwargs)

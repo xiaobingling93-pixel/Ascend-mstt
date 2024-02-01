@@ -1,10 +1,12 @@
 import unittest
-from api_accuracy_checker.dump.dump_scope import *
+from api_accuracy_checker.dump.dump_scope import iter_tracer
 from api_accuracy_checker.dump.dump import DumpUtil
+
 
 class TestDumpScope(unittest.TestCase):
     def test_iter_tracer(self):
         DumpUtil.call_num = 0
+        
         def dummy_func():
             return "Hello, World!"
         

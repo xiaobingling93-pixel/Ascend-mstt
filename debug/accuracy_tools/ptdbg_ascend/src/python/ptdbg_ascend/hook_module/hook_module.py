@@ -15,27 +15,29 @@
 # limitations under the License.
 """
 
-
 import functools
-
+import threading
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
-g_stop_hook = False
-
 
 class HOOKModule(nn.Module):
     module_count = {}
-    
+    inner_stop_hook = {}
+
     def __init__(self, hook) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
         self.input_args = tuple()
         self.input_kwargs = dict()
         self.prefix = ""
+        self.current_thread = threading.current_thread().ident
+        if self.current_thread not in HOOKModule.inner_stop_hook:
+            HOOKModule.inner_stop_hook[self.current_thread] = False
+        self.stop_hook = HOOKModule.inner_stop_hook.get(self.current_thread, False)
 
-        if not g_stop_hook:
+        if not self.stop_hook:
             if hasattr(self, "prefix_op_name_"):
                 self.prefix = self.prefix_op_name_
 
@@ -45,19 +47,17 @@ class HOOKModule(nn.Module):
             else:
                 HOOKModule.module_count[self.prefix] += 1
                 self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + '_'
-
             self.register_forward_hook(hook(self.prefix + "forward"))
             self.register_backward_hook(hook(self.prefix + "backward"))
 
     def __call__(self, *input, **kwargs):
         changed = False
-        global g_stop_hook
-        if not g_stop_hook:
-            g_stop_hook = True
+        if not self.stop_hook:
+            HOOKModule.inner_stop_hook[self.current_thread] = True
             changed = True
         result = self._call_func(*input, **kwargs)
         if changed:
-            g_stop_hook = False
+            HOOKModule.inner_stop_hook[self.current_thread] = False
         return result
 
     def _call_func(self, *input, **kwargs):

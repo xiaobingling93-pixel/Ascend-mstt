@@ -1,11 +1,13 @@
 # 进行比对及结果展示
 import os
+import csv
 from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.compare.algorithm import compare_core
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.common.config import msCheckerConfig
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
 class Comparator:
@@ -15,15 +17,10 @@ class Comparator:
     COLUMN_BACKWARD_SUCCESS = "Backward Test Success"
     COLUMN_STACK_INFO = "Traceback callstack info"
 
-    def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, test_result_cnt=None, stack_info_json_path=None):
+    def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, stack_info_json_path=None):
         self.save_path = result_csv_path
         self.detail_save_path = details_csv_path
-        if not is_continue_run_ut:
-            if os.path.exists(self.save_path):
-                raise ValueError(f"file {self.save_path} already exists, please remove it first or use a new dump path")
-            if os.path.exists(self.detail_save_path):
-                raise ValueError(
-                    f"file {self.detail_save_path} already exists, please remove it first or use a new dump path")
+        if not is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
             self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
@@ -33,9 +30,10 @@ class Comparator:
         self.test_result_cnt = {
             "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
             "total_num": 0, "forward_or_backward_fail_num": 0
-        } if not test_result_cnt else test_result_cnt
+        }
 
     def print_pretest_result(self):
+        self.get_statistics_from_result_csv()
         if self.test_result_cnt.get("total_num") != 0:
             passing_rate = str(self.test_result_cnt.get("success_num") / self.test_result_cnt.get("total_num"))
         else:
@@ -64,6 +62,35 @@ class Comparator:
 
         console.print(table_total)
         console.print(table_detail)
+
+    def get_statistics_from_result_csv(self):
+        checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.NA, CompareConst.SKIP]
+        with FileOpen(self.save_path, 'r') as file:
+            reader = csv.reader(file)
+            result_csv_rows = [row for row in reader]
+        result_csv_name = os.path.basename(self.save_path)
+        for item in result_csv_rows[1:]:
+            if not isinstance(item, list) or len(item) < 3:
+                raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
+            if not all(item[i] and item[i].upper() in checklist for i in (1, 2)):
+                raise ValueError(
+                    "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP or N/A"
+                    % result_csv_name)
+            column1 = item[1].upper()
+            column2 = item[2].upper()
+            if column1 == CompareConst.SKIP:
+                continue
+            self.test_result_cnt["total_num"] += 1
+            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, 'N/A']:
+                self.test_result_cnt['success_num'] += 1
+            elif column1 == CompareConst.FALSE and column2 == CompareConst.FALSE:
+                self.test_result_cnt['forward_and_backward_fail_num'] += 1
+            elif column1 == CompareConst.FALSE:
+                self.test_result_cnt['forward_fail_num'] += 1
+                self.test_result_cnt['forward_or_backward_fail_num'] += 1
+            else:
+                self.test_result_cnt['backward_fail_num'] += 1
+                self.test_result_cnt['forward_or_backward_fail_num'] += 1
 
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, self.COLUMN_BACKWARD_SUCCESS, "Message"]]
@@ -121,7 +148,6 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, api_name, bench_out, npu_out, bench_grad=None, npu_grad=None):
-        self.test_result_cnt["total_num"] += 1
         if "dropout" in api_name:
             is_fwd_success, fwd_compare_alg_results = self._compare_dropout(bench_out, npu_out)
         else:
@@ -139,16 +165,6 @@ class Comparator:
         else:
             self.record_results(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,
                                 bwd_compare_alg_results)
-        if is_fwd_success and is_bwd_success:
-            self.test_result_cnt['success_num'] += 1
-        elif not is_fwd_success and not is_bwd_success:
-            self.test_result_cnt['forward_and_backward_fail_num'] += 1
-        elif not is_fwd_success:
-            self.test_result_cnt['forward_fail_num'] += 1
-            self.test_result_cnt['forward_or_backward_fail_num'] += 1
-        else:
-            self.test_result_cnt['backward_fail_num'] += 1
-            self.test_result_cnt['forward_or_backward_fail_num'] += 1
         return is_fwd_success, is_bwd_success
 
     @staticmethod

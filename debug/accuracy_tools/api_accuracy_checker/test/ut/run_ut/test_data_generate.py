@@ -19,7 +19,7 @@ min_value = -5.125
 class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_api_params(self):
         api_info = copy.deepcopy(api_info_dict)
-        args_params, kwargs_params = gen_api_params(api_info, True, None)
+        args_params, kwargs_params = gen_api_params(api_info, True, None, None)
         max_diff = abs(args_params[0].max() - max_value)
         min_diff = abs(args_params[0].min() - min_value)
         self.assertEqual(len(args_params), 1)
@@ -30,7 +30,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(kwargs_params, {'inplace': False})
 
     def test_gen_args(self):
-        args_result = gen_args(api_info_dict.get('args'))
+        args_result = gen_args(api_info_dict.get('args'), real_data_path=None)
         max_diff = abs(args_result[0].max() - max_value)
         min_diff = abs(args_result[0].min() - min_value)
         self.assertEqual(len(args_result), 1)
@@ -40,7 +40,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(args_result[0].shape, torch.Size([2, 2560, 24, 24]))
 
     def test_gen_data(self):
-        data = gen_data(api_info_dict.get('args')[0], True, None)
+        data = gen_data(api_info_dict.get('args')[0], True, None, None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
         self.assertEqual(data.dtype, torch.float32)
