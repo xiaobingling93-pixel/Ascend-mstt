@@ -601,7 +601,7 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
 
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
                  suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
-    print_warn_log("Please check whether the input data belongs to you. If not, there may be security risks.")
+    print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_as_suffix("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
