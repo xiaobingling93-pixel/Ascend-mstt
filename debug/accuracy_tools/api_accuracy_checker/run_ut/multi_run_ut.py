@@ -69,18 +69,18 @@ def run_parallel_ut(config):
         ]
         return cmd
 
-def read_process_output(process):
-    try:
-        while True:
-            if process.poll() is not None:
-                break
-            output = process.stdout.readline()
-            if output == '':
-                break
-            if '[ERROR]' in output:
-                print(output, end='')
-    except ValueError as e:
-        print_warn_log(f"An error occurred while reading subprocess output: {e}")
+    def read_process_output(process):
+        try:
+            while True:
+                if process.poll() is not None:
+                    break
+                output = process.stdout.readline()
+                if output == '':
+                    break
+                if '[ERROR]' in output:
+                    print(output, end='')
+        except ValueError as e:
+            print_warn_log(f"An error occurred while reading subprocess output: {e}")
     
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
