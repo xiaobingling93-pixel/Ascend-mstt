@@ -79,6 +79,7 @@ def run_parallel_ut(config):
                     break
                 if '[ERROR]' in output:
                     print(output, end='')
+                    sys.stdout.flush()
         except ValueError as e:
             print_warn_log(f"An error occurred while reading subprocess output: {e}")
     
