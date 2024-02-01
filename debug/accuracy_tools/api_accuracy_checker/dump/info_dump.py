@@ -39,6 +39,7 @@ def write_json(file_path, data, indent=None):
     if not os.path.exists(file_path):
         with FileOpen(file_path, 'w') as f:
             f.write("{\n}")
+            os.chmod(file_path, 0o640)
     lock.acquire()
     with FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
