@@ -9,7 +9,7 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 from api_accuracy_checker.common.config import msCheckerConfig
 
 
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, change_mode
 
 lock = threading.Lock()
 
@@ -39,6 +39,7 @@ def write_json(file_path, data, indent=None):
     if not os.path.exists(file_path):
         with FileOpen(file_path, 'w') as f:
             f.write("{\n}")
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
     lock.acquire()
     with FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
