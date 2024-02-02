@@ -32,8 +32,11 @@ with FileOpen(yaml_path, 'r') as f:
 
 def get_tensor_ops():
     global WrapTensorOps
-    _tensor_ops = dir(torch._C._TensorBase)
+    _tensor_ops = dir(torch.Tensor)
     return set(WrapTensorOps) & set(_tensor_ops)
+
+
+TensorOps = {op: getattr(torch.Tensor, op) for op in get_tensor_ops()}
 
 
 class HOOKTensor(object):
@@ -50,7 +53,7 @@ class TensorOPTemplate(HOOKModule):
     @torch_device_guard
     @parameter_adapter
     def forward(self, *args, **kwargs):
-        return getattr(torch._C._TensorBase, str(self.op_name_))(*args, **kwargs)
+        return TensorOps[str(self.op_name_)](*args, **kwargs)
 
 
 def wrap_tensor_op(op_name, hook):
