@@ -86,6 +86,8 @@ class DumpUtil(object):
     summary_only = False
     need_replicate = False
     summary_mode = "all"
+    is_single_rank = None
+
 
     @staticmethod
     def set_dump_path(save_path):
@@ -200,6 +202,8 @@ def create_dirs_if_not_exist(rank, dump_file):
     rank_dir = os.path.join(dump_path, f"rank{rank}")
     dump_file = os.path.join(rank_dir, file_name)
     if not os.path.isdir(rank_dir):
+        check_path_pattern_vaild(dump_file)
+        check_path_length(dump_file, name_length=200)
         Path(rank_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     return dump_file
 
@@ -339,3 +343,15 @@ def load_env_dump_path(dump_path):
                             "3. Set environment variables ASCEND_WORK_PATH.")
             raise DumpException(DumpException.INVALID_PATH_ERROR)
     return dump_path
+
+
+def check_single_rank_folder(dump_path):
+    rank_folder_pattern = re.compile(r'^rank\d+$')
+    rank_folder_count = 0
+    for item in os.listdir(dump_path):
+        full_path = os.path.join(dump_path, item)
+        if os.path.isdir(full_path) and rank_folder_pattern.match(item):
+            rank_folder_count += 1
+            if rank_folder_count > 1:
+                return False
+    return rank_folder_count == 1

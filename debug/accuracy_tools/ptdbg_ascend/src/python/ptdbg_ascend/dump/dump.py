@@ -19,6 +19,7 @@ import inspect
 import json
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +33,7 @@ else:
     is_gpu = False
 
 from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,
-                    CompareException)
+                    CompareException, check_single_rank_folder)
 from ..common.utils import (print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,
                             get_md5_for_tensor, print_error_log)
 from ..dump.utils import check_writable
@@ -46,6 +47,7 @@ pkl_name = ""
 rank = os.getpid()
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = {}
+GLOBAL_THREAD_POOL = ThreadPoolExecutor()
 
 
 class APIList(list):
@@ -99,13 +101,14 @@ def get_not_float_tensor_info(data):
         tensor_min = []
         tensor_mean = []
     elif len(data.shape) == 0:
-        tensor_max = data.cpu().detach().float().numpy().tolist()
-        tensor_min = data.cpu().detach().float().numpy().tolist()
-        tensor_mean = data.cpu().detach().float().numpy().tolist()
+        item = data.float().item()
+        tensor_max = item
+        tensor_min = item
+        tensor_mean = item
     else:
-        tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
-        tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
-        tensor_mean = torch._C._VariableFunctionsClass.mean(data.float()).cpu().detach().float().numpy().tolist()
+        tensor_max = torch._C._VariableFunctionsClass.max(data).float().item()
+        tensor_min = torch._C._VariableFunctionsClass.min(data).float().item()
+        tensor_mean = torch._C._VariableFunctionsClass.mean(data.float()).float().item()
     return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, CompareConst.NAN)
 
 
@@ -117,10 +120,10 @@ def get_scalar_data_info(data):
 def get_float_tensor_info(data):
     if DumpUtil.summary_mode == "md5":
         return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
-    tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
-    tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
-    tensor_mean = torch._C._VariableFunctionsClass.mean(data).cpu().detach().float().numpy().tolist()
-    tensor_norm = torch._C._VariableFunctionsClass.norm(data).cpu().detach().float().numpy().tolist()
+    tensor_max = torch._C._VariableFunctionsClass.max(data).float().item()
+    tensor_min = torch._C._VariableFunctionsClass.min(data).float().item()
+    tensor_mean = torch._C._VariableFunctionsClass.mean(data).float().item()
+    tensor_norm = torch._C._VariableFunctionsClass.norm(data).float().item()
     return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, tensor_norm)
 
 
@@ -149,35 +152,48 @@ def dump_tensor(x, prefix, dump_step):
         if x.numel() == 0 or len(x.shape) == 0 or not x.is_floating_point():
             if DumpUtil.dump_filter_switch == Const.OFF:
                 data_info = get_not_float_tensor_info(x)
-                dump_data(dump_step, prefix, data_info)
+                dump_data_by_rank_count(dump_step, prefix, data_info)
             else:
                 return
         else:
             data_info = get_float_tensor_info(x)
-            dump_data(dump_step, prefix, data_info)
+            dump_data_by_rank_count(dump_step, prefix, data_info)
 
     elif DumpUtil.dump_filter_switch == Const.OFF:
         if isinstance(x, bool) or isinstance(x, int) or isinstance(x, float):
             data_info = get_scalar_data_info(x)
-            dump_data(dump_step, prefix, data_info)
+            dump_data_by_rank_count(dump_step, prefix, data_info)
 
 
-def dump_data(dump_step, prefix, data_info):
+def append_pkl_data(dump_step, prefix, data_info):
     global api_list
     thread_lock.acquire()
+    api_list.append([prefix, dump_step, data_info.md5, data_info.dtype, data_info.shape, data_info.summary_data])
+    thread_lock.release()
+
+
+def dump_data(prefix, data_info):
+    if DumpUtil.summary_mode != "all":
+        return
+    output_path = os.path.join(DumpUtil.dump_data_dir, f'{prefix}.npy')
     try:
-        output_path = os.path.join(DumpUtil.dump_data_dir, f'{prefix}.npy')
-        check_path_length(output_path)
-        check_path_pattern_vaild(output_path)
-        if DumpUtil.summary_mode == "all":
-            np.save(output_path, data_info.save_data)
-            change_mode(output_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        api_list.append([prefix, dump_step, data_info.md5, data_info.dtype, data_info.shape, data_info.summary_data])
-        print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
+        np.save(output_path, data_info.save_data)
+        change_mode(output_path, FileCheckConst.DATA_FILE_AUTHORITY)
     except Exception as e:
         print_warn_log("Dump data failed, error: {}".format(e))
-    finally:
-        thread_lock.release()
+
+
+def thread_dump_data(prefix, data_info):
+    GLOBAL_THREAD_POOL.submit(dump_data, prefix, data_info)
+
+
+def dump_data_by_rank_count(dump_step, prefix, data_info):
+    print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
+    if DumpUtil.is_single_rank:
+        thread_dump_data(prefix, data_info)
+    else:
+        dump_data(prefix, data_info)
+    append_pkl_data(dump_step, prefix, data_info)
 
 
 def dump_stack_info(name_template):
@@ -272,8 +288,6 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
         if rank != DumpUtil.target_rank:
             return
     dump_file = create_dirs_if_not_exist(rank, dump_file)
-    check_path_pattern_vaild(dump_file)
-    check_path_length(dump_file)
     global pkl_name
     pkl_name = dump_file
     if DumpUtil.dump_init_enable:
@@ -289,6 +303,8 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
 
     name_prefix = name
     name_template = f"{name_prefix}" + "_{}"
+    if DumpUtil.is_single_rank is None:
+        DumpUtil.is_single_rank = check_single_rank_folder(dump_dir)
     if DumpUtil.dump_switch_mode in [Const.ALL, Const.API_LIST]:
         dump_api_tensor(dump_step, in_feat, name_template, out_feat)
     elif DumpUtil.dump_switch_mode == Const.API_STACK:
