@@ -192,16 +192,6 @@ class Comparator:
                     test_final_success = False
         return test_final_success, detailed_result_total
 
-    def _compare_dropout(self, bench_output, device_output):
-        tensor_num = bench_output.numel()
-        if tensor_num >= 100:
-            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
-                return True, 1
-            else:
-                return False, 0
-        else:
-            return True, 1
-
     def _compare_core(self, bench_output, device_output):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
@@ -261,6 +251,17 @@ class Comparator:
             status, compare_column, message = self._compare_float_tensor(bench_output, device_output, 
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
+    
+    @staticmethod
+    def _compare_dropout(bench_output, device_output):
+        tensor_num = bench_output.numel()
+        if tensor_num >= 100:
+            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
+                return True, 1
+            else:
+                return False, 0
+        else:
+            return True, 1
 
     @staticmethod
     def _compare_builtin_type(bench_output, device_output, compare_column):
