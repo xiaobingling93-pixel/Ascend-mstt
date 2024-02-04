@@ -40,10 +40,10 @@ def cosine_sim(cpu_output, npu_output):
 #rmse
 def get_rmse(abs_err, inf_nan_mask):
     masked_ae = np.where(inf_nan_mask, 0, abs_err)
-    rmse = np.mean(np.square(masked_ae))
+    mse = np.mean(np.square(masked_ae))
     inf_nan_cnt = np.sum(inf_nan_mask)
-    rmse = rmse * (abs_err.size / (abs_err.size - inf_nan_cnt + 0.0001) + 0.0001)
-    rmse = np.sqrt(rmse)
+    mse = mse * (abs_err.size / (abs_err.size - inf_nan_cnt + 0.0001) + 0.0001)
+    rmse = np.sqrt(mse)
     return rmse
 
 
@@ -104,3 +104,17 @@ def get_rel_err_ratio(rel_err, thresholding):
         ratio = np.divide(np.sum(rel_err < thresholding), np.size(rel_err))
     bool_result = ratio > (1 - thresholding)
     return ratio, bool_result
+
+
+def get_finite_and_infinite_mask(bench_output, device_output):
+    device_finite_mask = np.isfinite(device_output)
+    bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
+    both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
+    inf_nan_mask = np.logical_not(both_finite_mask)
+    return both_finite_mask, inf_nan_mask
+
+
+def get_small_value_mask(abs_bench, both_finite_mask, small_value_threshold):
+    small_value_mask = np.less_equal(abs_bench, small_value_threshold)
+    small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
+    return small_value_mask

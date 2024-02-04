@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import torch
 from api_accuracy_checker.compare import algorithm as alg
-from api_accuracy_checker.compare.algorithm import CompareColumn
+from api_accuracy_checker.compare.compare_column import CompareColumn
 
 class TestAlgorithmMethods(unittest.TestCase):
 

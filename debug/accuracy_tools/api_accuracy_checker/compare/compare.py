@@ -11,7 +11,7 @@ from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
-    get_small_value_err_ratio
+    get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -290,39 +290,27 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in Benchmark_Compare_Support_List:
             dtype_config = precision_configs.get(dtype)
-            device_finite_mask = np.isfinite(device_output)
-            bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
-            both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
-            inf_nan_mask = np.logical_not(both_finite_mask)
-
-            #小值域
-            small_value_mask = np.less_equal(abs_bench, dtype_config['small_value'][0])
-            small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
+            both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
+            small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
             abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
             compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
-
             rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-            
-            #rmse、eb、max_rel_err、mean_rel_err
             compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
             compare_column.EB = get_error_balance(bench_output, device_output)
             compare_column.Max_rel_error = get_max_rel_err(rel_err)
             compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
-        #cos
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
         compare_column.cosine_sim = cos_res
         message += msg + "\n"
         if not cos_status:
             return CompareConst.ERROR, compare_column, message
 
-        #max abs err
         max_abs_res, max_abs_status = get_max_abs_err(abs_err)
         compare_column.max_abs_err = max_abs_res
         if max_abs_status:
             return CompareConst.PASS, compare_column, message
-        
-        #rel error
+
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if dtype in [torch.float16, torch.bfloat16]:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
@@ -342,5 +330,4 @@ class Comparator:
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
                 return CompareConst.WARNING, compare_column, message
-
         return CompareConst.PASS, compare_column, message
