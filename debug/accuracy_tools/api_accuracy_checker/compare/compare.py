@@ -168,7 +168,19 @@ class Comparator:
     def _compare_core_wrapper(self, bench_output, device_output):
         detailed_result_total = []
         test_final_success = True
-        status, compare_result, message = self._compare_core(bench_output, device_output)
+        if isinstance(bench_output, (list, tuple)):
+            status, compare_result, message = [], [], []
+            if len(bench_output) != len(device_output):
+                status = CompareConst.ERROR 
+                message = "bench and npu output structure is different."
+            else:
+                for b_out_i, n_out_i in zip(bench_output, device_output):
+                    status_i, compare_result_i, message_i = self._compare_core(b_out_i, n_out_i)
+                    status.append(status_i)
+                    compare_result.append(compare_result_i)
+                    message.append(message_i)
+        else:
+            status, compare_result, message = self._compare_core(bench_output, device_output)
         if not isinstance(status, list):
             detailed_result_total.append(compare_result.to_column_value(status, message))
             if status in [CompareConst.ERROR, CompareConst.WARNING]:
@@ -194,15 +206,6 @@ class Comparator:
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
             return CompareConst.ERROR, compare_column, "bench and npu output type is different."
-        if isinstance(bench_output, (list, tuple)):
-            status, compare_result, message = [], [], []
-            if len(bench_output) != len(device_output):
-                return CompareConst.ERROR, compare_column, "bench and npu output structure is different."
-            for b_out_i, n_out_i in zip(bench_output, device_output):
-                status_i, compare_result_i, message_i = self._compare_core(b_out_i, n_out_i)
-                status.append(status_i)
-                compare_result.append(compare_result_i)
-                message.append(message_i)
         elif isinstance(bench_output, dict):
             b_keys, n_keys = set(bench_output.keys()), set(device_output.keys())
             if b_keys != n_keys:
@@ -219,10 +222,9 @@ class Comparator:
             status, compare_result, message = self._compare_torch_tensor(copy_bench_out, copy_device_output,
                                                                 compare_column)
         elif isinstance(bench_output, (bool, int, float, str)):
-            compare_column.bench_dtype = str(type(bench_output))
-            compare_column.npu_dtype = str(type(device_output))
-            compare_column.shape = str(type(device_output))
-            status, compare_result, message  = self._compare_builtin_type(bench_output, device_output, compare_column)
+            compare_column.bench_type = str(type(bench_output))
+            compare_column.npu_type = str(type(device_output))
+            status, compare_result, message = self._compare_builtin_type(bench_output, device_output, compare_column)
         elif bench_output is None:
             return CompareConst.PASS, compare_column, "Output is None."
         else:
@@ -269,15 +271,6 @@ class Comparator:
         compare_column.error_rate = 0
         return CompareConst.PASS, compare_column, ""
 
-    @staticmethod
-    def _flatten_compare_result(result):
-        flatten_result = []
-        for result_i in result:
-            if isinstance(result_i, list):
-                flatten_result += flatten_compare_result(result_i)
-            else:
-                flatten_result.append(result_i)
-        return flatten_result
 
     @staticmethod
     def _compare_bool_tensor(bench_output, device_output):
@@ -291,18 +284,18 @@ class Comparator:
     @staticmethod
     def _compare_float_tensor(bench_output, device_output, compare_column, dtype):
         message = ""
+        eps = np.finfo(bench_output.dtype).eps
+        abs_bench = np.abs(bench_output)
+        abs_bench_with_eps = abs_bench + eps
+        abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in Benchmark_Compare_Support_List:
             dtype_config = precision_configs.get(dtype)
-            eps = np.finfo(bench_output.dtype).eps
-            abs_bench = np.abs(bench_output)
-            abs_bench_with_eps = abs_bench + eps
             device_finite_mask = np.isfinite(device_output)
             bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
             both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
             inf_nan_mask = np.logical_not(both_finite_mask)
 
             #小值域
-            abs_err = get_abs_err(bench_output, device_output)
             small_value_mask = np.less_equal(abs_bench, dtype_config['small_value'][0])
             small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
             abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
