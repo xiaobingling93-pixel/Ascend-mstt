@@ -6,8 +6,9 @@ import numpy as np
 from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
-from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs, Benchmark_Compare_Support_List
+from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
+    precision_configs, Benchmark_Compare_Support_List
+from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio
