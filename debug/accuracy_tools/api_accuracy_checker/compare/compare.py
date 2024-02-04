@@ -171,8 +171,8 @@ class Comparator:
         if isinstance(bench_output, (list, tuple)):
             status, compare_result, message = [], [], []
             if len(bench_output) != len(device_output):
-                status = CompareConst.ERROR 
-                message = "bench and npu output structure is different."
+                status = [CompareConst.ERROR]
+                message = ["bench and npu output structure is different."]
             else:
                 for b_out_i, n_out_i in zip(bench_output, device_output):
                     status_i, compare_result_i, message_i = self._compare_core(b_out_i, n_out_i)
