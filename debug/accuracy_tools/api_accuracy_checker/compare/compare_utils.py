@@ -4,7 +4,7 @@ from api_accuracy_checker.common.utils import Const, print_warn_log
 
 
 DETAIL_TEST_ROWS = [[
-            "API Name", "Bench Dtype", "NPU Dtype", "Shape",
+            "API Name", "Bench Dtype", "DEVICE Dtype", "Shape",
             "余弦相似度",
             "最大绝对误差",
             "双百指标",
@@ -47,6 +47,9 @@ precision_configs = {
         ]
     }
 }
+
+
+Benchmark_Compare_Support_List = ['torch.float16', 'torch.bfloat16', 'torch.float32']
 
 
 class CompareConst:

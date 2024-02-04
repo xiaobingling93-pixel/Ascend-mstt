@@ -219,9 +219,7 @@ def gen_kwargs(api_info, convert_type=None, real_data_path=None):
 
 
 def gen_torch_kwargs(kwargs_params, key, value):
-    if value.get('type') == "torch.device":
-        kwargs_params[key] = eval(value.get('type'))(value.get('value'))
-    else:
+    if value.get('type') != "torch.device":
         kwargs_params[key] = eval(value.get('value'))
 
 

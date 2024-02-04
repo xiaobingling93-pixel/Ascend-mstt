@@ -3,13 +3,12 @@ import os
 import csv
 import torch
 import numpy as np
-import xlsxwriter
 from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, CompareColumn, check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs
-from api_accuracy_checker.compare.algorithm import  get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
+    DETAIL_TEST_ROWS, precision_configs, Benchmark_Compare_Support_List
+from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio
 from api_accuracy_checker.common.config import msCheckerConfig
@@ -291,29 +290,30 @@ class Comparator:
     @staticmethod
     def _compare_float_tensor(bench_output, device_output, compare_column, dtype):
         message = ""
-        dtype_config = precision_configs.get(dtype)
-        eps = np.finfo(bench_output.dtype).eps
-        abs_bench = np.abs(bench_output)
-        abs_bench_with_eps = abs_bench + eps
-        device_finite_mask = np.isfinite(device_output)
-        bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
-        both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
-        inf_nan_mask = np.logical_not(both_finite_mask)
+        if str(dtype) in Benchmark_Compare_Support_List:
+            dtype_config = precision_configs.get(dtype)
+            eps = np.finfo(bench_output.dtype).eps
+            abs_bench = np.abs(bench_output)
+            abs_bench_with_eps = abs_bench + eps
+            device_finite_mask = np.isfinite(device_output)
+            bench_finite_mask = np.isfinite(bench_output.astype(device_output.dtype))
+            both_finite_mask = np.logical_and(device_finite_mask, bench_finite_mask)
+            inf_nan_mask = np.logical_not(both_finite_mask)
 
-        #小值域
-        abs_err = get_abs_err(bench_output, device_output)
-        small_value_mask = np.less_equal(np.abs(bench_output), dtype_config['small_value'][0])
-        small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
-        abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
-        compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
+            #小值域
+            abs_err = get_abs_err(bench_output, device_output)
+            small_value_mask = np.less_equal(abs_bench, dtype_config['small_value'][0])
+            small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
+            abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
+            compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
 
-        rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-        
-        #rmse、eb、max_rel_err、mean_rel_err
-        compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
-        compare_column.EB = get_error_balance(bench_output, device_output)
-        compare_column.Max_rel_error = get_max_rel_err(rel_err)
-        compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
+            rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
+            
+            #rmse、eb、max_rel_err、mean_rel_err
+            compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
+            compare_column.EB = get_error_balance(bench_output, device_output)
+            compare_column.Max_rel_error = get_max_rel_err(rel_err)
+            compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
         #cos
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)

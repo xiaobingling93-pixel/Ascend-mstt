@@ -147,7 +147,8 @@ class FileOpen:
 
     def __enter__(self):
         self.check_file_path()
-        if "b" not in self.mode:
+        binary_mode = "b"
+        if binary_mode not in self.mode:
             self._handle = open(self.file_path, self.mode, encoding=self.encoding)
         else:
             self._handle = open(self.file_path, self.mode)

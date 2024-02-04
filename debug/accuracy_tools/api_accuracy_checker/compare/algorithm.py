@@ -29,8 +29,8 @@ def cosine_sim(cpu_output, npu_output):
         msg = "All the data is zero in bench dump data."
         return CompareConst.NA, False, msg
     else:
-        n_value = n_value_max.astype(float) / n_value_max
-        b_value = b_value_max.astype(float) / b_value_max
+        n_value = n_value.astype(float) / n_value
+        b_value = b_value.astype(float) / b_value
         cos = np.dot(n_value, b_value) / (np.linalg.norm(n_value) * np.linalg.norm(b_value))
         if np.isnan(cos):
             msg = "Dump data has NaN when comparing with Cosine Similarity."
@@ -52,7 +52,7 @@ def get_error_balance(bench_data, device_data):
     larger_count = np.sum(np.greater(device_data - bench_data.astype(device_data.dtype), 0))
     smaller_count = np.sum(np.less(device_data - bench_data.astype(device_data.dtype), 0))
     total_count = bench_data.size
-    error_balance = abs(larger_count - smaller_count) / total_count
+    error_balance = abs(larger_count - smaller_count) / total_count if total_count > 0 else 0
     return error_balance
 
 
