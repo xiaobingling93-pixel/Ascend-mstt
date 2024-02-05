@@ -38,7 +38,7 @@ class TestCompare(unittest.TestCase):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
-        actual_cosine_similarity = detailed_result_total[0][4]
+        actual_cosine_similarity = detailed_result_total[0][3]
         # 设置一个小的公差值
         tolerance = 1e-4    
         # 判断实际的余弦相似度值是否在预期值的公差范围内
