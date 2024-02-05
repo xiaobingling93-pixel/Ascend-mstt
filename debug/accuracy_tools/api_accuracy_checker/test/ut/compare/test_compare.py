@@ -2,10 +2,12 @@ import csv
 import os
 import shutil
 import time
+import numpy as np
 import unittest
 import torch.nn.functional
 
 from api_accuracy_checker.compare.compare import Comparator
+from api_accuracy_checker.compare.compare_column import CompareColumn
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -72,3 +74,22 @@ class TestCompare(unittest.TestCase):
             next(csv_reader)
             api_name_list = [row[0] for row in csv_reader]
         self.assertEqual(api_name_list[0], 'Functional*conv2d*0.forward.output.0')
+        
+    def test_compare_torch_tensor(self):
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
+        compare_column = CompareColumn()
+        status, compare_column, message = self.compare._compare_torch_tensor(cpu_output, npu_output, compare_column)
+        self.assertEqual(status, "pass")
+
+    def test_compare_bool_tensor(self):
+        cpu_output = np.array([True, False, True])
+        npu_output = np.array([True, False, True])
+        self.assertEqual(self.compare._compare_bool_tensor(cpu_output, npu_output), (0.0, 'pass', ''))
+        
+    def test_compare_builtin_type(self):
+        compare_column = CompareColumn()
+        bench_out = 1
+        npu_out = 1
+        status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
+        self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))

@@ -29,9 +29,12 @@ def cosine_sim(bench_output, device_output):
         msg = "All the data is zero in bench dump data."
         return CompareConst.NA, False, msg
     else:
+        n_value = n_value.astype(float) / n_value_max
+        b_value = b_value.astype(float) / b_value_max
         cos = np.dot(n_value, b_value) / (np.linalg.norm(n_value) * np.linalg.norm(b_value))
         if np.isnan(cos):
             msg = "Dump data has NaN when comparing with Cosine Similarity."
+        cos = np.clip(cos, -1, 1)
         return cos, cos > 0.99, msg
 
 
