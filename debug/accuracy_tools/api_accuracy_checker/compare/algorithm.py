@@ -213,6 +213,12 @@ def compare_core(bench_out, npu_out):
         else:
             status, compare_result, message = compare_core(list(bench_out.values()), list(npu_out.values()))
     elif isinstance(bench_out, torch.Tensor):
+        if bench_out.numel() == 0 and npu_out.numel() == 0:
+            return CompareConst.PASS, compare_column, "bench and npu output is empty."
+        elif bench_out.numel() == 0 and npu_out.numel() != 0:
+            return CompareConst.ERROR, compare_column, "bench output is empty but npu output is not empty."
+        elif bench_out.numel() != 0 and npu_out.numel() == 0:
+            return CompareConst.ERROR, compare_column, "bench output is not empty but npu output is empty."
         copy_bench_out = bench_out.detach().clone()
         copy_npu_out = npu_out.detach().clone()
         compare_column.bench_type = str(copy_bench_out.dtype)

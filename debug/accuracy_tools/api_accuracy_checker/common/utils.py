@@ -630,3 +630,22 @@ def write_pt(file_path, tensor):
     full_path = os.path.realpath(file_path)
     file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
     return full_path
+
+
+def get_real_data_path(file_path):
+    targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
+    pattern = re.compile(r'({})'.format('|'.join(targets)))
+    match = pattern.search(file_path)
+    if match:
+        target_index = match.start()
+        target_path = file_path[target_index:]
+        return target_path
+    else:
+        raise DumpException(DumpException.INVALID_PATH_ERROR)
+
+
+def get_full_data_path(data_path, real_data_path):
+    if not data_path:
+        return data_path
+    full_data_path = os.path.join(real_data_path, data_path)
+    return os.path.realpath(full_data_path)
