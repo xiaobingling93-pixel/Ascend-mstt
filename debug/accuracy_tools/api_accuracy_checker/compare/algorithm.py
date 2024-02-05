@@ -6,31 +6,29 @@ from api_accuracy_checker.common.utils import Const
 
 
 #cos
-def cosine_sim(cpu_output, npu_output):
+def cosine_sim(bench_output, device_output):
     msg = ""
-    n_value = npu_output.reshape(-1)
-    b_value = cpu_output.reshape(-1)
+    n_value = device_output.reshape(-1)
+    b_value = bench_output.reshape(-1)
     cos = CompareConst.NA
     np.seterr(divide="ignore", invalid="ignore")
     if n_value.shape != b_value.shape:
-        msg = f"Shape of npu and bench outputs don't match. NPU: {n_value.shape}, bench: {b_value.shape}."
+        msg = f"Shape of device and bench outputs don't match. device: {n_value.shape}, bench: {b_value.shape}."
         return -1, False, msg
     if len(n_value) == 1:
-        msg = "All the data in npu dump data is scalar. Please refer to other compare algorithms."
+        msg = "All the data in device dump data is scalar. Please refer to other compare algorithms."
         return cos, True, msg
     n_value_max = np.max(np.abs(n_value))
     b_value_max = np.max(np.abs(b_value))
     if n_value_max <= np.finfo(float).eps and b_value_max <= np.finfo(float).eps:
         return cos, True, msg
     elif n_value_max <= np.finfo(float).eps:
-        msg = "All the data is zero in npu dump data."
+        msg = "All the data is zero in device dump data."
         return CompareConst.NA, False, msg
     elif b_value_max <= np.finfo(float).eps:
         msg = "All the data is zero in bench dump data."
         return CompareConst.NA, False, msg
     else:
-        n_value = n_value.astype(float) / n_value
-        b_value = b_value.astype(float) / b_value
         cos = np.dot(n_value, b_value) / (np.linalg.norm(n_value) * np.linalg.norm(b_value))
         if np.isnan(cos):
             msg = "Dump data has NaN when comparing with Cosine Similarity."
