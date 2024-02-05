@@ -2,10 +2,10 @@ import csv
 import os
 import shutil
 import time
+import unittest
+
 import numpy as np
 import torch.nn.functional
-
-import unittest
 
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
@@ -55,8 +55,8 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
                                                   actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
-                                                  'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
-                                                 ['torch.float32', 'torch.float32',(100, 100), 
+                                                  'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
+                                                 ['torch.float32', 'torch.float32', (100, 100), 
                                                   actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
                                                 'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
 
