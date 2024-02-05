@@ -38,15 +38,15 @@ class TestCompare(unittest.TestCase):
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                  'N/A', 'N/A', 'pass', '\n']])
+                                                  'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                  'N/A', 'N/A', 'pass', '\n'], ['torch.float32', 'torch.float32',
-                                                                                (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                                                'N/A', 'N/A', 'pass', '\n']])
+                                                  'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
+                                                 ['torch.float32', 'torch.float32',(100, 100), 1.0, 0.0, 'N/A', 'N/A',
+                                                'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0,'pass', '\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)

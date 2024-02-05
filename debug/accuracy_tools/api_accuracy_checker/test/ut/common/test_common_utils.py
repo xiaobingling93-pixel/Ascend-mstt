@@ -16,7 +16,7 @@ class TestUtils(unittest.TestCase):
     def test_write_csv(self):
         test_data = [["name", "age"], ["Alice", "20"], ["Bob", "30"]]
         write_csv(test_data, 'test.csv')
-        with open('test.csv', 'r') as f:
+        with open('test.csv', 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             for i, row in enumerate(reader):
                 self.assertEqual(row, test_data[i])
