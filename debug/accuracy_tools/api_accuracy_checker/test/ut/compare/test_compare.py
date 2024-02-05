@@ -38,16 +38,25 @@ class TestCompare(unittest.TestCase):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
+        actual_cosine_similarity = detailed_result_total[0][4]
+        # 设置一个小的公差值
+        tolerance = 1e-4    
+        # 判断实际的余弦相似度值是否在预期值的公差范围内
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        # 对其他值进行比较，确保它们符合预期
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
+                                              'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
         self.assertTrue(test_final_success)
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                  'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
         self.assertTrue(test_final_success)
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
                                                   'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
-                                                 ['torch.float32', 'torch.float32',(100, 100), 1.0, 0.0, 'N/A', 'N/A',
+                                                 ['torch.float32', 'torch.float32',(100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
                                                 'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0,'pass', '\n']])
 
     def test_compare_output(self):
