@@ -3,8 +3,9 @@ import os
 import shutil
 import time
 import numpy as np
-import unittest
 import torch.nn.functional
+
+import unittest
 
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
@@ -45,7 +46,7 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
         # 对其他值进行比较，确保它们符合预期
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
                                               'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
         self.assertTrue(test_final_success)
 
@@ -53,11 +54,11 @@ class TestCompare(unittest.TestCase):
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
                                                   'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
                                                  ['torch.float32', 'torch.float32',(100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A',
-                                                'N/A', 'N/A',  0.0, 0.0, 0, 0.0, 0.0,'pass', '\n']])
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
+                                                'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
