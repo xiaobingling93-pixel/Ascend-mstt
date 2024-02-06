@@ -33,6 +33,6 @@ source set_env.sh
 
 2. 运行阶段：添加依赖库路径
   ```
-  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/Ascend910B1/lib/:$LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH
   msprof op simulator --application=./add.fatbin # 在对应路径下
   ```
