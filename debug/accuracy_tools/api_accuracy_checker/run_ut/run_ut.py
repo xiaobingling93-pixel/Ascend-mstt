@@ -268,14 +268,17 @@ def initialize_save_error_data():
     initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
 
 
-def get_validated_result_csv_path(result_csv_path):
+def get_validated_result_csv_path(result_csv_path, mode):
+    if mode not in ['result', 'detail']:
+        raise ValueError("The csv mode must be result or detail")
     result_csv_path_checker = FileChecker(result_csv_path, FileCheckConst.FILE, ability=FileCheckConst.READ_WRITE_ABLE,
                                           file_type=FileCheckConst.CSV_SUFFIX)
     validated_result_csv_path = result_csv_path_checker.common_check()
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    pattern = r"^accuracy_checking_result_\d{14}\.csv$"
-    if not re.match(pattern, result_csv_name):
-        raise ValueError("When continue run ut, please do not modify the result csv name.")
+    if mode == 'result':
+        result_csv_name = os.path.basename(validated_result_csv_path)
+        pattern = r"^accuracy_checking_result_\d{14}\.csv$"
+        if not re.match(pattern, result_csv_name):
+            raise ValueError("When continue run ut, please do not modify the result csv name.")
     return validated_result_csv_path
 
 
@@ -361,7 +364,7 @@ def _run_ut():
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
     if args.result_csv_path:
-        result_csv_path = get_validated_result_csv_path(args.result_csv_path)
+        result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
     if save_error_data:
         if args.result_csv_path:
