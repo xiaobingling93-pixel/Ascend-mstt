@@ -74,7 +74,7 @@ class CompareConst:
     
 class BenchmarkCompareColumn:
     API_NAME = 'API Name'
-    NPU_DTYPE = 'NPU Dtype'
+    DEVICE_DTYPE = 'NPU Dtype'
     SMALL_VALUE_ERROR_RATE = '小值域错误占比'
     RMSE = '均方根误差'
     MAX_REL_ERR = '相对误差最大值'
@@ -96,7 +96,7 @@ class BenchmarkCompareColumn:
     
     @staticmethod
     def to_required_columns():
-        return [BenchmarkCompareColumn.API_NAME, BenchmarkCompareColumn.NPU_DTYPE, 
+        return [BenchmarkCompareColumn.API_NAME, BenchmarkCompareColumn.DEVICE_DTYPE, 
                 BenchmarkCompareColumn.SMALL_VALUE_ERROR_RATE, BenchmarkCompareColumn.RMSE, 
                 BenchmarkCompareColumn.MAX_REL_ERR, BenchmarkCompareColumn.MEAN_REL_ERR, BenchmarkCompareColumn.EB]
         
