@@ -29,6 +29,7 @@ void printTensor(int16_t *ptr, size_t size)
  }
 }
 
+extern void add_custom_do(uint32_t coreDim, void *l2ctrl, void *stream, uint8_t *x, uint8_t *y, uint8_t *z);
 int32_t main(int32_t argc, char *argv[])
 {
  size_t inputByteSize = 8 * 2048 * sizeof(int16_t);
