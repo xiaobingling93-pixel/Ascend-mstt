@@ -64,7 +64,7 @@ int32_t main(int32_t argc, char *argv[])
  CHECK_ACL(aclrtSynchronizeStream(stream));
  // 将Device上的运算结果拷贝回Host
  CHECK_ACL(aclrtMemcpy(zHost, outputByteSize, zDevice, outputByteSize, ACL_MEMCPY_DEVICE_TO_HOST));
- printTensor(zHost, 40);
+ printTensor(zHost, 2 * 8 * 2); // 显示2行
  // 释放申请的资源
  CHECK_ACL(aclrtFree(xDevice));
  CHECK_ACL(aclrtFree(yDevice));
