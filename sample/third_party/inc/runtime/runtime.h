@@ -50,7 +50,7 @@ rtError_t rtConfigureCall(uint32_t numBlocks, rtSmDesc_t *smDesc, rtStream_t stm
 rtError_t rtDevBinaryUnRegister(void *handle);
 rtError_t rtDevBinaryRegister(const rtDevBinary_t *bin, void **handle);
 rtError_t rtFunctionRegister(void* binHandle, const void* stubFunc, const char* stubName, const void* devFunc, uint32_t funcMode);
-rtError_t rtLaunch(const void * stubFunc);
+rtError_t rtLaunch(const void* stubFunc);
 
 #ifdef __cplusplus
 }
