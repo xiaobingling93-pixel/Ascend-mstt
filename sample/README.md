@@ -31,5 +31,5 @@ COMPILER_FLAG		:= -xcce -O2 -std=c++17 --cce-aicore-arch=dav-c220-vec -g
 2. 运行时添加依赖库路径
 ```
 export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/Ascend910B1/lib/:$LD_LIBRARY_PATH
-msprof op simulator add.fatbin
+msprof op simulator --application=./add.fatbin # 在对应路径下
 ```
