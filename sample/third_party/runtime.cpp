@@ -5,4 +5,4 @@ rtError_t rtConfigureCall(uint32_t numBlocks, rtSmDesc_t *smDesc, rtStream_t stm
 rtError_t rtDevBinaryUnRegister(void *handle){return 0;}
 rtError_t rtDevBinaryRegister(const rtDevBinary_t *bin, void **handle){return 0;}
 rtError_t rtFunctionRegister(void* binHandle, const void* stubFunc, const char* stubName, const void* devFunc, uint32_t funcMode){return 0;}
-rtError_t rtLaunch(const void * stubFunc){return 0;}
+rtError_t rtLaunch(const void* stubFunc){return 0;}
