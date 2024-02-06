@@ -203,7 +203,7 @@ def read_json(file):
 
 
 def write_csv(data, filepath):
-    with FileOpen(filepath, 'a') as f:
+    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
 

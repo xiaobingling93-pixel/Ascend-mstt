@@ -17,13 +17,12 @@ import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, check_file_or_directory_path, initialize_save_path, Const
+    print_error_log, initialize_save_path, Const
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.dump.api_info import APIInfo
 
 
@@ -174,7 +173,10 @@ def run_ut(config):
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
         finally:
-            torch.npu.empty_cache()
+            if is_gpu:
+                torch.cuda.empty_cache()
+            else:
+                torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
