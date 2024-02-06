@@ -11,7 +11,7 @@ source set_env.sh
 
 ## 目录说明
 现仅支持```sample\normal_sample\vec_only```样例。
-大概在2月份会补齐各类工具案例和文档
+大概在2月份会补齐各类工具样例和文档
 
 ## 其他
 现msprof使能仿真时，还需要额外调整，具体如下：
