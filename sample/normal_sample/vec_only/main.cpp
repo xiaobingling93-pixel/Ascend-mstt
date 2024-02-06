@@ -9,7 +9,7 @@
         if (__ret != ACL_ERROR_NONE) {                                      \
             printf("%s: %d aclError %d\n", __FILE__, __LINE__, __ret);      \
         }                                                                   \
-    } while(0)
+    } while (0)
 
 void prepareTensor(int16_t *ptr, size_t size)
 {
