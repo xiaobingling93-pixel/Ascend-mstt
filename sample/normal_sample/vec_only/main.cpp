@@ -9,7 +9,7 @@
         if (__ret != ACL_ERROR_NONE) {                                      \
             printf("%s: %d aclError %d\n", __FILE__, __LINE__, __ret);      \
         }                                                                   \
-    } while (0)
+    } while(0)
 
 void prepareTensor(int16_t *ptr, size_t size)
 {
@@ -45,12 +45,16 @@ int32_t main(int32_t argc, char *argv[])
     aclrtStream stream = nullptr;
     CHECK_ACL(aclrtCreateStream(&stream));
     // 分配Host内存
-    int16_t *xHost, *yHost, *zHost;
-    uint8_t *xDevice, *yDevice, *zDevice;
+    int16_t *xHost = nullptr;
+    int16_t *yHost = nullptr;
+    int16_t *zHost = nullptr;
     CHECK_ACL(aclrtMallocHost((void**)(&xHost), inputByteSize));
     CHECK_ACL(aclrtMallocHost((void**)(&yHost), inputByteSize));
     CHECK_ACL(aclrtMallocHost((void**)(&zHost), outputByteSize));
     // 分配Device内存
+    uint8_t *xDevice = nullptr;
+    uint8_t *yDevice = nullptr;
+    uint8_t *zDevice = nullptr;
     CHECK_ACL(aclrtMalloc((void**)&xDevice, inputByteSize, ACL_MEM_MALLOC_HUGE_FIRST));
     CHECK_ACL(aclrtMalloc((void**)&yDevice, inputByteSize, ACL_MEM_MALLOC_HUGE_FIRST));
     CHECK_ACL(aclrtMalloc((void**)&zDevice, outputByteSize, ACL_MEM_MALLOC_HUGE_FIRST));
