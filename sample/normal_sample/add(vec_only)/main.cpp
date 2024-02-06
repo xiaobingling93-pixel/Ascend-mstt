@@ -44,7 +44,7 @@ int32_t main(int32_t argc, char *argv[])
  aclrtStream stream = nullptr;
  CHECK_ACL(aclrtCreateStream(&stream));
  // 分配Host内存
- uint16_t *xHost, *yHost, *zHost;
+ int16_t *xHost, *yHost, *zHost;
  uint8_t *xDevice, *yDevice, *zDevice;
  CHECK_ACL(aclrtMallocHost((void**)(&xHost), inputByteSize));
  CHECK_ACL(aclrtMallocHost((void**)(&yHost), inputByteSize));
