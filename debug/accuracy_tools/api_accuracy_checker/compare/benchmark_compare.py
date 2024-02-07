@@ -159,9 +159,9 @@ def analyse_csv(npu_data, gpu_data, config):
         if row_gpu.empty:
             print_warn_log(f'This API : {part_api_name} does not exist in the GPU data.')
             continue
-        if row_npu[BenchmarkCompareColumn.NPU_DTYPE] in Benchmark_Compare_Support_List:
+        if row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] in Benchmark_Compare_Support_List:
             row_gpu = row_gpu.iloc[0]
-            bs = BenchmarkStandard(part_api_name, row_gpu, row_gpu)
+            bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             bs.get_result()
             write_detail_csv(bs.to_column_value(), config.details_csv_path)
 
@@ -180,7 +180,7 @@ def analyse_csv(npu_data, gpu_data, config):
             backward_status = backward_status and result_mapping.get(bs.final_result) \
             if backward_status != CompareConst.NA else result_mapping.get(bs.final_result)
         last_api_name = api_name
-        last_api_dtype = row_npu[BenchmarkCompareColumn.NPU_DTYPE]
+        last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
 
     if last_api_name is not None:
         if last_api_dtype in Benchmark_Compare_Support_List:
