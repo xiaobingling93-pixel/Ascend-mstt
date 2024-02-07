@@ -27,9 +27,9 @@ source set_env.sh
     ```
     + 调试信息增强：
     ```
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17 --cce-aicore-arch=dav-c220-vec
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17
     修改为：
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17 --cce-aicore-arch=dav-c220-vec -g
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17 -g
     ```
 
 2. 运行阶段：添加依赖库路径
