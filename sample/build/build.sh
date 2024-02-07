@@ -9,7 +9,7 @@ export TOP_DIR=${TOP_DIR}
 cd ${TOP_DIR}/third_party
 make
 
-cd ${TOP_DIR}/third_party
+cd ${TOP_DIR}/third_party/lib
 cp -f libruntime.so.$(arch) libruntime.so
 cp -f libruntime_camodel.so.$(arch) libruntime_camodel.so
 
