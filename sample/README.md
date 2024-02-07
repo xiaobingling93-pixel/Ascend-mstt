@@ -32,8 +32,8 @@ source set_env.sh
     COMPILER_FLAG		:= -xcce -O2 -std=c++17 -g
     ```
 
-2. 运行阶段：添加依赖库路径
+2. 运行阶段：添加依赖库路径，
   ```
-  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH
+  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH  # 使用npu-smi info查询NPU Name，如：名字为910A，则填入：Ascend910A
   msprof op simulator --application=./add.fatbin # 在对应路径下
   ```
