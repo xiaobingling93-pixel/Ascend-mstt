@@ -367,8 +367,8 @@ Forward Test Success和Backward Test Success是否通过测试是由`benchmark_c
 | 均方根误差判定结果     | 均方根误差比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
 | 相对误差最大值比值     | NPU与CPU的相对误差最大值/GPU与CPU的相对误差最大值。          |
 | 相对误差最大值判定结果 | 相对误差最大值比值小于等于1标记为pass，1~10之间标记为waring，大于10标记为error。 |
-| 相对误差均值比值       | NPU与CPU的相对误差的平均值/GPU与CPU的相对误差的平均值。      |
-| 相对误差均值判定结果   | 相对误差均值比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
+| 相对误差平均值比值     | NPU与CPU的相对误差的平均值/GPU与CPU的相对误差的平均值。      |
+| 相对误差平均值判定结果 | 相对误差平均值比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
 | 误差均衡性比值         | NPU与CPU的误差均衡性/GPU与CPU的误差均衡性。                  |
 | 误差均衡性判定结果     | 误差均衡性比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。该字段暂不参与benchmark_compare_result的结果判定。 |
 
