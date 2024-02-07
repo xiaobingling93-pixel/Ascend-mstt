@@ -1,6 +1,6 @@
 # Ascend模型精度预检工具
 
-Ascend模型精度预检工具能在昇腾NPU上扫描用户训练模型中所有API，输出精度情况的诊断和分析。工具会提取模型中所有的API前反向信息，构造相应的API单元测试，将NPU输出与标杆（CPU高精度）比对，从而检测出精度有问题的API；另外工具还可以通过标杆比对法，获取NPU与GPU之间的精度差。
+Ascend模型精度预检工具能在昇腾NPU上扫描用户训练模型中所有API，输出精度情况的诊断和分析。工具会提取模型中所有的API前反向信息，构造相应的API单元测试，将NPU输出与标杆（CPU高精度）比对，从而检测出精度有问题的API；另外工具还可以通过标杆比对法，从而确认NPU和GPU各自运行时的精度哪一方更接近标杆（CPU高精度）。
 
 **标杆比对法**：真实数据模式下，将NPU vs CPU高精度（标杆）的预检比对结果和GPU vs CPU高精度（标杆）的预检比对结果进行比对汇总，最终给出判定结果的精度预检方法。当前仅支持torch.float16、torch.bfloat16、torch.float32数据类型的API进行比对。
 
@@ -268,7 +268,7 @@ python run_ut.py -forward ./forward_info_0.json -backward ./backward_info_0.json
 
 Forward Test Success和Backward Test Success是否通过测试是由`accuracy_checking_details_{timestamp}.csv`中的余弦相似度、最大绝对误差、双百双千双万指标判定结果决定的。
 
-需要注意的是`accuracy_checking_details_{timestamp}.csv`中可能存在一个API的前向或反向有多个输出，那么每个输出记录一行，而在`accuracy_checking_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为TRUE，否则标记FALSE或WARING。
+需要注意的是`accuracy_checking_details_{timestamp}.csv`中可能存在一个API的前向（反向）有多个输出，那么每个输出记录一行，而在`accuracy_checking_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为TRUE，否则标记FALSE或WARING。
 
 `accuracy_checking_details_{timestamp}.csv`
 
@@ -285,7 +285,7 @@ Forward Test Success和Backward Test Success是否通过测试是由`accuracy_ch
 | 双百指标       | 双百精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于百分之一的个数占总元素个数的比例。测试通过标准为相对误差大于百分之一的个数占总元素个数的比例小于百分之一。 |
 | 双千指标       | 双千精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的个数占总元素个数的比例。测试通过标准为相对误差大于千分之一的个数占总元素个数的比例小于千分之一。 |
 | 双万指标       | 双万精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于万分之一的个数占总元素个数的比例。测试通过标准为相对误差大于万分之一的个数占总元素个数的比例小于万分之一。 |
-| 错误率         | NPU或GPU数据中每个Tensor精度不一致的数值的数量与Tensor中数值数量的比值。只有数据是builtin类型（bool、int、float、str）才会展示。 |
+| 错误率         | NPU或GPU数据中每个Tensor精度不一致的数值的数量与Tensor中数值数量的比值。只有数据是builtin类型（bool、int、float、str）、torch.bool和torch的int类型才会展示。 |
 | 误差均衡性     | NPU或GPU数据与标杆数据精度差的的上下浮动情况。               |
 | 均方根误差     | NPU或GPU数据与标杆数据的均方根误差。                         |
 | 小值域错误占比 | NPU或GPU Tensor中与标杆的绝对误差大于错误阈值的小值在小值域（小值的总数量）中的占比。判断为小值以及绝对误差的错误阈值见“**小值域阈值**”。 |
@@ -348,11 +348,11 @@ python benchmark_compare.py -npu /home/xxx/npu/accuracy_checking_details_{timest
 | 字段                  | 含义                                                         |
 | --------------------- | ------------------------------------------------------------ |
 | API name              | API名称。                                                    |
-| Forward Test Success  | 前向API是否通过测试，TRUE为通过，FALSE为不通过，WARING表示该API中存在NPU的指标低于GPU1~2倍之间，但不超过2倍。 |
-| Backward Test Success | 反向API是否通过测试，TRUE为通过，FALSE为不通过，WARING表示该API中存在NPU的指标低于GPU1~2倍之间，但不超过2倍，N/A表示该API没有反向。 |
+| Forward Test Success  | 前向API是否通过测试，TRUE为通过，FALSE为不通过。             |
+| Backward Test Success | 反向API是否通过测试，TRUE为通过，FALSE为不通过，N/A表示该API没有反向。 |
 | Message               | 提示信息。                                                   |
 
-Forward Test Success和Backward Test Success是否通过测试是由`benchmark_compare_details_{timestamp}.csv`中的各个指标判定结果决定的。需要注意的是`benchmark_compare_details_{timestamp}.csv`中可能存在一个API的前向或反向有多个输出，那么每个输出记录一行，而在`benchmark_compare_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为TRUE，否则标记FALSE或WARING。
+Forward Test Success和Backward Test Success是否通过测试是由`benchmark_compare_details_{timestamp}.csv`中的各个指标判定结果决定的。需要注意的是`benchmark_compare_details_{timestamp}.csv`中可能存在一个API的前向（反向）有多个输出，那么每个输出记录一行，而在`benchmark_compare_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为TRUE，否则标记FALSE或WARING。
 
 `benchmark_compare_details_{timestamp}.csv`
 
@@ -361,15 +361,15 @@ Forward Test Success和Backward Test Success是否通过测试是由`benchmark_c
 | 字段                   | 含义                                                         |
 | ---------------------- | ------------------------------------------------------------ |
 | API name               | NPU或GPU下的API名称。                                        |
-| 小值域错误比值         | NPU与GPU的小值域错误比值。                                   |
+| 小值域错误比值         | NPU与CPU的小值域的错误数/GPU与CPU的小值域的错误数。          |
 | 小值域错误判定结果     | 小值域错误比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
-| 均方根误差比值         | NPU与GPU的均方根误差比值。                                   |
+| 均方根误差比值         | NPU与CPU的均方根误差/GPU与CPU的均方根误差。                  |
 | 均方根误差判定结果     | 均方根误差比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
-| 相对误差最大值比值     | NPU与GPU的相对误差最大值比值。                               |
+| 相对误差最大值比值     | NPU与CPU的相对误差最大值/GPU与CPU的相对误差最大值。          |
 | 相对误差最大值判定结果 | 相对误差最大值比值小于等于1标记为pass，1~10之间标记为waring，大于10标记为error。 |
-| 相对误差均值比值       | NPU与GPU的相对误差的平均值比值。                             |
+| 相对误差均值比值       | NPU与CPU的相对误差的平均值/GPU与CPU的相对误差的平均值。      |
 | 相对误差均值判定结果   | 相对误差均值比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。 |
-| 误差均衡性比值         | NPU与GPU的误差均衡性比值。                                   |
+| 误差均衡性比值         | NPU与CPU的误差均衡性/GPU与CPU的误差均衡性。                  |
 | 误差均衡性判定结果     | 误差均衡性比值小于等于1标记为pass，1~2之间标记为waring，大于2标记为error。该字段暂不参与benchmark_compare_result的结果判定。 |
 
 # 溢出解析工具
