@@ -74,7 +74,7 @@ class CompareConst:
     
 class BenchmarkCompareColumn:
     API_NAME = 'API Name'
-    DEVICE_DTYPE = 'NPU Dtype'
+    DEVICE_DTYPE = 'DEVICE Dtype'
     SMALL_VALUE_ERROR_RATE = '小值域错误占比'
     RMSE = '均方根误差'
     MAX_REL_ERR = '相对误差最大值'
