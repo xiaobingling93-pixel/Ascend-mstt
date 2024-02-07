@@ -104,10 +104,10 @@ class BenchmarkCompareColumn:
     def get_detail_csv_title():
         return [BenchmarkCompareColumn.API_NAME,  
                 BenchmarkCompareColumn.SMALL_VALUE_ERROR_RATIO, BenchmarkCompareColumn.SMALL_VALUE_ERROR_STATUS, 
-                BenchmarkCompareColumn.RMSE, BenchmarkCompareColumn.RMSE_STATUS, 
-                BenchmarkCompareColumn.MAX_REL_ERR, BenchmarkCompareColumn.MAX_REL_ERR_STATUS, 
-                BenchmarkCompareColumn.MEAN_REL_ERR, BenchmarkCompareColumn.MEAN_REL_ERR_STATUS, 
-                BenchmarkCompareColumn.EB, BenchmarkCompareColumn.EB_STATUS]
+                BenchmarkCompareColumn.RMSE_RATIO, BenchmarkCompareColumn.RMSE_STATUS, 
+                BenchmarkCompareColumn.MAX_REL_ERR_RATIO, BenchmarkCompareColumn.MAX_REL_ERR_STATUS, 
+                BenchmarkCompareColumn.MEAN_REL_ERR_RATIO, BenchmarkCompareColumn.MEAN_REL_ERR_STATUS, 
+                BenchmarkCompareColumn.EB_RATIO, BenchmarkCompareColumn.EB_STATUS]
     
     @staticmethod
     def get_result_csv_title():
