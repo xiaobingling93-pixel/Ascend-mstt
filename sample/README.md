@@ -1,12 +1,12 @@
 # 样例库介绍
 
 ## 说明
-本案例库主要用于配合AscendC算子开发工具的能力演示，所以，对于整体算子工程做了深度简化，聚焦于辅助工具展示。
+本案例库主要用于配合AscendC算子开发工具的能力演示，所以，算子工程做了深度简化，聚焦于辅助工具展示。
 
-如果考虑商用集成，推荐使用CANN软件包中的AscendC工程，比如：ascendc_kernel_cmake目录。
+如果考虑商用集成，推荐使用CANN软件包中的AscendC样例工程，比如：ascendc_kernel_cmake目录。本项目中的工程就是基于其进行简化仅用于快速验证。
 
 ## 依赖说明
-安装CANN包，并使能环境变量，并确保```ASCEND_HOME_PATH```生效，可以在CANN包安装目录下使能
+安装CANN包，并使能环境变量，并确保```ASCEND_HOME_PATH```生效，可以在CANN包安装目录下使能：
 ```
 source set_env.sh
 ```
@@ -21,9 +21,9 @@ source set_env.sh
 1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
    + 仿真器依赖：
     ```
-    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/  -lruntime -lascendcl -lstdc++
+    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/ -lruntime -lascendcl -lstdc++
     修改为：
-    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/  -lruntime_camodel -lascendcl -lstdc++
+    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/ -lruntime_camodel -lascendcl -lstdc++
     ```
     + 调试信息增强：
     ```
