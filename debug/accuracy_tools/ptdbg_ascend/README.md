@@ -33,7 +33,7 @@
 
       ```
       sha256sum ptdbg_ascend-4.0-py3-none-any.whl
-      eb177ec795f8ae8b0c937a3cf543914f535bb64c76ba2e520fc6f0456ff6740b  ptdbg_ascend-3.0-py3-none-any.whl
+      ba7ff7a1acffb1a2fab02fea76b6f957b2868bc6b66d72365622f6a8950406c6 *ptdbg_ascend-4.0-py3-none-any.whl
       ```
 
 3. whl包安装。
@@ -142,7 +142,7 @@ ptdbg_ascend精度工具的安装方式包括：**下载whl包安装**和**源�
 
       ```
       sha256sum ptdbg_ascend-4.0-py3-none-any.whl
-      eb177ec795f8ae8b0c937a3cf543914f535bb64c76ba2e520fc6f0456ff6740b  ptdbg_ascend-3.0-py3-none-any.whl
+      ba7ff7a1acffb1a2fab02fea76b6f957b2868bc6b66d72365622f6a8950406c6 *ptdbg_ascend-4.0-py3-none-any.whl
       ```
 
 3. whl包安装。
