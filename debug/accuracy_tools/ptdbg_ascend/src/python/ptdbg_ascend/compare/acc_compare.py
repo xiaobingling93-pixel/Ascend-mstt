@@ -328,10 +328,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
-                    if isinstance(val[0], (float, int)) and isinstance(val[1], (float, int)):
-                        result_item[start_idx + i] = val[0] - val[1] if not any(np.isinf(val)) else np.inf
+                    if all(isinstance(value, (float, int)) for value in val):
+                        result_item[start_idx + i] = val[0] - val[1]
                     else:
-                        result_item[start_idx + i] = "Nan"
+                        result_item[start_idx + i] = CompareConst.NAN
+                replace_res = map(lambda x: f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x,
+                                  result_item[start_idx:])
+                result_item[start_idx:] = list(replace_res)
 
             result_item.append(CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
@@ -598,7 +601,7 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
 
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
                  suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
-    print_warn_log("Please check whether the input data belongs to you. If not, there may be security risks.")
+    print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_as_suffix("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)

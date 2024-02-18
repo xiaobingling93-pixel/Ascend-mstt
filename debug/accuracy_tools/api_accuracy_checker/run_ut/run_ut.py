@@ -18,13 +18,12 @@ import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, check_file_or_directory_path, initialize_save_path, Const
+    print_error_log, initialize_save_path, Const
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.dump.api_info import APIInfo
 
 
@@ -175,8 +174,11 @@ def run_ut(config):
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
         finally:
+            if is_gpu:
+                torch.cuda.empty_cache()
+            else:
+                torch.npu.empty_cache()
             gc.collect()
-            torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -270,14 +272,17 @@ def initialize_save_error_data():
     initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
 
 
-def get_validated_result_csv_path(result_csv_path):
+def get_validated_result_csv_path(result_csv_path, mode):
+    if mode not in ['result', 'detail']:
+        raise ValueError("The csv mode must be result or detail")
     result_csv_path_checker = FileChecker(result_csv_path, FileCheckConst.FILE, ability=FileCheckConst.READ_WRITE_ABLE,
                                           file_type=FileCheckConst.CSV_SUFFIX)
     validated_result_csv_path = result_csv_path_checker.common_check()
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    pattern = r"^accuracy_checking_result_\d{14}\.csv$"
-    if not re.match(pattern, result_csv_name):
-        raise ValueError("When continue run ut, please do not modify the result csv name.")
+    if mode == 'result':
+        result_csv_name = os.path.basename(validated_result_csv_path)
+        pattern = r"^accuracy_checking_result_\d{14}\.csv$"
+        if not re.match(pattern, result_csv_name):
+            raise ValueError("When continue run ut, please do not modify the result csv name.")
     return validated_result_csv_path
 
 
@@ -363,7 +368,7 @@ def _run_ut():
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
     if args.result_csv_path:
-        result_csv_path = get_validated_result_csv_path(args.result_csv_path)
+        result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
     if save_error_data:
         if args.result_csv_path:
