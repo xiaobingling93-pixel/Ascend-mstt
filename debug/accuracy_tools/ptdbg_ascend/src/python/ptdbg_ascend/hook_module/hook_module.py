@@ -80,8 +80,10 @@ class HOOKModule(nn.Module):
             result = self._slow_forward(*input, **kwargs)
         else:
             result = self.forward(*input, **kwargs)
+        input_list = list(input)
+        input_list.extend(kwargs.values())
         for hook in self._forward_hooks.values():
-            hook_result = hook(self, input, result)
+            hook_result = hook(self, input_list, result)
             if hook_result is not None:
                 result = hook_result
         if bw_hook:
