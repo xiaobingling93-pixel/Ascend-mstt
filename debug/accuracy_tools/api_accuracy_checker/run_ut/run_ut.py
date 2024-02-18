@@ -4,6 +4,7 @@ import csv
 import re
 import sys
 import time
+import gc
 from collections import namedtuple
 try:
     import torch_npu
@@ -174,6 +175,7 @@ def run_ut(config):
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
         finally:
+            gc.collect()
             torch.npu.empty_cache()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
