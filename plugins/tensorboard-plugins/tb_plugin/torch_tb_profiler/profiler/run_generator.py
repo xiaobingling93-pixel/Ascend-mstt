@@ -442,15 +442,22 @@ class RunGenerator(object):
                 else:
                     # Convert time metric
                     table['columns'].append({'name': column.replace('(us)', '(ms)'), 'type': 'number'})
+        required_column_idxs = {key: -1 for key in display_columns}
+        (name_idx, size_idx, allocation_idx, release_idx, duration_idx), column_exist_count = \
+            RunGenerator._check_csv_columns(datas[0], required_column_idxs)
+        if column_exist_count < len(required_column_idxs):
+            logger.error('Required column is missing in file "operator_memory.csv"')
         for idx, ls in enumerate(datas[1:]):
             device_type = ls[self.device_type_form_idx]
             # convert time metric 'us' to 'ms'
             # some operators may not have the following columns
             try:
-                nums = [ls[0] if ls[0] else '<unknown>', abs(float(ls[1])),
-                        round((float(ls[2]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[2] else None,
-                        round((float(ls[3]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[3] else None,
-                        round(float(ls[4]) / 1000, 3) if ls[4] else None]
+                nums = [ls[name_idx] if ls[name_idx] else '<unknown>', abs(float(ls[size_idx])),
+                        round((float(ls[allocation_idx]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[
+                            allocation_idx] else None,
+                        round((float(ls[release_idx]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[
+                            release_idx] else None,
+                        round(float(ls[duration_idx]) / 1000, 3) if ls[duration_idx] else None]
                 display_datas[device_type].append(nums)
             except ValueError:
                 logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
