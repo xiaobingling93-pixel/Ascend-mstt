@@ -176,10 +176,10 @@ def analyse_csv(npu_data, gpu_data, config):
             else:
                 message = 'This data type does not support benchmarking.'
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-        if direction_status == 'forward':
+        if direction_status == 'forward' and check_status:
             forward_status = forward_status and result_mapping.get(bs.final_result) \
             if forward_status != CompareConst.NA else result_mapping.get(bs.final_result)
-        if direction_status == 'backward':
+        if direction_status == 'backward' and check_status:
             backward_status = backward_status and result_mapping.get(bs.final_result) \
             if backward_status != CompareConst.NA else result_mapping.get(bs.final_result)
         last_api_name = api_name
