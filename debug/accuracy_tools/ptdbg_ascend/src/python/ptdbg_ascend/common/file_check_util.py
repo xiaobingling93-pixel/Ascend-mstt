@@ -192,9 +192,10 @@ def check_link(path):
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 
 
-def check_path_length(path):
+def check_path_length(path, name_length=None):
+    file_max_name_length = name_length if name_length else FileCheckConst.FILE_NAME_LENGTH
     if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
-            len(os.path.basename(path)) > FileCheckConst.FILE_NAME_LENGTH:
+            len(os.path.basename(path)) > file_max_name_length:
         print_error_log('The file path length exceeds limit.')
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 

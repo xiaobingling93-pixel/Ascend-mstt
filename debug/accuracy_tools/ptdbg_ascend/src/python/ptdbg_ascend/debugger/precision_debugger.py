@@ -2,7 +2,7 @@ import os
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
     CompareException, print_warn_log
-from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count
+from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count, GLOBAL_THREAD_POOL
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
 from ..overflow_check.utils import OverFlowUtil
@@ -130,6 +130,8 @@ class PrecisionDebugger:
             dump_path_str = generate_dump_path_str()
             set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
             write_to_disk()
+            if DumpUtil.is_single_rank:
+                GLOBAL_THREAD_POOL.shutdown(wait=True)
             if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
                 generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
 
