@@ -112,6 +112,6 @@ def get_rank_id(tensor):
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
     rank = get_tensor_rank(tensor)
-    if rank:
+    if rank is not None:
         return rank
     return os.getpid()
