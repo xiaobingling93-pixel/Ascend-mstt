@@ -51,11 +51,11 @@ debugger.configure_hook(mode="api_stack", summary_only=True)
 
 启动命令参数：python3 train_ptdbg.py --data ./data/coco.yaml --cfg yolov5s.yaml --weights '' --epochs 1 --batch-size 8 --device 1
 
-dump保存API统计信息的pkl文件。
+**dump保存API统计信息的pkl文件**。
 
-耗时：7s
+耗时：**7s**
 
-进行单卡dump全部API级别输入输出数据以及相应堆栈信息。
+进行**单卡dump**全部API级别输入输出数据以及相应堆栈信息。
 
 dump存盘的API numpy文件大小：13G
 
@@ -65,15 +65,13 @@ api numpy文件数量：3009个
 
 ![输入图片说明](img/YOLOV5S_2.png)
 
-优化前dump耗时：22s
-
-优化后dump耗时：11s
+耗时：11s
 
 ### GPT-3
 
-8卡
+#### NUM_LAYER：1
 
-NUM_LAYER：1
+8卡
 
 主要数据类型：FLOAT16
 
@@ -88,7 +86,7 @@ dump保存API统计信息的pkl文件。
 
 耗时：3.3s
 
-进行8卡dump全部API级别输入输出数据以及相应堆栈信息。
+进**行8卡dump**全部API级别输入输出数据以及相应堆栈信息。
 
 dump存盘的api numpy文件大小：145G
 
@@ -100,9 +98,9 @@ api numpy文件数量：5130个
 
 dump耗时：53s
 
-由于8卡同时写入磁盘已达到磁盘I/O上限，属于硬件瓶颈，在工具代码逻辑上已经无法再优化，本机环境多进程写入磁盘上限为3GB/秒左右，理论上保存145GB的数据一定需要50秒左右，如果dump的数据中包含许多的小文件，那么耗时将会更久。
+**经测试8卡同时写入磁盘已达到磁盘I/O上限，工具的dump速度取决于磁盘性能，本机环境多进程写入磁盘上限为3GB/秒左右，理论上保存145GB的数据需要50秒左右，如果dump的数据中包含许多的小文件，那么耗时将会更久。**
 
-指定rank0 dump。
+**指定rank0 dump**。
 
 dump存盘的api numpy文件大小：19G
 
@@ -112,15 +110,11 @@ api numpy文件数量：643个
 
 ![输入图片说明](img/GPT-3_4.png)
 
-优化前dump耗时：25s
+耗时：9s
 
-优化后dump耗时：9s
-
-### GPT-3
+#### NUM_LAYER：8
 
 8卡
-
-NUM_LAYER：8
 
 主要数据类型：FLOAT16
 
@@ -134,7 +128,7 @@ dump保存API统计信息的pkl文件。
 
 耗时：6.7s
 
-进行8卡dump全部API级别输入输出数据以及相应堆栈信息。
+进行**8卡dump**全部API级别输入输出数据以及相应堆栈信息。
 
 dump存盘的API numpy文件大小：878G
 
@@ -156,9 +150,7 @@ API numpy文件数量：3002个
 
 ![输入图片说明](img/GPT-3_8.png)
 
-优化前dump耗时：150s
-
-优化后dump耗时：47s
+耗时：47s
 
 ### BLOOM-7B
 
@@ -178,7 +170,7 @@ dump保存API统计信息的pkl文件。
 
 耗时：3s
 
-进行8卡dump全部API级别输入输出数据以及相应堆栈信息。
+进行**8卡dump**全部API级别输入输出数据以及相应堆栈信息。
 
 dump存盘的API numpy文件大小：160G
 
@@ -200,6 +192,4 @@ API numpy文件数量：633个
 
 ![输入图片说明](img/BLOOM-7B_4.png)
 
-优化前dump耗时：37s
-
-优化后dump耗时：17s
+耗时：17s
