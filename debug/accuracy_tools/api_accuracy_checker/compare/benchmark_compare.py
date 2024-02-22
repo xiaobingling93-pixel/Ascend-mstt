@@ -28,7 +28,7 @@ benchmark_algorithms_thresholds = {
         'warning_threshold' : 1
     },
     'max_rel_err' : {
-        'error_threshold' : 2,
+        'error_threshold' : 10,
         'warning_threshold' : 1
     },
     'mean_rel_err' : {
@@ -156,6 +156,7 @@ def analyse_csv(npu_data, gpu_data, config):
         part_api_name = row_npu[BenchmarkCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[BenchmarkCompareColumn.API_NAME] == part_api_name]
         api_name, direction_status, _, _ = part_api_name.split(".")
+        check_status = True
         if row_gpu.empty:
             print_warn_log(f'This API : {part_api_name} does not exist in the GPU data.')
             continue
@@ -164,6 +165,8 @@ def analyse_csv(npu_data, gpu_data, config):
             bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             bs.get_result()
             write_detail_csv(bs.to_column_value(), config.details_csv_path)
+        else:
+            check_status = False
 
         if api_name != last_api_name and last_api_name is not None:
             if last_api_dtype in Benchmark_Compare_Support_List:
@@ -173,14 +176,15 @@ def analyse_csv(npu_data, gpu_data, config):
             else:
                 message = 'This data type does not support benchmarking.'
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-        if direction_status == 'forward':
+        if direction_status == 'forward' and check_status:
             forward_status = forward_status and result_mapping.get(bs.final_result) \
             if forward_status != CompareConst.NA else result_mapping.get(bs.final_result)
-        if direction_status == 'backward':
+        if direction_status == 'backward' and check_status:
             backward_status = backward_status and result_mapping.get(bs.final_result) \
             if backward_status != CompareConst.NA else result_mapping.get(bs.final_result)
         last_api_name = api_name
-        last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
+        if not pd.isna(row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]):
+            last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
 
     if last_api_name is not None:
         if last_api_dtype in Benchmark_Compare_Support_List:
