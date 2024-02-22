@@ -59,11 +59,11 @@ dump保存API统计信息的pkl文件。
 
 dump存盘的API numpy文件大小：13G
 
-![输入图片说明](img/YOLOV5s_1.png)
+![输入图片说明](img/YOLOV5S_1.png)
 
 api numpy文件数量：3009个
 
-![输入图片说明](img/YOLOV5s_2.png)
+![输入图片说明](img/YOLOV5S_2.png)
 
 优化前dump耗时：22s
 
