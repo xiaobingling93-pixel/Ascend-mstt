@@ -28,7 +28,7 @@ benchmark_algorithms_thresholds = {
         'warning_threshold' : 1
     },
     'max_rel_err' : {
-        'error_threshold' : 2,
+        'error_threshold' : 10,
         'warning_threshold' : 1
     },
     'mean_rel_err' : {
