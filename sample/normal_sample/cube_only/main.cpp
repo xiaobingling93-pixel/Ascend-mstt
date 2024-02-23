@@ -48,38 +48,53 @@ void printAclFloat16(aclFloat16 *addr)
     }
 }
 
+
 void MakeTiling(uint32_t *addr, size_t size)
 {
     assert(sizeof(TCubeTiling) <= size);
+    // TCubeTiling该结构体参考kernel_tiling/kernel_tiling.h中的结构体定义
+    // tiling_api.h中本身定义的结构与kernel_tiling.h
     TCubeTiling *tiling = (TCubeTiling *)addr;
-    tiling->usedCoreNum = 16;
-    tiling->M = 512;
-    tiling->N = 1024;
-    tiling->Ka = 512;
-    tiling->Kb = 512;
+    // 此处计算使用的核数
+    tiling->usedCoreNum = 16;  // (M/singleCoreM)*(N/singleCoreN)*(K/singleCoreK)=4*4*1=16
+    // 对于 xa 是[M, Ka]矩阵， xb 是[Kb, N]矩阵，此处数据需要与外部格式保持一致
+    // 参考 AscendC算子开发文档
+    // https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC1alpha001/devguide/opdevg/ascendcopdevg/atlas_ascendc_10_0060.html
+    // 中对 数据分块(Tiling) 部分的介绍
+    tiling->M = 512;   //
+    tiling->N = 1024;  //
+    tiling->Ka = 512;  // Ka和Kb一般一样，只有pad的时候存在不一致，比如[1, 62]*[64, 2],这里64就是有pad的
+    tiling->Kb = 512;    //
+    tiling->isBias = 0;  // 是否有bias
+    // 多核切分的tiling参数，用于度量单个核上处理的数据大小
+    // xa在M轴上切分，分成多个singleCoreM；单核处理singleCoreM * singleCoreK大小数据
+    // xb在N轴上切分，分成多个singleCoreN；单核处理singleCoreK * singleCoreN
+    // 由于输入在M和N轴上切分了，输出
     tiling->singleCoreM = 128;
     tiling->singleCoreN = 256;
-    tiling->singleCoreK = 512;
+    tiling->singleCoreK = 512;  // 不建议对k进行切分，会导致累加，引起不确定计算
+    // 核内切分的tiling参数，用于单个核内的最小计算单位
     tiling->baseM = 128;
     tiling->baseN = 256;
     tiling->baseK = 64;
-    tiling->depthA1 = 8;
-    tiling->depthB1 = 8;
     tiling->stepM = 1;
     tiling->stepN = 1;
-    tiling->isBias = 0;
-    tiling->transLength = 131072;
-    tiling->iterateOrder = 0;
-    tiling->shareMode = 0;
-    tiling->shareL1Size = 393216;
-    tiling->shareL0CSize = 131072;
-    tiling->shareUbSize = 0;
-    tiling->batchM = 1;
-    tiling->batchN = 1;
-    tiling->singleBatchM = 1;
-    tiling->singleBatchN = 1;
     tiling->stepKa = 8;
     tiling->stepKb = 8;
+    tiling->depthA1 = 8;  // 矩阵[baseM, baseK]的缓存数量
+    tiling->depthB1 = 8;  // 矩阵[basek, baseN]的缓存数量
+    //
+    tiling->iterateOrder = 0;           // 控制
+    tiling->shareL1Size = 384 * 1024;   // 如存在多个matmul时，可以单独控制每个使用空间
+    tiling->shareL0CSize = 128 * 1024;  // 如存在多个matmul时，可以单独控制每个使用空间
+    tiling->shareUbSize = 0;            // 310P非分核时涉及
+    tiling->transLength = 131072;       // 310P使用涉及格式转换时的额外空间长度
+    // 下列是bmm中使用的batch参数，如果需要实现bmm，该结构体中还有其他tiling参数
+    tiling->batchM = 1;  // 对于普通matmul，默认1
+    tiling->batchN = 1;  // 对于普通matmul，默认1
+    tiling->singleBatchM = 1;
+    tiling->singleBatchN = 1;
+    // 下面的db参数用于控制ping-pong
     tiling->dbL0A = 2;
     tiling->dbL0B = 2;
     tiling->dbL0C = 1;
