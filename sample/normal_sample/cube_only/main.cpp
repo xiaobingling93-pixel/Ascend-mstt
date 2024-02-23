@@ -84,7 +84,7 @@ void MakeTiling(uint32_t *addr, size_t size)
     tiling->depthA1 = 8;  // 矩阵[baseM, baseK]的缓存数量
     tiling->depthB1 = 8;  // 矩阵[basek, baseN]的缓存数量
     //
-    tiling->iterateOrder = 0;           // 控制
+    tiling->iterateOrder = 0;           // 控制迭代的方向：0代表先M轴再N轴，1代表先N轴再M轴
     tiling->shareL1Size = 384 * 1024;   // 如存在多个matmul时，可以单独控制每个使用空间
     tiling->shareL0CSize = 128 * 1024;  // 如存在多个matmul时，可以单独控制每个使用空间
     tiling->shareUbSize = 0;            // 310P非分核时涉及
