@@ -16,6 +16,23 @@ source set_env.sh
 
 大概在2月份会补齐各类工具样例和文档
 
+### sanitizer_sample目录介绍
+
+此目录下为sanitizer对应的样例库，包含竞争检测和内存检测相关的样例。
+
+#### Racecheck目录介绍
+
+Racecheck为竞争检测相关的样例。
+
+raw_error_kernel.cpp文件为UB上先读后写竞争和GM上先写后读竞争问题的样例。
+
+
+运行阶段：
+
+```
+/usr/local/Ascend/ascend-toolkit/latest/tools/mssanitizer/bin/mssanitizer --tool=racecheck ./raw_error.fatbin
+```
+
 ## 其他
 现msprof使能仿真时，还需要额外调整，具体如下：
 1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：

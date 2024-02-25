@@ -17,3 +17,7 @@ cp -f libruntime_camodel.so.$(arch) libruntime_camodel.so
 cd ${TOP_DIR}/normal_sample/vec_only
 make
 mv *.fatbin ${TOP_DIR}/build
+
+cd ${TOP_DIR}/sanitizer_sample/Racecheck
+make
+mv *.fatbin ${TOP_DIR}/build
