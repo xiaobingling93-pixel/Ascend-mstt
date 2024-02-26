@@ -14,3 +14,5 @@ aclError aclrtDestroyContext(aclrtContext context){return 0;}
 aclError aclrtResetDevice(int32_t deviceId){return 0;}
 aclError aclFinalize(){return 0;}
 aclError aclrtSynchronizeStream(aclrtStream stream){return 0;}
+aclFloat16 aclFloatToFloat16(float value){return 0;}
+float aclFloat16ToFloat(aclFloat16 value){return 0;}
