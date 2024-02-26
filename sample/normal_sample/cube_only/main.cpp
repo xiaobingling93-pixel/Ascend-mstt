@@ -82,11 +82,13 @@ void MakeTiling(uint32_t *addr, size_t size)
     tiling->depthA1 = 8;  // 矩阵[baseM, baseK]的缓存数量
     tiling->depthB1 = 8;  // 矩阵[basek, baseN]的缓存数量
     // 其他参数
-    tiling->iterateOrder = 0;           // 控制迭代的方向：0代表先M轴再N轴，1代表先N轴再M轴
-    tiling->shareL1Size = 384 * 1024;   // 如存在多个matmul时，可以单独控制每个使用空间
-    tiling->shareL0CSize = 128 * 1024;  // 如存在多个matmul时，可以单独控制每个使用空间
-    tiling->shareUbSize = 0;            // 310P非分核时涉及
-    tiling->transLength = 131072;       // 310P使用涉及格式转换时的额外空间长度
+    tiling->iterateOrder = 0;          // 控制迭代的方向：0代表先M轴再N轴，1代表先N轴再M轴
+    tiling->shareL1Size = 384 * 1024;  // 如存在多个matmul时，可以单独控制每个使用空间
+                                       // 不小于 (baseM * baseK * depthA1 + baseN * baseK * depthB1) * sizeof(half)
+    tiling->shareL0CSize = 128 * 256 * 4;  // 如存在多个matmul时，可以单独控制每个使用空间
+                                           // 不小于 baseM * baseN * sizeof(float)
+    tiling->shareUbSize = 0;               // 非分核时涉及
+    tiling->transLength = 131072;          // 非分核时使用涉及格式转换时的额外空间长度
     // 下列是bmm中使用的batch参数，如果需要实现bmm，该结构体中还有其他tiling参数
     tiling->batchM = 1;  // 对于普通matmul，默认1
     tiling->batchN = 1;  // 对于普通matmul，默认1
