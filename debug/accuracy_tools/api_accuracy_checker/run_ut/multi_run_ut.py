@@ -12,13 +12,14 @@ from tqdm import tqdm
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
-from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path
+from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
 from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log
 
 
 def split_json_file(input_file, num_splits):
     with FileOpen(input_file, 'r') as file:
         data = json.load(file)
+        data = preprocess_forward_content(data)
 
     items = list(data.items())
     total_items = len(items)

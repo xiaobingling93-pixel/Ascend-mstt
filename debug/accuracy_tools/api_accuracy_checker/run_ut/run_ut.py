@@ -334,6 +334,18 @@ def _run_ut_parser(parser):
                         required=False)
 
 
+def preprocess_forward_content(forward_content):
+    unique_apis = {}
+    for api_full_name, api_info in forward_content.items():
+        api_type, _, _ = api_full_name.rsplit("*", 2)
+        args = api_info.get("args", [])
+        dtype_shape_key = tuple((arg.get("dtype"), tuple(arg.get("shape", []))) for arg in args if "type" in arg and arg["type"] == "torch.Tensor")
+        unique_key = (api_type, dtype_shape_key)
+        if unique_key not in unique_apis:
+            unique_apis[unique_key] = api_full_name
+    filtered_forward_content = {unique_apis[key]: forward_content[api_name] for key, api_name in unique_apis.items()}
+    return filtered_forward_content
+
 def _run_ut():
     parser = argparse.ArgumentParser()
     _run_ut_parser(parser)
@@ -357,6 +369,7 @@ def _run_ut():
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
     forward_content = get_json_contents(forward_file)
+    forward_content = preprocess_forward_content(forward_content)
     backward_content = {}
     if args.backward_input_file:
         check_link(args.backward_input_file)
