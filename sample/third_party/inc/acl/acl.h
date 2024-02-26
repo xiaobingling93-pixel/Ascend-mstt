@@ -27,6 +27,7 @@ typedef enum aclrtMemMallocPolicy {
 typedef void* aclrtStream;
 typedef void* aclrtContext;
 typedef int aclError;
+typedef uint16_t aclFloat16;
 
 aclError aclInit(const char* configPath);
 aclError aclrtSetDevice(int32_t deviceId);
@@ -42,6 +43,8 @@ aclError aclrtDestroyContext(aclrtContext context);
 aclError aclrtResetDevice(int32_t deviceId);
 aclError aclFinalize();
 aclError aclrtSynchronizeStream(aclrtStream stream);
+aclFloat16 aclFloatToFloat16(float value);
+float aclFloat16ToFloat(aclFloat16 value);
 
 #ifdef __cplusplus
 }
