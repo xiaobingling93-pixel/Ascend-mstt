@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
+ */
+
 #include "kernel_operator.h"
 #include "lib/matmul_intf.h"
 
