@@ -1,6 +1,5 @@
 # Location of the CANN
 ASCEND_HOME_PATH			?= /usr/local/Ascend/ascend-toolkit/latest
-TOP_DIR						?= /
 
 COMPILER					:= $(ASCEND_HOME_PATH)/compiler/ccec_compiler/bin/ccec
 COMPILER_FLAG				:= -xcce -O2 -std=c++17
@@ -8,7 +7,7 @@ LINK_FLAG					:= --cce-fatobj-link
 DAV_FLAG                    := --cce-aicore-arch=dav-c220
 ASCENDC_INC_FLAG 			:= -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/impl -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/interface -I${ASCEND_HOME_PATH}/include
 TILING_INC_FLAG				:= -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw
-HOST_INC_FLAG				:= -I${TOP_DIR}/third_party/inc
+HOST_INC_FLAG				:= -I${ASCEND_HOME_PATH}/include
 LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++ -lprofapi -lmmpa
 LINK_STATIC_LIBS			:= ${ASCEND_HOME_PATH}/lib64/libascendc_runtime.a
 
