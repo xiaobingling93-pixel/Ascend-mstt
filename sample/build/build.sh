@@ -22,3 +22,8 @@ mv *.fatbin ${TOP_DIR}/build
 cd ${TOP_DIR}/normal_sample/cube_only
 make
 mv *.fatbin ${TOP_DIR}/build
+
+# matmul_leakyrelu
+cd ${TOP_DIR}/normal_sample/mix
+make
+mv *.fatbin ${TOP_DIR}/build
