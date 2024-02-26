@@ -170,8 +170,6 @@ int32_t main(int32_t argc, char *argv[])
     CHECK_ACL(aclrtMalloc((void **)&yDevice, ySize, ACL_MEM_MALLOC_HUGE_FIRST));  // 准备 输出
 
     void *addr;
-    // uint32_t len;
-    // rtGetC2cCtrlAddr((uint64_t *)&addr, &len);
     (void)GetAscendCoreSyncAddr(&addr);
     matmul_leakyrelu_custom_do(blockDim,
         nullptr,
