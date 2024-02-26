@@ -26,4 +26,4 @@ matmul.fatbin: matmul_kernel.o main.o
 
 .PHONY: clean
 clean:
-    rm *.o *.fatbin
+	rm *.o *.fatbin
