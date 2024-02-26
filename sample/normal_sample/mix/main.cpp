@@ -92,8 +92,6 @@ void MakeTiling(int32_t *addr, size_t size)
                                            // 不小于(baseM*baseK*depthA1 + baseK+baseN*depthB1)*sizeof(half) = 294912
     tiling->shareL0CSize = 256 * 128 * 4;  // 如存在多个matmul时，可以单独控制每个使用空间
                                            // 不小于baseM*baseN*sizeof(float)
-    tiling->shareUbSize = 0;
-    tiling->transLength = 131072;
     // 下列是bmm中使用的batch参数，如果需要实现bmm，该结构体中还有其他tiling参数
     tiling->batchM = 1;  // 对于普通matmul，默认1
     tiling->batchN = 1;  // 对于普通matmul，默认1
