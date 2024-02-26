@@ -44,7 +44,7 @@ backward_init_status = False
 
 thread_lock = threading.Lock()
 pkl_name = ""
-rank = os.getpid()
+rank = os.getpid() + 100000
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = {}
 GLOBAL_THREAD_POOL = ThreadPoolExecutor()
