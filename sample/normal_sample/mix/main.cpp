@@ -108,7 +108,6 @@ void MakeTiling(int32_t *addr, size_t size)
     tiling->reserved = 0;
 }
 
-// y = matmul(xa, xb)
 int32_t main(int32_t argc, char *argv[])
 {
     size_t xaSize = 1024 * 256 * sizeof(aclFloat16);
@@ -146,7 +145,6 @@ int32_t main(int32_t argc, char *argv[])
     int32_t *tilingHost;
     CHECK_ACL(aclrtMallocHost((void **)(&tilingHost), tilingSize));
     MakeTiling(tilingHost, tilingSize);
-    // CHECK_ACL(aclrtMemcpy(tilingHost, tilingSize, GenerateTiling(), tilingSize, ACL_MEMCPY_HOST_TO_HOST));
 
     // 将host的输入同步到device
     uint8_t *xaDevice;
