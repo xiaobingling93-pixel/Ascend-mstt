@@ -1,6 +1,5 @@
 # Location of the CANN
 ASCEND_HOME_PATH			?= /usr/local/Ascend/ascend-toolkit/latest
-TOP_DIR						?= /
 
 COMPILER					:= $(ASCEND_HOME_PATH)/compiler/ccec_compiler/bin/ccec
 COMPILER_FLAG				:= -xcce -O2 -std=c++17
