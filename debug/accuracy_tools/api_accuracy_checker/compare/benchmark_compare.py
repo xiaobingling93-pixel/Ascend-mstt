@@ -219,6 +219,7 @@ def update_status(status, new_status):
     else:
         return new_status
 
+
 def check_csv_columns(columns, csv_type):
     required_columns = BenchmarkCompareColumn.to_required_columns()
     missing_columns = [column for column in required_columns if column not in columns]
