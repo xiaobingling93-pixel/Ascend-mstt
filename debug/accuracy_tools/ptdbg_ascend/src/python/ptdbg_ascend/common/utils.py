@@ -23,7 +23,7 @@ import stat
 import subprocess
 import sys
 import time
-import hashlib
+import zlib
 import json
 from datetime import datetime, timezone
 from functools import wraps
@@ -756,9 +756,9 @@ def check_file_valid(file_path):
 
 
 def get_md5_for_tensor(x):
-    tensor_bytes = x.cpu().detach().float().numpy().tobytes()
-    md5_hash = hashlib.md5(tensor_bytes)
-    return md5_hash.hexdigest()
+    tensor_bytes = x.cpu().detach().numpy().tobytes()
+    crc_hash = zlib.crc32(tensor_bytes)
+    return crc_hash
 
 
 def check_path_before_create(path):
