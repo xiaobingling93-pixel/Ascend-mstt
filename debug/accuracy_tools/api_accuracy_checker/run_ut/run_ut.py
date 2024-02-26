@@ -345,13 +345,13 @@ def preprocess_forward_content(forward_content):
             if unique_key not in unique_apis:
                 unique_apis[unique_key] = api_full_name
         except KeyError as e:
-            raise KeyError(f"The api {api_full_name} has no args or dtype_shape_key, please check the forward_content.")
+            raise KeyError(f"The api {api_full_name} has no args or dtype_shape_key, please check the forward_content.") from e
     filtered_forward_content = {}
     for key, api_name in unique_apis.items():
         try:
             filtered_forward_content[unique_apis[key]] = forward_content.get(api_name)
         except KeyError as e:
-            raise KeyError(f"The api {api_name} is not in forward_content, please check the forward_content.")
+            raise KeyError(f"The api {api_name} is not in forward_content, please check the forward_content.") from e
     return filtered_forward_content
 
 
