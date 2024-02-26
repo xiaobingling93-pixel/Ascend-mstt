@@ -13,7 +13,12 @@ cd ${TOP_DIR}/third_party/lib
 cp -f libruntime.so.$(arch) libruntime.so
 cp -f libruntime_camodel.so.$(arch) libruntime_camodel.so
 
-# 
+# add
 cd ${TOP_DIR}/normal_sample/vec_only
+make
+mv *.fatbin ${TOP_DIR}/build
+
+# matmul
+cd ${TOP_DIR}/normal_sample/cube_only
 make
 mv *.fatbin ${TOP_DIR}/build
