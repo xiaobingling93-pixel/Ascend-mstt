@@ -1,7 +1,5 @@
 /*
- * Copyright (c) Huawei Technologies Co., Ltd. 2022-2023. All rights reserved.
- * This file constains code of cpu debug and npu code.We read data from bin file
- * and write result to file.
+ * Copyright (c) Huawei Technologies Co., Ltd. 2024-2024. All rights reserved.
  */
 
 #include <cassert>
@@ -112,9 +110,9 @@ int32_t main(int32_t argc, char *argv[])
 {
     size_t xaSize = 1024 * 256 * sizeof(aclFloat16);
     size_t xbSize = 256 * 640 * sizeof(aclFloat16);
-    size_t biasSize = 1024 * 640 * sizeof(float);
+    size_t biasSize = 640 * sizeof(float);
     size_t ySize = 1024 * 640 * sizeof(float);
-    size_t workspaceSize = 96 * 1024 * 1024 * sizeof(float);
+    size_t workspaceSize = 16 * 1024 * 1024 * sizeof(float);  // AscendC::GetUserWorkspace中预留空间
     size_t tilingSize = 48 * sizeof(uint32_t);
     uint32_t blockDim = 1;
 
@@ -168,6 +166,8 @@ int32_t main(int32_t argc, char *argv[])
     CHECK_ACL(aclrtMalloc((void **)&yDevice, ySize, ACL_MEM_MALLOC_HUGE_FIRST));  // 准备 输出
 
     void *addr;
+    // uint32_t len;
+    // rtGetC2cCtrlAddr((uint64_t *)&addr, &len);
     (void)GetAscendCoreSyncAddr(&addr);
     matmul_leakyrelu_custom_do(blockDim,
         nullptr,
