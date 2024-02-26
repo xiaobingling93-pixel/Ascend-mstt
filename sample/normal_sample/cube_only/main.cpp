@@ -4,11 +4,11 @@
  * and write result to file.
  */
 
-#include <chrono>
+#include <cassert>
 #include <iostream>
-#include "assert.h"
 #include "kernel_tiling/kernel_tiling.h"
 #include "acl/acl.h"
+
 extern void matmul_custom_do(
     uint32_t coreDim, void *l2ctrl, void *stream, uint8_t *param1, uint8_t *param2, uint8_t *param3, uint8_t *param4);
 
