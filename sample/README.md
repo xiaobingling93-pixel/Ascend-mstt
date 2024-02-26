@@ -12,18 +12,17 @@ source set_env.sh
 ```
 
 ## 目录说明
-现仅支持```sample\normal_sample\vec_only```样例。
-
-大概在2月份会补齐各类工具样例和文档
+```normal_sample```目录中主要是算子样例，内部分为aic，aiv，mix的算子样例，支持调试和调优使用。
+```sanitizer```目录中主要是各类异常样例，用于体现异常检测工具的能力。
 
 ## 其他
 现msprof使能仿真时，还需要额外调整，具体如下：
 1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
    + 仿真器依赖：
     ```
-    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/ -lruntime -lascendcl -lstdc++
+    LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++
     修改为：
-    LINK_LIBS			:= -L${TOP_DIR}/third_party/lib/ -lruntime_camodel -lascendcl -lstdc++
+    LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -L${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/ -lruntime_camodel -lascendcl -lstdc++  # 需要添加libruntime_camodel的依赖路径, SOC_VERSION 使用npu-smi info查询NPU Name
     ```
     + 调试信息增强：
     ```
@@ -34,6 +33,6 @@ source set_env.sh
 
 2. 运行阶段：添加依赖库路径，
   ```
-  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/aarch64-linux/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH  # 使用npu-smi info查询NPU Name，如：名字为910A，则填入：Ascend910A
+  export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH  # SOC_VERSION 使用npu-smi info查询NPU Name，如：名字为910A，则填入：Ascend910A
   msprof op simulator --application=./add.fatbin # 在对应路径下
   ```
