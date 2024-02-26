@@ -50,8 +50,10 @@ void printAclFloat16(aclFloat16 *addr)
 void MakeTiling(uint32_t *addr, size_t size)
 {
     assert(sizeof(TCubeTiling) <= size);
-    // TCubeTiling该结构体参考kernel_tiling/kernel_tiling.h中的结构体定义
-    // tiling_api.h中本身定义的结构与kernel_tiling.h
+    // TCubeTiling该结构体在kernel_tiling/kernel_tiling.h中的结构体定义
+    // tiling_api.h中本身定义的结构与kernel_tiling.h相近，通过GetTiling实现映射
+    // TCubeTiling定义的可读性较好，可以直接理解，但使用tiling_api可以直接使能部分默认值
+    // 考虑到工具本身需要体现对应用的细粒度控制，所以直接使用kernel_tiling.h中的结构
     TCubeTiling *tiling = (TCubeTiling *)addr;
     // 此处计算使用的核数
     tiling->usedCoreNum = 16;  // (M/singleCoreM)*(N/singleCoreN)*(K/singleCoreK)=4*4*1=16
@@ -67,7 +69,7 @@ void MakeTiling(uint32_t *addr, size_t size)
     // 多核切分的tiling参数，用于度量单个核上处理的数据大小
     // xa在M轴上切分，分成多个singleCoreM；单核处理singleCoreM * singleCoreK大小数据
     // xb在N轴上切分，分成多个singleCoreN；单核处理singleCoreK * singleCoreN
-    // 由于输入在M和N轴上切分了，输出
+    // 由于输入在M和N轴上切分了，输出singleCoreM * singleCoreN
     tiling->singleCoreM = 128;
     tiling->singleCoreN = 256;
     tiling->singleCoreK = 512;  // 不建议对k进行切分，会导致累加，引起不确定计算
@@ -79,6 +81,7 @@ void MakeTiling(uint32_t *addr, size_t size)
     tiling->stepN = 1;
     tiling->stepKa = 8;
     tiling->stepKb = 8;
+    // A1+B1的缓存数据需要小于shareL1Size大小
     tiling->depthA1 = 8;  // 矩阵[baseM, baseK]的缓存数量
     tiling->depthB1 = 8;  // 矩阵[basek, baseN]的缓存数量
     // 其他参数
@@ -87,8 +90,6 @@ void MakeTiling(uint32_t *addr, size_t size)
                                        // 不小于 (baseM * baseK * depthA1 + baseN * baseK * depthB1) * sizeof(half)
     tiling->shareL0CSize = 128 * 256 * 4;  // 如存在多个matmul时，可以单独控制每个使用空间
                                            // 不小于 baseM * baseN * sizeof(float)
-    tiling->shareUbSize = 0;               // 非分核时涉及
-    tiling->transLength = 131072;          // 非分核时使用涉及格式转换时的额外空间长度
     // 下列是bmm中使用的batch参数，如果需要实现bmm，该结构体中还有其他tiling参数
     tiling->batchM = 1;  // 对于普通matmul，默认1
     tiling->batchN = 1;  // 对于普通matmul，默认1
