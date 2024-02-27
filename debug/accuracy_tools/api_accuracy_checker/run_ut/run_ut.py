@@ -335,24 +335,21 @@ def _run_ut_parser(parser):
 
 
 def preprocess_forward_content(forward_content):
-    unique_apis = {}
-    for api_full_name, api_info in forward_content.items():
-        try:
-            api_type, _, _ = api_full_name.rsplit("*", 2)
-            args = api_info.get("args", [])
-            dtype_shape_key = tuple((arg.get("dtype"), tuple(arg.get("shape", []))) for arg in args if "type" in arg and arg["type"] == "torch.Tensor")
-            unique_key = (api_type, dtype_shape_key)
-            if unique_key not in unique_apis:
-                unique_apis[unique_key] = api_full_name
-        except KeyError as e:
-            raise KeyError(f"The api {api_full_name} has no args or dtype_shape_key, please check the forward_content.") from e
-    filtered_forward_content = {}
-    for key, api_name in unique_apis.items():
-        try:
-            filtered_forward_content[unique_apis[key]] = forward_content.get(api_name)
-        except KeyError as e:
-            raise KeyError(f"The api {api_name} is not in forward_content, please check the forward_content.") from e
-    return filtered_forward_content
+    processed_content = {}
+    for key, value in forward_content.items():
+        base_key = key.rsplit('*', 1)[0]
+        if base_key in processed_content:
+            existing_args = processed_content[base_key]['args']
+            new_args = value['args']
+            filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
+            filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
+            if filtered_existing_args == filtered_new_args and processed_content[base_key]['kwargs'] == value['kwargs']:
+                continue
+            else:
+                processed_content[key] = value
+        else:
+            processed_content[base_key] = value
+    return processed_content
 
 
 def _run_ut():
