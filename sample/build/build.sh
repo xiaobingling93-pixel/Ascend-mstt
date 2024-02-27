@@ -18,6 +18,16 @@ cd ${TOP_DIR}/normal_sample/mix
 make
 mv *.fatbin ${TOP_DIR}/build
 
+# illegal_read_and_write
+cd ${TOP_DIR}/sanitizer_sample/memcheck/illegal_read_and_write
+make
+mv *.fatbin ${TOP_DIR}/build
+
+# out_of_bound
+cd ${TOP_DIR}/sanitizer_sample/memcheck/out_of_bound
+make
+mv *.fatbin ${TOP_DIR}/build
+
 # illegal align sample for sanitizer
 cd ${TOP_DIR}/sanitizer_sample/memcheck/illegal_align
 make
