@@ -17,3 +17,8 @@ mv *.fatbin ${TOP_DIR}/build
 cd ${TOP_DIR}/normal_sample/mix
 make
 mv *.fatbin ${TOP_DIR}/build
+
+# illegal align sample for sanitizer
+cd ${TOP_DIR}/sanitizer_sample/memcheck/illegal_align
+make
+mv *.fatbin ${TOP_DIR}/build

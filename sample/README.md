@@ -11,6 +11,15 @@
 source set_env.sh
 ```
 
+## msdebug
+若使用msdebug进行上板调试，还需要额外调整，具体如下：
+1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
+    + 调试信息增强，并扩大栈空间：
+    ```
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17
+    修改为：
+    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
+
 ## 算子调优
 算子调优工具可以支持上板和仿真算子的调优，不同算子运行模式包含以下特性
 
