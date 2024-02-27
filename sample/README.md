@@ -11,15 +11,6 @@
 source set_env.sh
 ```
 
-## msdebug
-若使用msdebug进行上板调试，还需要额外调整，具体如下：
-1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
-    + 调试信息增强，并扩大栈空间：
-    ```
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17
-    修改为：
-    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
-
 ## 算子调优
 算子调优工具可以支持上板和仿真算子的调优，不同算子运行模式包含以下特性
 
@@ -104,3 +95,30 @@ source set_env.sh
         ├── visualize_data.bin                  # 算子可视化文件，使用Ascend Insight加载
         └── trace.json                          # 算子所有核的流水图
     ```
+
+## 算子调试msdebug
+若使用msdebug进行上板调试，还需要额外调整，具体如下：
+1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
+    + 调试信息增强，并扩大栈空间：
+    ```
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17
+    修改为：
+    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
+
+## 内存检测 sanitizer
+### sanitizer_sample目录介绍
+
+此目录下为sanitizer对应的样例库，包含竞争检测和内存检测相关的样例。
+
+#### Racecheck目录介绍
+
+Racecheck为竞争检测相关的样例。
+
+raw_error_kernel.cpp文件为UB上先读后写竞争和GM上先写后读竞争问题的样例。
+
+
+运行阶段：
+
+```
+/usr/local/Ascend/ascend-toolkit/latest/tools/mssanitizer/bin/mssanitizer --tool=racecheck ./raw_error.fatbin
+```
