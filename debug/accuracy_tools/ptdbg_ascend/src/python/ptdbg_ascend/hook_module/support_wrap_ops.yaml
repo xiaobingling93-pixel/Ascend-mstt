@@ -168,6 +168,7 @@ tensor:
   - __radd__
   - __rmul__
   - __rshift__
+  - __setitem__
   - __sub__
   - __truediv__
   - __xor__
