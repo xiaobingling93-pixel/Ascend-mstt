@@ -36,3 +36,11 @@ source set_env.sh
   export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH  # SOC_VERSION 使用npu-smi info查询NPU Name，如：名字为910A，则填入：Ascend910A
   msprof op simulator --application=./add.fatbin # 在对应路径下
   ```
+
+现msdebug进行上板调试时，还需要额外调整，具体如下：
+1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
+    + 调试信息增强，并扩大栈空间：
+    ```
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17
+    修改为：
+    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
