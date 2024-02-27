@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import torch
+from grad_tool.utils import print_info_log
 
 
 class LevelOps:
@@ -73,7 +74,7 @@ class Level_2(Level):
         param_grad = torch.Tensor(grad.clone().cpu())
         is_positive = param_grad > 0
         torch.save(is_positive, f'{save_path}/{param_name}.pt')
-        print(f'Save {param_name} bool tensor, it has {is_positive.sum()}/{is_positive.numel()} positive elements')
+        print_info_log(f'Save {param_name} bool tensor, it has {is_positive.sum()}/{is_positive.numel()} positive elements')
 
     def count_grad_distribution(self, grad, bounds):
         return LevelOps.count_grad_distribution(grad, bounds)
