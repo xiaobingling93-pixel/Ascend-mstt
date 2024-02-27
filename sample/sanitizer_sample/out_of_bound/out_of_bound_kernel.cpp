@@ -14,16 +14,11 @@ extern "C" __global__ __aicore__ void out_of_bound_kernel(__gm__ uint8_t *gm)
     GlobalTensor<half> xGm;
     pipe.InitBuffer(xlm, BYTESIZE);
     LocalTensor<half> xLm = xlm.Get<half>();
-    for (int32_t i = 0; i < LOOP_COUNT; i++)
-    {
-        if (i == GetBlockIdx())
-        {
-            // 这里第23行CORE_OFFSET < NUM_DATA, 第24行多核写入GM时，写入的size大于偏移，导致出现内存踩踏
-            // 解决方法是将CORE_OFFSET替换成NUM_DATA
-            xGm.SetGlobalBuffer((__gm__ half *)gm + i * CORE_OFFSET, NUM_DATA);
-            DataCopy(xGm, xLm, NUM_DATA);
-        }
-    }
+    xGm.SetGlobalBuffer((__gm__ half *)gm + GetBlockIdx() * CORE_OFFSET, NUM_DATA);
+    // 这里第17行CORE_OFFSET < NUM_DATA, 第21行多核写入GM时，写入的size大于偏移，导致出现内存踩踏
+    // 以下是正确写法
+    // xGm.SetGlobalBuffer((__gm__ half *)gm + GetBlockIdx() * NUM_DATA, NUM_DATA);
+    DataCopy(xGm, xLm, NUM_DATA);
 }
 
 extern "C" void out_of_bound_kernel_do(uint32_t blockDim, void *l2ctrl, void *stream, uint8_t *gm)
