@@ -1,5 +1,4 @@
 ASCEND_HOME_PATH	    ?= /usr/local/Ascend/ascend-toolkit/latest
-TOP_DIR			    ?= /
 
 COMPILER                    := ${ASCEND_HOME_PATH}/compiler/ccec_compiler/bin/ccec
 HOST_COMPILER               := g++ 
