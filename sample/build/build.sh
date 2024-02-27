@@ -22,3 +22,7 @@ mv *.fatbin ${TOP_DIR}/build
 cd ${TOP_DIR}/sanitizer_sample/memcheck/illegal_align
 make
 mv *.fatbin ${TOP_DIR}/build
+
+cd ${TOP_DIR}/sanitizer_sample/Racecheck
+make
+mv *.fatbin ${TOP_DIR}/build
