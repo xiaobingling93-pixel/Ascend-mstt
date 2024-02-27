@@ -12,20 +12,7 @@ source set_env.sh
 ```
 
 ## 算子调优
-算子调优工具可以支持上板和仿真算子的调优，不同算子运行模式包含以下特性
-
-上板
-1. 算子block级调优
-2. 算子重放
-3. 7类aic-metrics性能数据
-
-仿真
-1. 算子流水图
-2. 算子热点图
-3. 算子指令代码行映射
-4. 代码行和指令耗时
-
-下面将以vec_only中的算子为例，进行工具使用的实战命令讲解
+算子调优工具可以支持上板和仿真算子的调优，下面将以vec_only中的算子为例，进行工具使用的实战命令讲解
 
 ### 上板调优
 1. 基于原始的sample代码，无需修改，直接编译算子，获得add.fatbin
@@ -46,22 +33,23 @@ source set_env.sh
     ├── ... (开启的aic-metrics)
     └──  ResourceConflictRatio.csv
     ```
+4. 更多csv中指标信息请参考算子开发工具使用手册。
 
 ### 仿真调优
 使用msprof进行仿真调优时，需要编译出可以运行在仿真器上的可执行算子，需要对编译选项稍作修改，修改如下
 在```./sample/normal_sample/vec_only```相对路径下的```Makefile```文件中修改如下内容：
-   + 仿真器依赖：
-    ```
-    LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++
-    修改为：
-    LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -L${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/ -lruntime_camodel -lascendcl -lstdc++  # 需要添加libruntime_camodel的依赖路径, SOC_VERSION 使用npu-smi info查询NPU Name
-    ```
-    + 调试信息增强：
-    ```
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17
-    修改为：
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17 -g
-    ```
++ 仿真器依赖：
+ ```
+ LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++
+ 修改为：
+ LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -L${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/ -lruntime_camodel -lascendcl -lstdc++  # 需要添加libruntime_camodel的依赖路径, SOC_VERSION 使用npu-smi info查询NPU Name
+ ```
+ + 调试信息增强：
+ ```
+ COMPILER_FLAG		:= -xcce -O2 -std=c++17
+ 修改为：
+ COMPILER_FLAG		:= -xcce -O2 -std=c++17 -g
+```
 
 下面将从编译阶段开始进行
 
@@ -95,6 +83,7 @@ source set_env.sh
         ├── visualize_data.bin                  # 算子可视化文件，使用Ascend Insight加载
         └── trace.json                          # 算子所有核的流水图
     ```
+4. 更多指标信息请参考算子开发工具使用手册。
 
 ## 算子调试msdebug
 若使用msdebug进行上板调试，还需要额外调整，具体如下：
