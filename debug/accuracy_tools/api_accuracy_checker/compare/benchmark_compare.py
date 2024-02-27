@@ -17,6 +17,7 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileChec
 
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
+unsupported_message = 'This data type does not support benchmark compare.'
 
 
 benchmark_algorithms_thresholds = {
@@ -169,9 +170,9 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             binary_consistency_check = True
 
-        if api_name != last_api_name and last_api_name is not None:
+        if last_api_name is not None and api_name != last_api_name:
             if last_api_dtype in Benchmark_Compare_Unsupport_List:
-                message = 'This data type does not support benchmark compare.'
+                message = unsupported_message
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
                 forward_status, backward_status = CompareConst.NA, CompareConst.NA
                 message = ''
@@ -180,14 +181,13 @@ def analyse_csv(npu_data, gpu_data, config):
                 forward_status, backward_status = CompareConst.NA, CompareConst.NA
                 message = ''
                 
-        is_support = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] not in Benchmark_Compare_Unsupport_List
+        is_supported = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] not in Benchmark_Compare_Unsupport_List
         last_api_name = api_name
-        if not pd.isna(row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]):
-            last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
-        else:
+        if pd.isna(row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]):
             continue
+        last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
         
-        if not is_support:
+        if not is_supported:
             continue
         
         if binary_consistency_check:
@@ -200,10 +200,12 @@ def analyse_csv(npu_data, gpu_data, config):
             forward_status = update_status(forward_status, new_status)
         elif direction_status == 'backward':
             backward_status = update_status(backward_status, new_status)
+        else:
+            print_error_log(f"Invalid direction status: {direction_status}")
 
     if last_api_name is not None:
         if last_api_dtype in Benchmark_Compare_Unsupport_List:
-            message = 'This data type does not support benchmark compare.'
+            message = unsupported_message
             write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
             write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
