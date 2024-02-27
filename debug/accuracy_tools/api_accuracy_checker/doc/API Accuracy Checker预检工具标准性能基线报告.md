@@ -2,7 +2,7 @@
 
 ## 环境信息
 
-NPU：910B1
+NPU：Atlas A2 训练系列产品
 
 CPU：
 
