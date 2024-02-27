@@ -13,17 +13,17 @@ LINK_LIBS                   := -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl 
 
 all: build
 
-build: raw_error_kernel.o main.o raw_error.fatbin
+build: out_of_bound_kernel.o main.o out_of_bound.fatbin
 
-raw_error_kernel.o: raw_error_kernel.cpp
+out_of_bound_kernel.o: out_of_bound_kernel.cpp
 	$(COMPILER) $(COMPILER_FLAG) $(DAV_FLAG) $(ASCENDC_INC_FLAG) -o $@ -c $^
 
 main.o: main.cpp
 	$(HOST_COMPILER) $(HOST_COMPILER_FLAG) $(HOST_INC_FLAG) -o $@ -c $^
 
-raw_error.fatbin: raw_error_kernel.o main.o
+out_of_bound.fatbin: out_of_bound_kernel.o main.o
 	$(COMPILER) $(LINK_FLAG) $(DAV_FLAG) -o $@ $^ ${LINK_LIBS}
 
 .PHONY: clean
 clean:
-	rm *.o raw_error.fatbin
+	rm *.o out_of_bound.fatbin
