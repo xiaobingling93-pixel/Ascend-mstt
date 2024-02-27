@@ -19,7 +19,7 @@ extern "C" __global__ __aicore__ void out_of_bound_kernel(__gm__ uint8_t *gm)
         if (i == GetBlockIdx())
         {
             // 这里第22行CORE_OFFSET < NUM_DATA, 第23行多核写入GM时，写入的size大于偏移，导致出现内存踩踏
-            // 解决方法时将CORE_OFFSET替换成NUM_DATA
+            // 解决方法是将CORE_OFFSET替换成NUM_DATA
             xGm.SetGlobalBuffer((__gm__ half *)gm + i * CORE_OFFSET, NUM_DATA);
             DataCopy(xGm, xLm, NUM_DATA);
         }
