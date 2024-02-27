@@ -165,6 +165,7 @@ def analyse_csv(npu_data, gpu_data, config):
         if len(row_gpu) > 1:
             msg = f'This API : {part_api_name} has multiple records in the GPU data.'
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+        row_gpu = row_gpu.iloc[0]
         if row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] in Benchmark_Compare_Support_List:
             bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             bs.get_result()
