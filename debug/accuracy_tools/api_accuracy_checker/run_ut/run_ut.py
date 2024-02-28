@@ -319,8 +319,8 @@ def _run_ut_parser(parser):
             if len(values) != len(unique_values):
                 parser.error("device id must be unique")
             for device_id in values:
-                if not 0 <= device_id <= 15:
-                    parser.error("device id must be in range 0-15")
+                if not 0 <= device_id:
+                    parser.error("device id must be greater than or equal to 0")
             setattr(namespace, self.dest, values)
 
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
