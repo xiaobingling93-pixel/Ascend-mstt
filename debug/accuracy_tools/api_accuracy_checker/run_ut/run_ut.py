@@ -345,7 +345,7 @@ def preprocess_forward_content(forward_content):
             new_args = value['args']
             filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
             filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
-            if filtered_existing_args == filtered_new_args:
+            if filtered_existing_args == filtered_new_args and processed_content[base_key]['kwargs'] == value['kwargs']:
                 continue
             else:
                 processed_content[key] = value
