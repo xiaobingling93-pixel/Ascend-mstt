@@ -32,12 +32,12 @@ class TestMultiRunUT(unittest.TestCase):
 
     @patch('subprocess.Popen')
     @patch('os.path.exists', return_value=True)
-    @patch('builtins.open', new_callable=mock_open)
+    @patch('builtins.open', new_callable=mock_open, read_data=json.dumps({'key1': 'TRUE', 'key2': 'TRUE'}))
     @patch('json.load', side_effect=lambda f: {'key1': 'TRUE', 'key2': 'TRUE'})
     def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen):
         mock_process = MagicMock()
-        mock_process.poll.side_effect = iter([None, None, 1])
-        mock_process.stdout.readline.side_effect = iter(['[ERROR] Test Error Message\n', ''])
+        mock_process.poll.side_effect = [None, None, 1]
+        mock_process.stdout.readline.side_effect = ['[ERROR] Test Error Message\n', '']
         mock_popen.return_value = mock_process
 
         config = ParallelUTConfig(
@@ -53,16 +53,15 @@ class TestMultiRunUT(unittest.TestCase):
             real_data_path=None
         )
 
-        mock_file.side_effect = [
-            mock_open(read_data=json.dumps(self.forward_split_files_content[0])).return_value,
-            mock_open(read_data=json.dumps(self.forward_split_files_content[1])).return_value
+        expected_calls = [
+            call('forward_split1.json', 'r'),
+            call('forward_split2.json', 'r')
         ]
-
         run_parallel_ut(config)
 
         mock_popen.assert_called()
         mock_exists.assert_called()
-        mock_file.assert_called()
+        mock_file.assert_has_calls(expected_calls, any_order=True)
 
     @patch('os.remove')
     @patch('os.path.realpath', side_effect=lambda x: x)
