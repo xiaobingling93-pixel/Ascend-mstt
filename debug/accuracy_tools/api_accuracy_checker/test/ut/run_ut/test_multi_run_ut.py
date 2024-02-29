@@ -36,8 +36,8 @@ class TestMultiRunUT(unittest.TestCase):
     @patch('json.load', side_effect=lambda f: {'key1': 'TRUE', 'key2': 'TRUE'})
     def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen):
         mock_process = MagicMock()
-        mock_process.poll.side_effect = [None, None, 1]
-        mock_process.stdout.readline.side_effect = ['[ERROR] Test Error Message\n', '']
+        mock_process.poll.side_effect = iter([None, None, 1])
+        mock_process.stdout.readline.side_effect = iter(['[ERROR] Test Error Message\n', ''])
         mock_popen.return_value = mock_process
 
         config = ParallelUTConfig(
@@ -53,7 +53,6 @@ class TestMultiRunUT(unittest.TestCase):
             real_data_path=None
         )
 
-        # 模拟 forward_split 文件的内容
         mock_file.side_effect = [
             mock_open(read_data=json.dumps(self.forward_split_files_content[0])).return_value,
             mock_open(read_data=json.dumps(self.forward_split_files_content[1])).return_value
