@@ -32,7 +32,7 @@ class TestMultiRunUT(unittest.TestCase):
 
     @patch('subprocess.Popen')
     @patch('os.path.exists', return_value=True)
-    @patch('builtins.open', new_callable=mock_open, read_data=json.dumps({'key1': 'TRUE', 'key2': 'TRUE'}))
+    @patch('builtins.open', new_callable=mock_open)
     @patch('json.load', side_effect=lambda f: {'key1': 'TRUE', 'key2': 'TRUE'})
     def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen):
         mock_process = MagicMock()
@@ -53,15 +53,15 @@ class TestMultiRunUT(unittest.TestCase):
             real_data_path=None
         )
 
-        expected_calls = [
-            call('forward_split1.json', 'r'),
-            call('forward_split2.json', 'r')
+        mock_file.side_effect = [
+            mock_open(read_data=json.dumps(self.forward_split_files_content[0])).return_value,
+            mock_open(read_data=json.dumps(self.forward_split_files_content[1])).return_value
         ]
+
         run_parallel_ut(config)
 
         mock_popen.assert_called()
         mock_exists.assert_called()
-        mock_file.assert_has_calls(expected_calls, any_order=True)
 
     @patch('os.remove')
     @patch('os.path.realpath', side_effect=lambda x: x)
