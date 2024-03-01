@@ -13,8 +13,8 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileChec
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path
-from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log
-
+from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, create_directory
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 def split_json_file(input_file, num_splits):
     with FileOpen(input_file, 'r') as file:
@@ -136,6 +136,8 @@ def prepare_config(args):
     backward_file = os.path.realpath(args.backward_input_file) if args.backward_input_file else None
     check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    check_path_before_create(out_path)
+    create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     forward_splits, total_items = split_json_file(args.forward_input_file, args.num_splits)
