@@ -4,6 +4,7 @@ import csv
 import re
 import sys
 import time
+import gc
 from collections import namedtuple
 try:
     import torch_npu
@@ -177,6 +178,7 @@ def run_ut(config):
                 torch.cuda.empty_cache()
             else:
                 torch.npu.empty_cache()
+            gc.collect()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -317,8 +319,8 @@ def _run_ut_parser(parser):
             if len(values) != len(unique_values):
                 parser.error("device id must be unique")
             for device_id in values:
-                if not 0 <= device_id <= 7:
-                    parser.error("device id must be in range 0-7")
+                if not 0 <= device_id:
+                    parser.error("device id must be greater than or equal to 0")
             setattr(namespace, self.dest, values)
 
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 

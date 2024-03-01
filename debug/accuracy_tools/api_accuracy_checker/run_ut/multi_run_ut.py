@@ -70,12 +70,18 @@ def run_parallel_ut(config):
         return cmd
 
     def read_process_output(process):
-        while True:
-            output = process.stdout.readline()
-            if output == '':
-                break
-            if '[ERROR]' in output:
-                print(output, end='')
+        try:
+            while True:
+                if process.poll() is not None:
+                    break
+                output = process.stdout.readline()
+                if output == '':
+                    break
+                if '[ERROR]' in output:
+                    print(output, end='')
+                    sys.stdout.flush()
+        except ValueError as e:
+            print_warn_log(f"An error occurred while reading subprocess output: {e}")
     
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
@@ -101,9 +107,11 @@ def run_parallel_ut(config):
     def clean_up():
         progress_bar.close()
         for process in processes:
-            if process.poll() is None:
+            try:
                 process.terminate()
-                process.wait()
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                process.kill()
         for file in config.forward_files:
             try:
                 os.remove(file)
