@@ -338,19 +338,32 @@ def _run_ut_parser(parser):
 
 def preprocess_forward_content(forward_content):
     processed_content = {}
+    base_keys_variants = {}
+
     for key, value in forward_content.items():
-        base_key = key.rsplit('*', 1)[0] + "*0"
-        if base_key in processed_content:
-            existing_args = processed_content[base_key]['args']
-            new_args = value['args']
-            filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
-            filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
-            if filtered_existing_args == filtered_new_args and processed_content[base_key]['kwargs'] == value['kwargs']:
-                continue
-            else:
+        base_key = key.rsplit('*', 1)[0]
+        new_args = value['args']
+        new_kwargs = value['kwargs']
+        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
+
+        if base_key in base_keys_variants:
+            is_duplicate = False
+            for variant in base_keys_variants[base_key]:
+                existing_args = processed_content[variant]['args']
+                existing_kwargs = processed_content[variant]['kwargs']
+                filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
+
+                if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
+                    is_duplicate = True
+                    break
+
+            if not is_duplicate:
                 processed_content[key] = value
+                base_keys_variants[base_key].append(key)
         else:
-            processed_content[base_key] = value
+            processed_content[key] = value
+            base_keys_variants[base_key] = [key]
+
     return processed_content
 
 
