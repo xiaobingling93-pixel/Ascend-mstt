@@ -334,6 +334,37 @@ def _run_ut_parser(parser):
                         help="<optional> In real data mode, the root directory for storing real data "
                              "must be configured.",
                         required=False)
+    parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
+                        help="<optional> Whether to filter the api in the forward_input_file.", required=False)
+
+
+def preprocess_forward_content(forward_content):
+    processed_content = {}
+    base_keys_variants = {}
+    for key, value in forward_content.items():
+        base_key = key.rsplit('*', 1)[0]
+        new_args = value['args']
+        new_kwargs = value['kwargs']
+        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
+        if base_key in base_keys_variants:
+            is_duplicate = False
+            for variant in base_keys_variants.get(base_key, []):
+                try:
+                    existing_args = processed_content[variant].get('args', [])
+                    existing_kwargs = processed_content[variant].get('kwargs', {})
+                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
+                except KeyError as e:
+                    print_error_log(f"KeyError: {e} when processing {key}")
+                if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                processed_content[key] = value
+                base_keys_variants[base_key].append(key)
+        else:
+            processed_content[key] = value
+            base_keys_variants[base_key] = [key]
+    return processed_content
 
 
 def _run_ut():
@@ -359,6 +390,8 @@ def _run_ut():
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
     forward_content = get_json_contents(forward_file)
+    if args.filter_api:
+        forward_content = preprocess_forward_content(forward_content)
     backward_content = {}
     if args.backward_input_file:
         check_link(args.backward_input_file)
