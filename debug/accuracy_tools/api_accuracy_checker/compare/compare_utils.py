@@ -8,6 +8,7 @@ current_time = time.strftime("%Y%m%d%H%M%S")
 BENCHMARK_COMPARE_RESULT_FILE_NAME = "benchmark_compare_result_" + current_time + ".csv"
 BENCHMARK_COMPARE_DETAILS_FILE_NAME = "benchmark_compare_details_" + current_time + ".csv"
 Benchmark_Compare_Support_List = ['torch.float16', 'torch.bfloat16', 'torch.float32']
+Benchmark_Compare_Unsupport_List = ['torch.float64']
 result_mapping = {
     'pass' : True,
     'warning': False,
@@ -90,6 +91,7 @@ class BenchmarkCompareColumn:
     MEAN_REL_ERR_STATUS = '相对误差平均值判定结果'
     EB_RATIO = '误差均衡性比值'
     EB_STATUS = '误差均衡性判定结果'
+    ERROR_RATE = '错误率'
     FORWWARD_STATUS = 'Forward Test Success'
     BACKWARD_STATUS = 'Backward Test Success'
     MESSAGE = 'Message'
@@ -98,7 +100,8 @@ class BenchmarkCompareColumn:
     def to_required_columns():
         return [BenchmarkCompareColumn.API_NAME, BenchmarkCompareColumn.DEVICE_DTYPE, 
                 BenchmarkCompareColumn.SMALL_VALUE_ERROR_RATE, BenchmarkCompareColumn.RMSE, 
-                BenchmarkCompareColumn.MAX_REL_ERR, BenchmarkCompareColumn.MEAN_REL_ERR, BenchmarkCompareColumn.EB]
+                BenchmarkCompareColumn.MAX_REL_ERR, BenchmarkCompareColumn.MEAN_REL_ERR, BenchmarkCompareColumn.EB,
+                BenchmarkCompareColumn.ERROR_RATE]
         
     @staticmethod
     def get_detail_csv_title():
