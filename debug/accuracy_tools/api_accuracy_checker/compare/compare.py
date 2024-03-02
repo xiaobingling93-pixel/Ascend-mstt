@@ -56,6 +56,7 @@ class Comparator:
         table_total.add_row("[yellow]Warning[/yellow]", str(self.test_result_cnt.get("warning_num", 0)))
         table_total.add_row("[red]Error[/red]", str(self.test_result_cnt.get("error_num", 0)))
         table_total.add_row("Passing Rate", passing_rate)
+        table_total.add_row("Skip Tests", str(self.test_result_cnt.get("total_skip_num", 0)))
 
         table_detail = Table(
             show_header=True, title="Detail Statistics", show_lines=True, width=75
@@ -74,7 +75,7 @@ class Comparator:
         self.test_result_cnt = {
             "success_num": 0, "warning_num": 0, "error_num": 0,
             "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
-            "total_num": 0
+            "total_num": 0, "total_skip_num": 0
         }
         with FileOpen(self.save_path, 'r') as file:
             reader = csv.reader(file)
@@ -90,6 +91,7 @@ class Comparator:
             column1 = item[1]
             column2 = item[2]
             if column1.upper() == CompareConst.SKIP:
+                self.test_result_cnt["total_skip_num"] += 1
                 continue
             self.test_result_cnt["total_num"] += 1
             if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.NA]:
