@@ -122,7 +122,7 @@ class Comparator:
 
         name = test_result[0]
         df_row = list(test_result[:3])
-        if test_result[1].upper() == "SKIP" or test_result[2].upper() == "SKIP":
+        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
             df_row.append(test_result[3])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
