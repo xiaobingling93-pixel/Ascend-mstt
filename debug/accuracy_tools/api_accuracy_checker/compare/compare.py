@@ -164,7 +164,7 @@ class Comparator:
             else:
                 bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(bench_grad, npu_grad)
         else:
-            bwd_success_status, bwd_compare_alg_results = CompareConst.PASS, None
+            bwd_success_status, bwd_compare_alg_results = CompareConst.PASS, []
         if bwd_success_status and bwd_compare_alg_results is None:
             self.record_results(api_name, fwd_success_status, CompareConst.NA, fwd_compare_alg_results,
                                 bwd_compare_alg_results)
