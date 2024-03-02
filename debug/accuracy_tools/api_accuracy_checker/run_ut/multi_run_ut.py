@@ -12,13 +12,15 @@ from tqdm import tqdm
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
-from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path
+from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
 from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, create_directory
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
-def split_json_file(input_file, num_splits):
+def split_json_file(input_file, num_splits, filter_api):
     with FileOpen(input_file, 'r') as file:
         data = json.load(file)
+        if filter_api:
+            data = preprocess_forward_content(data)
 
     items = list(data.items())
     total_items = len(items)
@@ -70,12 +72,18 @@ def run_parallel_ut(config):
         return cmd
 
     def read_process_output(process):
-        while True:
-            output = process.stdout.readline()
-            if output == '':
-                break
-            if '[ERROR]' in output:
-                print(output, end='')
+        try:
+            while True:
+                if process.poll() is not None:
+                    break
+                output = process.stdout.readline()
+                if output == '':
+                    break
+                if '[ERROR]' in output:
+                    print(output, end='')
+                    sys.stdout.flush()
+        except ValueError as e:
+            print_warn_log(f"An error occurred while reading subprocess output: {e}")
     
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
@@ -101,9 +109,11 @@ def run_parallel_ut(config):
     def clean_up():
         progress_bar.close()
         for process in processes:
-            if process.poll() is None:
+            try:
                 process.terminate()
-                process.wait()
+                process.wait(timeout=1)
+            except subprocess.TimeoutExpired:
+                process.kill()
         for file in config.forward_files:
             try:
                 os.remove(file)
@@ -140,7 +150,7 @@ def prepare_config(args):
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
-    forward_splits, total_items = split_json_file(args.forward_input_file, args.num_splits)
+    forward_splits, total_items = split_json_file(args.forward_input_file, args.num_splits, args.filter_api)
     backward_splits = [backward_file] * args.num_splits if backward_file else [None] * args.num_splits
     result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
