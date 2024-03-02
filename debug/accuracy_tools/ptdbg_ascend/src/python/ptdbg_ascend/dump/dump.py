@@ -96,6 +96,8 @@ class DataInfo(object):
 
 
 def get_not_float_tensor_info(data):
+    if DumpUtil.summary_mode == "md5":
+        return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
     if data.numel() == 0 or data.dtype == torch.bool:
         tensor_max = []
         tensor_min = []
