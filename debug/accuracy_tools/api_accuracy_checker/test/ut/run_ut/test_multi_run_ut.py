@@ -20,7 +20,7 @@ class TestMultiRunUT(unittest.TestCase):
     def test_split_json_file(self, mock_FileOpen):
         mock_FileOpen.return_value.__enter__.return_value = mock_open(read_data=self.test_json_content).return_value
         num_splits = 2
-        split_files, total_items = split_json_file(self.test_json_file, num_splits)
+        split_files, total_items = split_json_file(self.test_json_file, num_splits, False)
         self.assertEqual(len(split_files), num_splits)
         self.assertEqual(total_items, len(self.test_data))
 

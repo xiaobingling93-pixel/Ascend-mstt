@@ -16,6 +16,7 @@ from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_res
 from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, create_directory
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
+
 def split_json_file(input_file, num_splits, filter_api):
     with FileOpen(input_file, 'r') as file:
         data = json.load(file)
