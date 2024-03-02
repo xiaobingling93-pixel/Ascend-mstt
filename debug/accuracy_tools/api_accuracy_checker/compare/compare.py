@@ -52,9 +52,9 @@ class Comparator:
         )
         table_total.add_column("Result")
         table_total.add_column("Statistics")
-        table_total.add_row("Pass", str(self.test_result_cnt.get("success_num", 0)))
-        table_total.add_row("Warning", str(self.test_result_cnt.get("warning_num", 0)))
-        table_total.add_row("Error", str(self.test_result_cnt.get("error_num", 0)))
+        table_total.add_row("[green]Pass[/green]", str(self.test_result_cnt.get("success_num", 0)))
+        table_total.add_row("[yellow]Warning[/yellow]", str(self.test_result_cnt.get("warning_num", 0)))
+        table_total.add_row("[red]Error[/red]", str(self.test_result_cnt.get("error_num", 0)))
         table_total.add_row("Passing Rate", passing_rate)
 
         table_detail = Table(
@@ -83,27 +83,28 @@ class Comparator:
         for item in result_csv_rows[1:]:
             if not isinstance(item, list) or len(item) < 3:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-            if not all(item[i] and item[i].upper() in checklist for i in (1, 2)):
+            if not all(item[i] and item[i] in checklist for i in (1, 2)):
                 raise ValueError(
                     "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP, WARNING, or N/A"
                     % result_csv_name)
-            column1 = item[1].upper()
-            column2 = item[2].upper()
+            column1 = item[1]
+            column2 = item[2]
             if column1 == CompareConst.SKIP:
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, CompareConst.NA]:
+            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.NA]:
                 self.test_result_cnt['success_num'] += 1
-            elif column1 == CompareConst.FALSE and column2 == CompareConst.FALSE:
+            elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
-            elif column1 == CompareConst.FALSE:
-                self.test_result_cnt['forward_fail_num'] += 1
-            elif column2 == CompareConst.FALSE:
-                self.test_result_cnt['backward_fail_num'] += 1
-            if column1 == CompareConst.WARNING or column2 == CompareConst.WARNING:
-                self.test_result_cnt['warning_num'] += 1
-            if column1 == CompareConst.ERROR or column2 == CompareConst.ERROR:
                 self.test_result_cnt['error_num'] += 1
+            elif column1 == CompareConst.ERROR:
+                self.test_result_cnt['forward_fail_num'] += 1
+                self.test_result_cnt['error_num'] += 1
+            elif column2 == CompareConst.ERROR:
+                self.test_result_cnt['backward_fail_num'] += 1
+                self.test_result_cnt['error_num'] += 1
+            elif column1 == CompareConst.WARNING or column2 == CompareConst.WARNING:
+                self.test_result_cnt['warning_num'] += 1
 
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, 
