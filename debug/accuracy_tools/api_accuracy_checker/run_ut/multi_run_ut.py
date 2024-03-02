@@ -96,7 +96,7 @@ def run_parallel_ut(config):
                 print_warn_log(f"Result CSV file not found: {result_csv_path}.")
             except Exception as e:
                 print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
-            time.sleep(10)
+            time.sleep(1)
     
     for fwd, bwd in zip(config.forward_files, config.backward_files):
         cmd = create_cmd(fwd, bwd, next(device_id_cycle))
