@@ -756,9 +756,11 @@ def check_file_valid(file_path):
 
 
 def get_md5_for_tensor(x):
+    if x.dtype == torch.bfloat16:
+        x = x.float()
     tensor_bytes = x.cpu().detach().numpy().tobytes()
-    crc_hash = zlib.crc32(tensor_bytes)
-    return crc_hash
+    crc32_hash = zlib.crc32(tensor_bytes)
+    return f"{crc32_hash:08x}"
 
 
 def check_path_before_create(path):
