@@ -70,7 +70,7 @@ class Comparator:
         console.print(table_detail)
 
     def get_statistics_from_result_csv(self):
-        checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.NA, CompareConst.SKIP]
+        checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.NA, CompareConst.SKIP, "skip"]
         self.test_result_cnt = {
             "success_num": 0, "warning_num": 0, "error_num": 0,
             "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
@@ -85,11 +85,11 @@ class Comparator:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
             if not all(item[i] and item[i] in checklist for i in (1, 2)):
                 raise ValueError(
-                    "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP, WARNING, or N/A"
+                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or N/A"
                     % result_csv_name)
             column1 = item[1]
             column2 = item[2]
-            if column1 == CompareConst.SKIP:
+            if column1.upper() == CompareConst.SKIP:
                 continue
             self.test_result_cnt["total_num"] += 1
             if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.NA]:
@@ -120,7 +120,7 @@ class Comparator:
 
         name = test_result[0]
         df_row = list(test_result[:3])
-        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
+        if test_result[1].upper() == "SKIP" or test_result[2].upper() == "SKIP":
             df_row.append(test_result[3])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
