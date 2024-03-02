@@ -155,30 +155,24 @@ class Comparator:
 
     def compare_output(self, api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
         if "dropout" in api_name:
-            is_fwd_success, fwd_compare_alg_results = self._compare_dropout(bench_output, device_output)
+            fwd_success_status, fwd_compare_alg_results = self._compare_dropout(bench_output, device_output)
         else:
-            is_fwd_success, fwd_compare_alg_results = self._compare_core_wrapper(bench_output, device_output)
+            fwd_success_status, fwd_compare_alg_results = self._compare_core_wrapper(bench_output, device_output)
         if bench_grad and npu_grad:
             if "dropout" in api_name:
-                is_bwd_success, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
+                bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
             else:
-                is_bwd_success, bwd_compare_alg_results = self._compare_core_wrapper(bench_grad, npu_grad)
+                bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(bench_grad, npu_grad)
         else:
-            is_bwd_success, bwd_compare_alg_results = CompareConst.PASS, None
-        if is_bwd_success and bwd_compare_alg_results is None:
-            self.record_results(api_name, is_fwd_success, CompareConst.NA, fwd_compare_alg_results,
+            bwd_success_status, bwd_compare_alg_results = CompareConst.PASS, None
+        if bwd_success_status and bwd_compare_alg_results is None:
+            self.record_results(api_name, fwd_success_status, CompareConst.NA, fwd_compare_alg_results,
                                 bwd_compare_alg_results)
         else:
-            self.record_results(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,
+            self.record_results(api_name, fwd_success_status, bwd_success_status, fwd_compare_alg_results,
                                 bwd_compare_alg_results)
-        if is_fwd_success == CompareConst.PASS:
-            is_fwd_success = True
-        else:
-            is_fwd_success = False
-        if is_bwd_success == CompareConst.PASS:
-            is_bwd_success = True
-        else:
-            is_bwd_success = False
+        is_fwd_success = True if fwd_success_status == CompareConst.PASS else False
+        is_bwd_success = True if bwd_success_status == CompareConst.PASS else False
         return is_fwd_success, is_bwd_success
 
     def _compare_core_wrapper(self, bench_output, device_output):
