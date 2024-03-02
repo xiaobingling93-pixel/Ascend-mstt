@@ -157,7 +157,7 @@ def prepare_config(args):
         print_info_log(f"UT task result will be saved in {result_csv_path}")
         print_info_log(f"UT task details will be saved in {details_csv_path}")
     else:
-        result_csv_path = get_validated_result_csv_path(args.result_csv_path)
+        result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
         print_info_log(f"UT task result will be saved in {result_csv_path}")
         print_info_log(f"UT task details will be saved in {details_csv_path}")
