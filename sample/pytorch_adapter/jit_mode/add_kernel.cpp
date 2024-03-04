@@ -26,13 +26,13 @@ public:
     __aicore__ inline void Init(GM_ADDR x, GM_ADDR y, GM_ADDR z)
     {
         // get start index for current core, core parallel
-        xGm.SetGlobalBuffer((__gm__ int16_t *)x + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
-        yGm.SetGlobalBuffer((__gm__ int16_t *)y + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
-        zGm.SetGlobalBuffer((__gm__ int16_t *)z + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
+        xGm.SetGlobalBuffer((__gm__ half *)x + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
+        yGm.SetGlobalBuffer((__gm__ half *)y + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
+        zGm.SetGlobalBuffer((__gm__ half *)z + BLOCK_LENGTH * GetBlockIdx(), BLOCK_LENGTH);
         // pipe alloc memory to queue, the unit is Bytes
-        pipe.InitBuffer(inQueueX, BUFFER_NUM, TILE_LENGTH * sizeof(int16_t));
-        pipe.InitBuffer(inQueueY, BUFFER_NUM, TILE_LENGTH * sizeof(int16_t));
-        pipe.InitBuffer(outQueueZ, BUFFER_NUM, TILE_LENGTH * sizeof(int16_t));
+        pipe.InitBuffer(inQueueX, BUFFER_NUM, TILE_LENGTH * sizeof(half));
+        pipe.InitBuffer(inQueueY, BUFFER_NUM, TILE_LENGTH * sizeof(half));
+        pipe.InitBuffer(outQueueZ, BUFFER_NUM, TILE_LENGTH * sizeof(half));
     }
     __aicore__ inline void Process()
     {
@@ -50,8 +50,8 @@ private:
     __aicore__ inline void CopyIn(int32_t progress)
     {
         // alloc tensor from queue memory
-        LocalTensor<int16_t> xLocal = inQueueX.AllocTensor<int16_t>();
-        LocalTensor<int16_t> yLocal = inQueueY.AllocTensor<int16_t>();
+        LocalTensor<half> xLocal = inQueueX.AllocTensor<half>();
+        LocalTensor<half> yLocal = inQueueY.AllocTensor<half>();
         // copy progress_th tile from global tensor to local tensor
         DataCopy(xLocal, xGm[progress * TILE_LENGTH], TILE_LENGTH);
         DataCopy(yLocal, yGm[progress * TILE_LENGTH], TILE_LENGTH);
@@ -62,13 +62,13 @@ private:
     __aicore__ inline void Compute(int32_t progress)
     {
         // deque input tensors from VECIN queue
-        LocalTensor<int16_t> xLocal = inQueueX.DeQue<int16_t>();
-        LocalTensor<int16_t> yLocal = inQueueY.DeQue<int16_t>();
-        LocalTensor<int16_t> zLocal = outQueueZ.AllocTensor<int16_t>();
+        LocalTensor<half> xLocal = inQueueX.DeQue<half>();
+        LocalTensor<half> yLocal = inQueueY.DeQue<half>();
+        LocalTensor<half> zLocal = outQueueZ.AllocTensor<half>();
         // call Add instr for computation
         Add(zLocal, xLocal, yLocal, TILE_LENGTH);
         // enque the output tensor to VECOUT queue
-        outQueueZ.EnQue<int16_t>(zLocal);
+        outQueueZ.EnQue<half>(zLocal);
         // free input tensors for reuse
         inQueueX.FreeTensor(xLocal);
         inQueueY.FreeTensor(yLocal);
@@ -76,7 +76,7 @@ private:
     __aicore__ inline void CopyOut(int32_t progress)
     {
         // deque output tensor from VECOUT queue
-        LocalTensor<int16_t> zLocal = outQueueZ.DeQue<int16_t>();
+        LocalTensor<half> zLocal = outQueueZ.DeQue<half>();
         // copy progress_th tile from local tensor to global tensor
         DataCopy(zGm[progress * TILE_LENGTH], zLocal, TILE_LENGTH);
         // free output tensor for reuse
@@ -89,7 +89,7 @@ private:
     TQue<QuePosition::VECIN, BUFFER_NUM> inQueueX, inQueueY;
     // create queue for output, in this case depth is equal to buffer num
     TQue<QuePosition::VECOUT, BUFFER_NUM> outQueueZ;
-    GlobalTensor<int16_t> xGm, yGm, zGm;
+    GlobalTensor<half> xGm, yGm, zGm;
 };
 // implementation of kernel function
 extern "C" __global__ __aicore__ void add_custom(GM_ADDR x, GM_ADDR y, GM_ADDR z)
