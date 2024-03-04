@@ -128,6 +128,8 @@ def write_detail_csv(content, save_path):
 
 def benchmark_compare(config):
     print_info_log("start benchmark compare task")
+    print_info_log(f"Compare task result will be saved in {config.result_csv_path}")
+    print_info_log(f"Compare task detail will be saved in {config.details_csv_path}")
     try:
         npu_data = pd.read_csv(config.npu_csv_path)
     except Exception as err:
