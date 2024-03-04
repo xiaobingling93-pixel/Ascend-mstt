@@ -237,6 +237,7 @@ python multi_run_ut.py -forward ./forward_info_0.json -backward ./backward_info_
 | -d或--device                     | 指定Device ID，选择UT代码运行所在的卡，默认值为0，支持同时指定0~7，共8个Device。 | 否                                 |
 | -csv_path或--result_csv_path     | 指定本次运行中断时生成的`accuracy_checking_result_{timestamp}.csv`文件路径，执行run_ut中断时，若想从中断处继续执行，配置此参数即可。需要指定为上次中断的`accuracy_checking_result_{timestamp}.csv`文件。详见“**断点续检**”。 | run_ut操作中断后继续执行场景下必选 |
 | -real_data_path                  | 指定run_ut操作的真实数据路径。真实数据dump模式通过**msCheckerConfig.update_config**接口的real_data参数开启。指定绝对路径为forward_real_data和backward_real_data目录的父目录。 | dump的数据为真实数据下必选         |
+| -f或--filter_api                 | 过滤模型中除最大值和最小值以外其他参数和结构相同的API。适用于模型较大且重复API较多的场景。 | 否                                 |
 
 ### 断点续检
 
