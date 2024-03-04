@@ -13,5 +13,3 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-from ptdbg_ascend.src.python.ptdbg_ascend import __all__

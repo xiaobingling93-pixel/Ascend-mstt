@@ -219,7 +219,9 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
     device_out = exec_api(api_type, api_name, device_args, device_kwargs)
-    api_setting_dict = get_json_contents("torch_ut_setting.json")
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
+    api_setting_dict = get_json_contents(ut_setting_path)
     grad_input_index = api_setting_dict.get(api_name)
     grad_index = None
     grad, bench_grad = None, None
@@ -235,7 +237,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
     if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad, 
+        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
                           in_fwd_data_list)
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
@@ -250,7 +252,7 @@ def get_api_info(api_info_dict, api_name, real_data_path):
 
 
 def run_backward(args, grad, grad_index, out):
-    
+
     if grad_index is not None:
         out[grad_index].backward(grad)
     elif isinstance(out, (list, tuple)):
@@ -316,7 +318,7 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    
+
     class UniqueDeviceAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             unique_values = set(values)
@@ -327,7 +329,7 @@ def _run_ut_parser(parser):
                     parser.error("device id must be greater than or equal to 0")
             setattr(namespace, self.dest, values)
 
-    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
                         help="<optional> set device id to run ut, must be unique and in range 0-7",
                         default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
