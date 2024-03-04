@@ -41,4 +41,4 @@ class TestUtilsMethods(unittest.TestCase):
         data = [[1, 2], [3, 4]]
         x_data = torch.tensor(data)
         md5_value = get_md5_for_tensor(x_data)
-        self.assertEqual(md5_value, 2624136704)
+        self.assertEqual(md5_value, '9c692600')
