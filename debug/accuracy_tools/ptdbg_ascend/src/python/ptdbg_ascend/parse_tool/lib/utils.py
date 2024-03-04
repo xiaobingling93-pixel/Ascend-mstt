@@ -310,9 +310,14 @@ class Util:
         return md5_hash.hexdigest()
 
     def write_csv(self, data, filepath):
+        need_change_mode = False
+        if not os.path.exists(filepath):
+            need_change_mode = True
         with FileOpen(filepath, 'a') as f:
             writer = csv.writer(f)
             writer.writerows(data)
+        if need_change_mode:
+            change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def deal_with_dir_or_file_inconsistency(self, output_path):
         if os.path.exists(output_path):
