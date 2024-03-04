@@ -18,13 +18,14 @@ import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const
+    print_error_log, initialize_save_path, Const, create_directory
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.dump.api_info import APIInfo
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
@@ -266,6 +267,9 @@ def run_backward(args, grad, grad_index, out):
 
 
 def initialize_save_error_data():
+    error_data_path = msCheckerConfig.error_data_path
+    check_path_before_create(error_data_path)
+    create_directory(error_data_path)
     error_data_path_checker = FileChecker(msCheckerConfig.error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
     error_data_path = error_data_path_checker.common_check()
@@ -386,6 +390,8 @@ def _run_ut():
     forward_file = os.path.realpath(args.forward_input_file)
     check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    check_path_before_create(out_path)
+    create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
