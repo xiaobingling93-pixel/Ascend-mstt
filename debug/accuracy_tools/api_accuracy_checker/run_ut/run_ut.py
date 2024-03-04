@@ -4,6 +4,7 @@ import csv
 import re
 import sys
 import time
+import gc
 from collections import namedtuple
 try:
     import torch_npu
@@ -17,13 +18,14 @@ import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const
+    print_error_log, initialize_save_path, Const, create_directory
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.dump.api_info import APIInfo
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
@@ -177,6 +179,7 @@ def run_ut(config):
                 torch.cuda.empty_cache()
             else:
                 torch.npu.empty_cache()
+            gc.collect()
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
@@ -264,6 +267,9 @@ def run_backward(args, grad, grad_index, out):
 
 
 def initialize_save_error_data():
+    error_data_path = msCheckerConfig.error_data_path
+    check_path_before_create(error_data_path)
+    create_directory(error_data_path)
     error_data_path_checker = FileChecker(msCheckerConfig.error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
     error_data_path = error_data_path_checker.common_check()
@@ -317,8 +323,8 @@ def _run_ut_parser(parser):
             if len(values) != len(unique_values):
                 parser.error("device id must be unique")
             for device_id in values:
-                if not 0 <= device_id <= 7:
-                    parser.error("device id must be in range 0-7")
+                if not 0 <= device_id:
+                    parser.error("device id must be greater than or equal to 0")
             setattr(namespace, self.dest, values)
 
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
@@ -332,6 +338,37 @@ def _run_ut_parser(parser):
                         help="<optional> In real data mode, the root directory for storing real data "
                              "must be configured.",
                         required=False)
+    parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
+                        help="<optional> Whether to filter the api in the forward_input_file.", required=False)
+
+
+def preprocess_forward_content(forward_content):
+    processed_content = {}
+    base_keys_variants = {}
+    for key, value in forward_content.items():
+        base_key = key.rsplit('*', 1)[0]
+        new_args = value['args']
+        new_kwargs = value['kwargs']
+        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
+        if base_key in base_keys_variants:
+            is_duplicate = False
+            for variant in base_keys_variants.get(base_key, []):
+                try:
+                    existing_args = processed_content[variant].get('args', [])
+                    existing_kwargs = processed_content[variant].get('kwargs', {})
+                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
+                except KeyError as e:
+                    print_error_log(f"KeyError: {e} when processing {key}")
+                if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
+                    is_duplicate = True
+                    break
+            if not is_duplicate:
+                processed_content[key] = value
+                base_keys_variants[base_key].append(key)
+        else:
+            processed_content[key] = value
+            base_keys_variants[base_key] = [key]
+    return processed_content
 
 
 def _run_ut():
@@ -353,10 +390,14 @@ def _run_ut():
     forward_file = os.path.realpath(args.forward_input_file)
     check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    check_path_before_create(out_path)
+    create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
     forward_content = get_json_contents(forward_file)
+    if args.filter_api:
+        forward_content = preprocess_forward_content(forward_content)
     backward_content = {}
     if args.backward_input_file:
         check_link(args.backward_input_file)

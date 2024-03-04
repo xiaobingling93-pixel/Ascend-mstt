@@ -50,6 +50,8 @@ def check_data_overflow(x):
         return False
     else:
         if isinstance(x, torch.Tensor) and x.numel() != 0 and x.dtype != torch.bool:
+            if x.is_meta:
+                return False
             if len(x.shape) == 0:
                 tensor_max = x.cpu().detach().float().numpy().tolist()
                 tensor_min = tensor_max

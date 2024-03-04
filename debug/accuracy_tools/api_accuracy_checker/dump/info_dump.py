@@ -60,7 +60,10 @@ def write_json(file_path, data, indent=None):
 
 
 def initialize_output_json():
-    dump_path_checker = FileChecker(msCheckerConfig.dump_path, FileCheckConst.DIR)
+    dump_path = msCheckerConfig.dump_path
+    check_path_before_create(dump_path)
+    create_directory(dump_path)
+    dump_path_checker = FileChecker(dump_path, FileCheckConst.DIR)
     dump_path = dump_path_checker.common_check()
     files = ['forward_info.json', 'backward_info.json', 'stack_info.json']
     for file in files:

@@ -7,15 +7,18 @@ from collections import namedtuple
 import pandas as pd
 
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
-    CompareException
+    CompareException, create_directory
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, BENCHMARK_COMPARE_RESULT_FILE_NAME, \
-BENCHMARK_COMPARE_DETAILS_FILE_NAME, result_mapping, Benchmark_Compare_Support_List, BenchmarkCompareColumn
+BENCHMARK_COMPARE_DETAILS_FILE_NAME, result_mapping, Benchmark_Compare_Support_List, Benchmark_Compare_Unsupport_List, \
+    BenchmarkCompareColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
+unsupported_message = 'This data type does not support benchmark compare.'
 
 
 benchmark_algorithms_thresholds = {
@@ -156,42 +159,71 @@ def analyse_csv(npu_data, gpu_data, config):
         part_api_name = row_npu[BenchmarkCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[BenchmarkCompareColumn.API_NAME] == part_api_name]
         api_name, direction_status, _, _ = part_api_name.split(".")
-        check_status = True
+        binary_consistency_check = False
         if row_gpu.empty:
             print_warn_log(f'This API : {part_api_name} does not exist in the GPU data.')
             continue
+        if len(row_gpu) > 1:
+            msg = f'This API : {part_api_name} has multiple records in the GPU data.'
+            raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+        row_gpu = row_gpu.iloc[0]
         if row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] in Benchmark_Compare_Support_List:
-            row_gpu = row_gpu.iloc[0]
             bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             bs.get_result()
             write_detail_csv(bs.to_column_value(), config.details_csv_path)
         else:
-            check_status = False
+            binary_consistency_check = True
 
-        if api_name != last_api_name and last_api_name is not None:
-            if last_api_dtype in Benchmark_Compare_Support_List:
-                write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
+        if last_api_name is not None and api_name != last_api_name:
+            if last_api_dtype in Benchmark_Compare_Unsupport_List:
+                message = unsupported_message
+                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
                 forward_status, backward_status = CompareConst.NA, CompareConst.NA
                 message = ''
             else:
-                message = 'This data type does not support benchmarking.'
-                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-        if direction_status == 'forward' and check_status:
-            forward_status = forward_status and result_mapping.get(bs.final_result) \
-            if forward_status != CompareConst.NA else result_mapping.get(bs.final_result)
-        if direction_status == 'backward' and check_status:
-            backward_status = backward_status and result_mapping.get(bs.final_result) \
-            if backward_status != CompareConst.NA else result_mapping.get(bs.final_result)
+                write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
+                forward_status, backward_status = CompareConst.NA, CompareConst.NA
+                message = ''
+                
+        is_supported = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] not in Benchmark_Compare_Unsupport_List
         last_api_name = api_name
-        if not pd.isna(row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]):
-            last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
+        if pd.isna(row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]):
+            continue
+        last_api_dtype = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE]
+        
+        if not is_supported:
+            continue
+        
+        if binary_consistency_check:
+            new_status = check_error_rate(row_npu[BenchmarkCompareColumn.ERROR_RATE], 
+                                          row_gpu[BenchmarkCompareColumn.ERROR_RATE])
+        else:
+            new_status = result_mapping.get(bs.final_result)
+                
+        if direction_status == 'forward':
+            forward_status = update_status(forward_status, new_status)
+        elif direction_status == 'backward':
+            backward_status = update_status(backward_status, new_status)
+        else:
+            print_error_log(f"Invalid direction status: {direction_status}")
 
     if last_api_name is not None:
-        if last_api_dtype in Benchmark_Compare_Support_List:
-            write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
-        else:
-            message = 'This data type does not support benchmarking.'
+        if last_api_dtype in Benchmark_Compare_Unsupport_List:
+            message = unsupported_message
             write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
+        else:
+            write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
+
+
+def check_error_rate(npu_error_rate, gpu_error_rate):
+    return npu_error_rate == 0 and gpu_error_rate == 0
+
+
+def update_status(status, new_status):
+    if status != CompareConst.NA:
+        return status and new_status
+    else:
+        return new_status
 
 
 def check_csv_columns(columns, csv_type):
@@ -209,6 +241,8 @@ def _benchmark_compare():
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    check_path_before_create(out_path)
+    create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     result_csv_path = os.path.join(out_path, BENCHMARK_COMPARE_RESULT_FILE_NAME)

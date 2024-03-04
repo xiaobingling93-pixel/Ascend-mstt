@@ -44,7 +44,7 @@ backward_init_status = False
 
 thread_lock = threading.Lock()
 pkl_name = ""
-rank = os.getpid()
+rank = os.getpid() + 100000
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = {}
 GLOBAL_THREAD_POOL = ThreadPoolExecutor()
@@ -96,6 +96,8 @@ class DataInfo(object):
 
 
 def get_not_float_tensor_info(data):
+    if DumpUtil.summary_mode == "md5":
+        return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
     if data.numel() == 0 or data.dtype == torch.bool:
         tensor_max = []
         tensor_min = []
@@ -250,7 +252,7 @@ def rename_():
     global rank
     global pkl_name
     if rank is not None and pkl_name is not None:
-        dir_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(os.getpid()))
+        dir_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(os.getpid() + 100000))
         new_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(rank))
         if not os.path.exists(new_name) and os.path.exists(dir_name):
             _, file_name = os.path.split(pkl_name)
