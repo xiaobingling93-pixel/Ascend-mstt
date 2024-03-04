@@ -30,7 +30,7 @@ source set_env.sh
     |- xx               # 其他异常样例 
 ```
 
-如果你关注算子的框架适配，详见[此处](./pytorch_adapter/README.md)
+如果你关注自定义算子的pytorch框架适配，详见[此处](./pytorch_adapter/README.md)
 
 
 ## 算子调试 msdebug
