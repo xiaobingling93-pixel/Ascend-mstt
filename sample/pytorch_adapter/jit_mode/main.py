@@ -2,6 +2,7 @@ import os
 import torch
 import torch.utils.cpp_extension
 import torch_npu
+from torch_npu.testing.testcase import TestCase, run_tests
 
 PYTORCH_NPU_INSTALL_PATH = os.path.dirname(os.path.abspath(torch_npu.__file__))
 CUR_PATH = os.getcwd()
@@ -35,16 +36,33 @@ def compile_host():
     return module
 
 
-def test_add(module):
-    # 由于kernel现在是静态tiling，所以此处尺寸需要匹配
-    # 因为add是elementwise的，现有算子支持8*2048(详见kernel实现)，所以，小于这个应该都可以
-    x = torch.arange(0, 100).short()
-    y = torch.arange(0, 100).short()
-    z = module.my_add(x.npu(), y.npu())
-    print(z)
+class TestCustomAdd(TestCase):
+    def test_add(self):
+        module = compile_host()
+        # 由于kernel现在是静态tiling，所以此处尺寸需要匹配
+        # 因为add是elementwise的，现有算子支持8*2048(详见kernel实现)，所以，小于这个应该都可以
+        length = [8, 2048]
+        x = torch.rand(length, device='cpu', dtype=torch.float16)
+        y = torch.rand(length, device='cpu', dtype=torch.float16)
+
+        x_npu = x.npu()
+        y_npu = y.npu()
+        x_npu.requires_grad = True
+        y_npu.requires_grad = True
+        output = module.my_add(x_npu, y_npu)
+        # 反向能力验证
+        output.backward(output)
+
+        x.requires_grad = True
+        y.requires_grad = True
+        cpuout = torch.add(x, y)
+        cpuout.backward(cpuout)
+
+        self.assertRtolEqual(output, cpuout)
+        self.assertRtolEqual(x_npu.grad, x.grad)
+        self.assertRtolEqual(y_npu.grad, y.grad)
 
 
 if __name__ == '__main__':
     compile_kernels()
-    module = compile_host()
-    test_add(module)
+    run_tests()
