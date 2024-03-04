@@ -14,4 +14,4 @@
 # limitations under the License.
 
 import torch
-from ptdbg_ascend.src.python.ptdbg_ascend import __all__
+from ptdbg_ascend.src.python.ptdbg_ascend import *
