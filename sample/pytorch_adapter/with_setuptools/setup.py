@@ -1,26 +1,26 @@
 import os
+import subprocess
 import torch
 import torch_npu
-import subprocess
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import BuildExtension
 from torch_npu.utils.cpp_extension import NpuExtension
 
 PYTORCH_NPU_INSTALL_PATH = os.path.dirname(os.path.abspath(torch_npu.__file__))
-CUR_PATH = os.getcwd()
+CUR_PATH = os.path.abspath(os.path.dirname(__file__))
 
 
 def compile_kernels():
-    subprocess.run("make", shell=True)  # 由于pytorch中没有昇腾device编译的扩展，所以此处人工加make
+    # 由于pytorch中没有昇腾device编译的扩展，所以此处人工加make
+    subprocess.run("make")
     return "libcustom_kernels.so"  # 这个make出来的库名字
 
 
 def compile_adapter():
-    exts = []
-    ext1 = NpuExtension(
+    ext = NpuExtension(
         name="ascend_custom_kernels_lib",  # import的库的名字
         # 如果还有其他cpp文件参与编译，需要在这里添加
-        sources=["./add_adapter.cpp"],
+        sources=[f"{CUR_PATH}/add_adapter.cpp"],
         extra_compile_args=[
             '-I' + os.path.join(os.path.join(os.path.join(os.path.join(
                 PYTORCH_NPU_INSTALL_PATH, "include"), "third_party"), "acl"), "inc"),
@@ -28,8 +28,7 @@ def compile_adapter():
         library_dirs=[f"{CUR_PATH}"],  # 编译时需要依赖的库文件的路径，相当于g++编译时的-L选项
         libraries=["custom_kernels"],  # 编译时依赖的库文件，相当于-l选项
     )
-    exts.append(ext1)
-    return exts
+    return [ext]
 
 
 if __name__ == "__main__":
