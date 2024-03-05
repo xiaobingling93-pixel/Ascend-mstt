@@ -10,7 +10,7 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
     CompareException, create_directory
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, BENCHMARK_COMPARE_RESULT_FILE_NAME, \
-BENCHMARK_COMPARE_DETAILS_FILE_NAME, result_mapping, Benchmark_Compare_Support_List, Benchmark_Compare_Unsupport_List, \
+BENCHMARK_COMPARE_DETAILS_FILE_NAME, Benchmark_Compare_Support_List, Benchmark_Compare_Unsupport_List, \
     BenchmarkCompareColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -153,7 +153,7 @@ def benchmark_compare(config):
 
 
 def analyse_csv(npu_data, gpu_data, config):
-    forward_status, backward_status = CompareConst.NA, CompareConst.NA
+    forward_status, backward_status = [], []
     last_api_name = None
     last_api_dtype = None
     for _, row_npu in npu_data.iterrows():
@@ -180,11 +180,13 @@ def analyse_csv(npu_data, gpu_data, config):
             if last_api_dtype in Benchmark_Compare_Unsupport_List:
                 message = unsupported_message
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-                forward_status, backward_status = CompareConst.NA, CompareConst.NA
+                forward_status, backward_status = [], []
                 message = ''
             else:
-                write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
-                forward_status, backward_status = CompareConst.NA, CompareConst.NA
+                forward_result = get_direction_result(forward_status)
+                backward_result = get_direction_result(backward_status)
+                write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+                forward_status, backward_status = [], []
                 message = ''
                 
         is_supported = row_npu[BenchmarkCompareColumn.DEVICE_DTYPE] not in Benchmark_Compare_Unsupport_List
@@ -200,12 +202,12 @@ def analyse_csv(npu_data, gpu_data, config):
             new_status = check_error_rate(row_npu[BenchmarkCompareColumn.ERROR_RATE], 
                                           row_gpu[BenchmarkCompareColumn.ERROR_RATE])
         else:
-            new_status = result_mapping.get(bs.final_result)
+            new_status = bs.final_result
                 
         if direction_status == 'forward':
-            forward_status = update_status(forward_status, new_status)
+            forward_status.append(new_status)
         elif direction_status == 'backward':
-            backward_status = update_status(backward_status, new_status)
+            backward_status.append(new_status)
         else:
             print_error_log(f"Invalid direction status: {direction_status}")
 
@@ -214,11 +216,22 @@ def analyse_csv(npu_data, gpu_data, config):
             message = unsupported_message
             write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
-            write_csv([[last_api_name, forward_status, backward_status, message]], config.result_csv_path)
+            forward_result = get_direction_result(forward_status)
+            backward_result = get_direction_result(backward_status)
+            write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
 def check_error_rate(npu_error_rate, gpu_error_rate):
-    return npu_error_rate == 0 and gpu_error_rate == 0
+    return CompareConst.PASS if npu_error_rate == 0 and gpu_error_rate == 0 else CompareConst.ERROR
+
+
+def get_direction_result(status):
+    if not status:
+        return CompareConst.NA
+    for const in (CompareConst.ERROR, CompareConst.WARNING):
+        if const in status:
+            return const
+    return CompareConst.PASS
 
 
 def update_status(status, new_status):
