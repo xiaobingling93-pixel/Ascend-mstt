@@ -5,11 +5,60 @@
 
 如果考虑商用集成，推荐使用CANN软件包中的AscendC样例工程，比如：ascendc_kernel_cmake目录。本项目中的工程就是基于其进行简化仅用于快速验证。
 
+说明：该sample目录中，每个最小目录就是一个完整的样例工程。这些样例工程本身可能以为依赖的不同存在差异。
+
 ## 依赖说明
 安装CANN包，并使能环境变量，并确保```ASCEND_HOME_PATH```生效，可以在CANN包安装目录下使能：
 ```
 source set_env.sh
 ```
+
+## 目录介绍
+整体目录结构如下：
+```
+- sample
+  |- build              # 编译并运行所有样例内容（建议按需使用，此处命令可以参考
+  |- normal_sample      # 纯C/C++的AscendC单算子极简工程，可配合msdebug和msprof工具
+    |- cube_only        # 仅含aic的AscendC单算子极简工程
+    |- mix              # mix算子的AscendC单算子极简工程
+    |- vec_only         # 仅含aiv的AscendC单算子极简工程
+  |- pytorch_adapter    # 适配pytorch的AscendC单算子极简工程，可配合msdebug和msprof工具
+    |- jit_compile      # jit模式，运行时编译使用
+    |- with_setuptools  # 编译成wheel包安装使用
+  |- sanitizer_sample   # 异常样例，用于配合mssanitizer工具
+    |- racecheck        # 含竞争问题的样例
+    |- xx               # 其他异常样例 
+```
+
+如果你关注自定义算子的pytorch框架适配，详见[此处](./pytorch_adapter/README.md)
+
+
+## 算子调试 msdebug
+若使用msdebug进行上板调试，还需要额外调整，具体如下：
+1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
+    + 调试信息增强，并扩大栈空间：
+    ```
+    COMPILER_FLAG		:= -xcce -O2 -std=c++17
+    修改为：
+    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
+    ```
+
+2. 运行阶段：
+```
+msdebug ./*.fatbin
+```
+
+## 内存检测 sanitizer
+1. 编译阶段：在编译过程中添加```--cce-enable-sanitizer -g```参数, 在链接过程中添加```--cce-enable-sanitizer```参数。（现样例中已在Makefile中添加），执行如下命令：
+```
+make
+```
+
+2. 运行阶段：
+```
+mssanitizer ./*.fatbin  # 默认进行memcheck检查
+```
+
 
 ## 算子调优
 算子调优工具可以支持上板和仿真算子的调优，下面将以vec_only中的算子为例，进行工具使用的实战命令讲解
@@ -84,30 +133,3 @@ source set_env.sh
         └── trace.json                          # 算子所有核的流水图
     ```
 4. 更多指标信息请参考算子开发工具使用手册。
-
-## 算子调试msdebug
-若使用msdebug进行上板调试，还需要额外调整，具体如下：
-1. 编译阶段：在```sample\normal_sample\vec_only```相对路径下的```Makefile```文件中修改如下内容：
-    + 调试信息增强，并扩大栈空间：
-    ```
-    COMPILER_FLAG		:= -xcce -O2 -std=c++17
-    修改为：
-    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
-
-## 内存检测 sanitizer
-### sanitizer_sample目录介绍
-
-此目录下为sanitizer对应的样例库，包含竞争检测和内存检测相关的样例。
-
-#### Racecheck目录介绍
-
-Racecheck为竞争检测相关的样例。
-
-raw_error_kernel.cpp文件为UB上先读后写竞争和GM上先写后读竞争问题的样例。
-
-
-运行阶段：
-
-```
-/usr/local/Ascend/ascend-toolkit/latest/tools/mssanitizer/bin/mssanitizer --tool=racecheck ./raw_error.fatbin
-```
