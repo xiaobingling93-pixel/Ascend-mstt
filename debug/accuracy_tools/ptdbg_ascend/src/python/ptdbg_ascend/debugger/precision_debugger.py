@@ -32,7 +32,6 @@ class PrecisionDebugger:
                 err_msg = "You must provide hook_name argument to PrecisionDebugger\
                                 when config is not provided."
                 raise Exception(err_msg)
-            step = step or []
             self.config = DebuggerConfig(dump_path, hook_name, rank, step)
             self.configure_hook = self.get_configure_hook(self.config.hook_name)
             self.configure_hook()
