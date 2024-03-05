@@ -48,3 +48,6 @@ pytorch setup.py bdist_wheel    # 编译出wheel包，在dist目录下
 ```
 python test.py
 ```
+
+## 其他
+1. 此处样例使用的是静态tiling，如果使用动态tiling，则可以在adapter.cpp中对Tensor的shape进行分析，选择合适tiling。（这部分是流程中必须的，只是可能在不同位置，比如aclnn中，这部分在接口实现；此处，我们本身也可以对add_custom_do进行封装，将tiling内置。）
