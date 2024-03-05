@@ -1,6 +1,7 @@
 import os
 import torch
 import torch_npu
+import subprocess
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import BuildExtension
 from torch_npu.utils.cpp_extension import NpuExtension
@@ -10,7 +11,7 @@ CUR_PATH = os.getcwd()
 
 
 def compile_kernels():
-    os.system("make")  # 由于pytorch中没有device编译的扩展，所以此处人工加make
+    subprocess.run("make", shell=True)  # 由于pytorch中没有昇腾device编译的扩展，所以此处人工加make
     return "libcustom_kernels.so"  # 这个make出来的库名字
 
 
