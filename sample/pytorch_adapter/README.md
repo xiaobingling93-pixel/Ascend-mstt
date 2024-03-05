@@ -8,6 +8,23 @@
 
 pytorch版本可由pip安装，torch_npu版本详见[此处](https://gitee.com/ascend/pytorch/releases)，请选择与pytorch适配的torch_npu版本。
 
+## 工程介绍
+整体工程目录如下：
+```
+- pytorch_adapter
+  |- jit_compile         # 实时编译的接入方式
+    |- add_adapter.cpp   # 使用算子动态库接口完成算子在pytorch框架的适配
+    |- add_kernel.cpp    # 昇腾算子实现，并提供host侧的动态库接口
+    |- main.py           # python的入口，实现整体集成
+    |- Makefile          # 用以生成昇腾算子的host侧动态库的编译脚本
+  |- with_setuptools     # wheel包的接入方式
+    |- add_adapter.cpp
+    |- add_kernel.cpp
+    |- Makefile
+    |- setup.py          # setuptools的入口，支持编译并打包生成wheel包
+    |- test.py           # 测试wheel包功能的入口
+```
+
 ## 工程使用
 
 ### jit_compile工程
