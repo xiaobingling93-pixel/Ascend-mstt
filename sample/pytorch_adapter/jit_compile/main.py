@@ -1,7 +1,8 @@
 import os
 import torch
-import torch.utils.cpp_extension
 import torch_npu
+import torch.utils.cpp_extension
+import subprocess
 from torch_npu.testing.testcase import TestCase, run_tests
 
 PYTORCH_NPU_INSTALL_PATH = os.path.dirname(os.path.abspath(torch_npu.__file__))
@@ -9,7 +10,7 @@ CUR_PATH = os.getcwd()
 
 
 def compile_kernels():
-    os.system("make")  # 由于pytorch中没有device编译的扩展，所以此处人工加make
+    subprocess.run("make", shell=True)  # 由于pytorch中没有昇腾device编译的扩展，所以此处人工加make
 
 
 def compile_host():
