@@ -183,8 +183,8 @@ def analyse_csv(npu_data, gpu_data, config):
                 forward_status, backward_status = [], []
                 message = ''
             else:
-                forward_result = get_direction_result(forward_status)
-                backward_result = get_direction_result(backward_status)
+                forward_result = get_api_checker_result(forward_status)
+                backward_result = get_api_checker_result(backward_status)
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
@@ -216,8 +216,8 @@ def analyse_csv(npu_data, gpu_data, config):
             message = unsupported_message
             write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
-            forward_result = get_direction_result(forward_status)
-            backward_result = get_direction_result(backward_status)
+            forward_result = get_api_checker_result(forward_status)
+            backward_result = get_api_checker_result(backward_status)
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
@@ -225,7 +225,7 @@ def check_error_rate(npu_error_rate, gpu_error_rate):
     return CompareConst.PASS if npu_error_rate == 0 and gpu_error_rate == 0 else CompareConst.ERROR
 
 
-def get_direction_result(status):
+def get_api_checker_result(status):
     if not status:
         return CompareConst.NA
     for const in (CompareConst.ERROR, CompareConst.WARNING):
