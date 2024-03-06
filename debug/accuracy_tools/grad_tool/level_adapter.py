@@ -30,6 +30,15 @@ class LevelOps:
         return_list = [x / element_num if element_num != 0 else 0 for x in interval_nums]
         return return_list
     
+    @staticmethod
+    def save_grad_direction(param_name, grad, save_path):
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+        param_grad = torch.Tensor(grad.clone().cpu())
+        is_positive = param_grad > 0
+        torch.save(is_positive, f'{save_path}/{param_name}.pt')
+        print_info_log(f'Save {param_name} bool tensor, it has {is_positive.sum()}/{is_positive.numel()} positive elements')
+    
 
 class Level(ABC):
     @abstractmethod
@@ -69,12 +78,18 @@ class Level_1(Level):
 
 class Level_2(Level):
     def save_grad_direction(self, param_name, grad, save_path):
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
-        param_grad = torch.Tensor(grad.clone().cpu())
-        is_positive = param_grad > 0
-        torch.save(is_positive, f'{save_path}/{param_name}.pt')
-        print_info_log(f'Save {param_name} bool tensor, it has {is_positive.sum()}/{is_positive.numel()} positive elements')
+        LevelOps.save_grad_direction(param_name, grad, save_path)
+
+    def count_grad_distribution(self, grad, bounds):
+        return []
+
+    def intervals_header(self, bounds):
+        return []
+
+
+class Level_3(Level):
+    def save_grad_direction(self, param_name, grad, save_path):
+        LevelOps.save_grad_direction(param_name, grad, save_path)
 
     def count_grad_distribution(self, grad, bounds):
         return LevelOps.count_grad_distribution(grad, bounds)
@@ -84,7 +99,7 @@ class Level_2(Level):
 
 
 class LevelAdapter:
-    levels = {"L0": Level_0, "L1": Level_1, "L2": Level_2}
+    levels = {"L0": Level_0, "L1": Level_1, "L2": Level_2, "L3": Level_3}
 
     @staticmethod
     def level_adapter(level):
