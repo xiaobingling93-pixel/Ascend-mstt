@@ -33,4 +33,7 @@ setup(
     ],
     include_package_data=True,
     ext_modules=[],
-    zip_safe=False)
+    zip_safe=False,
+    entry_points={
+        'console_scripts' : ['atat=atat.atat:main'],
+    },)
