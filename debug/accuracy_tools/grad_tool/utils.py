@@ -5,6 +5,7 @@ import torch
 import pandas as pd
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, create_directory, \
     check_link, FileChecker, FileCheckConst
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_file_or_directory_path, print_info_log
 
 
 class ListCache(list):
@@ -115,3 +116,7 @@ def get_rank_id(tensor):
     if rank is not None:
         return rank
     return os.getpid()
+
+
+def path_check(path, isdir=False):
+    check_file_or_directory_path(path, isdir)
