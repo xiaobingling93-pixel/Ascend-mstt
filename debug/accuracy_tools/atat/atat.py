@@ -25,16 +25,16 @@ from api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_p
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="atat(Ascend Training Accuracy Tools), [Powered by MindStudio].\n"
+        description="atat(ascend training accuracy tools), [Powered by MindStudio].\n"
         "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
-        f"For any issue, refer README first TODO",
+        f"For any issue, refer README.md first",
     )
     subparsers = parser.add_subparsers(help='commands')
-    parse_cmd_parser = subparsers.add_parser('parse', help='[TODO]parse command')
-    run_ut_cmd_parser = subparsers.add_parser('run_ut', help='[TODO]run_ut command')
-    multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut', help='[TODO]multi_run_ut command')
-    benchmark_compare_cmd_parser = subparsers.add_parser('benchmark_compare', help='[TODO]benchmark_compare command')
-    run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check', help='[TODO]run_overflow_check command')
+    subparsers.add_parser('parse')
+    run_ut_cmd_parser = subparsers.add_parser('run_ut')
+    multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
+    benchmark_compare_cmd_parser = subparsers.add_parser('benchmark_compare')
+    run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     parser.set_defaults(print_help=parser.print_help)
     _run_ut_parser(run_ut_cmd_parser)
     _run_ut_parser(multi_run_ut_cmd_parser)
