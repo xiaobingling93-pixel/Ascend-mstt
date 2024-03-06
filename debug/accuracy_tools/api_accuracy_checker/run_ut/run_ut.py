@@ -373,10 +373,10 @@ def preprocess_forward_content(forward_content):
     return processed_content
 
 
-def _run_ut(parser = None):
+def _run_ut(parser=None):
     if not parser:
         parser = argparse.ArgumentParser()
-    parser = _run_ut_parser(parser)
+    _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
     run_ut_command(args)
 

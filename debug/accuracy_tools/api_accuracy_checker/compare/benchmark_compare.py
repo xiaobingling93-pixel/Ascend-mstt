@@ -236,10 +236,15 @@ def check_csv_columns(columns, csv_type):
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
 
 
-def _benchmark_compare():
-    parser = argparse.ArgumentParser()
+def _benchmark_compare(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
     _benchmark_compare_parser(parser)
     args = parser.parse_args(sys.argv[1:])
+    _benchmark_compare_command(args)
+
+
+def _benchmark_compare_command(args):
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
