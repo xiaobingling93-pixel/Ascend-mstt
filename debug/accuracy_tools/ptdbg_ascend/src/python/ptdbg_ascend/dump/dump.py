@@ -47,7 +47,6 @@ pkl_name = ""
 rank = os.getpid() + 100000
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = {}
-GLOBAL_THREAD_POOL = ThreadPoolExecutor()
 
 
 class APIList(list):
@@ -186,12 +185,12 @@ def dump_data(prefix, data_info):
 
 
 def thread_dump_data(prefix, data_info):
-    GLOBAL_THREAD_POOL.submit(dump_data, prefix, data_info)
+    DumpUtil.dump_thread_pool.submit(dump_data, prefix, data_info)
 
 
 def dump_data_by_rank_count(dump_step, prefix, data_info):
     print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
-    if DumpUtil.is_single_rank:
+    if DumpUtil.is_single_rank and DumpUtil.dump_thread_pool:
         thread_dump_data(prefix, data_info)
     else:
         dump_data(prefix, data_info)
