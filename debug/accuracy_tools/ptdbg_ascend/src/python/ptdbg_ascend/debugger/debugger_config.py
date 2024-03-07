@@ -7,7 +7,7 @@ class DebuggerConfig:
         self.dump_path = dump_path
         self.hook_name = hook_name
         self.rank = rank
-        self.step = step or []
+        self.step = step if step is not None else []
         self.check()
         if self.step:
             self.step.sort()
@@ -35,4 +35,3 @@ class DebuggerConfig:
         for s in self.step:
             if not isinstance(s, int):
                 raise ValueError(f"step element {s} should be int")
-
