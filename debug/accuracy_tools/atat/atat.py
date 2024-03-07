@@ -29,19 +29,22 @@ def main():
         "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
         f"For any issue, refer README.md first",
     )
-    subparsers = parser.add_subparsers(help='commands')
+    parser.set_defaults(print_help=parser.print_help)
+    subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
     run_ut_cmd_parser = subparsers.add_parser('run_ut')
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     benchmark_compare_cmd_parser = subparsers.add_parser('benchmark_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
-    parser.set_defaults(print_help=parser.print_help)
     _run_ut_parser(run_ut_cmd_parser)
     _run_ut_parser(multi_run_ut_cmd_parser)
     multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
                                          help='Number of splits for parallel processing. Range: 1-64')
     _benchmark_compare_parser(benchmark_compare_cmd_parser)
     _run_overflow_check_parser(run_overflow_check_cmd_parser)
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[1] == "run_ut":
         run_ut_command(args)
