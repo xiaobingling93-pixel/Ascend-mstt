@@ -1,12 +1,11 @@
 # coding=utf-8
 import os
 import copy
-import numpy as np
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, DEFAULT
+import torch
 from api_accuracy_checker.run_ut.run_ut import *
 from api_accuracy_checker.common.utils import get_json_contents
-from api_accuracy_checker.run_ut.run_ut import generate_cpu_params, get_api_info, UtDataInfo
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 forward_file = os.path.join(base_dir, "../resources/forward.json")
@@ -19,16 +18,15 @@ class TestRunUtMethods(unittest.TestCase):
     def test_exec_api(self):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
-        args, kwargs, need_grad = get_api_info(api_info, api_name)
-        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
+        args, kwargs, need_grad = get_api_info(api_info, api_name, None)
+        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True, '')
         out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
-        self.assertEqual(out.dtype, torch.float32)
-        self.assertEqual(out.requires_grad, True)
+        self.assertEqual(out.dtype, torch.float64)
+        self.assertTrue(out.requires_grad)
         self.assertEqual(out.shape, torch.Size([2, 2560, 24, 24]))
 
     def test_generate_device_params(self):
-        MockTensor = namedtuple('MockTensor', ['requires_grad', 'dtype', 'shape'])
-        mock_tensor = MockTensor(True, torch.float16, torch.Size([2, 2560, 24, 24]))
+        mock_tensor = torch.rand([2, 2560, 24, 24], dtype=torch.float32, requires_grad=True)
         
         with patch.multiple('torch.Tensor', 
                            to=DEFAULT, 
@@ -44,21 +42,21 @@ class TestRunUtMethods(unittest.TestCase):
             mocks['retain_grad'].return_value = None
             mocks['to'].return_value = mock_tensor
             
-            device_args, device_kwargs = generate_device_params([mock_tensor], {'inplace': False}, True)
+            device_args, device_kwargs = generate_device_params([mock_tensor], {'inplace': False}, True, '')
             self.assertEqual(len(device_args), 1)
-            self.assertEqual(device_args[0].dtype, torch.float16)
-            self.assertEqual(device_args[0].requires_grad, True)
+            self.assertEqual(device_args[0].dtype, torch.float32)
+            self.assertTrue(device_args[0].requires_grad)
             self.assertEqual(device_args[0].shape, torch.Size([2, 2560, 24, 24]))
             self.assertEqual(device_kwargs, {'inplace': False})
         
     def test_generate_cpu_params(self):
         api_info = copy.deepcopy(api_info_dict)
         [api_type, api_name, _] = api_full_name.split("*")
-        args, kwargs, need_grad = get_api_info(api_info, api_name)
-        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True)
+        args, kwargs, need_grad = get_api_info(api_info, api_name, None)
+        cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True, '')
         self.assertEqual(len(cpu_args), 1)
-        self.assertEqual(cpu_args[0].dtype, torch.float32)
-        self.assertEqual(cpu_args[0].requires_grad, True)
+        self.assertEqual(cpu_args[0].dtype, torch.float64)
+        self.assertTrue(cpu_args[0].requires_grad)
         self.assertEqual(cpu_args[0].shape, torch.Size([2, 2560, 24, 24]))
         self.assertEqual(cpu_kwargs, {'inplace': False})
     

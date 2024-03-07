@@ -48,7 +48,7 @@ class HOOKModule(nn.Module):
         self.register_forward_hook(hook(prefix, "forward"))
         self.register_backward_hook(hook(prefix, "backward"))
 
-    def __call__(self, *input, **kwargs):
+    def __call__(self, *inputs, **kwargs):
         changed = False
         global g_stop_hook
         if g_stop_hook:
@@ -56,34 +56,34 @@ class HOOKModule(nn.Module):
         else:
             g_stop_hook = True
             changed = True
-        result = self._call_func(*input, **kwargs)
+        result = self._call_func(*inputs, **kwargs)
         if changed:
             g_stop_hook = False
         return result
 
-    def _call_func(self, *input, **kwargs):
+    def _call_func(self, *inputs, **kwargs):
         if self._enable_hook:
             full_backward_hooks, non_full_backward_hooks = [], []
             if len(self._backward_hooks) > 0:
                 full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
             for hook in self._forward_pre_hooks.values():
-                result = hook(self, input)
+                result = hook(self, inputs)
                 if result is not None:
                     if not isinstance(result, tuple):
                         result = (result,)
-                    input = result
+                    inputs = result
             bw_hook = None
             if len(full_backward_hooks) > 0:
                 bw_hook = full_hooks.BackwardHook(self, full_backward_hooks)
-                input = bw_hook.setup_input_hook(input)
-            self.input_args = input
+                inputs = bw_hook.setup_input_hook(inputs)
+            self.input_args = inputs
             self.input_kwargs = kwargs
             if torch._C._get_tracing_state():
-                result = self._slow_forward(*input, **kwargs)
+                result = self._slow_forward(*inputs, **kwargs)
             else:
-                result = self.forward(*input, **kwargs)
+                result = self.forward(*inputs, **kwargs)
             for hook in self._forward_hooks.values():
-                hook_result = hook(self, input, result)
+                hook_result = hook(self, inputs, result)
                 if hook_result is not None:
                     result = hook_result
             if bw_hook:
@@ -106,8 +106,8 @@ class HOOKModule(nn.Module):
                         wrapper = functools.partial(hook, self)
                         functools.update_wrapper(wrapper, hook)
                         grad_fn.register_hook(wrapper)
-                    self._maybe_warn_non_full_backward_hook(input, result, grad_fn)
+                    self._maybe_warn_non_full_backward_hook(inputs, result, grad_fn)
             return result
         else:
             forward_call = (self._slow_forward if torch._C._get_tracing_state() else self.forward)
-            return forward_call(*input, **kwargs)
+            return forward_call(*inputs, **kwargs)

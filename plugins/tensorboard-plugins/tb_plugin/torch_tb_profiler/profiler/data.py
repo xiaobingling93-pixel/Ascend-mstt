@@ -29,6 +29,7 @@ from typing import Dict, List, Optional
 
 from .op_tree import OpTreeBuilder
 from .. import io, utils
+from ..consts import InputFilesType, MAX_FILE_SIZE, INPUT_FILE_LIST
 from ..utils import href
 from . import trace
 from .communication import analyze_communication_nodes
@@ -141,6 +142,8 @@ class RunProfileData(object):
     @staticmethod
     def parse_gpu(worker, span, path, cache_dir):
         trace_path, trace_json = RunProfileData._preprocess_file(path, cache_dir, 'GPU')
+        if not trace_json:
+            return None
 
         profile = RunProfileData.from_json(worker, span, trace_json)
         profile.trace_file_path = trace_path
@@ -156,8 +159,16 @@ class RunProfileData(object):
         has_memory_operator = False
         has_communication_overlap = False
         has_communication_wait_ops = False
+
+        def _check_file_size_valid(filepath):
+            if io.stat(filepath).length > MAX_FILE_SIZE:
+                logger.warning(
+                    f'File "{filepath}" exceeds the maximum limit size of 500MB and will be skipped.')
+                return False
+            return True
+
         for file in io.listdir(path):
-            if utils.is_npu_trace_path(file):
+            if utils.is_npu_trace_path(file) and _check_file_size_valid(io.join(path, file)):
                 has_trace = True
                 trace_file = io.join(path, file)
                 trace_path, trace_json = RunProfileData._preprocess_file(trace_file, cache_dir, 'Ascend')
@@ -179,26 +190,27 @@ class RunProfileData(object):
             profile.profiler_start_ts = 0
 
         for file in io.listdir(path):
-            if str(file) == 'kernel_details.csv':
-                has_kernel = True
-                profile.kernel_file_path = io.join(path, file)
-            if str(file) == 'memory_record.csv':
-                has_memory_record = True
-                profile.memory_curve_path = io.join(path, file)
-            if str(file) == 'operator_memory.csv':
-                has_memory_operator = True
-                profile.memory_operator_path = io.join(path, file)
-            if str(file) == 'npu_module_mem.csv':
-                profile.memory_component_path = io.join(path, file)
-            if str(file) == 'operator_details.csv':
-                profile.has_operator_view = True
-                profile.operator_path = io.join(path, file)
-            if str(file) == 'step_trace_time.csv':
-                has_communication_overlap = True
-                profile.distributed_csv_path = io.join(path, file)
-            if str(file) == 'communication.json':
-                has_communication_wait_ops = True
-                profile.communication_json_path = io.join(path, file)
+            if str(file) in INPUT_FILE_LIST and _check_file_size_valid(io.join(path, file)):
+                if InputFilesType(file) == InputFilesType.KERNEL_DETAILS_CSV:
+                    has_kernel = True
+                    profile.kernel_file_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.MEMORY_RECORD_CSV:
+                    has_memory_record = True
+                    profile.memory_curve_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.MEMORY_OPERATOR_CSV:
+                    has_memory_operator = True
+                    profile.memory_operator_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.MEMORY_COMPONENT_CSV:
+                    profile.memory_component_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.OPERATOR_DETAILS_CSV:
+                    profile.has_operator_view = True
+                    profile.operator_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.DISTRIBUTED_STEP_CSV:
+                    has_communication_overlap = True
+                    profile.distributed_csv_path = io.join(path, file)
+                if InputFilesType(file) == InputFilesType.DISTRIBUTED_COMMUNICATION_JSON:
+                    has_communication_wait_ops = True
+                    profile.communication_json_path = io.join(path, file)
 
         profile.has_kernel = has_kernel
         profile.has_memory = has_memory_operator and has_memory_record
@@ -243,9 +255,13 @@ class RunProfileData(object):
                     str_data = data.decode('utf-8')
                     # only replace the N/A without surrounding double quote
                     fout.write(re.sub(r'(?<!")N/A(?!")', "\"N/A\"", str_data))
-                    trace_json = json.loads(fout.getvalue())
-                    logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
-                    json_reencode = True
+                    try:
+                        trace_json = json.loads(fout.getvalue())
+                        logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
+                        json_reencode = True
+                    except JSONDecodeError:
+                        logger.error(f'File "{trace_path}" is not in a legal JSON format and will be skipped.')
+                        return trace_path, {}
 
         # work-around to remove the 'Record Window End' events to avoid the huge end timestamp
         if device_target == 'Ascend':

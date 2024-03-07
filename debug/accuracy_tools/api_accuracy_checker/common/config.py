@@ -17,15 +17,16 @@ class Config:
     def validate(self, key, value):
         validators = {
             'dump_path': str,
-            'jit_compile': bool,
             'real_data': bool,
-            'dump_step': int,
-            'error_data_path': str,
+            'enable_dataloader': bool,
             'target_iter': list,
-            'precision': int,
             'white_list': list,
-            'enable_dataloader': bool
+            'error_data_path': str,
+            'jit_compile': bool,
+            'precision': int
         }
+        if key not in validators:
+            raise ValueError(f"{key} must be one of {validators.keys()}")
         if not isinstance(value, validators.get(key)):
             raise ValueError(f"{key} must be {validators[key].__name__} type")
         if key == 'target_iter':
@@ -55,12 +56,13 @@ class Config:
     def __str__(self):
         return '\n'.join(f"{key}={value}" for key, value in self.config.items())
 
-    def update_config(self, dump_path=None, real_data=False, target_iter=None, white_list=None):
+    def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None):
         args = {
             "dump_path": dump_path if dump_path else self.config.get("dump_path", './'),
-            "real_data": real_data,
+            "real_data": real_data if real_data else self.config.get("real_data", False),
             "target_iter": target_iter if target_iter else self.config.get("target_iter", [1]),
-            "white_list": white_list if white_list else self.config.get("white_list", [])
+            "white_list": white_list if white_list else self.config.get("white_list", []),
+            "enable_dataloader": enable_dataloader if enable_dataloader else self.config.get("enable_dataloader", False)
         }
         for key, value in args.items():
             if key in self.config:

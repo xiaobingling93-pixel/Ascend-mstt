@@ -35,46 +35,20 @@ class ParseTool:
         self.util.create_dir(Const.DATA_ROOT_DIR)
 
     @catch_exception
-    def do_vector_compare(self, argv=None):
-        parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "-m", "--my_dump_path", dest="my_dump_path", default=None,
-            help="<Required> my dump path, the data compared with golden data",
-            required=True
-        )
-        parser.add_argument(
-            "-g", "--golden_dump_path", dest="golden_dump_path", default=None,
-            help="<Required> the golden dump data path",
-            required=True
-        )
-        parser.add_argument(
-            "-out", "--output_path", dest="output_path", default=None,
-            help="<Optional> the output path",
-            required=False
-        )
-        parser.add_argument(
-            "-asc", "--ascend_path", dest="ascend_path", default=None,
-            help="<Optional> the Ascend home path",
-            required=False
-        )
-        args = parser.parse_args(argv)
+    def do_vector_compare(self, args):
         if not args.output_path:
             result_dir = os.path.join(Const.COMPARE_DIR)
         else:
             result_dir = args.output_path
         my_dump_path = args.my_dump_path
         golden_dump_path = args.golden_dump_path
-        self.util.check_path_valid(my_dump_path)
-        self.util.check_path_valid(golden_dump_path)
-        self.util.check_files_in_path(my_dump_path)
-        self.util.check_files_in_path(golden_dump_path)
         if not os.path.isdir(my_dump_path) or not os.path.isdir(golden_dump_path):
             self.util.log.error("Please enter a directory not a file")
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if args.ascend_path:
-            Const.MS_ACCU_CMP_PATH = self.util.path_strip(args.ascend_path)
-            self.util.check_path_valid(Const.MS_ACCU_CMP_PATH)
-        self.compare.npu_vs_npu_compare(my_dump_path, golden_dump_path, result_dir)
+        msaccucmp_path = self.util.path_strip(args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
+        self.util.check_path_valid(msaccucmp_path)
+        self.util.check_executable_file(msaccucmp_path)
+        self.compare.npu_vs_npu_compare(my_dump_path, golden_dump_path, result_dir, msaccucmp_path)
 
     @catch_exception
     def do_convert_dump(self, argv=None):
@@ -86,15 +60,17 @@ class ParseTool:
         parser.add_argument(
             '-out', '--output_path', dest='output_path', required=False, default=None, help='output path')
         parser.add_argument(
-            "-asc", "--ascend_path", dest="ascend_path", default=None, help="<Optional> the Ascend home path",
-            required=False)
+            "-cmp_path", "--msaccucmp_path", dest="msaccucmp_path", default=None,
+            help="<Optional> the msaccucmp.py file path", required=False)
         args = parser.parse_args(argv)
         self.util.check_path_valid(args.path)
         self.util.check_files_in_path(args.path)
-        if args.ascend_path:
-            Const.MS_ACCU_CMP_PATH = self.util.path_strip(args.ascend_path)
-            self.util.check_path_valid(Const.MS_ACCU_CMP_PATH)
-        self.compare.convert_dump_to_npy(args.path, args.format, args.output_path)
+        msaccucmp_path = self.util.path_strip(args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
+        self.util.check_path_valid(msaccucmp_path)
+        self.util.check_executable_file(msaccucmp_path)
+        if args.format:
+            self.util.check_str_param(args.format)
+        self.compare.convert_dump_to_npy(args.path, args.format, args.output_path, msaccucmp_path)
 
     @catch_exception
     def do_print_data(self, argv=None):
@@ -108,9 +84,9 @@ class ParseTool:
     def do_parse_pkl(self, argv=None):
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            '-f', '--file', dest='file_name', default=None,  required=True, help='PKL file path')
+            '-f', '--file', dest='file_name', default=None, required=True, help='PKL file path')
         parser.add_argument(
-            '-n', '--name', dest='api_name', default=None,  required=True, help='API name')
+            '-n', '--name', dest='api_name', default=None, required=True, help='API name')
         args = parser.parse_args(argv)
         self.visual.parse_pkl(args.file_name, args.api_name)
 
@@ -138,3 +114,41 @@ class ParseTool:
         self.util.check_path_format(args.my_dump_path, Const.NPY_SUFFIX)
         self.util.check_path_format(args.golden_dump_path, Const.NPY_SUFFIX)
         self.compare.compare_data(args.my_dump_path, args.golden_dump_path, args.save, args.rtol, args.atol, args.count)
+
+    @catch_exception
+    def do_compare_converted_dir(self, args):
+        """compare two dir"""
+        my_dump_dir = self.util.path_strip(args.my_dump_path)
+        golden_dump_dir = self.util.path_strip(args.golden_dump_path)
+        if my_dump_dir == golden_dump_dir:
+            self.util.log.error("My directory path and golden directory path is same. Please check parameter"
+                                " '-m' and '-g'.")
+            raise ParseException("My directory path and golden directory path is same.")
+        output_path = self.util.path_strip(args.output_path) if args.output_path else Const.BATCH_COMPARE_DIR
+        if not os.path.isdir(output_path):
+            os.makedirs(output_path, mode=0o750)
+        self.compare.compare_converted_dir(my_dump_dir, golden_dump_dir, output_path)
+
+    @catch_exception
+    def do_convert_api_dir(self, argv=None):
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "-m", "--my_dump_path", dest="my_dump_path", default=None,
+            help="<Required> my dump path, the data need to convert to npy files.",
+            required=True
+        )
+        parser.add_argument(
+            '-out', '--output_path', dest='output_path', required=False, default=None, help='output path')
+        parser.add_argument(
+            "-asc", "--msaccucmp_path", dest="msaccucmp_path", default=None,
+            help="<Optional> the msaccucmp.py file path", required=False)
+        args = parser.parse_args(argv)
+        self.util.check_path_valid(args.my_dump_path)
+        self.util.check_files_in_path(args.my_dump_path)
+        output_path = self.util.path_strip(args.output_path) if args.output_path else \
+            os.path.join(Const.BATCH_DUMP_CONVERT_DIR, self.util.localtime_str())
+        msaccucmp_path = self.util.path_strip(
+            args.msaccucmp_path) if args.msaccucmp_path else Const.MS_ACCU_CMP_PATH
+        self.util.check_path_valid(msaccucmp_path)
+        self.util.check_executable_file(msaccucmp_path)
+        self.compare.convert_api_dir_to_npy(args.my_dump_path, None, output_path, msaccucmp_path)

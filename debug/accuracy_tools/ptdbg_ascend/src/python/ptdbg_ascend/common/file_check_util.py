@@ -85,11 +85,12 @@ class FileChecker:
         ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
         file_type(str): The correct file type for file
     """
-    def __init__(self, file_path, path_type, ability=None, file_type=None):
+    def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
         self.ability = ability
         self.file_type = file_type
+        self.is_script = is_script
 
     @staticmethod
     def _check_path_type(path_type):
@@ -109,7 +110,8 @@ class FileChecker:
         check_path_length(self.file_path)
         check_path_type(self.file_path, self.path_type)
         self.check_path_ability()
-        check_path_owner_consistent(self.file_path)
+        if self.is_script:
+            check_path_owner_consistent(self.file_path)
         check_path_pattern_vaild(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
@@ -137,14 +139,19 @@ class FileOpen:
     SUPPORT_WRITE_MODE = ["w", "wb", "a", "ab"]
     SUPPORT_READ_WRITE_MODE = ["r+", "rb+", "w+", "wb+", "a+", "ab+"]
 
-    def __init__(self, file_path, mode):
+    def __init__(self, file_path, mode, encoding='utf-8'):
         self.file_path = file_path
         self.mode = mode
+        self.encoding = encoding
         self._handle = None
 
     def __enter__(self):
         self.check_file_path()
-        self._handle = open(self.file_path, self.mode)
+        binary_mode = "b"
+        if binary_mode not in self.mode:
+            self._handle = open(self.file_path, self.mode, encoding=self.encoding)
+        else:
+            self._handle = open(self.file_path, self.mode)
         return self._handle
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -185,9 +192,10 @@ def check_link(path):
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 
 
-def check_path_length(path):
+def check_path_length(path, name_length=None):
+    file_max_name_length = name_length if name_length else FileCheckConst.FILE_NAME_LENGTH
     if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
-            len(os.path.basename(path)) > FileCheckConst.FILE_NAME_LENGTH:
+            len(os.path.basename(path)) > file_max_name_length:
         print_error_log('The file path length exceeds limit.')
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 
@@ -208,6 +216,20 @@ def check_path_writability(path):
     if not os.access(path, os.W_OK):
         print_error_log('The file path %s is not writable.' % path)
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+
+
+def check_path_executable(path):
+    if not os.access(path, os.X_OK):
+        print_error_log('The file path %s is not executable.' % path)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+
+
+def check_other_user_writable(path):
+    st = os.stat(path)
+    if st.st_mode & 0o002:
+        _user_interactive_confirm(
+            'The file path %s may be insecure because other users have write permissions. '
+            'Do you want to continue?' % path)
 
 
 def _user_interactive_confirm(message):
@@ -284,7 +306,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
 
 
 def change_mode(path, mode):
@@ -294,5 +316,5 @@ def change_mode(path, mode):
         os.chmod(path, mode)
     except PermissionError as ex:
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
 

@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from ..common.utils import print_error_log, get_time
-from ..common.file_check_util import FileOpen
+from ..common.file_check_util import FileOpen, FileCheckConst, change_mode
 
 
 special_torch_object = ["memory_format"]
@@ -210,6 +210,7 @@ def write_json(file_path, data, indent=None):
     if not os.path.exists(file_path):
         with FileOpen(file_path, 'w') as f:
             f.write("{\n}")
+        change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
     lock.acquire()
     with FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
@@ -223,7 +224,7 @@ def write_json(file_path, data, indent=None):
                 f.write(',\n')
             f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
         except Exception as e:
-            raise ValueError(f"Json save failed:{e}")
+            raise ValueError(f"Json save failed:{e}") from e
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
             lock.release()

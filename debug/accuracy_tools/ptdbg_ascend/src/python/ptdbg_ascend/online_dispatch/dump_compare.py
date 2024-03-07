@@ -113,13 +113,13 @@ def save_summery(run_param, npu_data, cpu_data, prefix, summery_list, compute_fl
         data_dict[CompareConst.BENCH_SHAPE] = str(list(cpu_data.shape))
         # the same process can not call torch api which may capture by torch_dispatch
         if run_param.process_flag:
-            data_dict[CompareConst.NPU_MAX] = torch.max(npu_data.float()).numpy().tolist()
-            data_dict[CompareConst.NPU_MIN] = torch.min(npu_data.float()).numpy().tolist()
-            data_dict[CompareConst.NPU_MEAN] = torch.mean(npu_data.float()).numpy().tolist()
+            data_dict[CompareConst.NPU_MAX] = np.max(npu_data.numpy()).tolist()
+            data_dict[CompareConst.NPU_MIN] = np.min(npu_data.numpy()).tolist()
+            data_dict[CompareConst.NPU_MEAN] = np.mean(npu_data.numpy()).tolist()
             if compute_flag:
-                data_dict[CompareConst.BENCH_MAX] = torch.max(cpu_data.float()).numpy().tolist()
-                data_dict[CompareConst.BENCH_MIN] = torch.min(cpu_data.float()).numpy().tolist()
-                data_dict[CompareConst.BENCH_MEAN] = torch.mean(cpu_data.float()).numpy().tolist()
+                data_dict[CompareConst.BENCH_MAX] = np.max(cpu_data.numpy()).tolist()
+                data_dict[CompareConst.BENCH_MIN] = np.min(cpu_data.numpy()).tolist()
+                data_dict[CompareConst.BENCH_MEAN] = np.mean(cpu_data.numpy()).tolist()
             else:
                 data_dict[CompareConst.BENCH_MAX] = data_dict[CompareConst.NPU_MAX]
                 data_dict[CompareConst.BENCH_MIN] = data_dict[CompareConst.NPU_MIN]
@@ -280,6 +280,12 @@ def save_csv(all_summery, call_stack_list, csv_path):
                             CompareConst.BENCH_DTYPE: data[CompareConst.BENCH_DTYPE],
                             CompareConst.NPU_SHAPE: data[CompareConst.NPU_SHAPE],
                             CompareConst.BENCH_SHAPE: data[CompareConst.BENCH_SHAPE],
+                            CompareConst.NPU_MAX: data[CompareConst.NPU_MAX],
+                            CompareConst.NPU_MIN: data[CompareConst.NPU_MIN],
+                            CompareConst.NPU_MEAN: data[CompareConst.NPU_MEAN],
+                            CompareConst.BENCH_MAX: data[CompareConst.BENCH_MAX],
+                            CompareConst.BENCH_MIN: data[CompareConst.BENCH_MIN],
+                            CompareConst.BENCH_MEAN: data[CompareConst.BENCH_MEAN],
                             CompareConst.COSINE: data[CompareConst.COSINE],
                             CompareConst.MAX_ABS_ERR: data[CompareConst.MAX_ABS_ERR],
                             CompareConst.MAX_RELATIVE_ERR: data[CompareConst.MAX_RELATIVE_ERR],

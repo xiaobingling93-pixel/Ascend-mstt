@@ -23,6 +23,8 @@ import stat
 import subprocess
 import sys
 import time
+import zlib
+import json
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -68,7 +70,7 @@ class Const:
     DUMP_RATIO_MAX = 100
     SUMMERY_DATA_NUMS = 256
     FLOAT_EPSILON = np.finfo(float).eps
-    SUPPORT_DUMP_MODE = ['api', 'acl', 'model']
+    SUPPORT_DUMP_MODE = ['api', 'acl']
     ON = 'ON'
     OFF = 'OFF'
     BACKWARD = 'backward'
@@ -86,8 +88,10 @@ class Const:
     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
     AUTO = "auto"
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
+    SUMMARY = "summary"
+    MD5 = "md5"
+    SUMMARY_MODE = [ALL, SUMMARY, MD5]
 
-    API_PATTERN = r"^[A-Za-z0-9]+[_]+([A-Za-z0-9]+[_]*[A-Za-z0-9]+)[_]+[0-9]+[_]+[A-Za-z0-9]+"
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 
@@ -108,7 +112,8 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter"]
+    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+                    "_reduce_scatter_base", "_all_gather_base"]
 
 
 class CompareConst:
@@ -133,6 +138,7 @@ class CompareConst:
     MAX_DIFF = "Max diff"
     MIN_DIFF = "Min diff"
     MEAN_DIFF = "Mean diff"
+    NORM_DIFF = "L2norm diff"
     COSINE = "Cosine"
     MAX_ABS_ERR = "MaxAbsErr"
     MAX_RELATIVE_ERR = "MaxRelativeErr"
@@ -141,6 +147,9 @@ class CompareConst:
     ERROR_MESSAGE = "Err_message"
     ONE_THOUSANDTH_ERR_RATIO = "One Thousandth Err Ratio"
     FIVE_THOUSANDTHS_ERR_RATIO = "Five Thousandths Err Ratio"
+    NPU_MD5 = "NPU MD5"
+    BENCH_MD5 = "BENCH MD5"
+    RESULT = "Result"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -149,9 +158,12 @@ class CompareConst:
     ]
 
     SUMMARY_COMPARE_RESULT_HEADER = [
-        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF,
-        ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
         NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
+    ]
+
+    MD5_COMPARE_RESULT_HEADER = [
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
 
     # compare result data
@@ -216,6 +228,7 @@ class CompareException(Exception):
     PARSE_FILE_ERROR = 16
     INVALID_COMPARE_MODE = 17
     OVER_SIZE_FILE_ERROR = 18
+    INVALID_SUMMARY_MODE = 19
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -224,6 +237,7 @@ class CompareException(Exception):
 
     def __str__(self):
         return self.error_info
+
 
 class DumpException(CompareException):
     pass
@@ -336,6 +350,12 @@ def check_dump_mode_valid(dump_mode):
     return dump_mode
 
 
+def check_summary_mode_valid(summary_mode):
+    if summary_mode not in Const.SUMMARY_MODE:
+        msg = "The summary_mode is not valid"
+        raise CompareException(CompareException.INVALID_SUMMARY_MODE, msg)
+
+
 def check_summary_only_valid(summary_only):
     if not isinstance(summary_only, bool):
         print_error_log("Params summary_only only support True or False.")
@@ -374,6 +394,16 @@ def is_summary_compare(input_param):
     raise CompareException(CompareException.INVALID_PATH_ERROR)
 
 
+def is_md5_compare(input_parma):
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
+        line = json.loads(npu_pkl.readline())
+    if len(line) < 3:
+        return False
+    if line[2]:
+        return True
+    return False
+
+
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
     if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
         print_error_log("Invalid input parameters which should be only bool type.")
@@ -409,15 +439,36 @@ def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
 
-def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
-    npu_pkl_name = os.path.split(npu_pkl.name)[-1]
-    bench_pkl_name = os.path.split(bench_pkl.name)[-1]
+def check_stack_mode(pkl_fp):
+    api_prefix = ""
+    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    is_stack_mode = False
+    for index, line in enumerate(pkl_fp):
+        if index == 0:
+            api_match = re.search(api_pattern, line)
+            api_prefix = api_match.group(1)
+        elif api_prefix and line.startswith(f'["{api_prefix}'):
+            if line.startswith(f'["{api_prefix}_stack_info'):
+                is_stack_mode = True
+                break
+        else:
+            break
+    pkl_fp.seek(0, 0)
+    return is_stack_mode
 
-    if not is_starts_with(npu_pkl_name, prefixes) and not is_starts_with(bench_pkl_name, prefixes):
+
+def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
+    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
+    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
+
+    npu_pkl_stack_mode = check_stack_mode(npu_pkl)
+    bench_pkl_stack_mode = check_stack_mode(bench_pkl)
+
+    if not npu_pkl_stack_mode and not bench_pkl_stack_mode:
         if stack_mode:
             print_error_log("The current file does not contain stack information, please turn off the stack_mode")
             raise CompareException(CompareException.INVALID_COMPARE_MODE)
-    elif is_starts_with(npu_pkl_name, prefixes) and is_starts_with(bench_pkl_name, prefixes):
+    elif npu_pkl_stack_mode and bench_pkl_stack_mode:
         if not stack_mode:
             print_error_log("The current file contains stack information, please turn on the stack_mode")
             raise CompareException(CompareException.INVALID_COMPARE_MODE)
@@ -425,16 +476,13 @@ def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
         print_error_log("The dump mode of the two files is not same, please check the dump files")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
 
-    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
-    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
-
 
 def check_file_size(input_file, max_size):
     try:
         file_size = os.path.getsize(input_file)
     except OSError as os_error:
         print_error_log('Failed to open "%s". %s' % (input_file, str(os_error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from os_error
     if file_size > max_size:
         print_error_log('The size (%d) of %s exceeds (%d) bytes, tools not support.'
                         % (file_size, input_file, max_size))
@@ -481,12 +529,6 @@ def get_dump_data_path(dump_dir):
     return dump_data_path, file_is_exist
 
 
-def get_api_name_from_matcher(name):
-    api_matcher = re.compile(Const.API_PATTERN)
-    match = api_matcher.match(name)
-    return match.group(1) if match else ""
-
-
 def modify_dump_path(dump_path, mode):
     if mode == Const.ALL:
         return dump_path
@@ -510,7 +552,7 @@ def create_directory(dir_path):
         except OSError as ex:
             print_error_log(
                 'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
 
 
 def execute_command(cmd):
@@ -626,18 +668,18 @@ def check_seed_all(seed, mode):
 def get_process_rank(model):
     print_info_log("Rank id is not provided. Trying to get the rank id of the model.")
     try:
-        device = next(model.parameters()).device
+        local_device = next(model.parameters()).device
     except StopIteration:
         print_warn_log('There is no parameter in the model. Fail to get rank id.')
         return 0, False
-    if device.type == 'cpu':
+    if local_device.type == 'cpu':
         print_warn_log("Warning: the debugger is unable to get the rank id. "
             "This may cause the dumpped data to be corrupted in the "
             "case of distributed training. (You may ignore this if you are using only one card.) "
             "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
         return 0, False
     else:
-        return device.index, True
+        return local_device.index, True
 
 
 def parameter_adapter(func):
@@ -645,24 +687,24 @@ def parameter_adapter(func):
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
-            input = args[0]
+            input_tensor = args[0]
             indices = args[1]
             if indices.dtype == torch.uint8:
                 indices = indices.bool()
             if indices.dtype == torch.bool:
-                if indices.shape == input.shape:
-                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input, indices)
+                if indices.shape == input_tensor.shape:
+                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input_tensor, indices)
                 else:
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
-                    return getattr(torch._C._TensorBase, "__getitem__")(input, indices)
+                    return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
             elif indices.dtype != torch.bool:
                 if len(indices.shape) == 1:
-                    return func(self, input, indices.tolist())
+                    return func(self, input_tensor, indices.tolist())
                 elif len(indices.shape) == 2:
-                    result = [func(self, input, index) for index in indices.tolist()]
+                    result = [func(self, input_tensor, index) for index in indices.tolist()]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(result, 0)
                 else:
-                    res = [input[tensor_index] for tensor_index in indices]
+                    res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
         return func(self, *args, **kwargs)
     return inner
@@ -711,6 +753,14 @@ def check_file_valid(file_path):
         if file_path.endswith(Const.NUMPY_SUFFIX) and file_size > Const.TEN_GB:
             print_error_log('The file {} size is greater than 10GB.'.format(file_path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+
+def get_md5_for_tensor(x):
+    if x.dtype == torch.bfloat16:
+        x = x.float()
+    tensor_bytes = x.cpu().detach().numpy().tobytes()
+    crc32_hash = zlib.crc32(tensor_bytes)
+    return f"{crc32_hash:08x}"
 
 
 def check_path_before_create(path):

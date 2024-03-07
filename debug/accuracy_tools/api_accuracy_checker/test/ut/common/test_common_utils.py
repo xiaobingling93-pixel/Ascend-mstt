@@ -16,7 +16,7 @@ class TestUtils(unittest.TestCase):
     def test_write_csv(self):
         test_data = [["name", "age"], ["Alice", "20"], ["Bob", "30"]]
         write_csv(test_data, 'test.csv')
-        with open('test.csv', 'r') as f:
+        with open('test.csv', 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
             for i, row in enumerate(reader):
                 self.assertEqual(row, test_data[i])
@@ -49,10 +49,6 @@ class TestUtils(unittest.TestCase):
     def test_get_dump_data_path(self):
         path, exist = get_dump_data_path(os.path.dirname(__file__))
         self.assertTrue(exist)
-
-    def test_get_api_name_from_matcher(self):
-        api_name = get_api_name_from_matcher("api_stack_1_add")
-        self.assertEqual(api_name, "stack")
 
     def test_create_directory(self):
         create_directory('test_dir')

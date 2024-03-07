@@ -18,7 +18,7 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare
+    check_configuration_param, is_summary_compare, is_md5_compare
 from .acc_compare import compare_core
 
 
@@ -50,13 +50,10 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         if not pkl_path:
             print_error_log(f'No file is found in dump dir {dirname}. ')
             raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
-        if dump_data_dir == '':
-            print_error_log(f'No directory is found in dump dir {dirname}. ')
-            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
         name_body, ext = os.path.splitext(pkl_name)
         pattern = re.compile(f'{name_body}$')
         match = pattern.match(dump_data_dirname)
-        if match is None:
+        if dump_data_dir and match is None:
             print_error_log('The names of pkl and directory do not match! '
                 f'Please check the names and remove irrelevant files in {dirname}. ')
             raise CompareException(CompareException.INVALID_FILE_ERROR)
@@ -66,6 +63,9 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get('suffix'):
         print_error_log("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    stack_mode = kwargs.get('stack_mode', False)
+    auto_analyze = kwargs.get('auto_analyze', True)
+    fuzzy_match = kwargs.get('fuzzy_match', False)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
@@ -88,9 +88,11 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         }
         try:
             summary_compare = is_summary_compare(dump_result_param)
-            check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, **kwargs)
-            check_configuration_param(**kwargs)
+            md5_compare = is_md5_compare(dump_result_param)
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+            check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
         except CompareException as error:
             print_error_log('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
-        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare, **kwargs)
+        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+                     md5_compare=md5_compare, **kwargs)

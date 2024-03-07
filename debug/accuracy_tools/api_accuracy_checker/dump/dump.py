@@ -17,7 +17,7 @@
 
 from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
 from api_accuracy_checker.dump.info_dump import write_api_info_json, initialize_output_json
-from api_accuracy_checker.common.utils import print_error_log, CompareException
+from api_accuracy_checker.common.utils import print_error_log, CompareException, print_info_log
 from api_accuracy_checker.hook_module.register_hook import initialize_hook
 from api_accuracy_checker.common.config import msCheckerConfig
 
@@ -32,18 +32,28 @@ def set_dump_switch(switch):
     DumpUtil.set_dump_switch(switch)
 
 
+def check_dataloader_status():
+    if msCheckerConfig.enable_dataloader:
+        error_info = ("If you want to use this  function, set enable_dataloader "
+                        "in the accuracy_tools/api_accuracy_check/config.yaml "
+                        "to False first")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
+
+
 def start():
-    if not DumpUtil.get_dump_switch() and not msCheckerConfig.enable_dataloader:
+    check_dataloader_status()
+    if not DumpUtil.get_dump_switch():
         DumpUtil.incr_iter_num_maybe_exit()
 
 
 def stop():
+    check_dataloader_status()
     DumpUtil.set_dump_switch("OFF")
 
 
 def step():
-    if not msCheckerConfig.enable_dataloader:
-        DumpUtil.call_num += 1
+    check_dataloader_status()
+    DumpUtil.call_num += 1
 
 
 class DumpUtil(object):
@@ -85,7 +95,7 @@ def pretest_info_dump(name, out_feat, module, phase):
         msg = "Unexpected training phase {}.".format(phase)
         print_error_log(msg)
         raise NotImplementedError(msg)
-
+    print_info_log(f"tools is dumping api: {name}" + " " * 10, end='\r')
     write_api_info_json(api_info)
 
 

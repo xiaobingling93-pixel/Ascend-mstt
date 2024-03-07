@@ -17,18 +17,21 @@
 
 import os
 import torch
-import numpy as np
+import numpy
 
-from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, print_error_log, \
-    CompareException
+from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
+    print_error_log, get_full_data_path, CompareException
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
 FLOAT_TYPE = ['torch.float32', 'torch.float', 'torch.float64', 'torch.double', 'torch.float16',
               'torch.half', 'torch.bfloat16']
+NUMPY_TYPE = ["numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
+              "numpy.uint64", "numpy.float16", "numpy.float32", "numpy.float64", "numpy.float128", "numpy.complex64", 
+              "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"]
 
 
-def gen_data(info, need_grad, convert_type):
+def gen_data(info, need_grad, convert_type, real_data_path=None):
     """
     Function Description:
         Based on arg basic information, generate arg data
@@ -40,6 +43,7 @@ def gen_data(info, need_grad, convert_type):
     check_object_type(info, dict)
     data_type = info.get('type')
     data_path = info.get('datapath')
+    data_path = get_full_data_path(data_path, real_data_path)
     if data_type in TENSOR_DATA_LIST:
         if data_path:
             data = gen_real_tensor(data_path, convert_type)
@@ -50,6 +54,14 @@ def gen_data(info, need_grad, convert_type):
             temp_data = data * 1
             data = temp_data.type_as(data)
             data.retain_grad()
+    elif data_type.startswith("numpy"):
+        if data_type not in NUMPY_TYPE:
+            raise Exception("{} is not supported now".format(data_type))
+        data = info.get("value")
+        try:
+            data = eval(data_type)(data)
+        except Exception as err:
+            print_error_log("Failed to convert the type to numpy: %s" % str(err))
     else:
         data = info.get('value')
         if info.get("type") == "slice":
@@ -73,7 +85,7 @@ def gen_real_tensor(data_path, convert_type):
     if data_path.endswith('.pt'):
         data = torch.load(data_path)
     else:
-        data_np = np.load(data_path)
+        data_np = numpy.load(data_path)
         data = torch.from_numpy(data_np)
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]
@@ -152,12 +164,14 @@ def gen_bool_tensor(low, high, shape):
         shape:The shape of Tensor
     """
     low, high = int(low), int(high)
+    if low > high:
+        low, high = high, low
     tensor = torch.randint(low, high + 1, shape)
     data = torch.gt(tensor, 0)
     return data
 
 
-def gen_args(args_info, need_grad=True, convert_type=None):
+def gen_args(args_info, need_grad=True, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, for API forward running
@@ -165,14 +179,15 @@ def gen_args(args_info, need_grad=True, convert_type=None):
         api_info: API basic information. List
         need_grad: set Tensor grad for backward
         convert_type: convert ori_type to dist_type flag.
+        real_data_path: the root directory for storing real data.
     """
     check_object_type(args_info, list)
     args_result = []
     for arg in args_info:
         if isinstance(arg, (list, tuple)):
-            data = gen_args(arg, need_grad, convert_type)
+            data = gen_args(arg, need_grad, convert_type, real_data_path)
         elif isinstance(arg, dict):
-            data = gen_data(arg, need_grad, convert_type)
+            data = gen_data(arg, need_grad, convert_type, real_data_path)
         else:
             print_warn_log(f'Warning: {arg} is not supported')
             raise NotImplementedError()
@@ -180,21 +195,22 @@ def gen_args(args_info, need_grad=True, convert_type=None):
     return args_result
 
 
-def gen_kwargs(api_info, convert_type=None):
+def gen_kwargs(api_info, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: kwargs, for API forward running
     Parameter:
         api_info: API basic information. Dict
         convert_type: convert ori_type to dist_type flag.
+        real_data_path: the root directory for storing real data.
     """
     check_object_type(api_info, dict)
     kwargs_params = api_info.get("kwargs")
     for key, value in kwargs_params.items():
         if isinstance(value, (list, tuple)):
-            kwargs_params[key] = gen_list_kwargs(value, convert_type)
-        elif value.get('type') in TENSOR_DATA_LIST:
-            kwargs_params[key] = gen_data(value, False, convert_type)
+            kwargs_params[key] = gen_list_kwargs(value, convert_type, real_data_path)
+        elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
+            kwargs_params[key] = gen_data(value, False, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
         else:
@@ -203,13 +219,11 @@ def gen_kwargs(api_info, convert_type=None):
 
 
 def gen_torch_kwargs(kwargs_params, key, value):
-    if value.get('type') == "torch.device":
-        kwargs_params[key] = eval(value.get('type'))(value.get('value'))
-    else:
+    if value.get('type') != "torch.device":
         kwargs_params[key] = eval(value.get('value'))
 
 
-def gen_list_kwargs(kwargs_item_value, convert_type):
+def gen_list_kwargs(kwargs_item_value, convert_type, real_data_path=None):
     """
     Function Description:
         When kwargs value is list, generate the list of kwargs result
@@ -220,14 +234,14 @@ def gen_list_kwargs(kwargs_item_value, convert_type):
     kwargs_item_result = []
     for item in kwargs_item_value:
         if item.get('type') in TENSOR_DATA_LIST:
-            item_value = gen_data(item, False, convert_type)
+            item_value = gen_data(item, False, convert_type, real_data_path)
         else:
             item_value = item.get('value')
         kwargs_item_result.append(item_value)
     return kwargs_item_result
 
 
-def gen_api_params(api_info, need_grad=True, convert_type=None):
+def gen_api_params(api_info, need_grad=True, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, kwargs, for API forward running
@@ -240,9 +254,9 @@ def gen_api_params(api_info, need_grad=True, convert_type=None):
     if convert_type and convert_type not in Const.CONVERT:
         error_info = f"convert_type params not support {convert_type}."
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
-    kwargs_params = gen_kwargs(api_info, convert_type)
+    kwargs_params = gen_kwargs(api_info, convert_type, real_data_path)
     if api_info.get("args"):
-        args_params = gen_args(api_info.get("args"), need_grad, convert_type)
+        args_params = gen_args(api_info.get("args"), need_grad, convert_type, real_data_path)
     else:
         print_warn_log(f'Warning: No args in {api_info} ')
         args_params = []

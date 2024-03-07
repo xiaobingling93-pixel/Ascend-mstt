@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import logging
+from ...common.file_check_util import FileCheckException
 
 
 class ParseException(Exception):
@@ -28,6 +29,7 @@ class ParseException(Exception):
     PARSE_JSONDECODE_ERROR = 6
     PARSE_MSACCUCMP_ERROR = 7
     PARSE_LOAD_NPY_ERROR = 8
+    PARSE_INVALID_PARAM_ERROR = 9
 
     def __init__(self, code, error_info=""):
         super(ParseException, self).__init__()
@@ -45,6 +47,8 @@ def catch_exception(func):
         except OSError:
             log.error("%s: command not found" % line)
         except ParseException:
+            log.error("Command execution failed")
+        except FileCheckException:
             log.error("Command execution failed")
         except SystemExit:
             log.warning("Please enter the correct command")

@@ -9,40 +9,28 @@
   pandas >= 1.0.0 ，tensorboard >= 2.11.0，protobuf <= 3.20.3
 * 安装方式
   1. pip安装（推荐） \
-    现本插件已经上传到pypi社区，用户可在python环境下直接通过以下pip指令进行安装：\
+    * 现本插件已经上传到pypi社区，用户可在python环境下直接通过以下pip指令进行安装：\
     `pip install torch-tb-profiler-ascend`
+    * 也可在pypi社区上下载离线whl包，传输到无法访问公网的环境上离线安装使用。访问[下载链接](https://pypi.org/project/torch-tb-profiler-ascend/#files)选择whl包进行下载，之后便可使用指令安装（此处{version}为whl包实际版本）\
+    `pip install torch-tb-profiler_ascend_{version}_py3_none_any.whl`
 
-  2. 插件离线方式安装
-     * 插件下载地址 \
-       https://mindstudio-sample.obs.cn-north-4.myhuaweicloud.com/torch-tb-profiler-ascend/v0.4.0.3/torch_tb_profiler_ascend-0.4.0.3-py3-none-any.whl
-
-     * 插件形式为whl包，使用指令安装（此处{version}为whl包实际版本）
-
-       `pip install torch-tb-profiler_ascend_{version}_py3_none_any.whl`
-     * 离线包完整性校验
-
-        通过SHA256算法生成的哈希值进行完整性校验，校验方式如下，表格中xxx.whl代表下载的离线包：
-
-        | 操作系统 | 查看哈希值指令 | 预期哈希值 |
-        |--------|--------------|----------|
-        | Windows | certutil -hashfile xxx.whl SHA256 | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
-        | Linux | sha256sum xxx.whl | b1fe778fa37595e25a0c29dac2cafc0b63601984f8220090440bc4aef0ddfed7 |
-
-  3. 从源代码安装
+  2. 从源代码安装
      * 从仓库下载源码:
 
        `git clone https://gitee.com/ascend/att.git`
 
-     *  进入目录 `/plugins/tensorboard_plugins/tb_plugin` 下.
+     * 进入目录 `/plugins/tensorboard_plugins/tb_plugin` 下.
+     * 编译前端代码
+       - `python setup.py build_fe` \
+     **注意**: build_fe步骤需要安装yarn和Node.js环境
+     * 执行安装命令可直接安装:
+       - `pip install .`
+     * 或： 构建whl包安装
+       - `python setup.py build_fe sdist bdist_wheel`
 
-     *  执行安装命令:
-       `pip install .`
-     * 构建whl包
-       - `python setup.py build_fe sdist bdist_wheel` \
-        注意: build_fe步骤需要安装yarn和Node.js环境
-       - `python setup.py sdist bdist_wheel`
+       在 `/tb_plugins/profiling/tb_plugin/dist` 目录下取出whl包，使用以下指令安装（此处{version}为whl包实际版本）
 
-       在 `/tb_plugins/profiling/tb_plugin/dist` 目录下取出whl包，使用方式2进行安装
+       `pip install torch-tb-profiler-ascend-{version}-py3-none-any.whl`
 
 ### 解析数据说明
 
@@ -278,9 +266,9 @@
 
 ##### 文件配置
 ###### 文件导入
-  界面分为左侧边栏和右侧展示界面。点击左侧的Import Files或在左侧未勾选文件时点击右侧界面中心的Import Files字体，将会弹出系统文件资源管理窗，可以上传需要比对的.txt或.log格式的模型网络训练日志文件。
+  界面分为左侧边栏和右侧展示界面。点击左侧的Import Files或在左侧未勾选文件时点击右侧界面中心的Import Files字体，将会弹出系统文件资源管理窗，可以上传需要比对的模型网络训练日志文件。
 
-  <font color='red'>注：当前最多支持上传6个文件，单个文件大小不能超过10MB。</font>
+  <font color='red'>注：当前最多支持上传6个文件，单个文件大小不能超过50MB。</font>
   ![Alt text](./docs/images/accuracy.PNG)
 
 ###### 已上传文件操作

@@ -124,7 +124,8 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
         trigger: 'axis',
         formatter: function (params: any) {
           const index = params[0].name.indexOf('@')
-          var res = `<b>${index > -1 ? params[0].name.slice(index + 1) : params[0].name}<b/> <br/>`
+          const safeName = params[0].name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          var res = `<b>${index > -1 ? safeName.slice(index + 1) : safeName}<b/> <br/>`
           for (const item of params) {
             if (typeof item.value[item.encode.y[0]] === 'number') {
               res += `<span style="background: ${item.color};
@@ -272,7 +273,8 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
         trigger: 'axis',
         formatter: function (params: any) {
           const index = params[0].name.indexOf('@')
-          var res = `<b>${index > -1 ? params[0].name.slice(index + 1) : params[0].name}<b/> <br/>`
+          const safeName = params[0].name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          var res = `<b>${index > -1 ? safeName.slice(index + 1) : safeName}<b/> <br/>`
           for (const item of params) {
             if (typeof item.value[item.encode.y[0]] === 'number') {
               res += `<span style="background: ${item.color};

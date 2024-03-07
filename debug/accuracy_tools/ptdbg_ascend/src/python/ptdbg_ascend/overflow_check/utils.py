@@ -9,14 +9,14 @@ else:
     is_gpu = False
 
 from ..common.utils import Const, check_switch_valid, check_inplace_op, OverflowConst
-from ..dump.dump import dump_stack_info, get_scalar_data_info, dump_data, \
+from ..dump.dump import dump_stack_info, get_scalar_data_info, dump_data_by_rank_count, \
     get_not_float_tensor_info, get_float_tensor_info
 from ..dump.utils import DumpUtil, make_dump_data_dir
 
 
 class OverFlowUtil(object):
     overflow_check_switch = None
-    overflow_filter_switch = None
+    overflow_filter_switch = Const.OFF
     real_overflow_dump_times = 0
     overflow_nums = 1
 
@@ -77,15 +77,15 @@ def _dump_tensor_completely(x, prefix):
         if x.numel() == 0 or len(x.shape) == 0 or not x.is_floating_point():
             if OverFlowUtil.overflow_filter_switch == Const.OFF:
                 data_info = get_not_float_tensor_info(x)
-                dump_data(dump_flag, prefix, data_info)
+                dump_data_by_rank_count(dump_flag, prefix, data_info)
         else:
             data_info = get_float_tensor_info(x)
-            dump_data(dump_flag, prefix, data_info)
+            dump_data_by_rank_count(dump_flag, prefix, data_info)
 
     elif OverFlowUtil.overflow_filter_switch == Const.OFF:
         if isinstance(x, bool) or isinstance(x, int) or isinstance(x, float):
             data_info = get_scalar_data_info(x)
-            dump_data(dump_flag, prefix, data_info)
+            dump_data_by_rank_count(dump_flag, prefix, data_info)
 
 
 def overflow_debug_mode_enalbe():

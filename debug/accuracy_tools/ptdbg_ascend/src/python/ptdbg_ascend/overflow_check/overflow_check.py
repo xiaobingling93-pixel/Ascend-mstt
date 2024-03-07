@@ -13,9 +13,10 @@ else:
 from ..common.utils import print_warn_log, get_time, print_info_log
 from ..dump.dump import forward_init_status, forward_acl_dump
 from .utils import OverFlowUtil, dump_overflow, check_overflow_npu, clear_overflow_npu
-from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist
+from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist, check_single_rank_folder
 from .info_dump import write_api_info_json, ForwardAPIInfo, BackwardAPIInfo
 from ..dump import dump
+from ..common.file_check_util import FileCheckConst
 
 backward_init_status = False
 api_overflow = []
@@ -49,6 +50,8 @@ def check_data_overflow(x):
         return False
     else:
         if isinstance(x, torch.Tensor) and x.numel() != 0 and x.dtype != torch.bool:
+            if x.is_meta:
+                return False
             if len(x.shape) == 0:
                 tensor_max = x.cpu().detach().float().numpy().tolist()
                 tensor_min = tensor_max
@@ -91,12 +94,13 @@ def overflow_check(name, **kwargs):
             return
         dump_file = DumpUtil.get_dump_path()
         global rank
-        if DumpUtil.target_iter:
-            dump_dir, dump_filename = os.path.split(dump_file)
-            dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
-            if not os.path.exists(dump_dir):
-                Path(dump_dir).mkdir(mode=0o750, exist_ok=True)
-            dump_file = os.path.join(dump_dir, dump_filename)
+        dump_dir, dump_filename = os.path.split(dump_file)
+        dump_dir = os.path.join(dump_dir, "step{}".format(DumpUtil.iter_num))
+        if not os.path.exists(dump_dir):
+            Path(dump_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+        if DumpUtil.is_single_rank is None:
+            DumpUtil.is_single_rank = check_single_rank_folder(dump_dir)
+        dump_file = os.path.join(dump_dir, dump_filename)
         rank_this = get_tensor_rank(in_feat, out_feat)
         DumpUtil.dump_root = os.path.dirname(DumpUtil.dump_path)
         if rank_this is not None and rank != rank_this:
