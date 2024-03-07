@@ -151,14 +151,15 @@ def dump_tensor(x, prefix, dump_step):
         if x.is_meta:
             print_info_log(f"Meta tensor {prefix} is skipped.")
             return
-        if x.numel() == 0 or len(x.shape) == 0 or not x.is_floating_point():
+        x_clone = x.clone().detach()
+        if x_clone.numel() == 0 or len(x_clone.shape) == 0 or not x_clone.is_floating_point():
             if DumpUtil.dump_filter_switch == Const.OFF:
-                data_info = get_not_float_tensor_info(x)
+                data_info = get_not_float_tensor_info(x_clone)
                 dump_data_by_rank_count(dump_step, prefix, data_info)
             else:
                 return
         else:
-            data_info = get_float_tensor_info(x)
+            data_info = get_float_tensor_info(x_clone)
             dump_data_by_rank_count(dump_step, prefix, data_info)
 
     elif DumpUtil.dump_filter_switch == Const.OFF:
