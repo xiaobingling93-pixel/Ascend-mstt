@@ -438,7 +438,19 @@ Forward Test Success和Backward Test Success是否通过测试是由`benchmark_c
 
    答：对于fp16的数据，CPU会上升一个精度fp32去计算，这是和算子那边对齐的精度结论，CPU用更高精度去计算会更接近真实值。
 
-6. Tensor 魔法函数具体对应什么操作？
+6. 添加预检工具后截取操作报错：`IndexError: too many indices for tensor of dimension x` 或 `TypeError: len() of a 0-d tensor`。
+
+   答：注释工具目录api_accuracy_checker/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- __getitem__`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+
+7. 添加预检工具后F.gelu触发ValueError报错：`activation_func must be F.gelu`等。
+
+   答：注释工具目录api_accuracy_checker/hook_module/support_wrap_ops.yaml文件中functional:下的的`- gelu`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+
+8. 添加预检工具后触发AsStrided算子相关的报错，或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
+
+   答：注释工具目录api_accuracy_checker/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- t`和`- transpose`。
+
+9. Tensor 魔法函数具体对应什么操作？
 
    答：
 
