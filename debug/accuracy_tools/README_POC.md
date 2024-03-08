@@ -10,9 +10,9 @@
 
    请通过下表链接下载ptdbg_ascend精度工具whl包。
 
-   | ptdbg_ascend版本 | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
-   | ---------------- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 0.0.1            | 2024-03-08 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a |
+   | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
+   | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 0.0.1 | 2024-03-08 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a |
 
 2. whl包校验。
 
