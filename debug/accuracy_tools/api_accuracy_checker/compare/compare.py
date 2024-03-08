@@ -242,7 +242,7 @@ class Comparator:
         message = ""
         if bench_output.dtype in [bool, np.uint8, np.int8, np.int16, np.uint16, np.uint32, np.int32, 
                                   np.int64, np.uint64]:
-            message += f"Compare algorithm cosine_sim is not supported for {bench_output.dtype} data. " \
+            message += f"Compare algorithm is not supported for {bench_output.dtype} data. " \
                     f"Only judged by Error Rate."
             err_rate, status, msg = self._compare_bool_tensor(bench_output, device_output)
             message += msg + "\n"
@@ -267,11 +267,11 @@ class Comparator:
     @staticmethod
     def _compare_builtin_type(bench_output, device_output, compare_column):
         if not isinstance(bench_output, (bool, int, float, str)):
-            return CompareConst.PASS, compare_column, ""
+            return CompareConst.PASS, compare_column, "Bench output type is not supported."
         if bench_output != device_output:
-            return CompareConst.ERROR, compare_column, ""
+            return CompareConst.ERROR, compare_column, "Bench output does not match device output."
         compare_column.error_rate = 0
-        return CompareConst.PASS, compare_column, ""
+        return CompareConst.PASS, compare_column, "Bench output matches device output."
 
 
     @staticmethod
@@ -306,11 +306,13 @@ class Comparator:
         compare_column.cosine_sim = cos_res
         message += msg + "\n"
         if not cos_status:
+            message += "Cosine similarity is less than 0.99, consider as error, skip other check and set to N/A.\n"
             return CompareConst.ERROR, compare_column, message
 
         max_abs_res, max_abs_status = get_max_abs_err(abs_err)
         compare_column.max_abs_err = max_abs_res
         if max_abs_status:
+            message += "Max abs error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
             return CompareConst.PASS, compare_column, message
 
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
@@ -318,18 +320,24 @@ class Comparator:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
             if not hundred_status:
+                message += "Relative error is greater than 0.01, consider as error, skip other check and set to N/A.\n"
                 return CompareConst.ERROR, compare_column, message
         thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
         compare_column.rel_err_thousandth = thousand_res
         if dtype in [torch.float16, torch.bfloat16]:
             if thousand_status:
+                message += "Relative error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
                 return CompareConst.PASS, compare_column, message
+            message += "Relative error is greater than 0.001, consider as warning, skip other check and set to N/A.\n"
             return CompareConst.WARNING, compare_column, message
         ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, 0.0001)
         compare_column.rel_err_ten_thousandth = ten_thousand_res
         if dtype in [torch.float32, torch.float64]:
             if not thousand_status:
+                message += "Relative error is greater than 0.001, consider as error, skip other check and set to N/A.\n"
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
+                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to N/A.\n"
                 return CompareConst.WARNING, compare_column, message
+            message += "Relative error is less than 0.0001, consider as pass.\n"
         return CompareConst.PASS, compare_column, message
