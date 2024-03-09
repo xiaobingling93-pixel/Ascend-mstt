@@ -6,23 +6,51 @@
 
 精度工具合一软件包名称为：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
 
-执行如下命令进行安装。
+1. whl包获取。
 
-```
-pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl
-```
+   请通过下表链接下载ptdbg_ascend精度工具whl包。
 
-若为覆盖安装，请在命令行末尾增加“--force-reinstall”参数强制安装，例如：
+   | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
+   | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 0.0.1 | 2024-03-08 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a |
 
-```
-pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl --force-reinstall
-```
+2. whl包校验。
 
-提示如下信息则表示安装成功。
+   1. 根据以上下载链接下载whl包到Linux安装环境。
 
-```
-Successfully installed ascend_training_accuracy_tools-{version}
-```
+   2. 进入whl包所在目录，执行如下命令。
+
+      ```bash
+      sha256sum {name}.whl
+      ```
+
+      {name}为whl包名称。
+
+      若回显呈现对应版本whl包一致的**校验码**，则表示下载了正确的ptdbg_ascend精度工具whl安装包。示例如下：
+
+      ```bash
+      sha256sum ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
+      7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a *ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
+      ```
+
+3. 执行如下命令进行安装。
+
+   ```bash
+   pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl
+   ```
+
+   若为覆盖安装，请在命令行末尾增加“--force-reinstall”参数强制安装，例如：
+
+   ```bash
+   pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl --force-reinstall
+   ```
+
+   提示如下信息则表示安装成功。
+
+   ```bash
+   Successfully installed ascend_training_accuracy_tools-{version}
+   ```
+
 
 ## 工具使用
 
