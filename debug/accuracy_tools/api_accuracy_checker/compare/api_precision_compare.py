@@ -126,7 +126,7 @@ def write_detail_csv(content, save_path):
     write_csv(rows, save_path)
 
 
-def benchmark_compare(config):
+def api_precision_compare(config):
     print_info_log("Start compare task")
     print_info_log(f"Compare task result will be saved in {config.result_csv_path}")
     print_info_log(f"Compare task detail will be saved in {config.details_csv_path}")
@@ -172,25 +172,25 @@ def analyse_csv(npu_data, gpu_data, config):
             continue
         _, dedicated_api_name, _ = api_name.split("*")
         new_status = CompareConst.NA
-        detail_csv_content = [part_api_name] + [" " for _ in range(17)]
+        detail_csv_content = [part_api_name] + [" " for _ in range(21)]
         if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in Binary_Compare_Unsupport_List:
-            new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE], 
-                                          row_gpu[ApiPrecisionCompareColumn.ERROR_RATE])
-            detail_csv_content[14] = new_status
-            detail_csv_content[15] = new_status
-            detail_csv_content[16] = "二进制一致法"                              
+            new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE])
+            detail_csv_content[18] = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
+            detail_csv_content[19] = new_status
+            detail_csv_content[20] = "二进制一致法"                              
         elif dedicated_api_name in AbsoluteStandardApiName:
-            inf_nan_result, rel_err_result, abs_err_result, new_status = get_absolute_threshold_result(row_npu)
-            detail_csv_content[11:14] = [inf_nan_result, rel_err_result, abs_err_result]
-            detail_csv_content[15] = new_status
-            detail_csv_content[16] = "绝对阈值法"
+            absolute_threshold_result = get_absolute_threshold_result(row_npu)
+            new_status = absolute_threshold_result[-1]
+            detail_csv_content[11:14] = absolute_threshold_result[:-1]
+            detail_csv_content[19] = new_status
+            detail_csv_content[20] = "绝对阈值法"
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in Benchmark_Compare_Support_List:
             bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             bs.get_result()
             new_status = bs.final_result
             detail_csv_content[0:11] = bs.to_column_value()
-            detail_csv_content[15] = new_status
-            detail_csv_content[16] = "标杆比对法" 
+            detail_csv_content[19] = new_status
+            detail_csv_content[20] = "标杆比对法" 
 
         write_detail_csv(detail_csv_content, config.details_csv_path)
 
@@ -231,8 +231,8 @@ def analyse_csv(npu_data, gpu_data, config):
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
-def check_error_rate(npu_error_rate, gpu_error_rate):
-    return CompareConst.PASS if npu_error_rate == 0 and gpu_error_rate == 0 else CompareConst.ERROR
+def check_error_rate(npu_error_rate):
+    return CompareConst.PASS if npu_error_rate == 0 else CompareConst.ERROR
 
 
 def get_absolute_threshold_result(row_npu):
@@ -244,7 +244,8 @@ def get_absolute_threshold_result(row_npu):
     rel_err_result = CompareConst.PASS if rel_err_ratio == 0 else CompareConst.ERROR
     abs_err_result = CompareConst.PASS if abs_err_ratio == 0 else CompareConst.ERROR
 
-    absolute_threshold_result = CompareConst.PASS if all(result == CompareConst.PASS for result in [inf_nan_result, rel_err_result, abs_err_result]) else CompareConst.ERROR
+    absolute_threshold_result = CompareConst.PASS if all(result == CompareConst.PASS for result in 
+    [inf_nan_result, rel_err_result, abs_err_result]) else CompareConst.ERROR
 
     return [
         inf_nan_error_ratio, inf_nan_result,
@@ -292,7 +293,7 @@ def _api_precision_compare_command(args):
     result_csv_path = os.path.join(out_path, BENCHMARK_COMPARE_RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, BENCHMARK_COMPARE_DETAILS_FILE_NAME)
     compare_config = CompareConfig(npu_csv_path, gpu_csv_path, result_csv_path, details_csv_path)
-    benchmark_compare(compare_config)
+    api_precision_compare(compare_config)
 
 
 def _api_precision_compare_parser(parser):
