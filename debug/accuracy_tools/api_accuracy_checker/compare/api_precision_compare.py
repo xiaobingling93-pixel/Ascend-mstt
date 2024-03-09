@@ -180,7 +180,7 @@ def analyse_csv(npu_data, gpu_data, config):
             detail_csv_content[15] = new_status
             detail_csv_content[16] = "二进制一致法"                              
         elif dedicated_api_name in AbsoluteStandardApiName:
-            inf_nan_result, rel_err_result, abs_err_result, new_status = get_absolute_threshold_result(row_npu, row_gpu)
+            inf_nan_result, rel_err_result, abs_err_result, new_status = get_absolute_threshold_result(row_npu)
             detail_csv_content[11:14] = [inf_nan_result, rel_err_result, abs_err_result]
             detail_csv_content[15] = new_status
             detail_csv_content[16] = "绝对阈值法"
@@ -235,17 +235,23 @@ def check_error_rate(npu_error_rate, gpu_error_rate):
     return CompareConst.PASS if npu_error_rate == 0 and gpu_error_rate == 0 else CompareConst.ERROR
 
 
-def get_absolute_threshold_result(row_npu, row_gpu):
-    inf_nan_result = CompareConst.PASS if row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO] == 0 and \
-    row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO] == 0 else CompareConst.ERROR
-    rel_err_result = CompareConst.PASS if row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO] == 0 and \
-    row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO] == 0 else CompareConst.ERROR
-    abs_err_result = CompareConst.PASS if row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO] == 0 and \
-    row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO] == 0 else CompareConst.ERROR
-    if CompareConst.ERROR not in [inf_nan_result, rel_err_result, abs_err_result]:
-        absolute_threshold_result = CompareConst.PASS
-    else:
-        absolute_threshold_result = CompareConst.ERROR
+def get_absolute_threshold_result(row_npu):
+    inf_nan_error_ratio = row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO]
+    rel_err_ratio = row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO]
+    abs_err_ratio = row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO]
+
+    inf_nan_result = CompareConst.PASS if inf_nan_error_ratio == 0 else CompareConst.ERROR
+    rel_err_result = CompareConst.PASS if rel_err_ratio == 0 else CompareConst.ERROR
+    abs_err_result = CompareConst.PASS if abs_err_ratio == 0 else CompareConst.ERROR
+
+    absolute_threshold_result = CompareConst.PASS if all(result == CompareConst.PASS for result in [inf_nan_result, rel_err_result, abs_err_result]) else CompareConst.ERROR
+
+    return [
+        inf_nan_error_ratio, inf_nan_result,
+        rel_err_ratio, rel_err_result,
+        abs_err_ratio, abs_err_result,
+        absolute_threshold_result
+    ]
 
     return inf_nan_result, rel_err_result, abs_err_result, absolute_threshold_result
 
