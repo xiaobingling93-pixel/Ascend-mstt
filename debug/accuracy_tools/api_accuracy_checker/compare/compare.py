@@ -7,11 +7,12 @@ from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
-    precision_configs, Benchmark_Compare_Support_List
+    precision_configs, Benchmark_Compare_Support_List, AbsoluteStandardApi, AbsoluteStandardApiName
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
-    get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask
+    get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
+    check_small_value, check_norm_value, get_abs_bench_with_eps
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -157,12 +158,12 @@ class Comparator:
 
     def compare_output(self, api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
         compare_func = self._compare_dropout if "dropout" in api_name else self._compare_core_wrapper
-        fwd_success_status, fwd_compare_alg_results = compare_func(bench_output, device_output)
-        bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(bench_grad[0], npu_grad[0]) if "dropout" in api_name else compare_func(bench_grad, npu_grad)
+        fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
+        bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(bench_grad[0], npu_grad[0]) if "dropout" in api_name else compare_func(api_name, bench_grad, npu_grad)
         self.record_results(api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.NA, fwd_compare_alg_results, bwd_compare_alg_results)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS
 
-    def _compare_core_wrapper(self, bench_output, device_output):
+    def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
@@ -172,12 +173,12 @@ class Comparator:
                 message = ["bench and npu output structure is different."]
             else:
                 for b_out_i, n_out_i in zip(bench_output, device_output):
-                    status_i, compare_result_i, message_i = self._compare_core(b_out_i, n_out_i)
+                    status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
                     status.append(status_i)
                     compare_result.append(compare_result_i)
                     message.append(message_i)
         else:
-            status, compare_result, message = self._compare_core(bench_output, device_output)
+            status, compare_result, message = self._compare_core(api_name, bench_output, device_output)
         if not isinstance(status, list):
             detailed_result_total.append(compare_result.to_column_value(status, message))
             if status == CompareConst.ERROR:
@@ -193,7 +194,7 @@ class Comparator:
                     test_final_success = CompareConst.WARNING
         return test_final_success, detailed_result_total
 
-    def _compare_core(self, bench_output, device_output):
+    def _compare_core(self, api_name, bench_output, device_output):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
             return CompareConst.ERROR, compare_column, "bench and npu output type is different."
@@ -202,7 +203,7 @@ class Comparator:
             if b_keys != n_keys:
                 return CompareConst.ERROR, compare_column, "bench and npu output dict keys are different."
             else:
-                status, compare_result, message = self._compare_core(list(bench_output.values()), 
+                status, compare_result, message = self._compare_core(api_name, list(bench_output.values()), 
                                                                      list(device_output.values()))
         elif isinstance(bench_output, torch.Tensor):
             copy_bench_out = bench_output.detach().clone()
@@ -210,7 +211,7 @@ class Comparator:
             compare_column.bench_type = str(copy_bench_out.dtype)
             compare_column.npu_type = str(copy_device_output.dtype)
             compare_column.shape = tuple(device_output.shape)
-            status, compare_result, message = self._compare_torch_tensor(copy_bench_out, copy_device_output,
+            status, compare_result, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
                                                                 compare_column)
         elif isinstance(bench_output, (bool, int, float, str)):
             compare_column.bench_type = str(type(bench_output))
@@ -224,7 +225,7 @@ class Comparator:
 
         return status, compare_result, message
 
-    def _compare_torch_tensor(self, bench_output, device_output, compare_column):
+    def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column):
         cpu_shape = bench_output.shape
         npu_shape = device_output.shape
         npu_dtype = device_output.dtype
@@ -249,58 +250,36 @@ class Comparator:
             compare_column.error_rate = err_rate
             return status, compare_column, message
         else:
-            status, compare_column, message = self._compare_float_tensor(bench_output, device_output, 
+            status, compare_column, message = self._compare_float_tensor(api_name, bench_output, device_output, 
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
     
-    @staticmethod
-    def _compare_dropout(bench_output, device_output):
-        tensor_num = bench_output.numel()
-        if tensor_num >= 100:
-            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
-                return CompareConst.PASS, 1
-            else:
-                return CompareConst.ERROR, 0
-        else:
-            return CompareConst.PASS, 1
-
-    @staticmethod
-    def _compare_builtin_type(bench_output, device_output, compare_column):
-        if not isinstance(bench_output, (bool, int, float, str)):
-            return CompareConst.PASS, compare_column, ""
-        if bench_output != device_output:
-            return CompareConst.ERROR, compare_column, ""
-        compare_column.error_rate = 0
-        return CompareConst.PASS, compare_column, ""
-
-
-    @staticmethod
-    def _compare_bool_tensor(bench_output, device_output):
-        error_nums = (bench_output != device_output).sum()
-        if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
-        error_rate = float(error_nums / bench_output.size)
-        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
-        return error_rate, result, ""
-    
-    @staticmethod
-    def _compare_float_tensor(bench_output, device_output, compare_column, dtype):
+    def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
         message = ""
-        eps = np.finfo(bench_output.dtype).eps
-        abs_bench = np.abs(bench_output)
-        abs_bench_with_eps = abs_bench + eps
+        abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in Benchmark_Compare_Support_List:
-            dtype_config = precision_configs.get(dtype)
+            _, dedicated_api_name, _ = api_name.split("*")
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
-            abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
-            compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
-            rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-            compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
-            compare_column.EB = get_error_balance(bench_output, device_output)
-            compare_column.Max_rel_error = get_max_rel_err(rel_err)
-            compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
+            if dedicated_api_name in AbsoluteStandardApiName:
+                small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
+                    dedicated_api_name, str(dtype))
+                rel_err = abs_err / abs_bench_with_eps
+                small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value_threshold)
+                normal_value_mask = np.logical_and(both_finite_mask, np.logical_not(small_value_mask))
+                compare_column.inf_nan_error_ratio = check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol)
+                compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
+                compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
+            else:
+                dtype_config = precision_configs.get(dtype)    
+                small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
+                abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
+                compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
+                rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
+                compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
+                compare_column.EB = get_error_balance(bench_output, device_output)
+                compare_column.Max_rel_error = get_max_rel_err(rel_err)
+                compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
         compare_column.cosine_sim = cos_res
@@ -333,3 +312,40 @@ class Comparator:
             if not ten_thousand_status:
                 return CompareConst.WARNING, compare_column, message
         return CompareConst.PASS, compare_column, message
+
+    @staticmethod
+    def _compare_dropout(api_name, bench_output, device_output):
+        tensor_num = bench_output.numel()
+        if tensor_num >= 100:
+            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
+                return CompareConst.PASS, 1
+            else:
+                return CompareConst.ERROR, 0
+        else:
+            return CompareConst.PASS, 1
+
+    @staticmethod
+    def _compare_builtin_type(bench_output, device_output, compare_column):
+        if not isinstance(bench_output, (bool, int, float, str)):
+            return CompareConst.PASS, compare_column, ""
+        if bench_output != device_output:
+            return CompareConst.ERROR, compare_column, ""
+        compare_column.error_rate = 0
+        return CompareConst.PASS, compare_column, ""
+
+
+    @staticmethod
+    def _compare_bool_tensor(bench_output, device_output):
+        error_nums = (bench_output != device_output).sum()
+        if bench_output.size == 0:
+            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
+        error_rate = float(error_nums / bench_output.size)
+        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
+        return error_rate, result, ""
+    
+    @staticmethod
+    def _get_absolute_threshold_attribute(dedicated_api_name, dtype):
+        small_value_threshold = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('small_value')
+        small_value_atol = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('small_value_atol')
+        rtol = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('rtol')
+        return small_value_threshold, small_value_atol, rtol
