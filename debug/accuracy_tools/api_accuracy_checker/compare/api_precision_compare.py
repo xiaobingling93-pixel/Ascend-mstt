@@ -147,7 +147,6 @@ def benchmark_compare(config):
     try:
         analyse_csv(npu_data, gpu_data, config)
     except Exception as err:
-        import traceback;traceback.print_exc()
         print_error_log(f"Analyse csv Error: %s" % str(err))
     change_mode(config.result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(config.details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
