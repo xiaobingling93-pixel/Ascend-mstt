@@ -17,8 +17,13 @@ class CompareColumn:
         self.small_value_err_ratio = CompareConst.NA
         self.Max_rel_error = CompareConst.NA
         self.Mean_rel_error = CompareConst.NA
+        self.inf_nan_error_ratio = CompareConst.NA
+        self.rel_err_ratio = CompareConst.NA
+        self.abs_err_ratio = CompareConst.NA
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
                 self.rel_err_thousandth, self.rel_err_ten_thousandth, self.error_rate, self.EB, self.RMSE, 
-                self.small_value_err_ratio, self.Max_rel_error, self.Mean_rel_error, is_pass, message]
+                self.small_value_err_ratio, self.Max_rel_error, self.Mean_rel_error, self.inf_nan_error_ratio, 
+                self.rel_err_ratio, self.abs_err_ratio, is_pass, message]
+                
