@@ -1,19 +1,26 @@
 import time
+import os
 import numpy as np
 import torch
+import yaml
 from api_accuracy_checker.common.utils import Const, print_warn_log
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
-BENCHMARK_COMPARE_RESULT_FILE_NAME = "benchmark_compare_result_" + current_time + ".csv"
-BENCHMARK_COMPARE_DETAILS_FILE_NAME = "benchmark_compare_details_" + current_time + ".csv"
+BENCHMARK_COMPARE_RESULT_FILE_NAME = "api_precision_compare_result_" + current_time + ".csv"
+BENCHMARK_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_" + current_time + ".csv"
 Benchmark_Compare_Support_List = ['torch.float16', 'torch.bfloat16', 'torch.float32']
-Benchmark_Compare_Unsupport_List = ['torch.float64']
-result_mapping = {
-    'pass' : True,
-    'warning': False,
-    'error' :  False
-}
+Api_Precision_Compare_Unsupport_List = ['torch.float64', 'torch.complex64', 'torch.complex128']
+Binary_Compare_Unsupport_List = Benchmark_Compare_Support_List + Api_Precision_Compare_Unsupport_List
+
+
+cur_path = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
+with FileOpen(yaml_path, 'r') as f:
+    Apis = yaml.safe_load(f)
+    AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
+    AbsoluteStandardApiName = list(AbsoluteStandardApi.keys())
 
 
 DETAIL_TEST_ROWS = [[
@@ -29,6 +36,9 @@ DETAIL_TEST_ROWS = [[
             "小值域错误占比",
             "相对误差最大值",
             "相对误差平均值",
+            "inf/nan错误率",
+            "相对误差错误率",
+            "绝对误差错误率",
             "Status",
             "Message"
         ]]
@@ -73,7 +83,7 @@ class CompareConst:
     FALSE = 'FALSE'
     
     
-class BenchmarkCompareColumn:
+class ApiPrecisionCompareColumn:
     API_NAME = 'API Name'
     DEVICE_DTYPE = 'DEVICE Dtype'
     SMALL_VALUE_ERROR_RATE = '小值域错误占比'
@@ -92,30 +102,43 @@ class BenchmarkCompareColumn:
     EB_RATIO = '误差均衡性比值'
     EB_STATUS = '误差均衡性判定结果'
     ERROR_RATE = '错误率'
+    ERROR_RATE_STATUS = '错误率判定结果'
+    INF_NAN_ERROR_RATIO = 'inf/nan错误率'
+    INF_NAN_ERROR_RATIO_STATUS = 'inf/nan判定结果'
+    REL_ERR_RATIO = '相对误差错误率'
+    REL_ERR_RATIO_STATUS = '相对误差判定结果'
+    ABS_ERR_RATIO = '绝对误差错误率'
+    ABS_ERR_RATIO_STATUS = '绝对误差判定结果'
+    FINAL_RESULT = '比对结果'
+    ALGORITHM = '比对算法'
     FORWWARD_STATUS = 'Forward Test Success'
     BACKWARD_STATUS = 'Backward Test Success'
     MESSAGE = 'Message'
     
     @staticmethod
     def to_required_columns():
-        return [BenchmarkCompareColumn.API_NAME, BenchmarkCompareColumn.DEVICE_DTYPE, 
-                BenchmarkCompareColumn.SMALL_VALUE_ERROR_RATE, BenchmarkCompareColumn.RMSE, 
-                BenchmarkCompareColumn.MAX_REL_ERR, BenchmarkCompareColumn.MEAN_REL_ERR, BenchmarkCompareColumn.EB,
-                BenchmarkCompareColumn.ERROR_RATE]
+        return [ApiPrecisionCompareColumn.API_NAME, ApiPrecisionCompareColumn.DEVICE_DTYPE, 
+                ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE, ApiPrecisionCompareColumn.RMSE, 
+                ApiPrecisionCompareColumn.MAX_REL_ERR, ApiPrecisionCompareColumn.MEAN_REL_ERR, ApiPrecisionCompareColumn.EB,
+                ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, 
+                ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO]
         
     @staticmethod
     def get_detail_csv_title():
-        return [BenchmarkCompareColumn.API_NAME,  
-                BenchmarkCompareColumn.SMALL_VALUE_ERROR_RATIO, BenchmarkCompareColumn.SMALL_VALUE_ERROR_STATUS, 
-                BenchmarkCompareColumn.RMSE_RATIO, BenchmarkCompareColumn.RMSE_STATUS, 
-                BenchmarkCompareColumn.MAX_REL_ERR_RATIO, BenchmarkCompareColumn.MAX_REL_ERR_STATUS, 
-                BenchmarkCompareColumn.MEAN_REL_ERR_RATIO, BenchmarkCompareColumn.MEAN_REL_ERR_STATUS, 
-                BenchmarkCompareColumn.EB_RATIO, BenchmarkCompareColumn.EB_STATUS]
+        return [ApiPrecisionCompareColumn.API_NAME,  
+                ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATIO, ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_STATUS, 
+                ApiPrecisionCompareColumn.RMSE_RATIO, ApiPrecisionCompareColumn.RMSE_STATUS, 
+                ApiPrecisionCompareColumn.MAX_REL_ERR_RATIO, ApiPrecisionCompareColumn.MAX_REL_ERR_STATUS, 
+                ApiPrecisionCompareColumn.MEAN_REL_ERR_RATIO, ApiPrecisionCompareColumn.MEAN_REL_ERR_STATUS, 
+                ApiPrecisionCompareColumn.EB_RATIO, ApiPrecisionCompareColumn.EB_STATUS, 
+                ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO_STATUS, ApiPrecisionCompareColumn.REL_ERR_RATIO_STATUS, 
+                ApiPrecisionCompareColumn.ABS_ERR_RATIO_STATUS, ApiPrecisionCompareColumn.ERROR_RATE_STATUS, 
+                ApiPrecisionCompareColumn.FINAL_RESULT, ApiPrecisionCompareColumn.ALGORITHM, ApiPrecisionCompareColumn.MESSAGE]
     
     @staticmethod
     def get_result_csv_title():
-        return [BenchmarkCompareColumn.API_NAME, BenchmarkCompareColumn.FORWWARD_STATUS, 
-                BenchmarkCompareColumn.BACKWARD_STATUS, BenchmarkCompareColumn.MESSAGE]
+        return [ApiPrecisionCompareColumn.API_NAME, ApiPrecisionCompareColumn.FORWWARD_STATUS, 
+                ApiPrecisionCompareColumn.BACKWARD_STATUS, ApiPrecisionCompareColumn.MESSAGE]
 
 
 def check_dtype_comparable(x, y):
