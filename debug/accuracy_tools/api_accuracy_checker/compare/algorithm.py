@@ -119,3 +119,43 @@ def get_small_value_mask(abs_bench, both_finite_mask, small_value_threshold):
     small_value_mask = np.less_equal(abs_bench, small_value_threshold)
     small_value_mask = np.logical_and(small_value_mask, both_finite_mask)
     return small_value_mask
+
+
+def get_abs_bench_with_eps(bench, dtype):
+    abs_bench = np.abs(bench)
+    eps = np.finfo(bench.dtype).eps if dtype != torch.bfloat16 else 2 ** -8
+    abs_bench_with_eps = abs_bench + eps
+    return abs_bench, abs_bench_with_eps
+
+
+def check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol):
+    abs_gpu_with_eps = get_abs_bench_with_eps(bench_output, dtype)
+    golden_same_dtype = bench_output.astype(device_output.dtype)
+    a_min = np.finfo(device_output.dtype).min if dtype != torch.bfloat16 else -3.3895313892515355e+38
+    a_max = np.finfo(device_output.dtype).max if dtype != torch.bfloat16 else 3.3895313892515355e+38
+    golden_clip = np.clip(golden_same_dtype, a_min, a_max)
+    npu_clip = np.clip(device_output, a_min, a_max)
+    clipped_abs_ae = np.abs(npu_clip - golden_clip)
+    clipped_re = clipped_abs_ae / abs_gpu_with_eps
+    pass_mask = np.less_equal(clipped_re, rtol)
+    both_nan_mask = np.logical_and(np.isnan(device_output), np.isnan(golden_clip))
+    pass_mask = np.logical_or(pass_mask, both_nan_mask)
+    not_pass_mask = np.logical_not(pass_mask)
+    not_pass_mask = np.logical_and(not_pass_mask, inf_nan_mask)
+
+    inf_nan_err_cnt = np.sum(not_pass_mask)
+    return 0 if inf_nan_err_cnt == 0  else inf_nan_err_cnt / np.sum(inf_nan_mask)
+
+
+def check_small_value(abs_err, small_value_mask, small_value_atol):
+    greater_mask = np.greater(abs_err, small_value_atol)
+    err_mask = np.logical_and(greater_mask, small_value_mask)
+    err_cnt = np.sum(err_mask)
+    return 0 if err_cnt == 0 else err_cnt / np.sum(small_value_mask)
+
+
+def check_norm_value(normal_value_mask, rel_err, rtol):
+    err_mask = np.greater(rel_err, rtol)
+    err_mask = np.logical_and(err_mask, normal_value_mask)
+    err_cnt = np.sum(err_mask)
+    return 0 if err_cnt == 0 else err_cnt / np.sum(normal_value_mask)
