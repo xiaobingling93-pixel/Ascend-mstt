@@ -10,9 +10,9 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 current_time = time.strftime("%Y%m%d%H%M%S")
 BENCHMARK_COMPARE_RESULT_FILE_NAME = "api_precision_compare_result_" + current_time + ".csv"
 BENCHMARK_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_" + current_time + ".csv"
-Benchmark_Compare_Support_List = ['torch.float16', 'torch.bfloat16', 'torch.float32']
-Api_Precision_Compare_Unsupport_List = ['torch.float64', 'torch.complex64', 'torch.complex128']
-Binary_Compare_Unsupport_List = Benchmark_Compare_Support_List + Api_Precision_Compare_Unsupport_List
+BENCHMARK_COMPARE_SUPPORT_LIST = ['torch.float16', 'torch.bfloat16', 'torch.float32']
+API_PRECISION_COMPARE_UNSUPPORT_LIST = ['torch.float64', 'torch.complex64', 'torch.complex128']
+BINARY_COMPARE_UNSUPPORT_LIST = BENCHMARK_COMPARE_SUPPORT_LIST + API_PRECISION_COMPARE_UNSUPPORT_LIST
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -81,6 +81,10 @@ class CompareConst:
     SKIP = 'SKIP'
     TRUE = 'TRUE'
     FALSE = 'FALSE'
+    BFLOAT16_MIN = -3.3895313892515355e+38
+    BFLOAT16_MAX = 3.3895313892515355e+38
+    BFLOAT16_EPS = 2 ** -8
+    SPACE = " "
     
     
 class ApiPrecisionCompareColumn:
