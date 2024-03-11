@@ -129,7 +129,7 @@ def get_abs_bench_with_eps(bench, dtype):
 
 
 def check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol):
-    abs_gpu_with_eps = get_abs_bench_with_eps(bench_output, dtype)
+    abs_gpu, abs_gpu_with_eps = get_abs_bench_with_eps(bench_output, dtype)
     golden_same_dtype = bench_output.astype(device_output.dtype)
     a_min = np.finfo(device_output.dtype).min if dtype != torch.bfloat16 else -3.3895313892515355e+38
     a_max = np.finfo(device_output.dtype).max if dtype != torch.bfloat16 else 3.3895313892515355e+38
