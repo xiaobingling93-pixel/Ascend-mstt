@@ -9,8 +9,8 @@ import pandas as pd
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
     CompareException, create_directory
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.compare.compare_utils import CompareConst, BENCHMARK_COMPARE_RESULT_FILE_NAME, \
-BENCHMARK_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
+from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
+API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApiName, BINARY_COMPARE_UNSUPPORT_LIST
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -318,8 +318,8 @@ def _api_precision_compare_command(args):
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
-    result_csv_path = os.path.join(out_path, BENCHMARK_COMPARE_RESULT_FILE_NAME)
-    details_csv_path = os.path.join(out_path, BENCHMARK_COMPARE_DETAILS_FILE_NAME)
+    result_csv_path = os.path.join(out_path, API_PRECISION_COMPARE_RESULT_FILE_NAME)
+    details_csv_path = os.path.join(out_path, API_PRECISION_COMPARE_DETAILS_FILE_NAME)
     compare_config = CompareConfig(npu_csv_path, gpu_csv_path, result_csv_path, details_csv_path)
     api_precision_compare(compare_config)
 
