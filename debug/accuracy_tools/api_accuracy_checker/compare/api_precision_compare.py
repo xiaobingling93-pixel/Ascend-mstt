@@ -244,8 +244,10 @@ def get_absolute_threshold_result(row_npu):
     rel_err_result = CompareConst.PASS if rel_err_ratio == 0 else CompareConst.ERROR
     abs_err_result = CompareConst.PASS if abs_err_ratio == 0 else CompareConst.ERROR
 
-    absolute_threshold_result = CompareConst.PASS if all(result == CompareConst.PASS for result in 
-    [inf_nan_result, rel_err_result, abs_err_result]) else CompareConst.ERROR
+    if CompareConst.ERROR in [inf_nan_result, rel_err_result, abs_err_result]:
+        absolute_threshold_result = CompareConst.ERROR
+    else:
+        absolute_threshold_result = CompareConst.PASS
 
     return [
         inf_nan_error_ratio, inf_nan_result,
@@ -253,8 +255,6 @@ def get_absolute_threshold_result(row_npu):
         abs_err_ratio, abs_err_result,
         absolute_threshold_result
     ]
-
-    return inf_nan_result, rel_err_result, abs_err_result, absolute_threshold_result
 
 
 def get_api_checker_result(status):
