@@ -30,7 +30,7 @@ DETAIL_TEST_ROWS = [[
             "双百指标",
             "双千指标",
             "双万指标",
-            "错误率",
+            "二进制一致错误率",
             "误差均衡性",
             "均方根误差",
             "小值域错误占比",
@@ -101,8 +101,8 @@ class ApiPrecisionCompareColumn:
     MEAN_REL_ERR_STATUS = '相对误差平均值判定结果'
     EB_RATIO = '误差均衡性比值'
     EB_STATUS = '误差均衡性判定结果'
-    ERROR_RATE = '错误率'
-    ERROR_RATE_STATUS = '错误率判定结果'
+    ERROR_RATE = '二进制一致错误率'
+    ERROR_RATE_STATUS = '二进制一致错误率判定结果'
     INF_NAN_ERROR_RATIO = 'inf/nan错误率'
     INF_NAN_ERROR_RATIO_STATUS = 'inf/nan判定结果'
     REL_ERR_RATIO = '相对误差错误率'
