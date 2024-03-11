@@ -2,18 +2,32 @@ import os
 import torch
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-from grad_tool.utils import write_csv, path_check, print_info_log
+from grad_tool.utils import write_csv, path_check, print_info_log, create_directory
 
 
 class GradComparator:
     @staticmethod
+    def compare_distributed(path1: str, path2: str, output_dir):
+        ranks = GradComparator._get_matched_dirs(path1, path2, "rank")
+        print_info_log(f"the following ranks will be compared: {ranks}")
+        if not ranks:
+            raise Exception("no matched ranks for comparison, please dump data in same configuration")
+        if not os.path.isdir(output_dir):
+            create_directory(output_dir)
+        for rank in tqdm(ranks, desc="rank"):
+            print_info_log(f"now comparing rank {rank}:")
+            GradComparator.compare(os.path.join(path1, f"rank_{rank}"),
+                                   os.path.join(path2, f"rank_{rank}"),
+                                   os.path.join(output_dir, f"rank_{rank}"))
+
+    @staticmethod
     def compare(path1: str, path2: str, output_dir):
-        steps = GradComparator._get_matched_steps(path1, path2)
+        steps = GradComparator._get_matched_dirs(path1, path2, "step")
         if not steps:
             raise Exception("no matched steps for comparison, please dump data in same configuration")
         similarities = GradComparator._calculate_separated_similarities(path1, path2, steps)
         if not os.path.isdir(output_dir):
-            os.makedirs(output_dir)
+            create_directory(output_dir)
         GradComparator._save_similarities(similarities, steps, output_dir)
 
     @staticmethod
@@ -30,12 +44,13 @@ class GradComparator:
                 same_count, total_count = GradComparator._calculate_similarity(pt1, pt2)
                 same_count_summary += same_count
                 total_count_summary += total_count
-                if pt_file not in similarities:
-                    similarities[pt_file] = []
+                param_name = pt_file[:-3]
+                if param_name not in similarities:
+                    similarities[param_name] = []
                 if total_count == 0:
-                    similarities[pt_file].append(0)
+                    similarities[param_name].append(0)
                 else:
-                    similarities[pt_file].append(same_count / total_count)
+                    similarities[param_name].append(same_count / total_count)
             if "summary" not in similarities:
                 similarities["summary"] = []
             if total_count_summary == 0:
@@ -45,21 +60,21 @@ class GradComparator:
         return similarities
 
     @staticmethod
-    def _get_matched_steps(path1: str, path2: str):
+    def _get_matched_dirs(path1: str, path2: str, dir_prefix):
         path_check(path1, isdir=True)
         path_check(path2, isdir=True)
-        steps = []
+        dirs = []
         for dirname in os.listdir(path1):
             splits = dirname.split('_')
-            if not splits or splits[0] != 'step' or not splits[1].isdigit():
+            if not splits or splits[0] != dir_prefix or not splits[1].isdigit():
                 continue
 
             folder2 = os.path.join(path2, dirname)
-            if not os.path.exists(folder2):
+            if not os.path.isdir(folder2):
                 continue
-            steps.append(int(splits[1]))
-        steps = sorted(steps)
-        return steps
+            dirs.append(int(splits[1]))
+        dirs = sorted(dirs)
+        return dirs
 
     @staticmethod
     def _get_matched_pt_files(path1: str, path2: str, step: int):
@@ -89,11 +104,13 @@ class GradComparator:
             plt.xlabel('steps')
             plt.ylabel('similarities')
             plt.title(f'{key}_similarities')
-            plt.savefig(f'{output_dir}/{key}_similarities.png')
-            plt.savefig(os.path.join(output_dir, f"{key}_similarities.png"))
+            picture_dir = os.path.join(output_dir, "similarities_picture")
+            if not os.path.isdir(picture_dir):
+                create_directory(picture_dir)
+            plt.savefig(os.path.join(picture_dir, f"{key}_similarities.png"))
             plt.close()
             head_tuple = tuple(['step'] + [str(step) for step in steps])
-            write_csv(os.path.join(output_dir, f"{key}_similarities.csv"), [['similarity'] + value], head_tuple)
+            write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
 
     @staticmethod
     def _calculate_similarity(pt_file1: str, pt_file2: str):
