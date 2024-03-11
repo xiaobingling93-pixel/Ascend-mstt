@@ -12,6 +12,7 @@ from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApiName, BINARY_COMPARE_UNSUPPORT_LIST
+from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
@@ -157,7 +158,7 @@ def analyse_csv(npu_data, gpu_data, config):
     last_api_name, last_api_dtype = None, None
     for _, row_npu in npu_data.iterrows():
         message = ''
-        compare_column = ApiPrecisionCompareColumn()
+        compare_column = ApiPrecisionOutputColumn()
         part_api_name = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == part_api_name]
         api_name, direction_status, _, _ = part_api_name.split(".")
@@ -180,7 +181,6 @@ def analyse_csv(npu_data, gpu_data, config):
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
             bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
             new_status = record_benchmark_compare_result(compare_column, bs)
-
         write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
         if last_api_name is not None and api_name != last_api_name:
@@ -266,6 +266,7 @@ def check_csv_columns(columns, csv_type):
 def record_binary_consistency_result(compare_column, row_npu):
     new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE])
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
+    compare_column.error_rate_status = new_status
     compare_column.compare_result = new_status
     compare_column.algorithm = "二进制一致法"
     return new_status
@@ -274,11 +275,11 @@ def record_binary_consistency_result(compare_column, row_npu):
 def record_absolute_threshold_result(compare_column, row_npu):
     absolute_threshold_result = get_absolute_threshold_result(row_npu)
     compare_column.inf_nan_error_ratio = absolute_threshold_result[0]
-    compare_column.inf_nan_result = absolute_threshold_result[1]
+    compare_column.inf_nan_error_ratio_status = absolute_threshold_result[1]
     compare_column.rel_err_ratio = absolute_threshold_result[2]
-    compare_column.rel_err_result = absolute_threshold_result[3]
+    compare_column.rel_err_ratio_status = absolute_threshold_result[3]
     compare_column.abs_err_ratio = absolute_threshold_result[4]
-    compare_column.abs_err_result = absolute_threshold_result[5]
+    compare_column.abs_err_ratio_status = absolute_threshold_result[5]
     new_status = absolute_threshold_result[6]
     compare_column.compare_result = new_status
     compare_column.algorithm = "绝对阈值法"
