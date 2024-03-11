@@ -15,7 +15,7 @@ class CompareColumn:
         self.EB = CompareConst.NA
         self.RMSE = CompareConst.NA
         self.small_value_err_ratio = CompareConst.NA
-        self.Max_rel_error = CompareConst.NA
+        self.Max_rel_error = CompareConst.NASPACE
         self.Mean_rel_error = CompareConst.NA
         self.inf_nan_error_ratio = CompareConst.NA
         self.rel_err_ratio = CompareConst.NA
@@ -28,7 +28,7 @@ class CompareColumn:
                 self.rel_err_ratio, self.abs_err_ratio, is_pass, message]
 
 
-class ApiPrecisionCompareColumn:
+class ApiPrecisionOutputColumn:
     def __init__(self):
         self.api_name = CompareConst.SPACE
         self.small_value_err_ratio = CompareConst.SPACE
@@ -53,7 +53,7 @@ class ApiPrecisionCompareColumn:
         self.compare_algorithm = CompareConst.SPACE
         self.compare_message = CompareConst.SPACE
 
-    def to_column_value(self, is_pass, message):
+    def to_column_value(self):
         return [self.api_name, self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
                 self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
                 self.mean_rel_err_status, self.eb_ratio, self.eb_status, self.inf_nan_error_ratio, 
