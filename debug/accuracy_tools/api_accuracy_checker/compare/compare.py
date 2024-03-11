@@ -217,7 +217,7 @@ class Comparator:
             compare_column.npu_type = str(type(device_output))
             status, compare_result, message = self._compare_builtin_type(bench_output, device_output, compare_column)
         elif bench_output is None:
-            return CompareConst.PASS, compare_column, "Output is None."
+            return CompareConst.SKIP, compare_column, "bench output is None, skip this test."
         else:
             return CompareConst.PASS, compare_column, 
         "Unexpected output type in compare_core: {}".format(type(bench_output))
