@@ -159,31 +159,32 @@ def analyse_csv(npu_data, gpu_data, config):
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
-        part_api_name = row_npu[ApiPrecisionCompareColumn.API_NAME]
-        row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == part_api_name]
-        api_name, direction_status, _, _ = part_api_name.split(".")
+        full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
+        row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
+        full_api_name, direction_status, _, _ = full_api_name_with_direction_status.split(".")
         if row_gpu.empty:
-            print_warn_log(f'This API : {part_api_name} does not exist in the GPU data.')
+            print_warn_log(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue
         if len(row_gpu) > 1:
-            msg = f'This API : {part_api_name} has multiple records in the GPU data.'
+            msg = f'This API : {full_api_name_with_direction_status} has multiple records in the GPU data.'
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         row_gpu = row_gpu.iloc[0]
+        #当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
         if pd.isna(row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]):
             continue
-        _, dedicated_api_name, _ = api_name.split("*")
+        _, dedicated_api_name, _ = full_api_name.split("*")
         new_status = CompareConst.NA
-        compare_column.api_name = part_api_name
+        compare_column.api_name = full_api_name_with_direction_status
         if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST:
             new_status = record_binary_consistency_result(compare_column, row_npu)                            
         elif dedicated_api_name in AbsoluteStandardApiName:
             new_status = record_absolute_threshold_result(compare_column, row_npu)
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
-            bs = BenchmarkStandard(part_api_name, row_npu, row_gpu)
+            bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
             new_status = record_benchmark_compare_result(compare_column, bs)
         write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if last_api_name is not None and api_name != last_api_name:
+        if last_api_name is not None and full_api_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
@@ -197,7 +198,7 @@ def analyse_csv(npu_data, gpu_data, config):
                 message = ''
                 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        last_api_name = api_name
+        last_api_name = full_api_name
         
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:
@@ -238,12 +239,15 @@ def get_absolute_threshold_result(row_npu):
     else:
         absolute_threshold_result = CompareConst.PASS
 
-    return [
-        inf_nan_error_ratio, inf_nan_result,
-        rel_err_ratio, rel_err_result,
-        abs_err_ratio, abs_err_result,
-        absolute_threshold_result
-    ]
+    return {
+        "inf_nan_error_ratio": inf_nan_error_ratio,
+        "inf_nan_result": inf_nan_result,
+        "rel_err_ratio": rel_err_ratio,
+        "rel_err_result": rel_err_result,
+        "abs_err_ratio": abs_err_ratio,
+        "abs_err_result": abs_err_result,
+        "absolute_threshold_result": absolute_threshold_result,
+    }
 
 
 def get_api_checker_result(status):
@@ -274,16 +278,15 @@ def record_binary_consistency_result(compare_column, row_npu):
 
 def record_absolute_threshold_result(compare_column, row_npu):
     absolute_threshold_result = get_absolute_threshold_result(row_npu)
-    compare_column.inf_nan_error_ratio = absolute_threshold_result[0]
-    compare_column.inf_nan_error_ratio_status = absolute_threshold_result[1]
-    compare_column.rel_err_ratio = absolute_threshold_result[2]
-    compare_column.rel_err_ratio_status = absolute_threshold_result[3]
-    compare_column.abs_err_ratio = absolute_threshold_result[4]
-    compare_column.abs_err_ratio_status = absolute_threshold_result[5]
-    new_status = absolute_threshold_result[6]
-    compare_column.compare_result = new_status
+    compare_column.inf_nan_error_ratio = absolute_threshold_result["inf_nan_error_ratio"]
+    compare_column.inf_nan_error_ratio_status = absolute_threshold_result["inf_nan_result"]
+    compare_column.rel_err_ratio = absolute_threshold_result["rel_err_ratio"]
+    compare_column.rel_err_ratio_status = absolute_threshold_result["rel_err_result"]
+    compare_column.abs_err_ratio = absolute_threshold_result["abs_err_ratio"]
+    compare_column.abs_err_ratio_status = absolute_threshold_result["abs_err_result"]
+    compare_column.compare_result = absolute_threshold_result["absolute_threshold_result"]
     compare_column.algorithm = "绝对阈值法"
-    return new_status
+    return compare_column.compare_result
 
 
 def record_benchmark_compare_result(compare_column, bs):
@@ -300,7 +303,7 @@ def record_benchmark_compare_result(compare_column, bs):
     compare_column.eb_status = bs.eb_status
     compare_column.compare_result = bs.final_result
     compare_column.algorithm = "标杆比对法"
-    return bs.final_result
+    return compare_column.compare_result
 
 
 def _api_precision_compare(parser=None):

@@ -156,15 +156,15 @@ class Comparator:
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
-    def compare_output(self, api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
-        _, dedicated_api_name, _ = api_name.split("*")
-        compare_func = self._compare_dropout if "dropout" in api_name else self._compare_core_wrapper
-        fwd_success_status, fwd_compare_alg_results = compare_func(dedicated_api_name, bench_output, device_output)
-        bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(dedicated_api_name, bench_grad[0], npu_grad[0]) if "dropout" in api_name else compare_func(dedicated_api_name, bench_grad, npu_grad)
-        self.record_results(api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.NA, fwd_compare_alg_results, bwd_compare_alg_results)
+    def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
+        _, api_name, _ = full_api_name.split("*")
+        compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
+        fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
+        bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(api_name, bench_grad[0], npu_grad[0]) if "dropout" in full_api_name else compare_func(api_name, bench_grad, npu_grad)
+        self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.NA, fwd_compare_alg_results, bwd_compare_alg_results)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS
 
-    def _compare_core_wrapper(self, dedicated_api_name, bench_output, device_output):
+    def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
@@ -174,12 +174,12 @@ class Comparator:
                 message = ["bench and npu output structure is different."]
             else:
                 for b_out_i, n_out_i in zip(bench_output, device_output):
-                    status_i, compare_result_i, message_i = self._compare_core(dedicated_api_name, b_out_i, n_out_i)
+                    status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
                     status.append(status_i)
                     compare_result.append(compare_result_i)
                     message.append(message_i)
         else:
-            status, compare_result, message = self._compare_core(dedicated_api_name, bench_output, device_output)
+            status, compare_result, message = self._compare_core(api_name, bench_output, device_output)
         if not isinstance(status, list):
             detailed_result_total.append(compare_result.to_column_value(status, message))
             if status == CompareConst.ERROR:
@@ -195,7 +195,7 @@ class Comparator:
                     test_final_success = CompareConst.WARNING
         return test_final_success, detailed_result_total
 
-    def _compare_core(self, dedicated_api_name, bench_output, device_output):
+    def _compare_core(self, api_name, bench_output, device_output):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
             return CompareConst.ERROR, compare_column, "bench and npu output type is different."
@@ -204,7 +204,7 @@ class Comparator:
             if b_keys != n_keys:
                 return CompareConst.ERROR, compare_column, "bench and npu output dict keys are different."
             else:
-                status, compare_result, message = self._compare_core(dedicated_api_name, list(bench_output.values()), 
+                status, compare_result, message = self._compare_core(api_name, list(bench_output.values()), 
                                                                      list(device_output.values()))
         elif isinstance(bench_output, torch.Tensor):
             copy_bench_out = bench_output.detach().clone()
@@ -212,7 +212,7 @@ class Comparator:
             compare_column.bench_type = str(copy_bench_out.dtype)
             compare_column.npu_type = str(copy_device_output.dtype)
             compare_column.shape = tuple(device_output.shape)
-            status, compare_result, message = self._compare_torch_tensor(dedicated_api_name, copy_bench_out, copy_device_output,
+            status, compare_result, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
                                                                 compare_column)
         elif isinstance(bench_output, (bool, int, float, str)):
             compare_column.bench_type = str(type(bench_output))
@@ -226,7 +226,7 @@ class Comparator:
 
         return status, compare_result, message
 
-    def _compare_torch_tensor(self, dedicated_api_name, bench_output, device_output, compare_column):
+    def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column):
         cpu_shape = bench_output.shape
         npu_shape = device_output.shape
         npu_dtype = device_output.dtype
@@ -251,19 +251,19 @@ class Comparator:
             compare_column.error_rate = err_rate
             return status, compare_column, message
         else:
-            status, compare_column, message = self._compare_float_tensor(dedicated_api_name, bench_output, device_output, 
+            status, compare_column, message = self._compare_float_tensor(api_name, bench_output, device_output, 
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
     
-    def _compare_float_tensor(self, dedicated_api_name, bench_output, device_output, compare_column, dtype):
+    def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
         message = ""
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if dedicated_api_name in AbsoluteStandardApiName:
+            if api_name in AbsoluteStandardApiName:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
-                    dedicated_api_name, str(dtype))
+                    api_name, str(dtype))
                 rel_err = abs_err / abs_bench_with_eps
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value_threshold)
                 normal_value_mask = np.logical_and(both_finite_mask, np.logical_not(small_value_mask))
@@ -314,7 +314,7 @@ class Comparator:
         return CompareConst.PASS, compare_column, message
 
     @staticmethod
-    def _compare_dropout(dedicated_api_name, bench_output, device_output):
+    def _compare_dropout(api_name, bench_output, device_output):
         tensor_num = bench_output.numel()
         if tensor_num >= 100:
             if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
@@ -344,8 +344,8 @@ class Comparator:
         return error_rate, result, ""
     
     @staticmethod
-    def _get_absolute_threshold_attribute(dedicated_api_name, dtype):
-        small_value_threshold = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('small_value')
-        small_value_atol = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('small_value_atol')
-        rtol = AbsoluteStandardApi.get(dedicated_api_name).get(dtype).get('rtol')
+    def _get_absolute_threshold_attribute(api_name, dtype):
+        small_value_threshold = AbsoluteStandardApi.get(api_name).get(dtype).get('small_value')
+        small_value_atol = AbsoluteStandardApi.get(api_name).get(dtype).get('small_value_atol')
+        rtol = AbsoluteStandardApi.get(api_name).get(dtype).get('rtol')
         return small_value_threshold, small_value_atol, rtol
