@@ -118,10 +118,17 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
         else:
             return arg_in
 
+    def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
+        if arg_in.dtype in Const.RAISE_PRECISION:
+            return True
+        if check_kwargs and arg_in.dtype == torch.half:
+            return True
+        return False
+
     def recursive_find_dtypes(arg_in, check_kwargs=False):
         if isinstance(arg_in, (list, tuple)):
             return set().union(*tuple(recursive_find_dtypes(arg, check_kwargs=check_kwargs) for arg in arg_in))
-        elif isinstance(arg_in, torch.Tensor) and (arg_in.dtype in Const.RAISE_PRECISION or (check_kwargs and arg_in.dtype == torch.half)):
+        elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
             return set([arg_in.dtype])
         elif isinstance(arg_in, dict) and check_kwargs:
             return set().union(*tuple(recursive_find_dtypes(v, check_kwargs=True) for v in arg_in.values()))
