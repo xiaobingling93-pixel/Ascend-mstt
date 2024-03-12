@@ -40,7 +40,7 @@ class ApiPrecisionOutputColumn:
         self.mean_rel_err_ratio = CompareConst.SPACE
         self.mean_rel_err_status = CompareConst.SPACE
         self.eb_ratio = CompareConst.SPACE
-        self.eb_status =  CompareConst.SPACE
+        self.eb_status = CompareConst.SPACE
         self.inf_nan_error_ratio = CompareConst.SPACE
         self.inf_nan_error_ratio_status = CompareConst.SPACE
         self.rel_err_ratio = CompareConst.SPACE

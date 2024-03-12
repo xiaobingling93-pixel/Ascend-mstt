@@ -127,6 +127,7 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, 
                 ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO]
 
+    @staticmethod
     def get_detail_csv_title():
         return [ApiPrecisionCompareColumn.API_NAME,  
                 ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATIO, ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_STATUS, 
