@@ -121,7 +121,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
         if arg_in.dtype in Const.RAISE_PRECISION:
             return True
-        if check_kwargs and arg_in.dtype == torch.half:
+        if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
             return True
         return False
 
