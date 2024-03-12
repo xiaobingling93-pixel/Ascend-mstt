@@ -278,13 +278,13 @@ def record_binary_consistency_result(compare_column, row_npu):
 
 def record_absolute_threshold_result(compare_column, row_npu):
     absolute_threshold_result = get_absolute_threshold_result(row_npu)
-    compare_column.inf_nan_error_ratio = absolute_threshold_result["inf_nan_error_ratio"]
-    compare_column.inf_nan_error_ratio_status = absolute_threshold_result["inf_nan_result"]
-    compare_column.rel_err_ratio = absolute_threshold_result["rel_err_ratio"]
-    compare_column.rel_err_ratio_status = absolute_threshold_result["rel_err_result"]
-    compare_column.abs_err_ratio = absolute_threshold_result["abs_err_ratio"]
-    compare_column.abs_err_ratio_status = absolute_threshold_result["abs_err_result"]
-    compare_column.compare_result = absolute_threshold_result["absolute_threshold_result"]
+    compare_column.inf_nan_error_ratio = absolute_threshold_result.get("inf_nan_error_ratio")
+    compare_column.inf_nan_error_ratio_status = absolute_threshold_result.get("inf_nan_result")
+    compare_column.rel_err_ratio = absolute_threshold_result.get("rel_err_ratio")
+    compare_column.rel_err_ratio_status = absolute_threshold_result.get("rel_err_result")
+    compare_column.abs_err_ratio = absolute_threshold_result.get("abs_err_ratio")
+    compare_column.abs_err_ratio_status = absolute_threshold_result.get("abs_err_result")
+    compare_column.compare_result = absolute_threshold_result.get("absolute_threshold_result")
     compare_column.algorithm = "绝对阈值法"
     return compare_column.compare_result
 
