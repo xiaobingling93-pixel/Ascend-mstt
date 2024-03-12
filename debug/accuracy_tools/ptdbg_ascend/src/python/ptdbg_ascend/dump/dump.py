@@ -339,6 +339,7 @@ def forward_acl_dump(module, module_name):
     global backward_init_status
     if not forward_init_status and not backward_init_status:
         forward_init_status = True
+        torch_npu.npu.synchronize()
         torch_npu.npu.init_dump()
         torch_npu.npu.set_dump(DumpUtil.dump_config)
         torch_npu.npu.synchronize()
@@ -348,6 +349,7 @@ def forward_acl_dump(module, module_name):
             module.forward(*module.input_args, **module.input_kwargs)
         torch_npu.npu.synchronize()
         torch_npu.npu.finalize_dump()
+        torch_npu.npu.synchronize()
     del module.input_args
     del module.input_kwargs
     forward_init_status = False
