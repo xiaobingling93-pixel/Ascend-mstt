@@ -138,7 +138,7 @@ def check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol):
         dtype：npu输出的dtype
     输出： 
         inf_nan_err_ratio：npu输出和golden输出的inf、nan不一致的比例
-'''
+    '''
     abs_gpu, abs_gpu_with_eps = get_abs_bench_with_eps(bench_output, dtype)
     golden_same_dtype = bench_output.astype(device_output.dtype)
     a_min = np.finfo(device_output.dtype).min if dtype != torch.bfloat16 else CompareConst.BFLOAT16_MIN
@@ -166,7 +166,7 @@ def check_small_value(abs_err, small_value_mask, small_value_atol):
         rtol：相对误差的阈值
     输出： 
         rel_err_ratio：npu输出和golden输出的相对误差不满足阈值的比例
-'''
+    '''
     greater_mask = np.greater(abs_err, small_value_atol)
     err_mask = np.logical_and(greater_mask, small_value_mask)
     err_cnt = np.sum(err_mask)
@@ -182,7 +182,7 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
         atol：绝对误差的阈值
     输出： 
         abs_err_ratio：npu输出和golden输出的绝对误差不满足阈值的比例
-'''
+    '''
     err_mask = np.greater(rel_err, rtol)
     err_mask = np.logical_and(err_mask, normal_value_mask)
     err_cnt = np.sum(err_mask)
