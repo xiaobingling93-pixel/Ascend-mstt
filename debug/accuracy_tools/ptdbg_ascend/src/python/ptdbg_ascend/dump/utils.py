@@ -87,6 +87,7 @@ class DumpUtil(object):
     need_replicate = False
     summary_mode = "all"
     is_single_rank = None
+    dump_thread_pool = None
 
 
     @staticmethod
