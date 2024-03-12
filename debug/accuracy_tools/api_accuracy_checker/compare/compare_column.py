@@ -15,7 +15,7 @@ class CompareColumn:
         self.EB = CompareConst.NA
         self.RMSE = CompareConst.NA
         self.small_value_err_ratio = CompareConst.NA
-        self.Max_rel_error = CompareConst.NASPACE
+        self.Max_rel_error = CompareConst.NA
         self.Mean_rel_error = CompareConst.NA
         self.inf_nan_error_ratio = CompareConst.NA
         self.rel_err_ratio = CompareConst.NA
