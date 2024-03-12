@@ -247,8 +247,8 @@ def _user_interactive_confirm(message):
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid():
-        _user_interactive_confirm('The file path %s may be insecure because is does not belong to you.'
-                                  'Do you want to continue?' % path)
+        print_error_log('The file path %s may be insecure because is does not belong to you.' % path)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
 
 
 def check_path_pattern_vaild(path):
