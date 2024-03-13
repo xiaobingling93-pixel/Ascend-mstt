@@ -1756,7 +1756,7 @@ compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 
 | 参数名         | 说明                                                         | 是否必选 |
 | -------------- | ------------------------------------------------------------ | -------- |
-| npu_dump_dir   | 配置NPU环境下的dump目录。参数示例：'./npu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。 | 是       |
+| npu_dump_dir   | 配置NPU环境下的dump目录。dump数据目录须指定到step级。参数示例：'./npu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。 | 是       |
 | bench_dump_dir | 配置CPU、GPU或NPU环境下的dump目录。参数示例：'./gpu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。 | 是       |
 | output_path    | 配置比对结果csv文件存盘目录。需要预先创建output_path目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_rank{npu_ID}-rank{cpu/gpu/npu_ID}_{timestamp}.csv`。 | 是       |
 | **kwargs       | 支持compare的所有可选参数。                                  | 否       |
