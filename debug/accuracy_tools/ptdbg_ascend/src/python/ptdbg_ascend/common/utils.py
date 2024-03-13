@@ -698,7 +698,7 @@ def parameter_adapter(func):
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
                     return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
             elif indices.dtype != torch.bool:
-                if len(indices.shape) == 1:
+                if not indices.shape or len(indices.shape) == 1:
                     return func(self, input_tensor, indices.tolist())
                 elif len(indices.shape) == 2:
                     result = [func(self, input_tensor, index) for index in indices.tolist()]
