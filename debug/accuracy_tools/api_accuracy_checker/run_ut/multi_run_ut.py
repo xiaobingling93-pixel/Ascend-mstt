@@ -129,6 +129,8 @@ def run_parallel_ut(config):
     except Exception as e:
         print_error_log(f"An unexpected error occurred: {e}")
     finally:
+        if progress_bar.n < config.total_items:
+            print_warn_log("UT task is not completed, prameter -csv_path with the result CSV file path will be used to continue the UT task.")
         clean_up()
         progress_bar_thread.join()
     try:
