@@ -1,8 +1,9 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
     CompareException, print_warn_log
-from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path
+from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
 from ..overflow_check.utils import OverFlowUtil
@@ -54,12 +55,25 @@ class PrecisionDebugger:
         return hook_dict.get(hook_name, lambda: ValueError("hook name {} is not in ['dump', 'overflow_check']".format(hook_name)))
 
     def configure_full_dump(self, mode='api_stack', scope=None, api_list=None, filter_switch=Const.OFF,
-            input_output_mode=[Const.ALL], acl_config=None, backward_input=None, summary_only=False):
+            input_output_mode=[Const.ALL], acl_config=None, backward_input=None, summary_only=False, summary_mode=None):
+        if mode == "acl" and self.model is not None:
+            print_error_log("Init dump does not support ACL dump mode.")
+            raise CompareException(CompareException.INVALID_DUMP_MODE)
         scope = scope or [] 
         api_list = api_list or []
         backward_input = backward_input or []
+
+        if summary_only:
+            if summary_mode is not None:
+                raise ValueError("summary_mode can not be used with summary_only")
+            print_warn_log("Argument 'summary_only' will be deprecated, it would be better to use 'summary_mode'")
+            summary_mode = "summary"
+        elif summary_mode is None:
+            summary_mode = "all"
+
         set_dump_switch_config(mode=mode, scope=scope, api_list=api_list,
-                               filter_switch=filter_switch, dump_mode=input_output_mode, summary_only=summary_only)
+                               filter_switch=filter_switch, dump_mode=input_output_mode, summary_only=summary_only,
+                               summary_mode=summary_mode)
         if mode == 'acl':
             DumpUtil.set_acl_config(acl_config)
             if not scope or not isinstance(scope, list) or len(scope) != 1:
@@ -95,6 +109,7 @@ class PrecisionDebugger:
                     register_hook_core(instance.hook_func, instance.model)
                     instance.first_start = False
                 DumpUtil.dump_switch = "ON"
+                DumpUtil.dump_thread_pool = ThreadPoolExecutor()
                 OverFlowUtil.overflow_check_switch = "ON"
                 dump_path_str = generate_dump_path_str()
                 set_dump_switch_print_info("ON", DumpUtil.dump_switch_mode, dump_path_str)
@@ -117,6 +132,8 @@ class PrecisionDebugger:
             dump_path_str = generate_dump_path_str()
             set_dump_switch_print_info("OFF", DumpUtil.dump_switch_mode, dump_path_str)
             write_to_disk()
+            if DumpUtil.is_single_rank and DumpUtil.dump_thread_pool:
+                DumpUtil.dump_thread_pool.shutdown(wait=True)
             if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
                 generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
 
@@ -129,6 +146,7 @@ class PrecisionDebugger:
             DumpUtil.iter_num += 1
             DumpUtil.dump_init_enable = True
             HOOKModule.module_count = {}
+            reset_module_count()
         else:
             print_warn_log("DataLoader is enabled, step() skipped.")
 
@@ -140,8 +158,12 @@ class PrecisionDebugger:
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        PrecisionDebugger.stop()
+        debugger_instance = PrecisionDebugger._instance
+        temp_enable_dataloader = debugger_instance.enable_dataloader
+        debugger_instance.enable_dataloader = False
+        debugger_instance.stop()
         result = func(*args, **kwargs)
-        PrecisionDebugger.incr_iter_num_maybe_exit()
+        debugger_instance.incr_iter_num_maybe_exit()
+        debugger_instance.enable_dataloader = temp_enable_dataloader
         return result
     return func_wrapper

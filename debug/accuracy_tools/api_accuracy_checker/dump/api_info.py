@@ -4,12 +4,15 @@ import inspect
 import torch
 import numpy as np
 from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException
+from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException, \
+    get_real_data_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
 def get_tensor_extremum(data, operator):
     if data.dtype is torch.bool:
+        if data.numel() == 0:
+            return False
         if operator == 'max':
             return True in data
         elif operator == 'min':
@@ -124,8 +127,9 @@ class APIInfo:
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
             pt_path = write_pt(file_path, arg.contiguous().cpu().detach())
             self.args_num += 1
+            real_data_path = get_real_data_path(pt_path)
             single_arg.update({'type': 'torch.Tensor'})
-            single_arg.update({'datapath': pt_path})
+            single_arg.update({'datapath': real_data_path})
             single_arg.update({'requires_grad': arg.requires_grad})
         return single_arg
 

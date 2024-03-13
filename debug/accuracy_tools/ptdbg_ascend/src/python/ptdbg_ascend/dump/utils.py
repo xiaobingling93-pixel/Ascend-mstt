@@ -9,7 +9,7 @@ import torch.distributed as dist
 from ..dump import dump
 from ..common.utils import print_error_log, CompareException, DumpException, Const, get_time, print_info_log, \
     check_mode_valid, check_switch_valid, check_dump_mode_valid, check_summary_only_valid, generate_compare_script, \
-    check_is_npu, check_file_valid, make_dump_path_if_not_exists, check_path_before_create
+    check_is_npu, check_file_valid, make_dump_path_if_not_exists, check_path_before_create, print_warn_log, check_summary_mode_valid
 from ..common.file_check_util import FileChecker, FileCheckConst, check_path_length, check_path_pattern_vaild
 
 from ..common.version import __version__
@@ -54,6 +54,17 @@ def check_stack_mode(name_prefix):
     return False
 
 
+class DumpConfig:
+    def __init__(self, mode=None, scope=None, api_list=None, filter_switch=None, dump_mode=None, summary_only=False, summary_mode="all"):
+        self.mode = mode
+        self.scope = scope
+        self.api_list = api_list
+        self.filter_switch = filter_switch
+        self.dump_mode = dump_mode
+        self.summary_only = summary_only
+        self.summary_mode = summary_mode
+
+
 class DumpUtil(object):
     dump_root = None
     dump_data_dir = None
@@ -74,6 +85,10 @@ class DumpUtil(object):
     target_rank = None
     summary_only = False
     need_replicate = False
+    summary_mode = "all"
+    is_single_rank = None
+    dump_thread_pool = None
+
 
     @staticmethod
     def set_dump_path(save_path):
@@ -90,23 +105,25 @@ class DumpUtil(object):
         DumpUtil.dump_config = acl_config
 
     @staticmethod
-    def set_dump_switch(switch, mode=None, scope=None, api_list=None, filter_switch=None, dump_mode=None, summary_only=False):
+    def set_dump_switch(switch, dump_config):
         DumpUtil.dump_switch = switch
-        if mode is not None:
-            DumpUtil.dump_switch_mode = mode
+        if dump_config.mode is not None:
+            DumpUtil.dump_switch_mode = dump_config.mode
         DumpUtil.dump_init_enable = True
-        if scope is not None:
-            DumpUtil.dump_switch_scope = scope
-        if api_list is not None:
-            DumpUtil.dump_api_list = [api.lower() for api in api_list]
-        if filter_switch is not None:
-            DumpUtil.dump_filter_switch = filter_switch
-        if dump_mode is not None:
-            DumpUtil.dump_mode = dump_mode if isinstance(dump_mode, list) else [dump_mode]
+        if dump_config.scope is not None:
+            DumpUtil.dump_switch_scope = dump_config.scope
+        if dump_config.api_list is not None:
+            DumpUtil.dump_api_list = [api.lower() for api in dump_config.api_list]
+        if dump_config.filter_switch is not None:
+            DumpUtil.dump_filter_switch = dump_config.filter_switch
+        if dump_config.dump_mode is not None:
+            DumpUtil.dump_mode = dump_config.dump_mode if isinstance(dump_config.dump_mode, list) else [dump_config.dump_mode]
 
-        if mode == Const.ACL:
-            DumpUtil.dump_switch_scope = [api_name.replace("backward", "forward") for api_name in scope]
-        DumpUtil.summary_only = summary_only
+        if dump_config.mode == Const.ACL:
+            DumpUtil.dump_switch_scope = [api_name.replace("backward", "forward") for api_name in dump_config.scope]
+
+        DumpUtil.summary_only = dump_config.summary_only
+        DumpUtil.summary_mode = dump_config.summary_mode
 
     check_mapper = {
         Const.LIST: check_list_or_acl_mode,
@@ -186,6 +203,8 @@ def create_dirs_if_not_exist(rank, dump_file):
     rank_dir = os.path.join(dump_path, f"rank{rank}")
     dump_file = os.path.join(rank_dir, file_name)
     if not os.path.isdir(rank_dir):
+        check_path_pattern_vaild(dump_file)
+        check_path_length(dump_file, name_length=200)
         Path(rank_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     return dump_file
 
@@ -215,7 +234,8 @@ def set_dump_switch(switch, mode=Const.ALL, scope=None, api_list=None, filter_sw
     check_switch_valid(switch)
     if not DumpUtil.dump_path:
         set_dump_path()
-    DumpUtil.set_dump_switch(switch, summary_only=summary_only)
+    dump_config = DumpConfig(summary_only=summary_only)
+    DumpUtil.set_dump_switch(switch, dump_config)
     dump_path_str = generate_dump_path_str()
     if switch == "OFF":
         dump.write_to_disk()
@@ -227,7 +247,7 @@ def set_dump_switch(switch, mode=Const.ALL, scope=None, api_list=None, filter_sw
 
 
 def set_dump_switch_config(mode=Const.ALL, scope=None, api_list=None, filter_switch=Const.OFF, dump_mode=None,
-                           summary_only=False):
+                           summary_only=False, summary_mode="all"):
     if scope is None:
         scope = []
     if api_list is None:
@@ -235,6 +255,7 @@ def set_dump_switch_config(mode=Const.ALL, scope=None, api_list=None, filter_swi
     if dump_mode is None:
         dump_mode = [Const.ALL]
     try:
+        check_summary_mode_valid(summary_mode)
         check_mode_valid(mode, scope, api_list)
         check_switch_valid(filter_switch)
         dump_mode = check_dump_mode_valid(dump_mode)
@@ -243,8 +264,8 @@ def set_dump_switch_config(mode=Const.ALL, scope=None, api_list=None, filter_swi
         print_error_log(str(err))
         raise CompareException(CompareException.INVALID_PARAM_ERROR) from err
     switch = DumpUtil.dump_switch
-    DumpUtil.set_dump_switch("OFF", mode=mode, scope=scope, api_list=api_list, filter_switch=filter_switch,
-                             dump_mode=dump_mode, summary_only=summary_only)
+    dump_config = DumpConfig(mode, scope, api_list, filter_switch, dump_mode, summary_only, summary_mode)
+    DumpUtil.set_dump_switch("OFF", dump_config)
     DumpUtil.dump_switch = switch
 
 
@@ -323,3 +344,15 @@ def load_env_dump_path(dump_path):
                             "3. Set environment variables ASCEND_WORK_PATH.")
             raise DumpException(DumpException.INVALID_PATH_ERROR)
     return dump_path
+
+
+def check_single_rank_folder(dump_path):
+    rank_folder_pattern = re.compile(r'^rank\d+$')
+    rank_folder_count = 0
+    for item in os.listdir(dump_path):
+        full_path = os.path.join(dump_path, item)
+        if os.path.isdir(full_path) and rank_folder_pattern.match(item):
+            rank_folder_count += 1
+            if rank_folder_count > 1:
+                return False
+    return rank_folder_count == 1

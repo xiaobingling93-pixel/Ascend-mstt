@@ -23,6 +23,8 @@ import stat
 import subprocess
 import sys
 import time
+import zlib
+import json
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -86,6 +88,9 @@ class Const:
     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
     AUTO = "auto"
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
+    SUMMARY = "summary"
+    MD5 = "md5"
+    SUMMARY_MODE = [ALL, SUMMARY, MD5]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
@@ -142,6 +147,9 @@ class CompareConst:
     ERROR_MESSAGE = "Err_message"
     ONE_THOUSANDTH_ERR_RATIO = "One Thousandth Err Ratio"
     FIVE_THOUSANDTHS_ERR_RATIO = "Five Thousandths Err Ratio"
+    NPU_MD5 = "NPU MD5"
+    BENCH_MD5 = "BENCH MD5"
+    RESULT = "Result"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -152,6 +160,10 @@ class CompareConst:
     SUMMARY_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
         NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
+    ]
+
+    MD5_COMPARE_RESULT_HEADER = [
+        NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
 
     # compare result data
@@ -216,6 +228,7 @@ class CompareException(Exception):
     PARSE_FILE_ERROR = 16
     INVALID_COMPARE_MODE = 17
     OVER_SIZE_FILE_ERROR = 18
+    INVALID_SUMMARY_MODE = 19
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -337,6 +350,12 @@ def check_dump_mode_valid(dump_mode):
     return dump_mode
 
 
+def check_summary_mode_valid(summary_mode):
+    if summary_mode not in Const.SUMMARY_MODE:
+        msg = "The summary_mode is not valid"
+        raise CompareException(CompareException.INVALID_SUMMARY_MODE, msg)
+
+
 def check_summary_only_valid(summary_only):
     if not isinstance(summary_only, bool):
         print_error_log("Params summary_only only support True or False.")
@@ -373,6 +392,16 @@ def is_summary_compare(input_param):
         return False
     print_error_log(f"Please check the dump data dir is valid.")
     raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+
+def is_md5_compare(input_parma):
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
+        line = json.loads(npu_pkl.readline())
+    if len(line) < 3:
+        return False
+    if line[2]:
+        return True
+    return False
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
@@ -412,7 +441,7 @@ def is_starts_with(string, prefix_list):
 
 def check_stack_mode(pkl_fp):
     api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
     is_stack_mode = False
     for index, line in enumerate(pkl_fp):
         if index == 0:
@@ -724,6 +753,14 @@ def check_file_valid(file_path):
         if file_path.endswith(Const.NUMPY_SUFFIX) and file_size > Const.TEN_GB:
             print_error_log('The file {} size is greater than 10GB.'.format(file_path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+
+def get_md5_for_tensor(x):
+    if x.dtype == torch.bfloat16:
+        x = x.float()
+    tensor_bytes = x.cpu().detach().numpy().tobytes()
+    crc32_hash = zlib.crc32(tensor_bytes)
+    return f"{crc32_hash:08x}"
 
 
 def check_path_before_create(path):

@@ -59,7 +59,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_set_dump_filter_switch_off(self):
         dump_util = hooks.DumpUtil
-        hooks.DumpUtil.dump_path='/home/dump_path/ptdbg_dump_v3.2/rank0'
+        hooks.DumpUtil.dump_path = '/home/dump_path/ptdbg_dump_v3.2/rank0'
         hooks.set_dump_switch("ON", filter_switch="OFF")
         self.assertEqual(dump_util.dump_filter_switch, "OFF")
 

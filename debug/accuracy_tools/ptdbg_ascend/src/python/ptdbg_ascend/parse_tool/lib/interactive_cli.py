@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import cmd
+import argparse
 from .parse_tool import ParseTool
 from .utils import Util
 from .config import Const
@@ -51,8 +52,39 @@ class InteractiveCli(cmd.Cmd):
     def do_run(self, line=""):
         self.util.execute_command(line)
 
+    @catch_exception
     def do_vc(self, line=""):
-        self.parse_tool.do_vector_compare(self._parse_argv(line))
+        parser = argparse.ArgumentParser()
+        parser.add_argument(
+            "-m", "--my_dump_path", dest="my_dump_path", default=None,
+            help="<Required> my dump path, the data compared with golden data",
+            required=True
+        )
+        parser.add_argument(
+            "-g", "--golden_dump_path", dest="golden_dump_path", default=None,
+            help="<Required> the golden dump data path",
+            required=True
+        )
+        parser.add_argument(
+            "-out", "--output_path", dest="output_path", default=None,
+            help="<Optional> the output path",
+            required=False
+        )
+        parser.add_argument(
+            "-cmp_path", "--msaccucmp_path", dest="msaccucmp_path", default=None,
+            help="<Optional> the msaccucmp.py file path",
+            required=False
+        )
+        args = parser.parse_args(self._parse_argv(line))
+        self.util.check_path_valid(args.my_dump_path)
+        self.util.check_path_valid(args.golden_dump_path)
+        self.util.check_files_in_path(args.my_dump_path)
+        self.util.check_files_in_path(args.golden_dump_path)
+        if self.util.dir_contains_only(args.my_dump_path, ".npy") and \
+            self.util.dir_contains_only(args.golden_dump_path, ".npy"):
+            self.parse_tool.do_compare_converted_dir(args)
+        else:
+            self.parse_tool.do_vector_compare(args)
 
     def do_dc(self, line=""):
         self.parse_tool.do_convert_dump(self._parse_argv(line))
@@ -65,3 +97,7 @@ class InteractiveCli(cmd.Cmd):
 
     def do_cn(self, line=''):
         self.parse_tool.do_compare_data(self._parse_argv(line))
+
+    def do_cad(self, line=''):
+        self.parse_tool.do_convert_api_dir(self._parse_argv(line))
+

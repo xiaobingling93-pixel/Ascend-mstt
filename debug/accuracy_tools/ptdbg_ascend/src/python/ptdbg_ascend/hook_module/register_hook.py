@@ -121,6 +121,7 @@ def register_hook_core(hook, model=None):
     print_info_log("The {} hook function is successfully mounted to the model.".format(hook_name))
 
     if model is not None:
+        print_info_log("The init dump mode is enabled, and the module dump function will not be available")
         if not isinstance(model, torch.nn.Module):
             print_error_log("The argument model must be an object of torch.nn.Module")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)

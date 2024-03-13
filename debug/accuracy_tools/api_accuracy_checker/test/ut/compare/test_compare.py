@@ -3,9 +3,12 @@ import os
 import shutil
 import time
 import unittest
+
+import numpy as np
 import torch.nn.functional
 
 from api_accuracy_checker.compare.compare import Comparator
+from api_accuracy_checker.compare.compare_column import CompareColumn
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -36,17 +39,26 @@ class TestCompare(unittest.TestCase):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
+        actual_cosine_similarity = detailed_result_total[0][3]
+        # 设置一个小的公差值
+        tolerance = 1e-4    
+        # 判断实际的余弦相似度值是否在预期值的公差范围内
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        # 对其他值进行比较，确保它们符合预期
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
+                                              'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
         self.assertTrue(test_final_success)
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                  'N/A', 'N/A', 'pass', '\n']])
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
         self.assertTrue(test_final_success)
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                  'N/A', 'N/A', 'pass', '\n'], ['torch.float32', 'torch.float32',
-                                                                                (100, 100), 1.0, 0.0, 'N/A', 'N/A',
-                                                                                'N/A', 'N/A', 'pass', '\n']])
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
+                                                  'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
+                                                 ['torch.float32', 'torch.float32', (100, 100), 
+                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
+                                                'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
@@ -72,3 +84,22 @@ class TestCompare(unittest.TestCase):
             next(csv_reader)
             api_name_list = [row[0] for row in csv_reader]
         self.assertEqual(api_name_list[0], 'Functional*conv2d*0.forward.output.0')
+        
+    def test_compare_torch_tensor(self):
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
+        compare_column = CompareColumn()
+        status, compare_column, message = self.compare._compare_torch_tensor(cpu_output, npu_output, compare_column)
+        self.assertEqual(status, "pass")
+
+    def test_compare_bool_tensor(self):
+        cpu_output = np.array([True, False, True])
+        npu_output = np.array([True, False, True])
+        self.assertEqual(self.compare._compare_bool_tensor(cpu_output, npu_output), (0.0, 'pass', ''))
+        
+    def test_compare_builtin_type(self):
+        compare_column = CompareColumn()
+        bench_out = 1
+        npu_out = 1
+        status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
+        self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))

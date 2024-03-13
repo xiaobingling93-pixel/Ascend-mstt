@@ -19,8 +19,8 @@ import inspect
 import json
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
 import torch
@@ -32,10 +32,10 @@ except ImportError:
 else:
     is_gpu = False
 
-from .utils import DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,\
-    CompareException
-from ..common.utils import print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,\
-    print_error_log
+from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,
+                    CompareException, check_single_rank_folder)
+from ..common.utils import (print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,
+                            get_md5_for_tensor, print_error_log)
 from ..dump.utils import check_writable
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
 
@@ -44,7 +44,7 @@ backward_init_status = False
 
 thread_lock = threading.Lock()
 pkl_name = ""
-rank = os.getpid()
+rank = os.getpid() + 100000
 multi_output_apis = ["_sort_", "npu_flash_attention"]
 module_count = {}
 
@@ -84,26 +84,32 @@ api_list = APIList()
 
 
 class DataInfo(object):
-    def __init__(self, save_data, summary_data, dtype, shape):
+    def __init__(self, save_data, summary_data, dtype, shape, md5=None):
+        if md5 is None:
+            md5 = []
         self.save_data = save_data
         self.summary_data = summary_data
         self.dtype = dtype
         self.shape = shape
+        self.md5 = md5
 
 
 def get_not_float_tensor_info(data):
+    if DumpUtil.summary_mode == "md5":
+        return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
     if data.numel() == 0 or data.dtype == torch.bool:
         tensor_max = []
         tensor_min = []
         tensor_mean = []
     elif len(data.shape) == 0:
-        tensor_max = data.cpu().detach().float().numpy().tolist()
-        tensor_min = data.cpu().detach().float().numpy().tolist()
-        tensor_mean = data.cpu().detach().float().numpy().tolist()
+        item = data.float().item()
+        tensor_max = item
+        tensor_min = item
+        tensor_mean = item
     else:
-        tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
-        tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
-        tensor_mean = torch._C._VariableFunctionsClass.mean(data.float()).cpu().detach().float().numpy().tolist()
+        tensor_max = torch._C._VariableFunctionsClass.max(data).float().item()
+        tensor_min = torch._C._VariableFunctionsClass.min(data).float().item()
+        tensor_mean = torch._C._VariableFunctionsClass.mean(data.float()).float().item()
     return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, CompareConst.NAN)
 
 
@@ -113,17 +119,19 @@ def get_scalar_data_info(data):
 
 
 def get_float_tensor_info(data):
-    tensor_max = torch._C._VariableFunctionsClass.max(data).cpu().detach().float().numpy().tolist()
-    tensor_min = torch._C._VariableFunctionsClass.min(data).cpu().detach().float().numpy().tolist()
-    tensor_mean = torch._C._VariableFunctionsClass.mean(data).cpu().detach().float().numpy().tolist()
-    tensor_norm = torch._C._VariableFunctionsClass.norm(data).cpu().detach().float().numpy().tolist()
+    if DumpUtil.summary_mode == "md5":
+        return DataInfo([], [], str(data.dtype), tuple(data.shape), get_md5_for_tensor(data))
+    tensor_max = torch._C._VariableFunctionsClass.max(data).float().item()
+    tensor_min = torch._C._VariableFunctionsClass.min(data).float().item()
+    tensor_mean = torch._C._VariableFunctionsClass.mean(data).float().item()
+    tensor_norm = torch._C._VariableFunctionsClass.norm(data).float().item()
     return get_tensor_data_info(data, tensor_max, tensor_min, tensor_mean, tensor_norm)
 
 
 def get_tensor_data_info(data, *tensor_args):
     summary_data = []
     summary_data.extend([*tensor_args])
-    if not DumpUtil.summary_only:
+    if DumpUtil.summary_mode == "all":
         saved_tensor = data.contiguous().cpu().detach()
         if data.dtype == torch.bfloat16:
             saved_numpy = saved_tensor.to(torch.float32).numpy()
@@ -145,35 +153,48 @@ def dump_tensor(x, prefix, dump_step):
         if x.numel() == 0 or len(x.shape) == 0 or not x.is_floating_point():
             if DumpUtil.dump_filter_switch == Const.OFF:
                 data_info = get_not_float_tensor_info(x)
-                dump_data(dump_step, prefix, data_info)
+                dump_data_by_rank_count(dump_step, prefix, data_info)
             else:
                 return
         else:
             data_info = get_float_tensor_info(x)
-            dump_data(dump_step, prefix, data_info)
+            dump_data_by_rank_count(dump_step, prefix, data_info)
 
     elif DumpUtil.dump_filter_switch == Const.OFF:
         if isinstance(x, bool) or isinstance(x, int) or isinstance(x, float):
             data_info = get_scalar_data_info(x)
-            dump_data(dump_step, prefix, data_info)
+            dump_data_by_rank_count(dump_step, prefix, data_info)
 
 
-def dump_data(dump_step, prefix, data_info):
+def append_pkl_data(dump_step, prefix, data_info):
     global api_list
     thread_lock.acquire()
+    api_list.append([prefix, dump_step, data_info.md5, data_info.dtype, data_info.shape, data_info.summary_data])
+    thread_lock.release()
+
+
+def dump_data(prefix, data_info):
+    if DumpUtil.summary_mode != "all":
+        return
+    output_path = os.path.join(DumpUtil.dump_data_dir, f'{prefix}.npy')
     try:
-        output_path = os.path.join(DumpUtil.dump_data_dir, f'{prefix}.npy')
-        check_path_length(output_path)
-        check_path_pattern_vaild(output_path)
-        if not DumpUtil.summary_only:
-            np.save(output_path, data_info.save_data)
-            change_mode(output_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        api_list.append([prefix, dump_step, [], data_info.dtype, data_info.shape, data_info.summary_data])
-        print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
+        np.save(output_path, data_info.save_data)
+        change_mode(output_path, FileCheckConst.DATA_FILE_AUTHORITY)
     except Exception as e:
         print_warn_log("Dump data failed, error: {}".format(e))
-    finally:
-        thread_lock.release()
+
+
+def thread_dump_data(prefix, data_info):
+    DumpUtil.dump_thread_pool.submit(dump_data, prefix, data_info)
+
+
+def dump_data_by_rank_count(dump_step, prefix, data_info):
+    print_info_log(f"ptdbg is analyzing rank{rank} api: {prefix}" + " " * 10, end='\r')
+    if DumpUtil.is_single_rank and DumpUtil.dump_thread_pool:
+        thread_dump_data(prefix, data_info)
+    else:
+        dump_data(prefix, data_info)
+    append_pkl_data(dump_step, prefix, data_info)
 
 
 def dump_stack_info(name_template):
@@ -230,7 +251,7 @@ def rename_():
     global rank
     global pkl_name
     if rank is not None and pkl_name is not None:
-        dir_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(os.getpid()))
+        dir_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(os.getpid() + 100000))
         new_name = os.path.join(DumpUtil.dump_root, "step{}".format(DumpUtil.iter_num), "rank{}".format(rank))
         if not os.path.exists(new_name) and os.path.exists(dir_name):
             _, file_name = os.path.split(pkl_name)
@@ -268,14 +289,12 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
         if rank != DumpUtil.target_rank:
             return
     dump_file = create_dirs_if_not_exist(rank, dump_file)
-    check_path_pattern_vaild(dump_file)
-    check_path_length(dump_file)
     global pkl_name
     pkl_name = dump_file
     if DumpUtil.dump_init_enable:
         DumpUtil.dump_init_enable = False
         DumpUtil.dump_data_dir = make_dump_data_dir(dump_file) \
-            if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and not DumpUtil.summary_only else ""
+            if DumpUtil.dump_switch_mode not in [Const.STACK, Const.ACL] and DumpUtil.summary_mode == "all" else ""
         if os.path.exists(dump_file) and not os.path.isdir(dump_file):
             check_writable(dump_file)
             try:
@@ -285,6 +304,8 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
 
     name_prefix = name
     name_template = f"{name_prefix}" + "_{}"
+    if DumpUtil.is_single_rank is None:
+        DumpUtil.is_single_rank = check_single_rank_folder(dump_dir)
     if DumpUtil.dump_switch_mode in [Const.ALL, Const.API_LIST]:
         dump_api_tensor(dump_step, in_feat, name_template, out_feat)
     elif DumpUtil.dump_switch_mode == Const.API_STACK:
@@ -401,7 +422,7 @@ def acc_cmp_dump(name, **kwargs):
             except IndexError as e:
                 print_error_log(f"Get module {name_template} index failed.")
                 raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-            name = name.format(index)
+            name = name_template.format(index)
         if pid == os.getpid():
             dump_acc_cmp(name, in_feat, out_feat, dump_step, module)
         if hasattr(module, "input_args"):
@@ -418,3 +439,8 @@ def write_to_disk():
 
 def get_pkl_file_path():
     return pkl_name
+
+
+def reset_module_count():
+    global module_count
+    module_count = {}

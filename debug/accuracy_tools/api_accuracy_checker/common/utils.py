@@ -203,26 +203,26 @@ def read_json(file):
 
 
 def write_csv(data, filepath):
-    with FileOpen(filepath, 'a') as f:
+    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
 
 
-def _print_log(level, msg):
+def _print_log(level, msg, end='\n'):
     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
     pid = os.getgid()
-    print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg)
+    print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg, end=end)
     sys.stdout.flush()
 
 
-def print_info_log(info_msg):
+def print_info_log(info_msg, end='\n'):
     """
     Function Description:
         print info log.
     Parameter:
         info_msg: the info message.
     """
-    _print_log("INFO", info_msg)
+    _print_log("INFO", info_msg, end=end)
 
 
 def print_error_log(error_msg):
@@ -630,3 +630,22 @@ def write_pt(file_path, tensor):
     full_path = os.path.realpath(file_path)
     file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
     return full_path
+
+
+def get_real_data_path(file_path):
+    targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
+    pattern = re.compile(r'({})'.format('|'.join(targets)))
+    match = pattern.search(file_path)
+    if match:
+        target_index = match.start()
+        target_path = file_path[target_index:]
+        return target_path
+    else:
+        raise DumpException(DumpException.INVALID_PATH_ERROR)
+
+
+def get_full_data_path(data_path, real_data_path):
+    if not data_path:
+        return data_path
+    full_data_path = os.path.join(real_data_path, data_path)
+    return os.path.realpath(full_data_path)

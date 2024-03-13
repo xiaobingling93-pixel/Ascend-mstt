@@ -139,14 +139,19 @@ class FileOpen:
     SUPPORT_WRITE_MODE = ["w", "wb", "a", "ab"]
     SUPPORT_READ_WRITE_MODE = ["r+", "rb+", "w+", "wb+", "a+", "ab+"]
 
-    def __init__(self, file_path, mode):
+    def __init__(self, file_path, mode, encoding='utf-8'):
         self.file_path = file_path
         self.mode = mode
+        self.encoding = encoding
         self._handle = None
 
     def __enter__(self):
         self.check_file_path()
-        self._handle = open(self.file_path, self.mode)
+        binary_mode = "b"
+        if binary_mode not in self.mode:
+            self._handle = open(self.file_path, self.mode, encoding=self.encoding)
+        else:
+            self._handle = open(self.file_path, self.mode)
         return self._handle
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -187,9 +192,10 @@ def check_link(path):
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 
 
-def check_path_length(path):
+def check_path_length(path, name_length=None):
+    file_max_name_length = name_length if name_length else FileCheckConst.FILE_NAME_LENGTH
     if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
-            len(os.path.basename(path)) > FileCheckConst.FILE_NAME_LENGTH:
+            len(os.path.basename(path)) > file_max_name_length:
         print_error_log('The file path length exceeds limit.')
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
 
