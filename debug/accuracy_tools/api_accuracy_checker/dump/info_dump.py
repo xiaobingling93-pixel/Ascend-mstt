@@ -38,29 +38,26 @@ def write_api_info_json(api_info):
 
 def write_json(file_path, data, indent=None):
     check_file_or_directory_path(os.path.dirname(file_path), True)
-    proc_lock.acquire()
-    lock.acquire()
-    if not os.path.exists(file_path):
-        with FileOpen(file_path, 'w') as f:
-            f.write("{\n}")
-            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    with FileOpen(file_path, 'a+') as f:
+    with lock, FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
             f.seek(0, os.SEEK_END)
-            f.seek(f.tell() - 1, os.SEEK_SET)
-            f.truncate()
-            if f.tell() > 3:
-                f.seek(f.tell() - 1, os.SEEK_SET)
+            current_position = f.tell()
+            if current_position > 0:
+                f.seek(current_position - 1, os.SEEK_SET)
                 f.truncate()
-                f.write(',\n')
-            f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
+                if f.tell() > 3:
+                    f.seek(f.tell() - 1, os.SEEK_SET)
+                    f.truncate()
+                    f.write(',\n')
+                f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
+            else:
+                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+                f.write('{\n' + json.dumps(data, indent=indent)[1:] + '\n')
         except Exception as e:
             raise ValueError(f"Json save failed:{e}") from e
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
-            lock.release()
-            proc_lock.release()
 
 
 def initialize_output_json():
