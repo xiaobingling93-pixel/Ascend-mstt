@@ -255,37 +255,6 @@ class Comparator:
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
     
-    @staticmethod
-    def _compare_dropout(bench_output, device_output):
-        tensor_num = bench_output.numel()
-        if tensor_num >= 100:
-            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
-                return CompareConst.PASS, 1
-            else:
-                return CompareConst.ERROR, 0
-        else:
-            return CompareConst.PASS, 1
-
-    @staticmethod
-    def _compare_builtin_type(bench_output, device_output, compare_column):
-        if not isinstance(bench_output, (bool, int, float, str)):
-            return CompareConst.PASS, compare_column, "Bench output type is not supported."
-        if bench_output != device_output:
-            return CompareConst.ERROR, compare_column, "Bench output does not match device output."
-        compare_column.error_rate = 0
-        return CompareConst.PASS, compare_column, "Bench output matches device output."
-
-
-    @staticmethod
-    def _compare_bool_tensor(bench_output, device_output):
-        error_nums = (bench_output != device_output).sum()
-        if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
-        error_rate = float(error_nums / bench_output.size)
-        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
-        return error_rate, result, ""
-    
-    @staticmethod
     def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
         message = ""
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
