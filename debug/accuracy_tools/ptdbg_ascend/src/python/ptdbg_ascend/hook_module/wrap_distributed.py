@@ -16,7 +16,7 @@
 """
 
 import os
-
+from functools import wraps
 import torch.distributed as dist
 import yaml
 
@@ -60,9 +60,11 @@ class DistributedOPTemplate(HOOKModule):
 
 
 def wrap_distributed_op(op_name, hook):
+    @wraps(DistributedOPTemplate)
     def distributed_op_template(*args, **kwargs):
         return DistributedOPTemplate(op_name, hook)(*args, **kwargs)
 
+    distributed_op_template.__name__ = op_name
     return distributed_op_template
 
 

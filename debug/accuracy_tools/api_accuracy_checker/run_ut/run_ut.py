@@ -373,10 +373,15 @@ def preprocess_forward_content(forward_content):
     return processed_content
 
 
-def _run_ut():
-    parser = argparse.ArgumentParser()
+def _run_ut(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
     _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
+    run_ut_command(args)
+
+
+def run_ut_command(args):
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     used_device = current_device + ":" + str(args.device_id[0])
