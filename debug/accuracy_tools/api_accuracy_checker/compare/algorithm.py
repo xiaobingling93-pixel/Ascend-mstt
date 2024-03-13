@@ -21,6 +21,7 @@ def cosine_sim(bench_output, device_output):
     n_value_max = np.max(np.abs(n_value))
     b_value_max = np.max(np.abs(b_value))
     if n_value_max <= np.finfo(float).eps and b_value_max <= np.finfo(float).eps:
+        msg = "All the data in device and bench outputs are zero."
         return cos, True, msg
     elif n_value_max <= np.finfo(float).eps:
         msg = "All the data is zero in device dump data."
