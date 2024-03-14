@@ -10,7 +10,7 @@ def cosine_sim(bench_output, device_output):
     msg = ""
     n_value = device_output.reshape(-1)
     b_value = bench_output.reshape(-1)
-    cos = CompareConst.NA
+    cos = CompareConst.SPACE
     np.seterr(divide="ignore", invalid="ignore")
     if n_value.shape != b_value.shape:
         msg = f"Shape of device and bench outputs don't match. device: {n_value.shape}, bench: {b_value.shape}."
@@ -25,10 +25,10 @@ def cosine_sim(bench_output, device_output):
         return cos, True, msg
     elif n_value_max <= np.finfo(float).eps:
         msg = "All the data is zero in device dump data."
-        return CompareConst.NA, False, msg
+        return CompareConst.SPACE, False, msg
     elif b_value_max <= np.finfo(float).eps:
         msg = "All the data is zero in bench dump data."
-        return CompareConst.NA, False, msg
+        return CompareConst.SPACE, False, msg
     else:
         n_value = n_value.astype(float) / n_value_max
         b_value = b_value.astype(float) / b_value_max
