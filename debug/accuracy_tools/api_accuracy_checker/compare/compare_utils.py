@@ -16,11 +16,16 @@ BINARY_COMPARE_UNSUPPORT_LIST = BENCHMARK_COMPARE_SUPPORT_LIST + API_PRECISION_C
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
-with FileOpen(yaml_path, 'r') as f:
+standard_yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
+with FileOpen(standard_yaml_path, 'r') as f:
     Apis = yaml.safe_load(f)
     AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
-    AbsoluteStandardApiName = list(AbsoluteStandardApi.keys())
+    BinaryStandardApi = Apis.get('BinaryCompareStandard')
+
+
+threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
+with FileOpen(threshold_yaml_path, 'r') as f:
+    apis_threshold = yaml.safe_load(f)
 
 
 DETAIL_TEST_ROWS = [[
