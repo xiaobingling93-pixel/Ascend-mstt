@@ -113,6 +113,8 @@ def data_to_cpu(data, deep, data_cpu):
     elif isinstance(data, torch._C.device):
         return cpu_device
     else:
+        if deep == 0:
+            data_cpu.append(data)
         return data
 
 
