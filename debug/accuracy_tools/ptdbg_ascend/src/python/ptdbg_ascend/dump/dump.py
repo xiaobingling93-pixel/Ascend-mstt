@@ -407,7 +407,12 @@ def module_count_func(name, name_template):
             module_count[module_name][-1].append(module_count[module_name][0])
         index = module_count[module_name][0]
     else:
-        index = module_count[module_name][-1].pop()
+        backward_stack = module_count[module_name][-1] if module_name in module_count else []
+        if not backward_stack:
+            print_warn_log("The backward stack of {} is empty.".format(module_name))
+            index = "abnormal"
+        else:
+            index = backward_stack.pop()
     return index
 
 
