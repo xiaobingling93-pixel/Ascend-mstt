@@ -117,6 +117,7 @@ def run_parallel_ut(config):
                 process.kill()
         for file in config.forward_files:
             try:
+                check_link(file)
                 os.remove(file)
             except FileNotFoundError:
                 print_warn_log(f"File not found and could not be deleted: {file}")
