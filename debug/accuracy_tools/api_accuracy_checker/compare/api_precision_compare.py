@@ -11,7 +11,7 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApiName, BINARY_COMPARE_UNSUPPORT_LIST
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -113,6 +113,7 @@ class BenchmarkStandard:
 
     @staticmethod
     def _calc_ratio(x, y, default_value=1.0):
+        x, y = float(x), float(y)
         if math.isclose(y, 0.0):
             return 1.0 if math.isclose(x, 0.0) else default_value
         else:
@@ -170,14 +171,14 @@ def analyse_csv(npu_data, gpu_data, config):
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         row_gpu = row_gpu.iloc[0]
         #当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
-        if pd.isna(row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]):
+        if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
             continue
-        _, dedicated_api_name, _ = full_api_name.split("*")
-        new_status = CompareConst.NA
+        _, api_name, _ = full_api_name.split("*")
+        new_status = CompareConst.SPACE
         compare_column.api_name = full_api_name_with_direction_status
-        if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST:
+        if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
             new_status = record_binary_consistency_result(compare_column, row_npu)                            
-        elif dedicated_api_name in AbsoluteStandardApiName:
+        elif api_name in AbsoluteStandardApi:
             new_status = record_absolute_threshold_result(compare_column, row_npu)
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
             bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
@@ -222,13 +223,13 @@ def analyse_csv(npu_data, gpu_data, config):
 
 
 def check_error_rate(npu_error_rate):
-    return CompareConst.PASS if npu_error_rate == 0 else CompareConst.ERROR
+    return CompareConst.PASS if float(npu_error_rate) == 0 else CompareConst.ERROR
 
 
 def get_absolute_threshold_result(row_npu):
-    inf_nan_error_ratio = row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO]
-    rel_err_ratio = row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO]
-    abs_err_ratio = row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO]
+    inf_nan_error_ratio = float(row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO])
+    rel_err_ratio = float(row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO])
+    abs_err_ratio = float(row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO])
 
     inf_nan_result = CompareConst.PASS if inf_nan_error_ratio == 0 else CompareConst.ERROR
     rel_err_result = CompareConst.PASS if rel_err_ratio == 0 else CompareConst.ERROR
@@ -252,7 +253,7 @@ def get_absolute_threshold_result(row_npu):
 
 def get_api_checker_result(status):
     if not status:
-        return CompareConst.NA
+        return CompareConst.SPACE
     for const in (CompareConst.ERROR, CompareConst.WARNING):
         if const in status:
             return const
@@ -272,7 +273,11 @@ def record_binary_consistency_result(compare_column, row_npu):
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
     compare_column.error_rate_status = new_status
     compare_column.compare_result = new_status
-    compare_column.algorithm = "二进制一致法"
+    compare_column.compare_algorithm = "二进制一致法"
+    message = ''
+    if compare_column.error_rate_status == CompareConst.ERROR:
+        message += "ERROR: 二进制一致错误率超过阈值"
+    compare_column.compare_message = message
     return new_status
 
 
@@ -285,7 +290,15 @@ def record_absolute_threshold_result(compare_column, row_npu):
     compare_column.abs_err_ratio = absolute_threshold_result.get("abs_err_ratio")
     compare_column.abs_err_ratio_status = absolute_threshold_result.get("abs_err_result")
     compare_column.compare_result = absolute_threshold_result.get("absolute_threshold_result")
-    compare_column.algorithm = "绝对阈值法"
+    compare_column.compare_algorithm = "绝对阈值法"
+    message = ''
+    if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
+        message += "ERROR: inf/nan错误率超过阈值\n"
+    if compare_column.rel_err_ratio_status == CompareConst.ERROR:
+        message += "ERROR: 相对误差错误率超过阈值\n"
+    if compare_column.abs_err_ratio_status == CompareConst.ERROR:
+        message += "ERROR: 绝对误差错误率超过阈值\n"
+    compare_column.compare_message = message
     return compare_column.compare_result
 
 
@@ -302,7 +315,25 @@ def record_benchmark_compare_result(compare_column, bs):
     compare_column.eb_ratio = bs.eb_ratio
     compare_column.eb_status = bs.eb_status
     compare_column.compare_result = bs.final_result
-    compare_column.algorithm = "标杆比对法"
+    compare_column.compare_algorithm = "标杆比对法"
+    message = ''
+    if compare_column.small_value_err_status == CompareConst.ERROR:
+        message += "ERROR: 小值域错误比值超过阈值\n"
+    if compare_column.rmse_status == CompareConst.ERROR:
+        message += "ERROR: 均方根误差比值超过阈值\n"
+    if compare_column.max_rel_err_status == CompareConst.ERROR:
+        message += "ERROR: 相对误差最大值比值超过阈值\n"
+    if compare_column.mean_rel_err_status == CompareConst.ERROR:
+        message += "ERROR: 相对误差平均值比值超过阈值\n"
+    if compare_column.small_value_err_status == CompareConst.WARNING:
+        message += "WARNING: 小值域错误比值超过阈值\n"
+    if compare_column.rmse_status == CompareConst.WARNING:
+        message += "WARNING: 均方根误差比值超过阈值\n"
+    if compare_column.max_rel_err_status == CompareConst.WARNING:
+        message += "WARNING: 相对误差最大值比值超过阈值\n"
+    if compare_column.mean_rel_err_status == CompareConst.WARNING:
+        message += "WARNING: 相对误差平均值比值超过阈值\n"
+    compare_column.compare_message = message
     return compare_column.compare_result
 
 
