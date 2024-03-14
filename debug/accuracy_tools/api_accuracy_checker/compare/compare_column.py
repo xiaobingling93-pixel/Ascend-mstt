@@ -3,23 +3,23 @@ from api_accuracy_checker.compare.compare_utils import CompareConst
 
 class CompareColumn:
     def __init__(self):
-        self.bench_type = CompareConst.NA
-        self.npu_type = CompareConst.NA
-        self.shape = CompareConst.NA
-        self.cosine_sim = CompareConst.NA
-        self.max_abs_err = CompareConst.NA
-        self.rel_err_hundredth = CompareConst.NA
-        self.rel_err_thousandth = CompareConst.NA
-        self.rel_err_ten_thousandth = CompareConst.NA
-        self.error_rate = CompareConst.NA
-        self.EB = CompareConst.NA
-        self.RMSE = CompareConst.NA
-        self.small_value_err_ratio = CompareConst.NA
-        self.Max_rel_error = CompareConst.NA
-        self.Mean_rel_error = CompareConst.NA
-        self.inf_nan_error_ratio = CompareConst.NA
-        self.rel_err_ratio = CompareConst.NA
-        self.abs_err_ratio = CompareConst.NA
+        self.bench_type = CompareConst.SPACE
+        self.npu_type = CompareConst.SPACE
+        self.shape = CompareConst.SPACE
+        self.cosine_sim = CompareConst.SPACE
+        self.max_abs_err = CompareConst.SPACE
+        self.rel_err_hundredth = CompareConst.SPACE
+        self.rel_err_thousandth = CompareConst.SPACE
+        self.rel_err_ten_thousandth = CompareConst.SPACE
+        self.error_rate = CompareConst.SPACE
+        self.EB = CompareConst.SPACE
+        self.RMSE = CompareConst.SPACE
+        self.small_value_err_ratio = CompareConst.SPACE
+        self.Max_rel_error = CompareConst.SPACE
+        self.Mean_rel_error = CompareConst.SPACE
+        self.inf_nan_error_ratio = CompareConst.SPACE
+        self.rel_err_ratio = CompareConst.SPACE
+        self.abs_err_ratio = CompareConst.SPACE
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
