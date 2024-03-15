@@ -181,5 +181,5 @@ def save_float_convert(input_data):
         return float_data
     except ValueError:
         msg = 'ERROR: Input data cannot be converted to float'
-        print_error_log(msg)
+        raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         
