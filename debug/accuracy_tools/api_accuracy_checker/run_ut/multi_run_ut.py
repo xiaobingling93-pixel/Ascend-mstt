@@ -116,6 +116,7 @@ def run_parallel_ut(config):
             except subprocess.TimeoutExpired:
                 process.kill()
         for file in config.forward_files:
+            check_link(file)
             try:
                 os.remove(file)
             except FileNotFoundError:
