@@ -38,7 +38,7 @@ def write_api_info_json(api_info):
 
 def write_json(file_path, data, indent=None):
     check_file_or_directory_path(os.path.dirname(file_path), True)
-    with lock, FileOpen(file_path, 'a+') as f:
+    with proc_lock, lock, FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
             f.seek(0, os.SEEK_END)
