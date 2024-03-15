@@ -87,7 +87,7 @@ class Comparator:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
             if not all(item[i] and item[i] in checklist for i in (1, 2)):
                 raise ValueError(
-                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or N/A"
+                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or SPACE"
                     % result_csv_name)
             column1 = item[1]
             column2 = item[2]
@@ -288,13 +288,13 @@ class Comparator:
         compare_column.cosine_sim = cos_res
         message += msg + "\n"
         if not cos_status:
-            message += "Cosine similarity is less than 0.99, consider as error, skip other check and set to N/A.\n"
+            message += "Cosine similarity is less than 0.99, consider as error, skip other check and set to SPACE.\n"
             return CompareConst.ERROR, compare_column, message
 
         max_abs_res, max_abs_status = get_max_abs_err(abs_err)
         compare_column.max_abs_err = max_abs_res
         if max_abs_status:
-            message += "Max abs error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
+            message += "Max abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
             return CompareConst.PASS, compare_column, message
 
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
@@ -302,24 +302,24 @@ class Comparator:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
             if not hundred_status:
-                message += "Relative error is greater than 0.01, consider as error, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.01, consider as error, skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
         thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
         compare_column.rel_err_thousandth = thousand_res
         if dtype in [torch.float16, torch.bfloat16]:
             if thousand_status:
-                message += "Relative error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
+                message += "Relative error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
                 return CompareConst.PASS, compare_column, message
-            message += "Relative error is greater than 0.001, consider as warning, skip other check and set to N/A.\n"
+            message += "Relative error is greater than 0.001, consider as warning, skip other check and set to SPACE.\n"
             return CompareConst.WARNING, compare_column, message
         ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, 0.0001)
         compare_column.rel_err_ten_thousandth = ten_thousand_res
         if dtype in [torch.float32, torch.float64]:
             if not thousand_status:
-                message += "Relative error is greater than 0.001, consider as error, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.001, consider as error, skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
-                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to SPACE.\n"
                 return CompareConst.WARNING, compare_column, message
             message += "Relative error is less than 0.0001, consider as pass.\n"
         return CompareConst.PASS, compare_column, message
