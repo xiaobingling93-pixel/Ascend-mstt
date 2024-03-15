@@ -167,3 +167,19 @@ def check_dtype_comparable(x, y):
         return False
     print_warn_log(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
     return False
+
+
+def save_float_convert(input_data):
+    if input_data.strip() == "":
+        msg = 'ERROR: Input data is an empty string'
+        raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+    try:
+        float_data = float(input_data)
+        if float_data == float('inf') or float_data == float('-inf') or float_data != float_data:
+            msg = 'ERROR: Input data is either "inf", "-inf", "nan"'
+            raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+        return float_data
+    except ValueError:
+        msg = 'ERROR: Input data cannot be converted to float'
+        print_error_log(msg)
+        
