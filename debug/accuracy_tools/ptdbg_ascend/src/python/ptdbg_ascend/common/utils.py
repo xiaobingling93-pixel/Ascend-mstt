@@ -25,6 +25,7 @@ import sys
 import time
 import zlib
 import json
+from json.decoder import JSONDecodeError
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -398,7 +399,11 @@ def is_summary_compare(input_param):
 
 def is_md5_compare(input_parma):
     with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
-        line = json.loads(npu_pkl.readline())
+        pkl_lines = npu_pkl.readline()
+    try:
+        line = json.loads(pkl_lines)
+    except JSONDecodeError as err:
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from err
     if len(line) < 3:
         return False
     if line[2]:
