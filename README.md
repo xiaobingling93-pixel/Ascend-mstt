@@ -1,6 +1,8 @@
 # ATT
 
-Ascend Training Tools，昇腾训练工具链。针对训练&大模型场景，提供端到端命令行&可视化调试调优工具，帮助用户快速提高模型开发效率。
+Ascend Training Tools，昇腾训练工具链。【Powered by MindStudio】
+
+针对训练&大模型场景，提供端到端命令行&可视化调试调优工具，帮助用户快速提高模型开发效率。
 
 ## 模型训练迁移全流程
 ![输入图片说明](debug/resources/model_training_migration_process.png)
