@@ -4,7 +4,7 @@
 
 ## 工具安装
 
-精度工具合一软件包名称为：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
+精度工具合一软件包名称：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
 
 1. whl包获取。
 
@@ -12,7 +12,7 @@
 
    | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
    | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 0.0.1 | 2024-03-08 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a |
+   | 0.0.1 | 2024-03-15 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
 
 2. whl包校验。
 
@@ -30,7 +30,7 @@
 
       ```bash
       sha256sum ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
-      7d5978720f00772546f324a577e842ca66f42342ea5d99897d5407e5c4e71b4a *ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
+      5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 *ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
       ```
 
 3. 执行如下命令进行安装。
