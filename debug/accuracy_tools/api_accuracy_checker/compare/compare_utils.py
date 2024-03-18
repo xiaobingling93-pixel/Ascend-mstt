@@ -179,7 +179,7 @@ def save_float_convert(input_data):
             msg = 'ERROR: Input data is either "inf", "-inf", "nan"'
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         return float_data
-    except ValueError:
+    except ValueError as e:
         msg = 'ERROR: Input data cannot be converted to float'
-        raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+        raise CompareException(CompareException.INVALID_DATA_ERROR, msg) from e
         
