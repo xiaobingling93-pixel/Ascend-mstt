@@ -175,7 +175,7 @@ def save_float_convert(input_data):
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
     try:
         float_data = float(input_data)
-        if float_data == float('inf') or float_data == float('-inf') or float_data != float_data:
+        if str(float_data) in ('inf', '-inf', 'nan'):
             msg = 'ERROR: Input data is either "inf", "-inf", "nan"'
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         return float_data
