@@ -31,6 +31,7 @@ from ...common.file_check_util import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from ...common.file_check_util import FileCheckConst
 from ...common.file_check_util import FileOpen
+from ...common.utils import check_file_or_directory_path
 
 try:
     from rich.traceback import install
@@ -297,8 +298,7 @@ class Util:
     def check_npy_files_valid_in_dir(self, dir_path):
         for file_name in os.listdir(dir_path):
             file_path = os.path.join(dir_path, file_name)
-            if not self.check_path_valid(file_path):
-                return False
+            check_file_or_directory_path(file_path)
             _, file_extension = os.path.splitext(file_path)
             if not file_extension == '.npy':
                 return False
