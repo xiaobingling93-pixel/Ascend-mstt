@@ -169,7 +169,7 @@ def check_dtype_comparable(x, y):
     return False
 
 
-def save_float_convert(input_data):
+def convert_str_to_float(input_data):
     if isinstance(input_data, str) and input_data.strip() == "":
         msg = 'ERROR: Input data is an empty string'
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
