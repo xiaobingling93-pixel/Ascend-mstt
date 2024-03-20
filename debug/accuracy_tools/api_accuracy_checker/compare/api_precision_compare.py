@@ -11,7 +11,7 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, save_float_convert
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, convert_str_to_float
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -133,7 +133,7 @@ class BenchmarkStandard:
 
     @staticmethod
     def _calc_ratio(x, y, default_value=1.0):
-        x, y = save_float_convert(x), save_float_convert(y)
+        x, y = convert_str_to_float(x), convert_str_to_float(y)
         if math.isclose(y, 0.0):
             return 1.0 if math.isclose(x, 0.0) else default_value
         else:
@@ -243,13 +243,13 @@ def analyse_csv(npu_data, gpu_data, config):
 
 
 def check_error_rate(npu_error_rate):
-    return CompareConst.PASS if save_float_convert(npu_error_rate) == 0 else CompareConst.ERROR
+    return CompareConst.PASS if convert_str_to_float(npu_error_rate) == 0 else CompareConst.ERROR
 
 
 def get_absolute_threshold_result(row_npu):
-    inf_nan_error_ratio = save_float_convert(row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO])
-    rel_err_ratio = save_float_convert(row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO])
-    abs_err_ratio = save_float_convert(row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO])
+    inf_nan_error_ratio = convert_str_to_float(row_npu[ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO])
+    rel_err_ratio = convert_str_to_float(row_npu[ApiPrecisionCompareColumn.REL_ERR_RATIO])
+    abs_err_ratio = convert_str_to_float(row_npu[ApiPrecisionCompareColumn.ABS_ERR_RATIO])
 
     inf_nan_result = CompareConst.PASS if inf_nan_error_ratio == 0 else CompareConst.ERROR
     rel_err_result = CompareConst.PASS if rel_err_ratio == 0 else CompareConst.ERROR
