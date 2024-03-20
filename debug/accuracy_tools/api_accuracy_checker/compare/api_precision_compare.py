@@ -46,6 +46,26 @@ benchmark_algorithms_thresholds = {
 }
 
 
+benchmark_message = {
+    "small_value_err_status": {
+        CompareConst.ERROR: "ERROR: 小值域错误比值超过阈值\n",
+        CompareConst.WARNING: "WARNING: 小值域错误比值超过阈值\n"
+    },
+    "rmse_status": {
+        CompareConst.ERROR: "ERROR: 均方根误差比值超过阈值\n",
+        CompareConst.WARNING: "WARNING: 均方根误差比值超过阈值\n"
+    },
+    "max_rel_err_status": {
+        CompareConst.ERROR: "ERROR: 相对误差最大值比值超过阈值\n",
+        CompareConst.WARNING: "WARNING: 相对误差最大值比值超过阈值\n"
+    },
+    "mean_rel_err_status": {
+        CompareConst.ERROR: "ERROR: 相对误差平均值比值超过阈值\n",
+        CompareConst.WARNING: "WARNING: 相对误差平均值比值超过阈值\n"
+    }
+}
+
+
 class BenchmarkStandard:
     def __init__(self, api_name, npu_precision, gpu_precision):
         self.api_name = api_name
@@ -317,22 +337,10 @@ def record_benchmark_compare_result(compare_column, bs):
     compare_column.compare_result = bs.final_result
     compare_column.compare_algorithm = "标杆比对法"
     message = ''
-    if compare_column.small_value_err_status == CompareConst.ERROR:
-        message += "ERROR: 小值域错误比值超过阈值\n"
-    if compare_column.rmse_status == CompareConst.ERROR:
-        message += "ERROR: 均方根误差比值超过阈值\n"
-    if compare_column.max_rel_err_status == CompareConst.ERROR:
-        message += "ERROR: 相对误差最大值比值超过阈值\n"
-    if compare_column.mean_rel_err_status == CompareConst.ERROR:
-        message += "ERROR: 相对误差平均值比值超过阈值\n"
-    if compare_column.small_value_err_status == CompareConst.WARNING:
-        message += "WARNING: 小值域错误比值超过阈值\n"
-    if compare_column.rmse_status == CompareConst.WARNING:
-        message += "WARNING: 均方根误差比值超过阈值\n"
-    if compare_column.max_rel_err_status == CompareConst.WARNING:
-        message += "WARNING: 相对误差最大值比值超过阈值\n"
-    if compare_column.mean_rel_err_status == CompareConst.WARNING:
-        message += "WARNING: 相对误差平均值比值超过阈值\n"
+    for status_attr, messages in benchmark_message.items():
+        status_value = getattr(compare_column, status_attr)
+        if status_value in messages:
+            message += messages[status_value]
     compare_column.compare_message = message
     return compare_column.compare_result
 
