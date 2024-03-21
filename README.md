@@ -44,6 +44,10 @@ Ascend Training Tools，昇腾训练工具链。【Powered by MindStudio】
 
    提供多机多卡的集群分析能力（基于通信域的通信分析和迭代耗时分析）, 当前需要配合Ascend Insight的集群分析功能使用。
 
+3. [affinity_cpu_bind (亲和cpu绑核工具) ](https://gitee.com/ascend/att/tree/master/profiler/affinity_cpu_bind)
+
+   提供亲和性CPU绑核能力，改善host_bound调度问题。
+
 ### [Tensorboard](https://gitee.com/ascend/att/tree/master/plugins/tensorboard-plugins/tb_plugin)
 
 Tensorboard支持NPU性能数据可视化插件PyTorch Profiler TensorBoard NPU Plugin。
