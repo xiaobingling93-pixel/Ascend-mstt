@@ -210,7 +210,7 @@ def gen_kwargs(api_info, convert_type=None, real_data_path=None):
         if isinstance(value, (list, tuple)):
             kwargs_params[key] = gen_list_kwargs(value, convert_type, real_data_path)
         elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
-            kwargs_params[key] = gen_data(value, False, convert_type, real_data_path)
+            kwargs_params[key] = gen_data(value, True, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
         else:
