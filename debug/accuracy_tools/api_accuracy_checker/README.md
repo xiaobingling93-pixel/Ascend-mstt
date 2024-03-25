@@ -195,7 +195,7 @@ run_ut预检操作包括如下场景：
    python run_ut.py -forward ./forward_info_0.json -backward ./backward_info_0.json -save_error_data
    ```
 
-   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过修改att/debug/accuracy_tools/api_accuracy_checker目录下，config.yaml文件的error_data_path参数来配置保存路径。
+   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过修改att/debug/accuracy_tools/api_accuracy_checker目录下，config.yaml文件的error_data_path参数来配置保存路径，详见“config.yaml文件说明”。。
 
 3. （可选）如果dump的数据为真实数据，那么需要指定真实数据路径，例如：
 
@@ -245,9 +245,24 @@ python run_ut.py -forward ./forward_info_0.json -backward ./backward_info_0.json
 
 run_ut过程同样支持API预检白名单，操作方式如下：
 
-修改att/debug/accuracy_tools/api_accuracy_checker目录下config.yaml文件的white_list参数，配置需要预检的API名称。
+修改att/debug/accuracy_tools/api_accuracy_checker目录下config.yaml文件的white_list参数，配置需要预检的API名称，详见“config.yaml文件说明”。
 
+### config.yaml文件说明
 
+config.yaml文件可以通过配置参数来控制dump和run_ut操作的真实数据模式以及白名单等功能。
+
+文件路径为：att/debug/accuracy_tools/api_accuracy_checker/config.yaml
+
+| 参数名称          | 说明                                                         | 是否必选 |
+| ----------------- | ------------------------------------------------------------ | -------- |
+| dump_path         | 设置dump路径，默认为当前目录。若指定目录不存在，则自动创建。 | 否       |
+| real_data         | 真实数据模式，可取值True或False，默认为False，表示随机数据模式，配置为True后开启真实数据模式，dump信息增加forward_real_data和backward_real_data目录，目录下保存每个API输入的具体数值。 | 否       |
+| enable_dataloader | 自动dump数据开关，可取值True（开启）、False（关闭），默认关闭。 | 否       |
+| target_iter       | 指定dump某个step的数据，默认为[1]，须指定为训练脚本中存在的step。target_iter为list格式，可配置逐个step，例如：target_iter=[0,1,2]；也可以配置step范围，例如：target_iter=list(range(0,9))，表示dump第0到第8个step。 | 否       |
+| white_list        | API dump白名单，指定dump具体API数据，也可以直接配置预检的API白名单，详细请参见“**API预检白名单**”。参数示例：white_list=["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。 | 否       |
+| error_data_path   | 配置保存精度未达标的API输入输出数据路径。                    | 否       |
+| jit_compile       | 开启jit编译。                                                | 否       |
+| precision         | 浮点数表示位数，默认取小数点后14位。                         | 否       |
 
 ## 预检结果
 
