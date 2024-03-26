@@ -16,11 +16,16 @@ BINARY_COMPARE_UNSUPPORT_LIST = BENCHMARK_COMPARE_SUPPORT_LIST + API_PRECISION_C
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
-with FileOpen(yaml_path, 'r') as f:
+standard_yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
+with FileOpen(standard_yaml_path, 'r') as f:
     Apis = yaml.safe_load(f)
     AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
-    AbsoluteStandardApiName = list(AbsoluteStandardApi.keys())
+    BinaryStandardApi = Apis.get('BinaryCompareStandard')
+
+
+threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
+with FileOpen(threshold_yaml_path, 'r') as f:
+    apis_threshold = yaml.safe_load(f)
 
 
 DETAIL_TEST_ROWS = [[
@@ -162,3 +167,19 @@ def check_dtype_comparable(x, y):
         return False
     print_warn_log(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
     return False
+
+
+def convert_str_to_float(input_data):
+    if isinstance(input_data, str) and input_data.strip() == "":
+        msg = 'ERROR: Input data is an empty string'
+        raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+    try:
+        float_data = float(input_data)
+        if str(float_data) in ('inf', '-inf', 'nan'):
+            msg = 'ERROR: Input data is either "inf", "-inf", "nan"'
+            raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
+        return float_data
+    except ValueError as e:
+        msg = 'ERROR: Input data cannot be converted to float'
+        raise CompareException(CompareException.INVALID_DATA_ERROR, msg) from e
+        

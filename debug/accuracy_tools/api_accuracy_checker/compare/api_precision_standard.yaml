@@ -14,446 +14,94 @@
 # limitations under the License.
 
 AbsoluteThreshStandard:
-  mul:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  mul_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __mul__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __imul__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __rmul__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  add:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  add_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __add__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __iadd__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __radd__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  div:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  div_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __div__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __idiv__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  divide:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  divide_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  floor_divide:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  floor_divide_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  true_divide:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  true_divide_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  leaky_relu:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  leaky_relu_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  prelu:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  reciprocal:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  reciprocal_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  rsqrt:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  rsqrt_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  square:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  square_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  sub:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  sub_:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  rsub:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __isub__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  __sub__:
-    torch.float32:
-      rtol: 0.000001
-      small_value: 0.000001
-      small_value_atol: 0.000001
-    torch.float16:
-      rtol: 0.001
-      small_value: 0.001
-      small_value_atol: 0.001
-    torch.bfloat16:
-      rtol: 0.004
-      small_value: 0.001
-      small_value_atol: 0.001
-  
+  - mul
+  - mul_
+  - __mul__
+  - __imul__
+  - __rmul__
+  - add
+  - add_
+  - __add__
+  - __iadd__
+  - __radd__
+  - div
+  - div_
+  - __div__
+  - __idiv__
+  - divide
+  - divide_
+  - leaky_relu
+  - leaky_relu_
+  - prelu
+  - reciprocal
+  - reciprocal_
+  - rsqrt
+  - rsqrt_
+  - square
+  - square_
+  - sub
+  - sub_
+  - rsub
+  - __isub__
+  - __sub__
+
+BinaryCompareStandard:
+  - abs
+  - abs_
+  - absolute
+  - absolute_
+  - argmin
+  - bitwise_and
+  - bitwise_and_
+  - broadcast_to
+  - ceil
+  - ceil_
+  - equal
+  - fill_
+  - flatten
+  - floor
+  - floor_
+  - gather
+  - greater
+  - greater_
+  - greater_equal
+  - greater_equal_
+  - isfinite
+  - isnan
+  - less
+  - less_
+  - less_equal
+  - less_equal_
+  - logical_and
+  - logical_and_
+  - logical_not
+  - logical_not_
+  - logical_or
+  - logical_or_
+  - masked_fill
+  - masked_fill_
+  - max_pool3d
+  - maximum
+  - minimum
+  - neg
+  - neg_
+  - nonzero
+  - not_equal
+  - not_equal_
+  - one_hot
+  - pad
+  - relu
+  - reshape
+  - round
+  - round_
+  - select
+  - sign
+  - sign_
+  - sort
+  - tile
+  - transpose
+  - transpose_
+  - tril
+  - tril_
+  - triu
+  - triu_

@@ -7,7 +7,7 @@ from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
-    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, AbsoluteStandardApiName
+    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, apis_threshold
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
@@ -72,7 +72,7 @@ class Comparator:
         console.print(table_detail)
 
     def get_statistics_from_result_csv(self):
-        checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.NA, CompareConst.SKIP, "skip"]
+        checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.SPACE, CompareConst.SKIP, "skip"]
         self.test_result_cnt = {
             "success_num": 0, "warning_num": 0, "error_num": 0,
             "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
@@ -87,7 +87,7 @@ class Comparator:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
             if not all(item[i] and item[i] in checklist for i in (1, 2)):
                 raise ValueError(
-                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or N/A"
+                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or SPACE"
                     % result_csv_name)
             column1 = item[1]
             column2 = item[2]
@@ -95,7 +95,7 @@ class Comparator:
                 self.test_result_cnt["total_skip_num"] += 1
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.NA]:
+            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
@@ -161,7 +161,7 @@ class Comparator:
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
         bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(api_name, bench_grad[0], npu_grad[0]) if "dropout" in full_api_name else compare_func(api_name, bench_grad, npu_grad)
-        self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.NA, fwd_compare_alg_results, bwd_compare_alg_results)
+        self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS
 
     def _compare_core_wrapper(self, api_name, bench_output, device_output):
@@ -261,7 +261,10 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in AbsoluteStandardApiName:
+            if api_name in BinaryStandardApi:
+                err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
+                compare_column.error_rate = err_rate
+            elif api_name in AbsoluteStandardApi:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))
                 rel_err = abs_err / abs_bench_with_eps
@@ -285,13 +288,13 @@ class Comparator:
         compare_column.cosine_sim = cos_res
         message += msg + "\n"
         if not cos_status:
-            message += "Cosine similarity is less than 0.99, consider as error, skip other check and set to N/A.\n"
+            message += "Cosine similarity is less than 0.99, consider as error, skip other check and set to SPACE.\n"
             return CompareConst.ERROR, compare_column, message
 
         max_abs_res, max_abs_status = get_max_abs_err(abs_err)
         compare_column.max_abs_err = max_abs_res
         if max_abs_status:
-            message += "Max abs error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
+            message += "Max abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
             return CompareConst.PASS, compare_column, message
 
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
@@ -299,24 +302,24 @@ class Comparator:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
             if not hundred_status:
-                message += "Relative error is greater than 0.01, consider as error, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.01, consider as error, skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
         thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
         compare_column.rel_err_thousandth = thousand_res
         if dtype in [torch.float16, torch.bfloat16]:
             if thousand_status:
-                message += "Relative error is less than 0.001, consider as pass, skip other check and set to N/A.\n"
+                message += "Relative error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
                 return CompareConst.PASS, compare_column, message
-            message += "Relative error is greater than 0.001, consider as warning, skip other check and set to N/A.\n"
+            message += "Relative error is greater than 0.001, consider as warning, skip other check and set to SPACE.\n"
             return CompareConst.WARNING, compare_column, message
         ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, 0.0001)
         compare_column.rel_err_ten_thousandth = ten_thousand_res
         if dtype in [torch.float32, torch.float64]:
             if not thousand_status:
-                message += "Relative error is greater than 0.001, consider as error, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.001, consider as error, skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
-                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to N/A.\n"
+                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to SPACE.\n"
                 return CompareConst.WARNING, compare_column, message
             message += "Relative error is less than 0.0001, consider as pass.\n"
         return CompareConst.PASS, compare_column, message
@@ -353,7 +356,7 @@ class Comparator:
     
     @staticmethod
     def _get_absolute_threshold_attribute(api_name, dtype):
-        small_value_threshold = AbsoluteStandardApi.get(api_name).get(dtype).get('small_value')
-        small_value_atol = AbsoluteStandardApi.get(api_name).get(dtype).get('small_value_atol')
-        rtol = AbsoluteStandardApi.get(api_name).get(dtype).get('rtol')
+        small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
+        small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
+        rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
         return small_value_threshold, small_value_atol, rtol

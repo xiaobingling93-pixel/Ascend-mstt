@@ -237,9 +237,15 @@ def merge_tensor(tensor_list):
 
     for tensor in tensor_list:
         if tensor[0].find("stack_info") != -1:
+            if len(tensor) != Const.STACK_COLUMN_NUM:
+                print_error_log(f"This stack_info data is not complete. {tensor}")
+                raise CompareException(CompareException.INVALID_DATA_ERROR)
             op_dict["stack_info"].append(tensor[1])
             break
         op_dict["op_name"].append(tensor[0])
+        if len(tensor) != Const.SUMMARY_COLUMN_NUM:
+            print_error_log(f"This summary data is not complete. {tensor}")
+            raise CompareException(CompareException.INVALID_DATA_ERROR)    
         if tensor[0].find("input") != -1:
             op_dict["input_struct"].append((tensor[3], tensor[4], tensor[2]))
         elif tensor[0].find("output") != -1:
