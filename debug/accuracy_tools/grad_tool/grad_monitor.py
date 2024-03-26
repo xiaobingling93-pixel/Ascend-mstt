@@ -98,7 +98,7 @@ class GradientMonitor:
                 continue
             if param.grad is not None:
                 grad = param.grad
-            elif param.main_grad is not None:
+            elif hasattr(param, "main_grad") and param.main_grad is not None:
                 grad = param.main_grad
             else:
                 continue
