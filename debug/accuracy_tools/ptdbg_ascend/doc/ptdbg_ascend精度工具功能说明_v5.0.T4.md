@@ -1719,6 +1719,17 @@ PrecisionDebugger模块的hook_name参数或register_hook函数设置了overflow
 * `Tensor_add_1_forward_1.pkl`
 * `Tensor_add_1_forward_1`目录
 
+## 工具支持的API列表 
+
+ptdbug_ascend工具维护固定的API支持列表，若需要删除或增加dump的API，可以在[support_wrap_ops.yaml](../src/python/ptdbg_ascend/hook_module/support_wrap_ops.yaml)文件内手动修改，如下示例：
+
+```bash
+functional:  # functional为算子类别，找到对应的类别，在该类别下按照下列格式删除或添加API
+  - conv1d
+  - conv2d
+  - conv3d
+```
+
 ## CPU或GPU与NPU精度数据比对
 
 ### 总体说明
