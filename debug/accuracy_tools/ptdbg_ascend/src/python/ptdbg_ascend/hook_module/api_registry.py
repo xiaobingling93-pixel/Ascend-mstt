@@ -60,12 +60,23 @@ class ApiRegistry:
     @staticmethod
     def store_ori_attr(ori_api_group, api_list, api_ori_attr):
         for api in api_list:
-            api_ori_attr[api] = getattr(ori_api_group, api)
+            parts = api.split('.')
+            if len(parts) > 1:
+                sub_module = getattr(ori_api_group, parts[0])
+                api_ori_attr[api] = getattr(sub_module, parts[1])
+            else:
+                api_ori_attr[api] = getattr(ori_api_group, api)
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):
         for api, api_attr in attr_dict.items():
-            setattr(api_group, api, api_attr)
+            parts = api.split('.')
+            if len(parts) > 1:
+                sub_module = getattr(api_group, parts[0], None)
+                if sub_module is not None:
+                    setattr(sub_module, parts[1], api_attr)
+            else:
+                setattr(api_group, api, api_attr)
 
     def api_modularity(self):
         self.set_api_attr(torch.Tensor, self.tensor_hook_attr)
