@@ -40,14 +40,14 @@ def get_torch_ops():
 TorchOps = {}
 for op in get_torch_ops():
     parts = op.split('.')
-    if len(parts) == 1:
-        if op in dir(torch):
-            TorchOps[op] = getattr(torch, op)
-    else:
+    if len(parts) > 1:
         sub_module_name, sub_op = parts
         sub_module = getattr(torch, sub_module_name, None)
         if sub_module and sub_op in dir(sub_module):
             TorchOps[op] = getattr(sub_module, sub_op)
+    else:
+        if op in dir(torch):
+            TorchOps[op] = getattr(torch, op)
 
 
 
@@ -59,7 +59,7 @@ class TorchOPTemplate(HOOKModule):
 
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Torch_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Torch_" + str(op_name.replace(".", "_")) + "_"
         super().__init__(hook)
 
     @torch_device_guard
