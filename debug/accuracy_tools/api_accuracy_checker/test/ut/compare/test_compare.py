@@ -45,7 +45,7 @@ class TestCompare(unittest.TestCase):
         # 判断实际的余弦相似度值是否在预期值的公差范围内
         self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
         # 对其他值进行比较，确保它们符合预期
-        
+        detailed_result_total[0][3] = 1.0
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
          ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
          '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
@@ -53,7 +53,12 @@ class TestCompare(unittest.TestCase):
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
-
+        actual_cosine_similarity = detailed_result_total[0][3]
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        actual_cosine_similarity = detailed_result_total[1][3]
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        detailed_result_total[0][3] = 1.0
+        detailed_result_total[1][3] = 1.0
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
          ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
