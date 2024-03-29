@@ -43,7 +43,7 @@ def get_torch_ops():
         else:
             if op in dir(torch):
                 _torch_ops.append(op)
-    return set(WrapTorchOps) & set(_torch_ops)
+    return set(_torch_ops)
 
 
 TorchOps = {}
