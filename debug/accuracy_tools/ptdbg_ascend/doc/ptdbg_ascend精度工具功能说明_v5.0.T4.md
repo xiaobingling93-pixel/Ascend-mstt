@@ -858,7 +858,7 @@ bn1_BatchNorm2d_0_backward_output.2.npy
 dump：
 
 ```python
-debugger.configure_hook(mode="api_stack", scope=[], api_list=[], filter_switch="OFF", acl_config=None, backward_input=[], input_output_mode=["all"], summary_only=False)
+debugger.configure_hook(mode="api_stack", scope=[], api_list=[], filter_switch="OFF", acl_config=None, backward_input=[], input_output_mode=["all"], summary_only=False, summary_mode=all)
 ```
 
 溢出检测：
