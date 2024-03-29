@@ -36,7 +36,7 @@ def get_torch_ops():
     for operation in WrapTorchOps:
         operation_parts = operation.split('.')
         if len(operation_parts) > 1:
-            operation_sub_module_name, operation_sub_op = operation_parts
+            operation_sub_module_name, operation_sub_op = '.'.join(operation_parts[:-1]), operation_parts[-1]
             operation_sub_module = getattr(torch, operation_sub_module_name, None)
             if operation_sub_module and operation_sub_op in dir(operation_sub_module):
                 _torch_ops.append(operation)
@@ -50,7 +50,7 @@ TorchOps = {}
 for op in get_torch_ops():
     parts = op.split('.')
     if len(parts) > 1:
-        sub_module_name, sub_op = parts
+        sub_module_name, sub_op = '.'.join(parts[:-1]), parts[-1]
         sub_module = getattr(torch, sub_module_name, None)
         if sub_module and sub_op in dir(sub_module):
             TorchOps[op] = getattr(sub_module, sub_op)
@@ -68,7 +68,7 @@ class TorchOPTemplate(HOOKModule):
 
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Torch_" + str(op_name.replace(".", "_")) + "_"
+        self.prefix_op_name_ = "Torch_" + str(op_name) + "_"
         super().__init__(hook)
 
     @torch_device_guard
