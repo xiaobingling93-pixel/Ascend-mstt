@@ -116,6 +116,7 @@ def run_parallel_ut(config):
             except subprocess.TimeoutExpired:
                 process.kill()
         for file in config.forward_files:
+            check_link(file)
             try:
                 os.remove(file)
             except FileNotFoundError:
@@ -129,6 +130,8 @@ def run_parallel_ut(config):
     except Exception as e:
         print_error_log(f"An unexpected error occurred: {e}")
     finally:
+        if progress_bar.n < config.total_items:
+            print_warn_log("The UT task has not been completed. The parameter '-csv_path' along with the path to the result CSV file will be utilized to resume the UT task.")
         clean_up()
         progress_bar_thread.join()
     try:

@@ -247,8 +247,8 @@ def _user_interactive_confirm(message):
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid():
-        _user_interactive_confirm('The file path %s may be insecure because is does not belong to you.'
-                                  'Do you want to continue?' % path)
+        print_error_log('The file path %s may be insecure because is does not belong to you.' % path)
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
 
 
 def check_path_pattern_vaild(path):
@@ -300,13 +300,12 @@ def create_directory(dir_path):
         when invalid data throw exception
     """
     dir_path = os.path.realpath(dir_path)
-    if not os.path.exists(dir_path):
-        try:
-            os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
-        except OSError as ex:
-            print_error_log(
-                'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
+    try:
+        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+    except OSError as ex:
+        print_error_log(
+            'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
+        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
 
 
 def change_mode(path, mode):

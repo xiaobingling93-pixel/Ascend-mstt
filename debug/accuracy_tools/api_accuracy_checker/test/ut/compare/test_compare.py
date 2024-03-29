@@ -33,32 +33,38 @@ class TestCompare(unittest.TestCase):
         dummmy_input = torch.randn(100, 100)
         bench_out = torch.nn.functional.dropout2d(dummmy_input, 0.3)
         npu_out = torch.nn.functional.dropout2d(dummmy_input, 0.3)
-        self.assertTrue(self.compare._compare_dropout(bench_out, npu_out))
+        self.assertTrue(self.compare._compare_dropout("api", bench_out, npu_out))
 
     def test_compare_core_wrapper(self):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
+        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
         actual_cosine_similarity = detailed_result_total[0][3]
         # 设置一个小的公差值
         tolerance = 1e-4    
         # 判断实际的余弦相似度值是否在预期值的公差范围内
         self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
         # 对其他值进行比较，确保它们符合预期
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
-                                              'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
+        detailed_result_total[0][3] = 1.0
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
         self.assertTrue(test_final_success)
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
-        test_final_success, detailed_result_total = self.compare._compare_core_wrapper(bench_out, npu_out)
+        test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
+        actual_cosine_similarity = detailed_result_total[0][3]
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        actual_cosine_similarity = detailed_result_total[1][3]
+        self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
+        detailed_result_total[0][3] = 1.0
+        detailed_result_total[1][3] = 1.0
         self.assertTrue(test_final_success)
-        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
-                                                  'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n'], 
-                                                 ['torch.float32', 'torch.float32', (100, 100), 
-                                                  actual_cosine_similarity, 0.0, 'N/A', 'N/A', 
-                                                'N/A', 'N/A', 0.0, 0.0, 0, 0.0, 0.0, 'pass', '\n']])
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'], 
+         ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ',
+          ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
@@ -89,7 +95,7 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.Tensor([1.0, 2.0, 3.0])
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
-        status, compare_column, message = self.compare._compare_torch_tensor(cpu_output, npu_output, compare_column)
+        status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output, compare_column)
         self.assertEqual(status, "pass")
 
     def test_compare_bool_tensor(self):

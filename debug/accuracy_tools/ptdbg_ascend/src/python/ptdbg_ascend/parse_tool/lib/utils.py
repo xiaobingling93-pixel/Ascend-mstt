@@ -31,6 +31,7 @@ from ...common.file_check_util import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from ...common.file_check_util import FileCheckConst
 from ...common.file_check_util import FileOpen
+from ...common.utils import check_file_or_directory_path
 
 try:
     from rich.traceback import install
@@ -297,8 +298,7 @@ class Util:
     def check_npy_files_valid_in_dir(self, dir_path):
         for file_name in os.listdir(dir_path):
             file_path = os.path.join(dir_path, file_name)
-            if not self.check_path_valid(file_path):
-                return False
+            check_file_or_directory_path(file_path)
             _, file_extension = os.path.splitext(file_path)
             if not file_extension == '.npy':
                 return False
@@ -310,9 +310,14 @@ class Util:
         return md5_hash.hexdigest()
 
     def write_csv(self, data, filepath):
+        need_change_mode = False
+        if not os.path.exists(filepath):
+            need_change_mode = True
         with FileOpen(filepath, 'a') as f:
             writer = csv.writer(f)
             writer.writerows(data)
+        if need_change_mode:
+            change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def deal_with_dir_or_file_inconsistency(self, output_path):
         if os.path.exists(output_path):

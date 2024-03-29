@@ -2,6 +2,7 @@ import fcntl
 import json
 import os
 import threading
+import multiprocessing
 
 from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
 from api_accuracy_checker.common.utils import check_file_or_directory_path, initialize_save_path, create_directory
@@ -12,6 +13,7 @@ from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, change_mode
 
 lock = threading.Lock()
+proc_lock = multiprocessing.Lock()
 
 
 def write_api_info_json(api_info):
@@ -36,27 +38,26 @@ def write_api_info_json(api_info):
 
 def write_json(file_path, data, indent=None):
     check_file_or_directory_path(os.path.dirname(file_path), True)
-    if not os.path.exists(file_path):
-        with FileOpen(file_path, 'w') as f:
-            f.write("{\n}")
-            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    lock.acquire()
-    with FileOpen(file_path, 'a+') as f:
+    with proc_lock, lock, FileOpen(file_path, 'a+') as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         try:
             f.seek(0, os.SEEK_END)
-            f.seek(f.tell() - 1, os.SEEK_SET)
-            f.truncate()
-            if f.tell() > 3:
-                f.seek(f.tell() - 1, os.SEEK_SET)
+            current_position = f.tell()
+            if current_position > 0:
+                f.seek(current_position - 1, os.SEEK_SET)
                 f.truncate()
-                f.write(',\n')
-            f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
+                if f.tell() > 3:
+                    f.seek(f.tell() - 1, os.SEEK_SET)
+                    f.truncate()
+                    f.write(',\n')
+                f.write(json.dumps(data, indent=indent)[1:-1] + '\n}')
+            else:
+                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+                f.write('{\n' + json.dumps(data, indent=indent)[1:] + '\n')
         except Exception as e:
             raise ValueError(f"Json save failed:{e}") from e
         finally:
             fcntl.flock(f, fcntl.LOCK_UN)
-            lock.release()
 
 
 def initialize_output_json():

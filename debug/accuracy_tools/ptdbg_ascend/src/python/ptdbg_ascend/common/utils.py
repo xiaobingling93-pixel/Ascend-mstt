@@ -25,6 +25,7 @@ import sys
 import time
 import zlib
 import json
+from json.decoder import JSONDecodeError
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
@@ -103,6 +104,8 @@ class Const:
     FILE_NAME_LENGTH = 255
     DIRECTORY_LENGTH = 4096
     DISTRIBUTED_PREFIX_LENGTH = 60
+    SUMMARY_COLUMN_NUM = 6
+    STACK_COLUMN_NUM = 2
     # env dump path
     ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
     DUMP_DIR = "dump_data"
@@ -396,7 +399,11 @@ def is_summary_compare(input_param):
 
 def is_md5_compare(input_parma):
     with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
-        line = json.loads(npu_pkl.readline())
+        pkl_lines = npu_pkl.readline()
+    try:
+        line = json.loads(pkl_lines)
+    except JSONDecodeError as err:
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from err
     if len(line) < 3:
         return False
     if line[2]:
@@ -698,7 +705,7 @@ def parameter_adapter(func):
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
                     return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
             elif indices.dtype != torch.bool:
-                if len(indices.shape) == 1:
+                if not indices.shape or len(indices.shape) == 1:
                     return func(self, input_tensor, indices.tolist())
                 elif len(indices.shape) == 2:
                     result = [func(self, input_tensor, index) for index in indices.tolist()]

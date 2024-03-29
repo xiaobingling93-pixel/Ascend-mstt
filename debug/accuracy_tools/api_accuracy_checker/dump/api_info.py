@@ -17,10 +17,11 @@ def get_tensor_extremum(data, operator):
             return True in data
         elif operator == 'min':
             return False not in data
+    data_clone = data.clone().detach()
     if operator == 'max':
-        return torch._C._VariableFunctionsClass.max(data.float()).item()
+        return torch._C._VariableFunctionsClass.max(data_clone.float()).item()
     else:
-        return torch._C._VariableFunctionsClass.min(data.float()).item()
+        return torch._C._VariableFunctionsClass.min(data_clone.float()).item()
 
 
 def get_type_name(name):

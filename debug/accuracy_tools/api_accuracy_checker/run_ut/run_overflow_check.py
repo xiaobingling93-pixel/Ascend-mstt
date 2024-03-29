@@ -84,7 +84,7 @@ def run_torch_api(api_full_name, api_info_dict):
     return
 
 
-def _run_ut_parser(parser):
+def _run_overflow_check_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="",
                         help="<Required> The api param tool forward result file: generate from api param tool, "
                              "a json file.",
@@ -95,10 +95,15 @@ def _run_ut_parser(parser):
                         default=0, required=False)
 
 
-def _run_overflow_check():
-    parser = argparse.ArgumentParser()
-    _run_ut_parser(parser)
+def _run_overflow_check(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    _run_overflow_check_parser(parser)
     args = parser.parse_args(sys.argv[1:])
+    _run_overflow_check_command(args)
+
+
+def _run_overflow_check_command(args):
     torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     npu_device = "npu:" + str(args.device_id)
     check_link(args.forward_input_file)

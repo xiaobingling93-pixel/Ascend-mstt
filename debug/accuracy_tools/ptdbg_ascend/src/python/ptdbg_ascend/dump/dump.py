@@ -150,14 +150,15 @@ def dump_tensor(x, prefix, dump_step):
         if x.is_meta:
             print_info_log(f"Meta tensor {prefix} is skipped.")
             return
-        if x.numel() == 0 or len(x.shape) == 0 or not x.is_floating_point():
+        x_clone = x.clone().detach()
+        if x_clone.numel() == 0 or len(x_clone.shape) == 0 or not x_clone.is_floating_point():
             if DumpUtil.dump_filter_switch == Const.OFF:
-                data_info = get_not_float_tensor_info(x)
+                data_info = get_not_float_tensor_info(x_clone)
                 dump_data_by_rank_count(dump_step, prefix, data_info)
             else:
                 return
         else:
-            data_info = get_float_tensor_info(x)
+            data_info = get_float_tensor_info(x_clone)
             dump_data_by_rank_count(dump_step, prefix, data_info)
 
     elif DumpUtil.dump_filter_switch == Const.OFF:
@@ -337,6 +338,7 @@ def forward_acl_dump(module, module_name):
     global backward_init_status
     if not forward_init_status and not backward_init_status:
         forward_init_status = True
+        torch_npu.npu.synchronize()
         torch_npu.npu.init_dump()
         torch_npu.npu.set_dump(DumpUtil.dump_config)
         torch_npu.npu.synchronize()
@@ -346,6 +348,7 @@ def forward_acl_dump(module, module_name):
             module.forward(*module.input_args, **module.input_kwargs)
         torch_npu.npu.synchronize()
         torch_npu.npu.finalize_dump()
+        torch_npu.npu.synchronize()
     del module.input_args
     del module.input_kwargs
     forward_init_status = False
@@ -403,7 +406,12 @@ def module_count_func(name, name_template):
             module_count[module_name][-1].append(module_count[module_name][0])
         index = module_count[module_name][0]
     else:
-        index = module_count[module_name][-1].pop()
+        backward_stack = module_count[module_name][-1] if module_name in module_count else []
+        if not backward_stack:
+            print_warn_log("The backward stack of {} is empty.".format(module_name))
+            index = "abnormal"
+        else:
+            index = backward_stack.pop()
     return index
 
 

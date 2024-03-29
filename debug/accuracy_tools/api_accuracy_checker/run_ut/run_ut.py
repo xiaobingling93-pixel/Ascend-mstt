@@ -118,23 +118,33 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
         else:
             return arg_in
 
-    def recursive_find_dtypes(arg_in):
+    def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
+        if arg_in.dtype in Const.RAISE_PRECISION:
+            return True
+        if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
+            return True
+        return False
+
+    def recursive_find_dtypes(arg_in, kwargs=None, check_kwargs=False):
         if isinstance(arg_in, (list, tuple)):
-            return set().union(*tuple(recursive_find_dtypes(arg) for arg in arg_in))
-        elif isinstance(arg_in, torch.Tensor) and arg_in.dtype in Const.RAISE_PRECISION:
+            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs) for arg in arg_in))
+        elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
             return set([arg_in.dtype])
+        elif isinstance(arg_in, dict) and check_kwargs:
+            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True) for v in arg_in.values()))
         return set()
 
     raise_dtype = None
     need_raise_dtypes = recursive_find_dtypes(input_args)
+    need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
     if len(need_raise_dtypes) == 1:
-        raise_dtype = Const.RAISE_PRECISION.get(need_raise_dtypes.pop())
+        raise_dtype = Const.RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
 
 
@@ -219,7 +229,9 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
     device_out = exec_api(api_type, api_name, device_args, device_kwargs)
-    api_setting_dict = get_json_contents("torch_ut_setting.json")
+    current_path = os.path.dirname(os.path.realpath(__file__))
+    ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
+    api_setting_dict = get_json_contents(ut_setting_path)
     grad_input_index = api_setting_dict.get(api_name)
     grad_index = None
     grad, bench_grad = None, None
@@ -235,7 +247,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
     if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad, 
+        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
                           in_fwd_data_list)
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
@@ -250,7 +262,7 @@ def get_api_info(api_info_dict, api_name, real_data_path):
 
 
 def run_backward(args, grad, grad_index, out):
-    
+
     if grad_index is not None:
         out[grad_index].backward(grad)
     elif isinstance(out, (list, tuple)):
@@ -316,7 +328,7 @@ def _run_ut_parser(parser):
                         help="<optional> Save compare failed api output.", required=False)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", action="store_true",
                         help="<optional> whether to turn on jit compile", required=False)
-    
+
     class UniqueDeviceAction(argparse.Action):
         def __call__(self, parser, namespace, values, option_string=None):
             unique_values = set(values)
@@ -327,7 +339,7 @@ def _run_ut_parser(parser):
                     parser.error("device id must be greater than or equal to 0")
             setattr(namespace, self.dest, values)
 
-    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int, 
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
                         help="<optional> set device id to run ut, must be unique and in range 0-7",
                         default=[0], required=False, action=UniqueDeviceAction)
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str,
@@ -371,10 +383,15 @@ def preprocess_forward_content(forward_content):
     return processed_content
 
 
-def _run_ut():
-    parser = argparse.ArgumentParser()
+def _run_ut(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
     _run_ut_parser(parser)
     args = parser.parse_args(sys.argv[1:])
+    run_ut_command(args)
+
+
+def run_ut_command(args):
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     used_device = current_device + ":" + str(args.device_id[0])

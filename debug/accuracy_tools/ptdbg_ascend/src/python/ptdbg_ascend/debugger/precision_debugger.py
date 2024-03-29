@@ -33,7 +33,6 @@ class PrecisionDebugger:
                 err_msg = "You must provide hook_name argument to PrecisionDebugger\
                                 when config is not provided."
                 raise Exception(err_msg)
-            step = step or []
             self.config = DebuggerConfig(dump_path, hook_name, rank, step)
             self.configure_hook = self.get_configure_hook(self.config.hook_name)
             self.configure_hook()
@@ -59,9 +58,9 @@ class PrecisionDebugger:
         if mode == "acl" and self.model is not None:
             print_error_log("Init dump does not support ACL dump mode.")
             raise CompareException(CompareException.INVALID_DUMP_MODE)
-        scope = scope or [] 
-        api_list = api_list or []
-        backward_input = backward_input or []
+        scope = scope if scope is not None else []
+        api_list = api_list if api_list is not None else []
+        backward_input = backward_input if backward_input is not None else []
 
         if summary_only:
             if summary_mode is not None:
