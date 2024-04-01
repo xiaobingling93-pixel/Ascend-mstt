@@ -12,11 +12,11 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 def get_tensor_extremum(data, operator):
     if data.dtype is torch.bool:
         if data.numel() == 0:
-            return False
+            return False, False
         if operator == 'max':
-            return True in data
+            return True in data, True in data
         elif operator == 'min':
-            return False not in data
+            return False not in data, False not in data
     data_clone = data.clone().detach()
     if operator == 'max':
         max_result = torch._C._VariableFunctionsClass.max(data_clone.float())
