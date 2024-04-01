@@ -18,6 +18,7 @@
 import os
 import torch
 import numpy
+import math
 
 from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
     print_error_log, get_full_data_path, CompareException
@@ -105,6 +106,9 @@ def gen_random_tensor(info, convert_type):
     """
     check_object_type(info, dict)
     low, high = info.get('Min'), info.get('Max')
+    low_origin, high_origin = info.get('Min_origin'), info.get('Max_origin')
+    low_info = [low, low_origin]
+    high_info = [high, high_origin]
     data_dtype = info.get('dtype')
     shape = tuple(info.get('shape'))
     if not isinstance(low, (int, float)) or not isinstance(high, (int, float)):
@@ -113,11 +117,11 @@ def gen_random_tensor(info, convert_type):
     if data_dtype == "torch.bool":
         data = gen_bool_tensor(low, high, shape)
     else:
-        data = gen_common_tensor(low, high, shape, data_dtype, convert_type)
+        data = gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type)
     return data
 
 
-def gen_common_tensor(low, high, shape, data_dtype, convert_type):
+def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     """
     Function Description:
         Based on API basic information, generate int or float tensor
@@ -133,10 +137,23 @@ def gen_common_tensor(low, high, shape, data_dtype, convert_type):
         if ori_dtype == data_dtype:
             data_dtype = Const.CONVERT.get(convert_type)[1]
     if data_dtype in FLOAT_TYPE:
-        if high in [float('inf'), float('-inf')] or low in [float('inf'), float('-inf')]:
-            error_info = 'Parameter contains inf, skip comparison.'
-            raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
-        scale = high - low
+        low, low_origin = low_info[0], low_info[1]
+        high, high_origin = high_info[0], high_info[1]
+        if math.isnan(high):
+            tensor = torch.full(shape, float('nan'), dtype=eval(data_dtype))
+            return tensor
+        low_scale, high_scale = low, high
+        dtype_finio = torch.finio(eval(data_dtype))
+        if high == float('inf'):
+            high_scale = dtype_finio.max
+        elif high == float('-inf'):
+            high_scale = dtype_finio.min
+        if low == float('inf'):
+            low_scale = dtype_finio.max
+        elif low == float('-inf'):
+            low_scale = dtype_finio.min
+
+        scale = high_scale - low_scale
         rand01 = torch.rand(shape, dtype=eval(data_dtype))
         tensor = rand01 * scale + low
     elif 'int' in data_dtype or 'long' in data_dtype:
@@ -148,8 +165,21 @@ def gen_common_tensor(low, high, shape, data_dtype, convert_type):
     if tensor.nelement() == 0:
         return tensor
     tmp_tensor = tensor.reshape(-1)
-    tmp_tensor[0] = low
-    tmp_tensor[-1] = high
+    if math.isnan(high_origin):
+        if tmp_tensor.numel() <= 2:
+            tmp_tensor[0] = float('nan')
+            tmp_tensor[-1] = high
+        else:
+            tmp_tensor[0] = low
+            tmp_tensor[1] = float('nan')
+            tmp_tensor[-1] = high
+    else:
+        tmp_tensor[0] = low
+        tmp_tensor[-1] = high
+        if high_origin in [float('inf'), float('-inf')]:
+            tmp_tensor[-1] = high_origin
+        if low_origin in [float('inf'), float('-inf')]:
+            tmp_tensor[0] = low_origin
     data = tmp_tensor.reshape(shape)
     return data
 
