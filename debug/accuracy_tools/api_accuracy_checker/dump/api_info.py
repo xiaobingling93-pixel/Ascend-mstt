@@ -38,9 +38,9 @@ def handle_tensor_extremum_nan_inf(data_clone, operator):
         return float('nan')
     data_no_inf = data_no_nan[~torch.isinf(data_no_nan)]
     if len(data_no_inf) == 0:
-        return torch._C._VariableFunctionsClass.max(data_no_nan.float()).item() if operator =='max' else \
+        return torch._C._VariableFunctionsClass.max(data_no_nan.float()).item() if operator == 'max' else \
             torch._C._VariableFunctionsClass.min(data_no_nan.float()).item()
-    return torch._C._VariableFunctionsClass.max(data_no_inf.float()).item() if operator =='max' else \
+    return torch._C._VariableFunctionsClass.max(data_no_inf.float()).item() if operator == 'max' else \
         torch._C._VariableFunctionsClass.min(data_no_inf.float()).item()
 
 
@@ -138,10 +138,10 @@ class APIInfo:
             single_arg.update({'type': 'torch.Tensor'})
             single_arg.update({'dtype': str(arg.dtype)})
             single_arg.update({'shape': arg.shape})
-            max_handle, max_origin = get_tensor_extremum(arg,'max')
+            max_handle, max_origin = get_tensor_extremum(arg, 'max')
             single_arg.update({'Max': transfer_types(max_handle, str(arg.dtype))})
             single_arg.update({'Max_origin': transfer_types(max_origin, str(arg.dtype))})
-            min_handle, min_origin = get_tensor_extremum(arg,'min')
+            min_handle, min_origin = get_tensor_extremum(arg, 'min')
             single_arg.update({'Min': transfer_types(min_handle, str(arg.dtype))})
             single_arg.update({'Min_origin': transfer_types(min_origin, str(arg.dtype))})
             single_arg.update({'requires_grad': arg.requires_grad})

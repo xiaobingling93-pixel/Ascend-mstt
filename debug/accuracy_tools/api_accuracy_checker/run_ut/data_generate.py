@@ -16,9 +16,9 @@
 """
 
 import os
+import math
 import torch
 import numpy
-import math
 
 from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
     print_error_log, get_full_data_path, CompareException
