@@ -143,7 +143,7 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             tensor = torch.full(shape, float('nan'), dtype=eval(data_dtype))
             return tensor
         low_scale, high_scale = low, high
-        dtype_finio = torch.finio(eval(data_dtype))
+        dtype_finio = torch.finfo(eval(data_dtype))
         if high == float('inf'):
             high_scale = dtype_finio.max
         elif high == float('-inf'):
