@@ -143,15 +143,15 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             tensor = torch.full(shape, float('nan'), dtype=eval(data_dtype))
             return tensor
         low_scale, high_scale = low, high
-        dtype_finio = torch.finfo(eval(data_dtype))
+        dtype_finfo = torch.finfo(eval(data_dtype))
         if high == float('inf'):
-            high_scale = dtype_finio.max
+            high_scale = dtype_finfo.max
         elif high == float('-inf'):
-            high_scale = dtype_finio.min
+            high_scale = dtype_finfo.min
         if low == float('inf'):
-            low_scale = dtype_finio.max
+            low_scale = dtype_finfo.max
         elif low == float('-inf'):
-            low_scale = dtype_finio.min
+            low_scale = dtype_finfo.min
 
         scale = high_scale - low_scale
         rand01 = torch.rand(shape, dtype=eval(data_dtype))
