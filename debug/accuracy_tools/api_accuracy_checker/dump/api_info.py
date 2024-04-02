@@ -38,10 +38,11 @@ def handle_tensor_extremum_nan_inf(data_clone, operator):
         return float('nan')
     data_no_inf = data_no_nan[~torch.isinf(data_no_nan)]
     if len(data_no_inf) == 0:
-        return torch._C._VariableFunctionsClass.max(data_no_nan.float()).item() if operator == 'max' else \
-            torch._C._VariableFunctionsClass.min(data_no_nan.float()).item()
-    return torch._C._VariableFunctionsClass.max(data_no_inf.float()).item() if operator == 'max' else \
-        torch._C._VariableFunctionsClass.min(data_no_inf.float()).item()
+        float_data = data_no_nan.float()
+    else:
+        float_data = data_no_inf.float()
+    return torch._C._VariableFunctionsClass.max(float_data).item() if operator == 'max' else \
+        torch._C._VariableFunctionsClass.min(float_data).item()
 
 
 def get_type_name(name):
