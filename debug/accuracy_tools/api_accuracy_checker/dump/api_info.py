@@ -33,16 +33,19 @@ def get_tensor_extremum(data, operator):
 
 
 def handle_tensor_extremum_nan_inf(data_clone, operator):
-    data_no_nan = data_clone[~torch._C._VariableFunctionsClass.isnan(data_clone)]
-    if len(data_no_nan) == 0:
+    
+    data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
+    if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
         return float('nan')
-    data_no_inf = data_no_nan[~torch._C._VariableFunctionsClass.isinf(data_no_nan)]
-    if len(data_no_inf) == 0:
-        float_data = data_no_nan.float()
+    finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
+    if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
+        finite_values = data_clone[finite_mask]
+        return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
+         torch._C._VariableFunctionsClass.min(finite_values).item()
     else:
-        float_data = data_no_inf.float()
-    return torch._C._VariableFunctionsClass.max(float_data).item() if operator == 'max' else \
-        torch._C._VariableFunctionsClass.min(float_data).item()
+        data_no_nan = data_clone[~torch._C._VariableFunctionsClass.isnan(data_clone)]
+        return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
+         torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
 
 def get_type_name(name):
