@@ -33,10 +33,10 @@ def get_tensor_extremum(data, operator):
 
 
 def handle_tensor_extremum_nan_inf(data_clone, operator):
-    data_no_nan = data_clone[~torch.isnan(data_clone)]
+    data_no_nan = data_clone[~torch._C._VariableFunctionsClass.isnan(data_clone)]
     if len(data_no_nan) == 0:
         return float('nan')
-    data_no_inf = data_no_nan[~torch.isinf(data_no_nan)]
+    data_no_inf = data_no_nan[~torch._C._VariableFunctionsClass.isinf(data_no_nan)]
     if len(data_no_inf) == 0:
         float_data = data_no_nan.float()
     else:
