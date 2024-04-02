@@ -136,9 +136,9 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
         ori_dtype = Const.CONVERT.get(convert_type)[0]
         if ori_dtype == data_dtype:
             data_dtype = Const.CONVERT.get(convert_type)[1]
+    low, low_origin = low_info[0], low_info[1]
+    high, high_origin = high_info[0], high_info[1]
     if data_dtype in FLOAT_TYPE:
-        low, low_origin = low_info[0], low_info[1]
-        high, high_origin = high_info[0], high_info[1]
         if math.isnan(high):
             tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=eval(data_dtype))
             return tensor
