@@ -84,24 +84,24 @@ class TestAPIInfo(unittest.TestCase):
         result_min, result_min_origin = get_tensor_extremum(data, 'min')
         self.assertEqual(result_max, 3)
         self.assertEqual(result_min, 1)
-        self.assertEqual(bool(np.isnan(result_max_origin)), True)
-        self.assertEqual(bool(np.isnan(result_min_origin)), True)
+        self.assertTrue(np.isnan(result_max_origin))
+        self.assertTrue(np.isnan(result_min_origin))
 
         data = torch.tensor([float("inf"), float("nan")])
         result_max, result_max_origin = get_tensor_extremum(data, 'max')
         result_min, result_min_origin = get_tensor_extremum(data, 'min')
         self.assertEqual(result_max, float("inf"))
         self.assertEqual(result_min, float("inf"))
-        self.assertEqual(bool(np.isnan(result_max_origin)), True)
-        self.assertEqual(bool(np.isnan(result_min_origin)), True)
+        self.assertTrue(np.isnan(result_max_origin))
+        self.assertTrue(np.isnan(result_min_origin))
 
         data = torch.tensor([float("nan"), float("nan")])
         result_max, result_max_origin = get_tensor_extremum(data, 'max')
         result_min, result_min_origin = get_tensor_extremum(data, 'min')
-        self.assertEqual(bool(np.isnan(result_max)), True)
-        self.assertEqual(bool(np.isnan(result_min)), True)
-        self.assertEqual(bool(np.isnan(result_max_origin)), True)
-        self.assertEqual(bool(np.isnan(result_min_origin)), True)
+        self.assertTrue(np.isnan(result_max))
+        self.assertTrue(np.isnan(result_min))
+        self.assertTrue(np.isnan(result_max_origin))
+        self.assertTrue(np.isnan(result_min_origin))
 
     def test_get_type_name(self):
         name = "<class 'int'>"
