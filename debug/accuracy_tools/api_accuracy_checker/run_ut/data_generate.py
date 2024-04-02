@@ -165,7 +165,7 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     if tensor.nelement() == 0:
         return tensor
     tmp_tensor = tensor.reshape(-1)
-    if math.isnan(high_origin):
+    if high_origin and math.isnan(high_origin):
         if tmp_tensor.numel() <= 2:
             tmp_tensor[0] = float('nan')
             tmp_tensor[-1] = high
