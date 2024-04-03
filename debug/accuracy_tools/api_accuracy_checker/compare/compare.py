@@ -168,7 +168,8 @@ class Comparator:
             else:
                 bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, npu_grad)
         self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
-        return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS or bwd_success_status == CompareConst.SPACE
+        return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
+            or bwd_success_status == CompareConst.SPACE
 
     def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
