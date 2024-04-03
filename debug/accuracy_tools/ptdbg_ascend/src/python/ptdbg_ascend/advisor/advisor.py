@@ -42,9 +42,14 @@ class Advisor:
                             % (self.input_file, str(os_err)))
             raise CompareException(CompareException.PARSE_FILE_ERROR) from os_err
         data_columns = df.columns.values
-        if not {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
-            print_error_log('Compare result file does not contain %s, %s columns.' % (CompareConst.ACCURACY,
-                                                                                      CompareConst.NPU_NAME))
+        if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
+            self.file_type = 'accuracy'
+        elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
+            self.file_type = 'md5'
+        elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
+            self.file_type = 'summary'
+        else:
+            print_error_log('Compare result file does not meet the required conditions.')
             raise CompareException(CompareException.INVALID_FILE_ERROR)
         df.reset_index(inplace=True)
         # The value of index is consistent with the line number of csv, csv file first line is 2
@@ -87,15 +92,19 @@ class Advisor:
             message = AdvisorConst.BATCH_NORM_SUGGEST
         return message
 
-    @staticmethod
-    def analyze_unmatched(analyze_data):
-        accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
+    def analyze_unmatched(self, analyze_data):
+        if self.file_type == 'accuracy':
+            accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
+        elif self.file_type == 'md5':
+            accuracy_unmatched = analyze_data[analyze_data[CompareConst.RESULT] == False]
+        elif self.file_type == 'summary':
+            accuracy_unmatched = analyze_data[analyze_data[CompareConst.RESULT] == "warning"]
         num_unmatch = len(accuracy_unmatched)
         if num_unmatch != 0:
             for i in range(len(accuracy_unmatched)):
-                item = analyze_data.iloc[i]
+                item = accuracy_unmatched.iloc[i]
                 print_warn_log("The tensor name matches but the shape or dtype does not match: {}"
-                               .format(item[CompareConst.NPU_NAME]))
+                            .format(item[CompareConst.NPU_NAME]))
 
     def gen_advisor_result(self, pd_data):
         first_failing_data = pd_data.iloc[0]
@@ -111,7 +120,12 @@ class Advisor:
         analyze_data = self._parse_input_file()
         print_info_log("Start analyzing the comparison result: %s" % self.input_file)
         self.analyze_unmatched(analyze_data)
-        failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
+        if self.file_type == 'accuracy':
+            failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
+        elif self.file_type == 'md5':
+            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == False]
+        elif self.file_type == 'summary':
+            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == "warning"]
         if failing_data.empty:
             print_info_log("All data from api input/output accuracy reached")
             result = AdvisorResult(AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERR_SUGGEST)
