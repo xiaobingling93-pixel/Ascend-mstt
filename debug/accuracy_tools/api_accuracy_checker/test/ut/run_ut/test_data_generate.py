@@ -73,9 +73,12 @@ class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_common_tensor(self):
         info = api_info_dict.get('args')[0]
         low, high = info.get('Min'), info.get('Max')
+        low_origin, high_origin = info.get('Min_origin'), info.get('Max_origin')
+        low_info = [low, low_origin]
+        high_info = [high, high_origin]
         data_dtype = info.get('dtype')
         shape = tuple(info.get('shape'))
-        data = gen_common_tensor(low, high, shape, data_dtype, None)
+        data = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
         self.assertEqual(data.dtype, torch.float32)

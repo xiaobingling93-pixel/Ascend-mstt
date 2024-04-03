@@ -12,16 +12,39 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 def get_tensor_extremum(data, operator):
     if data.dtype is torch.bool:
         if data.numel() == 0:
-            return False
+            return False, False
         if operator == 'max':
-            return True in data
+            return True in data, True in data
         elif operator == 'min':
-            return False not in data
-    data_clone = data.clone().detach()
+            return False not in data, False not in data
+    data_clone = data.float().clone().detach()
     if operator == 'max':
-        return torch._C._VariableFunctionsClass.max(data_clone.float()).item()
+        max_result = torch._C._VariableFunctionsClass.max(data_clone).item()
+        if np.isinf(max_result) or np.isnan(max_result):
+            return handle_tensor_extremum_nan_inf(data_clone, operator), max_result
+        else:
+            return max_result, max_result
     else:
-        return torch._C._VariableFunctionsClass.min(data_clone.float()).item()
+        min_result = torch._C._VariableFunctionsClass.min(data_clone).item()
+        if np.isinf(min_result) or np.isnan(min_result):
+            return handle_tensor_extremum_nan_inf(data_clone, operator), min_result
+        else:
+            return min_result, min_result
+
+
+def handle_tensor_extremum_nan_inf(data_clone, operator):
+    data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
+    if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
+        return float('nan')
+    finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
+    if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
+        finite_values = data_clone[finite_mask]
+        return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
+         torch._C._VariableFunctionsClass.min(finite_values).item()
+    else:
+        data_no_nan = data_clone[~data_nan]
+        return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
+         torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
 
 def get_type_name(name):
@@ -118,8 +141,12 @@ class APIInfo:
             single_arg.update({'type': 'torch.Tensor'})
             single_arg.update({'dtype': str(arg.dtype)})
             single_arg.update({'shape': arg.shape})
-            single_arg.update({'Max': transfer_types(get_tensor_extremum(arg, 'max'), str(arg.dtype))})
-            single_arg.update({'Min': transfer_types(get_tensor_extremum(arg, 'min'), str(arg.dtype))})
+            max_handle, max_origin = get_tensor_extremum(arg, 'max')
+            single_arg.update({'Max': transfer_types(max_handle, str(arg.dtype))})
+            single_arg.update({'Max_origin': transfer_types(max_origin, str(arg.dtype))})
+            min_handle, min_origin = get_tensor_extremum(arg, 'min')
+            single_arg.update({'Min': transfer_types(min_handle, str(arg.dtype))})
+            single_arg.update({'Min_origin': transfer_types(min_origin, str(arg.dtype))})
             single_arg.update({'requires_grad': arg.requires_grad})
         else:
             api_args = self.api_name + '.' + str(self.args_num)
