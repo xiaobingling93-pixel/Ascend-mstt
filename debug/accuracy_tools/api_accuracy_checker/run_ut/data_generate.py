@@ -155,7 +155,7 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
 
         scale = high_scale - low_scale
         rand01 = torch.rand(shape, dtype=eval(data_dtype))
-        tensor = rand01 * scale + low
+        tensor = rand01 * scale + low_scale
     elif 'int' in data_dtype or 'long' in data_dtype:
         low, high = int(low), int(high)
         tensor = torch.randint(low, high + 1, shape, dtype=eval(data_dtype))
