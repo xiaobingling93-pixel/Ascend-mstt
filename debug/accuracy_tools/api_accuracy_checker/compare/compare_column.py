@@ -20,12 +20,17 @@ class CompareColumn:
         self.inf_nan_error_ratio = CompareConst.SPACE
         self.rel_err_ratio = CompareConst.SPACE
         self.abs_err_ratio = CompareConst.SPACE
+        self.Max_ULP_error = CompareConst.SPACE
+        self.Min_ULP_error = CompareConst.SPACE
+        self.Mean_ULP_error = CompareConst.SPACE
+        self.ULP_error_ratio = CompareConst.SPACE
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
                 self.rel_err_thousandth, self.rel_err_ten_thousandth, self.error_rate, self.EB, self.RMSE, 
                 self.small_value_err_ratio, self.Max_rel_error, self.Mean_rel_error, self.inf_nan_error_ratio, 
-                self.rel_err_ratio, self.abs_err_ratio, is_pass, message]
+                self.rel_err_ratio, self.abs_err_ratio, self.Max_ULP_error, self.Min_ULP_error, self.Mean_ULP_error, 
+                self.ULP_error_ratio, is_pass, message]
 
 
 class ApiPrecisionOutputColumn:
@@ -49,6 +54,8 @@ class ApiPrecisionOutputColumn:
         self.abs_err_ratio_status = CompareConst.SPACE
         self.error_rate = CompareConst.SPACE
         self.error_rate_status = CompareConst.SPACE
+        self.ULP_err_ratio = CompareConst.SPACE
+        self.ULP_err_ratio_status = CompareConst.SPACE
         self.compare_result = CompareConst.SPACE
         self.compare_algorithm = CompareConst.SPACE
         self.compare_message = CompareConst.SPACE
@@ -58,6 +65,6 @@ class ApiPrecisionOutputColumn:
                 self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
                 self.mean_rel_err_status, self.eb_ratio, self.eb_status, self.inf_nan_error_ratio, 
                 self.inf_nan_error_ratio_status, self.rel_err_ratio, self.rel_err_ratio_status, self.abs_err_ratio, 
-                self.abs_err_ratio_status, self.error_rate, self.error_rate_status, self.compare_result, 
-                self.compare_algorithm, self.compare_message]
+                self.abs_err_ratio_status, self.error_rate, self.error_rate_status, self.ULP_err_ratio, 
+                self.ULP_err_ratio_status, self.compare_result, self.compare_algorithm, self.compare_message]
         

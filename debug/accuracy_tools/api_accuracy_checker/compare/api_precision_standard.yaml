@@ -105,3 +105,8 @@ BinaryCompareStandard:
   - tril_
   - triu
   - triu_
+
+
+ULPStandard:
+  - matmul
+  - __matmul__

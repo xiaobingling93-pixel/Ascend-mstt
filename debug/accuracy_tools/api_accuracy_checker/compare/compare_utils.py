@@ -21,6 +21,7 @@ with FileOpen(standard_yaml_path, 'r') as f:
     Apis = yaml.safe_load(f)
     AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
     BinaryStandardApi = Apis.get('BinaryCompareStandard')
+    ULPStandardApi = Apis.get('ULPStandard')
 
 
 threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
@@ -118,6 +119,9 @@ class ApiPrecisionCompareColumn:
     REL_ERR_RATIO_STATUS = '相对误差判定结果'
     ABS_ERR_RATIO = '绝对误差错误率'
     ABS_ERR_RATIO_STATUS = '绝对误差判定结果'
+    MEAN_ULP_ERR = 'ULP误差平均值'
+    ULP_ERR_RATIO = 'ULP误差大于阈值占比比值'
+    ULP_ERR_RATIO_STATUS = 'ULP误差判定结果'
     FINAL_RESULT = '比对结果'
     ALGORITHM = '比对算法'
     FORWWARD_STATUS = 'Forward Test Success'
@@ -130,7 +134,8 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE, ApiPrecisionCompareColumn.RMSE, 
                 ApiPrecisionCompareColumn.MAX_REL_ERR, ApiPrecisionCompareColumn.MEAN_REL_ERR, ApiPrecisionCompareColumn.EB,
                 ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, 
-                ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO]
+                ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO, 
+                ApiPrecisionCompareColumn.MEAN_REL_ERR, ApiPrecisionCompareColumn.ULP_ERR_RATIO]
 
     @staticmethod
     def get_detail_csv_title():
@@ -144,6 +149,7 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.REL_ERR_RATIO_STATUS, 
                 ApiPrecisionCompareColumn.ABS_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO_STATUS, 
                 ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.ERROR_RATE_STATUS, 
+                ApiPrecisionCompareColumn.ULP_ERR_RATIO, ApiPrecisionCompareColumn.ULP_ERR_RATIO_STATUS, 
                 ApiPrecisionCompareColumn.FINAL_RESULT, ApiPrecisionCompareColumn.ALGORITHM, ApiPrecisionCompareColumn.MESSAGE]
     
     @staticmethod

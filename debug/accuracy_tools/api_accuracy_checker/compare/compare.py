@@ -7,12 +7,13 @@ from rich.table import Table
 from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
-    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, apis_threshold
+    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, \
+    apis_threshold
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps
+    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ULP_err
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -271,6 +272,15 @@ class Comparator:
             if api_name in BinaryStandardApi:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
                 compare_column.error_rate = err_rate
+            elif api_name in ULPStandardApi:
+                ulp_err = get_ULP_err(bench_output, device_output, dtype)
+                compare_column.Max_ULP_error = np.max(ulp_err)
+                compare_column.Min_ULP_error = np.min(ulp_err)
+                compare_column.Mean_ULP_error = np.mean(ulp_err)
+                if dtype == torch.float32:
+                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 32) / bench_output.size)
+                else:
+                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 1) / bench_output.size)
             elif api_name in AbsoluteStandardApi:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))

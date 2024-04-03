@@ -188,3 +188,21 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
     err_mask = np.logical_and(err_mask, normal_value_mask)
     err_cnt = np.sum(err_mask)
     return 0 if np.sum(normal_value_mask) == 0 else err_cnt / np.sum(normal_value_mask)
+
+def get_ULP_parameter(dtype):
+    if dtype == torch.float32:
+        return -126, 23
+    if dtype == torch.float16:
+        return -14, 10
+    if dtype == torch.bfloat16:
+        return -126, 7
+    
+def get_ULP_err(bench_output, device_output, dtype):
+    min_eb, exponent = get_ULP_parameter(dtype)
+    abs_bench = np.abs(bench_output)
+    eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
+    eb = np.maximum(eb, min_eb)
+
+    ulp_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent)
+    ulp_err = np.abs(ulp_err)
+    return ulp_err

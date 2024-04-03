@@ -42,6 +42,10 @@ benchmark_algorithms_thresholds = {
     'eb' : {
         'error_threshold' : 2,
         'warning_threshold' : 1
+    },
+    'ULP' : {
+        'error_threshold' : 2,
+        'warning_threshold' : 1
     }
 }
 
@@ -76,11 +80,13 @@ class BenchmarkStandard:
         self.max_rel_err_ratio = 1
         self.mean_rel_err_ratio = 1
         self.eb_ratio = 1
+        self.ULP_err_ratio = 1
         self.small_value_err_status = CompareConst.PASS
         self.rmse_status = CompareConst.PASS
         self.max_rel_err_status = CompareConst.PASS
         self.mean_rel_err_status = CompareConst.PASS
         self.eb_status = CompareConst.PASS
+        self.ULP_err_status = CompareConst.PASS
         self.check_result_list = []
         self.final_result = CompareConst.PASS
 
@@ -97,6 +103,8 @@ class BenchmarkStandard:
         self.check_result_list.append(self.max_rel_err_status)
         self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
         self.check_result_list.append(self.mean_rel_err_status)
+        self.ULP_err_status = self._get_status(self.ULP_err_ratio, 'ULP')
+        self.check_result_list.append(self.ULP_err_status)
         self.eb_status = self._get_status(self.eb_ratio, 'eb')
         if CompareConst.ERROR in self.check_result_list:
             self.final_result = CompareConst.ERROR
@@ -115,11 +123,13 @@ class BenchmarkStandard:
                                                       self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
         self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                                       self.gpu_precision.get(ApiPrecisionCompareColumn.EB))
+        self.ULP_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO),
+                                              self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO))
 
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
         self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
-        self.mean_rel_err_status, self.eb_ratio, self.eb_status]
+        self.mean_rel_err_status, self.eb_ratio, self.eb_status, self.ULP_err_ratio, self.ULP_err_status]
 
     @staticmethod
     def _get_status(ratio, algorithm):
@@ -334,6 +344,8 @@ def record_benchmark_compare_result(compare_column, bs):
     compare_column.mean_rel_err_status = bs.mean_rel_err_status
     compare_column.eb_ratio = bs.eb_ratio
     compare_column.eb_status = bs.eb_status
+    compare_column.ULP_err_ratio = bs.ULP_err_ratio
+    compare_column.ULP_err_ratio_status = bs.ULP_err_status
     compare_column.compare_result = bs.final_result
     compare_column.compare_algorithm = "标杆比对法"
     message = ''
