@@ -20,7 +20,7 @@ import pandas as pd
 
 from .advisor_result import AdvisorResult
 from .advisor_const import AdvisorConst
-from ..common.utils import CompareException, CompareConst
+from ..common.utils import CompareException, CompareConst, Const
 from ..common.utils import print_info_log, print_warn_log, print_error_log
 from ..common.file_check_util import FileChecker, FileCheckConst
 
@@ -43,11 +43,11 @@ class Advisor:
             raise CompareException(CompareException.PARSE_FILE_ERROR) from os_err
         data_columns = df.columns.values
         if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
-            self.file_type = 'accuracy'
+            self.file_type = Const.ALL
         elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
-            self.file_type = 'md5'
+            self.file_type = Const.MD5
         elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
-            self.file_type = 'summary'
+            self.file_type = Const.SUMMARY
         else:
             print_error_log('Compare result file does not meet the required conditions.')
             raise CompareException(CompareException.INVALID_FILE_ERROR)
@@ -93,11 +93,11 @@ class Advisor:
         return message
 
     def analyze_unmatched(self, analyze_data):
-        if self.file_type == 'accuracy':
+        if self.file_type == Const.ALL:
             accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
-        elif self.file_type == 'md5':
+        elif self.file_type == Const.MD5:
             accuracy_unmatched = analyze_data[analyze_data[CompareConst.RESULT] == False]
-        elif self.file_type == 'summary':
+        elif self.file_type == Const.SUMMARY:
             accuracy_unmatched = analyze_data[analyze_data[CompareConst.RESULT] == "warning"]
         num_unmatch = len(accuracy_unmatched)
         if num_unmatch != 0:
@@ -120,11 +120,11 @@ class Advisor:
         analyze_data = self._parse_input_file()
         print_info_log("Start analyzing the comparison result: %s" % self.input_file)
         self.analyze_unmatched(analyze_data)
-        if self.file_type == 'accuracy':
+        if self.file_type == Const.ALL:
             failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
-        elif self.file_type == 'md5':
+        elif self.file_type == Const.MD5:
             failing_data = analyze_data[analyze_data[CompareConst.RESULT] == False]
-        elif self.file_type == 'summary':
+        elif self.file_type == Const.SUMMARY:
             failing_data = analyze_data[analyze_data[CompareConst.RESULT] == "warning"]
         if failing_data.empty:
             print_info_log("All data from api input/output accuracy reached")
