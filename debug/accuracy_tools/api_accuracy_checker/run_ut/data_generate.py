@@ -142,6 +142,10 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
         if math.isnan(high):
             tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=eval(data_dtype))
             return tensor
+        if high_origin and high in [float('inf'), float('-inf')]:
+            tensor = torch._C._VariableFunctionsClass.full(shape, high, dtype=eval(data_dtype))
+            tensor[-1] = low
+            return tensor
         low_scale, high_scale = low, high
         dtype_finfo = torch.finfo(eval(data_dtype))
         if high == float('inf'):
