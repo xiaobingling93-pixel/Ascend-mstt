@@ -45,6 +45,10 @@ DETAIL_TEST_ROWS = [[
             "inf/nan错误率",
             "相对误差错误率",
             "绝对误差错误率",
+            "ULP误差最大值",
+            "ULP误差最小值",
+            "ULP误差平均值",
+            "ULP误差大于阈值占比",
             "Status",
             "Message"
         ]]
