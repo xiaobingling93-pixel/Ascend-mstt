@@ -11,7 +11,8 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, convert_str_to_float
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
+    convert_str_to_float
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -67,7 +68,7 @@ benchmark_message = {
         CompareConst.ERROR: "ERROR: 相对误差平均值比值超过阈值\n",
         CompareConst.WARNING: "WARNING: 相对误差平均值比值超过阈值\n"
     },
-    "ulp_err_status": {
+    "ULP_err_ratio_status": {
         CompareConst.ERROR: "ERROR: ULP误差大于阈值占比比值超过阈值\n",
         CompareConst.WARNING: "WARNING: ULP误差大于阈值占比比值超过阈值\n"
     }
@@ -98,37 +99,46 @@ class BenchmarkStandard:
         return "%s" % (self.api_name)
 
     def get_result(self):
+        full_api_name, direction_status, _, _ = self.api_name.split(".")
+        _, api_name, _ = full_api_name.split("*")
         self._compare_ratio()
-        self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
-        self.check_result_list.append(self.small_value_err_status)
-        self.rmse_status = self._get_status(self.rmse_ratio, 'rmse')
-        self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err')
-        self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
-        self.check_result_list.append(self.mean_rel_err_status)
-        self.ULP_err_status = self._get_status(self.ULP_err_ratio, 'ULP')
-        self.check_result_list.append(self.ULP_err_status)
-        self.eb_status = self._get_status(self.eb_ratio, 'eb')
+        if api_name in ULPStandardApi:
+            self.ULP_err_status = self._get_status(self.ULP_err_ratio, 'ULP')
+            self.check_result_list.append(self.ULP_err_status)
+        else:
+            self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
+            self.check_result_list.append(self.small_value_err_status)
+            self.rmse_status = self._get_status(self.rmse_ratio, 'rmse')
+            self.check_result_list.append(self.rmse_status)
+            self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err')
+            self.check_result_list.append(self.max_rel_err_status)
+            self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
+            self.check_result_list.append(self.mean_rel_err_status)
+            self.eb_status = self._get_status(self.eb_ratio, 'eb')
         if CompareConst.ERROR in self.check_result_list:
             self.final_result = CompareConst.ERROR
         elif CompareConst.WARNING in self.check_result_list:
             self.final_result = CompareConst.WARNING
 
     def _compare_ratio(self):
-        self.small_value_err_ratio = self._calc_ratio(
-            self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
-            self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE))
-        self.rmse_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
-        self.max_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
-                                                self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
-        self.mean_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
-        self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.EB))
-        self.ULP_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO),
-                                              self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO))
+        full_api_name, direction_status, _, _ = self.api_name.split(".")
+        _, api_name, _ = full_api_name.split("*")
+        if api_name in ULPStandardApi:
+            self.ULP_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO),
+                                                self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO))
+        else:
+            self.small_value_err_ratio = self._calc_ratio(
+                self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
+                self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE))
+            self.rmse_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
+                                                        self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
+            self.max_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
+                                                    self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
+            self.mean_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
+                                                        self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
+            self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
+                                                        self.gpu_precision.get(ApiPrecisionCompareColumn.EB))
+
 
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
