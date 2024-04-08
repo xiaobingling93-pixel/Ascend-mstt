@@ -124,7 +124,7 @@ class ApiPrecisionCompareColumn:
     ABS_ERR_RATIO = '绝对误差错误率'
     ABS_ERR_RATIO_STATUS = '绝对误差判定结果'
     MEAN_ULP_ERR = 'ULP误差平均值'
-    ULP_ERR_RATIO = 'ULP误差大于阈值占比比值'
+    ULP_ERR_RATIO = 'ULP误差大于阈值占比'
     ULP_ERR_RATIO_STATUS = 'ULP误差判定结果'
     FINAL_RESULT = '比对结果'
     ALGORITHM = '比对算法'
