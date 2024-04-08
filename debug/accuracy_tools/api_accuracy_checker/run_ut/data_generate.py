@@ -126,8 +126,10 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     Function Description:
         Based on API basic information, generate int or float tensor
     Parameter:
-        low: The minimum value in Tensor
-        high: The max value in Tensor
+        low_info: [low, low_origin], low is the minimum value in the tensor removed inf and nan, 
+        low_origin is the original minimum value in the tensor
+        high_info: [high, high_origin], high is the maximum value in the tensor removed inf and nan, 
+        high_origin is the original maximum value in the tensor
         shape:The shape of Tensor
         data_dtype: The data type of Tensor
         convert_type: convert ori_type to dist_type flag.
