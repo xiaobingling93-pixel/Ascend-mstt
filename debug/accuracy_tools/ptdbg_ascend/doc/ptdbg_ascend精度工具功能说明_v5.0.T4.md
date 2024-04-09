@@ -1846,15 +1846,15 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 **函数原型**
 
 ```python
-parse(pkl_file, moudule_name_prefix)
+parse(pkl_file, module_name_prefix)
 ```
 
 **参数说明**
 
-| 参数名              | 说明                                                         | 是否必选 |
-| ------------------- | ------------------------------------------------------------ | -------- |
-| pkl_file            | 指定dump数据文件中的pkl文件名。参数示例："./npu_dump/ptdbg_dump_v4.0/step0/rank0/dump.pkl"。 | 是       |
-| moudule_name_prefix | 指定待提取的API接口前缀。参数示例："Torch_norm_1_forward"。  | 是       |
+| 参数名             | 说明                                                         | 是否必选 |
+| ------------------ | ------------------------------------------------------------ | -------- |
+| pkl_file           | 指定dump数据文件中的pkl文件名。参数示例："./npu_dump/ptdbg_dump_v4.0/step0/rank0/dump.pkl"。 | 是       |
+| module_name_prefix | 指定待提取的API接口前缀。参数示例："Torch_norm_1_forward"。  | 是       |
 
 **函数示例**
 
@@ -1992,14 +1992,15 @@ Parse >>> cad -m /home/xxx/my_dump_path/20000124003856/0
 输入以下比对命令进行数据比对。
 
 ```bash
-vc -m my_dump_path -g golden_dump_path [-out output_path]
+vc -m my_dump_path -g golden_dump_path [-out output_path] [-cmp_path msaccucmp_path]
 ```
 
-| 参数名称 | 说明                                                         | 是否必选 |
-| -------- | ------------------------------------------------------------ | -------- |
-| -m       | 待比对ACL dump数据目录。如果比对单个算子，需要指定到ACL dump数据的model_id级目录；如果批量比对，则指定到cad转换后的timestamp级目录。 | 是       |
-| -g       | 标杆ACL dump数据目录。如果比对单个算子，需要指定到ACL dump数据的model_id级目录；如果批量比对，则指定到cad转换后的timestamp级目录。 | 是       |
-| -out     | 结果输出目录，须指定已存在的目录，默认为./parse_data/acl_batch_comapre。未指定时保存在默认路径下，比对结束后会打印log提示输出结果存放路径。 | 否       |
+| 参数名称  | 说明                                                         | 是否必选 |
+| --------- | ------------------------------------------------------------ | -------- |
+| -m        | 待比对ACL dump数据目录。如果比对单个算子，需要指定到ACL dump数据的model_id级目录；如果批量比对，则指定到cad转换后的timestamp级目录。 | 是       |
+| -g        | 标杆ACL dump数据目录。如果比对单个算子，需要指定到ACL dump数据的model_id级目录；如果批量比对，则指定到cad转换后的timestamp级目录。 | 是       |
+| -out      | 结果输出目录，须指定已存在的目录，默认为./parse_data/acl_batch_comapre。未指定时保存在默认路径下，比对结束后会打印log提示输出结果存放路径。 | 否       |
+| -cmp_path | 指定msaccucmp路径，默认路径为：/usr/local/Ascend/ascend-toolkit/latest/tools/operator_cmp/compare/msaccucmp.py | 否       |
 
 输出结果：batch_compare_{timestamp}.csv文件。
 
