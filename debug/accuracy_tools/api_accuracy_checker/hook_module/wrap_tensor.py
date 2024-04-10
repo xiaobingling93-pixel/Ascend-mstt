@@ -25,6 +25,7 @@ from api_accuracy_checker.common.utils import torch_device_guard
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.hook_module.utils import WrapTensorOps
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import parameter_adapter
 
 
 def get_tensor_ops():
@@ -49,6 +50,7 @@ class TensorOPTemplate(HOOKModule):
             super().__init__(hook)
 
     @torch_device_guard
+    @parameter_adapter
     def forward(self, *args, **kwargs):
         return getattr(torch._C._TensorBase, str(self.op_name_))(*args, **kwargs)
 
