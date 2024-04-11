@@ -313,7 +313,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             err_msg = ""
             if md5_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2], n_struct[2] == b_struct[2]]
+                               n_struct[2], b_struct[2], "pass" if n_struct[2] == b_struct[2] else "unmatched"]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 result.append(result_item)
