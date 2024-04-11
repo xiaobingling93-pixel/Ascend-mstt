@@ -313,7 +313,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             err_msg = ""
             if md5_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2], "pass" if n_struct[2] == b_struct[2] else "unmatched"]
+                               n_struct[2], b_struct[2], CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.ACCURACY_CHECK_UNMATCH]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 result.append(result_item)
@@ -338,12 +338,12 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
                         diff = npu_val - bench_val
                         result_item[start_idx + i] = diff
-                        magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-6)
-                        if magnitude_diff > 0.1:
+                        magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
+                        if magnitude_diff > 0.5:
                             warning_flag = True
                     else:
                         result_item[start_idx + i] = CompareConst.NAN
-                accuracy_check = "warning" if warning_flag else ""
+                accuracy_check = CompareConst.WARNING if warning_flag else ""
                 err_msg += "Need double check api accuracy." if warning_flag else ""
                 result_item[start_idx:] = [f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x for x in result_item[start_idx:]]
 

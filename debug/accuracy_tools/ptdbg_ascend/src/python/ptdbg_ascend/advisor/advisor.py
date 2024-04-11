@@ -95,8 +95,9 @@ class Advisor:
     def analyze_unmatched(self, analyze_data):
         if self.file_type == Const.ALL:
             accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
-        accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) | 
-                                         (analyze_data[CompareConst.BENCH_SHAPE] == CompareConst.NAN)]
+        else:
+            accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) | 
+                                              (analyze_data[CompareConst.BENCH_SHAPE] == CompareConst.NAN)]
         num_unmatch = len(accuracy_unmatched)
         if num_unmatch != 0:
             for i in range(len(accuracy_unmatched)):
@@ -121,9 +122,9 @@ class Advisor:
         if self.file_type == Const.ALL:
             failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
         elif self.file_type == Const.MD5:
-            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == "unmatched"]
+            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.ACCURACY_CHECK_UNMATCH]
         elif self.file_type == Const.SUMMARY:
-            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == "warning"]
+            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.WARNING]
         if failing_data.empty:
             print_info_log("All data from api input/output accuracy reached")
             result = AdvisorResult(AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERR_SUGGEST)

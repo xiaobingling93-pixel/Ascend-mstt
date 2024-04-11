@@ -173,6 +173,8 @@ class CompareConst:
     NAN = 'Nan'
     SHAPE_UNMATCH = 'shape unmatched'
     DTYPE_UNMATCH = 'dtype unmatched'
+    PASS = 'Pass'
+    WARNING = 'Warning'
 
     # accuracy standards
     COS_THRESHOLD = 0.99
