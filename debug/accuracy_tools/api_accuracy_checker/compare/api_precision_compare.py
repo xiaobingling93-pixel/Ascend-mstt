@@ -11,7 +11,8 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, convert_str_to_float
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
+    convert_str_to_float, CompareMessage
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -197,7 +198,7 @@ def analyse_csv(npu_data, gpu_data, config):
         new_status = CompareConst.SPACE
         compare_column.api_name = full_api_name_with_direction_status
         if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
-            new_status = record_binary_consistency_result(compare_column, row_npu)                            
+            new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
         elif api_name in AbsoluteStandardApi:
             new_status = record_absolute_threshold_result(compare_column, row_npu)
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
@@ -214,6 +215,7 @@ def analyse_csv(npu_data, gpu_data, config):
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
+                message += get_topk_message(forward_result) if "topk" in last_api_name else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
@@ -239,7 +241,12 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
+            message += get_topk_message(forward_result) if "topk" in last_api_name else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+
+
+def get_topk_message(status):
+    return CompareMessage.TOPK_MESSAGE if status == CompareConst.ERROR else ''
 
 
 def check_error_rate(npu_error_rate):
@@ -288,7 +295,7 @@ def check_csv_columns(columns, csv_type):
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
 
 
-def record_binary_consistency_result(compare_column, row_npu):
+def record_binary_consistency_result(api_name, compare_column, row_npu):
     new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE])
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
     compare_column.error_rate_status = new_status
@@ -296,7 +303,8 @@ def record_binary_consistency_result(compare_column, row_npu):
     compare_column.compare_algorithm = "二进制一致法"
     message = ''
     if compare_column.error_rate_status == CompareConst.ERROR:
-        message += "ERROR: 二进制一致错误率超过阈值"
+        message += "ERROR: 二进制一致错误率超过阈值\n"
+        message += CompareMessage.TOPK_MESSAGE if api_name == "topk" else ""
     compare_column.compare_message = message
     return new_status
 

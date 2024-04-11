@@ -152,6 +152,11 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.BACKWARD_STATUS, ApiPrecisionCompareColumn.MESSAGE]
 
 
+class CompareMessage:
+    TOPK_MESSAGE = "On the NPU, the input parameter sorted=False of topk does not take effect. "\
+                "Check whether the precision problem is caused by this reason.\n"
+
+
 def check_dtype_comparable(x, y):
     if x.dtype in Const.FLOAT_TYPE:
         if y.dtype in Const.FLOAT_TYPE:
