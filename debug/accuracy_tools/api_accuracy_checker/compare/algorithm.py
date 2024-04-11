@@ -91,12 +91,13 @@ def get_max_abs_err(abs_err):
 
 #相对误差最大值
 def get_max_rel_err(rel_err):
-    return np.max(rel_err)
+    return np.max(rel_err) if np.max(rel_err) >= 0 else 0
 
 
 #相对误差均值
 def get_mean_rel_err(rel_err):
-    return np.mean(rel_err)
+    non_negative_rel_err = rel_err[rel_err >= 0]
+    return np.mean(non_negative_rel_err)
 
 
 def get_rel_err_ratio(rel_err, thresholding):
