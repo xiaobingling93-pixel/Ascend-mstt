@@ -97,7 +97,7 @@ def get_max_rel_err(rel_err):
 #相对误差均值
 def get_mean_rel_err(rel_err):
     non_negative_rel_err = rel_err[rel_err >= 0]
-    return np.mean(non_negative_rel_err)
+    return np.mean(non_negative_rel_err) if non_negative_rel_err.size > 0 else 0
 
 
 def get_rel_err_ratio(rel_err, thresholding):
