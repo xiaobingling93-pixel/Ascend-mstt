@@ -175,6 +175,7 @@ class CompareConst:
     DTYPE_UNMATCH = 'dtype unmatched'
     PASS = 'Pass'
     WARNING = 'Warning'
+    DIFF = 'Different'
 
     # accuracy standards
     COS_THRESHOLD = 0.99

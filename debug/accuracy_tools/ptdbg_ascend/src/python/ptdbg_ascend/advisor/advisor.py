@@ -122,7 +122,7 @@ class Advisor:
         if self.file_type == Const.ALL:
             failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
         elif self.file_type == Const.MD5:
-            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.ACCURACY_CHECK_UNMATCH]
+            failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.DIFF]
         elif self.file_type == Const.SUMMARY:
             failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.WARNING]
         if failing_data.empty:
