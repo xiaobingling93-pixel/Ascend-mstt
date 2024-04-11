@@ -126,8 +126,10 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     Function Description:
         Based on API basic information, generate int or float tensor
     Parameter:
-        low: The minimum value in Tensor
-        high: The max value in Tensor
+        low_info: [low, low_origin], low is the minimum value in the tensor removed inf and nan, 
+        low_origin is the original minimum value in the tensor
+        high_info: [high, high_origin], high is the maximum value in the tensor removed inf and nan, 
+        high_origin is the original maximum value in the tensor
         shape:The shape of Tensor
         data_dtype: The data type of Tensor
         convert_type: convert ori_type to dist_type flag.
@@ -142,8 +144,14 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
         if math.isnan(high):
             tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=eval(data_dtype))
             return tensor
+        #high_origin为新版json中的属性，只有当high_origin不为None,且high为inf或-inf时，原tensor全为inf或-inf
+        if high_origin and high in [float('inf'), float('-inf')]:
+            tensor = torch._C._VariableFunctionsClass.full(shape, high, dtype=eval(data_dtype))
+            tensor[-1] = low
+            return tensor
         low_scale, high_scale = low, high
         dtype_finfo = torch.finfo(eval(data_dtype))
+        #适配老版json high和low为inf或-inf的情况，取dtype的最大值或最小值进行放缩
         if high == float('inf'):
             high_scale = dtype_finfo.max
         elif high == float('-inf'):
