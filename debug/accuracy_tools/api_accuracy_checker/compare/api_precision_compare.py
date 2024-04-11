@@ -45,7 +45,7 @@ benchmark_algorithms_thresholds = {
         'warning_threshold' : 1
     },
     'ULP' : {
-        'error_threshold' : 2,
+        'error_threshold' : 1,
         'warning_threshold' : 1
     }
 }
@@ -69,8 +69,8 @@ benchmark_message = {
         CompareConst.WARNING: "WARNING: 相对误差平均值比值超过阈值\n"
     },
     "ULP_err_ratio_status": {
-        CompareConst.ERROR: "ERROR: ULP误差大于阈值占比比值超过阈值\n",
-        CompareConst.WARNING: "WARNING: ULP误差大于阈值占比比值超过阈值\n"
+        CompareConst.ERROR: "ERROR: ULP误差错误比值超过阈值\n",
+        CompareConst.WARNING: "WARNING: ULP误差错误比值超过阈值\n"
     }
 }
 
