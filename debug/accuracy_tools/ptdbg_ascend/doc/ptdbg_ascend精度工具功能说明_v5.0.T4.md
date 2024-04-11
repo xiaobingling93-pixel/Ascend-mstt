@@ -784,12 +784,12 @@ PrecisionDebugger(dump_path=None, hook_name=None, rank=None, step=[], enable_dat
 
 | 参数名            | 说明                                                         | 是否必选 |
 | ----------------- | ------------------------------------------------------------ | -------- |
-| dump_path         | 设置dump数据目录路径，参数示例："./dump_path"。<br/>默认在dump_path目录下生成`ptdbg_dump_{version}`目录，并在该目录下生成`dump.pkl`文件以及`dump`数据文件保存目录。<br/>当**configure_hook**函数配置了mode参数时，`dump.pkl`文件以及`dump`数据文件保存目录名称添加mode参数值为前缀，详情请参见“**dump数据存盘说明**”。<br/>未配置dump_path时，也可以通过环境变量ASCEND_WORK_PATH配置dump路径，此时dump数据将落盘在${ASCEND_WORK_PATH}/dump_data下，自定义配置dump_path优先级高于环境变量，dump_path和环境变量需要二选一。 | 否       |
-| hook_name         | dump模式，可取值dump和overflow_check，表示dump和溢出检测功能，二选一。 | 是       |
-| rank              | 指定对某张卡上的数据进行dump或溢出检测，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0~7，实际训练运行0~3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。 | 否       |
-| step              | 指定dump某个step的数据，默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]；也可以配置step范围，例如：step=list(range(0,9))，表示dump第0到第8个step。 | 否       |
-| enable_dataloader | 自动控制开关，可取值True（开启）或False（关闭），默认为False。配置为True后自动识别dump step参数指定的迭代，并在该迭代执行完成后退出训练，此时start和stop函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据；配置为False则需要配置start和stop函数，并在最后一个stop函数后或一个step结束的位置添加debugger.step()。 | 否       |
-| model             | 开启init dump模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.Module类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。<br/>该模式不支持“溢出检测”、”ACL级别数据dump“和“模块级精度数据dump”。此模式下dump文件名前缀为网络中定义的模块名或层名。 | 否       |
+| dump_path         | 设置dump数据目录路径，参数示例："./dump_path"。数据类型：str。<br/>默认在dump_path目录下生成`ptdbg_dump_{version}`目录，并在该目录下生成`dump.pkl`文件以及`dump`数据文件保存目录。<br/>当**configure_hook**函数配置了mode参数时，`dump.pkl`文件以及`dump`数据文件保存目录名称添加mode参数值为前缀，详情请参见“**dump数据存盘说明**”。<br/>未配置dump_path时，也可以通过环境变量ASCEND_WORK_PATH配置dump路径，此时dump数据将落盘在${ASCEND_WORK_PATH}/dump_data下，自定义配置dump_path优先级高于环境变量，dump_path和环境变量需要二选一。 | 否       |
+| hook_name         | dump模式，可取值"dump"和"overflow_check"，表示dump和溢出检测功能，二选一。参数示例：hook_name="dump"。数据类型：str。 | 是       |
+| rank              | 指定对某张卡上的数据进行dump或溢出检测，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0到7，实际训练运行0到3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。数据类型：int。 | 否       |
+| step              | 指定dump某个step的数据，默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]；也可以配置step范围，例如：step=list(range(0,9))，表示dump第0到第8个step。数据类型：List[int]。 | 否       |
+| enable_dataloader | 自动控制开关，可取值True（开启）或False（关闭），默认为False。配置为True后自动识别dump step参数指定的迭代，并在该迭代执行完成后退出训练，此时start和stop函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据；配置为False则需要配置start和stop函数，并在最后一个stop函数后或一个step结束的位置添加debugger.step()。数据类型：bool。 | 否       |
+| model             | 开启init dump模式，传入网络模型实例化的对象，配置该参数后，dump操作仅dump网络中init方法里调用的方法（nn.Module类），不会对所有API进行dump。参数示例： model=net，net为网络模型实例化的对象名称。默认未配置。<br/>配置该参数时，PrecisionDebugger模块请在模型实例化之后调用。数据类型：torch.nn.Module。<br/>该模式不支持“溢出检测”、”ACL级别数据dump“和“模块级精度数据dump”。此模式下dump文件名前缀为网络中定义的模块名或层名。 | 否       |
 
 #### init dump模式示例代码和数据落盘说明
 
@@ -871,16 +871,16 @@ debugger.configure_hook(mode=None, acl_config=None, overflow_nums=1, need_replic
 
 | 参数名            | 说明                                                         | 是否必选 |
 | ----------------- | ------------------------------------------------------------ | -------- |
-| mode              | dump模式。可取值"all"、"list"、"range"、"stack"、"acl"、"api_list"、"api_stack"，各参数含义请参见本节的“**函数示例**”。参数示例：mode="list"。默认为api_stack。该参数配置值将作为dump数据文件名的前缀，详情请参见“**dump数据存盘说明**”。 | 否       |
-| scope或api_list   | dump范围。根据model配置的模式选择dump的API范围，mode="api_list"时，需要配置api_list=[]，其他模式有需要时配置scope=[]。参数示例：scope=["Tensor_permute_1_forward", "Tensor_transpose_2_forward"]、api_list=["relu"]。默认为空。 | 否       |
-| filter_switch     | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"（表示开启过滤，即不dump）或"OFF"（表示关闭过滤）。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。 | 否       |
-| acl_config        | acl dump的配置文件。mode="acl"时，该参数必选；mode为其他值时，该参数不选。参数示例：acl_config='./dump.json'。dump.json配置文件详细介绍请参见“**dump.json配置文件说明**”。 | 否       |
-| backward_input    | 该输入文件为首次运行训练dump得到反向API输入的.npy文件。例如若需要dump Functional_conv2d_1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional_conv2d_1、backward和input字段的.npy文件。 | 否       |
-| input_output_mode | dump数据过滤。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。参数示例input_output_mode=["backward"]或input_output_mode=["forward", "backward"]。默认为all，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。 | 否       |
-| summary_only      | dump npy文件过滤，可取值True或False，配置为True后仅dump保存API统计信息的pkl文件，参数示例：summary_only=False，默认为False。 | 否       |
-| summary_mode      | 控制dump文件输出的模式，可取值md5（dump仅输出包含md5值的pkl文件，用于验证数据的完整性）、summary（dump仅输出包含API统计信息的pkl文件）、all（dump输出包含API统计信息的pkl文件以及具体的npy文件），参数示例：summary_mode="md5"，默认为"all"。summary_only=True时，不允许配置该参数。 | 否       |
-| overflow_nums     | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
-| need_replicate    | 过程dump数据生成开关，执行溢出检测时，dump目录下会生成forward_real_data和backward_real_data的过程dump数据目录，可取值True（生成）或False（不生成），默认不生成。 | 否       |
+| mode              | dump模式。可取值"all"、"list"、"range"、"stack"、"acl"、"api_list"、"api_stack"，各参数含义请参见本节的“**函数示例**”。参数示例：mode="list"。默认为"api_stack"。该参数配置值将作为dump数据文件名的前缀，详情请参见“**dump数据存盘说明**”。数据类型：str。 | 否       |
+| scope或api_list   | dump范围。根据model配置的模式选择dump的API范围，mode="api_list"时，需要配置api_list=[]，其他模式有需要时配置scope=[]。参数示例：scope=["Tensor_permute_1_forward", "Tensor_transpose_2_forward"]、api_list=["relu"]。默认为空。数据类型：List[str]。 | 否       |
+| filter_switch     | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"（表示开启过滤，即不dump）或"OFF"（表示关闭过滤）。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。数据类型：str。 | 否       |
+| acl_config        | acl dump的配置文件。mode="acl"时，该参数必选；mode为其他值时，该参数不选。参数示例：acl_config='./dump.json'。dump.json配置文件详细介绍请参见“**dump.json配置文件说明**”。数据类型：str。 | 否       |
+| backward_input    | 该输入文件为首次运行训练dump得到反向API输入的.npy文件。例如若需要dump Functional_conv2d_1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional_conv2d_1、backward和input字段的.npy文件。数据类型：str。 | 否       |
+| input_output_mode | dump数据过滤。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。参数示例input_output_mode=["backward"]或input_output_mode=["forward", "backward"]。默认为["all"]，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。数据类型：list。 | 否       |
+| summary_only      | dump npy文件过滤，可取值True或False，配置为True后仅dump保存API统计信息的pkl文件，参数示例：summary_only=False，默认为False。数据类型：bool。 | 否       |
+| summary_mode      | 控制dump文件输出的模式，可取值md5（dump仅输出包含md5值的pkl文件，用于验证数据的完整性）、summary（dump仅输出包含API统计信息的pkl文件）、all（dump输出包含API统计信息的pkl文件以及具体的npy文件），参数示例：summary_mode="md5"，默认为"all"。summary_only=True时，不允许配置该参数。数据类型：str。 | 否       |
+| overflow_nums     | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。数据类型：int。 | 否       |
+| need_replicate    | 过程dump数据生成开关，执行溢出检测时，dump目录下会生成forward_real_data和backward_real_data的过程dump数据目录，可取值True（生成）或False（不生成），默认不生成。数据类型：bool。 | 否       |
 
 **函数示例**
 
@@ -1132,8 +1132,8 @@ seed_all(seed=1234, mode=False)
 
 | 参数名 | 说明                                                         | 是否必选 |
 | ------ | ------------------------------------------------------------ | -------- |
-| seed   | 随机数种子。参数示例：seed=1000。默认值为：1234。            | 否       |
-| mode   | 确定性计算模式。可配置True或False。参数示例：mode=True。默认为False。<br/>即使在相同的硬件和输入下，API多次执行的结果也可能不同，开启确定性计算是为了保证在相同的硬件和输入下，API多次执行的结果相同。<br/>确定性计算会导致API执行性能降低，建议在发现模型多次执行结果不同的情况下开启。<br/>rnn类算子、ReduceSum、ReduceMean等算子可能与确定性计算存在冲突，若开启确定性计算后多次执行的结果不相同，则考虑存在这些算子。 | 否       |
+| seed   | 随机数种子。参数示例：seed=1000。默认值为：1234。数据类型：int。 | 否       |
+| mode   | 确定性计算模式。可配置True或False。参数示例：mode=True。默认为False。数据类型：bool。<br/>即使在相同的硬件和输入下，API多次执行的结果也可能不同，开启确定性计算是为了保证在相同的硬件和输入下，API多次执行的结果相同。<br/>确定性计算会导致API执行性能降低，建议在发现模型多次执行结果不同的情况下开启。<br/>rnn类算子、ReduceSum、ReduceMean等算子可能与确定性计算存在冲突，若开启确定性计算后多次执行的结果不相同，则考虑存在这些算子。 | 否       |
 
 **函数示例**
 
@@ -1207,8 +1207,8 @@ set_dump_path(fpath=None, dump_tag='ptdbg_dump')
 
 | 参数名   | 说明                                                         | 是否必选 |
 | -------- | ------------------------------------------------------------ | -------- |
-| fpath    | 设置数据目录路径。参数示例：'./dump_path'。<br/>默认在dump_path目录下生成`ptdbg_dump_{version}`目录，并在该目录下生成`dump.pkl`文件以及`dump`数据文件保存目录。<br/>当set_dump_switch函数配置了mode参数时，`dump.pkl`文件以及`dump`数据文件保存目录名称添加mode参数值为前缀，详情请参见“**dump数据存盘说明**”。<br/>未配置fpath时，也可以通过环境变量ASCEND_WORK_PATH配置dump路径，此时数据将落盘在${ASCEND_WORK_PATH}/dump_data下，自定义配置dump_path优先级高于环境变量，fpath和环境变量需要二选一。 | 否       |
-| dump_tag | 设置数据目录名称。参数示例：dump_tag='dump_conv2d'。默认数据目录命名为ptdbg_dump_{version}。<br/>{version}为当前安装ptdbg_ascend工具版本。目录结构参见“**dump数据存盘说明**”。<br/>配置该参数会将生成的`ptdbg_dump_{version}`目录名称变更为dump_tag配置的值，如`dump_conv2d_{version}`。 | 否       |
+| fpath    | 设置数据目录路径。参数示例：'./dump_path'。数据类型：str。<br/>默认在dump_path目录下生成`ptdbg_dump_{version}`目录，并在该目录下生成`dump.pkl`文件以及`dump`数据文件保存目录。<br/>当set_dump_switch函数配置了mode参数时，`dump.pkl`文件以及`dump`数据文件保存目录名称添加mode参数值为前缀，详情请参见“**dump数据存盘说明**”。<br/>未配置fpath时，也可以通过环境变量ASCEND_WORK_PATH配置dump路径，此时数据将落盘在${ASCEND_WORK_PATH}/dump_data下，自定义配置dump_path优先级高于环境变量，fpath和环境变量需要二选一。 | 否       |
+| dump_tag | 设置数据目录名称。参数示例：dump_tag='dump_conv2d'。默认数据目录命名为ptdbg_dump_{version}。数据类型：str。<br/>{version}为当前安装ptdbg_ascend工具版本。目录结构参见“**dump数据存盘说明**”。<br/>配置该参数会将生成的`ptdbg_dump_{version}`目录名称变更为dump_tag配置的值，如`dump_conv2d_{version}`。 | 否       |
 
 **函数示例**
 
@@ -1245,11 +1245,11 @@ register_hook(model, hook, overflow_nums=overflow_nums, dump_mode=dump_mode, dum
 
 | 参数名        | 说明                                                         | 是否必选 |
 | ------------- | ------------------------------------------------------------ | -------- |
-| model         | 传入网络模型实例化的对象。参数示例： model=net，net为网络模型实例化的对象名称。 | 是       |
-| hook          | 注册工具的dump和溢出检测钩子。可取值overflow_check（表示溢出检测）和acc_cmp_dump（表示dump数据），二选一。 | 是       |
-| overflow_nums | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
-| dump_mode     | 控制针对溢出API的dump模式，可取值"acl"或"api"。配置acl时，表示dump ACL级别的溢出数据，此时set_dump_path参数不生效，dump数据目录由dump_config的.json文件配置。参数示例：dump_mode="acl"。默认不配置，即dump API级别的溢出数据。 | 否       |
-| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"时，该参数不选。参数示例：dump_config='./dump.json'。 | 否       |
+| model         | 传入网络模型实例化的对象。参数示例： model=net，net为网络模型实例化的对象名称。数据类型：torch.nn.Module。 | 是       |
+| hook          | 注册工具的dump和溢出检测钩子。可取值overflow_check（表示溢出检测）和acc_cmp_dump（表示dump数据），二选一。数据类型：Callable。 | 是       |
+| overflow_nums | 控制溢出次数，表示第N次溢出时，停止训练，过程中检测到溢出API对应ACL数据均dump。参数示例：overflow_nums=3。配置overflow_check时可配置，默认不配置，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。数据类型：int。 | 否       |
+| dump_mode     | 控制针对溢出API的dump模式，可取值"acl"或"api"。配置acl时，表示dump ACL级别的溢出数据，此时set_dump_path参数不生效，dump数据目录由dump_config的.json文件配置。参数示例：dump_mode="acl"。默认不配置，即dump API级别的溢出数据。数据类型：str。 | 否       |
+| dump_config   | acl dump的配置文件。dump_mode="acl"时，该参数必选；dump_mode="api"时，该参数不选。参数示例：dump_config='./dump.json'。数据类型：str。 | 否       |
 
 **函数示例**
 
@@ -1309,12 +1309,12 @@ def set_dump_switch(switch, mode="all", scope=[], api_list=[], filter_switch="OF
 
 | 参数名          | 说明                                                         | 是否必选 |
 | --------------- | ------------------------------------------------------------ | -------- |
-| switch          | dump开关。可取值"ON"或"OFF"。须在选定dump开始的位置配置set_dump_switch("ON")；dump结束的位置设置set_dump_switch("OFF")。 | 是       |
-| mode            | dump模式。可取值"all"、"list"、"range"、"stack"、"acl"、"api_list"、"api_stack"，各参数含义请参见本节的“**函数示例**”。参数示例：mode="list"。默认为all。该参数配置值将作为dump数据文件名的前缀，详情请参见“**dump数据存盘说明**”。 | 否       |
-| scope或api_list | dump范围。根据model配置的模式选择dump的API范围。参数示例：scope=["Tensor_permute_1_forward", "Tensor_transpose_2_forward"]、api_list=["relu"]。默认为空。 | 否       |
-| filter_switch   | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"或"OFF"。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。 | 否       |
-| dump_mode       | dump数据过滤。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。参数示例dump_mode=["backward"]或dump_mode=["forward", "backward"]。默认为all，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。 | 否       |
-| summary_only    | dump npy文件过滤，可取值True或False，配置为True后仅dump保存API统计信息的pkl文件，参数示例：summary_only=False，默认为False。 | 否       |
+| switch          | dump开关。可取值"ON"或"OFF"。须在选定dump开始的位置配置set_dump_switch("ON")；dump结束的位置设置set_dump_switch("OFF")。数据类型：str。 | 是       |
+| mode            | dump模式。可取值"all"、"list"、"range"、"stack"、"acl"、"api_list"、"api_stack"，各参数含义请参见本节的“**函数示例**”。参数示例：mode="list"。默认为"all"。该参数配置值将作为dump数据文件名的前缀，详情请参见“**dump数据存盘说明**”。数据类型：str。 | 否       |
+| scope或api_list | dump范围。根据model配置的模式选择dump的API范围。参数示例：scope=["Tensor_permute_1_forward", "Tensor_transpose_2_forward"]、api_list=["relu"]。默认为空。数据类型：List[str]。 | 否       |
+| filter_switch   | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"或"OFF"。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。数据类型：str。 | 否       |
+| dump_mode       | dump数据过滤。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。参数示例dump_mode=["backward"]或dump_mode=["forward", "backward"]。默认为all，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。数据类型：List[str]。 | 否       |
+| summary_only    | dump npy文件过滤，可取值True或False，配置为True后仅dump保存API统计信息的pkl文件，参数示例：summary_only=False，默认为False。数据类型：bool。 | 否       |
 
 **推荐配置**
 
@@ -1463,8 +1463,8 @@ set_overflow_check_switch(switch, filter_switch='OFF')
 
 | 参数名        | 说明                                                         | 是否必选 |
 | ------------- | ------------------------------------------------------------ | -------- |
-| switch,       | 检测开关。可取值"ON"或"OFF"。如果只在特定的step溢出检测，则在期望溢出检测的step位置开始前插入set_overflow_check_switch("ON")，在step结束的位置插入set_overflow_check_switch("OFF")。 | 是       |
-| filter_switch | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"或"OFF"。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。 | 否       |
+| switch,       | 检测开关。可取值"ON"或"OFF"。如果只在特定的step溢出检测，则在期望溢出检测的step位置开始前插入set_overflow_check_switch("ON")，在step结束的位置插入set_overflow_check_switch("OFF")。数据类型：str。 | 是       |
+| filter_switch | dump bool和整型的tensor以及浮点、bool和整型的标量的过滤开关。可取值"ON"或"OFF"。参数示例：filter_switch="ON"。默认不配置，即filter_switch="OFF"，表示dump上述数据。数据类型：str。 | 否       |
 
 **函数示例**
 
@@ -1510,7 +1510,7 @@ set_backward_input(backward_input)
 
 | 参数名         | 说明                                                         | 是否必选 |
 | -------------- | ------------------------------------------------------------ | -------- |
-| backward_input | 该输入文件为首次运行训练dump得到反向API输入的.npy文件。例如若需要dump Functional_conv2d_1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional_conv2d_1、backward和input字段的.npy文件。 | 是       |
+| backward_input | 该输入文件为首次运行训练dump得到反向API输入的.npy文件。例如若需要dump Functional_conv2d_1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional_conv2d_1、backward和input字段的.npy文件。数据类型：str。 | 是       |
 
 **函数示例**
 
@@ -1597,8 +1597,8 @@ module_dump(module, module_name)
 
 | 参数名      | 说明                                                         | 是否必选 |
 | ----------- | ------------------------------------------------------------ | -------- |
-| module      | 网络中实例化好的nn.Module类模块的model对象。                 | 是       |
-| module_name | 用户自定义的该model名称。主要用于dump数据文件的命名，便于在比对时识别模块级数据。 | 是       |
+| module      | 网络中实例化好的nn.Module类对象。数据类型：torch.nn.Module。 | 是       |
+| module_name | 用户自定义的该model名称。主要用于dump数据文件的命名，便于在比对时识别模块级数据。数据类型：str。 | 是       |
 
 ### module_dump_end
 
@@ -1767,9 +1767,9 @@ compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 
 | 参数名         | 说明                                                         | 是否必选 |
 | -------------- | ------------------------------------------------------------ | -------- |
-| npu_dump_dir   | 配置NPU环境下的dump目录。dump数据目录须指定到step级。参数示例：'./npu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。 | 是       |
-| bench_dump_dir | 配置CPU、GPU或NPU环境下的dump目录。参数示例：'./gpu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。 | 是       |
-| output_path    | 配置比对结果csv文件存盘目录。需要预先创建output_path目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_rank{npu_ID}-rank{cpu/gpu/npu_ID}_{timestamp}.csv`。 | 是       |
+| npu_dump_dir   | 配置NPU环境下的dump目录。dump数据目录须指定到step级。参数示例：'./npu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。数据类型：str。 | 是       |
+| bench_dump_dir | 配置CPU、GPU或NPU环境下的dump目录。参数示例：'./gpu_dump/ptdbg_dump_v4.0/step0'。register_hook方式可通过set_dump_path函数的dump_tag参数修改该目录名称。数据类型：str。 | 是       |
+| output_path    | 配置比对结果csv文件存盘目录。需要预先创建output_path目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_rank{npu_ID}-rank{cpu/gpu/npu_ID}_{timestamp}.csv`。数据类型：str。 | 是       |
 | **kwargs       | 支持compare的所有可选参数。                                  | 否       |
 
 **函数示例**
@@ -1799,11 +1799,11 @@ compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_mat
 
 | 参数名       | 说明                                                         | 是否必选 |
 | ------------ | ------------------------------------------------------------ | -------- |
-| input_param  | 配置dump数据文件及目录。配置参数包括：<br/>- "npu_pkl_path"：指定NPU dump目录下的.pkl文件。参数示例："npu_pkl_path": "./npu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl"。必选。<br/>- "bench_pkl_path"：指定CPU、GPU或NPU dump目录下的.pkl文件。参数示例："bench_pkl_path": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl"。必选。<br/>- "npu_dump_data_dir"："指定NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./npu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump"。可选，仅比对pkl文件时不选。<br/>- "bench_dump_data_dir"："指定CPU、GPU或NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump"。可选，仅比对pkl文件时不选。<br/>- "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
-| output_path  | 配置比对结果csv文件存盘目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.csv`。 | 是       |
-| stack_mode   | 配置stack_mode的开关。仅当dump数据时配置debugger.configure_hook或set_dump_switch的mode="api_stack"时需要开启。参数示例：stack_mode=True，默认为False。 | 否       |
-| auto_analyze | 自动精度分析，开启后工具自动针对比对结果进行分析，识别到第一个精度不达标节点（在比对结果文件中的“Accuracy Reached or Not”列显示为No），并给出问题可能产生的原因（打屏展示并生成advisor_{timestamp}.txt文件）。可取值True或False，参数示例：auto_analyze=False，默认为True。 | 否       |
-| fuzzy_match  | 模糊匹配。开启后，对于网络中同一层级且命名仅调用次数不同的API，可匹配并进行比对。可取值True或False，参数示例：fuzzy_match=True，默认为False。 | 否       |
+| input_param  | 配置dump数据文件及目录。数据类型：dict。配置参数包括：<br/>- "npu_pkl_path"：指定NPU dump目录下的.pkl文件。参数示例："npu_pkl_path": "./npu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl"。必选。<br/>- "bench_pkl_path"：指定CPU、GPU或NPU dump目录下的.pkl文件。参数示例："bench_pkl_path": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump.pkl"。必选。<br/>- "npu_dump_data_dir"："指定NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./npu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump"。可选，仅比对pkl文件时不选。<br/>- "bench_dump_data_dir"："指定CPU、GPU或NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./gpu_dump/ptdbg_dump_v4.0/step0/rank0/api_stack_dump"。可选，仅比对pkl文件时不选。<br/>- "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
+| output_path  | 配置比对结果csv文件存盘目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.csv`。数据类型：str。 | 是       |
+| stack_mode   | 配置stack_mode的开关。仅当dump数据时配置debugger.configure_hook或set_dump_switch的mode="api_stack"时需要开启。可取值True或False，参数示例：stack_mode=True，默认为False。数据类型：bool。 | 否       |
+| auto_analyze | 自动精度分析，开启后工具自动针对比对结果进行分析，识别到第一个精度不达标节点（在比对结果文件中的“Accuracy Reached or Not”列显示为No），并给出问题可能产生的原因（打屏展示并生成advisor_{timestamp}.txt文件）。可取值True或False，参数示例：auto_analyze=False，默认为True。数据类型：bool。 | 否       |
+| fuzzy_match  | 模糊匹配。开启后，对于网络中同一层级且命名仅调用次数不同的API，可匹配并进行比对。可取值True或False，参数示例：fuzzy_match=True，默认为False。数据类型：bool。 | 否       |
 
 **函数示例**
 
@@ -1853,9 +1853,8 @@ parse(pkl_file, module_name_prefix)
 
 | 参数名             | 说明                                                         | 是否必选 |
 | ------------------ | ------------------------------------------------------------ | -------- |
-| pkl_file           | 指定dump数据文件中的pkl文件名。参数示例："./npu_dump/ptdbg_dump_v4.0/step0/rank0/dump.pkl"。 | 是       |
-| module_name_prefix | 指定待提取的API接口前缀。参数示例："Torch_norm_1_forward"。  | 是       |
-
+| pkl_file           | 指定dump数据文件中的pkl文件名。参数示例："./npu_dump/ptdbg_dump_v4.0/step0/rank0/dump.pkl"。数据类型：str。 | 是       |
+| module_name_prefix | 指定待提取的API接口前缀。参数示例："Torch_norm_1_forward"。数据类型：str。 | 是       |
 **函数示例**
 
 创建堆栈信息及数据统计信息提取脚本，例如parse.py，拷贝如下代码，具体参数请根据实际环境修改。
