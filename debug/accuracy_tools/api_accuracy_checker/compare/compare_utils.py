@@ -153,7 +153,7 @@ class ApiPrecisionCompareColumn:
 
 
 CompareMessage = {
-    "topk" : "在npu上，topk的入参sorted=False时，返回的结果与cpu上不一致。 如果topk精度不达标，请检查是否是该原因导致的。"
+    "topk" : "在npu上，topk的入参sorted=False时不生效，会返回有序tensor，而cpu上会返回无序tensor。 如果topk精度不达标，请检查是否是该原因导致的。"
 }
 
 
