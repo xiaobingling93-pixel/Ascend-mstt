@@ -177,7 +177,7 @@ def api_precision_compare(config):
 
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
-    last_api_name, last_api_dtype = None, None
+    full_last_api_name, last_api_dtype = None, None
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
@@ -206,22 +206,23 @@ def analyse_csv(npu_data, gpu_data, config):
             new_status = record_benchmark_compare_result(compare_column, bs)
         write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if last_api_name is not None and full_api_name != last_api_name:
+        if full_last_api_name is not None and full_api_name != full_last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
-                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
+                write_csv([[full_last_api_name, "skip", "skip", message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
-                message += get_topk_message(forward_result) if "topk" in last_api_name else ""
-                write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+                _, last_api_name, _ = full_last_api_name.split("*")
+                message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+                write_csv([[full_last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
                 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        last_api_name = full_api_name
+        full_last_api_name = full_api_name
         
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:
@@ -234,19 +235,16 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             print_error_log(f"Invalid direction status: {direction_status}")
 
-    if last_api_name is not None:
+    if full_last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
             message = unsupported_message
-            write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
+            write_csv([[full_last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
-            message += get_topk_message(forward_result) if "topk" in last_api_name else ""
-            write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
-
-
-def get_topk_message(status):
-    return CompareMessage.TOPK_MESSAGE if status == CompareConst.ERROR else ''
+            _, last_api_name, _ = full_last_api_name.split("*")
+            message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+            write_csv([[full_last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
 def check_error_rate(npu_error_rate):
@@ -304,7 +302,7 @@ def record_binary_consistency_result(api_name, compare_column, row_npu):
     message = ''
     if compare_column.error_rate_status == CompareConst.ERROR:
         message += "ERROR: 二进制一致错误率超过阈值\n"
-        message += CompareMessage.TOPK_MESSAGE if api_name == "topk" else ""
+        message += CompareMessage.get(api_name, "")
     compare_column.compare_message = message
     return new_status
 

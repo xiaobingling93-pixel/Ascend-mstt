@@ -152,9 +152,9 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.BACKWARD_STATUS, ApiPrecisionCompareColumn.MESSAGE]
 
 
-class CompareMessage:
-    TOPK_MESSAGE = "On the NPU, the input parameter sorted=False of topk does not take effect. "\
-                "Check whether the precision problem is caused by this reason.\n"
+CompareMessage = {
+    "topk" : "在npu上，topk的入参sorted=False时，返回的结果与cpu上不一致，原因是npu上topk的实现中，sort函数的实现有差异，导致结果不一致。"
+}
 
 
 def check_dtype_comparable(x, y):
