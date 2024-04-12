@@ -96,7 +96,7 @@ class BenchmarkStandard:
         self.final_result = CompareConst.PASS
 
     def __str__(self):
-        return "%s" % (self.api_name)
+        return f"{self.api_name}"
 
     def get_result(self):
         full_api_name, direction_status, _, _ = self.api_name.split(".")
@@ -348,18 +348,22 @@ def record_absolute_threshold_result(compare_column, row_npu):
 
 def record_benchmark_compare_result(compare_column, bs):
     bs.get_result()
-    compare_column.small_value_err_ratio = bs.small_value_err_ratio
-    compare_column.small_value_err_status = bs.small_value_err_status
-    compare_column.rmse_ratio = bs.rmse_ratio
-    compare_column.rmse_status = bs.rmse_status
-    compare_column.max_rel_err_ratio = bs.max_rel_err_ratio
-    compare_column.max_rel_err_status = bs.max_rel_err_status
-    compare_column.mean_rel_err_ratio = bs.mean_rel_err_ratio
-    compare_column.mean_rel_err_status = bs.mean_rel_err_status
-    compare_column.eb_ratio = bs.eb_ratio
-    compare_column.eb_status = bs.eb_status
-    compare_column.ULP_err_ratio = bs.ULP_err_ratio
-    compare_column.ULP_err_ratio_status = bs.ULP_err_status
+    full_api_name, direction_status, _, _ = bs.api_name.split(".")
+    _, api_name, _ = full_api_name.split("*")
+    if api_name in ULPStandardApi:
+        compare_column.ULP_err_ratio = bs.ULP_err_ratio
+        compare_column.ULP_err_ratio_status = bs.ULP_err_status
+    else:
+        compare_column.small_value_err_ratio = bs.small_value_err_ratio
+        compare_column.small_value_err_status = bs.small_value_err_status
+        compare_column.rmse_ratio = bs.rmse_ratio
+        compare_column.rmse_status = bs.rmse_status
+        compare_column.max_rel_err_ratio = bs.max_rel_err_ratio
+        compare_column.max_rel_err_status = bs.max_rel_err_status
+        compare_column.mean_rel_err_ratio = bs.mean_rel_err_ratio
+        compare_column.mean_rel_err_status = bs.mean_rel_err_status
+        compare_column.eb_ratio = bs.eb_ratio
+        compare_column.eb_status = bs.eb_status    
     compare_column.compare_result = bs.final_result
     compare_column.compare_algorithm = "标杆比对法"
     message = ''
