@@ -121,13 +121,13 @@ from api_accuracy_checker.dump import msCheckerConfig
 msCheckerConfig.update_config(white_list=["conv1d", "conv2d"])
 ```
 
-说明：配置的API名称须存在于[support_wrap_ops.yaml](./hook_module/support_wrap_ops.yaml)文件下。
+配置的API名称须存在于[support_wrap_ops.yaml](./hook_module/support_wrap_ops.yaml)文件下。
 
 #### 工具支持的API列表
 
-预检工具维护固定的API支持列表，若需要删除或增加dump的API，可以在[support_wrap_ops.yaml](https://gitee.com/ascend/att/blob/develop/debug/accuracy_tools/api_accuracy_checker/hook_module/support_wrap_ops.yaml)文件内手动修改，如下示例：
+预检工具维护固定的API支持列表，若需要删除或增加dump的API，可以在[support_wrap_ops.yaml](./hook_module/support_wrap_ops.yaml)文件内手动修改，如下示例：
 
-```
+```bash
 functional:  # functional为算子类别，找到对应的类别，在该类别下按照下列格式删除或添加API
   - conv1d
   - conv2d
