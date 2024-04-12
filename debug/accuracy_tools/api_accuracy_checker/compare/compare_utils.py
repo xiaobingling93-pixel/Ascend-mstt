@@ -82,6 +82,34 @@ precision_configs = {
 }
 
 
+ULP_PARAMETERS = {
+    torch.float16 : {
+        'min_eb' : [
+            -14
+        ],
+        'exponent_num' : [
+            10
+        ]
+    },
+    torch.bfloat16 : {
+        'min_eb' : [
+            -126
+        ],
+        'exponent_num' : [
+            7
+        ]
+    },
+    torch.float32 : {
+        'min_eb' : [
+            -126
+        ],
+        'exponent_num' : [
+            23
+        ]
+    }
+}
+
+
 class CompareConst:
     NAN = np.nan
     NA = "N/A"
