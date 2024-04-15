@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 import yaml
-from api_accuracy_checker.common.utils import Const, print_warn_log
+from api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
