@@ -271,16 +271,7 @@ class Comparator:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
             if api_name in BinaryStandardApi:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
-                compare_column.error_rate = err_rate
-            elif api_name in ULPStandardApi:
-                ulp_err = get_ULP_err(bench_output, device_output, dtype)
-                compare_column.Max_ULP_error = np.max(ulp_err)
-                compare_column.Min_ULP_error = np.min(ulp_err)
-                compare_column.Mean_ULP_error = np.mean(ulp_err)
-                if dtype == torch.float32:
-                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 32) / bench_output.size)
-                else:
-                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 1) / bench_output.size)
+                compare_column.error_rate = err_rate            
             elif api_name in AbsoluteStandardApi:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))
@@ -290,6 +281,15 @@ class Comparator:
                 compare_column.inf_nan_error_ratio = check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol)
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
+            elif api_name in ULPStandardApi:
+                ulp_err = get_ULP_err(bench_output, device_output, dtype)
+                compare_column.Max_ULP_error = np.max(ulp_err)
+                compare_column.Min_ULP_error = np.min(ulp_err)
+                compare_column.Mean_ULP_error = np.mean(ulp_err)
+                if dtype == torch.float32:
+                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 32) / bench_output.size)
+                else:
+                    compare_column.ULP_error_ratio = float(np.sum(ulp_err > 1) / bench_output.size)
             else:
                 dtype_config = precision_configs.get(dtype)    
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
