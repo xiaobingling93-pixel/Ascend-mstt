@@ -560,12 +560,45 @@ tensor:
   - xlogy_
 
 torch:
+  - linalg.norm
+  - linalg.vector_norm
+  - linalg.matrix_norm
+  - linalg.diagonal
+  - linalg.det
+  - linalg.slogdet
+  - linalg.cond
+  - linalg.matrix_rank
+  - linalg.qr
+  - linalg.lu
+  - linalg.lu_factor
+  - linalg.svd
+  - linalg.svdvals
+  - linalg.solve
+  - linalg.lstsq
+  - linalg.inv
+  - linalg.pinv
+  - linalg.matrix_exp
+  - linalg.matrix_power
+  - linalg.cross
+  - linalg.matmul
+  - linalg.vecdot
+  - linalg.multi_dot
+  - linalg.householder_product
+  - linalg.tensorsolve
+  - linalg.vander
+  - linalg.cholesky_ex
+  - linalg.inv_ex
+  - linalg.solve_ex
+  - linalg.lu_factor_ex
+  - linalg.ldl_factor
+  - linalg.ldl_factor_ex
   - _adaptive_avg_pool2d
   - _add_relu
   - _add_relu_
   - _aminmax
   - _batch_norm_impl_index
   - _convolution
+  - _foreach_norm
   - _softmax_backward_data
   - abs
   - abs_

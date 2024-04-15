@@ -273,6 +273,9 @@ def read_op(ops_queue, pkl_file_handle, stack_mode):
             continue
         if len(tensor_line) != 0:
             tensor_data = json.loads(tensor_line)
+            if not isinstance(tensor_data, list):
+                print_error_log(f"This data is not a list, please check the dump data pkl file. {tensor_data}")
+                raise CompareException(CompareException.INVALID_DATA_ERROR) 
             read_output_flag["last_line"] = read_output_flag.get("curr_line")
             read_output_flag["curr_line"] = True if tensor_data[0].find(end_flag) != -1 else False
 
