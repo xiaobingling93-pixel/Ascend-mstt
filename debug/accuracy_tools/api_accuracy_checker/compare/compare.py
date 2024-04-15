@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from api_accuracy_checker.common.utils import get_json_contents, write_csv
+from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
     precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, apis_threshold
 from api_accuracy_checker.compare.compare_column import CompareColumn
@@ -47,6 +47,8 @@ class Comparator:
         else:
             passing_rate = "0%"
 
+        print_warn_log("The follwing tables will be deprecated in the future."
+                       "The following results are for reference only.")
         console = Console()
         table_total = Table(
             show_header=True, title="Overall Statistics", show_lines=True, width=75
@@ -160,9 +162,16 @@ class Comparator:
         _, api_name, _ = full_api_name.split("*")
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
-        bwd_success_status, bwd_compare_alg_results = (CompareConst.PASS, []) if not (bench_grad and npu_grad) else compare_func(api_name, bench_grad[0], npu_grad[0]) if "dropout" in full_api_name else compare_func(api_name, bench_grad, npu_grad)
+        if not (bench_grad and npu_grad):
+            bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
+        else:
+            if "dropout" in full_api_name:
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], npu_grad[0])
+            else:
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, npu_grad)
         self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
-        return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS
+        return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
+            or bwd_success_status == CompareConst.SPACE
 
     def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
