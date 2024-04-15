@@ -308,7 +308,7 @@ def check_csv_columns(columns, csv_type):
     required_columns = ApiPrecisionCompareColumn.to_required_columns()
     missing_columns = [column for column in required_columns if column not in columns]
     if missing_columns:
-        msg = f"The followint columns {','.join(missing_columns)} are missing in{csv_type}"
+        msg = f"The following columns {','.join(missing_columns)} are missing in{csv_type}"
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
 
 
