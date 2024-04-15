@@ -152,6 +152,11 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.BACKWARD_STATUS, ApiPrecisionCompareColumn.MESSAGE]
 
 
+CompareMessage = {
+    "topk" : "在npu上，topk的入参sorted=False时不生效，会返回有序tensor，而cpu上会返回无序tensor。 如果topk精度不达标，请检查是否是该原因导致的。"
+}
+
+
 def check_dtype_comparable(x, y):
     if x.dtype in Const.FLOAT_TYPE:
         if y.dtype in Const.FLOAT_TYPE:
