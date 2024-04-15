@@ -23,6 +23,9 @@ Ascend Training Tools，昇腾训练工具链。【Powered by MindStudio】
 
    脚本迁移工具提供后端命令行用于将GPU上训练的PyTorch脚本迁移至NPU上，得到新的训练脚本用于训练。
 
+4. [训推一体权重转换工具](https://gitee.com/Ascend/att/wikis/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D/%E5%88%86%E6%9E%90%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7/%E8%AE%AD%E6%8E%A8%E4%B8%80%E4%BD%93%E6%9D%83%E9%87%8D%E8%BD%AC%E6%8D%A2%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC)
+
+    训推一体权重转换工具，支持在GPU和NPU上训练好的模型转成加速推理支持的格式。
 
 ### [精度工具](https://gitee.com/ascend/att/tree/master/debug/accuracy_tools)
 

@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 import yaml
-from api_accuracy_checker.common.utils import Const, print_warn_log
+from api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
@@ -150,6 +150,11 @@ class ApiPrecisionCompareColumn:
     def get_result_csv_title():
         return [ApiPrecisionCompareColumn.API_NAME, ApiPrecisionCompareColumn.FORWWARD_STATUS, 
                 ApiPrecisionCompareColumn.BACKWARD_STATUS, ApiPrecisionCompareColumn.MESSAGE]
+
+
+CompareMessage = {
+    "topk" : "在npu上，topk的入参sorted=False时不生效，会返回有序tensor，而cpu上会返回无序tensor。 如果topk精度不达标，请检查是否是该原因导致的。"
+}
 
 
 def check_dtype_comparable(x, y):
