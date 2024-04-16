@@ -106,3 +106,4 @@ BinaryCompareStandard:
   - tril_
   - triu
   - triu_
+  - type_as
