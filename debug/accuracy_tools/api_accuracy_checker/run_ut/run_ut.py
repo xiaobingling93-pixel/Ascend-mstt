@@ -246,9 +246,6 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         device_grad = grad.clone().detach().to(current_device)
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
-    if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
-                          in_fwd_data_list)
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
 
