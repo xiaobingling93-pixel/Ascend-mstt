@@ -99,6 +99,7 @@ BinaryCompareStandard:
   - sign_
   - sort
   - tile
+  - topk
   - transpose
   - transpose_
   - tril

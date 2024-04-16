@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from api_accuracy_checker.common.utils import get_json_contents, write_csv
+from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
     precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, \
     apis_threshold
@@ -48,6 +48,8 @@ class Comparator:
         else:
             passing_rate = "0%"
 
+        print_warn_log("The follwing tables will be deprecated in the future."
+                       "The following results are for reference only.")
         console = Console()
         table_total = Table(
             show_header=True, title="Overall Statistics", show_lines=True, width=75

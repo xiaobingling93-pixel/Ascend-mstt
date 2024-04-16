@@ -713,6 +713,8 @@ def parameter_adapter(func):
                 else:
                     res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
+        if self.op_name_ == "__eq__" and args[1] is None:
+            return False
         return func(self, *args, **kwargs)
     return inner
 
