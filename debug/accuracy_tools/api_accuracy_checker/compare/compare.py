@@ -273,7 +273,7 @@ class Comparator:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
             if api_name in BinaryStandardApi:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
-                compare_column.error_rate = err_rate            
+                compare_column.error_rate = err_rate
             elif api_name in AbsoluteStandardApi:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))
