@@ -2,9 +2,9 @@ import argparse
 import os
 import sys
 import csv
-import torch
 import math
 from collections import namedtuple
+import torch
 import pandas as pd
 
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
