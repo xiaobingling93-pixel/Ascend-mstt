@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import csv
+import torch
 import math
 from collections import namedtuple
 import pandas as pd
@@ -43,10 +44,6 @@ benchmark_algorithms_thresholds = {
     'eb' : {
         'error_threshold' : 2,
         'warning_threshold' : 1
-    },
-    'ULP' : {
-        'error_threshold' : 1,
-        'warning_threshold' : 1
     }
 }
 
@@ -67,15 +64,31 @@ benchmark_message = {
     "mean_rel_err_status": {
         CompareConst.ERROR: "ERROR: 相对误差平均值比值超过阈值\n",
         CompareConst.WARNING: "WARNING: 相对误差平均值比值超过阈值\n"
-    },
-    "ULP_err_ratio_status": {
-        CompareConst.ERROR: "ERROR: ULP误差错误比值超过阈值\n",
-        CompareConst.WARNING: "WARNING: ULP误差错误比值超过阈值\n"
     }
 }
 
 
-class BenchmarkStandard:
+class Standard:
+    @staticmethod
+    def _get_status(ratio, algorithm):
+        error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
+        warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
+        if ratio > error_threshold:
+            return CompareConst.ERROR
+        elif ratio > warning_threshold:
+            return CompareConst.WARNING
+        return CompareConst.PASS
+
+    @staticmethod
+    def _calc_ratio(x, y, default_value=1.0):
+        x, y = convert_str_to_float(x), convert_str_to_float(y)
+        if math.isclose(y, 0.0):
+            return 1.0 if math.isclose(x, 0.0) else default_value
+        else:
+            return abs(x / y)
+
+
+class BenchmarkStandard(Standard):
     def __init__(self, api_name, npu_precision, gpu_precision):
         self.api_name = api_name
         self.npu_precision = npu_precision
@@ -132,11 +145,13 @@ class BenchmarkStandard:
         self.mean_rel_err_status, self.eb_ratio, self.eb_status]
 
 
-class ULPStandard:
+class ULPStandard(Standard):
     def __init__(self, api_name, npu_precision, gpu_precision):
         self.api_name = api_name
         self.npu_precision = npu_precision
         self.gpu_precision = gpu_precision
+        self.mean_ULP_err = 0
+        self.ULP_err_proportion = 0
         self.ULP_err_proportion_ratio = 1
         self.ULP_err_status = CompareConst.PASS
 
@@ -144,27 +159,29 @@ class ULPStandard:
         return f"{self.api_name}"
 
     def get_result(self):
-        self.ULP_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO),
-                                                self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_RATIO))
-        self.ULP_err_status = self._get_status(self.ULP_err_ratio, 'ULP')
-
+        self.mean_ULP_err = self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR)
+        self.ULP_err_proportion = self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION)
+        self.ULP_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
+                                                self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
+        self.ULP_err_status = self.get_ULP_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
     
-def _get_status(ratio, algorithm):
-    error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
-    warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
-    if ratio > error_threshold:
-        return CompareConst.ERROR
-    elif ratio > warning_threshold:
-        return CompareConst.WARNING
-    return CompareConst.PASS
-
-
-def _calc_ratio(x, y, default_value=1.0):
-    x, y = convert_str_to_float(x), convert_str_to_float(y)
-    if math.isclose(y, 0.0):
-        return 1.0 if math.isclose(x, 0.0) else default_value
-    else:
-        return abs(x / y)
+    def get_ULP_status(self, dtype):
+        if dtype == torch.float32:
+            if self.mean_ULP_err < 64:
+                return CompareConst.PASS
+            elif self.ULP_err_proportion < 0.05:
+                return CompareConst.PASS
+            elif self.ULP_err_proportion_ratio < 1:
+                return CompareConst.PASS
+            else:
+                return CompareConst.ERROR
+        else:
+            if self.ULP_err_proportion < 0.001:
+                return CompareConst.PASS
+            elif self.ULP_err_proportion_ratio < 1:
+                return CompareConst.PASS
+            else:
+                return CompareConst.ERROR
 
 
 def write_detail_csv(content, save_path):
@@ -229,6 +246,7 @@ def analyse_csv(npu_data, gpu_data, config):
             new_status = record_absolute_threshold_result(compare_column, row_npu)
         elif api_name in ULPStandardApi:
             us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+            new_status = record_ULP_compare_result(compare_column, us)
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
             bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
             new_status = record_benchmark_compare_result(compare_column, bs)
@@ -381,14 +399,16 @@ def record_benchmark_compare_result(compare_column, bs):
 
 def record_ULP_compare_result(compare_column, us):
     us.get_result()
+    compare_column.mean_ULP_err = us.mean_ULP_err
+    compare_column.ULP_err_proportion = us.ULP_err_proportion
     compare_column.ULP_err_proportion_ratio = us.ULP_err_proportion_ratio
     compare_column.ULP_err_status = us.ULP_err_status
     compare_column.compare_result = us.ULP_err_status
-    compare_column.compare_algorithm = "ULP比对法"
+    compare_column.compare_algorithm = "ULP误差比对法"
     message = ''
     if compare_column.ULP_err_status == CompareConst.ERROR:
-        message += "ERROR: ULP错误率不达标"
-    compare_column.message = message
+        message += "ERROR: ULP误差不满足标准\n"
+    compare_column.compare_message = message
     return compare_column.compare_result
 
 

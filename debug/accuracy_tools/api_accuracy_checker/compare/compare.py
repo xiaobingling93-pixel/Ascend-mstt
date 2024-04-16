@@ -284,13 +284,13 @@ class Comparator:
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
             elif api_name in ULPStandardApi:
-                ulp_err = get_ULP_err(bench_output, device_output, dtype)
-                compare_column.max_ULP_error = np.max(ulp_err)
-                compare_column.mean_ULP_error = np.mean(ulp_err)
+                ULP_err = get_ULP_err(bench_output, device_output, dtype)
+                compare_column.max_ULP_error = np.max(ULP_err)
+                compare_column.mean_ULP_error = np.mean(ULP_err)
                 if dtype == torch.float32:
-                    compare_column.ULP_error_proportion = float(np.sum(ulp_err > 32) / bench_output.size)
+                    compare_column.ULP_error_proportion = float(np.sum(ULP_err > 32) / bench_output.size)
                 else:
-                    compare_column.ULP_error_proportion = float(np.sum(ulp_err > 1) / bench_output.size)
+                    compare_column.ULP_error_proportion = float(np.sum(ULP_err > 1) / bench_output.size)
             else:
                 dtype_config = precision_configs.get(dtype)    
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])

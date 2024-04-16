@@ -199,6 +199,6 @@ def get_ULP_err(bench_output, device_output, dtype):
     eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
     eb = np.maximum(eb, min_eb)
 
-    ulp_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num)
-    ulp_err = np.abs(ulp_err)
-    return ulp_err
+    ULP_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num)
+    ULP_err = np.abs(ULP_err)
+    return ULP_err

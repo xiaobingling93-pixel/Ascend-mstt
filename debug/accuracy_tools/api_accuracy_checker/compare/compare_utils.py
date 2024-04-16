@@ -171,7 +171,7 @@ class ApiPrecisionCompareColumn:
 
     @staticmethod
     def get_detail_csv_title():
-        return [ApiPrecisionCompareColumn.API_NAME,  
+        return [ApiPrecisionCompareColumn.API_NAME, 
                 ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATIO, ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_STATUS, 
                 ApiPrecisionCompareColumn.RMSE_RATIO, ApiPrecisionCompareColumn.RMSE_STATUS, 
                 ApiPrecisionCompareColumn.MAX_REL_ERR_RATIO, ApiPrecisionCompareColumn.MAX_REL_ERR_STATUS, 
