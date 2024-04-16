@@ -20,15 +20,15 @@ class CompareColumn:
         self.inf_nan_error_ratio = CompareConst.SPACE
         self.rel_err_ratio = CompareConst.SPACE
         self.abs_err_ratio = CompareConst.SPACE
-        self.Max_ULP_error = CompareConst.SPACE
-        self.Mean_ULP_error = CompareConst.SPACE
+        self.max_ULP_error = CompareConst.SPACE
+        self.mean_ULP_error = CompareConst.SPACE
         self.ULP_error_proportion = CompareConst.SPACE
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
                 self.rel_err_thousandth, self.rel_err_ten_thousandth, self.error_rate, self.EB, self.RMSE, 
                 self.small_value_err_ratio, self.Max_rel_error, self.Mean_rel_error, self.inf_nan_error_ratio, 
-                self.rel_err_ratio, self.abs_err_ratio, self.Max_ULP_error, self.Mean_ULP_error, 
+                self.rel_err_ratio, self.abs_err_ratio, self.max_ULP_error, self.mean_ULP_error, 
                 self.ULP_error_proportion, is_pass, message]
 
 
