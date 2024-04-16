@@ -159,8 +159,8 @@ class ULPStandard(Standard):
         return f"{self.api_name}"
 
     def get_result(self):
-        self.mean_ULP_err = self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR)
-        self.ULP_err_proportion = self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION)
+        self.mean_ULP_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
+        self.ULP_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
         self.ULP_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
                                                 self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
         self.ULP_err_status = self.get_ULP_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
