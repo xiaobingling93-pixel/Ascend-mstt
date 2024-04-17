@@ -77,27 +77,18 @@
 
    
 
-2. 在训练流程执行之前传入 config.yaml 的路径实例化一个 GradientDumper 对象。实例代码如下：
+2. 在模型构造完成时插入如下代码：
 
       ```python
       from grad_tool.grad_monitor import GradientMonitor
       gm = GradientMonitor("config_path")
-      ```
-
-
-3. 插入代码监控模型，有两种方法，选择其一即可：
-
-   推荐：在训练流程中，反向执行之后梯度清零之前的位置，调用 gm.save_grad 并将模型作为参数传入
-
-      ```python
-      gm.save_grad(model)
-      ```
-
-   另一种：在训练开始前，调用 gm.monitor 并将模型作为参数传入。这种方式目前不稳定。
-
-      ```python
       gm.monitor(model)
       ```
+
+   config_path: 传入config.yaml 的路径实例化一个 GradientMonitor 对象
+   
+   model: 传入刚构造好的模型进行监控
+
 
 ### 输出结果
 **输出目录结构**（level 为 L2）
