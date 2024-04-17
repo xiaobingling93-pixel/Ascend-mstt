@@ -32,11 +32,28 @@ with FileOpen(yaml_path, 'r') as f:
 
 def get_torch_ops():
     global WrapTorchOps
-    _torch_ops = dir(torch)
-    return set(WrapTorchOps) & set(_torch_ops)
+    _torch_ops = []
+    for operation in WrapTorchOps:
+        if '.' in operation:
+            operation_sub_module_name, operation_sub_op = operation.rsplit('.', 1)
+            operation_sub_module = getattr(torch, operation_sub_module_name)
+            if operation_sub_op in dir(operation_sub_module):
+                _torch_ops.append(operation)
+        else:
+            if hasattr(torch, operation):
+                _torch_ops.append(operation)
+    return set(_torch_ops)
 
 
-TorchOps = {op: getattr(torch, op) for op in get_torch_ops()}
+TorchOps = {}
+for op in get_torch_ops():
+    if '.' in op:
+        sub_module_name, sub_op = op.rsplit('.', 1)
+        sub_module = getattr(torch, sub_module_name)
+        TorchOps[op] = getattr(sub_module, sub_op)
+    else:
+        TorchOps[op] = getattr(torch, op)
+
 
 
 class HOOKTorchOP(object):

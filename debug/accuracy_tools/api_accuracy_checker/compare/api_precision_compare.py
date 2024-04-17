@@ -107,15 +107,15 @@ class BenchmarkStandard:
     def _compare_ratio(self):
         self.small_value_err_ratio = self._calc_ratio(
             self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
-            self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE))
+            self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE), 10000.0)
         self.rmse_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
                                                       self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
         self.max_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
                                                 self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
         self.mean_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
+                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
         self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.EB))
+                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
 
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
