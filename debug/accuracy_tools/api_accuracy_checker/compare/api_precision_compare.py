@@ -196,7 +196,7 @@ def analyse_csv(npu_data, gpu_data, config):
         if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
             compare_column.api_name = full_api_name_with_direction_status
             compare_column.compare_result = CompareConst.SKIP
-            compare_column.message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
+            compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
             new_status = CompareConst.SKIP
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
         else:
