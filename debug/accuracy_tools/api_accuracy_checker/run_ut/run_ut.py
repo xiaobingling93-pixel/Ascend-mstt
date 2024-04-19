@@ -39,6 +39,7 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
+not_raise_dtype_set = {'type_as'}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -142,6 +143,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
+    raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
     cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
@@ -246,9 +248,6 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         device_grad = grad.clone().detach().to(current_device)
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
-    if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
-                          in_fwd_data_list)
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
 
