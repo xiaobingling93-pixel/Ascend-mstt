@@ -17,9 +17,12 @@ else:
 import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
+from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
     print_error_log, initialize_save_path, Const, create_directory
 from api_accuracy_checker.compare.compare import Comparator
+from api_accuracy_checker.compare.compare_column import CompareColumn
+from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
@@ -172,10 +175,7 @@ def run_ut(config):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name,
-                                                                    data_info.bench_out,
-                                                                    data_info.device_out,
-                                                                    data_info.bench_grad_out,
-                                                                    data_info.device_grad_out)
+                                                                    data_info)
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
@@ -185,7 +185,9 @@ def run_ut(config):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
-            compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+            err_column = CompareColumn()
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            compare.record_results(api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
@@ -211,6 +213,7 @@ def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
+    backward_message = ''
     [api_type, api_name, _] = api_full_name.split("*")
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
@@ -219,10 +222,12 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if not need_grad:
         print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward."
                        % api_full_name)
+        backward_message += Backward_Message.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
         print_warn_log(
             "%s function backward result is None, skip backward." % api_full_name)
+        backward_message += Backward_Message.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
@@ -241,14 +246,17 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         grad_index = grad_input_index.get('grad_index')
 
     if need_backward:
-        backward_args = backward_content[api_full_name]
-        grad = gen_args(backward_args, real_data_path=real_data_path)[0]
-        bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
-        bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
-        device_grad = grad.clone().detach().to(current_device)
-        device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
+        if need_to_backward(grad_index, out):
+            backward_args = backward_content[api_full_name]
+            grad = gen_args(backward_args, real_data_path=real_data_path)[0]
+            bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
+            bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
+            device_grad = grad.clone().detach().to(current_device)
+            device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
+        else:
+            backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
 
-    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
@@ -260,12 +268,16 @@ def get_api_info(api_info_dict, api_name, real_data_path):
     return args, kwargs, need_grad
 
 
+def need_to_backward(grad_index, out):
+    if grad_index is None and isinstance(out, (list, tuple)):
+        return False
+    return True
+
+
 def run_backward(args, grad, grad_index, out):
 
     if grad_index is not None:
         out[grad_index].backward(grad)
-    elif isinstance(out, (list, tuple)):
-        raise NotImplementedError("Multiple backward is not supported.")
     else:
         out.backward(grad)
     args_grad = []
@@ -437,13 +449,14 @@ def run_ut_command(args):
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad_out, device_grad_out, device_out, bench_out, grad_in, in_fwd_data_list):
-        self.bench_grad_out = bench_grad_out
-        self.device_grad_out = device_grad_out
-        self.device_out = device_out
-        self.bench_out = bench_out
+    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, backward_message):
+        self.bench_grad = bench_grad
+        self.device_grad = device_grad
+        self.device_output = device_output
+        self.bench_output = bench_output
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
+        self.backward_message = backward_message
 
 
 class UtAPIInfo(APIInfo):
