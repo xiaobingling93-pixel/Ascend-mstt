@@ -83,7 +83,7 @@ def setup_python(env_path):
                     (not compile_args[0].startswith(_PYTORCH_VERSION_2_0)) and \
                     (not compile_args[0].startswith(_PYTORCH_VERSION_2_1)) and \
                     (not compile_args[0].startswith(_PYTORCH_VERSION_2_2)):
-                print('Currently supported Pytorch version is %s/%s, we got %s.'
+                print('Currently supported Pytorch version is %s/%s/%s/%s, we got %s.'
                       % (_PYTORCH_VERSION_1_11, _PYTORCH_VERSION_2_0, _PYTORCH_VERSION_2_1, _PYTORCH_VERSION_2_2, compile_args[0]))
                 continue
         except subprocess.CalledProcessError:
