@@ -193,12 +193,15 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
 
 def get_ULP_err(bench_output, device_output, dtype):
     parameters = ULP_PARAMETERS.get(dtype)
-    min_eb = parameters['min_eb'][0]
-    exponent_num = parameters['exponent_num'][0]
+    min_eb = (parameters.get('min_eb'))[0]
+    exponent_num = (parameters.get('exponent_num'))[0]
     abs_bench = np.abs(bench_output)
     eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
     eb = np.maximum(eb, min_eb)
 
-    ULP_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num)
+    if dtype == torch.float32:
+        ULP_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num)
+    else:
+        ULP_err = (device_output.astype(np.float32) - bench_output).astype(np.float32) * np.exp2(-eb + exponent_num)
     ULP_err = np.abs(ULP_err)
     return ULP_err

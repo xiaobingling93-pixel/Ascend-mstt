@@ -13,7 +13,7 @@ from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
-    convert_str_to_float, CompareMessage
+    ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -69,16 +69,6 @@ benchmark_message = {
 
 
 class Standard:
-    @staticmethod
-    def _get_status(ratio, algorithm):
-        error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
-        warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
-        if ratio > error_threshold:
-            return CompareConst.ERROR
-        elif ratio > warning_threshold:
-            return CompareConst.WARNING
-        return CompareConst.PASS
-
     @staticmethod
     def _calc_ratio(x, y, default_value=1.0):
         x, y = convert_str_to_float(x), convert_str_to_float(y)
@@ -143,6 +133,16 @@ class BenchmarkStandard(Standard):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
         self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
         self.mean_rel_err_status, self.eb_ratio, self.eb_status]
+    
+    @staticmethod
+    def _get_status(ratio, algorithm):
+        error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
+        warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
+        if ratio > error_threshold:
+            return CompareConst.ERROR
+        elif ratio > warning_threshold:
+            return CompareConst.WARNING
+        return CompareConst.PASS
 
 
 class ULPStandard(Standard):
@@ -244,7 +244,7 @@ def analyse_csv(npu_data, gpu_data, config):
             new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
         elif api_name in AbsoluteStandardApi:
             new_status = record_absolute_threshold_result(compare_column, row_npu)
-        elif api_name in ULPStandardApi:
+        elif api_name in ULPStandardApi and row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
             us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
             new_status = record_ULP_compare_result(compare_column, us)
         elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
