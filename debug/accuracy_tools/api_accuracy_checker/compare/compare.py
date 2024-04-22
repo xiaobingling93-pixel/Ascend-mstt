@@ -293,9 +293,9 @@ class Comparator:
                     compare_column.max_ulp_error = np.max(ulp_err)
                     compare_column.mean_ulp_error = np.mean(ulp_err)
                     if dtype == torch.float32:
-                        compare_column.ulp_error_proportion = float(np.sum(ulp_err > 32) / bench_output.size)
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 32) / bench_output.size
                     else:
-                        compare_column.ulp_error_proportion = float(np.sum(ulp_err > 1) / bench_output.size)
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 1) / bench_output.size
             else:
                 dtype_config = precision_configs.get(dtype)    
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
