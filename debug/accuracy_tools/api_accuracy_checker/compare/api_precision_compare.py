@@ -128,7 +128,6 @@ class BenchmarkStandard(Standard):
         self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                                       self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
 
-
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
         self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
