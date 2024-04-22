@@ -13,7 +13,7 @@ from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ULP_err
+    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -284,13 +284,18 @@ class Comparator:
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
             elif api_name in ULPStandardApi:
-                ULP_err = get_ULP_err(bench_output, device_output, dtype)
-                compare_column.max_ULP_error = np.max(ULP_err)
-                compare_column.mean_ULP_error = np.mean(ULP_err)
-                if dtype == torch.float32:
-                    compare_column.ULP_error_proportion = float(np.sum(ULP_err > 32) / bench_output.size)
+                if bench_output.size == 0:
+                    compare_column.max_ulp_error = 0
+                    compare_column.mean_ulp_error = 0
+                    compare_column.ulp_error_proportion = 0
                 else:
-                    compare_column.ULP_error_proportion = float(np.sum(ULP_err > 1) / bench_output.size)
+                    ulp_err = get_ulp_err(bench_output, device_output, dtype)
+                    compare_column.max_ulp_error = np.max(ulp_err)
+                    compare_column.mean_ulp_error = np.mean(ulp_err)
+                    if dtype == torch.float32:
+                        compare_column.ulp_error_proportion = float(np.sum(ulp_err > 32) / bench_output.size)
+                    else:
+                        compare_column.ulp_error_proportion = float(np.sum(ulp_err > 1) / bench_output.size)
             else:
                 dtype_config = precision_configs.get(dtype)    
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
