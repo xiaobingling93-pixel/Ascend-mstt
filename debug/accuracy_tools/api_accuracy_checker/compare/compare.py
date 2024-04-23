@@ -97,7 +97,7 @@ class Comparator:
                 self.test_result_cnt["total_skip_num"] += 1
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE]:
+            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE, CompareConst.SKIP]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
@@ -125,8 +125,8 @@ class Comparator:
 
         name = test_result[0]
         df_row = list(test_result[:3])
-        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
-            df_row.append(test_result[3])
+        if test_result[1] == "SKIP":
+            df_row.append(test_result[3][0][-1])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
@@ -158,18 +158,28 @@ class Comparator:
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
-    def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
+    def compare_output(self, full_api_name, data_info):
         _, api_name, _ = full_api_name.split("*")
+        bench_output = data_info.bench_output
+        device_output = data_info.device_output
+        bench_grad = data_info.bench_grad
+        device_grad = data_info.device_grad
+        backward_message = data_info.backward_message
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
-        if not (bench_grad and npu_grad):
+        if not (bench_grad and device_grad):
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
             if "dropout" in full_api_name:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], npu_grad[0])
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], device_grad[0])
             else:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, npu_grad)
-        self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, device_grad)
+        if backward_message:
+            backward_column = CompareColumn()
+            bwd_compare_alg_results = backward_column.to_column_value(CompareConst.SKIP, backward_message)
+            self.record_results(full_api_name, fwd_success_status, CompareConst.SKIP, fwd_compare_alg_results, [bwd_compare_alg_results])
+        else:
+            self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
             or bwd_success_status == CompareConst.SPACE
 
