@@ -39,7 +39,7 @@ else:
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, FileOpen
 from ptdbg_ascend.src.python.ptdbg_ascend.common import file_check_util
 
-torch_without_guard_version_list = ['2.1']
+torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True

@@ -41,7 +41,7 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1']
+torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True
@@ -201,6 +201,8 @@ class VersionCheck:
     V1_11 = "1.11"
     V2_0 = "2.0"
     V2_1 = "2.1"
+    V2_2 = "2.2"
+    
 
     @staticmethod
     def check_torch_version(version):
