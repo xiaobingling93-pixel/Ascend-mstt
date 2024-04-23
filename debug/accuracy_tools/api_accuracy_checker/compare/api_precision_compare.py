@@ -233,23 +233,28 @@ def analyse_csv(npu_data, gpu_data, config):
             msg = f'This API : {full_api_name_with_direction_status} has multiple records in the GPU data.'
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         row_gpu = row_gpu.iloc[0]
+        new_status = CompareConst.SPACE
         #当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
         if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
-            continue
-        _, api_name, _ = full_api_name.split("*")
-        new_status = CompareConst.SPACE
-        compare_column.api_name = full_api_name_with_direction_status
-        if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
-            new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
-        elif api_name in AbsoluteStandardApi:
-            new_status = record_absolute_threshold_result(compare_column, row_npu)
-        elif api_name in ULPStandardApi and row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
-            us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_ulp_compare_result(compare_column, us)
-        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
-            bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_benchmark_compare_result(compare_column, bs)
-        write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
+            compare_column.api_name = full_api_name_with_direction_status
+            compare_column.compare_result = CompareConst.SKIP
+            compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
+            new_status = CompareConst.SKIP
+            write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
+        else:
+            _, api_name, _ = full_api_name.split("*")
+            compare_column.api_name = full_api_name_with_direction_status
+            if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
+                new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
+            elif api_name in AbsoluteStandardApi:
+                new_status = record_absolute_threshold_result(compare_column, row_npu)
+            elif api_name in ULPStandardApi and row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
+                us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+                new_status = record_ulp_compare_result(compare_column, us)
+            elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
+                bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+                new_status = record_benchmark_compare_result(compare_column, bs)
+            write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
         if full_last_api_name is not None and full_api_name != full_last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
