@@ -1848,7 +1848,7 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 
 **比对结果**
 
-pkl文件比对同样生成`compare_result_{timestamp}.csv`和`advisor_{timestamp}.txt`文件。其中`advisor_{timestamp}.txt`主要对`compare_result_{timestamp}.csv`中可能存在精度问题的API提出修改建议；`compare_result_{timestamp}.csv`主要有如下两种情况：
+pkl文件比对同样生成`compare_result_{timestamp}.csv`和`advisor_{timestamp}.txt`文件。其中`advisor_{timestamp}.txt`主要对`compare_result_{timestamp}.csv`中可能存在精度问题（Result为Waring）的API提出修改建议；`compare_result_{timestamp}.csv`主要有如下两种情况：
 
 - configure_hook配置summary_only=True、summary_mode=summary或不配置前面两个参数直接比对pkl文件：
 
