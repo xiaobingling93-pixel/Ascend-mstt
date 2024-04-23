@@ -48,7 +48,7 @@ class TestCompare(unittest.TestCase):
         # 对其他值进行比较，确保它们符合预期
         detailed_result_total[0][3] = 1.0
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
          '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
         self.assertTrue(test_final_success)
 
@@ -62,10 +62,10 @@ class TestCompare(unittest.TestCase):
         detailed_result_total[1][3] = 1.0
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
          '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'], 
          ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ',
-          ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
+          ' ', ' ', ' ', ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)

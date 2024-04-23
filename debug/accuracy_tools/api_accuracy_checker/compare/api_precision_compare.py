@@ -4,6 +4,7 @@ import sys
 import csv
 import math
 from collections import namedtuple
+import torch
 import pandas as pd
 
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
@@ -11,8 +12,8 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
-    convert_str_to_float, CompareMessage
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
+    ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -67,7 +68,17 @@ benchmark_message = {
 }
 
 
-class BenchmarkStandard:
+class Standard:
+    @staticmethod
+    def _calc_ratio(x, y, default_value=1.0):
+        x, y = convert_str_to_float(x), convert_str_to_float(y)
+        if math.isclose(y, 0.0):
+            return 1.0 if math.isclose(x, 0.0) else default_value
+        else:
+            return abs(x / y)
+
+
+class BenchmarkStandard(Standard):
     def __init__(self, api_name, npu_precision, gpu_precision):
         self.api_name = api_name
         self.npu_precision = npu_precision
@@ -86,7 +97,7 @@ class BenchmarkStandard:
         self.final_result = CompareConst.PASS
 
     def __str__(self):
-        return "%s" % (self.api_name)
+        return f"{self.api_name}"
 
     def get_result(self):
         self._compare_ratio()
@@ -121,7 +132,7 @@ class BenchmarkStandard:
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
         self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio, 
         self.mean_rel_err_status, self.eb_ratio, self.eb_status]
-
+    
     @staticmethod
     def _get_status(ratio, algorithm):
         error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
@@ -132,13 +143,44 @@ class BenchmarkStandard:
             return CompareConst.WARNING
         return CompareConst.PASS
 
-    @staticmethod
-    def _calc_ratio(x, y, default_value=1.0):
-        x, y = convert_str_to_float(x), convert_str_to_float(y)
-        if math.isclose(y, 0.0):
-            return 1.0 if math.isclose(x, 0.0) else default_value
+
+class ULPStandard(Standard):
+    def __init__(self, api_name, npu_precision, gpu_precision):
+        self.api_name = api_name
+        self.npu_precision = npu_precision
+        self.gpu_precision = gpu_precision
+        self.mean_ulp_err = 0
+        self.ulp_err_proportion = 0
+        self.ulp_err_proportion_ratio = 1
+        self.ulp_err_status = CompareConst.PASS
+
+    def __str__(self):
+        return f"{self.api_name}"
+
+    def get_result(self):
+        self.mean_ulp_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
+        self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
+        self.ulp_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
+                                                self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
+        self.ulp_err_status = self.get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
+    
+    def get_ulp_status(self, dtype):
+        if dtype == torch.float32:
+            if self.mean_ulp_err < 64:
+                return CompareConst.PASS
+            elif self.ulp_err_proportion < 0.05:
+                return CompareConst.PASS
+            elif self.ulp_err_proportion_ratio < 1:
+                return CompareConst.PASS
+            else:
+                return CompareConst.ERROR
         else:
-            return abs(x / y)
+            if self.ulp_err_proportion < 0.001:
+                return CompareConst.PASS
+            elif self.ulp_err_proportion_ratio < 1:
+                return CompareConst.PASS
+            else:
+                return CompareConst.ERROR
 
 
 def write_detail_csv(content, save_path):
@@ -206,6 +248,9 @@ def analyse_csv(npu_data, gpu_data, config):
                 new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
             elif api_name in AbsoluteStandardApi:
                 new_status = record_absolute_threshold_result(compare_column, row_npu)
+            elif api_name in ULPStandardApi and row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
+                us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+                new_status = record_ulp_compare_result(compare_column, us)
             elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
                 bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
                 new_status = record_benchmark_compare_result(compare_column, bs)
@@ -296,7 +341,7 @@ def check_csv_columns(columns, csv_type):
     required_columns = ApiPrecisionCompareColumn.to_required_columns()
     missing_columns = [column for column in required_columns if column not in columns]
     if missing_columns:
-        msg = f"The followint columns {','.join(missing_columns)} are missing in{csv_type}"
+        msg = f"The following columns {','.join(missing_columns)} are missing in{csv_type}"
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
 
 
@@ -354,6 +399,21 @@ def record_benchmark_compare_result(compare_column, bs):
         status_value = getattr(compare_column, status_attr)
         if status_value in messages:
             message += messages[status_value]
+    compare_column.compare_message = message
+    return compare_column.compare_result
+
+
+def record_ulp_compare_result(compare_column, us):
+    us.get_result()
+    compare_column.mean_ulp_err = us.mean_ulp_err
+    compare_column.ulp_err_proportion = us.ulp_err_proportion
+    compare_column.ulp_err_proportion_ratio = us.ulp_err_proportion_ratio
+    compare_column.ulp_err_status = us.ulp_err_status
+    compare_column.compare_result = us.ulp_err_status
+    compare_column.compare_algorithm = "ULP误差比对法"
+    message = ''
+    if compare_column.ulp_err_status == CompareConst.ERROR:
+        message += "ERROR: ULP误差不满足标准\n"
     compare_column.compare_message = message
     return compare_column.compare_result
 
