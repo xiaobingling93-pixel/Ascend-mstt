@@ -114,8 +114,8 @@ class GradComparator:
 
     @staticmethod
     def _calculate_similarity(pt_file1: str, pt_file2: str):
-        tensor1 = torch.load(pt_file1)
-        tensor2 = torch.load(pt_file2)
+        tensor1 = torch.load(pt_file1, map_location=torch.device("cpu"))
+        tensor2 = torch.load(pt_file2, map_location=torch.device("cpu"))
         if tensor1.shape != tensor2.shape:
             raise Exception(f"tensor shape is not equal: {pt_file1}, {pt_file2}")
         if tensor1.dtype != torch.bool:

@@ -1,39 +1,12 @@
 import os
 import yaml
 import torch
+import torch.distributed as dist
 import pandas as pd
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, create_directory, \
     FileChecker, FileCheckConst
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_file_or_directory_path, print_info_log, \
     print_warn_log
-
-
-class ListCache(list):
-    threshold = 1000
-
-    def __init__(self, *args):
-        self._dump_count = 0
-        super().__init__(*args)
-
-    def __del__(self):
-        self.flush()
-
-    def flush(self):
-        if len(self) == 0:
-            return
-        if not self._output_file:
-            print_warn_log("dumpfile path is not setted")
-        write_csv(self._output_file, self, [])
-        print_info_log(f"write {len(self)} items to {self._output_file} the {self._dump_count} time")
-        self.clear()
-
-    def append(self, data):
-        list.append(self, data)
-        if len(self) >= ListCache.threshold:
-            self.flush()
-    
-    def set_output_file(self, output_file):
-        self._output_file = output_file
 
 
 def get_config(filepath):
@@ -52,6 +25,7 @@ def write_csv(filepath, content_list, header):
     filepath_checker.common_check()
     new_data = pd.DataFrame(list(content for content in content_list))
     new_data.to_csv(filepath, mode='a+', header=False, index=False)
+    print_info_log(f"write {len(content_list)} items to {filepath}")
 
 
 def make_file_safety(file_path: str, permission=0o640):
@@ -83,28 +57,19 @@ def check_numeral_list_ascend(lst):
         raise Exception("The input list should be ascending")
 
 
-def get_tensor_rank(x):
-    if isinstance(x, (list, tuple)):
-        if len(x) > 0:
-            return get_tensor_rank(x[0])
-        return None
-    elif isinstance(x, torch.Tensor):
-        device = x.device
-        if device.type == 'cpu':
-            return None
-        else:
-            return device.index
-    return None
-
-
-def get_rank_id(tensor):
+def get_rank_id():
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
-    rank = get_tensor_rank(tensor)
-    if rank is not None:
-        return rank
     return os.getpid()
 
 
 def path_check(path, isdir=False):
     check_file_or_directory_path(path, isdir)
+
+
+def print_rank_0(message):
+    if dist.is_initialized():
+        if dist.get_rank() == 0:
+            print(message)
+    else:
+        print(message)

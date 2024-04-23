@@ -9,6 +9,7 @@ import torch.nn.functional
 
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
+from api_accuracy_checker.run_ut.run_ut import UtDataInfo
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -70,13 +71,15 @@ class TestCompare(unittest.TestCase):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
         api_name = 'Functional*conv2d*0'
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertFalse(is_fwd_success)
         self.assertFalse(is_bwd_success)
 
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, bench_out, npu_out)
+        data_info = UtDataInfo(None, None, bench_out, npu_out, None, None, None)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertTrue(is_fwd_success)
         self.assertTrue(is_bwd_success)
 

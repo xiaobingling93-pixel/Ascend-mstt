@@ -329,6 +329,8 @@ def get_absolute_threshold_result(row_npu):
 def get_api_checker_result(status):
     if not status:
         return CompareConst.SPACE
+    if all(item == CompareConst.SKIP for item in status):
+        return CompareConst.SKIP
     for const in (CompareConst.ERROR, CompareConst.WARNING):
         if const in status:
             return const

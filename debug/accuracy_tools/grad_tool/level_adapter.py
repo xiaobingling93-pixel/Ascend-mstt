@@ -37,7 +37,6 @@ class LevelOps:
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         torch.save(is_positive, f'{save_path}/{param_name}.pt')
-        print_info_log(f'Save {param_name} bool tensor, it has {is_positive.sum()}/{is_positive.numel()} positive elements')
     
 
 class Level(ABC):
