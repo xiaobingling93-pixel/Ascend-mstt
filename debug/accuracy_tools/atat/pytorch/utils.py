@@ -16,10 +16,12 @@
 """
 import os
 import random
-import torch
-import numpy as np
 import zlib
 from functools import wraps
+
+import torch
+import numpy as np
+
 from atat.core.utils import print_error_log
 from atat.core.utils import Const
 from atat.core.utils import CompareException
@@ -127,22 +129,3 @@ def get_md5_for_tensor(x):
     tensor_bytes = x.cpu().detach().numpy().tobytes()
     crc32_hash = zlib.crc32(tensor_bytes)
     return f"{crc32_hash:08x}"
-
-
-class VersionCheck:
-    """
-    Class for TorchVersion
-    """
-    V1_8 = "1.8"
-    V1_11 = "1.11"
-    V2_0 = "2.0"
-    V2_1 = "2.1"
-    V2_2 = "2.2"
-
-    @staticmethod
-    def check_torch_version(version):
-        torch_version = torch.__version__
-        if torch_version.startswith(version):
-            return True
-        else:
-            return False
