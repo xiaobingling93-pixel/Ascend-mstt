@@ -115,8 +115,10 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-                    "_reduce_scatter_base", "_all_gather_base"]
+    INPLACE_LIST = [
+        "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend"
+        ]
 
 
 class CompareConst:
