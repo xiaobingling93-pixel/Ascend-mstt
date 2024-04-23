@@ -1848,7 +1848,7 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 
 **比对结果**
 
-pkl文件比对同样生成`compare_result_{timestamp}.csv`和`advisor_{timestamp}.txt`文件。其中`advisor_{timestamp}.txt`主要对`compare_result_{timestamp}.csv`中可能存在精度问题（Result为Waring）的API提出修改建议；`compare_result_{timestamp}.csv`主要有如下两种情况：
+pkl文件比对同样生成`compare_result_{timestamp}.csv`和`advisor_{timestamp}.txt`文件。其中`advisor_{timestamp}.txt`主要对`compare_result_{timestamp}.csv`中可能存在精度问题（Result为Waring）的API提出定位建议；`compare_result_{timestamp}.csv`主要有如下两种情况：
 
 - configure_hook配置summary_only=True、summary_mode=summary或不配置前面两个参数直接比对pkl文件：
 
@@ -1860,7 +1860,7 @@ pkl文件比对同样生成`compare_result_{timestamp}.csv`和`advisor_{timestam
 
   ![compare_result_pkl_md5.png](./img/compare_result_pkl_md5.png.png)
 
-  上图是对pkl文件中NPU及标杆API的MD5信息进行比对，判断API数据的完整性，文件中记录NPU及标杆API的基本信息和MD5信息，其中需要关注Result列，包含结果：Pass（表示NPU与标杆的MD5值一致，即API数据完整）；Different（表示NPU与标杆的MD5值不一致，即API数据不完整，可以通过NPU_Stack_Info列API调用栈查询该API的详细信息）；Nan（表示MD5信息数据没有匹配上）。
+  上图是对pkl文件中NPU及标杆API的MD5信息进行比对，判断API数据的完整性，文件中记录NPU及标杆API的基本信息和MD5信息，其中需要关注Result列，包含结果：Pass（表示NPU与标杆的MD5值一致，即API数据完整）；Different（表示NPU与标杆的MD5值不一致，即API数据不完全一致，可以通过NPU_Stack_Info列API调用栈查询该API的详细信息）；Nan（表示MD5信息数据没有匹配上）。
 
 ### parse
 
