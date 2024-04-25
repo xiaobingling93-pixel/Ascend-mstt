@@ -31,13 +31,14 @@ except ImportError:
 else:
     is_gpu = False
 
-from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,
-                    CompareException, check_single_rank_folder)
 from atat.core.utils import (print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,
                              print_error_log)
+from atat.core.file_check_util import FileOpen, change_mode, FileCheckConst
 from atat.pytorch.common.utils import get_md5_for_tensor
 from ..dump.utils import check_writable
-from atat.core.file_check_util import FileOpen, change_mode, FileCheckConst
+from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tensor_rank, create_dirs_if_not_exist,
+                    CompareException, check_single_rank_folder)
+
 
 forward_init_status = False
 backward_init_status = False

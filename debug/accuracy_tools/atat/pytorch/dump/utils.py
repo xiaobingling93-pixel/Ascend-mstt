@@ -5,12 +5,13 @@ from pathlib import Path
 import torch
 import torch.distributed as dist
 
-from ..dump import dump
 from atat.core.utils import print_error_log, CompareException, DumpException, Const, get_time, print_info_log, \
     check_mode_valid, check_switch_valid, check_dump_mode_valid, check_summary_only_valid, generate_compare_script, \
     check_file_valid, make_dump_path_if_not_exists, check_path_before_create, check_summary_mode_valid
 from atat.core.file_check_util import FileChecker, FileCheckConst, check_path_length, check_path_pattern_vaild
 from atat.pytorch.common.utils import check_is_npu
+
+from ..dump import dump
 
 dump_count = 0
 range_begin_flag, range_end_flag = False, False
