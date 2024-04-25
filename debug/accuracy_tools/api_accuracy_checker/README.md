@@ -2,7 +2,7 @@
 
 Ascend模型精度预检工具能在昇腾NPU上扫描用户训练模型中所有API，输出精度情况的诊断和分析。工具通过dump模型中所有的API前反向信息；构造相应的API单元测试，将NPU输出与标杆（CPU高精度）比对，从而计算对应的精度指标，该过程称为run_ut；将NPU环境下dump的预检数据拷贝至GPU环境，同样执行run_ut；最后通过新精度标准比对法将NPU和GPU的预检结果进行比对，从而找出NPU中存在精度问题的API。
 
-**新精度标准比对法**：依据新精度标准，对不同的API采取不同的比对算法进行比对（包括绝对阈值法，标杆比对法和二进制一致法），最终给定预检判定结果。
+**新精度标准比对法**：依据新精度标准，对不同的API采取不同的比对算法进行比对（包括绝对阈值法，标杆比对法、二进制一致法和ULP误差比对法），最终给定预检判定结果。
 
 **真实数据模式**：精度预检工具支持随机生成模式和真实数据模式，即在预检dump时可以选择由工具构造随机数进行输入获得dump数据或选择获取真实输入数据进行预检dump操作；随机生成模式执行效率高，可以快速获得结果，但数据精度低，只能大致判断精度问题；真实数据模式执行效率略低于随机生成模式，但是数据精度高，可以准确判断精度问题。
 
@@ -294,28 +294,31 @@ Forward Test Success和Backward Test Success是否通过测试是由`accuracy_ch
 
 ![f07237b1_12631423](img/accuracy_checking_details.png)
 
-| 字段             | 含义                                                         |
-| ---------------- | ------------------------------------------------------------ |
-| API name         | NPU或GPU下的API名称。                                        |
-| Bench Dtype      | 标杆数据的API数据类型。                                      |
-| DEVICE Dtype     | NPU或GPU数据的API数据类型。                                  |
-| Shape            | API的Shape信息。                                             |
-| 余弦相似度       | NPU或GPU数据与标杆数据的余弦相似度。                         |
-| 最大绝对误差     | NPU或GPU数据与标杆数据的最大绝对误差。                       |
-| 双百指标         | 双百精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于百分之一的个数占总元素个数的比例。测试通过标准为相对误差大于百分之一的个数占总元素个数的比例小于百分之一。 |
-| 双千指标         | 双千精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的个数占总元素个数的比例。测试通过标准为相对误差大于千分之一的个数占总元素个数的比例小于千分之一。 |
-| 双万指标         | 双万精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于万分之一的个数占总元素个数的比例。测试通过标准为相对误差大于万分之一的个数占总元素个数的比例小于万分之一。 |
-| 二进制一致错误率 | NPU或GPU数据中每个Tensor精度不一致的数值的数量与Tensor中数值数量的比值。只有数据是builtin类型（bool、int、float、str）、torch.bool和torch的int类型或者在新精度标准中使用二进制一致算法进行比对的API才会展示。 |
-| 误差均衡性       | NPU或GPU数据与标杆数据精度差的上下浮动情况。                 |
-| 均方根误差       | NPU或GPU数据与标杆数据的均方根误差。                         |
-| 小值域错误占比   | NPU或GPU Tensor中与标杆的绝对误差大于错误阈值的小值在小值域（小值的总数量）中的占比。判断为小值以及绝对误差的错误阈值见“**小值域阈值**”。 |
-| 相对误差最大值   | NPU或GPU数据与标杆数据相对误差的最大值。                     |
-| 相对误差平均值   | NPU或GPU数据与标杆数据相对误差的平均值。                     |
-| inf/nan错误率    | NPU与标杆inf/nan计算不一致的元素个数占总元素的个数比例。     |
-| 相对误差错误率   | NPU与标杆的正常值计算相对误差，其大于错误阈值的元素个数占正常值元素个数的比例。 |
-| 绝对误差错误率   | NPU与标杆的小值计算绝对误差，其大于错误阈值的元素个数占小值元素个数的比例。 |
-| Status           | API预检通过状态，pass表示通过测试，error表示未通过，warning表示测试未通过双千或双万精度指标，SKIP表示该API的某个参数的反向不要计算梯度，所以没有任何计算过程，其他信息均为空。 |
-| message          | 提示信息。                                                   |
+| 字段                | 含义                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| API name            | NPU或GPU下的API名称。                                        |
+| Bench Dtype         | 标杆数据的API数据类型。                                      |
+| DEVICE Dtype        | NPU或GPU数据的API数据类型。                                  |
+| Shape               | API的Shape信息。                                             |
+| 余弦相似度          | NPU或GPU数据与标杆数据的余弦相似度。                         |
+| 最大绝对误差        | NPU或GPU数据与标杆数据的最大绝对误差。                       |
+| 双百指标            | 双百精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于百分之一的个数占总元素个数的比例。测试通过标准为相对误差大于百分之一的个数占总元素个数的比例小于百分之一。 |
+| 双千指标            | 双千精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的个数占总元素个数的比例。测试通过标准为相对误差大于千分之一的个数占总元素个数的比例小于千分之一。 |
+| 双万指标            | 双万精度指标。是指NPU或GPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于万分之一的个数占总元素个数的比例。测试通过标准为相对误差大于万分之一的个数占总元素个数的比例小于万分之一。 |
+| 二进制一致错误率    | NPU或GPU数据中每个Tensor精度不一致的数值的数量与Tensor中数值数量的比值。只有数据是builtin类型（bool、int、float、str）、torch.bool和torch的int类型或者在新精度标准中使用二进制一致算法进行比对的API才会展示。 |
+| 误差均衡性          | NPU或GPU数据与标杆数据精度差的上下浮动情况。                 |
+| 均方根误差          | NPU或GPU数据与标杆数据的均方根误差。                         |
+| 小值域错误占比      | NPU或GPU Tensor中与标杆的绝对误差大于错误阈值的小值在小值域（小值的总数量）中的占比。判断为小值以及绝对误差的错误阈值见“**小值域阈值**”。 |
+| 相对误差最大值      | NPU或GPU数据与标杆数据相对误差的最大值。                     |
+| 相对误差平均值      | NPU或GPU数据与标杆数据相对误差的平均值。                     |
+| inf/nan错误率       | NPU与标杆inf/nan计算不一致的元素个数占总元素的个数比例。     |
+| 相对误差错误率      | NPU与标杆的正常值计算相对误差，其大于错误阈值的元素个数占正常值元素个数的比例。 |
+| 绝对误差错误率      | NPU与标杆的小值计算绝对误差，其大于错误阈值的元素个数占小值元素个数的比例。 |
+| ULP误差最大值       | NPU或GPU数据与标杆数据ULP误差的最大值（取绝对值后）。        |
+| ULP误差平均值       | NPU或GPU数据与标杆数据ULP误差的平均值（取绝对值后）。        |
+| ULP误差大于阈值占比 | NPU或GPU数据与标杆数据的ULP误差（取绝对值后）大于阈值（当NPU或GPU数据类型为float16或bfloat16时，阈值为1；当NPU或GPU数据类型为float32时，阈值为32）的元素个数占总元素的个数比例。 |
+| Status              | API预检通过状态，pass表示通过测试，error表示未通过，warning表示测试未通过双千或双万精度指标，SKIP表示该API的某个参数的反向不要计算梯度，所以没有任何计算过程，其他信息均为空。 |
+| message             | 提示信息。                                                   |
 
 ### 小值域阈值
 
@@ -375,7 +378,7 @@ python api_precision_compare.py -npu /home/xxx/npu/accuracy_checking_details_{ti
 | Backward Test Success | 反向API是否通过测试，pass为通过，warning为待观察，error为错误，如果是空白的话代表该API没有反向输出，skip表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
 | Message               | 提示信息。                                                   |
 
-Forward Test Success和Backward Test Success是否通过测试是由`api_precision_compare_details_{timestamp}.csv`中的各个指标判定结果决定的。需要注意的是`api_precision_compare_details_{timestamp}.csv`中可能存在一个API的前向（反向）有多个输出，那么每个输出记录一行，而在`api_precision_compare_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为pass，只要存在一个error则标记error，仅存在waring和pass且不存在error标记waring。
+Forward Test Success和Backward Test Success是否通过测试是由`api_precision_compare_details_{timestamp}.csv`中的各个指标判定结果决定的。需要注意的是`api_precision_compare_details_{timestamp}.csv`中可能存在一个API的前向（反向）有多个输出，那么每个输出记录一行，而在`api_precision_compare_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为pass，只要存在一个error则标记error，仅存在warning和pass且不存在error标记warning。
 
 `api_precision_compare_details_{timestamp}.csv`
 
@@ -402,8 +405,12 @@ Forward Test Success和Backward Test Success是否通过测试是由`api_precisi
 | 绝对误差判定结果         | 绝对误差错误率判定结果，等于0标记为pass，其余情况标记为error。 |
 | 二进制一致错误率         | NPU或GPU数据中每个Tensor精度不一致的数值的数量与Tensor中数值数量的比值。只有数据是builtin类型（bool、int、float、str）、torch.bool和torch的int类型或者在新精度标准中使用二进制一致算法进行比对的API才会展示。二进制一致法指标。 |
 | 二进制一致错误率判定结果 | 二进制一致错误率判定结果，等于0标记为pass，其余情况标记为error。 |
+| ULP误差平均值            | NPU数据与标杆数据ULP误差的平均值（取绝对值后）。ULP误差比对法指标。 |
+| ULP误差大于阈值占比      | NPU数据与标杆数据的ULP误差（取绝对值后）大于阈值（当NPU数据类型为float16或bfloat16时，阈值为1；当NPU数据类型为float32时，阈值为32）的元素个数占总元素的个数比例。ULP误差比对法指标。 |
+| ULP误差大于阈值占比比值  | NPU与CPU的ULP误差大于阈值占比/GPU与CPU的ULP误差大于阈值占比。ULP误差比对法指标。 |
+| ULP误差判定结果          | ULP误差判定结果。<br/>     当NPU或GPU数据类型是float16或bfloat16时，以下两条标准满足其一标记为pass，否则标记为error：<br>          NPU ULP误差大于阈值占比小于0.001；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。<br/>     当NPU或GPU数据类型是float32时，以下三条标准满足其一标记为pass，否则标记为error：<br/>          NPU ULP误差平均值小于64；<br/>          NPU ULP误差大于阈值占比小于0.05；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。 |
 | 比对结果                 | 综合所有指标的最终结果。如果比对指标中有error，则标记为error；有warning，则标记为warning；否则标记为pass。 |
-| 比对算法                 | API使用的比对算法，为标杆比对法、二进制一致法和绝对阈值法中的一种。 |
+| 比对算法                 | API使用的比对算法，为标杆比对法、二进制一致法、绝对阈值法和ULP误差比对法中的一种。 |
 | Message                  | 提示信息。当前提示该API比对结果为error或warning时对应不符合标准的指标。 |
 
 # 溢出解析工具
