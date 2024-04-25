@@ -77,7 +77,7 @@ def deal_detach(arg, to_detach=True):
     return arg.detach() if to_detach else arg
 
 
-def deal_dtype(api_name,arg, raise_dtype=None):
+def deal_dtype(api_name, arg, raise_dtype=None):
     if api_name in hf_32_standard_api and arg.dtype == torch.float32:
         return arg
     if raise_dtype is None or arg.dtype not in Const.RAISE_PRECISION or raise_dtype == arg.dtype:
