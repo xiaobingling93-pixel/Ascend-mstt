@@ -279,6 +279,7 @@ class Comparator:
         message = ""
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
+        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
             if api_name in ThousandthStandardApi:
@@ -333,7 +334,6 @@ class Comparator:
             message += "Max abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
             return CompareConst.PASS, compare_column, message
 
-        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if dtype in [torch.float16, torch.bfloat16]:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
