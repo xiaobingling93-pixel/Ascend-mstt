@@ -410,7 +410,7 @@ Forward Test Success和Backward Test Success是否通过测试是由`api_precisi
 
 针对训练过程中的溢出检测场景（参见[ptdbg_ascend精度工具功能说明](https://gitee.com/ascend/att/tree/master/debug/accuracy_tools/ptdbg_ascend/doc)中的"溢出检测场景"进行溢出检测dump），对于输入正常但输出存在溢出的API，会在训练执行目录下将溢出的API信息按照前向和反向分类，dump并保存为`forward_info_{pid}.json`，前向过程溢出的API可通过该工具对`forward_info_{pid}.json`进行解析，输出溢出API为正常溢出还是非正常溢出，从而帮助用户快速判断。
 
-工具支持PyTorch版本：1.8.1/1.11.0/2.0/2.1/2.2。
+工具支持PyTorch版本：1.11.0/2.0/2.1/2.2。
 
 若溢出检测场景dump结果生成`forward_info_{pid}.json`文件，则使用本工具进行解析。操作步骤如下：
 
