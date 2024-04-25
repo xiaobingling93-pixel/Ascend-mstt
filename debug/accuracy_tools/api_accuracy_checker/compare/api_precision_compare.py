@@ -12,8 +12,8 @@ from api_accuracy_checker.common.utils import print_info_log, print_warn_log, pr
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
-    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
-    ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
+    ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, ThousandthStandardApi, \
+    BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -244,7 +244,9 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             _, api_name, _ = full_api_name.split("*")
             compare_column.api_name = full_api_name_with_direction_status
-            if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
+            if api_name in ThousandthStandardApi:
+                new_status = record_thousandth_threshold_result(compare_column, row_npu)
+            elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or api_name in BinaryStandardApi:
                 new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
             elif api_name in AbsoluteStandardApi:
                 new_status = record_absolute_threshold_result(compare_column, row_npu)
@@ -414,6 +416,23 @@ def record_ulp_compare_result(compare_column, us):
     message = ''
     if compare_column.ulp_err_status == CompareConst.ERROR:
         message += "ERROR: ULP误差不满足标准\n"
+    compare_column.compare_message = message
+    return compare_column.compare_result
+
+
+def check_thousandth_rate(thousandth_rate):
+    return CompareConst.PASS if convert_str_to_float(thousandth_rate) >= 0.999 else CompareConst.ERROR
+
+
+def record_thousandth_threshold_result(compare_column, row_npu):
+    new_status = check_thousandth_rate(row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH])
+    compare_column.rel_err_thousandth = row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
+    compare_column.rel_err_thousandth_status = new_status
+    compare_column.compare_result = new_status
+    compare_column.compare_algorithm = "双千指标法"
+    message = ''
+    if compare_column.rel_err_thousandth_status == CompareConst.ERROR:
+        message += "ERROR: 双千指标不达标\n"
     compare_column.compare_message = message
     return compare_column.compare_result
 

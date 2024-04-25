@@ -124,3 +124,7 @@ ULPStandard:
   - mv
   - smm
   - sspaddmm
+
+ThousandthStandard:
+  - conv1d
+  - conv2d
