@@ -8,7 +8,7 @@ from rich.console import Console
 from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
     precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, \
-    apis_threshold
+    ThousandthStandardApi, apis_threshold
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
@@ -281,7 +281,10 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in BinaryStandardApi:
+            if api_name in ThousandthStandardApi:
+                thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+                compare_column.rel_err_thousandth = thousand_res
+            elif api_name in BinaryStandardApi:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
                 compare_column.error_rate = err_rate
             elif api_name in AbsoluteStandardApi:
