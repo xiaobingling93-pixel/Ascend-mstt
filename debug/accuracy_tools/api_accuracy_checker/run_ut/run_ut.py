@@ -206,11 +206,11 @@ def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
             UtAPIInfo(api_full_name + '.forward.input', element)
-        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
-        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_out)
+        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_output)
+        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_output)
         UtAPIInfo(api_full_name + '.backward.input', data_info.grad_in)
-        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
-        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
+        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad)
+        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
