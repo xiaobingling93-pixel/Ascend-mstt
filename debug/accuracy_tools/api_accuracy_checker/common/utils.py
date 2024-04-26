@@ -24,10 +24,12 @@ import subprocess
 import sys
 import time
 import csv
+import logging
 from datetime import datetime, timezone
 
 import numpy as np
 import torch
+import torch.distributed as dist
 
 try:
     import torch_npu
@@ -649,3 +651,42 @@ def get_full_data_path(data_path, real_data_path):
         return data_path
     full_data_path = os.path.join(real_data_path, data_path)
     return os.path.realpath(full_data_path)
+
+
+def get_tensor_rank(in_feat, out_feat):
+    if dist.is_initialized():
+        return dist.get_rank()
+
+    def get_tensor_rank_single(x):
+        if isinstance(x, (list, tuple)):
+            if len(x) > 0:
+                return get_tensor_rank_single(x[0])
+            return None
+        elif isinstance(x, torch.Tensor):
+            device = x.device
+            if device.type == 'cpu':
+                return None
+            else:
+                return device.index
+        return None
+
+    in_rank = get_tensor_rank_single(in_feat)
+    if in_rank is not None:
+        return in_rank
+    out_rank = get_tensor_rank_single(out_feat)
+    if out_rank is not None:
+        return out_rank
+    return None
+
+
+def _create_logger(level=logging.INFO):
+    logger_ = logging.getLogger()
+    logger_.setLevel(level)
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+    logger_.addHandler(ch)
+    return logger_
+
+
+log_level = logging.DEBUG if os.environ.get("API_ACCUCARY_CHECK_LOG_LEVEL") == 1 else logging.INFO
+logger = _create_logger(log_level)

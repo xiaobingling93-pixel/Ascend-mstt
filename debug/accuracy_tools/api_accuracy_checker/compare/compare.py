@@ -1,6 +1,8 @@
 # 进行比对及结果展示
 import os
 import csv
+from collections import namedtuple
+
 import torch
 import numpy as np
 from rich.table import Table
@@ -18,6 +20,10 @@ from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
+ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
+                                       'fwd_compare_alg_results', 'bwd_compare_alg_results', 'rank'])
+
+
 class Comparator:
     # consts for result csv
     COLUMN_API_NAME = "API name"
@@ -26,9 +32,17 @@ class Comparator:
     COLUMN_STACK_INFO = "Traceback callstack info"
 
     def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, stack_info_json_path=None):
-        self.save_path = result_csv_path
-        self.detail_save_path = details_csv_path
-        if not is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
+        self.save_path_str = result_csv_path
+        self.detail_save_path_str = details_csv_path
+        self.save_path_list = [result_csv_path]
+        self.detail_save_path_list = [details_csv_path]
+        if msCheckerConfig.is_online:
+            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
+            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
+            self.save_path_list = [self.save_path_str.format(rank) for rank in msCheckerConfig.rank_list]
+            self.detail_save_path_list = [self.detail_save_path_str.format(rank) for rank in msCheckerConfig.rank_list]
+
+        if not is_continue_run_ut:
             self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
@@ -36,12 +50,18 @@ class Comparator:
             self.stack_info = None
 
         self.test_result_cnt = {
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-            "total_num": 0, "forward_or_backward_fail_num": 0
+            "success_num": 0, "warning_num": 0, "error_num": 0,
+            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
+            "total_num": 0, "total_skip_num": 0
         }
 
+    @staticmethod
+    def get_path_from_rank(rank, path_list, path_pattern):
+        return path_list[-1] if len(path_list) == 1 else path_pattern.format(rank)
+
     def print_pretest_result(self):
-        self.get_statistics_from_result_csv()
+        for save_path in self.save_path_list:
+            self.get_statistics_from_result_csv(save_path)
         total_tests = self.test_result_cnt.get("total_num", 0)
         if total_tests != 0:
             passing_rate = "{:.2%}".format(self.test_result_cnt.get("success_num", 0) / total_tests)
@@ -74,17 +94,12 @@ class Comparator:
         console.print(table_total)
         console.print(table_detail)
 
-    def get_statistics_from_result_csv(self):
+    def get_statistics_from_result_csv(self, save_path):
         checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.SPACE, CompareConst.SKIP, "skip"]
-        self.test_result_cnt = {
-            "success_num": 0, "warning_num": 0, "error_num": 0,
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
-            "total_num": 0, "total_skip_num": 0
-        }
-        with FileOpen(self.save_path, 'r') as file:
+        with FileOpen(save_path, 'r') as file:
             reader = csv.reader(file)
             result_csv_rows = [row for row in reader]
-        result_csv_name = os.path.basename(self.save_path)
+        result_csv_name = os.path.basename(save_path)
         for item in result_csv_rows[1:]:
             if not isinstance(item, list) or len(item) < 3:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
@@ -115,9 +130,11 @@ class Comparator:
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, 
                               self.COLUMN_BACKWARD_SUCCESS, "Message"]]
-        write_csv(summary_test_rows, self.save_path)
-
-        write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
+        for save_path, detail_save_path in zip(self.save_path_list, self.detail_save_path_list):
+            if not os.path.exists(save_path):
+                write_csv(summary_test_rows, save_path)
+            if not os.path.exists(detail_save_path):
+                write_csv(DETAIL_TEST_ROWS, detail_save_path)
 
     def write_summary_csv(self, test_result):
         test_rows = []
@@ -132,7 +149,8 @@ class Comparator:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
         test_rows.append(df_row)
-        write_csv(test_rows, self.save_path)
+        save_path = self.get_path_from_rank(test_result[-1], self.save_path_list, self.save_path_str)
+        write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
         test_rows = []
@@ -153,22 +171,25 @@ class Comparator:
                                 if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
 
-        write_csv(test_rows, self.detail_save_path)
+        detail_save_path = self.get_path_from_rank(test_result[-1],
+                                                   self.detail_save_path_list,
+                                                   self.detail_save_path_str)
+        write_csv(test_rows, detail_save_path)
 
-    def record_results(self, *args):
+    def record_results(self, args):
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, data_info):
         _, api_name, _ = full_api_name.split("*")
-        bench_output = data_info.bench_output
-        device_output = data_info.device_output
-        bench_grad = data_info.bench_grad
-        device_grad = data_info.device_grad
+        bench_output, device_output = data_info.bench_out, data_info.device_out
+        bench_grad, device_grad = data_info.bench_grad_out, data_info.device_grad_out
         backward_message = data_info.backward_message
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
+        # forward result compare
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
-        if not (bench_grad and device_grad):
+        # backward result compare
+        if bench_grad is None or device_grad is None:
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
             if "dropout" in full_api_name:
@@ -177,10 +198,17 @@ class Comparator:
                 bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, device_grad)
         if backward_message:
             backward_column = CompareColumn()
-            bwd_compare_alg_results = backward_column.to_column_value(CompareConst.SKIP, backward_message)
-            self.record_results(full_api_name, fwd_success_status, CompareConst.SKIP, fwd_compare_alg_results, [bwd_compare_alg_results])
+            bwd_compare_alg_results = [backward_column.to_column_value(CompareConst.SKIP, backward_message)]
         else:
-            self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
+            bwd_success_status = bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE
+
+        result_info = ResultInfo(full_api_name,
+                                 fwd_success_status,
+                                 bwd_success_status,
+                                 fwd_compare_alg_results,
+                                 bwd_compare_alg_results,
+                                 data_info.rank)
+        self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
             or bwd_success_status == CompareConst.SPACE
 

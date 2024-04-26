@@ -6,4 +6,9 @@ white_list: []
 error_data_path: './'
 jit_compile: True
 precision: 14
+is_online: False
+is_golden: True
+host: "127.0.0.1"
+port: 30001
+rank_list: [0]
  

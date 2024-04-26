@@ -86,8 +86,8 @@ class TestCompare(unittest.TestCase):
     def test_record_results(self):
         args = ('Functional*conv2d*0', False, 'N/A', [['torch.float64', 'torch.float32', (32, 64, 112, 112), 1.0,
                                                        0.012798667686, 'N/A', 0.81631212311, 0.159979121213, 'N/A',
-                                                       'error', '\n']], None)
-        self.compare.record_results(*args)
+                                                       'error', '\n']], None, 0)
+        self.compare.record_results(args)
         with open(self.details_csv_path, 'r') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
