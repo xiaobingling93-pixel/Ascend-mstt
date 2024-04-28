@@ -280,12 +280,12 @@ class Comparator:
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
-        if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
-            both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in ThousandthStandardApi:
+        if api_name in ThousandthStandardApi:
                 thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
                 compare_column.rel_err_thousandth = thousand_res
-            elif api_name in BinaryStandardApi:
+        if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
+            both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
+            if api_name in BinaryStandardApi:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
                 compare_column.error_rate = err_rate
             elif api_name in AbsoluteStandardApi:

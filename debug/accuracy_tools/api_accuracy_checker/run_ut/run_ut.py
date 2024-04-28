@@ -77,7 +77,16 @@ def deal_detach(arg, to_detach=True):
     return arg.detach() if to_detach else arg
 
 
-def deal_dtype(api_name, arg, raise_dtype=None):
+def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
+    '''
+    将标杆数据的dtype转换为raise_dtype
+    输入：
+        api_name：api名称
+        arg：标杆输入
+        raise_dtype：需要转换的dtype
+    输出： 
+        arg: 转换dtype的标杆输入
+    '''
     if api_name in hf_32_standard_api and arg.dtype == torch.float32:
         return arg
     if raise_dtype is None or arg.dtype not in Const.RAISE_PRECISION or raise_dtype == arg.dtype:
@@ -114,13 +123,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(deal_dtype(api_name, arg_in.clone(), raise_dtype), to_detach).requires_grad_()
+                arg_in = deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype), to_detach).requires_grad_()
                 temp_arg_in = arg_in * 1
                 arg_in = temp_arg_in.type_as(arg_in)
                 arg_in.retain_grad()
                 return arg_in
             else:
-                return deal_detach(deal_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
+                return deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
         else:
             return arg_in
 
