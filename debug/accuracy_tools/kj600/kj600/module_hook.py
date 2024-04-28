@@ -12,6 +12,7 @@ from kj600.features import square_sum
 from kj600.module_spec_verifier import get_config, validate_config_spec
 from kj600.optimizer_collect import MixPrecsionOptimizerMon, print_rank_0
 from kj600.features import eff_rank
+from kj600.visualizer import HeatmapVisualizer
 
 
 def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):
@@ -50,6 +51,8 @@ class OptimizerContext:
         self.param_exp_avg_norm = defaultdict(float)
         self.param_exp_avg_sq_norm = defaultdict(float)
         self.param_effective_rank = defaultdict(float)
+        self.param_adam_update = defaultdict()
+        self.param_adam_ratio = defaultdict()
 
 
 class TrainerMon:
@@ -65,6 +68,7 @@ class TrainerMon:
         self.params_have_main_grad = True
         self.config = get_config(config_file_path)
         self.module_rank_list = [int(rank) for rank in self.config.get("module_ranks", "").split(',') if rank.strip()]
+        self.ur_distribution = self.config.get('ur_distribution', False)
 
         self.optimizer_hooked = False
         output_base_dir = os.getenv('KJ600_OUTPUT_DIR', './kj600_output')
@@ -75,6 +79,9 @@ class TrainerMon:
                 self.summary_writer = SummaryWriter(os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}"))
         else:
             self.summary_writer = SummaryWriter(os.path.join(output_base_dir, f"{cur_time}-{unique_id}"))
+        # A HeatmapVisualizer instance is associated with an image
+        self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
+        self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.micro_batch_number = 0
 
         self.param_name_list = []
@@ -190,8 +197,8 @@ class TrainerMon:
                 if "params_effrank" in self.config and name in self.config["params_effrank"]:
                     context.param_effective_rank[name] = eff_rank(param.detach())
 
-            context.param_exp_avg_norm, context.param_exp_avg_sq_norm = self.mix_precision_optimizer_mon.fetch_mv(
-                optimizer, self.param2name)
+            context.param_exp_avg_norm, context.param_exp_avg_sq_norm, context.param_adam_update, context.param_adam_ratio = self.mix_precision_optimizer_mon.fetch_mv(
+                optimizer, self.param2name, self.update_heatmap_visualizer, self.ratio_heatmap_visualizer, self.ur_distribution)
             return
         
         def optimizer_post_step_hook(optimizer, args, kwargs):
@@ -224,7 +231,11 @@ class TrainerMon:
                 self.summary_writer.add_scalar(get_summary_writer_tag_name(param_name, 'exp_avg_norm', rank), exp_avg_norm.item(), context.step)
             for param_name, exp_avg_sq_norm in context.param_exp_avg_sq_norm.items():
                 self.summary_writer.add_scalar(get_summary_writer_tag_name(param_name, 'exp_avg_sq_norm', rank), exp_avg_sq_norm.item(), context.step)
-
+            if self.ur_distribution:
+                for param_name, _ in context.param_adam_update.items():
+                    self.update_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
+                for param_name, _ in context.param_adam_ratio.items():
+                    self.ratio_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
             context.step += 1
 
             return
