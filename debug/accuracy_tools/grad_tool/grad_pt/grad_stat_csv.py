@@ -1,17 +1,17 @@
 import hashlib
 import torch
-from grad_tool.level_adapter import Level
+from grad_tool.grad_pt.level_adapter import Level
 
 
 class GradExtremeOps:
     @staticmethod
     def tensor_max(tensor):
         return torch._C._VariableFunctionsClass.max(tensor).cpu().detach().float().numpy().tolist()
-    
+
     @staticmethod
     def tensor_min(tensor):
         return torch._C._VariableFunctionsClass.min(tensor).cpu().detach().float().numpy().tolist()
-    
+
     @staticmethod
     def tensor_norm(tensor):
         return torch._C._VariableFunctionsClass.norm(tensor).cpu().detach().float().numpy().tolist()
@@ -29,7 +29,7 @@ class GradStatOps:
     @staticmethod
     def md5_header(**kwargs):
         return ["MD5"]
-    
+
     @staticmethod
     def intervals_header(**kwargs):
         level: Level = kwargs.get("level")
@@ -43,7 +43,7 @@ class GradStatOps:
     @staticmethod
     def shape_header(**kwargs):
         return ["shape"]
-    
+
     @staticmethod
     def md5_content(**kwargs):
         grad = kwargs.get("grad")
@@ -62,7 +62,7 @@ class GradStatOps:
     def extremes_content(**kwargs):
         grad = kwargs.get("grad")
         return [f(grad) for f in GradExtremes.extremes.values()]
-    
+
     @staticmethod
     def shape_content(**kwargs):
         grad = kwargs.get("grad")
@@ -88,7 +88,7 @@ class GradStatCsv:
                 "content": GradStatOps.shape_content
             },
         }
-   
+
     @staticmethod
     def generate_csv_header(**kwargs):
         header = ["param_name"]
@@ -102,4 +102,3 @@ class GradStatCsv:
         for func in GradStatCsv.CSV.values():
             line.extend(func["content"](**kwargs))
         return line
-    
