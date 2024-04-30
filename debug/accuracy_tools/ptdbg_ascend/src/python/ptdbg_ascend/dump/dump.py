@@ -106,6 +106,12 @@ def get_not_float_tensor_info(data):
         tensor_max = item
         tensor_min = item
         tensor_mean = item
+    elif torch.is_complex(data):
+        data_np = data.detach().cpu().numpy()
+        data_abs = np.abs(data_np)
+        tensor_max = np.max(data_abs).item()
+        tensor_min = np.min(data_abs).item()
+        tensor_mean = np.mean(data_abs).item()
     else:
         tensor_max = torch._C._VariableFunctionsClass.max(data).float().item()
         tensor_min = torch._C._VariableFunctionsClass.min(data).float().item()
