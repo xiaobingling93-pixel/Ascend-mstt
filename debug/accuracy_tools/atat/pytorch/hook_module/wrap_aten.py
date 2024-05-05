@@ -20,9 +20,9 @@ import torch
 
 import yaml
 
+from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
 from ..common.utils import torch_device_guard
-from atat.core.file_check_util import FileOpen
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))

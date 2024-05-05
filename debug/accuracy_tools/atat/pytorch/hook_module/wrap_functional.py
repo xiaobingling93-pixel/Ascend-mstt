@@ -20,10 +20,10 @@ import os
 import torch
 import yaml
 
-from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard
 from atat.core.utils import print_info_log
 from atat.core.file_check_util import FileOpen
+from .hook_module import HOOKModule
+from ..common.utils import torch_device_guard
 
 
 def remove_dropout():

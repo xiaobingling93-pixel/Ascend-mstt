@@ -20,9 +20,9 @@ import torch
 import torch_npu
 import yaml
 
+from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
 from ..common.utils import torch_device_guard, torch_without_guard_version
-from atat.core.file_check_util import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")

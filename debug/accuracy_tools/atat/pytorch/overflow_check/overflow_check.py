@@ -10,13 +10,13 @@ except ImportError:
 else:
     is_gpu = False
 
+from atat.core.file_check_util import FileCheckConst
 from atat.core.utils import print_warn_log, get_time, print_info_log
 from ..dump.dump import forward_init_status, forward_acl_dump
 from .utils import OverFlowUtil, dump_overflow, check_overflow_npu, clear_overflow_npu
 from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist, check_single_rank_folder
 from .info_dump import write_api_info_json, ForwardAPIInfo, BackwardAPIInfo
 from ..dump import dump
-from atat.core.file_check_util import FileCheckConst
 
 backward_init_status = False
 api_overflow = []

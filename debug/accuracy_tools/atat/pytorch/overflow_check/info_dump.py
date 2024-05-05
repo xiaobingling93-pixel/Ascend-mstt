@@ -7,9 +7,9 @@ import json
 import numpy as np
 import torch
 
-from ..common.utils import print_error_log
-from atat.core.utils import get_time
 from atat.core.file_check_util import FileOpen, FileCheckConst, change_mode
+from atat.core.utils import get_time
+from ..common.utils import print_error_log
 
 
 special_torch_object = ["memory_format"]

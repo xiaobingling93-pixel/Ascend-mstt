@@ -8,8 +8,8 @@ except ImportError:
 else:
     is_gpu = False
 
-from ..common.utils import Const
 from atat.core.utils import check_switch_valid, check_inplace_op, OverflowConst
+from ..common.utils import Const
 from ..dump.dump import dump_stack_info, get_scalar_data_info, dump_data_by_rank_count, \
     get_not_float_tensor_info, get_float_tensor_info
 from ..dump.utils import DumpUtil, make_dump_data_dir
