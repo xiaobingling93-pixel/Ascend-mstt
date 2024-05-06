@@ -1,7 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 import torch
-from grad_tool.utils import print_info_log
+from grad_tool.common.utils import print_info_log
 
 
 class LevelOps:
