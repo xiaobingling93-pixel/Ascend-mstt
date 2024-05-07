@@ -49,6 +49,9 @@ class PtGradientMonitor(BaseMonitor):
                 if not data_in_list_target(param_name, self._param_list):
                     continue
                 grad = param.main_grad if hasattr(param, "main_grad") else param.grad
+                if grad is None:
+                    print_info_log(f"grad is None: {param_name}")
+                    continue
                 grad_info = GradStatCsv.generate_csv_line(
                     level=self._level_adp, 
                     param_name=param_name, 
