@@ -116,9 +116,11 @@ ULPStandard:
   - addmm_
   - baddbmm
   - baddbmm_
+  - bilinear
   - bmm
   - chain_matmul
   - hspmm
+  - linear
   - matmul
   - mm
   - mv
