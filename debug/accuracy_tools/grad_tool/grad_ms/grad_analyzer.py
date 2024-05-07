@@ -53,7 +53,7 @@ class GradAnalyzer:
 
     @staticmethod
     def calculate_level0(dump_step: Parameter, grad: ms.Tensor):
-        is_bf16 = grad.dtype
+        is_bf16 = grad.dtype == ms.bfloat16
         max_val = grad.max().float() if is_bf16 else grad.max()
         min_val = grad.min().float() if is_bf16 else grad.min()
         norm_val = grad.norm().float() if is_bf16 else grad.norm()

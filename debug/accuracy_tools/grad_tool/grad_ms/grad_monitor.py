@@ -14,4 +14,3 @@ class MsGradientMonitor(BaseMonitor):
 
     def monitor(self, module):
         hook_optimizer(module)
-        csv_generator.start()

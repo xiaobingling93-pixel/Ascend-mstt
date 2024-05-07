@@ -5,7 +5,7 @@
 - 将模型的梯度数据导出。这种功能可以将模型权重的梯度值以统计量的形式采集出来，用以分析问题。
 - 将两份梯度数据进行相似度对比。这种功能可以发现训练过程中问题出现的step，以及抓取反向过程中的问题。
 
-工具支持PyTorch版本：2.0/2.1/2.2。
+工具支持PyTorch版本：2.0/2.1/2.2；支持MindSpore版本：r2.3。
 
 ## 工具特性
 
@@ -30,7 +30,7 @@
 
 ### 梯度数据导出
 
-1. 创建配置文件config.yaml，样例代码如下：
+1. 创建配置文件config.yaml，PyTorch框架样例代码如下：
 
    ```python
    level: L2
@@ -40,6 +40,7 @@
    bounds: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]
    output_path: /home/pxp1/code/train_test_msft_multi/test/npu_grad_output4
    ```
+   > step在MindSpore框架下，要求必须是range列表或者不指定
 
    **参数说明**
 
@@ -48,7 +49,7 @@
    | level                  | Level级别，可取值：L0、L1、L2、L3。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | 是       |
    | param_list             | 填写需要导出的梯度数据的变量名称。不指定或列表为空就表示导出所有参数的梯度数据。数据类型：List[str]。 | 否       |
    | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。 | 否       |
-   | step                   | 指定需要导出数据的step。不指定或列表为空就表示导出所有step的数据。数据类型：List[int]。 | 否 |
+   | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。 | 否 |
    | bounds                 | 用来划分区间以统计值分布。需要保证由数据小到大排列。数据类型：List。 | 否  |
    | output_path            | 输出目录。如果不存在就会创建一个新目录。数据类型：str。 | 是 |
 
@@ -62,6 +63,7 @@
    | L3   | ("param_name", "MD5", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
    intervals就是根据值分布划分出的区间。
+   > MindSpore梯度监控没有MD5值，其余与PyTorch一致
    
    **方向数据解释**
    
@@ -74,24 +76,30 @@
 
 2. 在训练流程执行之前传入config.yaml的路径实例化一个GradientDumper对象。示例代码如下：
 
+- PyTorch框架
       ```python
       from grad_tool.grad_monitor import GradientMonitor
       gm = GradientMonitor("config_path")
       ```
-
-
-3. 插入代码监控模型，有两种方式，选择其一即可：
-
-   方式一（推荐）：在训练流程中，反向执行之后梯度清零之前的位置，调用gm.save_grad并将模型作为参数传入
-
+- MindSpore框架
       ```python
-      gm.save_grad(model)
+      from grad_tool.grad_monitor import GradientMonitor
+      gm = GradientMonitor("config_path", framework="MindSpore")
       ```
 
-   方式二：在训练开始前，调用gm.monitor并将模型作为参数传入。这种方式目前不稳定。
+3. 插入代码监控模型：
+
+- PyTorch框架
+   在训练开始前，调用gm.monitor并将模型作为参数传入。
 
       ```python
       gm.monitor(model)
+      ```
+- MindSpore框架
+   在训练开始前，调用gm.monitor并将优化器作为参数传入。
+
+      ```python
+      gm.monitor(optimizer)
       ```
 
 ### 输出结果
@@ -102,13 +110,13 @@
       ├── rank_{rank_id}
       │        ├── grad_summary_{step}.csv
       │        ├── step_{step}
-      │        │        ├── {param_name}.pt
+      │        │        ├── {param_name}.pt(npy)
 ```
 + {timestamp}：梯度工具导出数据的时候会在output_path下生成一个时间戳目录，然后在这个时间戳目录下输出结果。
 + rank_{rank_id}：在分布式场景下，会记录卡的rank_id。非分布式场景下，如果是CPU则记录进程号，如果是CPU或GPU则记录卡号
 + grad_summary_{step}.csv：会分step记录每一步的梯度数据统计值。
 + step_{step}：这个目录下会存放该step的梯度的方向数据。
-+ {param_name}.pt：模型参数的梯度方向数据。
++ {param_name}.pt(npy)：模型参数的梯度方向数据，PyTorch保存的是pt文件，MindSpore是npy文件。
 
 **grad_summary_{step}.csv**
 
@@ -190,24 +198,15 @@
 ## 公开接口
 
 ```python
-GradientMonitor.monitor(model)
+GradientMonitor.monitor(module)
 ```
 
 **参数说明**
 
 | 参数  | 说明                 | 是否必选 |
 | ----- | -------------------- | -------- |
-| model | 设置需要监测的模型。 | 是       |
+| module | 设置需要监测的模型或者优化器。 | 是       |
 
-```python
-GradientMonitor.save_grad(model)
-```
-
-**参数说明**
-
-| 参数  | 说明                 | 是否必选 |
-| ----- | -------------------- | -------- |
-| model | 设置需要监测的模型。 | 是       |
 
 ```python
 GradientMonitor.__init__(config_path)
