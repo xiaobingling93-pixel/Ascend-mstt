@@ -206,9 +206,6 @@ class TrainerMon:
                     context.param_effective_rank[name] = eff_rank(param.detach())
 
                 if self.mg_direction: 
-                    if context.step == 0:
-                        self.summary_writer.add_scalar(get_summary_writer_tag_name(name, 'adam_mg_direction', rank), 1, context.step)
-                        continue
                     if name in context.param_exp_avg_sign:
                         g_sign = grad_for_norm.detach().sign()
                         m_sign = context.param_exp_avg_sign.pop(name)
@@ -255,8 +252,8 @@ class TrainerMon:
                 for param_name, _ in context.param_adam_ratio.items():
                     self.ratio_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
             if self.mg_direction: 
-                for param_name, mg_direction in context.param_gm_direction.items():
-                    self.summary_writer.add_scalar(get_summary_writer_tag_name(param_name, 'adam_mg_direction', rank), mg_direction.item(), context.step)
+                for param_name, mg_direction in context.param_mg_direction.items():
+                    self.summary_writer.add_scalar(get_summary_writer_tag_name(param_name, 'adam_mg_direction', rank), mg_direction, context.step)
             context.step += 1
 
             return
