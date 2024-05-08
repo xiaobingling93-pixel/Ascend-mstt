@@ -64,6 +64,8 @@ pip install -e .
 
 "ur_distribution": 可选字段，若为true则会统计adam优化器的update和ratio的数值分布，并展示在heatmap里，默认为false。
 
+"mg_direction": 可选字段，若为true则会统计adam优化器的动量与当前梯度方向一致的参数比例。
+
 下面给出transformer架构模型中常见的module的前向计算的输入输出和反向计算输入张量的梯度和输出张量的梯度格式，以供参考：
 
 | module                                                       | input    | output   | input_grad | output_grad |
