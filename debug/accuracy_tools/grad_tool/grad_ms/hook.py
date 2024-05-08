@@ -13,6 +13,7 @@ from grad_tool.common.constant import GradConst
 from grad_tool.common.utils import print_warn_log
 from grad_tool.grad_ms.global_context import grad_context
 from grad_tool.grad_ms.grad_analyzer import GradAnalyzer, get_rank_id
+from grad_tool.grad_ms.grad_analyzer import csv_generator
 
 
 def hook_optimizer(opt: Optimizer):
@@ -47,3 +48,4 @@ def hook_optimizer(opt: Optimizer):
     if rank_list is None or rank_id in rank_list:
         opt.dump_step = Parameter(initializer(0, [1], ms.int32), name="dump_step")
         opt.construct = new_construct.__get__(opt, type(opt))
+        csv_generator.start()
