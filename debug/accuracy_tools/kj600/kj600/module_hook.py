@@ -48,7 +48,9 @@ class OptimizerContext:
     def __init__(self) -> None:
         self.step = 0
         self.param_gnorm = defaultdict(float)
+        self.param_gsign = defaultdict(int)
         self.param_exp_avg_norm = defaultdict(float)
+        self.param_exp_avg_sign = defaultdict(int)
         self.param_exp_avg_sq_norm = defaultdict(float)
         self.param_effective_rank = defaultdict(float)
         self.param_adam_update = defaultdict()
@@ -69,6 +71,7 @@ class TrainerMon:
         self.config = get_config(config_file_path)
         self.module_rank_list = [int(rank) for rank in self.config.get("module_ranks", "").split(',') if rank.strip()]
         self.ur_distribution = self.config.get('ur_distribution', False)
+        self.mg_direction = self.config.get('mg_direction', False)
 
         self.optimizer_hooked = False
         output_base_dir = os.getenv('KJ600_OUTPUT_DIR', './kj600_output')
@@ -137,7 +140,7 @@ class TrainerMon:
                 context.verified = True
             if not context.ignore_in:
                 cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
-                cared_input_grad_cal_result = square_sum(cared_input_grad)
+                cared_input_grad_cal_result = square_sum(cared_input_grad) if cared_input_grad is not None else torch.tensor(0.)
             else:
                 cared_input_grad_cal_result = None
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
@@ -191,14 +194,26 @@ class TrainerMon:
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
+            rank = dist.get_rank() if dist.is_initialized() else None
+
+            context.param_exp_avg_norm, context.param_exp_avg_sign, context.param_exp_avg_sq_norm, context.param_adam_update, context.param_adam_ratio = self.mix_precision_optimizer_mon.fetch_mv(
+                optimizer, self.param2name, self.update_heatmap_visualizer, self.ratio_heatmap_visualizer, self.ur_distribution, self.mg_direction)
+            
             for param, name in self.param2name.items():
                 grad_for_norm = param.main_grad if self.params_have_main_grad else param.grad
                 context.param_gnorm[name] = grad_for_norm.detach().norm()
                 if "params_effrank" in self.config and name in self.config["params_effrank"]:
                     context.param_effective_rank[name] = eff_rank(param.detach())
 
-            context.param_exp_avg_norm, context.param_exp_avg_sq_norm, context.param_adam_update, context.param_adam_ratio = self.mix_precision_optimizer_mon.fetch_mv(
-                optimizer, self.param2name, self.update_heatmap_visualizer, self.ratio_heatmap_visualizer, self.ur_distribution)
+                if self.mg_direction: 
+                    if context.step == 0:
+                        self.summary_writer.add_scalar(get_summary_writer_tag_name(name, 'adam_mg_direction', rank), 1, context.step)
+                        continue
+                    g_sign = grad_for_norm.detach().sign()
+                    m_sign = context.param_exp_avg_sign[name]
+                    same_direction_ratio  = ((m_sign * g_sign).sum().item()/m_sign.numel() + 1)/2
+                    self.summary_writer.add_scalar(get_summary_writer_tag_name(name, 'adam_mg_direction', rank), same_direction_ratio, context.step)
+
             return
         
         def optimizer_post_step_hook(optimizer, args, kwargs):
