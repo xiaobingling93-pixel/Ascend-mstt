@@ -48,9 +48,9 @@ class OptimizerContext:
     def __init__(self) -> None:
         self.step = 0
         self.param_gnorm = defaultdict(float)
-        self.param_gsign = defaultdict(int)
         self.param_exp_avg_norm = defaultdict(float)
         self.param_exp_avg_sign = defaultdict(int)
+        self.param_mg_direction = defaultdict(float)
         self.param_exp_avg_sq_norm = defaultdict(float)
         self.param_effective_rank = defaultdict(float)
         self.param_adam_update = defaultdict()
@@ -209,11 +209,14 @@ class TrainerMon:
                     if context.step == 0:
                         self.summary_writer.add_scalar(get_summary_writer_tag_name(name, 'adam_mg_direction', rank), 1, context.step)
                         continue
-                    g_sign = grad_for_norm.detach().sign()
-                    m_sign = context.param_exp_avg_sign[name]
-                    same_direction_ratio  = ((m_sign * g_sign).sum().item()/m_sign.numel() + 1)/2
-                    self.summary_writer.add_scalar(get_summary_writer_tag_name(name, 'adam_mg_direction', rank), same_direction_ratio, context.step)
-
+                    if name in context.param_exp_avg_sign:
+                        g_sign = grad_for_norm.detach().sign()
+                        m_sign = context.param_exp_avg_sign.pop(name)
+                        same_direction_ratio  = ((m_sign * g_sign).sum().item()/m_sign.numel() + 1)/2
+                    else:
+                        same_direction_ratio = 1
+                    context.param_mg_direction[name] = same_direction_ratio
+                    # 
             return
         
         def optimizer_post_step_hook(optimizer, args, kwargs):
@@ -251,6 +254,9 @@ class TrainerMon:
                     self.update_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
                 for param_name, _ in context.param_adam_ratio.items():
                     self.ratio_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
+            if self.mg_direction: 
+                for param_name, mg_direction in context.param_gm_direction.items():
+                    self.summary_writer.add_scalar(get_summary_writer_tag_name(param_name, 'adam_mg_direction', rank), mg_direction.item(), context.step)
             context.step += 1
 
             return
