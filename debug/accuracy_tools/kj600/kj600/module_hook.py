@@ -194,7 +194,6 @@ class TrainerMon:
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
-            rank = dist.get_rank() if dist.is_initialized() else None
 
             context.param_exp_avg_norm, context.param_exp_avg_sign, context.param_exp_avg_sq_norm, context.param_adam_update, context.param_adam_ratio = self.mix_precision_optimizer_mon.fetch_mv(
                 optimizer, self.param2name, self.update_heatmap_visualizer, self.ratio_heatmap_visualizer, self.ur_distribution, self.mg_direction)
@@ -213,7 +212,7 @@ class TrainerMon:
                     else:
                         same_direction_ratio = 1
                     context.param_mg_direction[name] = same_direction_ratio
-                    # 
+
             return
         
         def optimizer_post_step_hook(optimizer, args, kwargs):
