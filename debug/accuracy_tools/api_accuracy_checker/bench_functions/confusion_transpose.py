@@ -8,7 +8,7 @@ def npu_confusion_transpose(data, perm, shape, transpose_first):
         output = data.permute(*perm).contiguous().view(shape)
     else:
         output = data.view(shape).permute(*perm)
-    return output
+    return output.cpu()
 
 
 @npu_custom_grad_functions
@@ -22,4 +22,4 @@ def npu_confusion_transpose_backward(grad, perm, shape, transpose_first):
         result = grad.permute(*perm_cal).reshape(shape_cal)
     else:
         result = grad.reshape(shape_cal).permute(*perm_cal)
-    return result
+    return result.cpu()

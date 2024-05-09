@@ -11,7 +11,7 @@ def npu_scaled_masked_softmax(x, mask, scale, fixed_triu_mask):
     x = x - torch.max(x, dim=-1, keepdims=True)[0]
     x = torch.exp(x.float())
     y = torch.div(x, torch.sum(x, dim=-1, keepdims=True))
-    return y.to(dtype)
+    return y.to(dtype).cpu()
 
 
 @npu_custom_grad_functions
@@ -26,4 +26,4 @@ def npu_scaled_masked_softmax_backward(y_grad, y, mask, scale, fixed_triu_mask):
     x_grad = x_grad * y
     x_grad = x_grad * scale
     x_grad = x_grad.masked_fill(mask, value=0)
-    return x_grad.to(dtype)
+    return x_grad.to(dtype).cpu()

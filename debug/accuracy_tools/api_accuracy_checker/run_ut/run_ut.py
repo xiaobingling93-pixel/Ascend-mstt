@@ -316,6 +316,9 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
 
     device_out = exec_api(api_type, api_name, args, kwargs)
     device_out = device_out.cpu() if hasattr(device_out, "cpu") else device_out
+    if "torch.return_types" in str(type(device_out)):
+        device_out = tuple(device_out)
+        out = tuple(out)
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
 
@@ -384,7 +387,7 @@ def get_validated_details_csv_path(validated_result_csv_path):
 
 
 def init_attl():
-    attl = ATTL('gpu', ATTLConfig(is_golden=True, connect_port=msCheckerConfig.port))
+    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True, connect_ip=msCheckerConfig.host, connect_port=msCheckerConfig.port))
     return attl
 
 
