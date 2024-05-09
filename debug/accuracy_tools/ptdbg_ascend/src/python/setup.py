@@ -20,7 +20,7 @@ import stat
 from pathlib import Path
 import setuptools
 
-VERSION = '6.0.T1'
+VERSION = '6.0.T2'
 
 
 def generate_ptdbg_ascend_version():
