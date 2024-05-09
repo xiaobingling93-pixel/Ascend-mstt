@@ -23,7 +23,12 @@ class Config:
             'white_list': list,
             'error_data_path': str,
             'jit_compile': bool,
-            'precision': int
+            'precision': int,
+            'is_online': bool,
+            'is_golden': bool,
+            'host': str,
+            'port': int,
+            'rank_list': list
         }
         if key not in validators:
             raise ValueError(f"{key} must be one of {validators.keys()}")
@@ -56,13 +61,20 @@ class Config:
     def __str__(self):
         return '\n'.join(f"{key}={value}" for key, value in self.config.items())
 
-    def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None):
+    def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None,
+                      is_online=None, port=None, host=None, rank_list=None):
         args = {
-            "dump_path": dump_path if dump_path else self.config.get("dump_path", './'),
-            "real_data": real_data if real_data else self.config.get("real_data", False),
-            "target_iter": target_iter if target_iter else self.config.get("target_iter", [1]),
-            "white_list": white_list if white_list else self.config.get("white_list", []),
-            "enable_dataloader": enable_dataloader if enable_dataloader else self.config.get("enable_dataloader", False)
+            "dump_path": dump_path if dump_path is not None else self.config.get("dump_path", './'),
+            "real_data": real_data if real_data is not None else self.config.get("real_data", False),
+            "target_iter": target_iter if target_iter is not None else self.config.get("target_iter", [1]),
+            "white_list": white_list if white_list is not None else self.config.get("white_list", []),
+            "enable_dataloader": enable_dataloader
+            if enable_dataloader is not None else self.config.get("enable_dataloader", False),
+            "is_online": is_online if is_online is not None else self.config.get("is_online", False),
+            "is_golden": False if is_online and host is not None else True,
+            "host": host if host is not None else self.config.get("host", "127.0.0.1"),
+            "port": port if port is not None else self.config.get("port", 30001),
+            "rank_list": rank_list if rank_list is not None else self.config.get("rank_list", [0])
         }
         for key, value in args.items():
             if key in self.config:

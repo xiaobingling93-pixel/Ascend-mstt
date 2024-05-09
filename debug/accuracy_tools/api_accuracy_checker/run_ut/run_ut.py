@@ -26,6 +26,8 @@ from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
+from api_accuracy_checker.hook_module.wrap_aten import AtenOPTemplate
+from api_accuracy_checker.hook_module.wrap_npu_custom import NPUOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.dump.api_info import APIInfo
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
@@ -34,10 +36,14 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link
 
+if msCheckerConfig.is_online:
+    from api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData
+    from api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
-RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
-DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
+RESULT_FILE_NAME = f"accuracy_checking_result_" + current_time + ".csv"
+DETAILS_FILE_NAME = f"accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
@@ -69,6 +75,12 @@ def exec_api(api_type, api_name, args, kwargs):
         out = tensor_api.forward(*args, **kwargs)
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "Aten":
+        torch_api = AtenOPTemplate(api_name)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "NPU":
+        torch_api = NPUOPTemplate(api_name, None, False)
         out = torch_api.forward(*args, **kwargs)
     return out
 
@@ -172,10 +184,23 @@ def run_ut(config):
         error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
         print_info_log(f"UT task error_datas will be saved in {error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
-    with FileOpen(config.result_csv_path, 'r') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)
-        api_name_set = {row[0] for row in csv_reader}
+    if msCheckerConfig.is_online:
+        run_api_online(config, compare)
+    else:
+        with FileOpen(config.result_csv_path, 'r') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader)
+            api_name_set = {row[0] for row in csv_reader}
+        run_api_offline(config, compare, api_name_set)
+    for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
+        change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        print_info_log(f"UT task result csv is saved in {result_csv_path}")
+        print_info_log(f"UT task details csv is saved in {details_csv_path}")
+    compare.print_pretest_result()
+
+
+def run_api_offline(config, compare, api_name_set):
     for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
@@ -185,8 +210,7 @@ def run_ut(config):
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
-            is_fwd_success, is_bwd_success = compare.compare_output(api_full_name,
-                                                                    data_info)
+            is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
@@ -198,16 +222,40 @@ def run_ut(config):
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
             err_column = CompareColumn()
             fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
-            compare.record_results(api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None)
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
             else:
                 torch.npu.empty_cache()
             gc.collect()
-    change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    compare.print_pretest_result()
+
+
+def run_api_online(config, compare):
+    attl = init_attl()
+    dispatcher = ConsumerDispatcher(compare=compare)
+    dispatcher.start(handle_func=run_torch_api_online, config=config)
+    while True:
+        api_data = attl.recv()
+        if api_data == 'STOP_':
+            continue
+        if api_data == 'KILL_':
+            time.sleep(1)
+            print_info_log("==========接收到STOP信号==========")
+            dispatcher.stop()
+            attl.stop_serve()
+            time.sleep(1)
+            break
+        if not isinstance(api_data, ApiData):
+            continue
+        api_full_name = api_data.name
+
+        if msCheckerConfig.white_list:
+            [_, api_name, _] = api_full_name.split("*")
+            if api_name not in set(msCheckerConfig.white_list):
+                continue
+        dispatcher.update_consume_queue(api_data)
 
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
@@ -266,6 +314,20 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
+
+
+def run_torch_api_online(api_full_name, api_data, backward_content):
+    in_fwd_data_list = []
+    [api_type, api_name, _] = api_full_name.split("*")
+    args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
+    in_fwd_data_list.append(args)
+    in_fwd_data_list.append(kwargs)
+    if kwargs.get("device"):
+        del kwargs["device"]
+
+    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = device_out.cpu() if hasattr(device_out, "cpu") else device_out
+    return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
@@ -332,13 +394,18 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
+def init_attl():
+    attl = ATTL('gpu', ATTLConfig(is_golden=True, connect_port=msCheckerConfig.port))
+    return attl
+
+
 def _run_ut_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
-                        help="<Required> The api param tool forward result file: generate from api param tool, "
+                        help="<Optional> The api param tool forward result file: generate from api param tool, "
                              "a json file.",
-                        required=True)
+                        required=False)
     parser.add_argument("-backward", "--backward_input_file", dest="backward_input_file", default="", type=str,
-                        help="<Required> The api param tool backward result file: generate from api param tool, "
+                        help="<Optional> The api param tool backward result file: generate from api param tool, "
                              "a json file.",
                         required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
@@ -431,16 +498,19 @@ def run_ut_command(args):
     except Exception as error:
         print_error_log(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.forward_input_file)
-    forward_file = os.path.realpath(args.forward_input_file)
-    check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content = get_json_contents(forward_file)
+    forward_content = {}
+    if args.forward_input_file:
+        check_link(args.forward_input_file)
+        forward_file = os.path.realpath(args.forward_input_file)
+        check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+        forward_content = get_json_contents(forward_file)
     if args.filter_api:
         print_info_log("Start filtering the api in the forward_input_file.")
         forward_content = preprocess_forward_content(forward_content)
@@ -468,14 +538,16 @@ def run_ut_command(args):
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, backward_message):
-        self.bench_grad = bench_grad
-        self.device_grad = device_grad
-        self.device_output = device_output
-        self.bench_output = bench_output
+    def __init__(self, bench_grad_out, device_grad_out, device_out,
+                 bench_out, grad_in, in_fwd_data_list, backward_message, rank=0):
+        self.bench_grad_out = bench_grad_out
+        self.device_grad_out = device_grad_out
+        self.device_out = device_out
+        self.bench_out = bench_out
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
         self.backward_message = backward_message
+        self.rank = rank
 
 
 class UtAPIInfo(APIInfo):
