@@ -409,6 +409,8 @@ Forward Test Success和Backward Test Success是否通过测试是由`api_precisi
 | ULP误差大于阈值占比      | NPU数据与标杆数据的ULP误差（取绝对值后）大于阈值（当NPU数据类型为float16或bfloat16时，阈值为1；当NPU数据类型为float32时，阈值为32）的元素个数占总元素的个数比例。ULP误差比对法指标。 |
 | ULP误差大于阈值占比比值  | NPU与CPU的ULP误差大于阈值占比/GPU与CPU的ULP误差大于阈值占比。ULP误差比对法指标。 |
 | ULP误差判定结果          | ULP误差判定结果。<br/>     当NPU或GPU数据类型是float16或bfloat16时，以下两条标准满足其一标记为pass，否则标记为error：<br>          NPU ULP误差大于阈值占比小于0.001；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。<br/>     当NPU或GPU数据类型是float32时，以下三条标准满足其一标记为pass，否则标记为error：<br/>          NPU ULP误差平均值小于64；<br/>          NPU ULP误差大于阈值占比小于0.05；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。 |
+| 双千指标                 | 双千精度指标。是指NPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的个数占总元素个数的比例。测试通过标准为相对误差大于千分之一的个数占总元素个数的比例小于千分之一。仅conv1d和conv2d使用该指标。双千指标法指标。 |
+| 双千指标判定结果         | 双千指标判定结果。双千指标大于0.999标记为pass，否则标记为error。 |
 | 比对结果                 | 综合所有指标的最终结果。如果比对指标中有error，则标记为error；有warning，则标记为warning；否则标记为pass。 |
 | 比对算法                 | API使用的比对算法，为标杆比对法、二进制一致法、绝对阈值法和ULP误差比对法中的一种。 |
 | Message                  | 提示信息。当前提示该API比对结果为error或warning时对应不符合标准的指标。 |
