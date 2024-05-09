@@ -112,3 +112,11 @@ class TestCompare(unittest.TestCase):
         npu_out = 1
         status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
         self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))
+    
+    def test_compare_float_tensor(self):
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
+        compare_column = CompareColumn()
+        status, compare_column, message = self.compare._compare_float_tensor("api", cpu_output.numpy(), npu_output.numpy(),
+                                                                             compare_column, npu_output.dtype)
+        self.assertEqual(status, "pass")
