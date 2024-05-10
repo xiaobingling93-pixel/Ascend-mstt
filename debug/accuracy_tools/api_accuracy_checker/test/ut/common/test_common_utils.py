@@ -105,7 +105,7 @@ class TestUtils(unittest.TestCase):
         os.remove('test.json')
 
     def test_get_file_content_bytes(self):
-        fd = os.open('test.json', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
         with os.fdopen(fd, 'w') as f:
             f.write("Hello, World!")
         self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
