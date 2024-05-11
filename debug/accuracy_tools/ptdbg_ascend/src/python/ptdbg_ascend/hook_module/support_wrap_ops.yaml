@@ -1131,6 +1131,7 @@ torch_npu:
   - npu_prompt_flash_attention
   - npu_lstm
   - npu_apply_adam
+  - npu_apply_adam_w
 
 aten:
   - signbit
