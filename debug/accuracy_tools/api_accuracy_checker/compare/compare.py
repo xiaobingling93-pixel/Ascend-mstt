@@ -182,8 +182,8 @@ class Comparator:
 
     def compare_output(self, full_api_name, data_info):
         _, api_name, _ = full_api_name.split("*")
-        bench_output, device_output = data_info.bench_out, data_info.device_out
-        bench_grad, device_grad = data_info.bench_grad_out, data_info.device_grad_out
+        bench_output, device_output = data_info.bench_output, data_info.device_output
+        bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
         backward_message = data_info.backward_message
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
         # forward result compare
