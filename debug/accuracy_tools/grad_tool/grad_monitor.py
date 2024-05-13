@@ -16,3 +16,7 @@ class GradientMonitor:
 
     def monitor(self, module):
         self.grad_monitor.monitor(module)
+
+    def stop(self):
+        if self.framework == GradConst.MindSpore:
+            self.grad_monitor.stop()

@@ -40,7 +40,8 @@
    bounds: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]
    output_path: /home/pxp1/code/train_test_msft_multi/test/npu_grad_output4
    ```
-   > step在MindSpore框架下，要求必须是range列表或者不指定
+   > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集
+   > MindSpore中step指的是优化器被调用的次数
 
    **参数说明**
 
@@ -92,15 +93,24 @@
 - PyTorch框架
    在训练开始前，调用gm.monitor并将模型作为参数传入。
 
-      ```python
-      gm.monitor(model)
-      ```
+```python
+gm.monitor(model)
+```
+
 - MindSpore框架
    在训练开始前，调用gm.monitor并将优化器作为参数传入。
 
-      ```python
-      gm.monitor(optimizer)
-      ```
+```python
+gm.monitor(optimizer)
+```
+
+4. 结束监控（MindSpore需要）
+
+   在训练结束之后，调用stop接口
+
+```python
+gm.stop()
+```
 
 ### 输出结果
 **输出目录结构**（以level配置L2为例）

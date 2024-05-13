@@ -17,7 +17,7 @@ class GlobalContext:
         GradConst.RANK: None,
         GradConst.STEP: [0, 0],
         GradConst.CURRENT_STEP: 0,
-        GradConst.BOUNDS: [-10., -1., -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1., 10.],
+        GradConst.BOUNDS: [-1., 0., 1.],
         GradConst.OUTPUT_PATH: "./grad_stat"
     }
 

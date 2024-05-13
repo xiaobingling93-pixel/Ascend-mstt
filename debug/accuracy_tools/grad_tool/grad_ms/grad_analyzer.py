@@ -2,6 +2,7 @@ import os
 import shutil
 import time
 from typing import List, Tuple
+import multiprocessing
 from multiprocessing import Process 
 
 import numpy as np
@@ -25,63 +26,49 @@ def get_rank_id():
     return rank_id
 
 
-class GradAnalyzer:
+@ms.jit
+def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor, level: str, bounds: List):
+    '''
+    Dump gradient statistic data.
+        level0: [step, max, min, norm, shape_dim, shape]
+        level1: [step, max, min, norm, shape_dim, shape, dist_dim, dist]
+        level2: [step, max, min, norm, shape_dim, shape] + grad_bool_data
+        level3: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
+    '''
+    dump_path = dump_dir + g_name
+    dump_dir_path = dump_path + "_dir"
+    save_op = ms.ops.TensorDump()
 
-    @staticmethod
-    def dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor):
-        '''
-        Dump gradient statistic data.
-            level0: [step, max, min, norm, shape_dim, shape]
-            level1: [step, max, min, norm, shape_dim, shape, dist_dim, dist]
-            level2: [step, max, min, norm, shape_dim, shape] + grad_bool_data
-            level3: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
-        '''
-        dump_path = os.path.join(dump_dir, g_name)
-        dump_dir_path = dump_path + "_dir"
-        save_op = ms.ops.TensorDump()
-        level = grad_context.get_context(GradConst.LEVEL)
+    grad_flat = grad.reshape(-1)
+    max_val = grad_flat.max(axis=0).float()
+    min_val = grad_flat.min(axis=0).float()
+    norm_val = grad_flat.norm(ord=2).float()
+    shape = grad.shape
+    extrem_list = [dump_step[0].float(), max_val, min_val, norm_val]
+    extrem_stat = ms.ops.stack(extrem_list)
+    shape_list = [len(shape)] + list(shape)
+    shape_stat = ms.Tensor(shape_list).float()
+    level0_stat = ms.ops.concat((extrem_stat, shape_stat), axis=0)
+    level_stat = level0_stat
 
-        if level == GradConst.LEVEL0 or level == GradConst.LEVEL2:
-            level_stat = GradAnalyzer.calculate_level0(dump_step, grad)
-        else:
-            level_stat = GradAnalyzer.calculate_level1(dump_step, grad)
-
-        save_op(dump_path, level_stat)
-        if level == GradConst.LEVEL2 or level == GradConst.LEVEL3:
-            grad_direction = GradAnalyzer.calculate_direction(grad)
-            save_op(dump_dir_path, grad_direction)
-
-    @staticmethod
-    def calculate_level0(dump_step: Parameter, grad: ms.Tensor):
-        is_bf16 = grad.dtype == ms.bfloat16
-        max_val = grad.max().float() if is_bf16 else grad.max()
-        min_val = grad.min().float() if is_bf16 else grad.min()
-        norm_val = grad.norm().float() if is_bf16 else grad.norm()
-        shape = grad.shape
-        extrem_stat = ms.ops.stack([dump_step[0].astype(max_val.dtype), max_val, min_val, norm_val])
-        shape_stat = ms.Tensor([len(shape)] + list(shape)).astype(max_val.dtype)
-        level0_stat = ms.ops.concat((extrem_stat, shape_stat), axis=0)
-        return level0_stat
-
-    @staticmethod
-    def calculate_level1(dump_step: Parameter, grad: ms.Tensor):
-        level0_stat = GradAnalyzer.calculate_level0(dump_step, grad)
-        bounds = grad_context.get_context(GradConst.BOUNDS)
+    if level == "L1" or level == "L3":
         zero_grad = (grad == 0).sum()
-        dist_dim = ms.Tensor([len(bounds) + 2]).astype(level0_stat.dtype)
-        bucket_result = ms.ops.bucketize(grad, bounds).astype(ms.int8)
+        dist_dim = ms.Tensor([len(bounds) + 2]).float()
+        bucket_result = ms.ops.bucketize(grad.float(), bounds)
+        bucket_result = bucket_result.astype(ms.int8)
         dist_stat = [(bucket_result == i).sum() for i in range(len(bounds) + 1)]
         dist_stat.append(zero_grad)
-        dist_stat = ms.ops.stack(dist_stat, axis=0).astype(level0_stat.dtype)
+        dist_stat = ms.ops.stack(dist_stat, axis=0).float()
         element_num = dist_stat.sum() - dist_stat[-1]
         if element_num != 0:
             dist_stat = dist_stat / element_num
         level1_stat = ms.ops.concat((level0_stat, dist_dim, dist_stat), axis=0)
-        return level1_stat
+        level_stat = level1_stat
 
-    @staticmethod
-    def calculate_direction(grad: ms.Tensor):
-        return grad > 0
+    save_op(dump_path, level_stat)
+    if level == "L2" or level == "L3":
+        grad_direction = grad > 0
+        save_op(dump_dir_path, grad_direction)
 
 
 class CSVGenerator(Process):
@@ -93,31 +80,34 @@ class CSVGenerator(Process):
         self.level = GradConst.LEVEL0
         self.cache_list = ListCache()
         self.current_step = None
-        self.bounds = [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10],
+        self.bounds = [-0.1, 0.0, 0.1],
 
     def init(self, context: GlobalContext):
         rank_id = get_rank_id()
         output_path = context.get_context(GradConst.OUTPUT_PATH)
         self.level = context.get_context(GradConst.LEVEL)
         self.bounds = context.get_context(GradConst.BOUNDS)
-        step_range = context.get_context(GradConst.STEP)
-        self.step_end = 0 if step_range is None else step_range[1]
         self.dump_dir = f"{output_path}/rank_{rank_id}/Dump/"
         self.save_dir = f"{output_path}/rank_{rank_id}/"
         self.current_step = None
-        self.finish_flag = False
+        self.stop_event = multiprocessing.Event()  
+        self.last_finish = False
 
     def run(self):
-        while not self.finish_flag:
+        while True:
             if not os.path.exists(self.dump_dir):
                 time.sleep(0.1)
                 continue
             npy_files = os.listdir(self.dump_dir)
             npy_files.sort(key=lambda x: int(x.split("_")[0]))
-            if not npy_files:
-                continue
             self.traverse_files(npy_files)
+            empty = len(os.listdir(self.dump_dir)) == 0
+            if self.stop_event.is_set() and empty and self.last_finish:
+                break
         shutil.rmtree(self.dump_dir)
+
+    def stop(self):
+        self.stop_event.set()
 
     def traverse_files(self, npy_files: List):
         for npy_file in npy_files:
@@ -128,8 +118,7 @@ class CSVGenerator(Process):
             if GradConst.STEP_FINISH in npy_file:
                 self.cache_list.flush()
                 os.remove(file_path)
-                if self.current_step == self.step_end:
-                    self.finish_flag = True
+                self.last_finish = True
             elif file_path.split("_")[-1] == GradConst.DIR_SUFFIX:
                 prefix_idx = len(npy_file.split("_")[0])
                 new_name = npy_file[prefix_idx + 1:].replace("_" + GradConst.DIR_SUFFIX, "." + GradConst.NPY_SUFFIX)
@@ -142,16 +131,19 @@ class CSVGenerator(Process):
                     create_directory(step_dir)
                 dst_file = os.path.join(step_dir, new_name)
                 shutil.move(file_path, dst_file)
+                self.last_finish = False
             elif file_path.split(".")[-1] == GradConst.NPY_SUFFIX:
                 stat_data = self.load_npy_data(file_path)
                 if stat_data is None:
                     continue
                 step = int(stat_data[GradConst.STEP_IDX])
-                if self.current_step is None or step != self.current_step:
-                    self.current_step = step
+                update_step = self.current_step is None or step != self.current_step
+                self.current_step = step
+                if update_step:
                     self.create_csv_file()
                 self.gen_csv_line(file_path, stat_data)
                 os.remove(file_path)
+                self.last_finish = False
 
     def load_npy_data(self, file_path: str):
         stat_data = None
