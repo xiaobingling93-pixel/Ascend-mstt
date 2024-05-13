@@ -47,14 +47,14 @@ class ModuleHookContext:
 class OptimizerContext:
     def __init__(self) -> None:
         self.step = 0
-        self.param_gnorm = defaultdict(float)
-        self.param_exp_avg_norm = defaultdict(float)
-        self.param_exp_avg_sign = defaultdict(int)
-        self.param_mg_direction = defaultdict(float)
-        self.param_exp_avg_sq_norm = defaultdict(float)
-        self.param_effective_rank = defaultdict(float)
-        self.param_adam_update = defaultdict()
-        self.param_adam_ratio = defaultdict()
+        self.param_gnorm = defaultdict(float) # norm of grad
+        self.param_exp_avg_norm = defaultdict(float) # norm of expection of gradient average (m_{t-1})
+        self.param_exp_avg_sign = defaultdict(int) # sign of expection of gradient average (m_{t-1})
+        self.param_mg_direction = defaultdict(float) # ratio of parameters in same direction between g_{t} and m_{t-1}
+        self.param_exp_avg_sq_norm = defaultdict(float) # norm of expection of gradient square (v_{t-1})
+        self.param_effective_rank = defaultdict(float) # ratio of parameters above a threshold  
+        self.param_adam_update = defaultdict() # distribution of update (m_t/(v_t**0.5+eps))
+        self.param_adam_ratio = defaultdict() # distribution of ratio (m_t/v_t**0.5)
 
 
 class TrainerMon:
@@ -199,14 +199,14 @@ class TrainerMon:
                 optimizer, self.param2name, self.update_heatmap_visualizer, self.ratio_heatmap_visualizer, self.ur_distribution, self.mg_direction)
             
             for param, name in self.param2name.items():
-                grad_for_norm = param.main_grad if self.params_have_main_grad else param.grad
-                context.param_gnorm[name] = grad_for_norm.detach().norm()
+                grad = param.main_grad if self.params_have_main_grad else param.grad
+                context.param_gnorm[name] = grad.detach().norm()
                 if "params_effrank" in self.config and name in self.config["params_effrank"]:
                     context.param_effective_rank[name] = eff_rank(param.detach())
 
                 if self.mg_direction: 
                     if name in context.param_exp_avg_sign:
-                        g_sign = grad_for_norm.detach().sign()
+                        g_sign = grad.detach().sign()
                         m_sign = context.param_exp_avg_sign.pop(name)
                         same_direction_ratio  = ((m_sign * g_sign).sum().item()/m_sign.numel() + 1)/2
                     else:
