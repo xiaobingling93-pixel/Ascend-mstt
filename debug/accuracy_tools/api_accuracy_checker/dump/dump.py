@@ -69,13 +69,12 @@ class DumpUtil(object):
     call_num = 0
     phase = "all"
     rank_list = msCheckerConfig.rank_list
-    attl_config = None
     attl = None
-    if msCheckerConfig.is_online:
-        attl_config = ATTLConfig(msCheckerConfig.is_golden, connect_ip=msCheckerConfig.host,
+    if msCheckerConfig.is_online and not msCheckerConfig.is_benchmark_device:
+        attl_config = ATTLConfig(False, connect_ip=msCheckerConfig.host,
                                  connect_port=msCheckerConfig.port)
         need_dump = dist.get_rank() in msCheckerConfig.rank_list if dist.is_initialized() else True
-        attl = ATTL('gpu' if msCheckerConfig.is_golden else 'npu', attl_config, need_dump=need_dump)
+        attl = ATTL('npu', attl_config, need_dump=need_dump)
 
     @staticmethod
     def set_dump_switch(switch):

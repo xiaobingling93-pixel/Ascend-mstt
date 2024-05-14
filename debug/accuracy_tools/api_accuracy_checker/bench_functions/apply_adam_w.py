@@ -16,11 +16,15 @@ def npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay,
     beta2_power_out = beta2_power * beta2
     if amsgrad:
         max_grad_norm_out = torch.max(max_grad_norm, v_out)
+        if (1 - beta2_power_out) == 0:
+            beta2_power_out -= eps
         denom = torch.sqrt(torch.div(max_grad_norm_out, (1 - beta2_power_out))) + eps
     else:
         vraintain = torch.div(v_out, (1 - beta2_power_out))
         denom = torch.sqrt(vraintain) + eps
 
+    if (1 - beta1_power_out) == 0:
+        beta1_power_out -= eps
     var_out = var_t + torch.div(-lr * m_out, (1 - beta1_power_out)).div(denom)
-    return var_out, m_out, v_out
+    return var_out.cpu(), m_out.cpu(), v_out.cpu()
 

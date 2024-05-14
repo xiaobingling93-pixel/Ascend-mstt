@@ -48,4 +48,4 @@ def matmul_backward(grad, self, other, mask):
         grad_self = torch.matmul(grad, other.transpose(-1, -2)) if mask[0] else grad_self
         grad_other = torch.matmul(self.transpose(-1, -2), grad) if mask[1] else grad_other
 
-    return grad_self, grad_other
+    return grad_self.cpu(), grad_other.cpu()
