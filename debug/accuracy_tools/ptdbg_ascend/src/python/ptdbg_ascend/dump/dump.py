@@ -310,7 +310,7 @@ def dump_acc_cmp(name, in_feat, out_feat, dump_step, module):
                 print_warn_log("The file does not exist, error: {}".format(e))
 
     name_prefix = name
-    name_template = f"{name_prefix}" + "_{}"
+    name_template = f"{name_prefix}" + Const.DELIMITER + "{}"
     if DumpUtil.is_single_rank is None:
         DumpUtil.is_single_rank = check_single_rank_folder(dump_dir)
     if DumpUtil.dump_switch_mode in [Const.ALL, Const.API_LIST]:
@@ -400,7 +400,7 @@ def dump_mode_backward_acl_dump(module, module_name, grad_path):
 
 
 def module_count_func(name, name_template):
-    module_name = name.split("_")[-3]
+    module_name = name.split(Const.DELIMITER)[-3]
     if Const.FORWARD in name_template:
         if module_name not in module_count:
             module_count[module_name] = [0, [0]]
@@ -430,7 +430,8 @@ def acc_cmp_dump(name, **kwargs):
 
     def acc_cmp_hook(module, in_feat, out_feat=None):
         nonlocal name, name_template
-        if "_{}_" in name_template:
+        place_holder = Const.DELIMITER + "{}" + Const.DELIMITER
+        if place_holder in name_template:
             try:
                 index = module_count_func(name, name_template)
             except IndexError as e:

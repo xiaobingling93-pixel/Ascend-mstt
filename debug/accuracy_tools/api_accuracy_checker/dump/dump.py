@@ -22,7 +22,7 @@ import torch.distributed as dist
 from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
 from api_accuracy_checker.dump.info_dump import write_api_info_json, initialize_output_json
 from api_accuracy_checker.common.utils import print_error_log, CompareException, print_info_log, \
-    get_tensor_rank, logger
+    get_tensor_rank, logger, Const
 from api_accuracy_checker.hook_module.register_hook import initialize_hook
 from api_accuracy_checker.common.config import msCheckerConfig
 
@@ -103,18 +103,13 @@ class DumpUtil(object):
             set_dump_switch("OFF")
 
 
-class DumpConst:
-    delimiter = '*'
-    forward = 'forward'
-    backward = 'backward'
-
-
 def pretest_info_dump(name, out_feat, module, phase):
     if not DumpUtil.get_dump_switch():
         return
-    if phase == DumpConst.forward:
+    name = name.replace('*', Const.DELIMITER)
+    if phase == Const.FORWARD:
         api_info = ForwardAPIInfo(name, module.input_args, module.input_kwargs)
-    elif phase == DumpConst.backward:
+    elif phase == Const.BACKWARD:
         api_info = BackwardAPIInfo(name, out_feat)
     else:
         msg = "Unexpected training phase {}.".format(phase)
@@ -127,7 +122,7 @@ def pretest_info_dump(name, out_feat, module, phase):
 def pretest_real_data_transport(name, out_feat, module, phase):
     if not DumpUtil.get_dump_switch():
         return
-    if phase == DumpConst.forward and (DumpUtil.phase == "all" or DumpUtil.phase == phase):
+    if phase == Const.FORWARD and (DumpUtil.phase == "all" or DumpUtil.phase == phase):
         cur_rank = get_tensor_rank(module.input_args, out_feat)
         if cur_rank not in DumpUtil.rank_list:
             return

@@ -1,6 +1,6 @@
 import os
 import torch.nn as nn
-from ..common.utils import print_error_log, DumpException
+from ..common.utils import print_error_log, DumpException, Const
 from .dump import acc_cmp_dump
 from ..hook_module.api_registry import api_register
 
@@ -20,9 +20,9 @@ def module_dump(module, dump_name):
         module_count[dump_name] = 0
     else:
         module_count[dump_name] += 1
-    dump_name = dump_name + '_' + str(module_count.get(dump_name)) + "_"
-    module.register_forward_hook(acc_cmp_dump(dump_name + "forward", pid=pid))
-    module.register_backward_hook(acc_cmp_dump(dump_name + "backward", pid=pid))
+    dump_name = dump_name + Const.DELIMITER + str(module_count.get(dump_name)) + Const.DELIMITER
+    module.register_forward_hook(acc_cmp_dump(dump_name + Const.FORWARD, pid=pid))
+    module.register_backward_hook(acc_cmp_dump(dump_name + Const.BACKWARD, pid=pid))
 
 
 def module_dump_end():
