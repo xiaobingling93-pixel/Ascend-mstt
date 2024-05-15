@@ -353,38 +353,38 @@ rsub:
   torch.float32:
     rtol: 0.000001
     small_value: 0.000001
-    small_value_atol: 1.0e-9
+    small_value_atol: 0.000000001
   torch.float16:
     rtol: 0.001
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
   torch.bfloat16:
     rtol: 0.004
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
 __isub__:
   torch.float32:
     rtol: 0.000001
     small_value: 0.000001
-    small_value_atol: 1.0e-9
+    small_value_atol: 0.000000001
   torch.float16:
     rtol: 0.001
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
   torch.bfloat16:
     rtol: 0.004
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
 __sub__:
   torch.float32:
     rtol: 0.000001
     small_value: 0.000001
-    small_value_atol: 1.0e-9
+    small_value_atol: 0.000000001
   torch.float16:
     rtol: 0.001
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
   torch.bfloat16:
     rtol: 0.004
     small_value: 0.001
-    small_value_atol: 1.0e-5
+    small_value_atol: 0.00001
