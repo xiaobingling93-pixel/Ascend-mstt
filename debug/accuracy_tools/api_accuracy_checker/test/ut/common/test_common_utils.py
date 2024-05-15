@@ -8,7 +8,8 @@ class TestUtils(unittest.TestCase):
 
     def test_read_json(self):
         test_dict = {"key": "value"}
-        with open('test.json', 'w') as f:
+        fd = os.open('test.json', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
             json.dump(test_dict, f)
         self.assertEqual(read_json('test.json'), test_dict)
         os.remove('test.json')
@@ -97,13 +98,15 @@ class TestUtils(unittest.TestCase):
 
     def test_get_json_contents(self):
         test_dict = {"key": "value"}
-        with open('test.json', 'w') as f:
+        fd = os.open('test.json', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
             json.dump(test_dict, f)
         self.assertEqual(get_json_contents('test.json'), test_dict)
         os.remove('test.json')
 
     def test_get_file_content_bytes(self):
-        with open('test.txt', 'w') as f:
+        fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
             f.write("Hello, World!")
         self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
         os.remove('test.txt')
