@@ -90,9 +90,11 @@ def setup_python(env_path):
             print('Pytorch is not installed or does not work properly.')
             continue
         # Write tools/python_bin_path.sh
-        with open(config_path('PYTHON_BIN_PATH'), 'w') as f:
+        fd = os.open(config_path('PYTHON_BIN_PATH'), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
             f.write(python_bin_path)
-        with open(config_path('PYTORCH_INSTALLED_PATH'), 'w') as f:
+        fd = os.open(config_path('PYTORCH_INSTALLED_PATH'), os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
             f.write(compile_args[1])
         break
 

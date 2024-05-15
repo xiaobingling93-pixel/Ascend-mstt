@@ -1,5 +1,6 @@
 import io
 import time
+import re
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
 from collections import namedtuple
@@ -20,9 +21,9 @@ BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional
 @dataclass
 class ATTLConfig:
     # net_config: dict
-    is_golden: bool
-    connect_ip: str = "127.0.0.1"
-    connect_port: int = 8006
+    is_benchmark_device: bool
+    connect_ip: str
+    connect_port: int
     # storage_config
     check_sum: bool = True
     queue_size: int = 50
@@ -38,7 +39,8 @@ class ATTL:
         self.dequeue_list = []
         self.message_end = False
         self.kill_progress = False
-        if self.session_config.is_golden:
+        self.check_attl_config()
+        if self.session_config.is_benchmark_device:
             self.socket_manager = TCPServer(self.session_config.connect_port,
                                             self.data_queue,
                                             self.session_config.check_sum)
@@ -48,6 +50,14 @@ class ATTL:
                                             self.session_config.connect_port,
                                             self.session_config.check_sum)
             self.socket_manager.start()
+
+    def check_attl_config(self):
+        ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
+        if not re.match(ipv4_pattern, self.session_config.connect_ip):
+            raise Exception(f"host {self.session_config.connect_ip} is invalid.")
+        if not (0 < self.session_config.connect_port <= 65535):
+            raise Exception(f"port {self.session_config.connect_port} is invalid.")
+
 
     def stop_serve(self):
         if isinstance(self.socket_manager, TCPServer):
@@ -137,14 +147,9 @@ def move2target_device(buffer: ApiData, target_device):
     new_kwargs = move2device_exec(buffer.kwargs, target_device)
 
     # handle result
-    new_results = []
-    res = buffer.result[0] if isinstance(buffer.result, (tuple, list)) else buffer.result
-    if isinstance(res, torch.Tensor) and res.device.type != target_device:
-        new_results.append(res.detach().to(target_device))
-    else:
-        new_results.append(res)
+    new_results = move2device_exec(buffer.result, target_device)
 
     if target_device == torch.device('cpu') or target_device == "cpu":
-        return ApiData(buffer.name, tuple(new_args), new_kwargs, new_results[0], buffer.step, buffer.rank)
+        return ApiData(buffer.name, tuple(new_args), new_kwargs, new_results, buffer.step, buffer.rank)
     else:
         return ApiData(buffer.name, tuple(new_args), new_kwargs, buffer.result, buffer.step, buffer.rank)

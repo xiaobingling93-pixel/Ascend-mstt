@@ -25,7 +25,7 @@ class Config:
             'jit_compile': bool,
             'precision': int,
             'is_online': bool,
-            'is_golden': bool,
+            'is_benchmark_device': bool,
             'host': str,
             'port': int,
             'rank_list': list
@@ -62,7 +62,7 @@ class Config:
         return '\n'.join(f"{key}={value}" for key, value in self.config.items())
 
     def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None,
-                      is_online=None, port=None, host=None, rank_list=None):
+                      is_online=None, is_benchmark_device=True, port=None, host=None, rank_list=None):
         args = {
             "dump_path": dump_path if dump_path is not None else self.config.get("dump_path", './'),
             "real_data": real_data if real_data is not None else self.config.get("real_data", False),
@@ -71,9 +71,9 @@ class Config:
             "enable_dataloader": enable_dataloader
             if enable_dataloader is not None else self.config.get("enable_dataloader", False),
             "is_online": is_online if is_online is not None else self.config.get("is_online", False),
-            "is_golden": False if is_online and host is not None else True,
-            "host": host if host is not None else self.config.get("host", "127.0.0.1"),
-            "port": port if port is not None else self.config.get("port", 30001),
+            "is_benchmark_device": is_benchmark_device,
+            "host": host if host is not None else self.config.get("host", ""),
+            "port": port if port is not None else self.config.get("port", -1),
             "rank_list": rank_list if rank_list is not None else self.config.get("rank_list", [0])
         }
         for key, value in args.items():

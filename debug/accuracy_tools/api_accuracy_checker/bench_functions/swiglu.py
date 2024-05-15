@@ -16,7 +16,7 @@ def npu_swiglu(x, dim=-1):
         tensor_out_float = torch.nn.functional.silu(tensor_self_float).type(tensor_dtype).type(
             torch.float32) * tensor_other_float
         output_data = tensor_out_float.type(tensor_dtype)
-    return output_data
+    return output_data.cpu()
 
 
 @npu_custom_grad_functions
@@ -46,7 +46,7 @@ def npu_swiglu_backward(grad, x, dim=-1):
         tensor_out1 = torch.mul(torch.mul(in_tensors[1], swish_grad(1.0, in_tensors[0])), tensor_grad_out)
         tensor_out2 = torch.mul(tensor_grad_out, swish(1.0, in_tensors[0]))
         output = torch.cat((tensor_out1, tensor_out2), dim)
-    return output
+    return output.cpu()
 
 
 def swish_grad(beta, x):

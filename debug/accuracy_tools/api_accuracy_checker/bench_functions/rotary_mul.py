@@ -7,11 +7,14 @@ def npu_rotary_mul(x, r1, r2):
     x1, x2 = torch.chunk(x, 2, -1)
     x_new = torch.cat((-x2, x1), dim=-1)
     output = r1 * x + r2 * x_new
-    return output
+    return output.cpu()
 
 
 @npu_custom_grad_functions
 def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
+    x.requires_grad = True
+    r1.requires_grad = True
+    r2.requires_grad = True
     # golden
     x1, x2 = torch.chunk(x, 2, -1)
     x_new = torch.cat((-x2, x1), dim=-1)
@@ -49,4 +52,4 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
             for j in range(x_shape[2]):
                 r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
                 r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
-    return x.grad, r1_grad, r2_grad
+    return x.grad.cpu(), r1_grad.cpu(), r2_grad.cpu()

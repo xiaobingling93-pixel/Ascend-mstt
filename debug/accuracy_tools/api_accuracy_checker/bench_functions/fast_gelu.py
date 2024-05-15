@@ -21,7 +21,7 @@ def fast_gelu(input0):
     div_down_rec = torch.reciprocal(div_down)
     result = div_up * div_down_rec
 
-    return result
+    return result.cpu()
 
 
 @npu_custom_grad_functions
@@ -55,4 +55,4 @@ def npu_fast_gelu_backward(grad, input_x):
     result_temp = div_up * div_down_rec
     result = grad * result_temp
 
-    return result
+    return result.cpu()
