@@ -1,0 +1,32 @@
+{
+    "task": "statistics", //(ms,pt), 必要, 默认statistics | 取值["tensor"(真实数据及统计数据), "statistics", "summary_md5", "overflow_check"]
+    "dump_path": "/home/wangchao/out",  //(ms,pt),必要， 输出数据path
+    "rank": [1],  //(ms,pt),默认不配置或为空即为dump全量,注意pytorch针对此功能要做整改
+    "step": [0,1],  //(ms,pt),默认不配置或为空即为dump全量，注意mindspore需要注意此step的真实行为
+    "level": "L1", //(ms,pt),默认L1。 | L0:module, L1:api, L2:kernel
+    // 上述为通用配置
+    // 以下为每种任务的配置,当前从业务上讲，只支持一种任务
+    "tensor" : {
+        "scope": [""], //[]中有两个值，用于锁定区间，L0级别下使用，表示两个模块间的范围(pt)
+        "list":[""], //list, api_list, kernel_api, kernel_name(ms,pt), 某个api下的kernel dump(pt)
+        "data_mode": ["all"], //dump数据模式。默认all(pt,ms)。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。
+        "backward_input": "/home/wangchao/out/forward_mul_1.npy", //"dump_mode"="acl"时，反向数据
+        "file_format": "npy" // 真实tensor数据的保存格式(ms) | [bin, npy]
+    },
+    "statistics" : {
+        "scope": [""], //[]中有两个值，用于锁定区间，L0级别下使用，表示两个模块间的范围(pt)
+        "list":[""], //list(pt), api_list(pt), kernel_name(ms)
+        "data_mode": ["all"] //dump数据模式。默认all(pt,ms)可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。
+    },
+    "summary_md5" : {
+        "scope": [""], //[]中有两个值，用于锁定区间，L0级别下使用，表示两个模块间的范围(pt)
+        "list":[""], //list(pt), api_list(pt), kernel_name(ms)
+        "data_mode": ["all"] //dump数据模式。默认all(pt,ms)可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的.npy文件。
+    },
+    "overflow_check": {
+        "overflow_nums": 1, //溢出次数(pt),默认1，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。数据类型：int。
+        "check_mode":"all" //["aicore", "atomic", "all"] kernel级别溢出检测的能力(ms)
+    }
+
+    //后续配置文件维护策略：当前架构归一只关心数据采集，后续如果集成解析、梯度、无标杆等能力，新增task及task的任务配置
+}
