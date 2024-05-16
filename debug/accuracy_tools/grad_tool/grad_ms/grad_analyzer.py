@@ -97,6 +97,8 @@ class CSVGenerator(Process):
         while True:
             if not os.path.exists(self.dump_dir):
                 time.sleep(0.1)
+                if self.stop_event.is_set():
+                    break
                 continue
             npy_files = os.listdir(self.dump_dir)
             npy_files.sort(key=lambda x: int(x.split("_")[0]))
@@ -104,7 +106,8 @@ class CSVGenerator(Process):
             empty = len(os.listdir(self.dump_dir)) == 0
             if self.stop_event.is_set() and empty and self.last_finish:
                 break
-        shutil.rmtree(self.dump_dir)
+        if os.path.exists(self.dump_dir):
+            shutil.rmtree(self.dump_dir)
 
     def stop(self):
         self.stop_event.set()

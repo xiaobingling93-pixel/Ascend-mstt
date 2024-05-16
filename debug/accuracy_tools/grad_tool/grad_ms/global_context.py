@@ -69,9 +69,10 @@ class GlobalContext:
         else:
             type_str = "string"
         if value and isinstance(value, list):
-            if not isinstance(value[0], dtype):
-                print_warn_log(f"Invalid {name} which must be None or list of {type_str}")
-                value = None
+            for val in value:
+                if not isinstance(val, dtype):
+                    print_warn_log(f"Invalid {name} which must be None or list of {type_str}")
+                    return
             self._setting[name] = value
 
 
