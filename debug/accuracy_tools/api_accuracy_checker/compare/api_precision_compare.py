@@ -219,7 +219,7 @@ def api_precision_compare(config):
 
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
-    full_last_api_name, last_api_dtype = None, None
+    last_api_name, last_api_dtype = None, None
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
@@ -285,16 +285,15 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             print_error_log(f"Invalid direction status: {direction_status}")
 
-    if full_last_api_name is not None:
+    if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
             message = unsupported_message
-            write_csv([[full_last_api_name, "skip", "skip", message]], config.result_csv_path)
+            write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
-            _, last_api_name, _ = full_last_api_name.split("*")
             message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
-            write_csv([[full_last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+            write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
 def check_error_rate(npu_error_rate):
