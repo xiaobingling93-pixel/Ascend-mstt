@@ -28,7 +28,8 @@ class GradExtremes:
 class GradStatOps:
     @staticmethod
     def md5_header(**kwargs):
-        return ["MD5"]
+        level: Level = kwargs.get("level")
+        return level.MD5_header()
 
     @staticmethod
     def intervals_header(**kwargs):
@@ -47,9 +48,8 @@ class GradStatOps:
     @staticmethod
     def md5_content(**kwargs):
         grad = kwargs.get("grad")
-        tensor_bytes = grad.cpu().detach().float().numpy().tobytes()
-        md5_hash = hashlib.md5(tensor_bytes)
-        return [md5_hash.hexdigest()]
+        level: Level = kwargs.get("level")
+        return level.MD5_content(grad)
 
     @staticmethod
     def count_distribution(**kwargs):
