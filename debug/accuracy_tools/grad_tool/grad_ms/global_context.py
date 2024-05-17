@@ -31,6 +31,8 @@ class GlobalContext:
     def init_context(self, config_dict: Dict):
         if config_dict.get(GradConst.LEVEL, None) in GradConst.SUPPORTED_LEVEL:
             self._setting[GradConst.LEVEL] = config_dict.get(GradConst.LEVEL)
+        else:
+            print_warn_log("Invalid level set in config yaml file, use L0 instead.")
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
         self._set_input_list(config_dict, GradConst.RANK, int)
         self._set_input_list(config_dict, GradConst.STEP, int)
