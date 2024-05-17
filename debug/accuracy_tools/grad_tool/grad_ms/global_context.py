@@ -17,7 +17,7 @@ class GlobalContext:
         GradConst.RANK: None,
         GradConst.STEP: [0, 0],
         GradConst.CURRENT_STEP: 0,
-        GradConst.BOUNDS: [-10., -1., -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1., 10.],
+        GradConst.BOUNDS: [-1., 0., 1.],
         GradConst.OUTPUT_PATH: "./grad_stat"
     }
 
@@ -69,9 +69,10 @@ class GlobalContext:
         else:
             type_str = "string"
         if value and isinstance(value, list):
-            if not isinstance(value[0], dtype):
-                print_warn_log(f"Invalid {name} which must be None or list of {type_str}")
-                value = None
+            for val in value:
+                if not isinstance(val, dtype):
+                    print_warn_log(f"Invalid {name} which must be None or list of {type_str}")
+                    return
             self._setting[name] = value
 
 
