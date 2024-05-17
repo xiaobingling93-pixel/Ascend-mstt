@@ -1,9 +1,9 @@
 # Ascend模型梯度状态监测工具
 
-训练状态监控工具提供了两种能力：
+梯度状态监测工具提供了两种能力：
 
-- 将模型的梯度数据导出。这种功能可以将模型权重的梯度值以统计量的形式采集出来，用以分析问题。
-- 将两份梯度数据进行相似度对比。这种功能可以发现训练过程中问题出现的step，以及抓取反向过程中的问题。
+- 将模型权重的梯度数据导出。这种功能可以将模型权重的梯度值以统计量的形式采集出来，用以分析问题。
+- 将两份梯度数据进行相似度对比。在有标杆问题中，可以确认训练过程中精度问题出现的step，以及抓取反向过程中的问题。
 
 工具支持PyTorch版本：2.0/2.1/2.2；支持MindSpore版本：r2.3。
 
@@ -33,12 +33,12 @@
 1. 创建配置文件config.yaml，PyTorch框架样例代码如下：
 
    ```python
-   level: L2
-   param_list: ["module.model.7.bias", "module.model.0.weight"]
+   level: L1
+   param_list: 
    rank: [0, 1, 2, 3]
    step: [0, 1, 2, 3]
    bounds: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]
-   output_path: /home/pxp1/code/train_test_msft_multi/test/npu_grad_output4
+   output_path: your_output_dir
    ```
    > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集
    > MindSpore中step指的是优化器被调用的次数
@@ -47,7 +47,7 @@
 
    | 参数                       | 说明                                               | 是否必选 |
    |--------------------------------|----------------------------------------------------|----------|
-   | level                  | Level级别，可取值：L0、L1、L2、L3。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | 是       |
+   | level                  | Level级别，可取值：L0、L1、L2。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | 是       |
    | param_list             | 填写需要导出的梯度数据的变量名称。不指定或列表为空就表示导出所有参数的梯度数据。数据类型：List[str]。 | 否       |
    | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。 | 否       |
    | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。 | 否 |
@@ -59,9 +59,8 @@
    | 级别 | 特征数据表头                                                 | 是否有方向数据 |
    | ---- | ------------------------------------------------------------ | -------------- |
    | L0   | ("param_name", "MD5", "max", "min", "norm", "shape")         | 否             |
-   | L1   | ("param_name", "MD5", *intervals, "=0", "max", "min", "norm", "shape") | 否             |
-   | L2   | ("param_name", "MD5", "max", "min", "norm", "shape")         | 是             |
-   | L3   | ("param_name", "MD5", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
+   | L1   | ("param_name", "max", "min", "norm", "shape")         | 是             |
+   | L2   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
    intervals就是根据值分布划分出的区间。
    > MindSpore梯度监控没有MD5值，其余与PyTorch一致
@@ -73,25 +72,26 @@
    **bounds和值分布解释**
    
    + 值分布：梯度数据落在各个区间的元素个数占总元素个数的比例。
-   + bounds：一个列表，用来划分出区间以统计值分布。例如传入bounds = [-10, 0, 10]，此时有一个 grad_value: Tensor = [9.3 , 5.4, -1.0, -12.3]，依据 bounds 划分出 (-inf, -10]、(-10, 0]、(0, 10]、(10, inf) 四个区间，然后统计grad_value里的数据落在每个区间内的个数，得到 1、1、2、0。如下图所示：   ![Alt text](img/image-1.png)
+   + bounds：一个列表，用来划分出区间以统计值分布。例如传入bounds = [-10, 0, 10]，此时有一个 grad_value: Tensor = [9.3 , 5.4, -1.0, -12.3]，依据 bounds 划分出 (-inf, -10]、(-10, 0]、(0, 10]、(10, inf) 四个区间，然后统计grad_value里的数据落在每个区间内的个数，得到 1、1、2、0。如下图所示：   
+   ![Alt text](img/image-1.png)
 
 2. 在训练流程执行之前传入config.yaml的路径实例化一个GradientDumper对象。示例代码如下：
 
 - PyTorch框架
-      ```python
+```python
       from grad_tool.grad_monitor import GradientMonitor
       gm = GradientMonitor("config_path")
-      ```
+```
 - MindSpore框架
-      ```python
+```python
       from grad_tool.grad_monitor import GradientMonitor
       gm = GradientMonitor("config_path", framework="MindSpore")
-      ```
+```
 
 3. 插入代码监控模型：
 
 - PyTorch框架
-   在训练开始前，调用gm.monitor并将模型作为参数传入。
+   模型构造完成时，调用gm.monitor并将模型作为参数传入。
 
 ```python
 gm.monitor(model)
@@ -215,7 +215,7 @@ GradientMonitor.monitor(module)
 
 | 参数  | 说明                 | 是否必选 |
 | ----- | -------------------- | -------- |
-| module | 设置需要监测的模型或者优化器。 | 是       |
+| module |Pytorch框架下传入模型，必须是torch.nn.Module；MindSpore框架下传入优化器。 | 是       |
 
 
 ```python
