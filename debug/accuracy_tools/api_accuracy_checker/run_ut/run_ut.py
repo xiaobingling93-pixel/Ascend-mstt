@@ -541,12 +541,12 @@ def run_ut_command(args):
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad_out, device_grad_out, device_out,
-                 bench_out, grad_in, in_fwd_data_list, backward_message, rank=0):
-        self.bench_grad_out = bench_grad_out
-        self.device_grad_out = device_grad_out
-        self.device_out = device_out
-        self.bench_out = bench_out
+    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, 
+                 backward_message, rank=0):
+        self.bench_grad = bench_grad
+        self.device_grad = device_grad
+        self.device_output = device_output
+        self.bench_output = bench_output
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
         self.backward_message = backward_message
