@@ -217,15 +217,16 @@ class Comparator:
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
             status, compare_result, message = [], [], []
-            if len(bench_output) != len(device_output):
+            if len(bench_output) > len(device_output):
                 status = [CompareConst.ERROR]
                 message = ["bench and npu output structure is different."]
             else:
-                for b_out_i, n_out_i in zip(bench_output, device_output):
-                    status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
-                    status.append(status_i)
-                    compare_result.append(compare_result_i)
-                    message.append(message_i)
+                device_output = device_output[:len(bench_output)]
+            for b_out_i, n_out_i in zip(bench_output, device_output):
+                status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
+                status.append(status_i)
+                compare_result.append(compare_result_i)
+                message.append(message_i)
         else:
             status, compare_result, message = self._compare_core(api_name, bench_output, device_output)
         if not isinstance(status, list):
