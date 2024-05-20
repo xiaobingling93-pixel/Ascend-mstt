@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import numpy as np
 import torch
 
 try:
@@ -55,6 +56,11 @@ def check_data_overflow(x):
             if len(x.shape) == 0:
                 tensor_max = x.cpu().detach().float().numpy().tolist()
                 tensor_min = tensor_max
+            elif torch.is_complex(x):
+                data_np = x.detach().cpu().numpy()
+                data_abs = np.abs(data_np)
+                tensor_max = np.max(data_abs).item()
+                tensor_min = np.min(data_abs).item()
             else:
                 tensor_max = torch._C._VariableFunctionsClass.max(x).cpu().detach().float().numpy().tolist()
                 tensor_min = torch._C._VariableFunctionsClass.min(x).cpu().detach().float().numpy().tolist()
