@@ -37,7 +37,7 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
     change_mode, check_file_suffix, check_link
 
 if msCheckerConfig.is_online:
-    from api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData
+    from api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec
     from api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -315,10 +315,7 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
         del kwargs["device"]
 
     device_out = exec_api(api_type, api_name, args, kwargs)
-    device_out = device_out.cpu() if hasattr(device_out, "cpu") else device_out
-    if "torch.return_types" in str(type(device_out)):
-        device_out = tuple(device_out)
-        out = tuple(out)
+    device_out = move2device_exec(device_out, "cpu")
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
 

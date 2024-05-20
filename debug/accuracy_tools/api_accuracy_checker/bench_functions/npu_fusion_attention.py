@@ -62,7 +62,7 @@ def calculate_qk(q, k, atten_mask, pse, scale):
     else:
         qk = (torch.matmul(q, k.permute(0, 1, 3, 2)) + pse).mul(scale)
     if atten_mask is None or len(atten_mask.shape) == 0:
-        qk = qk
+        return qk
     else:
         qk = qk + atten_mask.bool() * (-40000.0)  # -10000
     return qk
