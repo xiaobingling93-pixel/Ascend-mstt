@@ -19,11 +19,7 @@ from grad_tool.grad_ms.grad_analyzer import csv_generator
 def hook_optimizer(opt: Optimizer):
     func = opt.construct
     g_names = [param.name for param in opt._parameters]
-    step_range = grad_context.get_context(GradConst.STEP)
-    step_start = step_range[0]
-    step_end = step_range[1]
     param_list = grad_context.get_context(GradConst.PARAM_LIST)
-    rank_list = grad_context.get_context(GradConst.RANK)
     rank_id = get_rank_id()
     output_path = grad_context.get_context(GradConst.OUTPUT_PATH)
     dump_dir = f"{output_path}/rank_{rank_id}/Dump/"
