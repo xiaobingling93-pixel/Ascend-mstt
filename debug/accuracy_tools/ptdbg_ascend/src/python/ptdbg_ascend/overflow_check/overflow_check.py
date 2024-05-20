@@ -117,7 +117,7 @@ def overflow_check(name, **kwargs):
         global forward_api_info
         global backward_api_info
 
-        module_name = name.replace(Const.DELIMITER, '_')
+        module_name = name
         if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
             # backward API endwith backward
             if module_name.endswith(Const.BACKWARD):
@@ -142,7 +142,7 @@ def overflow_check(name, **kwargs):
                     backward_api_info.update({name: BackwardAPIInfo(name, out_feat)})
             OverFlowUtil.inc_overflow_dump_times()
             dump_file_name = os.path.join(dump_dir,
-                                          "{}_{}.pkl".format(module_name, OverFlowUtil.real_overflow_dump_times))
+                                          "{}_{}.pkl".format(module_name.replace(Const.DELIMITER, '_'), OverFlowUtil.real_overflow_dump_times))
             dump_overflow(module_name, in_feat, out_feat, dump_file_name)
             dump.pkl_name = dump_file_name
 
