@@ -14,8 +14,6 @@ class GlobalContext:
     _setting = {
         GradConst.LEVEL: GradConst.LEVEL0,
         GradConst.PARAM_LIST: None,
-        GradConst.RANK: None,
-        GradConst.STEP: [0, 0],
         GradConst.CURRENT_STEP: 0,
         GradConst.BOUNDS: [-1., 0., 1.],
         GradConst.OUTPUT_PATH: "./grad_stat"
@@ -31,12 +29,9 @@ class GlobalContext:
     def init_context(self, config_dict: Dict):
         if config_dict.get(GradConst.LEVEL, None) in GradConst.SUPPORTED_LEVEL:
             self._setting[GradConst.LEVEL] = config_dict.get(GradConst.LEVEL)
+        else:
+            print_warn_log("Invalid level set in config yaml file, use L0 instead.")
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
-        self._set_input_list(config_dict, GradConst.RANK, int)
-        self._set_input_list(config_dict, GradConst.STEP, int)
-        step_list = self._setting.get(GradConst.STEP)
-        if len(step_list) != 2:
-            raise ValueError("Two interger are required for step in mindspore mode.")
         self._set_input_list(config_dict, GradConst.BOUNDS, float)
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
         if output_path:
@@ -74,6 +69,8 @@ class GlobalContext:
                     print_warn_log(f"Invalid {name} which must be None or list of {type_str}")
                     return
             self._setting[name] = value
+        else:
+            print_warn_log(f"{name} is None or not a list with valid items, use default value.")
 
 
 grad_context = GlobalContext()

@@ -40,30 +40,40 @@
    bounds: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]
    output_path: your_output_dir
    ```
-   > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集
-   > MindSpore中step指的是优化器被调用的次数
+   > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集，
+   > MindSpore中step指的是优化器被调用的次数（并非模型跑的step，某些step，例如loss为nan时，不会调用优化器）
 
    **参数说明**
 
    | 参数                       | 说明                                               | 是否必选 |
    |--------------------------------|----------------------------------------------------|----------|
-   | level                  | Level级别，可取值：L0、L1、L2。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | 是       |
+   | level                  | Level级别，PyTorch可取值：L0、L1、L2，MindSpore可取值：L0, L1, L2, L3。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | PyTorch是（MindSpore否，默认为L0）       |
    | param_list             | 填写需要导出的梯度数据的变量名称。不指定或列表为空就表示导出所有参数的梯度数据。数据类型：List[str]。 | 否       |
-   | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。 | 否       |
-   | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。 | 否 |
+   | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。（MindSpore当前不支持指定rank） | 否       |
+   | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。（MindSpore当前不支持指定step） | 否 |
    | bounds                 | 用来划分区间以统计值分布。需要保证由数据小到大排列。数据类型：List。 | 否  |
-   | output_path            | 输出目录。如果不存在就会创建一个新目录。数据类型：str。 | 是 |
+   | output_path            | 输出目录。如果不存在就会创建一个新目录。数据类型：str。 | PyTorch是（MindSpore否，默认为./grad_stat |
 
    **不同级别的level的导出数据**
+
+- PyTorch不同level数据
 
    | 级别 | 特征数据表头                                                 | 是否有方向数据 |
    | ---- | ------------------------------------------------------------ | -------------- |
    | L0   | ("param_name", "MD5", "max", "min", "norm", "shape")         | 否             |
    | L1   | ("param_name", "max", "min", "norm", "shape")         | 是             |
    | L2   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
+
+- MindSpore不同level数据
+
+   | 级别 | 特征数据表头                                                 | 是否有方向数据 |
+   | ---- | ------------------------------------------------------------ | -------------- |
+   | L0   | ("param_name", "max", "min", "norm", "shape")         | 否             |
+   | L1   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape")         | 否             |
+   | L2   | ("param_name", "max", "min", "norm", "shape") | 是             |
+   | L3   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
-   intervals就是根据值分布划分出的区间。
-   > MindSpore梯度监控没有MD5值，其余与PyTorch一致
+   intervals就是根据值分布bounds划分出的区间。
    
    **方向数据解释**
    
@@ -79,13 +89,13 @@
 
 - PyTorch框架
 ```python
-      from grad_tool.grad_monitor import GradientMonitor
-      gm = GradientMonitor("config_path")
+from grad_tool.grad_monitor import GradientMonitor
+gm = GradientMonitor("config_path")
 ```
 - MindSpore框架
 ```python
-      from grad_tool.grad_monitor import GradientMonitor
-      gm = GradientMonitor("config_path", framework="MindSpore")
+from grad_tool.grad_monitor import GradientMonitor
+gm = GradientMonitor("config_path", framework="MindSpore")
 ```
 
 3. 插入代码监控模型：
@@ -160,23 +170,27 @@ gm.stop()
 
       新建Python脚本，调用grad_tool.grad_comparator的GradComparator.compare函数，传入的前两个参数分别为梯度数据的rank层目录，第三个参数为输出目录。如下所示：
 
-      ```python
-      from grad_tool.grad_comparator import GradComparator
-      GradComparator.compare("需要对比的rank_id级目录",
-                             "需要对比的rank_id级目录",
-                             "比对结果输出目录")
-      ```
+```python
+from grad_tool.grad_comparator import GradComparator
+# 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
+GradComparator.compare("需要对比的rank_id级目录",
+                        "需要对比的rank_id级目录",
+                        "比对结果输出目录",
+                        framework="PyTorch")
+```
 
    - 多卡比对
 
       新建Python脚本，调用grad_tool.grad_comparator的GradComparator.compare_distributed函数，传入的前两个参数分别为梯度数据的rank层目录，第三个参数为输出目录。如下所示：
 
-      ```python
-      from grad_tool.grad_comparator import GradComparator
-      GradComparator.compare_distributed("配置文件里写的输出目录",
-                                         "配置文件里写的输出目录",
-                                         "比对结果输出目录")
-      ```
+```python
+from grad_tool.grad_comparator import GradComparator
+# 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
+GradComparator.compare_distributed("配置文件里写的输出目录",
+                                    "配置文件里写的输出目录",
+                                    "比对结果输出目录",
+                                    framework="PyTorch")
+```
 
 ### 比对结果
 
