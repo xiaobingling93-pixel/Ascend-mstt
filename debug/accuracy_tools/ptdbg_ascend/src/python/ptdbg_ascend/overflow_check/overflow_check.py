@@ -10,7 +10,7 @@ except ImportError:
 else:
     is_gpu = False
 
-from ..common.utils import print_warn_log, get_time, print_info_log
+from ..common.utils import print_warn_log, get_time, print_info_log, Const
 from ..dump.dump import forward_init_status, forward_acl_dump
 from .utils import OverFlowUtil, dump_overflow, check_overflow_npu, clear_overflow_npu
 from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist, check_single_rank_folder
@@ -117,7 +117,7 @@ def overflow_check(name, **kwargs):
         global forward_api_info
         global backward_api_info
 
-        module_name = name
+        module_name = name.replace(Const.DELIMITER, '_')
         if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
             # backward API endwith backward
             if module_name.endswith(Const.BACKWARD):
