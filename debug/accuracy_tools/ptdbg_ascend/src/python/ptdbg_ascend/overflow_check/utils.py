@@ -50,7 +50,7 @@ def set_overflow_check_switch(switch, filter_switch=Const.OFF):
 
 
 def dump_overflow(module_name, in_feat, out_feat, dump_file):
-    name_template = f"{module_name}" + "_{}"
+    name_template = f"{module_name}" + Const.DELIMITER + "{}"
     DumpUtil.dump_data_dir = make_dump_data_dir(dump_file)
     dump_stack_info(name_template)
     if check_inplace_op(name_template):
