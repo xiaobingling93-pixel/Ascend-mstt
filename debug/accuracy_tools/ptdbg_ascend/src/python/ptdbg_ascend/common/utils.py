@@ -456,14 +456,14 @@ def is_starts_with(string, prefix_list):
 
 def check_stack_mode(pkl_fp):
     api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_.]+.(for|back)ward).(in|out)put(\.[0-9]+)?'
+    api_pattern = r'\[\"([0-9a-zA-Z_.] + Const.DELIMITER + (for|back)ward) + Const.DELIMITER + (in|out)put(\.[0-9]+)?'
     is_stack_mode = False
     for index, line in enumerate(pkl_fp):
         if index == 0:
             api_match = re.search(api_pattern, line)
             api_prefix = api_match.group(1)
         elif api_prefix and line.startswith(f'["{api_prefix}'):
-            if line.startswith(f'["{api_prefix}.stack_info'):
+            if line.startswith(f'["{api_prefix} + Const.DELIMITER + stack_info'):
                 is_stack_mode = True
                 break
         else:
