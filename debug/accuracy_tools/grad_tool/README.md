@@ -10,7 +10,7 @@
 ## 工具特性
 
 - 使用便捷，修改处少
-- 可配置多种过滤项
+- 梯度是一步训练过程中差异最大的地方，精度差异体现到梯度差异上比loss差异更明显
 
 ## 工具安装
 
@@ -23,7 +23,7 @@
 2. 安装依赖
 
    ```bash
-   pip3 install pandas pyyaml tqdm
+   pip3 install pandas pyyaml tqdm matplotlib
    ```
 
 ## 使用方式
@@ -37,7 +37,7 @@
    param_list: 
    rank: [0, 1, 2, 3]
    step: [0, 1, 2, 3]
-   bounds: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]
+   bounds: 
    output_path: your_output_dir
    ```
    > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集，
@@ -48,10 +48,10 @@
    | 参数                       | 说明                                               | 是否必选 |
    |--------------------------------|----------------------------------------------------|----------|
    | level                  | Level级别，PyTorch可取值：L0、L1、L2，MindSpore可取值：L0, L1, L2, L3。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | PyTorch是（MindSpore否，默认为L0）       |
-   | param_list             | 填写需要导出的梯度数据的变量名称。不指定或列表为空就表示导出所有参数的梯度数据。数据类型：List[str]。 | 否       |
+   | param_list             | 填写需要监控的权重名称。不指定或列表为空就表示监控所有权重。数据类型：List[str]。 | 否       |
    | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。（MindSpore当前不支持指定rank） | 否       |
    | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。（MindSpore当前不支持指定step） | 否 |
-   | bounds                 | 用来划分区间以统计值分布。需要保证由数据小到大排列。数据类型：List。 | 否  |
+   | bounds                 | 用来划分区间以统计值分布。需要保证由数据小到大排列。不传则使用默认值[-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]（mindspore为[-0.1, 0., 1.0]），数据类型：List。 | 否  |
    | output_path            | 输出目录。如果不存在就会创建一个新目录。数据类型：str。 | PyTorch是（MindSpore否，默认为./grad_stat |
 
    **不同级别的level的导出数据**
@@ -85,36 +85,22 @@
    + bounds：一个列表，用来划分出区间以统计值分布。例如传入bounds = [-10, 0, 10]，此时有一个 grad_value: Tensor = [9.3 , 5.4, -1.0, -12.3]，依据 bounds 划分出 (-inf, -10]、(-10, 0]、(0, 10]、(10, inf) 四个区间，然后统计grad_value里的数据落在每个区间内的个数，得到 1、1、2、0。如下图所示：   
    ![Alt text](img/image-1.png)
 
-2. 在训练流程执行之前传入config.yaml的路径实例化一个GradientDumper对象。示例代码如下：
+2. 插入代码。示例代码如下：
 
-- PyTorch框架
+- PyTorch框架：模型构造完成时，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将模型作为参数传入。
 ```python
 from grad_tool.grad_monitor import GradientMonitor
 gm = GradientMonitor("config_path")
+gm.monitor(model)
 ```
-- MindSpore框架
+- MindSpore框架：在训练开始前，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将优化器作为参数传入。
 ```python
 from grad_tool.grad_monitor import GradientMonitor
 gm = GradientMonitor("config_path", framework="MindSpore")
-```
-
-3. 插入代码监控模型：
-
-- PyTorch框架
-   模型构造完成时，调用gm.monitor并将模型作为参数传入。
-
-```python
-gm.monitor(model)
-```
-
-- MindSpore框架
-   在训练开始前，调用gm.monitor并将优化器作为参数传入。
-
-```python
 gm.monitor(optimizer)
 ```
 
-4. 结束监控（MindSpore需要）
+3. 结束监控（MindSpore需要）
 
    在训练结束之后，调用stop接口
 
@@ -207,17 +193,23 @@ GradComparator.compare_distributed("配置文件里写的输出目录",
       │                     └── summary_similarities.png
 ```
 
-**similarities.csv示例**
+**问题界定**
 
-![Alt text](img/image-2.png)
+原则：对于任意权重，第0步的梯度相似度低于0.97，或者某一步的梯度相似度下降超过0.03，认为这一步存在精度问题。例子如下：
 
-这份文件记录了所有权重在每一步的梯度相似度和总的梯度相似度。
-
-**summary_similarities.png示例**
+- 第0步相似度低于0.97
 
 ![Alt text](img/image-3.png)
 
-上图为梯度相似度随step变化图。
+- 第3步相似度下降超过0.03
+
+![Alt text](img/image-4.png)
+
+- 正常情况
+
+![Alt text](img/image-2.png)
+
+这个原则是一个经验性的指标，并不是严格的标注，还需要结合实际情况具体分析。
 
 ## 公开接口
 
