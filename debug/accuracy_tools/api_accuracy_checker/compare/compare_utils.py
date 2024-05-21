@@ -232,4 +232,10 @@ def convert_str_to_float(input_data):
     except ValueError as e:
         msg = 'ERROR: Input data cannot be converted to float'
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg) from e
-        
+
+
+def is_inf_or_nan(x):
+    if isinstance(x, str):
+        return x in ("inf", "-inf", "nan")
+    elif isinstance(x, float):
+        return x in (float("inf"), float("-inf"), float("nan"))

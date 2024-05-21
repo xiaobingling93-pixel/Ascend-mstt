@@ -162,7 +162,10 @@ class ULPStandard(Standard):
         self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
         self.ulp_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
                                                 self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
-        self.ulp_err_status = self.get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
+        if is_inf_or_nan(self.mean_ulp_err) or is_inf_or_nan(self.ulp_err_proportion):
+            self.ulp_err_status = CompareConst.ERROR
+        else:
+            self.ulp_err_status = self.get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
     
     def get_ulp_status(self, dtype):
         if dtype == torch.float32:
