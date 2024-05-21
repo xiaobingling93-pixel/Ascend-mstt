@@ -21,7 +21,7 @@ import torch
 import yaml
 
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard
+from ..common.utils import torch_device_guard, Const
 from ..common.file_check_util import FileOpen
 
 
@@ -56,7 +56,7 @@ class AtenOPTemplate(HOOKModule):
             if not '.' + overload_name in op_name_:
                 op_name_ = op_name_ + '.' + overload_name
         self.op = op
-        self.prefix_op_name_ = "Aten_" + str(op_name_) + "_"
+        self.prefix_op_name_ = "Aten" + Const.DELIMITER + str(op_name_) + Const.DELIMITER
         super().__init__(hook)
 
     @torch_device_guard

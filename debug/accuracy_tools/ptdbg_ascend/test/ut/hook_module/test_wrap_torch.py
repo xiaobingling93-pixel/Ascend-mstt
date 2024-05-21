@@ -18,7 +18,7 @@ class TestWrapTorch(unittest.TestCase):
     def test_TorchOPTemplate(self):
         template = TorchOPTemplate(self.op_name, self.hook)
         self.assertEqual(template.op_name_, self.op_name)
-        self.assertEqual(template.prefix_op_name_, "Torch_" + str(self.op_name) + "_")
+        self.assertEqual(template.prefix_op_name_, "Torch." + str(self.op_name) + ".")
 
     def test_forward(self):
         template = TorchOPTemplate(self.op_name, self.hook)

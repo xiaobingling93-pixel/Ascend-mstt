@@ -219,13 +219,13 @@ def api_precision_compare(config):
 
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
-    full_last_api_name, last_api_dtype = None, None
+    last_api_name, last_api_dtype = None, None
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        full_api_name, direction_status, _, _ = full_api_name_with_direction_status.split(".")
+        _, api_name, _, direction_status, _, _ = full_api_name_with_direction_status.split(".")
         if row_gpu.empty:
             print_warn_log(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue
@@ -242,7 +242,6 @@ def analyse_csv(npu_data, gpu_data, config):
             new_status = CompareConst.SKIP
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
         else:
-            _, api_name, _ = full_api_name.split("*")
             compare_column.api_name = full_api_name_with_direction_status
             if api_name in ThousandthStandardApi:
                 new_status = record_thousandth_threshold_result(compare_column, row_npu)
@@ -258,23 +257,22 @@ def analyse_csv(npu_data, gpu_data, config):
                 new_status = record_benchmark_compare_result(compare_column, bs)
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if full_last_api_name is not None and full_api_name != full_last_api_name:
+        if last_api_name is not None and api_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
-                write_csv([[full_last_api_name, "skip", "skip", message]], config.result_csv_path)
+                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
-                _, last_api_name, _ = full_last_api_name.split("*")
                 message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
-                write_csv([[full_last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+                write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 forward_status, backward_status = [], []
                 message = ''
                 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        full_last_api_name = full_api_name
+        last_api_name = api_name
         
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:
@@ -287,16 +285,15 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             print_error_log(f"Invalid direction status: {direction_status}")
 
-    if full_last_api_name is not None:
+    if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
             message = unsupported_message
-            write_csv([[full_last_api_name, "skip", "skip", message]], config.result_csv_path)
+            write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
-            _, last_api_name, _ = full_last_api_name.split("*")
             message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
-            write_csv([[full_last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+            write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
 
 
 def check_error_rate(npu_error_rate):

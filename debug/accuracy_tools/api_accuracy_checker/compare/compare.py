@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
+from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log, Const
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
     precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, \
     ThousandthStandardApi, apis_threshold
@@ -181,7 +181,7 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, data_info):
-        _, api_name, _ = full_api_name.split("*")
+        _, api_name, _ = full_api_name.split(Const.DELIMITER)
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
         backward_message = data_info.backward_message

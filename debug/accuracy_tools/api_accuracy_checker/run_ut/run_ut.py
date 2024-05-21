@@ -19,7 +19,7 @@ from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const, create_directory
+    print_error_log, initialize_save_path, Const, create_directory, Const
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.compare_utils import CompareConst
@@ -206,7 +206,7 @@ def run_api_offline(config, compare, api_name_set):
             continue
         try:
             if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split("*")
+                [_, api_name, _] = api_full_name.split(Const.DELIMITER)
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
@@ -214,7 +214,7 @@ def run_api_offline(config, compare, api_name_set):
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
             if "expected scalar type Long" in str(err):
                 print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -252,7 +252,7 @@ def run_api_online(config, compare):
         api_full_name = api_data.name
 
         if msCheckerConfig.white_list:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
             if api_name not in set(msCheckerConfig.white_list):
                 continue
         dispatcher.update_consume_queue(api_data)
@@ -260,7 +260,6 @@ def run_api_online(config, compare):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
             UtAPIInfo(api_full_name + '.forward.input', element)
         UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_output)
@@ -273,7 +272,7 @@ def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split("*")
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -318,7 +317,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split("*")
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -450,7 +449,7 @@ def preprocess_forward_content(forward_content):
     arg_cache = {}
 
     for key, value in forward_content.items():
-        base_key = key.rsplit('*', 1)[0]
+        base_key = key.rsplit(Const.DELIMITER, 1)[0]
 
         if key not in arg_cache:
             new_args = value['args']
