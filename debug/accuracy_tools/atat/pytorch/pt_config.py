@@ -1,6 +1,7 @@
 import os
 import json
 from ..core.common_config import CommonConfig, BaseConfig
+from ..core.utils import Const
 from ..core.file_check_util import FileOpen
 
 
@@ -8,8 +9,6 @@ from ..core.file_check_util import FileOpen
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.backward_input = json_config.get("backward_input")
-        self.file_format = json_config.get("file_format")
         self.check_config()
         self._check_file_format()
 
@@ -21,12 +20,11 @@ class TensorConfig(BaseConfig):
 class StatisticsConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.summary_mode =  json_config.get("summary_mode")
         self.check_config()
         self._check_summary_mode()
 
     def _check_summary_mode(self):
-        if self.summary_mode is not None and self.summary_mode not in ["statistics", "md5"]:
+        if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
             raise Exception("summary_mode is invalid")
         
 
@@ -45,12 +43,18 @@ class OverflowCheckConfig(BaseConfig):
 
 
 def parse_task_config(task, json_config):
-    if task == "tensor":
-        return TensorConfig(json_config["tensor"])
-    elif task == "statistics":
-        return StatisticsConfig(json_config["statistics"])
-    elif task == "overflow_check":
-        return OverflowCheckConfig(json_config["overflow_check"])
+    default_dic = {}
+    if task == Const.TENSOR:
+        config_dic = json_config.get(Const.TENSOR) if json_config.get(Const.TENSOR) else default_dic
+        return TensorConfig(config_dic)
+    elif task == Const.STATISTICS:
+        config_dic = json_config.get(Const.STATISTICS) if json_config.get(Const.STATISTICS) else default_dic
+        return StatisticsConfig(config_dic)
+    elif task == Const.OVERFLOW_CHECK:
+        config_dic = json_config.get(Const.OVERFLOW_CHECK) if json_config.get(Const.STATISTICS) else default_dic
+        return OverflowCheckConfig(config_dic)
+    else:
+        return StatisticsConfig(default_dic)
 
 
 def parse_json_config(json_file_path):
