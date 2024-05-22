@@ -30,7 +30,7 @@ from ..advisor.advisor import Advisor
 from ..common.utils import check_compare_param, add_time_as_suffix, \
     print_info_log, print_warn_log, print_error_log, CompareException, Const, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
-    is_summary_compare, is_md5_compare, task_dumppath_get
+    task_dumppath_get
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 

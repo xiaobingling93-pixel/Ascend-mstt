@@ -389,36 +389,6 @@ def check_compare_param(input_parma, output_path, stack_mode=False, summary_comp
         check_json_file(input_parma, npu_json, bench_json, stack_json, stack_mode)
 
 
-def is_summary_compare(input_param):
-    npu_pkl_path = input_param.get("npu_pkl_path", None)
-    bench_pkl_path = input_param.get("bench_pkl_path", None)
-    npu_dump_data_dir = input_param.get("npu_dump_data_dir", None)
-    bench_dump_data_dir = input_param.get("bench_dump_data_dir", None)
-    if not npu_pkl_path or not bench_pkl_path:
-        print_error_log(f"Please check the pkl path is valid.")
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-    if not (npu_dump_data_dir and bench_dump_data_dir):
-        return True
-    if npu_dump_data_dir and bench_dump_data_dir:
-        return False
-    print_error_log(f"Please check the dump data dir is valid.")
-    raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def is_md5_compare(input_parma):
-    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
-        pkl_lines = npu_pkl.readline()
-    try:
-        line = json.loads(pkl_lines)
-    except JSONDecodeError as err:
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from err
-    if len(line) < 3:
-        return False
-    if line[2]:
-        return True
-    return False
-
-
 def md5_find(data):
     for key_op in data:
         for key_xxput in data[key_op]:
