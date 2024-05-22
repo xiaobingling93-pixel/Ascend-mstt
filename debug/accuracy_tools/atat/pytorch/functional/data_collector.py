@@ -1,6 +1,6 @@
 
 import os
-from pytorch.module_processer import ModuleProcesser
+from ..module_processer import ModuleProcesser
 from .scope import BaseScope, build_scope
 from .json_writer import DataWriter
 from ..common.log import print_info_log, print_info_log_rank_0, print_error_log_rank_0
