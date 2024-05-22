@@ -36,7 +36,7 @@ class ModuleProcesser:
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
 
         def pre_hook(module, input, output=None):
-            try:  # ??todo why try except
+            try:
                 index = self.module_count_func(name_prefix)
             except IndexError as e:
                 index = None
