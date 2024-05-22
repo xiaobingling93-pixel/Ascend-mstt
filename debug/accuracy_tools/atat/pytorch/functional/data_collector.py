@@ -14,16 +14,16 @@ def build_collect_data(config):
 
 
 class DataCollector:
-    overflow_task = "overflow"
-    tasks_need_tensor_data = ["overflow", "tensor"]
-    level_without_construct = "API"
+    overflow_task = "overflow_check"
+    tasks_need_tensor_data = ["overflow_check", "tensor"]
+    level_without_construct = "L1"
 
     def __init__(self, config):
         self.config = config
         self.data_writer = DataWriter()
-        self.data_processor = build_data_processor(config.task, config.task_config, self.data_writer)
+        self.data_processor = build_data_processor(config, self.data_writer)
         self.module_count = {}
-        self.scope = build_scope(None, self.config.scope, self.config.api_list)
+        self.scope = build_scope(None, self.config.scope, self.config.list)
 
     @property
     def dump_data_dir(self):
@@ -87,20 +87,3 @@ class DataCollector:
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
-
-    def generate_compare_script(self):
-        template_path = os.path.join(os.path.dirname(__file__), '..', 'common', "compare_script.template")
-        pkl_dir = os.path.dirname(self.dump_file_path)
-        compare_script_path = os.path.join(pkl_dir, "compare_data.py")
-        is_api_stack = "True" if self.config.task == Const.API_STACK else "False"
-
-        try:
-            with FileOpen(template_path, 'r') as ftemp, \
-                    os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
-                code_temp = ftemp.read()
-                fout.write(code_temp % (self.dump_file_path, self.dump_data_dir, is_api_stack))
-        except OSError:
-            print_error_log_rank_0(f"Failed to open file. Please check file {template_path} or path {pkl_dir}.")
-
-        print_info_log_rank_0(f"Generate compare script successfully which is {compare_script_path}.")
-
