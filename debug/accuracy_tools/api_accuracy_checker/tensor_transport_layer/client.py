@@ -3,12 +3,16 @@ import io
 import struct
 import time
 import os
+import signal
+import sys
 from queue import Queue
 from threading import Thread
 from typing import Union
+
 from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
-from api_accuracy_checker.common.utils import logger, print_info_log
+
+from api_accuracy_checker.common.utils import logger, print_info_log, print_error_log
 
 
 class TCPDataItem:
@@ -63,10 +67,18 @@ class TCPClient:
     def start(self):
         def conn_callback(cur_protocol):
             if cur_protocol.transport and cur_protocol.transport.getPeer().host == self.host:
-                logger.debug(f"SUCCESSFULLY 当前进程 {os.getpid()}")
+                logger.debug(f"Process: {os.getpid()} connects to server successfully.")
             else:
-                logger.debug(f"FAIL 当前进程 {os.getpid()}")
+                logger.warning(f"Process: {os.getpid()} fails to connect to server. ")
                 raise ConnectionError(f"Failed to connect to {self.host}.")
+            
+        def conn_err_callback(failure):
+            self.signal_exit = True
+            time.sleep(1)
+            reactor.stop()
+            print_error_log(f"Failed to connected {self.host} {self.port}. Reason is {failure.getErrorMessage()}")
+            os.kill(os.getpid(), signal.SIGKILL)
+            os.kill(os.getppid(), signal.SIGKILL)
 
         def cur_protocol():
             return self.tcp_manager
@@ -77,6 +89,7 @@ class TCPClient:
         endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)
         d.addCallback(conn_callback)
+        d.addErrback(conn_err_callback)
 
         reactor_thread = Thread(target=self.run_reactor, daemon=True)
         reactor_thread.start()

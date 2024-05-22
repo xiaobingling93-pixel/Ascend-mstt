@@ -3,8 +3,8 @@ from api_accuracy_checker.common.function_factory import npu_custom_functions, n
 
 
 @npu_custom_functions
-def npu_rms_norm(x, gamma, eps=1e-5):
-    rstd = torch.rsqrt(torch.mean(torch.pow(x, 2), axis=-1, keepdim=True) + eps)
+def npu_rms_norm(x, gamma, epsilon=1e-5):
+    rstd = torch.rsqrt(torch.mean(torch.pow(x, 2), axis=-1, keepdim=True) + epsilon)
     res = x * rstd * gamma
     return res.cpu(), rstd.cpu()
 

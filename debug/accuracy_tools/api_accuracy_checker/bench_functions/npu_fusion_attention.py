@@ -3,6 +3,7 @@ import numpy as np
 from einops import rearrange
 
 from api_accuracy_checker.common.function_factory import npu_custom_functions, npu_custom_grad_functions
+from api_accuracy_checker.common.utils import logger
 
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 softmax_build_mode = "QKV"  # "MAX_SUM"
@@ -186,7 +187,7 @@ def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next
                         atten_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
                         atten_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
                         atten_mask = atten_mask_u + atten_mask_l
-                    print(f"反向转换atten_mask {atten_mask.shape}")
+                    logger.debug(f"反向转换atten_mask {atten_mask.shape}")
                     return atten_mask.to(dtype)
 
         return atten_mask.to(dtype)
@@ -263,9 +264,9 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
 
     B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], args[3], args[4])
     if N1 == N2 and S1 == S2:
-        print(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+        logger.debug(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
-        print(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+        logger.debug(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
     if not (N1 % N2 == 0 and N1 >= N2):
         raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
 
