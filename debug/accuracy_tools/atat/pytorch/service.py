@@ -101,8 +101,7 @@ class Service:
     def stop(self):
         self.switch = False
         self.collect_data.write_json()
-        if not is_gpu:
-            self.collect_data.generate_compare_script()
+
 
     def create_dirs(self):
         check_path_before_create(self.config.dump_path)
