@@ -83,7 +83,7 @@ class Service:
     def start(self, model):
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
-            raise Exception("ptdbg: exit after iteration {}".format(max(self.config.step)))
+            raise Exception("atat: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
             return
         self.model = self.check_model_valid(model)
@@ -101,9 +101,6 @@ class Service:
     def stop(self):
         self.switch = False
         self.collect_data.write_json()
-
-        # if DumpUtil.is_single_rank and DumpUtil.dump_thread_pool: # todo: 多线程dump
-        #     DumpUtil.dump_thread_pool.shutdown(wait=True)
         if not is_gpu:
             self.collect_data.generate_compare_script()
 
@@ -132,11 +129,11 @@ class Service:
         hook_name = self.config.task
 
         if "overflow_check" in hook_name and not is_gpu:
-            pass  # 自提单： todo: clear overflow
+            pass
 
         print_info_log_rank_0("The {} hook function is successfully mounted to the model.".format(hook_name))
         if self.config.level in ["L1", "L2"]:
-            assert self.model is not None  # TODO assert
+            assert self.model is not None
             print_info_log_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             if not isinstance(self.model, torch.nn.Module):
                 raise MsaccException(MsaccException.INVALID_PARAM_ERROR,
