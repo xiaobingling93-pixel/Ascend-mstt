@@ -3,7 +3,7 @@ import torch
 import pytest
 import ptdbg_ascend.common.utils as utils
 
-from ptdbg_ascend.common.utils import CompareException, is_md5_compare, get_md5_for_tensor
+from ptdbg_ascend.common.utils import CompareException, get_md5_for_tensor
 from ptdbg_ascend.common.file_check_util import FileCheckException
 
 
@@ -32,10 +32,6 @@ class TestUtilsMethods(unittest.TestCase):
             utils.check_file_size(file, 0)
         self.assertEqual(error.value.code, CompareException.INVALID_FILE_ERROR)
 
-    def test_is_md5_compare(self):
-        input_param = {"npu_pkl_path": "resources/compare/npu_test.pkl"}
-        result = is_md5_compare(input_param)
-        self.assertFalse(result)
 
     def test_get_md5_for_tensor(self):
         data = [[1, 2], [3, 4]]

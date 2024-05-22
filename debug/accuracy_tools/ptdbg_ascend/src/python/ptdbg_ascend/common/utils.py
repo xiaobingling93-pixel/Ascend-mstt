@@ -391,7 +391,6 @@ def check_compare_param(input_parma, output_path, stack_mode=False, summary_comp
 
 def md5_find(data):
     for key_op in data:
-        # data_key_op = data.get(key_op, None)
         for api_info in data[key_op]:
             if isinstance(data[key_op][api_info], list):
                 for i in range(len(data[key_op][api_info])):
