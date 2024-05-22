@@ -432,8 +432,6 @@ def task_dumppath_get(input_param):
         input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
         input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
         return summary_compare, md5_compare
-    print_error_log(f"Please check the dump data dir is valid.")
-    raise CompareException(CompareException.INVALID_PATH_ERROR)
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
