@@ -10,13 +10,13 @@ from ..common.utils import Const
 from ..common import recursive_apply_transform
 
 
-def build_data_processor(task, task_config, data_writer):
-    if task == DataProcessor.full:
-        return FullTensorDataProcessor(task_config, data_writer)
-    elif task == DataProcessor.summary:
-        return DataProcessor(task_config, data_writer)
-    elif task == DataProcessor.overflow:
-        return OverflowTensorDataProcessor(task_config, data_writer)
+def build_data_processor(config, data_writer):
+    if config.task == DataProcessor.full:
+        return FullTensorDataProcessor(config, data_writer)
+    elif config.task == DataProcessor.summary:
+        return DataProcessor(config, data_writer)
+    elif config.task == DataProcessor.overflow:
+        return OverflowTensorDataProcessor(config, data_writer)
     else:
         raise MsaccException(MsaccException.INVALID_PARAM_ERROR,
                                   "task should be in [{}, {}, {}]".format(
@@ -58,10 +58,10 @@ class ModuleBackwardInputsOutputs:
 
 class DataProcessor:
     full = "tensor"
-    summary = "summary"
-    overflow = "overflow"
+    summary = "statistics"
+    overflow = "overflow_check"
 
-    def __init__(self, task_config, data_writer):
+    def __init__(self, config, data_writer):
         self.data_writer = data_writer
         self.api_info_struct = {}
         self.stack_info_struct = {}
@@ -70,7 +70,7 @@ class DataProcessor:
             "dtype": self.analyze_dtype_in_kwargs
         }
         self.api_name = None
-        self.task_config = task_config
+        self.config = config
         self.api_data_category = None
         self.has_overflow = False
 
@@ -200,7 +200,7 @@ class DataProcessor:
         tensor_json.update({"Mean": tensor_mean})
         tensor_json.update({"Norm": tensor_norm})
         tensor_json.update({"requires_grad": tensor.requires_grad})
-        if self.task_config.md5:
+        if self.config.summary_mode == "md5":
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({"md5": tensor_md5})
 
@@ -281,8 +281,8 @@ class FullTensorDataProcessor(DataProcessor):
 class OverflowTensorDataProcessor(FullTensorDataProcessor):
     __slots__ = ["cached_tensors_and_file_paths"]
 
-    def __init__(self, task_config, data_writer):
-        super().__init__(task_config, data_writer)
+    def __init__(self, config, data_writer):
+        super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_tensor(self, tensor, suffix):
