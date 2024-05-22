@@ -47,6 +47,7 @@ aten_ops_blacklist:
   - npu_clear_float_status
   - npu_format_cast
   - npu_dtype_cast
+  - npu_dtype_cast_backward
   - _allgather_base_
   - _reduce_scatter_base_
   - is_same_size

@@ -217,10 +217,11 @@ class Comparator:
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
             status, compare_result, message = [], [], []
-            if len(bench_output) != len(device_output):
+            if len(bench_output) > len(device_output):
                 status = [CompareConst.ERROR]
                 message = ["bench and npu output structure is different."]
             else:
+                device_output = device_output[:len(bench_output)]
                 for b_out_i, n_out_i in zip(bench_output, device_output):
                     status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
                     status.append(status_i)
@@ -346,6 +347,8 @@ class Comparator:
                 rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
                 compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
                 compare_column.EB = get_error_balance(bench_output, device_output)
+                if rel_err.size == 0:
+                    return CompareConst.ERROR, compare_column, "Relative error result list is empty."
                 compare_column.Max_rel_error = get_max_rel_err(rel_err)
                 compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 

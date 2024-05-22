@@ -69,15 +69,15 @@ class ServerProtocol(protocol.Protocol):
         self.obj_body = None
         self.factory.transport_dict[self.transport] = 1
         self.factory.transport_list.append(self.transport)
-        print_info_log(f"已连接客户端{self.transport.getPeer()}")
+        print_info_log(f"Connected to {self.transport.getPeer()} successfully.")
 
     def connectionLost(self, reason):
         self.factory.transport_dict.pop(self.transport, None)
         if len(self.factory.transport_dict) == 0:
             self.consumer_queue.put(b'KILL_')
 
-        print_info_log(f"REASON: {reason} 与客户端{self.transport.getPeer()} 断开连接, "
-                       f"self.factory.transport_dict: {len(self.factory.transport_dict)}")
+        print_info_log(f"Lost connection with {self.transport.getPeer()}. Reason is: {reason} 与客户端 断开连接, "
+                       f"current connetcion number is: {len(self.factory.transport_dict)}")
 
     def send_ack(self, ack_info):
         self.transport.write(ack_info)

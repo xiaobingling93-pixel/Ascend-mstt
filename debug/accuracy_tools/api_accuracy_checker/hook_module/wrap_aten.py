@@ -49,7 +49,8 @@ class AtenOPTemplate(HOOKModule):
         if self.op in WhiteAtenOps:
             return eval(f"torch.ops.aten.{self.op}")(*args, **kwargs)
         if self.op not in aten_func:
-            raise Exception(f"The op {self.op} is not in dir(torch.ops.aten) and support yaml.")
+            raise Exception(f"Skip op[{self.op}] accuracy check, because the op is not "
+                            f"in dir(torch.ops.aten) and support yaml.")
         return aten_func[self.op](*args, **kwargs)
 
 

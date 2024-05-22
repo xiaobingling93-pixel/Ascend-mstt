@@ -133,6 +133,8 @@ def move2device_exec(obj, device):
         if obj.device.type != device:
             obj = obj.to(device)
         return obj
+    elif "return_types" in str(type(obj)):
+        return move2device_exec(tuple(obj), device)
     elif isinstance(obj, torch._C.device):
         return torch.device(device)
     else:
