@@ -96,6 +96,7 @@ class Const:
     INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
                     "_reduce_scatter_base", "_all_gather_base"]
 
+    TASK_LIST = ["tensor", "statistics", "overflow_check"]
 
 class CompareConst:
     """
