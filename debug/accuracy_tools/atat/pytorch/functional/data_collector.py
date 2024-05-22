@@ -89,7 +89,7 @@ class DataCollector:
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
 
     def generate_compare_script(self):
-        template_path = os.path.join(os.path.dirname(__file__), '../..', 'common', "compare_script.template")
+        template_path = os.path.join(os.path.dirname(__file__), '..', 'common', "compare_script.template")
         pkl_dir = os.path.dirname(self.dump_file_path)
         compare_script_path = os.path.join(pkl_dir, "compare_data.py")
         is_api_stack = "True" if self.config.task == Const.API_STACK else "False"
