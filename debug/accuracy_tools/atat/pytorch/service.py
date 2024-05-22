@@ -132,7 +132,7 @@ class Service:
             pass
 
         print_info_log_rank_0("The {} hook function is successfully mounted to the model.".format(hook_name))
-        if self.config.level in ["L1", "L2"]:
+        if self.config.level in ["L0", "mix"]:
             assert self.model is not None
             print_info_log_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             if not isinstance(self.model, torch.nn.Module):
@@ -153,7 +153,7 @@ class Service:
                 module.register_full_backward_pre_hook(self.module_processor.node_hook(prefix + "backward", "start"))
                 module.register_full_backward_hook(self.module_processor.node_hook(prefix + "backward", "stop"))
 
-        if self.config.level in ["L2", "API"]:
+        if self.config.level in ["mix", "L1"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_modularity()
 
