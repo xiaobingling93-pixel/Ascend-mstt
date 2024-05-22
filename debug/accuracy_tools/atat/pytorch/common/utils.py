@@ -74,7 +74,6 @@ def get_rank_if_initialized():
 
 
 def seed_all(seed=1234, mode=False):
-    check_seed_all(seed, mode)
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
