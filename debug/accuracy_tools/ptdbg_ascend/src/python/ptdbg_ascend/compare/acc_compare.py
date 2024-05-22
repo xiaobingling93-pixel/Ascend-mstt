@@ -340,7 +340,6 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         if magnitude_diff > 0.5:
                             warning_flag = True
                     else:
-                        # result_item[start_idx + i] = CompareConst.NAN
                         result_item[start_idx + i] = CompareConst.NONE
                 accuracy_check = CompareConst.WARNING if warning_flag else ""
                 err_msg += "Need double check api accuracy." if warning_flag else ""
@@ -785,33 +784,33 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
         if not read_err_npu or not read_err_bench:
             break
         try:
-            opname_npu = next(ops_npu_iter)
+            op_name_npu = next(ops_npu_iter)
             read_err_npu = True
 
-            npuop_data = npu_json_data['data'][opname_npu]
-            npuop_parsed_list = read_op(npuop_data, opname_npu)
-            if opname_npu in stack_json_data:
-                npuop_parsed_list.append({'full_op_name': opname_npu, 'full_info': stack_json_data[opname_npu]})
+            npu_op_data = npu_json_data['data'][op_name_npu]
+            npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
+            if op_name_npu in stack_json_data:
+                npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
             else:
-                npuop_parsed_list.append({'full_op_name': opname_npu, 'full_info': None})
+                npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
 
-            npu_ops_queue.append(merge_tensor(npuop_parsed_list, summary_compare, md5_compare))
+            npu_ops_queue.append(merge_tensor(npu_op_parsed_list, summary_compare, md5_compare))
         except StopIteration:
             read_err_npu = False
             continue
         try:
-            opname_bench = next(ops_bench_iter)
+            op_name_bench = next(ops_bench_iter)
             read_err_bench = True
 
-            benchop_data = bench_json_data['data'][opname_bench]
-            benchop_parsed_list = read_op(benchop_data, opname_bench)
-            if opname_bench in stack_json_data:
-                benchop_parsed_list.append(
-                    {'full_op_name': opname_bench, 'full_info': stack_json_data[opname_bench]})
+            bench_op_data = bench_json_data['data'][op_name_bench]
+            bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
+            if op_name_bench in stack_json_data:
+                bench_op_parsed_list.append(
+                    {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
             else:
-                benchop_parsed_list.append({'full_op_name': opname_bench, 'full_info': None})
+                bench_op_parsed_list.append({'full_op_name': op_name_bench, 'full_info': None})
 
-            bench_ops_queue.append(merge_tensor(benchop_parsed_list, summary_compare, md5_compare))
+            bench_ops_queue.append(merge_tensor(bench_op_parsed_list, summary_compare, md5_compare))
         except StopIteration:
             read_err_bench = False
             continue

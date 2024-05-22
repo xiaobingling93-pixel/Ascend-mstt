@@ -391,14 +391,15 @@ def check_compare_param(input_parma, output_path, stack_mode=False, summary_comp
 
 def md5_find(data):
     for key_op in data:
-        for key_xxput in data[key_op]:
-            if isinstance(data[key_op][key_xxput], list):
-                for i in range(len(data[key_op][key_xxput])):
-                    if data[key_op][key_xxput][i] == None:
+        # data_key_op = data.get(key_op, None)
+        for api_info in data[key_op]:
+            if isinstance(data[key_op][api_info], list):
+                for i in range(len(data[key_op][api_info])):
+                    if data[key_op][api_info][i] == None:
                         continue
-                    elif 'md5' in data[key_op][key_xxput][i]:
+                    elif 'md5' in data[key_op][api_info][i]:
                         return True
-            elif 'md5' in data[key_op][key_xxput]:
+            elif 'md5' in data[key_op][api_info]:
                 return True
     return False
 
@@ -409,9 +410,9 @@ def task_dumppath_get(input_param):
     if not npu_json_path or not bench_json_path:
         print_error_log(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    with open(npu_json_path, 'r') as npu_f:
+    with FileOpen(npu_json_path, 'r') as npu_f:
         npu_json_data = json.load(npu_f)
-    with open(bench_json_path, 'r') as bench_f:
+    with FileOpen(bench_json_path, 'r') as bench_f:
         bench_json_data = json.load(bench_f)
     if npu_json_data['task'] != bench_json_data['task']:
         print_error_log(f"Please check the dump task is consistent.")
@@ -515,7 +516,7 @@ def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
 
 
-def check_json_file(input_param, npu_json, bench_json, stack_json, stack_mode):
+def check_json_file(input_param, npu_json, bench_json, stack_json):
     _check_json(npu_json, input_param.get("npu_json_path"))
     _check_json(bench_json, input_param.get("bench_json_path"))
     _check_json(stack_json, input_param.get("stack_json_path"))

@@ -18,7 +18,7 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare, is_md5_compare, task_dumppath_get
+    check_configuration_param, task_dumppath_get
 from .acc_compare import compare_core
 
 

@@ -177,13 +177,6 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(op_dict, result_op_dict)
 
     def test_read_op(self):
-        # base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        #
-        # pkl_dir = os.path.join(base_dir, "resources/compare/npu_test.pkl")
-        #
-        # npu_ops_queue = []
-        # npu_pkl_handle = open(pkl_dir, "r")
-        # stack_mode = False
         opname_npu = 'modulemodle.linear.Linear.0.forward'
         result = compare.read_op(npuop_data, opname_npu)
         self.assertEqual(result, result_1)
@@ -203,5 +196,5 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_accuracy_graph_mode(self):
         result = []
-        compare.get_accuracy(result, npu_dict_aten, bench_dict_functional)
+        compare.get_accuracy(result, npu_dict_aten, bench_dict_functional, True, False)
         self.assertEqual(result, aten_result)
