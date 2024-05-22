@@ -12,7 +12,7 @@ else:
     is_gpu = False
 
 
-torch_without_guard_version_list = ['2.1'] # TODO: 2.2?
+torch_without_guard_version_list = ['2.1']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True
@@ -71,9 +71,6 @@ def get_rank_if_initialized():
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
     return None
-
-
-
 
 
 class Const:
