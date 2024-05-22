@@ -21,7 +21,7 @@ class CommonConfig:
             raise Exception("rank is invalid")
         if self.step is not None and not isinstance(self.step, list):
             raise Exception("step is invalid")
-        if self.level is not None and self.level not in ["L0", "L1", "L2"]:
+        if self.level and self.level not in Const.LEVEL_LIST:
             raise Exception("level is invalid")
         if self.seed is not None and not isinstance(self.seed, int):
             raise Exception("seed is invalid")
