@@ -1,33 +1,9 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
 import os
-import random
-import zlib
-from functools import wraps
-
+from pathlib import Path
+import stat
 import torch
 import numpy as np
-
-from atat.core.utils import print_error_log
-from atat.core.utils import Const
-from atat.core.utils import CompareException
-
-
-
+from functools import wraps
 try:
     import torch_npu
 except ImportError:
@@ -35,8 +11,8 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1', '2.2']
-npu_distributed_api = ['isend', 'irecv']
+
+torch_without_guard_version_list = ['2.1'] # TODO: 2.2?
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True
@@ -47,51 +23,7 @@ for version in torch_without_guard_version_list:
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
 
-
-def check_is_npu():
-    return not is_gpu
-
-
-def torch_device_guard(func):
-    if is_gpu or torch_without_guard_version:
-        return func
-    # Parse args/kwargs matched torch.device objects
-
-    @torch_npu_device_guard
-    def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
-    return wrapper
-
-
-def seed_all(seed=1234, mode=False):
-    check_seed_all(seed, mode)
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.use_deterministic_algorithms(mode)
-    if is_gpu:
-        torch.cuda.manual_seed_all(seed)
-        torch.cuda.manual_seed(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.enable = False
-        torch.backends.cudnn.benchmark = False
-    else:
-        torch_npu.npu.manual_seed_all(seed)
-        torch_npu.npu.manual_seed(seed)
-
-
-def check_seed_all(seed, mode):
-    if isinstance(seed, int):
-        if seed < 0 or seed > Const.MAX_SEED_VALUE:
-            print_error_log(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
-            raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    else:
-        print_error_log(f"Seed must be integer.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    if not isinstance(mode, bool):
-        print_error_log(f"seed_all mode must be bool.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+npu_distributed_api = ['isend', 'irecv']
 
 
 def parameter_adapter(func):
@@ -124,9 +56,84 @@ def parameter_adapter(func):
     return inner
 
 
-def get_md5_for_tensor(x):
-    if x.dtype == torch.bfloat16:
-        x = x.float()
-    tensor_bytes = x.cpu().detach().numpy().tobytes()
-    crc32_hash = zlib.crc32(tensor_bytes)
-    return f"{crc32_hash:08x}"
+def torch_device_guard(func):
+    if is_gpu or torch_without_guard_version:
+        return func
+    # Parse args/kwargs matched torch.device objects
+
+    @torch_npu_device_guard
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def get_rank_if_initialized():
+    if torch.distributed.is_initialized():
+        return torch.distributed.get_rank()
+    return None
+
+
+
+
+
+class Const:
+    """
+    Class for const
+    """
+    SEP = "."
+    MODEL_TYPE = ['.onnx', '.pb', '.om']
+    DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
+    SEMICOLON = ";"
+    COLON = ":"
+    EQUAL = "="
+    COMMA = ","
+    DOT = "."
+    DUMP_RATIO_MAX = 100
+    SUMMERY_DATA_NUMS = 256
+    FLOAT_EPSILON = np.finfo(float).eps
+    SUPPORT_DUMP_MODE = ['api', 'acl']
+    ON = 'ON'
+    OFF = 'OFF'
+    BACKWARD = 'backward'
+    FORWARD = 'forward'
+    PRE_FORWARD = "pre_forward"
+
+    # dump mode
+    ALL = "all"
+    LIST = "list"
+    RANGE = "range"
+    STACK = "stack"
+    ACL = "acl"
+    API_LIST = "api_list"
+    API_STACK = "api_stack"
+    DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+    AUTO = "auto"
+    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
+    SUMMARY = "summary"
+    MD5 = "md5"
+    SUMMARY_MODE = [ALL, SUMMARY, MD5]
+
+    WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
+    WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
+
+    PKL_SUFFIX = ".pkl"
+    NUMPY_SUFFIX = ".npy"
+    ONE_GB = 1 * 1024 * 1024 * 1024
+    TEN_GB = 10 * 1024 * 1024 * 1024
+    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    FILE_NAME_LENGTH = 255
+    DIRECTORY_LENGTH = 4096
+    DISTRIBUTED_PREFIX_LENGTH = 60
+    SUMMARY_COLUMN_NUM = 6
+    STACK_COLUMN_NUM = 2
+    # env dump path
+    ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
+    DUMP_DIR = "dump_data"
+
+    ENV_ENABLE = "1"
+    ENV_DISABLE = "0"
+
+    MAX_SEED_VALUE = 2**32 - 1
+
+    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+                    "_reduce_scatter_base", "_all_gather_base"]

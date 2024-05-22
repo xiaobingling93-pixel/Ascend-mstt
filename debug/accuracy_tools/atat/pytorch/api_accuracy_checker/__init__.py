@@ -16,6 +16,6 @@
 # ==============================================================================
 """
 
-from api_accuracy_checker.common.utils import seed_all
+from .common.utils import seed_all
 seed_all()
 __all__ = []

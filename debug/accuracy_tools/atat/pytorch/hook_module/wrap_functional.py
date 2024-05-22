@@ -20,15 +20,15 @@ import os
 import torch
 import yaml
 
-from atat.core.utils import print_info_log
-from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard
+from ..common.utils import torch_device_guard, Const
+from ..common.log import print_info_log_rank_0
+from ..common.file_check import FileOpen
 
 
 def remove_dropout():
     if torch.__version__ > "1.8":
-        print_info_log("For precision comparison, the probability p in the dropout method is set to 0.")
+        print_info_log_rank_0("For precision comparison, the probability p in the dropout method is set to 0.")
         import torch.nn.functional as F
         from torch import _VF
         from torch.overrides import has_torch_function_unary, handle_torch_function
@@ -85,7 +85,7 @@ class HOOKFunctionalOP(object):
 class FunctionalOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Functional_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Functional" + Const.SEP + str(op_name) + Const.SEP
         super().__init__(hook)
 
     @torch_device_guard

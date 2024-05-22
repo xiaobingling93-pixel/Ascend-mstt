@@ -24,15 +24,11 @@ from .wrap_tensor import get_tensor_ops
 from .wrap_vf import get_vf_ops
 from .wrap_distributed import get_distributed_ops
 from .wrap_aten import get_aten_ops
-from ..common.utils import torch_without_guard_version, npu_distributed_api
+from ..common.utils import torch_without_guard_version, npu_distributed_api, is_gpu
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
-try:
+if not is_gpu:
     import torch_npu
-except ImportError:
-    is_gpu = True
-else:
-    is_gpu = False
     from . import wrap_npu_custom
     from .wrap_npu_custom import get_npu_ops
 

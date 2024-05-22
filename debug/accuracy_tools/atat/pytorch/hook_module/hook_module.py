@@ -20,17 +20,15 @@ import threading
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
-
+from ..common.utils import Const
 
 class HOOKModule(nn.Module):
     module_count = {}
     inner_stop_hook = {}
 
-    def __init__(self, hook) -> None:
+    def __init__(self, build_hook) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
-        self.input_args = tuple()
-        self.input_kwargs = dict()
         self.prefix = ""
         self.current_thread = threading.current_thread().ident
         if self.current_thread not in HOOKModule.inner_stop_hook:
@@ -43,12 +41,14 @@ class HOOKModule(nn.Module):
 
             if self.prefix not in HOOKModule.module_count:
                 HOOKModule.module_count[self.prefix] = 1
-                self.prefix += '0_'
+                self.prefix += '0' + Const.SEP
             else:
                 HOOKModule.module_count[self.prefix] += 1
-                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + '_'
-            self.register_forward_hook(hook(self.prefix + "forward"))
-            self.register_backward_hook(hook(self.prefix + "backward"))
+                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
+            forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
+            self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
+            self.register_forward_hook(forward_hook, with_kwargs=True)
+            self.register_backward_hook(backward_hook)
 
     def __call__(self, *input, **kwargs):
         changed = False
@@ -65,17 +65,17 @@ class HOOKModule(nn.Module):
         if len(self._backward_hooks) > 0:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
         for hook in self._forward_pre_hooks.values():
-            result = hook(self, input)
-            if result is not None:
-                if not isinstance(result, tuple):
-                    result = (result,)
-                input = result
+            result_input, result_kwargs = hook(self, input, kwargs)
+            if result_input is not None:
+                if not isinstance(result_input, tuple):
+                    result_input = (result_input,)
+                input = result_input
+            if result_kwargs is not None:
+                kwargs = result_kwargs
         bw_hook = None
         if len(full_backward_hooks) > 0:
             bw_hook = full_hooks.BackwardHook(self, full_backward_hooks)
             input = bw_hook.setup_input_hook(input)
-        self.input_args = input
-        self.input_kwargs = kwargs
         if torch._C._get_tracing_state():
             result = self._slow_forward(*input, **kwargs)
         else:
@@ -83,7 +83,7 @@ class HOOKModule(nn.Module):
         input_list = list(input)
         input_list.extend(kwargs.values())
         for hook in self._forward_hooks.values():
-            hook_result = hook(self, input_list, result)
+            hook_result = hook(self, input, kwargs, result)
             if hook_result is not None:
                 result = hook_result
         if bw_hook:

@@ -1,22 +1,20 @@
 import argparse
 import os
 import sys
-import csv
 import math
 from collections import namedtuple
 import pandas as pd
 
-from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
+from ..common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
     CompareException, create_directory
-from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
+from ..common.config import msCheckerConfig
+from ..compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
     convert_str_to_float, CompareMessage
-from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
-from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
-from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
+from ..compare.compare_column import ApiPrecisionOutputColumn
+from ..run_ut.run_ut import get_validated_result_csv_path
+from ...common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create
 
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])

@@ -3,10 +3,10 @@ import os
 import inspect
 import torch
 import numpy as np
-from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.common.utils import print_error_log, write_pt, create_directory, DumpException, \
+from ..common.config import msCheckerConfig
+from ..common.utils import print_error_log, write_pt, create_directory, DumpException, \
     get_real_data_path
-from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
+from ...common.file_check import check_path_before_create
 
 
 def get_tensor_extremum(data, operator):
@@ -97,7 +97,7 @@ class APIInfo:
     @staticmethod
     def get_full_save_path(save_path, dir_name, contain_step=False):
         if contain_step:
-            from api_accuracy_checker.dump.dump import DumpUtil
+            from calibrator.pytorch.api_accuracy_checker.dump.dump import DumpUtil
             step_dir = "step" + str(DumpUtil.call_num - 1 if msCheckerConfig.enable_dataloader else DumpUtil.call_num)
             rank_dir = f"rank{os.getpid()}"
             return os.path.join(save_path, step_dir, dir_name, rank_dir)

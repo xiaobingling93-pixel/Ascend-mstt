@@ -15,17 +15,12 @@
 # limitations under the License.
 """
 
-import os
-
 import torch
-import yaml
 
-from api_accuracy_checker.hook_module.hook_module import HOOKModule
-from api_accuracy_checker.common.utils import torch_device_guard
-from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.hook_module.utils import WrapTensorOps
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
-from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import parameter_adapter
+from .hook_module import HOOKModule
+from ..common.utils import torch_device_guard
+from ..common.config import msCheckerConfig
+from ...common.utils import parameter_adapter
 
 
 def get_tensor_ops():

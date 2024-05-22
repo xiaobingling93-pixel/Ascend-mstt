@@ -15,11 +15,11 @@
 # limitations under the License.
 """
 
-from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
-from api_accuracy_checker.dump.info_dump import write_api_info_json, initialize_output_json
-from api_accuracy_checker.common.utils import print_error_log, CompareException, print_info_log
-from api_accuracy_checker.hook_module.register_hook import initialize_hook
-from api_accuracy_checker.common.config import msCheckerConfig
+from .api_info import ForwardAPIInfo, BackwardAPIInfo
+from .info_dump import write_api_info_json, initialize_output_json
+from ..common.utils import print_error_log, CompareException, print_info_log
+from ..hook_module.register_hook import initialize_hook
+from ..common.config import msCheckerConfig
 
 
 def set_dump_switch(switch):

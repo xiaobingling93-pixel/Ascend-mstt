@@ -20,7 +20,7 @@ import math
 import torch
 import numpy
 
-from api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
+from ..common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
     print_error_log, get_full_data_path, CompareException
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
@@ -226,6 +226,8 @@ def gen_args(args_info, need_grad=True, convert_type=None, real_data_path=None):
             data = gen_args(arg, need_grad, convert_type, real_data_path)
         elif isinstance(arg, dict):
             data = gen_data(arg, need_grad, convert_type, real_data_path)
+        elif arg is None:
+            data = None
         else:
             print_warn_log(f'Warning: {arg} is not supported')
             raise NotImplementedError()
@@ -243,10 +245,12 @@ def gen_kwargs(api_info, convert_type=None, real_data_path=None):
         real_data_path: the root directory for storing real data.
     """
     check_object_type(api_info, dict)
-    kwargs_params = api_info.get("kwargs")
+    kwargs_params = api_info.get("input_kwargs")
     for key, value in kwargs_params.items():
         if isinstance(value, (list, tuple)):
             kwargs_params[key] = gen_list_kwargs(value, convert_type, real_data_path)
+        elif value is None:
+            kwargs_params[key] = None
         elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
             kwargs_params[key] = gen_data(value, True, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
@@ -293,8 +297,8 @@ def gen_api_params(api_info, need_grad=True, convert_type=None, real_data_path=N
         error_info = f"convert_type params not support {convert_type}."
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     kwargs_params = gen_kwargs(api_info, convert_type, real_data_path)
-    if api_info.get("args"):
-        args_params = gen_args(api_info.get("args"), need_grad, convert_type, real_data_path)
+    if api_info.get("input_args"):
+        args_params = gen_args(api_info.get("input_args"), need_grad, convert_type, real_data_path)
     else:
         print_warn_log(f'Warning: No args in {api_info} ')
         args_params = []

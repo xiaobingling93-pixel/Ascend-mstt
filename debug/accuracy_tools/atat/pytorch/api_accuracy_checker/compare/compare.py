@@ -5,16 +5,16 @@ import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
-from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
+from ..common.utils import get_json_contents, write_csv, print_warn_log, Const
+from ..compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
     precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, apis_threshold
-from api_accuracy_checker.compare.compare_column import CompareColumn
-from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
+from ..compare.compare_column import CompareColumn
+from ..compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
     check_small_value, check_norm_value, get_abs_bench_with_eps
-from api_accuracy_checker.common.config import msCheckerConfig
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+from ..common.config import msCheckerConfig
+from ...common.file_check import FileOpen
 
 
 class Comparator:
@@ -159,7 +159,7 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
-        _, api_name, _ = full_api_name.split("*")
+        _, api_name, _ = full_api_name.split(Const.SEP)
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
         if not (bench_grad and npu_grad):
