@@ -15,11 +15,11 @@
 
 import argparse
 import sys
-from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
+from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
 from ptdbg_ascend.src.python.ptdbg_ascend.parse_tool.cli import parse as cli_parse
-from api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
-from api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, _api_precision_compare_command
-from api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, _run_overflow_check_command
+from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
+from atat.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, _api_precision_compare_command
+from atat.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, _run_overflow_check_command
 
 
 def main():

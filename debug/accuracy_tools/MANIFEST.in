@@ -1,8 +1,5 @@
 recursive-include ptdbg_ascend/src/python/ptdbg_ascend/ *.py
 recursive-include ptdbg_ascend/src/python/ptdbg_ascend/ *.yaml
 recursive-include ptdbg_ascend/src/python/ptdbg_ascend/ *.template
-recursive-include api_accuracy_checker/ *.py
-recursive-include api_accuracy_checker/ *.yaml
-recursive-include api_accuracy_checker/ *.json
 recursive-include atat/ *
 recursive-exclude api_accuracy_checker/test *
