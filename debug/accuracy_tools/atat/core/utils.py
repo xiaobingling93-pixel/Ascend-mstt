@@ -97,6 +97,10 @@ class Const:
                     "_reduce_scatter_base", "_all_gather_base"]
 
     TASK_LIST = ["tensor", "statistics", "overflow_check"]
+    LEVEL_LIST = ["L0", "L1", "L2", "mix"]
+    STATISTICS = "statistics"
+    TENSOR = "tensor"
+    OVERFLOW_CHECK = "overflow_check"
 
 class CompareConst:
     """

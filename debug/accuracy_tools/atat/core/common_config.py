@@ -1,4 +1,3 @@
-from .file_check_util import FileChecker, FileCheckConst
 from .utils import Const
 
 
@@ -15,13 +14,13 @@ class CommonConfig:
         self._check_config()
 
     def _check_config(self):
-        if self.task is not None and self.task not in Const.TASK_LIST:
+        if self.task and self.task not in Const.TASK_LIST:
             raise Exception("task is invalid")
         if self.rank is not None and not isinstance(self.rank, list):
             raise Exception("rank is invalid")
         if self.step is not None and not isinstance(self.step, list):
             raise Exception("step is invalid")
-        if self.level is not None and self.level not in ["L0", "L1", "L2"]:
+        if self.level and self.level not in Const.LEVEL_LIST:
             raise Exception("level is invalid")
         if self.seed is not None and not isinstance(self.seed, int):
             raise Exception("seed is invalid")
@@ -35,6 +34,11 @@ class BaseConfig:
         self.scope = json_config.get('scope')
         self.list = json_config.get('list')
         self.data_mode = json_config.get('data_mode')
+        self.backward_input = json_config.get("backward_input")
+        self.file_format = json_config.get("file_format")
+        self.summary_mode =  json_config.get("summary_mode")
+        self.overflow_num = json_config.get("overflow_num")
+        self.check_mode = json_config.get("check_mode")
 
     def check_config(self):
         if self.scope is not None and not isinstance(self.scope, list):
