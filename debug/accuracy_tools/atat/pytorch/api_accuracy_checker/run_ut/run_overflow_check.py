@@ -85,8 +85,8 @@ def run_torch_api(api_full_name, api_info_dict):
 
 
 def _run_overflow_check_parser(parser):
-    parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="",
-                        help="<Required> The api param tool forward result file: generate from api param tool, "
+    parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", default="",
+                        help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.",
                         required=True)
     parser.add_argument("-j", "--jit_compile", dest="jit_compile", help="<optional> whether to turn on jit compile",
@@ -106,14 +106,14 @@ def _run_overflow_check(parser=None):
 def _run_overflow_check_command(args):
     torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     npu_device = "npu:" + str(args.device_id)
-    check_link(args.forward_input_file)
-    forward_file = os.path.realpath(args.forward_input_file)
+    check_link(args.api_info_file)
+    api_info = os.path.realpath(args.api_info_file)
     try:
         torch.npu.set_device(npu_device)
     except Exception as error:
         print_error_log(f"Set NPU device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    run_overflow_check(forward_file)
+    run_overflow_check(api_info)
 
 
 if __name__ == '__main__':
