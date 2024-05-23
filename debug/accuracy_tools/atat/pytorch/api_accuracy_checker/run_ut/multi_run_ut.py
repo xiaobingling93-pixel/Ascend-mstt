@@ -12,7 +12,7 @@ from tqdm import tqdm
 from ...common.file_check import FileCheckConst, FileChecker, \
     check_file_suffix, check_link, FileOpen
 from ..compare.compare import Comparator
-from ..run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
+from .run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
 from ..common.utils import print_error_log, print_warn_log, print_info_log, create_directory
 from ...common.file_check import check_path_before_create
 
