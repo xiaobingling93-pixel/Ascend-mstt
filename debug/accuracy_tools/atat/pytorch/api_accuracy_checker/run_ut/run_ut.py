@@ -311,7 +311,7 @@ def get_validated_details_csv_path(validated_result_csv_path):
 
 def _run_ut_parser(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", default="", type=str,
-                        help="<Required> The api param tool forward result file: generate from api param tool, "
+                        help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.",
                         required=True)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
