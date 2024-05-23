@@ -20,9 +20,9 @@ import torch
 
 import yaml
 
-from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard
+from ..common.utils import torch_device_guard, Const
+from ..common.file_check import FileOpen
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -56,7 +56,7 @@ class AtenOPTemplate(HOOKModule):
             if not '.' + overload_name in op_name_:
                 op_name_ = op_name_ + '.' + overload_name
         self.op = op
-        self.prefix_op_name_ = "Aten_" + str(op_name_) + "_"
+        self.prefix_op_name_ = "Aten" + Const.SEP + str(op_name_) + Const.SEP
         super().__init__(hook)
 
     @torch_device_guard

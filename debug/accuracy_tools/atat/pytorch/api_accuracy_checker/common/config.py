@@ -1,8 +1,8 @@
 import os
 import yaml
-from api_accuracy_checker.common.utils import check_file_or_directory_path
-from api_accuracy_checker.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+from ..common.utils import check_file_or_directory_path
+from ..hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+from ...common.file_check import FileOpen
 
 WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
 

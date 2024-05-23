@@ -16,19 +16,18 @@ else:
     current_device = "npu"
 import torch
 from tqdm import tqdm
-from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
+from .data_generate import gen_api_params, gen_args
+from ..common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
     print_error_log, initialize_save_path, Const, create_directory
-from api_accuracy_checker.compare.compare import Comparator
-from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
-from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
-from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
-from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.dump.api_info import APIInfo
-from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
-
-
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
+from ..compare.compare import Comparator
+from ..hook_module.wrap_tensor import TensorOPTemplate
+from ..hook_module.wrap_functional import FunctionalOPTemplate
+from ..hook_module.wrap_torch import TorchOPTemplate
+from ..common.config import msCheckerConfig
+from ..dump.api_info import APIInfo
+from ...common.parse_json import parse_json_info_forward_backward
+from ...common.file_check import check_path_before_create
+from ...common.file_check import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -39,7 +38,6 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
-not_raise_dtype_set = {'type_as'}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -143,7 +141,6 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
-    raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
     cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
@@ -167,7 +164,7 @@ def run_ut(config):
             continue
         try:
             if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split("*")
+                [_, api_name, _] = api_full_name.split(Const.SEP)
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
@@ -179,7 +176,7 @@ def run_ut(config):
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.SEP)
             if "expected scalar type Long" in str(err):
                 print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -199,7 +196,6 @@ def run_ut(config):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
             UtAPIInfo(api_full_name + '.forward.input', element)
         UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
@@ -211,7 +207,7 @@ def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split("*")
+    [api_type, api_name, _] = api_full_name.split(Const.SEP)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -241,27 +237,29 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         grad_index = grad_input_index.get('grad_index')
 
     if need_backward:
-        backward_args = backward_content[api_full_name]
+        backward_args = backward_content[api_full_name].get("grad_output")
         grad = gen_args(backward_args, real_data_path=real_data_path)[0]
         bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
         bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
         device_grad = grad.clone().detach().to(current_device)
         device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
 
+    if grad_index is not None:
+        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
+                          in_fwd_data_list)
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
     convert_type, api_info_dict = api_info_preprocess(api_name, api_info_dict)
     need_grad = True
-    if api_info_dict.get("kwargs") and "out" in api_info_dict.get("kwargs"):
+    if api_info_dict.get("input_kwargs") and "out" in api_info_dict.get("input_kwargs"):
         need_grad = False
     args, kwargs = gen_api_params(api_info_dict, need_grad, convert_type, real_data_path)
     return args, kwargs, need_grad
 
 
 def run_backward(args, grad, grad_index, out):
-
     if grad_index is not None:
         out[grad_index].backward(grad)
     elif isinstance(out, (list, tuple)):
@@ -357,7 +355,7 @@ def preprocess_forward_content(forward_content):
     processed_content = {}
     base_keys_variants = {}
     for key, value in forward_content.items():
-        base_key = key.rsplit('*', 1)[0]
+        base_key = key.rsplit(Const.SEP, 1)[0]
         new_args = value['args']
         new_kwargs = value['kwargs']
         filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
@@ -411,15 +409,10 @@ def run_ut_command(args):
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content = get_json_contents(forward_file)
+    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(forward_file)
     if args.filter_api:
         forward_content = preprocess_forward_content(forward_content)
-    backward_content = {}
-    if args.backward_input_file:
-        check_link(args.backward_input_file)
-        backward_file = os.path.realpath(args.backward_input_file)
-        check_file_suffix(backward_file, FileCheckConst.JSON_SUFFIX)
-        backward_content = get_json_contents(backward_file)
+
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
     if args.result_csv_path:

@@ -20,9 +20,9 @@ from functools import wraps
 import torch.distributed as dist
 import yaml
 
-from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
 from ..common.utils import torch_device_guard, Const
+from ..common.file_check import FileOpen
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -49,7 +49,7 @@ class HOOKDistributedOP(object):
 class DistributedOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Distributed_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Distributed" + Const.SEP + str(op_name) + Const.SEP
         super().__init__(hook)
         if self.op_name_ in Const.INPLACE_LIST:
             self.register_forward_pre_hook(hook(self.prefix + Const.PRE_FORWARD))

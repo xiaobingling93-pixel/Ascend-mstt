@@ -36,8 +36,8 @@ except ImportError:
 else:
     IS_GPU = False
 
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, FileOpen
-from ptdbg_ascend.src.python.ptdbg_ascend.common import file_check_util
+from ...common.file_check import FileCheckConst, FileChecker, FileOpen
+from ...common import file_check as file_check_util
 
 torch_without_guard_version_list = ['2.1']
 for version in torch_without_guard_version_list:
@@ -54,6 +54,7 @@ class Const:
     """
     Class for const
     """
+    SEP = '.'
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'

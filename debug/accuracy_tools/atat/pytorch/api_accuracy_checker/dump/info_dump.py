@@ -4,20 +4,19 @@ import os
 import threading
 import multiprocessing
 
-from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
-from api_accuracy_checker.common.utils import check_file_or_directory_path, initialize_save_path, create_directory
-from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
-from api_accuracy_checker.common.config import msCheckerConfig
+from ..dump.api_info import ForwardAPIInfo, BackwardAPIInfo
+from ..common.utils import check_file_or_directory_path, create_directory
+from ...common.file_check import check_path_before_create
+from ...common.file_check import FileOpen, FileCheckConst, FileChecker, change_mode
+from ..common.config import msCheckerConfig
 
-
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, change_mode
 
 lock = threading.Lock()
 proc_lock = multiprocessing.Lock()
 
 
 def write_api_info_json(api_info):
-    from api_accuracy_checker.dump.dump import DumpUtil
+    from ..dump.dump import DumpUtil
     dump_path = msCheckerConfig.dump_path
     dump_path = os.path.join(msCheckerConfig.dump_path, "step" + str((DumpUtil.call_num - 1) if msCheckerConfig.enable_dataloader else DumpUtil.call_num)) 
     check_path_before_create(dump_path)

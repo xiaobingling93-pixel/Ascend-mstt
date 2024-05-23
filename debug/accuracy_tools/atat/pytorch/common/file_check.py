@@ -17,7 +17,9 @@
 import os
 import re
 
-from .log import print_warn_log, print_error_log
+from .log import print_error_log
+from .exceptions import FileCheckException
+from .utils import Const
 
 
 class FileCheckConst:
@@ -56,25 +58,6 @@ class FileCheckConst:
     }
 
 
-class FileCheckException(Exception):
-    """
-    Class for File Check Exception
-    """
-    NONE_ERROR = 0
-    INVALID_PATH_ERROR = 1
-    INVALID_FILE_TYPE_ERROR = 2
-    INVALID_PARAM_ERROR = 3
-    INVALID_PERMISSION_ERROR = 3
-
-    def __init__(self, code, error_info: str = ""):
-        super(FileCheckException, self).__init__()
-        self.code = code
-        self.error_info = error_info
-
-    def __str__(self):
-        return self.error_info
-
-
 class FileChecker:
     """
     The class for check file.
@@ -96,7 +79,7 @@ class FileChecker:
     def _check_path_type(path_type):
         if path_type not in [FileCheckConst.DIR, FileCheckConst.FILE]:
             print_error_log(f'The path_type must be {FileCheckConst.DIR} or {FileCheckConst.FILE}.')
-            raise FileCheckException(FileCheckException.INVALID_PARAM_ERROR)
+            raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         return path_type
 
     def common_check(self):
@@ -162,7 +145,7 @@ class FileOpen:
         support_mode = self.SUPPORT_READ_MODE + self.SUPPORT_WRITE_MODE + self.SUPPORT_READ_WRITE_MODE
         if self.mode not in support_mode:
             print_error_log("File open not support %s mode" % self.mode)
-            raise FileCheckException(FileCheckException.INVALID_PARAM_ERROR)
+            raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         check_link(self.file_path)
         self.file_path = os.path.realpath(self.file_path)
         check_path_length(self.file_path)
@@ -189,7 +172,7 @@ def check_link(path):
     abs_path = os.path.abspath(path)
     if os.path.islink(abs_path):
         print_error_log('The file path {} is a soft link.'.format(path))
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+        raise FileCheckException(FileCheckException.SOFT_LINK_ERROR)
 
 
 def check_path_length(path, name_length=None):
@@ -197,71 +180,58 @@ def check_path_length(path, name_length=None):
     if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
             len(os.path.basename(path)) > file_max_name_length:
         print_error_log('The file path length exceeds limit.')
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_exists(path):
     if not os.path.exists(path):
         print_error_log('The file path %s does not exist.' % path)
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_readability(path):
     if not os.access(path, os.R_OK):
         print_error_log('The file path %s is not readable.' % path)
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_writability(path):
     if not os.access(path, os.W_OK):
         print_error_log('The file path %s is not writable.' % path)
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_executable(path):
     if not os.access(path, os.X_OK):
         print_error_log('The file path %s is not executable.' % path)
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_other_user_writable(path):
     st = os.stat(path)
     if st.st_mode & 0o002:
-        _user_interactive_confirm(
-            'The file path %s may be insecure because other users have write permissions. '
-            'Do you want to continue?' % path)
-
-
-def _user_interactive_confirm(message):
-    while True:
-        check_message = input(message + " Enter 'c' to continue or enter 'e' to exit: ")
-        if check_message == "c":
-            break
-        elif check_message == "e":
-            print_warn_log("User canceled.")
-            raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
-        else:
-            print("Input is error, please enter 'c' or 'e'.")
+        print_error_log('The file path %s may be insecure because other users have write permissions. ' % path)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid():
         print_error_log('The file path %s may be insecure because is does not belong to you.' % path)
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
         print_error_log('The file path {} contains special characters.'.format(path))
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_file_size(file_path, max_size):
     file_size = os.path.getsize(file_path)
     if file_size >= max_size:
-        _user_interactive_confirm(f'The size of file path {file_path} exceeds {max_size} bytes.'
-                                  f'Do you want to continue?')
+        print_error_log(f'The size of file path {file_path} exceeds {max_size} bytes.')
+        raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
 
 
 def check_common_file_size(file_path):
@@ -276,18 +246,18 @@ def check_file_suffix(file_path, file_suffix):
     if file_suffix:
         if not file_path.endswith(file_suffix):
             print_error_log(f"The {file_path} should be a {file_suffix} file!")
-            raise FileCheckException(FileCheckException.INVALID_FILE_TYPE_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
 def check_path_type(file_path, file_type):
     if file_type == FileCheckConst.FILE:
         if not os.path.isfile(file_path):
             print_error_log(f"The {file_path} should be a file!")
-            raise FileCheckException(FileCheckException.INVALID_FILE_TYPE_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
     if file_type == FileCheckConst.DIR:
         if not os.path.isdir(file_path):
             print_error_log(f"The {file_path} should be a dictionary!")
-            raise FileCheckException(FileCheckException.INVALID_FILE_TYPE_ERROR)
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
 def create_directory(dir_path):
@@ -303,9 +273,18 @@ def create_directory(dir_path):
     try:
         os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
-        print_error_log(
-            'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR) from ex
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
+            'Failed to create {}. Please check the path permission or disk space .{}'.format(dir_path, str(ex))) from ex
+
+
+def check_path_before_create(path):
+    if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
+            Const.FILE_NAME_LENGTH:
+        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR, 'The file path length exceeds limit.')
+
+    if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
+        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR,
+                                 'The file path {} contains special characters.'.format(path))
 
 
 def change_mode(path, mode):
@@ -314,6 +293,6 @@ def change_mode(path, mode):
     try:
         os.chmod(path, mode)
     except PermissionError as ex:
-        print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
+        raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
+                                 'Failed to change {} authority. {}'.format(path, str(ex))) from ex
 

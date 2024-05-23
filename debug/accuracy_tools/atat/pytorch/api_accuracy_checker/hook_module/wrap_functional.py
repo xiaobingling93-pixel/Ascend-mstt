@@ -15,16 +15,11 @@
 # limitations under the License.
 """
 
-import os
-
 import torch
-import yaml
 
-from api_accuracy_checker.hook_module.hook_module import HOOKModule
-from api_accuracy_checker.common.utils import torch_device_guard
-from api_accuracy_checker.common.config import msCheckerConfig
-from api_accuracy_checker.hook_module.utils import WrapFunctionalOps
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+from .hook_module import HOOKModule
+from ..common.utils import torch_device_guard
+from ..common.config import msCheckerConfig
 
 for f in dir(torch.nn.functional):
     locals().update({f: getattr(torch.nn.functional, f)})

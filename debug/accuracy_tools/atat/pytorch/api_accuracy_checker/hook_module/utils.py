@@ -18,7 +18,7 @@
 import os
 import yaml
 
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+from ...common.file_check import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")

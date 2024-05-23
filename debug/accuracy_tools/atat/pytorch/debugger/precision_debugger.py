@@ -7,7 +7,7 @@ from ..pt_config import parse_json_config
 class PrecisionDebugger:
     _instance = None
 
-    def __new__(cls):
+    def __new__(cls, config_path=None, task=None, dump_path=None, level=None):
         if cls._instance is None:
             cls._instance = super(PrecisionDebugger, cls).__new__(cls)
             cls._instance.config = None

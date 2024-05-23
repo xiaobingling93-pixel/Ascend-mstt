@@ -20,9 +20,9 @@ import torch
 import torch_npu
 import yaml
 
-from atat.core.file_check_util import FileOpen
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard, torch_without_guard_version
+from ..common.utils import torch_device_guard, torch_without_guard_version, Const
+from ..common.file_check import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
@@ -47,7 +47,7 @@ class NpuOPTemplate(HOOKModule):
 
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "NPU_" + str(op_name) + "_"
+        self.prefix_op_name_ = "NPU" + Const.SEP + str(op_name) + Const.SEP
         super().__init__(hook)
 
     @torch_device_guard

@@ -4,9 +4,9 @@ import sys
 import torch_npu
 import torch
 from tqdm import tqdm
-from api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
-from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, print_error_log
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import check_link
+from ..run_ut.run_ut import exec_api, generate_device_params, get_api_info
+from ..common.utils import print_info_log, print_warn_log, get_json_contents, print_error_log
+from ...common.file_check import check_link
 
 
 def check_tensor_overflow(x):
@@ -64,8 +64,8 @@ def run_overflow_check(forward_file):
 
 def run_torch_api(api_full_name, api_info_dict):
     torch.npu.clear_npu_overflow_flag()
-    api_type = api_full_name.split("_")[0]
-    api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
+    api_type = api_full_name.split(".")[0]
+    api_name = api_full_name.split(".", 1)[1].rsplit(".", 2)[0]
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path='')
     if not need_grad:
         print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." 
