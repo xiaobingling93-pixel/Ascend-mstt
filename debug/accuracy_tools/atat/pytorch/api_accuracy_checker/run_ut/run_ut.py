@@ -310,14 +310,10 @@ def get_validated_details_csv_path(validated_result_csv_path):
 
 
 def _run_ut_parser(parser):
-    parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
-                        help="<Required> The api param tool forward result file: generate from api param tool, "
+    parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", default="", type=str,
+                        help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.",
                         required=True)
-    parser.add_argument("-backward", "--backward_input_file", dest="backward_input_file", default="", type=str,
-                        help="<Required> The api param tool backward result file: generate from api param tool, "
-                             "a json file.",
-                        required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The ut task result out path.",
                         required=False)
@@ -348,7 +344,7 @@ def _run_ut_parser(parser):
                              "must be configured.",
                         required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
-                        help="<optional> Whether to filter the api in the forward_input_file.", required=False)
+                        help="<optional> Whether to filter the api in the api_info_file.", required=False)
 
 
 def preprocess_forward_content(forward_content):
@@ -400,16 +396,16 @@ def run_ut_command(args):
     except Exception as error:
         print_error_log(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.forward_input_file)
-    forward_file = os.path.realpath(args.forward_input_file)
-    check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+    check_link(args.api_info_file)
+    api_info = os.path.realpath(args.api_info_file)
+    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(forward_file)
+    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
     if args.filter_api:
         forward_content = preprocess_forward_content(forward_content)
 

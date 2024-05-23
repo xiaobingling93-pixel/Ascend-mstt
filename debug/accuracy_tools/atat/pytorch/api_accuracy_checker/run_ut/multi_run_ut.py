@@ -61,8 +61,7 @@ def run_parallel_ut(config):
     def create_cmd(fwd, bwd, dev_id):
         cmd = [
             sys.executable, 'run_ut.py',
-            '-forward', fwd,
-            *(['-backward', bwd] if bwd else []),
+            '-api_info', fwd,
             *(['-o', config.out_path] if config.out_path else []),
             '-d', str(dev_id),
             *(['-j'] if config.jit_compile_flag else []),
