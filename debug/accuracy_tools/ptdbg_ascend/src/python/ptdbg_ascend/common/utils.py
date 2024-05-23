@@ -386,7 +386,7 @@ def check_compare_param(input_parma, output_path, stack_mode=False, summary_comp
     with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
          FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
          FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-        check_json_file(input_parma, npu_json, bench_json, stack_json, stack_mode)
+        check_json_file(input_parma, npu_json, bench_json, stack_json)
 
 
 def md5_find(data):
