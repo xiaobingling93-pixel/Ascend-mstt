@@ -541,7 +541,7 @@ def check_accuracy(cos, max_abs_err):
 def compare_by_op(op_name, op_name_mapping_dict, input_parma):
     npu_bench_name_list = op_name_mapping_dict[op_name]
     data_name = npu_bench_name_list[1]
-    if (isinstance(data_name, str) and data_name == '-1') or (isinstance(data_name, int) and data_name == -1):
+    if data_name == '-1' or data_name == -1:
         return CompareConst.NONE, CompareConst.NONE, CompareConst.NONE, CompareConst.NO_BENCH, CompareConst.NONE, CompareConst.NONE
     try:
         n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
