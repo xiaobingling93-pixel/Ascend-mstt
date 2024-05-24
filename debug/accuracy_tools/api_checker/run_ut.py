@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from compare.compare import Comparator
 from common.logger import logger
+from common.json_parser import convert_json
 
 
 def _run_ut_parser(parser):
@@ -95,7 +96,7 @@ def _run_ut():
             continue
     
         if json_path:
-            kwargs = load_json(json_path)
+            kwargs = convert_json(load_json(json_path))
             args = [load_npy(npy_path) for npy_path in sorted(input_paths)]
             output = [load_npy(npy_path) for npy_path in sorted(output_paths)]
             module = importlib.import_module(f"ut_case.{module_name}")
