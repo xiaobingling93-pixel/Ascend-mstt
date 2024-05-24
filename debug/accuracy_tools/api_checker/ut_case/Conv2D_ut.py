@@ -45,7 +45,6 @@ class Conv2DUT(UTBase):
         dtype = self.args[0].dtype
         input_shape = self.args[0].shape
         weight_shape = self.args[1].shape
-        self.dtype = dtype_map[dtype]
         
         self.out_channel = self.kwargs.get("out_channel") if self.kwargs else self.args[0]
         self.kernel_size = self.kwargs.get("kernel_size") if self.kwargs else self.args[1]
@@ -130,13 +129,10 @@ class Conv2DUT(UTBase):
     def forward_pytorch_impl(self, *args):
         x = args[0]
         weight = args[1]
-        if self.data_format == 'NCHW':
-            x = x.astype(self.dtype)
-            weight = weight.astype(self.dtype)
         
         if self.data_format == 'NHWC':
-            x = x.transpose(0, 3, 1, 2).astype(self.dtype)
-            weight = x.transpose(0, 3, 1, 2).astype(self.dtype)
+            x = x.transpose(0, 3, 1, 2)
+            weight = x.transpose(0, 3, 1, 2)
         
         net = Conv2DPytoch(in_channels=self.in_c, out_channels=self.out_c,
                            kernel_size=(self.kernel_h, self.kernel_w),
@@ -147,6 +143,6 @@ class Conv2DUT(UTBase):
         output = net(x)
         if self.data_format == 'NHWC':
             output = output.transpose(0, 2, 3, 1)
-        return output.detach().numpy().astype(self.dtype)
+        return output.detach().numpy()
 
     
