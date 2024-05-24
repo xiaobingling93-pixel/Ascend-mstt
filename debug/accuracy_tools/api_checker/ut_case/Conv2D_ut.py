@@ -34,6 +34,8 @@ class Conv2DPytorch(nn.Module):
             return (value,) * len(ref_value)
         if isinstance(value, (tuple, list)) and len(value) == len(ref_value):
             return tuple(value)
+        elif isinstance(value, (tuple, list)) and len(value) == 4:
+            return (value[2], value[3])
         raise ValueError(f"Invalid value for conversion to tuple: {value}")
 
     def _to_padding(self, padding):
@@ -114,4 +116,4 @@ class Conv2DUT(UTBase):
         output = net(x)
         if self.data_format == 'NHWC':
             output = output.permute(0, 2, 3, 1)
-        return output.detach().numpy()
+        return output.detach()
