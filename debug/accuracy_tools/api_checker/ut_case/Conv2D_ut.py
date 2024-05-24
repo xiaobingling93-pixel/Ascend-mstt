@@ -20,10 +20,10 @@ class Conv2D(Cell):
         return self.conv2d(input_x, weight)
 
 
-class Conv2DPytoch(nn.Module):
+class Conv2DPytorch(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride,
                  padding, dilation, groups, bias):
-        super(Conv2dPytorch, self).__init__()
+        super(Conv2DPytorch, self).__init__()
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
                               kernel_size=kernel_size,
                               stride=stride, padding=0,
@@ -101,7 +101,7 @@ class Conv2DUT(UTBase):
                     self.dilation_torch[0] * (self.kernel_h - 1) + 1 - (self.in_h % tmp_stride[0]),
                     0
                 )
-            if self.in_w % tmp_stride == 0:
+            if self.in_w % tmp_stride[1] == 0:
                 pad_along_width = max(
                     self.dilation_torch[1] * (self.kernel_w - 1) + 1 - tmp_stride[1],
                     0
@@ -133,7 +133,7 @@ class Conv2DUT(UTBase):
             x = x.transpose(0, 3, 1, 2)
             weight = x.transpose(0, 3, 1, 2)
         
-        net = Conv2DPytoch(in_channels=self.in_c, out_channels=self.out_c,
+        net = Conv2DPytorch(in_channels=self.in_c, out_channels=self.out_c,
                            kernel_size=(self.kernel_h, self.kernel_w),
                            stride=self.stride, padding=self.padding_torch,
                            dilation=self.dilation_torch, groups=self.group, bias=False)
@@ -141,7 +141,7 @@ class Conv2DUT(UTBase):
         net.conv.register_parameter('weight', nn.Parameter(weight))
         output = net(x)
         if self.data_format == 'NHWC':
-            output = output.transpose(0, 2, 3, 1)
+            output = output.transpose(0, 3, 1, 2)
         return output.detach().numpy()
 
     
