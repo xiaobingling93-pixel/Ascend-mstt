@@ -8,28 +8,42 @@ import torch.nn.functional as F
 from ut_base import UTBase
 
 class Conv2D(Cell):
-    def __init__(self, out_channel, kernel_size, mode=1, pad_mode="valid", pad=0, stride=1,
-                 dilation=1, group=1, data_format="NCHW"):
-        super().__init__()
-        self.conv2d = P.Conv2D(out_channel, kernel_size, mode, pad_mode, pad, stride,
-                               dilation, group, data_format)
+    def __init__(self, out_channel, kernel_size, mode=1, pad_mode="valid", pad=0, stride=1, dilation=1, group=1, data_format="NCHW"):
+        super(Conv2D, self).__init__()
+        self.conv2d = P.Conv2D(out_channel, kernel_size, mode, pad_mode, pad, stride, dilation, group, data_format)
     
     def construct(self, input_x, weight):
         return self.conv2d(input_x, weight)
 
 class Conv2DPytorch(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation, groups, bias):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=False):
         super(Conv2DPytorch, self).__init__()
         self.conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
-                              kernel_size=kernel_size, stride=stride, padding=0,
-                              dilation=dilation, groups=groups, bias=bias)
-        self.padding_torch = padding
-        self.flag = int(any(padding))
+                              kernel_size=kernel_size, stride=self._ensure_tuple(stride, kernel_size),
+                              padding=0, dilation=self._ensure_tuple(dilation, kernel_size), groups=groups, bias=bias)
+        self.padding_torch = self._to_padding(padding)
+        self.flag = int(any(self.padding_torch))
 
     def forward(self, x):
         if self.flag:
             x = F.pad(x, self.padding_torch)
         return self.conv(x)
+    
+    def _ensure_tuple(self, value, ref_value):
+        if isinstance(value, int):
+            return (value,) * len(ref_value)
+        if isinstance(value, (tuple, list)) and len(value) == len(ref_value):
+            return tuple(value)
+        raise ValueError(f"Invalid value for conversion to tuple: {value}")
+
+    def _to_padding(self, padding):
+        if isinstance(padding, int):
+            return [padding] * 4
+        if isinstance(padding, (tuple, list)) and len(padding) == 2:
+            return [padding[0], padding[0], padding[1], padding[1]]
+        if isinstance(padding, (tuple, list)) and len(padding) == 4:
+            return list(padding)
+        raise ValueError(f"Invalid padding value: {padding}")
 
 class Conv2DUT(UTBase):
     def __init__(self, name, args, kwargs, output, real_data=False, stack=None, comparator=None):
@@ -55,19 +69,18 @@ class Conv2DUT(UTBase):
             self.in_n, self.in_h, self.in_w, self.in_c = input_shape
             self.out_c, self.kernel_h, self.kernel_w, _ = weight_shape
 
-        self.kernel_size = self._to_tuple(self.kernel_size)
-        self.stride = self._to_tuple(self.stride, length=2)
-        self.dilation = self._to_tuple(self.dilation, length=2)
+        self.stride = self._ensure_tuple(self.stride, (self.kernel_h, self.kernel_w))
+        self.dilation = self._ensure_tuple(self.dilation, (self.kernel_h, self.kernel_w))
 
         if self.pad_mode == 'same':
             self.padding_torch = self._compute_same_padding(self.in_h, self.in_w, self.kernel_h, self.kernel_w, self.stride, self.dilation)
         else:
             self.padding_torch = [self.pad] * 4
 
-    def _to_tuple(self, value, length=2):
+    def _ensure_tuple(self, value, ref_value):
         if isinstance(value, int):
-            return (value,) * length
-        if isinstance(value, (list, tuple)) and len(value) == length:
+            return (value,) * len(ref_value)
+        if isinstance(value, (tuple, list)) and len(value) == len(ref_value):
             return tuple(value)
         raise ValueError(f"Invalid value for conversion to tuple: {value}")
 
@@ -82,8 +95,7 @@ class Conv2DUT(UTBase):
     def forward_mindspore_impl(self, *args):
         x = ms.Tensor(args[0])
         weight = ms.Tensor(args[1])
-        net = Conv2D(self.out_channel, self.kernel_size, self.mode, self.pad_mode, self.pad,
-                     self.stride, self.dilation, self.group, self.data_format)
+        net = Conv2D(self.out_channel, self.kernel_size, self.mode, self.pad_mode, self.pad, self.stride, self.dilation, self.group, self.data_format)
         out = net(x, weight)
         return out.asnumpy()
     
