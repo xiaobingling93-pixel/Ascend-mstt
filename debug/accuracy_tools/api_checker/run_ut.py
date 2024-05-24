@@ -25,7 +25,7 @@ def _run_ut_parser(parser):
 
 def get_ops_ut(module):
     for name, obj in inspect.getmembers(module):
-        if inspect.isclass(obj) and name.startswith("UT"):
+        if inspect.isclass(obj) and name.endswith("UT"):
             return obj
 
 
@@ -91,7 +91,7 @@ def _run_ut():
             module_name = op_type + "_ut"
             api_name = op_name
         
-        if not os.path.exists(f"ut_cast/{module_name}.py"):
+        if not os.path.exists(f"ut_case/{module_name}.py"):
             logger.warning(f"{op_type} not support compare now")
             continue
     
