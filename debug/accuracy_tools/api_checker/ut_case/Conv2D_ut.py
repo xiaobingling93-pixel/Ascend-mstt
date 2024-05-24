@@ -42,7 +42,6 @@ class Conv2DUT(UTBase):
     def __init__(self, name, args, kwargs, output, real_data=False, stack=None, comparator=None):
         super().__init__(name, args, kwargs, output, real_data, stack, comparator)
         
-        dtype = self.args[0].dtype
         input_shape = self.args[0].shape
         weight_shape = self.args[1].shape
         
@@ -54,7 +53,7 @@ class Conv2DUT(UTBase):
         self.stride = self.kwargs.get("stride") if self.kwargs else 1
         self.dilation = self.kwargs.get("dilation") if self.kwargs else 1
         self.group = self.kwargs.get("group") if self.kwargs.get("group") else 1
-        self.data_format = self.kwargs.get("data_format") if self.kwargs else "NCHW"
+        self.data_format = self.kwargs.get("format") if self.kwargs else "NCHW"
         
         if self.data_format == "NCHW":
             self.in_n, self.in_c, self.in_h, self.in_w = input_shape
