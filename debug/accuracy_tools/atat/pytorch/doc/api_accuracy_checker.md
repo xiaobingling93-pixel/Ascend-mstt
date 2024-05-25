@@ -20,8 +20,8 @@
 
 精度预检操作流程如下：
 
-1. 在NPU和GPU环境下分别安装msad工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
-2. 在NPU训练脚本内添加msad工具dump接口PrecisionDebugger采集待预检数据。详见《[精度数据采集](./dump.md)》。
+1. 在NPU和GPU环境下分别安装atat工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
+2. 在NPU训练脚本内添加atat工具dump接口PrecisionDebugger采集待预检数据。详见《[精度数据采集](./dump.md)》。
 3. 将NPU环境下dump的预检数据拷贝至GPU环境。
 4. 在NPU和GPU环境下分别执行run_ut，生成结果用于最终api_precision_compare操作的输入。详见“**run_ut预检操作**”。
 5. 将NPU和GPU执行run_ut生成的`accuracy_checking_details_{timestamp}.csv`结果文件拷贝至同一环境下。

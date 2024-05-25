@@ -6,7 +6,7 @@
 
 ## 进入parse交互式界面
 
-安装msad工具后（详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节），可以通过使用命令 **atat -f pytorch parse** 进入交互式界面，如下所示：
+安装atat工具后（详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节），可以通过使用命令 **atat -f pytorch parse** 进入交互式界面，如下所示：
 
 ```bash
 atat -f pytorch parse

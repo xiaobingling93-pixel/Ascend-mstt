@@ -44,7 +44,7 @@ compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 创建比对脚本，例如compare_distributed.py，拷贝如下代码，具体参数请根据实际环境修改。
 
 ```Python
-from atat.pytorch import compare
+from atat.pytorch import *
 compare_distributed('./npu_dump/step0', './gpu_dump/step0', './output')
 ```
 
@@ -66,7 +66,7 @@ compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_mat
 
 | 参数名       | 说明                                                         | 是否必选 |
 | ------------ | ------------------------------------------------------------ | -------- |
-| input_param  | 配置dump数据文件及目录。数据类型：dict。配置参数包括：<br>        "npu_json_path"：指定NPU dump目录下的dump.json文件。参数示例："npu_json_path": "./npu_dump/dump.json"。必选。<br/>        "bench_json_path"：指定CPU、GPU或NPU dump目录下的dump.json文件。参数示例："bench_json_path": "./gpu_dump/dump.json"。必选。<br/>        "stack_json_path"：指定NPU dump目录下的stack.json文件。参数示例："stack_json_path": "./npu_dump/stack.json"。可选。<br/>        "npu_dump_data_dir"："指定NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./npu_dump/dump"。可选，仅比对json文件时不选。<br/>        "bench_dump_data_dir"："指定CPU、GPU或NPU dump目录下的dump数据目录。参数示例："npu_dump_data_dir": "./gpu_dump/dump"。可选，仅比对json文件时不选。<br/>        "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
+| input_param  | 配置dump数据文件及目录。数据类型：dict。配置参数包括：<br>        "npu_json_path"：指定NPU dump目录下的dump.json文件。参数示例："npu_json_path": "./npu_dump/dump.json"。必选。<br/>        "bench_json_path"：指定CPU、GPU或NPU dump目录下的dump.json文件。参数示例："bench_json_path": "./gpu_dump/dump.json"。必选。<br/>        "stack_json_path"：指定NPU dump目录下的stack.json文件。参数示例："stack_json_path": "./npu_dump/stack.json"。可选。<br/>        "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
 | output_path  | 配置比对结果csv文件存盘目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.csv`。数据类型：str。 | 是       |
 | stack_mode   | 配置stack_mode的开关。仅当配置"stack_json_path"需要开启。可取值True或False，参数示例：stack_mode=True，默认为False。数据类型：bool。 | 否       |
 | auto_analyze | 自动精度分析，开启后工具自动针对比对结果进行分析，识别到第一个精度不达标节点（在比对结果文件中的“Accuracy Reached or Not”列显示为No），并给出问题可能产生的原因（打屏展示并生成advisor_{timestamp}.txt文件）。可取值True或False，参数示例：auto_analyze=False，默认为True。数据类型：bool。 | 否       |
@@ -82,8 +82,6 @@ dump_result_param={
 "npu_json_path": "./npu_dump/dump.json",
 "bench_json_path": "./gpu_dump/dump.json",
 "stack_json_path": "./npu_dump/stack.json",
-"npu_dump_data_dir": "./npu_dump/dump",
-"npu_dump_data_dir": "./gpu_dump/dump",
 "is_print_compare_log": True
 }
 compare(dump_result_param, output_path="./output", stack_mode=True)
@@ -91,7 +89,7 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 
 ### 统计量比对
 
-若使用**compare**或**compare_distributed**函数创建的比对脚本中，input_param参数只配置了npu_json_path和bench_json_path或在[config.json](../../config/config.json)文件中配置"summary_mode": "statistics"或"summary_mode": "md5"方式dump时，可以进行统计量比对，此时比对dump.json文件中的统计信息，开启后的比对结果文件生成Max diff、Min diff、Mean diff和L2norm diff，表示NPU dump数据中API的输入或输出与标杆数据输入或输出的最大值、最小值、平均值以及L2范数的差。可以通过该值判断API是否存在精度问题：当某个API的输入和输出的Max diff、Min diff、Mean diff和L2norm diff均为0或无限趋于0，那么可以判断该API无精度问题，反之则可能存在精度问题。
+若使用**compare**或**compare_distributed**函数创建的比对脚本中，在[config.json](../../config/config.json)文件中配置"task": "statistics"方式dump时，可以进行统计量比对，此时比对dump.json文件中的统计信息，开启后的比对结果文件生成Max diff、Min diff、Mean diff和L2norm diff，表示NPU dump数据中API的输入或输出与标杆数据输入或输出的最大值、最小值、平均值以及L2范数的差。可以通过该值判断API是否存在精度问题：当某个API的输入和输出的Max diff、Min diff、Mean diff和L2norm diff均为0或无限趋于0，那么可以判断该API无精度问题，反之则可能存在精度问题。
 
 **比对脚本示例**
 
@@ -123,34 +121,6 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
   ![compare_result_pkl_md5.png](img/compare_result_pkl_md5.png.png)
 
   上图是对dump.json文件中NPU及标杆API的MD5信息进行比对，判断API数据的完整性，文件中记录NPU及标杆API的基本信息和MD5信息，其中需要关注Result列，包含结果：Pass（表示NPU与标杆的MD5值一致，即API数据完整）；Different（表示NPU与标杆的MD5值不一致，即API数据不完全一致，可以通过NPU_Stack_Info列API调用栈查询该API的详细信息）；Nan（表示MD5信息数据没有匹配上）。
-
-### parse
-
-**功能说明**
-
-解析并提取dump信息中的堆栈信息及数据统计信息。
-
-**函数原型**
-
-```Python
-parse(pkl_file, module_name_prefix)
-```
-
-**参数说明**
-
-| 参数名             | 说明                                                         | 是否必选 |
-| ------------------ | ------------------------------------------------------------ | -------- |
-| pkl_file           | 指定dump数据文件中的pkl文件名。参数示例："./npu_dump/dump.json"。数据类型：str。 | 是       |
-| module_name_prefix | 指定待提取的API接口前缀。参数示例："Torch.norm.1.forward"。数据类型：str。 | 是       |
-
-**函数示例**
-
-创建堆栈信息及数据统计信息提取脚本，例如parse.py，拷贝如下代码，具体参数请根据实际环境修改。
-
-```Python
-from atat.pytorch import *
-parse("./npu_dump/dump.json", "Torch.batch.normal.1.forward")
-```
 
 ## 计算精度评价指标
 

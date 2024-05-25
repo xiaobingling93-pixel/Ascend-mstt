@@ -12,7 +12,7 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 
 通过加载dump配置文件的方式来确定dump操作的详细配置。
 
-可以在from msad.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
+可以在from atat.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
 
 **原型**
 
@@ -32,7 +32,7 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 | rank        | 指定对某张卡上的数据进行dump，int类型。默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0到7，实际训练运行0到3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。rank为list格式，可配置多个rank，参数示例：rank=[1]或rank=[1, 2]。 | 否       |
 | step        | 指定dump某个step的数据，int类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置多个step，参数示例：step=[0]或step=[0,1,2]。 | 否       |
 
-### start函数（可选）
+### start函数
 
 **功能说明**
 
@@ -43,12 +43,12 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 **原型**
 
 ```Python
-debugger.start()
+debugger.start(model)
 ```
 
 该函数为类函数，可以使用debugger.start()也可以使用PrecisionDebugger.start()。
 
-### stop函数（可选）
+### stop函数
 
 **功能说明**
 
@@ -64,7 +64,7 @@ debugger.stop()
 
 该函数为类函数，可以使用debugger.stop()也可以使用PrecisionDebugger.stop()。
 
-### step函数（可选）
+### step函数
 
 **功能说明**
 
@@ -89,12 +89,12 @@ debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path
 
 # 模型初始化
 # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
-debugger.start()
+debugger.start(model)
 
 # 需要dump的代码片段1
 
 debugger.stop()
-debugger.start()
+debugger.start(model)
 
 # 需要dump的代码片段2
 
