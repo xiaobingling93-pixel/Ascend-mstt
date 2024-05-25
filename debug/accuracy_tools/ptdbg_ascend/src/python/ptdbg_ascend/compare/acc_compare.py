@@ -763,6 +763,43 @@ def read_op(op_data, opname):
     return op_parsed_list
 
 
+def read_op(op_data, op_name):
+    if 'forward' in op_name:
+        if 'input_args' in op_data:
+            input_item = op_data['input_args']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'input_kwargs' in op_data:
+            kwargs_item = op_data['input_kwargs']
+            if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
+                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '_input', None)
+                op_parsed_list += kwarg_parsed_list
+                kwarg_parsed_list.clear()
+            elif kwargs_item:
+                for kwarg in kwargs_item:
+                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '_input.' + kwarg, None)
+                    op_parsed_list += kwarg_parsed_list
+                    kwarg_parsed_list.clear()
+        if 'output' in op_data:
+            output_item = op_data['output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
+    if 'backward' in op_name:
+        if 'grad_input' in op_data:
+            input_item = op_data['grad_input']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'grad_output' in op_data:
+            output_item = op_data['grad_output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
+    return op_parsed_list
+
+
 def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
     npu_json_handle, bench_json_handle, stack_json_handle, output_csv_handle = file_handles
     npu_json_data = json.load(npu_json_handle)
