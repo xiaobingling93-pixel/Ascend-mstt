@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 import yaml
+import math
 from api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -232,7 +233,4 @@ def convert_str_to_float(input_data):
 
 
 def is_inf_or_nan(x):
-    if isinstance(x, str):
-        return x in ("inf", "-inf", "nan")
-    elif isinstance(x, float):
-        return x in (float("inf"), float("-inf"), float("nan"))
+    return math.isnan(x) or x in (float("inf"), float("-inf"))
