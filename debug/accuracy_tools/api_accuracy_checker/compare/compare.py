@@ -413,7 +413,7 @@ class Comparator:
     def _compare_bool_tensor(bench_output, device_output):
         error_nums = (bench_output != device_output).sum()
         if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
+            return 0, CompareConst.ERROR, "There is not bench calculation result."
         error_rate = float(error_nums / bench_output.size)
         result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
         return error_rate, result, ""

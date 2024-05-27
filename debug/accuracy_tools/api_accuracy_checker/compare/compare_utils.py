@@ -233,4 +233,4 @@ def convert_str_to_float(input_data):
 
 
 def is_inf_or_nan(x):
-    return math.isnan(x) or x in (float("inf"), float("-inf"))
+    return math.isnan(x) or math.isinf(x)

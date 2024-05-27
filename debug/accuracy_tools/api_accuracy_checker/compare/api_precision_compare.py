@@ -13,7 +13,7 @@ from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, ThousandthStandardApi, \
-    BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
+    BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, CompareMessage, convert_str_to_float, is_inf_or_nan
 from api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker, change_mode
@@ -153,6 +153,7 @@ class ULPStandard(Standard):
         self.ulp_err_proportion = 0
         self.ulp_err_proportion_ratio = 1
         self.ulp_err_status = CompareConst.PASS
+        self.compare_message = ""
 
     def __str__(self):
         return f"{self.api_name}"
@@ -162,10 +163,37 @@ class ULPStandard(Standard):
         self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
         self.ulp_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
                                                 self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
-        if is_inf_or_nan(self.mean_ulp_err) or is_inf_or_nan(self.ulp_err_proportion):
-            self.ulp_err_status = CompareConst.ERROR
-        else:
+        inf_nan_consistency = True
+        if is_inf_or_nan(self.mean_ulp_err):
+            gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
+            if math.isnan(self.mean_ulp_err):
+                if math.isnan(gpu_mean_ulp_err):
+                    inf_nan_consistency = True
+                else:
+                    inf_nan_consistency = False
+            else:
+                inf_nan_consistency = (self.mean_ulp_err == gpu_mean_ulp_err)
+            if inf_nan_consistency:
+                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
+            else:
+                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+        if is_inf_or_nan(self.ulp_err_proportion):
+            gpu_ulp_err_proportion = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
+            if math.isnan(self.ulp_err_proportion):
+                if math.isnan(gpu_ulp_err_proportion):
+                    inf_nan_consistency = True
+                else:
+                    inf_nan_consistency = False
+            else:
+                inf_nan_consistency = (self.ulp_err_proportion == gpu_ulp_err_proportion)
+            if inf_nan_consistency:
+                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
+            else:
+                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+        if inf_nan_consistency:
             self.ulp_err_status = self.get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
+        else:
+            self.ulp_err_status = CompareConst.ERROR
     
     def get_ulp_status(self, dtype):
         if dtype == torch.float32:
@@ -176,6 +204,7 @@ class ULPStandard(Standard):
             elif self.ulp_err_proportion_ratio < 1:
                 return CompareConst.PASS
             else:
+                self.compare_message += "ERROR: ULP误差不满足标准\n"
                 return CompareConst.ERROR
         else:
             if self.ulp_err_proportion < 0.001:
@@ -183,6 +212,7 @@ class ULPStandard(Standard):
             elif self.ulp_err_proportion_ratio < 1:
                 return CompareConst.PASS
             else:
+                self.compare_message += "ERROR: ULP误差不满足标准\n"
                 return CompareConst.ERROR
 
 
@@ -416,10 +446,7 @@ def record_ulp_compare_result(compare_column, us):
     compare_column.ulp_err_status = us.ulp_err_status
     compare_column.compare_result = us.ulp_err_status
     compare_column.compare_algorithm = "ULP误差比对法"
-    message = ''
-    if compare_column.ulp_err_status == CompareConst.ERROR:
-        message += "ERROR: ULP误差不满足标准\n"
-    compare_column.compare_message = message
+    compare_column.compare_message = us.compare_message
     return compare_column.compare_result
 
 
