@@ -72,9 +72,12 @@ class DumpUtil(object):
     attl = None
     if msCheckerConfig.is_online and not msCheckerConfig.is_benchmark_device:
         attl_config = ATTLConfig(False, connect_ip=msCheckerConfig.host,
-                                 connect_port=msCheckerConfig.port)
+                                 connect_port=msCheckerConfig.port,
+                                 nfs_path=msCheckerConfig.nfs_path if msCheckerConfig.nfs_path else None)
         need_dump = dist.get_rank() in msCheckerConfig.rank_list if dist.is_initialized() else True
         attl = ATTL('npu', attl_config, need_dump=need_dump)
+        if msCheckerConfig.nfs_path:
+            attl.upload("start")
 
     @staticmethod
     def set_dump_switch(switch):
@@ -90,7 +93,9 @@ class DumpUtil(object):
             set_dump_switch("ON")
         elif DumpUtil.call_num > max(msCheckerConfig.target_iter):
             if msCheckerConfig.is_online:
-                if DumpUtil.attl.socket_manager is not None:
+                if msCheckerConfig.nfs_path:
+                    DumpUtil.attl.upload("end")
+                elif DumpUtil.attl.socket_manager is not None:
                     logger.debug(f"进程{os.getpid()} 已完成,准备发送STOP信号")
                     DumpUtil.attl.socket_manager.send_stop_signal()
                     logger.debug(f"has stop rank_{dist.get_rank()} process")
@@ -132,7 +137,12 @@ def pretest_real_data_transport(name, out_feat, module, phase):
             return
         api_data = ApiData(name, module.input_args, module.input_kwargs, out_feat, DumpUtil.call_num, cur_rank)
         print_info_log(f"tools is dumping api: {api_data.name}, rank: {cur_rank}")
-        DumpUtil.attl.send(api_data)
+        if "device" in api_data.kwargs:
+            api_data.kwargs.pop("device")
+        if msCheckerConfig.nfs_path:
+            DumpUtil.attl.upload(api_data)
+        else:
+            DumpUtil.attl.send(api_data)
 
 
 def pretest_hook(name, phase):

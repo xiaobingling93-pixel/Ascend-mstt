@@ -63,7 +63,12 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         api_name = f'Aten*{aten_api}*{cur_api_number}'
         print_info_log(f"tools is dumping api: {api_name}")
         api_data = ApiData(api_name, args, kwargs, res, DumpUtil.call_num, cur_rank)
-        self.attl.send(api_data)
+        if "device" in api_data.kwargs:
+            api_data.kwargs.pop("device")
+        if msCheckerConfig.nfs_path:
+            self.attl.upload(api_data)
+        else:
+            self.attl.send(api_data)
         self.counter.index_dict[aten_api] += 1
 
         return res
