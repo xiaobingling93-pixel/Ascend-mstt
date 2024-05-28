@@ -70,21 +70,45 @@ benchmark_message = {
 
 class Standard:
     @staticmethod
-    def _calc_ratio(x, y, default_value=1.0):
+    def _calc_ratio(column_name, x, y, default_value):
+        '''
+        计算npu侧和gpu侧统计量的比值
+        输入：
+            column_name：统计量名称
+            x：npu侧统计量
+            y：gpu侧统计量
+            default：当x不接近0，y接近0，设置的比值默认值
+        输出： 
+            ratio：统计量x和y的比值
+            inf_nan_consistency：不出现inf或nan时为True，出现inf或nan时必须同时为inf或-inf或nan才为True，否则为False
+            message：当出现inf或nan时的提示信息
+        '''
         x, y = convert_str_to_float(x), convert_str_to_float(y)
-        if math.isnan(x) or math.isnan(y):
-            return float("nan")
-        if math.isinf(x) or math.isinf(y):
-            if math.isinf(x) and math.isinf(y):
-                return float("nan")
-            elif math.isinf(x):
-                return x
+        if is_inf_or_nan(x) or is_inf_or_nan(y):
+            if math.isnan(x) or math.isnan(y):
+                if math.isnan(x) and math.isnan(y):
+                    return float("nan"), True, f"{column_name}同为同号inf或nan\n"
+                else:
+                    return float("nan"), False, f"{column_name}inf或nan不一致\n"
             else:
-                return abs(x / y)
+                if math.isinf(x) and math.isinf(y):
+                    if x == y:
+                        return float("nan"), True, f"{column_name}同为同号inf或nan\n"
+                    else:
+                        return float("nan"), False, f"{column_name}inf或nan不一致\n"
+                elif math.isinf(x):
+                    return x, False, f"{column_name}inf或nan不一致\n"
+                else:
+                    return abs(x / y), False, f"{column_name}inf或nan不一致\n"
+        inf_nan_consistency = True
+        message = ""
         if math.isclose(y, 0.0):
-            return 1.0 if math.isclose(x, 0.0) else default_value
+            if math.isclose(x, 0.0):
+                return 1.0, inf_nan_consistency, message
+            else:
+                return default_value, inf_nan_consistency, message
         else:
-            return abs(x / y)
+            return abs(x / y), inf_nan_consistency, message
 
 
 class BenchmarkStandard(Standard):
@@ -125,17 +149,21 @@ class BenchmarkStandard(Standard):
             self.final_result = CompareConst.WARNING
 
     def _compare_ratio(self):
-        self.small_value_err_ratio = self._calc_ratio(
+        self.small_value_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE,
             self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
             self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE), 10000.0)
-        self.rmse_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
-        self.max_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
-                                                self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
-        self.mean_rel_err_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
-        self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
-                                                      self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
+        self.rmse_ratio = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
+                                           self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
+                                            self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
+        self.max_rel_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.MAX_REL_ERR,
+                                                  self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
+                                                    self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
+        self.mean_rel_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
+                                                   self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
+                                                    self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
+        self.eb_ratio = self._calc_ratio(ApiPrecisionCompareColumn.EB,
+                                         self.npu_precision.get(ApiPrecisionCompareColumn.EB),
+                                            self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
 
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
@@ -170,8 +198,9 @@ class ULPStandard(Standard):
     def get_result(self):
         self.mean_ulp_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
         self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
-        self.ulp_err_proportion_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
-                                                self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
+        self.ulp_err_proportion_ratio = self._calc_ratio(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
+                                                         self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
+                                                            self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
         inf_nan_consistency = True
         if is_inf_or_nan(self.mean_ulp_err):
             gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
