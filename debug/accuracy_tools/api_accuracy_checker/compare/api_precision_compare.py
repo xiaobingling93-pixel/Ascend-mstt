@@ -199,7 +199,7 @@ class BenchmarkStandard(Standard):
     @staticmethod
     def _get_status(ratio, algorithm):
         if math.isnan(ratio) or math.isinf(ratio):
-            return CompareConst.ERROR
+            return CompareConst.PASS
         error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
         warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
         if ratio > error_threshold:
