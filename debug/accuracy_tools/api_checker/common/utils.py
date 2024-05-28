@@ -186,7 +186,6 @@ dtype_map = {
     "Bool": np.bool_,
     "Complex64": np.complex64,
     "Complex128": np.complex128
-    
 }
 
 
