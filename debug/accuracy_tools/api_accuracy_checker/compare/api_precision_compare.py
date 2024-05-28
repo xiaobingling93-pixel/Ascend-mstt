@@ -128,42 +128,65 @@ class BenchmarkStandard(Standard):
         self.eb_status = CompareConst.PASS
         self.check_result_list = []
         self.final_result = CompareConst.PASS
+        self.compare_message = ""
 
     def __str__(self):
         return f"{self.api_name}"
 
     def get_result(self):
-        self._compare_ratio()
-        self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
+        small_value_inf_nan_consistency, rmse_inf_nan_consistency, \
+        max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency, eb_inf_nan_consistency = self._compare_ratio()
+        if small_value_inf_nan_consistency:
+            self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
+        else:
+            self.small_value_err_status = CompareConst.ERROR
         self.check_result_list.append(self.small_value_err_status)
-        self.rmse_status = self._get_status(self.rmse_ratio, 'rmse')
+        if rmse_inf_nan_consistency:
+            self.rmse_status = self._get_status(self.rmse_ratio, 'rmse')
+        else:
+            self.rmse_status = CompareConst.ERROR
         self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err')
+        if max_rel_inf_nan_consistency:
+            self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err')
+        else:
+            self.max_rel_err_status = CompareConst.ERROR
         self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
+        if mean_rel_inf_nan_consistency:
+            self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
+        else:
+            self.mean_rel_err_status = CompareConst.ERROR
         self.check_result_list.append(self.mean_rel_err_status)
-        self.eb_status = self._get_status(self.eb_ratio, 'eb')
+        if eb_inf_nan_consistency:
+            self.eb_status = self._get_status(self.eb_ratio, 'eb')
+        else:
+            self.eb_status = CompareConst.ERROR
         if CompareConst.ERROR in self.check_result_list:
             self.final_result = CompareConst.ERROR
         elif CompareConst.WARNING in self.check_result_list:
             self.final_result = CompareConst.WARNING
 
     def _compare_ratio(self):
-        self.small_value_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE,
+        self.small_value_err_ratio, small_value_inf_nan_consistency, small_value_message = self._calc_ratio(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE,
             self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
             self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE), 10000.0)
-        self.rmse_ratio = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
+        self.compare_message += small_value_message
+        self.rmse_ratio, rmse_inf_nan_consistency, rmse_message = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
                                            self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
                                             self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
-        self.max_rel_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.MAX_REL_ERR,
+        self.compare_message += rmse_message
+        self.max_rel_err_ratio, max_rel_inf_nan_consistency, max_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MAX_REL_ERR,
                                                   self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
                                                     self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
-        self.mean_rel_err_ratio = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
+        self.compare_message += max_rel_message
+        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
                                                    self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
                                                     self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
-        self.eb_ratio = self._calc_ratio(ApiPrecisionCompareColumn.EB,
+        self.compare_message += mean_rel_message
+        self.eb_ratio, eb_inf_nan_consistency, eb_message = self._calc_ratio(ApiPrecisionCompareColumn.EB,
                                          self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                             self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
+        self.compare_message += eb_message
+        return small_value_inf_nan_consistency, rmse_inf_nan_consistency, max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency, eb_inf_nan_consistency
 
     def to_column_value(self):
         return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 
@@ -172,6 +195,8 @@ class BenchmarkStandard(Standard):
     
     @staticmethod
     def _get_status(ratio, algorithm):
+        if math.isnan(ratio) or math.isinf(ratio):
+            return CompareConst.ERROR
         error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
         warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
         if ratio > error_threshold:
@@ -197,37 +222,29 @@ class ULPStandard(Standard):
 
     def get_result(self):
         self.mean_ulp_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
-        self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
-        self.ulp_err_proportion_ratio = self._calc_ratio(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
-                                                         self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
-                                                            self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
+        gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
         inf_nan_consistency = True
-        if is_inf_or_nan(self.mean_ulp_err):
-            gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
-            if math.isnan(self.mean_ulp_err):
-                if math.isnan(gpu_mean_ulp_err):
+        if is_inf_or_nan(self.mean_ulp_err) or is_inf_or_nan(gpu_mean_ulp_err):
+            if math.isnan(self.mean_ulp_err) or math.isnan(gpu_mean_ulp_err):
+                if math.isnan(self.mean_ulp_err) and math.isnan(gpu_mean_ulp_err):
                     inf_nan_consistency = True
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
                 else:
                     inf_nan_consistency = False
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
             else:
-                inf_nan_consistency = (self.mean_ulp_err == gpu_mean_ulp_err)
-            if inf_nan_consistency:
-                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
-            else:
-                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
-        if is_inf_or_nan(self.ulp_err_proportion):
-            gpu_ulp_err_proportion = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
-            if math.isnan(self.ulp_err_proportion):
-                if math.isnan(gpu_ulp_err_proportion):
+                if self.mean_ulp_err == gpu_mean_ulp_err:
                     inf_nan_consistency = True
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
                 else:
                     inf_nan_consistency = False
-            else:
-                inf_nan_consistency = (self.ulp_err_proportion == gpu_ulp_err_proportion)
-            if inf_nan_consistency:
-                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
-            else:
-                self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+        self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
+        self.ulp_err_proportion_ratio, ulp_inf_nan_consistency, message = self._calc_ratio(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
+                                                            self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
+                                                            self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
+        inf_nan_consistency = inf_nan_consistency and ulp_inf_nan_consistency
+        self.compare_message += message
         if inf_nan_consistency:
             self.ulp_err_status = self.get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
         else:
@@ -467,12 +484,11 @@ def record_benchmark_compare_result(compare_column, bs):
     compare_column.eb_status = bs.eb_status
     compare_column.compare_result = bs.final_result
     compare_column.compare_algorithm = "标杆比对法"
-    message = ''
+    compare_column.compare_message = bs.compare_message
     for status_attr, messages in benchmark_message.items():
         status_value = getattr(compare_column, status_attr)
         if status_value in messages:
-            message += messages[status_value]
-    compare_column.compare_message = message
+            compare_column.compare_message += messages[status_value]
     return compare_column.compare_result
 
 
