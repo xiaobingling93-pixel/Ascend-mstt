@@ -62,7 +62,7 @@ class UTBase:
         if isinstance(output_pt, torch.Tensor):
             output_ms = self.output[0]
             output_pt = output_pt.numpy()
-            self.comparator.compare(output_pt, output_ms, self.name + "." + Const.INPUT)
+            self.comparator.compare(output_pt, output_ms, self.name + "." + Const.OUTPUT)
         else:
             for index_output, (output_p, output_ms) in enumerate(zip(output_pt, self.output)):
                 output_p = output_p.numpy()

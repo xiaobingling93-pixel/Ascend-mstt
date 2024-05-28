@@ -86,7 +86,7 @@ def _run_ut():
         op_type = files['type']
         if op_type in api_mapping_dict:
             module_name = "common_ut"
-            api_name = op_type + "_" + api_mapping_dict[op_type]
+            api_name = op_type + "_" + api_mapping_dict[op_type] + "_" + op_name
         else:
             module_name = op_type + "_ut"
             api_name = op_name
