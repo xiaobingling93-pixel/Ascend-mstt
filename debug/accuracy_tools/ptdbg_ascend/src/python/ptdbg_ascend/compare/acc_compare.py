@@ -738,28 +738,41 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
     return item_list
 
 
-def read_op(op_data, opname):
-    if 'input_args' in op_data:
-        input_item = op_data['input_args']
-        input_parsed_list = op_item_parse(input_item, opname + '_input', None)
-        op_parsed_list = input_parsed_list.copy()
-        input_parsed_list.clear()
-    if 'input_kwargs' in op_data:
-        kwargs_item = op_data['input_kwargs']
-        if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
-            kwarg_parsed_list = op_item_parse(kwargs_item, opname + '_input', None)
-            op_parsed_list += kwarg_parsed_list
-            kwarg_parsed_list.clear()
-        elif kwargs_item:
-            for kwarg in kwargs_item:
-                kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], opname + '_input.' + kwarg, None)
+def read_op(op_data, op_name):
+    op_parsed_list = []
+    if 'forward' in op_name:
+        if 'input_args' in op_data:
+            input_item = op_data['input_args']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'input_kwargs' in op_data:
+            kwargs_item = op_data['input_kwargs']
+            if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
+                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '_input', None)
                 op_parsed_list += kwarg_parsed_list
                 kwarg_parsed_list.clear()
-    if 'output' in op_data:
-        output_item = op_data['output']
-        output_parsed_list = op_item_parse(output_item, opname + '_output', None)
-        op_parsed_list += output_parsed_list
-        output_parsed_list.clear()
+            elif kwargs_item:
+                for kwarg in kwargs_item:
+                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '_input.' + kwarg, None)
+                    op_parsed_list += kwarg_parsed_list
+                    kwarg_parsed_list.clear()
+        if 'output' in op_data:
+            output_item = op_data['output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
+    if 'backward' in op_name:
+        if 'grad_input' in op_data:
+            input_item = op_data['grad_input']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'grad_output' in op_data:
+            output_item = op_data['grad_output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
     return op_parsed_list
 
 
