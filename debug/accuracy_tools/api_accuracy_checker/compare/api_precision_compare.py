@@ -97,7 +97,10 @@ class Standard:
                     else:
                         return float("nan"), False, f"{column_name}inf或nan不一致\n"
                 elif math.isinf(x):
-                    return x, False, f"{column_name}inf或nan不一致\n"
+                    if y >= 0:
+                        return x, False, f"{column_name}inf或nan不一致\n"
+                    else:
+                        return -x, False, f"{column_name}inf或nan不一致\n"
                 else:
                     return abs(x / y), False, f"{column_name}inf或nan不一致\n"
         inf_nan_consistency = True
@@ -228,17 +231,17 @@ class ULPStandard(Standard):
             if math.isnan(self.mean_ulp_err) or math.isnan(gpu_mean_ulp_err):
                 if math.isnan(self.mean_ulp_err) and math.isnan(gpu_mean_ulp_err):
                     inf_nan_consistency = True
-                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_ULP_ERR}同为同号inf或nan\n"
                 else:
                     inf_nan_consistency = False
-                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_ULP_ERR}inf或nan不一致\n"
             else:
                 if self.mean_ulp_err == gpu_mean_ulp_err:
                     inf_nan_consistency = True
-                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}同为同号inf或nan\n"
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_ULP_ERR}同为同号inf或nan\n"
                 else:
                     inf_nan_consistency = False
-                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_REL_ERR}inf或nan不一致\n"
+                    self.compare_message += f"{ApiPrecisionCompareColumn.MEAN_ULP_ERR}inf或nan不一致\n"
         self.ulp_err_proportion = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
         self.ulp_err_proportion_ratio, ulp_inf_nan_consistency, message = self._calc_ratio(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
                                                             self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
