@@ -243,7 +243,6 @@ tensor:
   - ceil
   - ceil_
   - cholesky
-  - chunk
   - clamp
   - cholesky_solve
   - cholesky_inverse
@@ -467,12 +466,10 @@ tensor:
   - relu_
   - remainder
   - repeat_interleave
-  - reshape
   - remainder_
   - renorm
   - renorm_
   - repeat
-  - reshape_as
   - resize_
   - resize_as_
   - roll
@@ -544,7 +541,6 @@ tensor:
   - unbind
   - unflatten
   - unfold
-  - unsafe_chunk
   - unsqueeze
   - unsafe_split
   - unsafe_split_with_sizes
@@ -653,7 +649,6 @@ torch:
   - cholesky_inverse
   - cholesky_solve
   - choose_qparams_optimized
-  - chunk
   - clamp
   - clamp_
   - clamp_max
@@ -904,7 +899,6 @@ torch:
   - remainder
   - renorm
   - repeat_interleave
-  - reshape
   - resize_as_
   - roll
   - rot90
@@ -986,7 +980,6 @@ torch:
   - xlogy
   - unbind
   - unique_dim
-  - unsafe_chunk
   - unsafe_split
   - vander
   - var
@@ -1249,7 +1242,6 @@ aten:
   - grid_sampler_2d_backward
   - frac_
   - dropout
-  - unsafe_chunk
   - masked_fill_
   - log
   - negative_
@@ -1314,7 +1306,6 @@ aten:
   - linalg_vector_norm
   - _cudnn_rnn
   - _scaled_dot_product_efficient_attention
-  - _reshape_alias
   - _linalg_det
   - constant_pad_nd
   - _linalg_svd
