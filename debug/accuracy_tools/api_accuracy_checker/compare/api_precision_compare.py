@@ -72,6 +72,15 @@ class Standard:
     @staticmethod
     def _calc_ratio(x, y, default_value=1.0):
         x, y = convert_str_to_float(x), convert_str_to_float(y)
+        if math.isnan(x) or math.isnan(y):
+            return float("nan")
+        if math.isinf(x) or math.isinf(y):
+            if math.isinf(x) and math.isinf(y):
+                return float("nan")
+            elif math.isinf(x):
+                return x
+            else:
+                return abs(x / y)
         if math.isclose(y, 0.0):
             return 1.0 if math.isclose(x, 0.0) else default_value
         else:
