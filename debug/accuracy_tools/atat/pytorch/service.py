@@ -99,6 +99,8 @@ class Service:
                               f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        if self.config.step and self.current_iter not in self.config.step:
+            return
         self.switch = False
         self.collect_data.write_json()
 
