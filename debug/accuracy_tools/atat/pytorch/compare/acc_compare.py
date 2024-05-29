@@ -20,16 +20,17 @@ import multiprocessing
 import os.path
 import stat
 import sys
+import torch
 
 import numpy as np
 import pandas as pd
 
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
-from ..common.utils import check_compare_param, add_time_as_suffix, \
+from ..common.utils_compare import check_compare_param, add_time_as_suffix, \
     print_info_log, print_warn_log, print_error_log, CompareException, Const, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
-    is_summary_compare, is_md5_compare
+    task_dumppath_get
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
@@ -227,67 +228,47 @@ def rename_api(npu_name, process):
     return torch_func
 
 
-def merge_tensor(tensor_list):
+def merge_tensor(tensor_list, summary_compare, md5_compare):
     op_dict = {}
     op_dict["op_name"] = []
     op_dict["input_struct"] = []
+    op_dict["kwargs_struct"] = []
     op_dict["output_struct"] = []
     op_dict["summery"] = []
     op_dict["stack_info"] = []
 
+    all_mode_bool = summary_compare == False and md5_compare == False
+    if all_mode_bool:
+        op_dict["data_name"] = []
+
     for tensor in tensor_list:
-        if tensor[0].find("stack_info") != -1:
-            if len(tensor) != Const.STACK_COLUMN_NUM:
-                print_error_log(f"This stack_info data is not complete. {tensor}")
-                raise CompareException(CompareException.INVALID_DATA_ERROR)
-            op_dict["stack_info"].append(tensor[1])
+        if len(tensor) == 2:
+            op_dict['stack_info'].append(tensor['full_info'])
             break
-        op_dict["op_name"].append(tensor[0])
-        if len(tensor) != Const.SUMMARY_COLUMN_NUM:
-            print_error_log(f"This summary data is not complete. {tensor}")
-            raise CompareException(CompareException.INVALID_DATA_ERROR)    
-        if tensor[0].find("input") != -1:
-            op_dict["input_struct"].append((tensor[3], tensor[4], tensor[2]))
-        elif tensor[0].find("output") != -1:
-            op_dict["output_struct"].append((tensor[3], tensor[4], tensor[2]))
+        op_dict["op_name"].append(tensor['full_op_name'])
+        if not md5_compare:
+            if tensor['full_op_name'].find("input") != -1:
+                op_dict["input_struct"].append((tensor['dtype'], tensor['shape']))
+            elif tensor['full_op_name'].find("kwarg") != -1:
+                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape']))
+            elif tensor['full_op_name'].find("output") != -1:
+                op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
+        else:
+            if tensor['full_op_name'].find("input") != -1:
+                op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+            elif tensor['full_op_name'].find("kwarg") != -1:
+                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+            elif tensor['full_op_name'].find("output") != -1:
+                op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
 
-        if tensor[1] <= Const.DUMP_RATIO_MAX:
-            op_dict["summery"].append(tensor[5])
+        op_dict["summery"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
 
+        if all_mode_bool:
+            op_dict["data_name"].append(tensor['data_name'])
+
+    if not op_dict["kwargs_struct"]:
+        del op_dict["kwargs_struct"]
     return op_dict
-
-
-def read_op(ops_queue, pkl_file_handle, stack_mode):
-    tensor_list = []
-    read_err = False
-    read_output_flag = {"last_line": False, "curr_line": False}
-    end_flag = "stack_info" if stack_mode is True else "output"
-
-    while True:
-        curr_pos = pkl_file_handle.tell()
-        tensor_line = pkl_file_handle.readline()
-        if len(tensor_line) == 0 and not read_output_flag.get("curr_line"):
-            read_err = True
-            break
-        if tensor_line == '\n':
-            continue
-        if len(tensor_line) != 0:
-            tensor_data = json.loads(tensor_line)
-            if not isinstance(tensor_data, list):
-                print_error_log(f"This data is not a list, please check the dump data pkl file. {tensor_data}")
-                raise CompareException(CompareException.INVALID_DATA_ERROR) 
-            read_output_flag["last_line"] = read_output_flag.get("curr_line")
-            read_output_flag["curr_line"] = True if tensor_data[0].find(end_flag) != -1 else False
-
-        if (read_output_flag.get("last_line") and not read_output_flag.get("curr_line")) \
-                or (len(tensor_line) == 0 and read_output_flag.get("curr_line")):  # end of file scenario
-            ops_queue.append(merge_tensor(tensor_list))
-            # the pos of the handle needs to restore to the start of the next api.
-            pkl_file_handle.seek(curr_pos, 0)
-            break
-        tensor_list.append(tensor_data)
-
-    return not read_err
 
 
 def match_op(npu_queue, bench_queue, fuzzy_match):
@@ -308,7 +289,17 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
         npu_stack_info = n_dict.get("stack_info", None)
         bench_stack_info = b_dict.get("stack_info", None)
         has_stack = npu_stack_info and bench_stack_info
+
+        all_mode_bool = summary_compare == False and md5_compare == False
+        if all_mode_bool:
+            npu_data_name = n_dict.get("data_name", None)
+            bench_data_name = b_dict.get("data_name", None)
+        has_data_name = False
+
         for index in range(min_len):
+            if all_mode_bool:
+                has_data_name = npu_data_name[n_start + index] and bench_data_name[b_start + index]
+
             n_name = n_dict['op_name'][n_start + index]
             b_name = b_dict['op_name'][b_start + index]
             n_struct = n_dict[key][index]
@@ -319,6 +310,10 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                                n_struct[2], b_struct[2], CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
+                else:
+                    result_item.append(CompareConst.NONE)
+                if all_mode_bool and has_data_name:
+                    result_item.append(npu_data_name[n_start + index])
                 result.append(result_item)
                 continue
 
@@ -345,7 +340,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         if magnitude_diff > 0.5:
                             warning_flag = True
                     else:
-                        result_item[start_idx + i] = CompareConst.NAN
+                        result_item[start_idx + i] = CompareConst.NONE
                 accuracy_check = CompareConst.WARNING if warning_flag else ""
                 err_msg += "Need double check api accuracy." if warning_flag else ""
                 result_item[start_idx:] = [f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x for x in result_item[start_idx:]]
@@ -354,11 +349,18 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             result_item.append(err_msg)
             if has_stack and index == 0 and key == "input_struct":
                 result_item.extend(npu_stack_info)
+            else:
+                result_item.append(CompareConst.NONE)
+            if all_mode_bool and has_data_name:
+                result_item.append(npu_data_name[n_start + index])
 
             result.append(result_item)
 
         if n_len > b_len:
             for index in range(b_len, n_len):
+                if all_mode_bool:
+                    has_data_name = npu_data_name[n_start + index] and bench_data_name[b_start + index]
+
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
                 if md5_compare:
@@ -379,6 +381,10 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
+                else:
+                    result_item.append(CompareConst.NONE)
+                if all_mode_bool and has_data_name:
+                    result_item.append(npu_data_name[n_start + index])
 
                 result.append(result_item)
 
@@ -386,10 +392,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
     b_num = len(b_dict['op_name'])
     n_num_input = len([name for name in n_dict['op_name'] if 'input' in name])
     b_num_input = len([name for name in b_dict['op_name'] if 'input' in name])
-    n_num_output = n_num - n_num_input
-    b_num_output = b_num - b_num_input
+    n_num_kwarg = len([name for name in n_dict['op_name'] if 'kwarg' in name])
+    b_num_kwarg = len([name for name in b_dict['op_name'] if 'kwarg' in name])
+    n_num_output = n_num - n_num_input - n_num_kwarg
+    b_num_output = b_num - b_num_input - b_num_kwarg
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
-    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
+    get_accuracy_core(n_num_input, n_num_kwarg, b_num_input, b_num_kwarg, "kwargs_struct")
+    get_accuracy_core(n_num_input + n_num_kwarg, n_num_output, b_num_input + b_num_kwarg, b_num_output, 'output_struct')
 
 
 def _do_multi_process(input_parma, result_path):
@@ -407,12 +416,14 @@ def read_dump_path(result_path):
     try:
         csv_pd = pd.read_csv(result_path)
         npu_dump_name_list = csv_pd.iloc[0:, 0].tolist()
-        bench_dump_name_list = csv_pd.iloc[0:, 1].tolist()
+        npu_dump_tensor_list = csv_pd.iloc[0:, -1].tolist()
+        # bench_dump_name_list = csv_pd.iloc[0:, 1].tolist()
         op_name_mapping_dict = {}
         for index, _ in enumerate(npu_dump_name_list):
             npu_dump_name = npu_dump_name_list[index]
-            bench_dump_name = bench_dump_name_list[index]
-            op_name_mapping_dict[npu_dump_name] = [npu_dump_name, bench_dump_name]
+            npu_dump_tensor = npu_dump_tensor_list[index]
+            # bench_dump_name = bench_dump_name_list[index]
+            op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
         return op_name_mapping_dict
     except FileNotFoundError as e:
         print_error_log('{} file is not found.'.format(result_path))
@@ -464,7 +475,12 @@ def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_p
     for i, op_name in enumerate(fusion_op_names):
         if is_print_compare_log:
             print("start compare: {}".format(op_name))
-        cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
+
+        if op_name == '-1':
+            cos_sim = max_abs_err = max_relative_err = err_msg = one_thousand_err_ratio = five_thousand_err_ratio = CompareConst.NONE
+        else:
+            cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
+
         if is_print_compare_log:
             print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
         cos_result.append(cos_sim)
@@ -506,15 +522,15 @@ def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, e
 def check_accuracy(cos, max_abs_err):
     if cos == CompareConst.SHAPE_UNMATCH:
         return CompareConst.ACCURACY_CHECK_UNMATCH
-    if cos == CompareConst.NAN or max_abs_err == CompareConst.NAN:
-        return CompareConst.NAN
+    if cos == CompareConst.NONE or max_abs_err == CompareConst.NONE:
+        return CompareConst.NONE
     if cos == "N/A" or max_abs_err == "N/A":
         return CompareConst.ACCURACY_CHECK_NO
     try:
         cos, max_abs_err = float(cos), float(max_abs_err)
     except ValueError:
         print_warn_log("Cosine or MaxAbsErr can not get float value.")
-        return CompareConst.NAN
+        return CompareConst.NONE
     if cos < CompareConst.COS_THRESHOLD and max_abs_err > CompareConst.MAX_ABS_ERR_THRESHOLD:
         return CompareConst.ACCURACY_CHECK_NO
     if cos < CompareConst.COS_MAX_THRESHOLD or max_abs_err > CompareConst.MAX_ABS_ERR_MAX_THRESHOLD:
@@ -524,19 +540,20 @@ def check_accuracy(cos, max_abs_err):
 
 def compare_by_op(op_name, op_name_mapping_dict, input_parma):
     npu_bench_name_list = op_name_mapping_dict[op_name]
-    if npu_bench_name_list[1] == CompareConst.NAN:
-        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, CompareConst.NO_BENCH, CompareConst.NAN, CompareConst.NAN
+    data_name = npu_bench_name_list[1]
+    if data_name == '-1' or data_name == -1:
+        return CompareConst.NONE, CompareConst.NONE, CompareConst.NONE, CompareConst.NO_BENCH, CompareConst.NONE, CompareConst.NONE
     try:
-        n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0] + ".npy")
-        b_path = os.path.join(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1] + ".npy")
+        n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
+        b_path = os.path.join(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
         n_path_checker = FileChecker(n_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.NUMPY_SUFFIX, False)
+                                     FileCheckConst.PT_SUFFIX, False)
         b_path_checker = FileChecker(b_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.NUMPY_SUFFIX, False)
+                                     FileCheckConst.PT_SUFFIX, False)
         n_path = n_path_checker.common_check()
         b_path = b_path_checker.common_check()
-        n_value = np.load(n_path)
-        b_value = np.load(b_path)
+        n_value = torch.load(n_path).detach().numpy()
+        b_value = torch.load(b_path).detach().numpy()
     except IOError as error:
         return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, "Dump file: {} not found.".format(error.filename), CompareConst.NAN, CompareConst.NAN
     relative_err = get_relative_err(n_value, b_value)
@@ -601,10 +618,9 @@ def handle_inf_nan(n_value, b_value):
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
-        summary_compare = is_summary_compare(input_parma)
-        md5_compare = is_md5_compare(input_parma)
+        summary_compare, md5_compare = task_dumppath_get(input_parma)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
-        check_compare_param(input_parma, output_path, stack_mode, summary_compare)
+        check_compare_param(input_parma, output_path, stack_mode, summary_compare, md5_compare)
     except CompareException as error:
         print_error_log('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
@@ -620,11 +636,12 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
 
-    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
-            FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl, \
+    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
+            FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
+            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json, \
             os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') \
                     as fout:
-        compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
+        compare_process([npu_json, bench_json, stack_json, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
         if summary_compare:
             print_info_log(f"Summary compare result is {file_path}")
 
@@ -671,19 +688,150 @@ def parse(pkl_file, module_name_prefix):
                 print(summery_info)
 
 
+def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
+    if item == None or (isinstance(item, dict) and len(item) == 0):
+        if not top_bool:
+            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+        else:
+            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+        item_list.append(tmp)
+        return item_list
+    if index == None:
+        if isinstance(item, dict):
+            full_op_name = op_name + '.0'
+        else:
+            full_op_name = op_name
+    else:
+        full_op_name = op_name + '.' + str(index)
+    if isinstance(item, dict):
+        if 'dtype' in item:
+            parsed_item = item
+            parsed_item['full_op_name'] = full_op_name
+            item_list.append(parsed_item)
+        else:
+            parsed_item = {}
+            if item['type'] == 'slice':
+                parsed_item['full_op_name'] = full_op_name
+                parsed_item['dtype'] = 'slice'
+                parsed_item['shape'] = str(np.shape(np.array(item['value'])))
+                parsed_item['md5'] = None
+                parsed_item['Max'] = None
+                parsed_item['Min'] = None
+                parsed_item['Mean'] = None
+                parsed_item['Norm'] = None
+                parsed_item['data_name'] = '-1'
+                item_list.append(parsed_item)
+            else:
+                parsed_item['full_op_name'] = full_op_name
+                parsed_item['dtype'] = str(type(item['value']))
+                parsed_item['shape'] = '[]'
+                parsed_item['md5'] = None
+                parsed_item['Max'] = item['value']
+                parsed_item['Min'] = item['value']
+                parsed_item['Mean'] = item['value']
+                parsed_item['Norm'] = item['value']
+                parsed_item['data_name'] = '-1'
+                item_list.append(parsed_item)
+    else:
+        for j in range(len(item)):
+            op_item_parse(item[j], full_op_name, j, top_bool=False)
+    return item_list
+
+
+def read_op(op_data, op_name):
+    op_parsed_list = []
+    if 'forward' in op_name:
+        if 'input_args' in op_data:
+            input_item = op_data['input_args']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'input_kwargs' in op_data:
+            kwargs_item = op_data['input_kwargs']
+            if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
+                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '_input', None)
+                op_parsed_list += kwarg_parsed_list
+                kwarg_parsed_list.clear()
+            elif kwargs_item:
+                for kwarg in kwargs_item:
+                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '_input.' + kwarg, None)
+                    op_parsed_list += kwarg_parsed_list
+                    kwarg_parsed_list.clear()
+        if 'output' in op_data:
+            output_item = op_data['output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
+    if 'backward' in op_name:
+        if 'grad_input' in op_data:
+            input_item = op_data['grad_input']
+            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            op_parsed_list = input_parsed_list.copy()
+            input_parsed_list.clear()
+        if 'grad_output' in op_data:
+            output_item = op_data['grad_output']
+            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            op_parsed_list += output_parsed_list
+            output_parsed_list.clear()
+    return op_parsed_list
+
+
 def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
-    npu_pkl_handle, bench_pkl_handle, output_csv_handle = file_handles
+    npu_json_handle, bench_json_handle, stack_json_handle, output_csv_handle = file_handles
+    npu_json_data = json.load(npu_json_handle)
+    bench_json_data = json.load(bench_json_handle)
+    stack_json_data = json.load(stack_json_handle)
+
     if fuzzy_match:
         print_warn_log("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
+
     npu_ops_queue = []
     bench_ops_queue = []
     result = []
+
+    ops_npu_iter = iter(npu_json_data['data'])
+    ops_bench_iter = iter(bench_json_data['data'])
+    read_err_npu = True
+    read_err_bench = True
+
     while True:
-        npu_file_flag = read_op(npu_ops_queue, npu_pkl_handle, stack_mode)
-        bench_file_flag = read_op(bench_ops_queue, bench_pkl_handle, stack_mode)
-        if (not npu_file_flag and not bench_file_flag) \
-                or (len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0):
+        if not read_err_npu or not read_err_bench:
             break
+        try:
+            op_name_npu = next(ops_npu_iter)
+            read_err_npu = True
+
+            npu_op_data = npu_json_data['data'][op_name_npu]
+            npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
+            if op_name_npu in stack_json_data:
+                npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
+            else:
+                npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
+
+            npu_ops_queue.append(merge_tensor(npu_op_parsed_list, summary_compare, md5_compare))
+        except StopIteration:
+            read_err_npu = False
+            continue
+        try:
+            op_name_bench = next(ops_bench_iter)
+            read_err_bench = True
+
+            bench_op_data = bench_json_data['data'][op_name_bench]
+            bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
+            if op_name_bench in stack_json_data:
+                bench_op_parsed_list.append(
+                    {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
+            else:
+                bench_op_parsed_list.append({'full_op_name': op_name_bench, 'full_info': None})
+
+            bench_ops_queue.append(merge_tensor(bench_op_parsed_list, summary_compare, md5_compare))
+        except StopIteration:
+            read_err_bench = False
+            continue
+
+        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0:
+            break
+
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
         if n_match_point == -1 and b_match_point == -1:
             continue
@@ -706,8 +854,23 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
         header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
     else:
         header = CompareConst.COMPARE_RESULT_HEADER[:]
+
+    all_mode_bool = summary_compare == False and md5_compare == False
     if stack_mode:
-        header.append(CompareConst.STACK)
+        if all_mode_bool:
+            header.append(CompareConst.STACK)
+            header.append(CompareConst.DATA_NAME)
+        else:
+            header.append(CompareConst.STACK)
+    else:
+        if all_mode_bool:
+            for row in result:
+                del row[-2]
+            header.append(CompareConst.DATA_NAME)
+        else:
+            for row in result:
+                del row[-1]
+
     result_df = pd.DataFrame(result, columns=header)
     result_df.to_csv(output_csv_handle, index=False)
 
