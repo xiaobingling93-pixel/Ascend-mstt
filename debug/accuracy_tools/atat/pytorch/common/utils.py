@@ -102,8 +102,8 @@ def seed_all(seed=1234, mode=False):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.enable = False
         torch.backends.cudnn.benchmark = False
-        os.environ['HCCL_DETERMINISTIC'] = True
     else:
+        os.environ['HCCL_DETERMINISTIC'] = True
         torch_npu.npu.manual_seed_all(seed)
         torch_npu.npu.manual_seed(seed)
 
