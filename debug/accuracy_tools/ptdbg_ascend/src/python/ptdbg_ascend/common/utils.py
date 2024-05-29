@@ -118,7 +118,7 @@ class Const:
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
         ]
 
 
