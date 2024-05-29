@@ -225,7 +225,7 @@ class ULPStandard(Standard):
 
     def get_result(self):
         self.mean_ulp_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
-        gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR))
+        gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
         inf_nan_consistency = True
         if is_inf_or_nan(self.mean_ulp_err) or is_inf_or_nan(gpu_mean_ulp_err):
             if math.isnan(self.mean_ulp_err) or math.isnan(gpu_mean_ulp_err):
