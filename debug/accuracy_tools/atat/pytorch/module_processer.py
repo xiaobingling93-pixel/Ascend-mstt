@@ -28,7 +28,7 @@ class ModuleProcesser:
             if isinstance(result, torch.Tensor):
                 result = result.clone()
             elif isinstance(result, tuple):
-                result = tuple(r.clone() for r in result)
+                result = tuple(r.clone() if isinstance(r, torch.Tensor) else r for r in result)
             return result
 
         return clone_return_value_func
