@@ -23,6 +23,7 @@ with FileOpen(standard_yaml_path, 'r') as f:
     AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
     BinaryStandardApi = Apis.get('BinaryCompareStandard')
     ULPStandardApi = Apis.get('ULPStandard')
+    ThousandthStandardApi = Apis.get('ThousandthStandard')
 
 
 threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
@@ -155,6 +156,8 @@ class ApiPrecisionCompareColumn:
     ULP_ERR_PROPORTION = 'ULP误差大于阈值占比'
     ULP_ERR_PROPORTION_RATIO = 'ULP误差大于阈值占比比值'
     ULP_ERR_STATUS = 'ULP误差判定结果'
+    REL_ERR_THOUSANDTH = '双千指标'
+    REL_ERR_THOUSANDTH_STATUS = '双千指标判定结果'
     FINAL_RESULT = '比对结果'
     ALGORITHM = '比对算法'
     FORWWARD_STATUS = 'Forward Test Success'
@@ -168,7 +171,8 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.MAX_REL_ERR, ApiPrecisionCompareColumn.MEAN_REL_ERR, ApiPrecisionCompareColumn.EB,
                 ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, 
                 ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO, 
-                ApiPrecisionCompareColumn.MEAN_ULP_ERR, ApiPrecisionCompareColumn.ULP_ERR_PROPORTION]
+                ApiPrecisionCompareColumn.MEAN_ULP_ERR, ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
+                ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
 
     @staticmethod
     def get_detail_csv_title():
@@ -183,7 +187,8 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.ABS_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO_STATUS, 
                 ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.ERROR_RATE_STATUS, 
                 ApiPrecisionCompareColumn.MEAN_ULP_ERR, ApiPrecisionCompareColumn.ULP_ERR_PROPORTION, 
-                ApiPrecisionCompareColumn.ULP_ERR_PROPORTION_RATIO, ApiPrecisionCompareColumn.ULP_ERR_STATUS, 
+                ApiPrecisionCompareColumn.ULP_ERR_PROPORTION_RATIO, ApiPrecisionCompareColumn.ULP_ERR_STATUS,
+                 ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH, ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH_STATUS,
                 ApiPrecisionCompareColumn.FINAL_RESULT, ApiPrecisionCompareColumn.ALGORITHM, ApiPrecisionCompareColumn.MESSAGE]
     
     @staticmethod

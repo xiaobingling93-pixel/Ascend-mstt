@@ -70,7 +70,7 @@ class TestCompare(unittest.TestCase):
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
-        api_name = 'Functional*conv2d*0'
+        api_name = 'Functional.conv2d.0'
         data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
         is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertFalse(is_fwd_success)
@@ -84,7 +84,7 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(is_bwd_success)
 
     def test_record_results(self):
-        args = ('Functional*conv2d*0', False, 'N/A', [['torch.float64', 'torch.float32', (32, 64, 112, 112), 1.0,
+        args = ('Functional.conv2d.0', False, 'N/A', [['torch.float64', 'torch.float32', (32, 64, 112, 112), 1.0,
                                                        0.012798667686, 'N/A', 0.81631212311, 0.159979121213, 'N/A',
                                                        'error', '\n']], None, 0)
         self.compare.record_results(args)
@@ -92,7 +92,7 @@ class TestCompare(unittest.TestCase):
             csv_reader = csv.reader(file)
             next(csv_reader)
             api_name_list = [row[0] for row in csv_reader]
-        self.assertEqual(api_name_list[0], 'Functional*conv2d*0.forward.output.0')
+        self.assertEqual(api_name_list[0], 'Functional.conv2d.0.forward.output.0')
         
     def test_compare_torch_tensor(self):
         cpu_output = torch.Tensor([1.0, 2.0, 3.0])
@@ -112,3 +112,11 @@ class TestCompare(unittest.TestCase):
         npu_out = 1
         status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
         self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))
+    
+    def test_compare_float_tensor(self):
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
+        compare_column = CompareColumn()
+        status, compare_column, message = self.compare._compare_float_tensor("api", cpu_output.numpy(), npu_output.numpy(),
+                                                                             compare_column, npu_output.dtype)
+        self.assertEqual(status, "pass")

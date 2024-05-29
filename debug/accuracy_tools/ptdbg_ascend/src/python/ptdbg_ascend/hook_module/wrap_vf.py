@@ -21,7 +21,7 @@ import torch
 import yaml
 
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard
+from ..common.utils import torch_device_guard, Const
 from ..common.file_check_util import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -44,7 +44,7 @@ class HOOKVfOP(object):
 class VfOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "VF_" + str(op_name) + "_"
+        self.prefix_op_name_ = "VF" + Const.DELIMITER+ str(op_name) + Const.DELIMITER
         super().__init__(hook)
 
     @torch_device_guard

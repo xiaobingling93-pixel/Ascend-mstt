@@ -1,7 +1,8 @@
 import os
+import hashlib
 from abc import ABC, abstractmethod
 import torch
-from grad_tool.utils import print_info_log
+from grad_tool.common.utils import print_info_log
 
 
 class LevelOps:
@@ -37,6 +38,16 @@ class LevelOps:
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         torch.save(is_positive, f'{save_path}/{param_name}.pt')
+
+    @staticmethod
+    def MD5_content(grad):
+        tensor_bytes = grad.cpu().detach().float().numpy().tobytes()
+        md5_hash = hashlib.md5(tensor_bytes)
+        return [md5_hash.hexdigest()]
+    
+    @staticmethod
+    def MD5_header():
+        return ["MD5"]
     
 
 class Level(ABC):
@@ -52,6 +63,14 @@ class Level(ABC):
     def intervals_header(self, bounds) -> list:
         pass
 
+    @abstractmethod
+    def MD5_content(self, grad) -> list:
+        pass
+
+    @abstractmethod
+    def MD5_header(self) -> list:
+        pass
+
 
 class Level_0(Level):
     def save_grad_direction(self, param_name, grad, save_path):
@@ -62,17 +81,29 @@ class Level_0(Level):
 
     def intervals_header(self, bounds):
         return []
+    
+    def MD5_content(self, grad):
+        return LevelOps.MD5_content(grad)
+
+    def MD5_header(self):
+        return LevelOps.MD5_header()
 
 
 class Level_1(Level):
     def save_grad_direction(self, param_name, grad, save_path):
-        pass
+        LevelOps.save_grad_direction(param_name, grad, save_path)
 
     def count_grad_distribution(self, grad, bounds):
-        return LevelOps.count_grad_distribution(grad, bounds)
+        return []
 
     def intervals_header(self, bounds):
-        return LevelOps.intervals_header(bounds)
+        return []
+    
+    def MD5_content(self, grad):
+        return []
+
+    def MD5_header(self):
+        return []
 
 
 class Level_2(Level):
@@ -80,25 +111,20 @@ class Level_2(Level):
         LevelOps.save_grad_direction(param_name, grad, save_path)
 
     def count_grad_distribution(self, grad, bounds):
-        return []
-
-    def intervals_header(self, bounds):
-        return []
-
-
-class Level_3(Level):
-    def save_grad_direction(self, param_name, grad, save_path):
-        LevelOps.save_grad_direction(param_name, grad, save_path)
-
-    def count_grad_distribution(self, grad, bounds):
         return LevelOps.count_grad_distribution(grad, bounds)
 
     def intervals_header(self, bounds):
         return LevelOps.intervals_header(bounds)
+    
+    def MD5_content(self, grad):
+        return []
+
+    def MD5_header(self):
+        return []
 
 
 class LevelAdapter:
-    levels = {"L0": Level_0, "L1": Level_1, "L2": Level_2, "L3": Level_3}
+    levels = {"L0": Level_0, "L1": Level_1, "L2": Level_2}
 
     @staticmethod
     def level_adapter(level):

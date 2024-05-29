@@ -49,7 +49,7 @@ class HOOKDistributedOP(object):
 class DistributedOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Distributed_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Distributed" + Const.DELIMITER + str(op_name) + Const.DELIMITER
         super().__init__(hook)
         if self.op_name_ in Const.INPLACE_LIST:
             self.register_forward_pre_hook(hook(self.prefix + Const.PRE_FORWARD))

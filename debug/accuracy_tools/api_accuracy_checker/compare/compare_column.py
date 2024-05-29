@@ -57,6 +57,8 @@ class ApiPrecisionOutputColumn:
         self.ulp_err_proportion = CompareConst.SPACE
         self.ulp_err_proportion_ratio = CompareConst.SPACE
         self.ulp_err_status = CompareConst.SPACE
+        self.rel_err_thousandth = CompareConst.SPACE
+        self.rel_err_thousandth_status = CompareConst.SPACE
         self.compare_result = CompareConst.SPACE
         self.compare_algorithm = CompareConst.SPACE
         self.compare_message = CompareConst.SPACE
@@ -67,5 +69,5 @@ class ApiPrecisionOutputColumn:
                 self.mean_rel_err_status, self.eb_ratio, self.eb_status, self.inf_nan_error_ratio, 
                 self.inf_nan_error_ratio_status, self.rel_err_ratio, self.rel_err_ratio_status, self.abs_err_ratio, 
                 self.abs_err_ratio_status, self.error_rate, self.error_rate_status, self.mean_ulp_err, 
-                self.ulp_err_proportion, self.ulp_err_proportion_ratio, self.ulp_err_status, self.compare_result, 
-                self.compare_algorithm, self.compare_message]
+                self.ulp_err_proportion, self.ulp_err_proportion_ratio, self.ulp_err_status, self.rel_err_thousandth, 
+                self.rel_err_thousandth_status, self.compare_result, self.compare_algorithm, self.compare_message]

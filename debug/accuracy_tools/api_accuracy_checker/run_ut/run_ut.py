@@ -17,9 +17,9 @@ else:
 import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message
+from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const, create_directory
+    print_error_log, initialize_save_path, Const, create_directory, Const
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.compare_utils import CompareConst
@@ -89,7 +89,18 @@ def deal_detach(arg, to_detach=True):
     return arg.detach() if to_detach else arg
 
 
-def deal_dtype(arg, raise_dtype=None):
+def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
+    '''
+    将标杆数据的dtype转换为raise_dtype
+    输入：
+        api_name：api名称
+        arg：标杆输入
+        raise_dtype：需要转换的dtype
+    输出： 
+        arg: 转换dtype的标杆输入
+    '''
+    if api_name in hf_32_standard_api and arg.dtype == torch.float32:
+        return arg
     if raise_dtype is None or arg.dtype not in Const.RAISE_PRECISION or raise_dtype == arg.dtype:
         return arg
     return arg.type(raise_dtype)
@@ -124,13 +135,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(deal_dtype(arg_in.clone(), raise_dtype), to_detach).requires_grad_()
+                arg_in = deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype), to_detach).requires_grad_()
                 temp_arg_in = arg_in * 1
                 arg_in = temp_arg_in.type_as(arg_in)
                 arg_in.retain_grad()
                 return arg_in
             else:
-                return deal_detach(deal_dtype(arg_in.clone(), raise_dtype=raise_dtype), to_detach)
+                return deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
         else:
             return arg_in
 
@@ -195,7 +206,7 @@ def run_api_offline(config, compare, api_name_set):
             continue
         try:
             if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split("*")
+                [_, api_name, _] = api_full_name.split(Const.DELIMITER)
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
@@ -203,7 +214,7 @@ def run_api_offline(config, compare, api_name_set):
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
             if "expected scalar type Long" in str(err):
                 print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -272,20 +283,19 @@ def run_api_online(config, compare):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
             UtAPIInfo(api_full_name + '.forward.input', element)
-        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
-        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_out)
+        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_output)
+        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_output)
         UtAPIInfo(api_full_name + '.backward.input', data_info.grad_in)
-        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
-        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
+        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad)
+        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split("*")
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -317,7 +327,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if need_backward:
         if need_to_backward(grad_index, out):
             backward_args = backward_content[api_full_name]
-            grad = gen_args(backward_args, real_data_path=real_data_path)[0]
+            grad = gen_args(backward_args, api_name, real_data_path=real_data_path)[0]
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -330,7 +340,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split("*")
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -347,7 +357,7 @@ def get_api_info(api_info_dict, api_name, real_data_path):
     need_grad = True
     if api_info_dict.get("kwargs") and "out" in api_info_dict.get("kwargs"):
         need_grad = False
-    args, kwargs = gen_api_params(api_info_dict, need_grad, convert_type, real_data_path)
+    args, kwargs = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
     return args, kwargs, need_grad
 
 
@@ -459,29 +469,37 @@ def _run_ut_parser(parser):
 def preprocess_forward_content(forward_content):
     processed_content = {}
     base_keys_variants = {}
+    arg_cache = {}
+
     for key, value in forward_content.items():
-        base_key = key.rsplit('*', 1)[0]
-        new_args = value['args']
-        new_kwargs = value['kwargs']
-        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
-        if base_key in base_keys_variants:
+        base_key = key.rsplit(Const.DELIMITER, 1)[0]
+
+        if key not in arg_cache:
+            new_args = value['args']
+            new_kwargs = value['kwargs']
+            filtered_new_args = [
+                {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
+                for arg in new_args if isinstance(arg, dict)
+            ]
+            arg_cache[key] = (filtered_new_args, new_kwargs)
+
+        filtered_new_args, new_kwargs = arg_cache[key]
+
+        if base_key not in base_keys_variants:
+            processed_content[key] = value
+            base_keys_variants[base_key] = {key}
+        else:
             is_duplicate = False
-            for variant in base_keys_variants.get(base_key, []):
-                try:
-                    existing_args = processed_content[variant].get('args', [])
-                    existing_kwargs = processed_content[variant].get('kwargs', {})
-                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
-                except KeyError as e:
-                    print_error_log(f"KeyError: {e} when processing {key}")
-                if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
+            for variant in base_keys_variants[base_key]:
+                existing_args, existing_kwargs = arg_cache[variant]
+                if existing_args == filtered_new_args and existing_kwargs == new_kwargs:
                     is_duplicate = True
                     break
+
             if not is_duplicate:
                 processed_content[key] = value
-                base_keys_variants[base_key].append(key)
-        else:
-            processed_content[key] = value
-            base_keys_variants[base_key] = [key]
+                base_keys_variants[base_key].add(key)
+
     return processed_content
 
 
@@ -519,7 +537,9 @@ def run_ut_command(args):
         check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
         forward_content = get_json_contents(forward_file)
     if args.filter_api:
+        print_info_log("Start filtering the api in the forward_input_file.")
         forward_content = preprocess_forward_content(forward_content)
+        print_info_log("Finish filtering the api in the forward_input_file.")
     backward_content = {}
     if args.backward_input_file:
         check_link(args.backward_input_file)
@@ -543,12 +563,12 @@ def run_ut_command(args):
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad_out, device_grad_out, device_out,
-                 bench_out, grad_in, in_fwd_data_list, backward_message, rank=0):
-        self.bench_grad_out = bench_grad_out
-        self.device_grad_out = device_grad_out
-        self.device_out = device_out
-        self.bench_out = bench_out
+    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, 
+                 backward_message, rank=0):
+        self.bench_grad = bench_grad
+        self.device_grad = device_grad
+        self.device_output = device_output
+        self.bench_output = bench_output
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
         self.backward_message = backward_message

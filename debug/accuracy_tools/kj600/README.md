@@ -41,8 +41,8 @@ pip install -e .
     "targets": {  
         "language_model.encoder.layers.0": {"input": "tuple[2]:0", "output": "tensor", "input_grad":"tuple[2]:0", "output_grad":"tuple[1]:0"}  
     },
-    "module_ranks":"1,2,3,4",
-    "optimizer_ranks":"1,2,3,4"  
+    "module_ranks": "1,2,3,4",
+    "ur_distribution": true
 }  
 ```
 
@@ -62,7 +62,9 @@ pip install -e .
 
 "module_ranks"：可选字段，用于在分布式训练场景中希望控制在哪些rank开启module监控。如果不填，则默认在所有rank开启。
 
-"optimizer_ranks"：可选字段，用于在分布式训练场景中希望控制在哪些rank开启optimizer监控。如果不填，则默认在所有rank开启。
+"ur_distribution": 可选字段，若为true则会统计adam优化器的update和ratio的数值分布，并展示在heatmap里，默认为false。
+
+"mg_direction": 可选字段，若为true则会统计adam优化器的动量与当前梯度方向一致的参数比例。
 
 下面给出transformer架构模型中常见的module的前向计算的输入输出和反向计算输入张量的梯度和输出张量的梯度格式，以供参考：
 

@@ -29,12 +29,12 @@ class TestModule(nn.Module):
         super().__init__()
         self.linear = nn.Linear(10, 5)
         self.relu = nn.ReLU()
-    
+
     def forward(self, x):
         x1 = self.linear(x)
         x2 = self.relu(x1)
         return x2
-        
+
 
 def test_grad_monitor():
     gm = GradientMonitor(os.path.join(base_dir, "resources/test_grad_monitor.yaml"))
@@ -53,19 +53,19 @@ def test_grad_monitor():
     return gm
 
 
-def test_save_grad():
+def test_grad_monitor_1():
     gm = GradientMonitor(os.path.join(base_dir, "resources/test_save_grad.yaml"))
     loss_fun = nn.CrossEntropyLoss()
     test_module = TestModule()
     nn.init.constant_(test_module.linear.weight, 1.0)
     nn.init.constant_(test_module.linear.bias, 1.0)
+    gm.monitor(test_module)
     optimizer = torch.optim.SGD(test_module.parameters(), lr=1e-2)
-    for input_data, label in zip([x + 0.1 for x in inputs], labels):
+    for input_data, label in zip(inputs, labels):
         output = test_module(input_data)
         loss = loss_fun(output, label)
         optimizer.zero_grad()
         loss.backward()
-        gm.save_grad(test_module)
         optimizer.step()
     return gm
 
@@ -73,7 +73,7 @@ def test_save_grad():
 class TestGradMonitor(unittest.TestCase):
     def test_compare(self):
         gm1 = test_grad_monitor()
-        gm2 = test_save_grad()
+        gm2 = test_grad_monitor_1()
         compare_output_path = os.path.join(os.path.dirname(gm1._output_path), "grad_compare")
         GradComparator.compare_distributed(gm1._output_path, gm2._output_path, compare_output_path)
         items = os.listdir(compare_output_path)
