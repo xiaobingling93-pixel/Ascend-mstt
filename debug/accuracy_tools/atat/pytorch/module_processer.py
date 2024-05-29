@@ -25,13 +25,22 @@ class ModuleProcesser:
         @wraps(func)
         def clone_return_value_func(*args, **kwargs):
             result = func(*args, **kwargs)
-            if isinstance(result, torch.Tensor):
-                result = result.clone()
-            elif isinstance(result, tuple):
-                result = tuple(r.clone() if isinstance(r, torch.Tensor) else r for r in result)
-            return result
+            return ModuleProcesser.clone_if_tensor(result)
 
         return clone_return_value_func
+    
+    @staticmethod
+    def clone_if_tensor(result):
+        if isinstance(result, torch.Tensor):
+            result = result.clone()
+        elif isinstance(result, tuple):
+            return tuple(ModuleProcesser.clone_if_tensor(x) for x in result)
+        elif isinstance(result, list):
+            return list(ModuleProcesser.clone_if_tensor(x) for x in result)
+        elif isinstance(result, dict):
+            return {k: ModuleProcesser.clone_if_tensor(v) for k, v in result.items()}
+        else:
+            return result
 
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
 
