@@ -103,6 +103,7 @@ def seed_all(seed=1234, mode=False):
         torch.backends.cudnn.enable = False
         torch.backends.cudnn.benchmark = False
     else:
+        os.environ['HCCL_DETERMINISTIC'] = True
         torch_npu.npu.manual_seed_all(seed)
         torch_npu.npu.manual_seed(seed)
 

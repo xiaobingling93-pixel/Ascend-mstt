@@ -280,10 +280,10 @@ def create_directory(dir_path):
 def check_path_before_create(path):
     if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
             Const.FILE_NAME_LENGTH:
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR, 'The file path length exceeds limit.')
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
     if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
-        raise FileCheckException(FileCheckException.INVALID_PATH_ERROR,
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
 
 
