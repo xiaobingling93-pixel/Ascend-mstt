@@ -92,7 +92,7 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
-            self.first_start = Falseq
+            self.first_start = False
         self.switch = True
         self.create_dirs()
         print_info_log_rank_0(f"Dump switch is turned on at step {self.current_iter}. "
