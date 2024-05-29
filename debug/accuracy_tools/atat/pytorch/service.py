@@ -110,7 +110,8 @@ class Service:
         file_check = FileChecker(self.config.dump_path, FileCheckConst.DIR)
         file_check.common_check()
         self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
-        dump_dir = os.path.join(self.dump_iter_dir, f"rank{self.current_rank}")
+        cur_rank = self.current_rank if self.current_rank is not None else ''
+        dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         if not os.path.exists(dump_dir):
             Path(dump_dir).mkdir(mode=0o750, parents=True, exist_ok=True)
         if self.config.task in self.collect_data.tasks_need_tensor_data:
