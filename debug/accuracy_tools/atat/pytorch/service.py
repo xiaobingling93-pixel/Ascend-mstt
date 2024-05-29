@@ -88,7 +88,8 @@ class Service:
             return
         self.model = self.check_model_valid(model)
         if self.first_start:
-            self.current_rank = get_rank_if_initialized()
+            cur_rank = get_rank_if_initialized()
+            self.current_rank = cur_rank if cur_rank is not None else ''
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
