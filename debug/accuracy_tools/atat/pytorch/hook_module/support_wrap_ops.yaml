@@ -1874,3 +1874,4 @@ distributed:
   - reduce_scatter
   - _reduce_scatter_base
   - _all_gather_base
+  - all_to_all_single
