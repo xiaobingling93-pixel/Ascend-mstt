@@ -552,8 +552,8 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
                                      FileCheckConst.PT_SUFFIX, False)
         n_path = n_path_checker.common_check()
         b_path = b_path_checker.common_check()
-        n_value = torch.load(n_path).detach().numpy()
-        b_value = torch.load(b_path).detach().numpy()
+        n_value = torch.load(n_path, map_location=torch.device('cpu')).detach().numpy()
+        b_value = torch.load(b_path, map_location=torch.device('cpu')).detach().numpy()
     except IOError as error:
         return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, "Dump file: {} not found.".format(error.filename), CompareConst.NAN, CompareConst.NAN
     relative_err = get_relative_err(n_value, b_value)
