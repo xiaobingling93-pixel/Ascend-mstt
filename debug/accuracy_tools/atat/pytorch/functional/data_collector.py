@@ -50,11 +50,19 @@ class DataCollector:
             self.data_writer.update_data(data_info)
         return msg
 
+    @staticmethod
+    def check_scope_and_pid(scope, name, pid):
+        return (not scope or scope.check(name)) and pid == os.getpid()
+
+    @staticmethod
+    def is_inplace(module):
+        return getattr(module, "op_is_inplace", False)
+
     def pre_forward(self, name, module_type, module, pid, module_input_output):
-        if not getattr(module, "op_is_inplace", False):
+        if not self.is_inplace(module):
             return
         print_info_log(f"API {name} is inplace.")
-        if not self.scope or self.scope.check(name) and pid == os.getpid():
+        if self.check_scope_and_pid(self.scope, name, pid):
             data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
             self.update_data(data_info)
 
@@ -67,11 +75,11 @@ class DataCollector:
         if self.config.level != DataCollector.level_without_construct:
             self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
             self.data_writer.update_construct(ModuleProcesser.module_node)
-        if (self.scope and not self.scope.check(name)) or not pid == os.getpid():
+        if not self.check_scope_and_pid(self.scope, name, pid):
             return
         msg = f"Calibrator is collecting data on {name}. "
         if "forward" in name:
-            if not getattr(module, "op_is_inplace", False):
+            if not self.is_inplace(module):
                 data_info = self.data_processor.analyze_forward(name, module_input_output)
             else:
                 data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
