@@ -26,7 +26,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     def check_and_return_dir_contents(dump_dir, prefix):
         check_file_or_directory_path(dump_dir, True)
         contents = os.listdir(dump_dir)
-        pattern = re.compile(f'^{prefix}[0-9]+$')
+        pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
         for name in contents:
             match = pattern.match(name)
             if match is None:
