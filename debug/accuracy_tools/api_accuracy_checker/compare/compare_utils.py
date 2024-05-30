@@ -3,6 +3,7 @@ import os
 import numpy as np
 import torch
 import yaml
+import math
 from api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
@@ -225,11 +226,11 @@ def convert_str_to_float(input_data):
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
     try:
         float_data = float(input_data)
-        if str(float_data) in ('inf', '-inf', 'nan'):
-            msg = 'ERROR: Input data is either "inf", "-inf", "nan"'
-            raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         return float_data
     except ValueError as e:
         msg = 'ERROR: Input data cannot be converted to float'
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg) from e
-        
+
+
+def is_inf_or_nan(x):
+    return math.isnan(x) or math.isinf(x)

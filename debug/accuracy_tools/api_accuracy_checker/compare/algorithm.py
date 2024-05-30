@@ -200,8 +200,8 @@ def get_ulp_err(bench_output, device_output, dtype):
     eb = np.maximum(eb, min_eb)
 
     if dtype == torch.float32:
-        ulp_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num)
+        ulp_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num).astype(np.float64)
     else:
-        ulp_err = (device_output.astype(np.float32) - bench_output).astype(np.float32) * np.exp2(-eb + exponent_num)
+        ulp_err = (device_output.astype(np.float32) - bench_output).astype(np.float32) * np.exp2(-eb + exponent_num).astype(np.float32)
     ulp_err = np.abs(ulp_err)
     return ulp_err
