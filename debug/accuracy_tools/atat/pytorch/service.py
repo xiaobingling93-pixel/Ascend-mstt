@@ -32,30 +32,38 @@ class Service:
         self.first_touch_dir = True
 
     def build_hook(self, module_type, name):
-        def pre_hook(repair, name_template, module, args, kwargs):
+        def pre_hook(repair, api_or_module_name, module, args, kwargs):
+            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            nonlocal module_type, pid
+            if not self.switch:
+                return
             if repair:
-                args, kwargs = repair.convert(name_template, module_type, args, kwargs)
+                args, kwargs = repair.convert(api_or_module_name, module_type, args, kwargs)
+            if self.collect_data:
+                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
+                self.collect_data.pre_forward(api_or_module_name, module_type, module, pid, module_input_output)
             return args, kwargs
 
-        def forward_hook(repair, name_template, module, args, kwargs, output):
+        def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
+            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
             nonlocal module_type, pid
             if not self.switch:
                 return
             if self.collect_data:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-                self.collect_data(name_template, module_type, module, pid, module_input_output)
+                self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
             if repair:
-                output = repair.invert(name_template, module_type, output)
+                output = repair.invert(api_or_module_name, module_type, output)
 
             return output
 
-        def backward_hook(repair, name_template, module, grad_input, grad_output):
+        def backward_hook(repair, api_or_module_name, module, grad_input, grad_output):
             nonlocal module_type, pid
             if not self.switch:
                 return
             if self.collect_data:
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
-                self.collect_data(name_template, module_type, module, pid, module_input_output)
+                self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
 
         pid = os.getpid()
         if module_type == BaseScope.Module_Type_Module:

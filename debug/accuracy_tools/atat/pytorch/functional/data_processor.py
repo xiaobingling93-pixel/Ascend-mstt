@@ -41,6 +41,10 @@ class ModuleForwardInputsOutputs:
         self.kwargs = kwargs
         self.output = output
 
+    def concat_args_and_kwargs(self):
+        args = self.args + tuple(self.kwargs.values())
+        return args
+
 
 @dataclass
 class ModuleBackwardInputsOutputs:
@@ -69,7 +73,7 @@ class DataProcessor:
             "device": self.analyze_device_in_kwargs,
             "dtype": self.analyze_dtype_in_kwargs
         }
-        self.api_name = None
+        self.current_api_or_module_name = None
         self.config = config
         self.api_data_category = None
         self.has_overflow = False
@@ -118,6 +122,11 @@ class DataProcessor:
             if isinstance(arg, numpy_type):
                 return builtin_type(arg), type(arg).__name__
         return arg, ''
+
+    def visit_and_clear_overflow_status(self, api_or_module_name):
+        if not self.current_api_or_module_name == api_or_module_name:
+            self.current_api_or_module_name = api_or_module_name
+            self.has_overflow = False
 
     def _analyze_numpy(self, value, numpy_type):
         single_arg = {}
@@ -243,7 +252,6 @@ class DataProcessor:
 
     def analyze_forward(self, name,
                         module_input_output: ModuleForwardInputsOutputs):
-        self.api_name = name
         self.api_data_category = "input"
         args_info_list = self.analyze_element(module_input_output.args)
         self.api_data_category = "kwargs"
@@ -255,9 +263,24 @@ class DataProcessor:
                                   "output": output_info_list}}
         return api_info_struct
 
+    def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+        self.api_data_category = "input"
+        args_info_list = self.analyze_element(module_input_output.args)
+        self.api_data_category = "kwargs"
+        kwargs_info_list = self.analyze_element(module_input_output.kwargs)
+        api_info_struct = {name: {"input_args": args_info_list,
+                                  "input_kwargs": kwargs_info_list}}
+        return api_info_struct
+
+    def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+        concat_args = module_input_output.concat_args_and_kwargs()
+        self.api_data_category = "output"
+        output_info_list = self.analyze_element(concat_args)
+        api_info_struct = {name: {"output": output_info_list}}
+        return api_info_struct
+
     def analyze_backward(self, name,
                          module_input_output: ModuleBackwardInputsOutputs):
-        self.api_name = name
         self.api_data_category = "output"
         input_info_list = self.analyze_element(module_input_output.grad_input)
         self.api_data_category = "input"
@@ -269,7 +292,7 @@ class DataProcessor:
 class FullTensorDataProcessor(DataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         self.data_path = self.data_writer.dump_tensor_data_dir
-        dump_data_name = (self.api_name + Const.SEP + self.api_data_category + Const.SEP +
+        dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         torch.save(tensor, file_path)
@@ -287,7 +310,7 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
 
     def _analyze_tensor(self, tensor, suffix):
         self.data_path = self.data_writer.dump_tensor_data_dir
-        dump_data_name = (self.api_name + Const.SEP + self.api_data_category + Const.SEP +
+        dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         self.cached_tensors_and_file_paths.update({file_path: tensor})
