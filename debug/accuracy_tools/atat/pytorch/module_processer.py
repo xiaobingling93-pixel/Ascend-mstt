@@ -32,7 +32,7 @@ class ModuleProcesser:
     @staticmethod
     def clone_if_tensor(result):
         if isinstance(result, torch.Tensor):
-            result = result.clone()
+            return result.clone()
         elif isinstance(result, tuple):
             return tuple(ModuleProcesser.clone_if_tensor(x) for x in result)
         elif isinstance(result, list):
