@@ -73,6 +73,8 @@ aten_result = [['Aten__native_batch_norm_legit_functional.default_0_forward_inpu
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.4', 'Nan', 'torch.float32', 'Nan', [256], 'Nan', ' ', ' ', ' ', ' ', ' ', 61.7945556640625, 42.59713363647461, 52.03831481933594, 'Nan', 'Nan', 'Nan', 'Yes', '']
     ]
 
+highlight_dict = {'red_rows': [], 'yellow_rows': [], 'blue_rows': []}
+
 
 class TestUtilsMethods(unittest.TestCase):
     def test_correct_data(self):
@@ -187,11 +189,11 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_accuracy(self):
         result = []
-        compare.get_accuracy(result, npu_dict, bench_dict)
+        compare.get_accuracy(result, npu_dict, bench_dict, highlight_dict)
         
         self.assertEqual(result, o_result)
 
     def test_get_accuracy_graph_mode(self):
         result = []
-        compare.get_accuracy(result, npu_dict_aten, bench_dict_functional)
+        compare.get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
         self.assertEqual(result, aten_result)
