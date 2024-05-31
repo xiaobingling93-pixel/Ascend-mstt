@@ -124,7 +124,7 @@ class DataProcessor:
         return arg, ''
 
     def visit_and_clear_overflow_status(self, api_or_module_name):
-        if not self.current_api_or_module_name == api_or_module_name:
+        if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
             self.has_overflow = False
 
