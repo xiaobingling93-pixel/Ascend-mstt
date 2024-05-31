@@ -335,12 +335,12 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
             raise ValueError(f"[overflow {self.real_overflow_dump_times} times]")
 
 
-def overflow_debug_mode_enalbe():
+def overflow_debug_mode_enable():
     overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
     return overflow_mode == Const.ENV_ENABLE
 
 def check_overflow_npu():
-    if overflow_debug_mode_enalbe():
+    if overflow_debug_mode_enable():
         float_status = torch.zeros(8).npu()
         result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
         if (result.cpu()[0] != 0):
@@ -351,7 +351,7 @@ def check_overflow_npu():
         return torch_npu._C._check_overflow_npu()
 
 def clear_overflow_npu():
-    if overflow_debug_mode_enalbe():
+    if overflow_debug_mode_enable():
         float_status = torch.zeros(8).npu()
         torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
     else:
