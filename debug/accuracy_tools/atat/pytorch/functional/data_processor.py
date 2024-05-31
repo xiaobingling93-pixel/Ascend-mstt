@@ -3,6 +3,7 @@ import zlib
 import numpy as np
 import os
 import inspect
+import torch_npu
 from dataclasses import dataclass
 from typing import Tuple, List, Dict, Optional, Union
 from ..common.exceptions import MsaccException
@@ -180,12 +181,17 @@ class DataProcessor:
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
-        if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-            tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-            self.has_overflow = True
-        if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-            tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
-            self.has_overflow = True
+        if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
+            if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
+                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
+                self.has_overflow = True
+            if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
+                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
+                self.has_overflow = True
+        else:
+            self.has_overflow = check_overflow_npu()
+            if self.has_overflow:
+                clear_overflow_npu()
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_max, tensor_min, tensor_mean, tensor_norm = self.get_stat_info(tensor)
@@ -284,6 +290,8 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
+        self.real_overflow_dump_times = 0
+        self.overflow_nums = config.overflow_num
 
     def _analyze_tensor(self, tensor, suffix):
         self.data_path = self.data_writer.dump_tensor_data_dir
@@ -300,6 +308,7 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         api_info_struct = super().analyze_forward(name, module_input_output)
         if self.has_overflow:
             self.save_overflow_data()
+            self.inc_and_check_overflow_times()
             return api_info_struct
         return None
 
@@ -309,6 +318,7 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         api_info_struct = super().analyze_backward(name, module_input_output)
         if self.has_overflow:
             self.save_overflow_data()
+            self.inc_and_check_overflow_times()
             return api_info_struct
         return None
 
@@ -316,3 +326,41 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         for file_path, tensor in self.cached_tensors_and_file_paths.items():
             torch.save(tensor, file_path)
         self.cached_tensors_and_file_paths = {}
+
+    def inc_and_check_overflow_times(self):
+        self.real_overflow_dump_times += 1
+        if self.overflow_nums == -1:
+            return 
+        if self.real_overflow_dump_times >= self.overflow_nums:
+            raise ValueError(f"[overflow {self.real_overflow_dump_times} times]")
+
+
+def overflow_debug_mode_enalbe():
+    overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
+    return overflow_mode == Const.ENV_ENABLE
+
+def check_overflow_npu():
+    if overflow_debug_mode_enalbe():
+        float_status = torch.zeros(8).npu()
+        result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
+        if (result.cpu()[0] != 0):
+            return True
+        else:
+            return False
+    else:
+        return torch_npu._C._check_overflow_npu()
+
+def clear_overflow_npu():
+    if overflow_debug_mode_enalbe():
+        float_status = torch.zeros(8).npu()
+        torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
+    else:
+        torch_npu._C._clear_overflow_npu()
+
+class OverflowConst:
+    """
+    Class for Overflow
+    """
+    OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
+    OVERFLOW_ORIGINAL_MODE = 0
+    OVERFLOW_DEBUG_MODE = 1
