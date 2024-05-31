@@ -47,12 +47,12 @@ class HOOKDistributedOP(object):
 
 
 class DistributedOPTemplate(HOOKModule):
-    def __init__(self, op_name, hook):
+    def __init__(self, op_name, build_hook):
         self.op_name_ = op_name
         self.prefix_op_name_ = "Distributed" + Const.SEP + str(op_name) + Const.SEP
-        super().__init__(hook)
-        if self.op_name_ in Const.INPLACE_LIST:
-            self.register_forward_pre_hook(hook(self.prefix + Const.PRE_FORWARD))
+        super().__init__(build_hook)
+        if not self.stop_hook and self.op_name_ in Const.INPLACE_LIST:
+            self.op_is_inplace = True
 
     @torch_device_guard
     def forward(self, *args, **kwargs):

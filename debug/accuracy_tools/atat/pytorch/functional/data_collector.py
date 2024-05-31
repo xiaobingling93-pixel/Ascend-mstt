@@ -33,8 +33,38 @@ class DataCollector:
     def dump_file_path(self):
         return self.data_writer.dump_file_path
 
+    def visit_and_clear_overflow_status(self, api_or_module_name):
+        self.data_processor.visit_and_clear_overflow_status(api_or_module_name)
+
     def write_json(self):
         self.data_writer.write_json()
+
+    def update_data(self, data_info, msg=''):
+        if self.config.task == DataProcessor.overflow:
+            if self.data_processor.has_overflow:
+                self.data_writer.update_data(data_info)
+                msg += "Overflow detected."
+            else:
+                msg += "No Overflow, OK."
+        else:
+            self.data_writer.update_data(data_info)
+        return msg
+
+    @staticmethod
+    def check_scope_and_pid(scope, name, pid):
+        return (not scope or scope.check(name)) and pid == os.getpid()
+
+    @staticmethod
+    def is_inplace(module):
+        return getattr(module, "op_is_inplace", False)
+
+    def pre_forward(self, name, module_type, module, pid, module_input_output):
+        if not self.is_inplace(module):
+            return
+        print_info_log(f"API {name} is inplace.")
+        if self.check_scope_and_pid(self.scope, name, pid):
+            data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
+            self.update_data(data_info)
 
     def __call__(self, name_template, module_type, module, pid, module_input_output):
         if module_type == BaseScope.Module_Type_Module:
@@ -45,24 +75,20 @@ class DataCollector:
         if self.config.level != DataCollector.level_without_construct:
             self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
             self.data_writer.update_construct(ModuleProcesser.module_node)
-        if not self.scope or self.scope.check(name):
-            msg = f"Calibrator is collecting data on {name}. "
-            if pid == os.getpid():
-                if "forward" in name:
-                    data_info = self.data_processor.analyze_forward(name, module_input_output)
-                    self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-                else:
-                    data_info = self.data_processor.analyze_backward(name, module_input_output)
-                if self.config.task == DataProcessor.overflow:
-                    if data_info:
-                        self.data_writer.update_data(data_info)
-                        msg += "Overflow detected."
-                    else:
-                        msg += "No Overflow, OK."
-                else:
-                    self.data_writer.update_data(data_info)
-                print_info_log(msg)
-
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+        msg = f"Calibrator is collecting data on {name}. "
+        if "forward" in name:
+            if not self.is_inplace(module):
+                data_info = self.data_processor.analyze_forward(name, module_input_output)
+            else:
+                data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
+            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        else:
+            data_info = self.data_processor.analyze_backward(name, module_input_output)
+        msg = self.update_data(data_info, msg)
+        print_info_log(msg)
+        self.data_writer.flush_data_when_buffer_is_full()
 
     def module_count_func(self, name, name_template):
         module_name = name.split(Const.SEP)[-3]

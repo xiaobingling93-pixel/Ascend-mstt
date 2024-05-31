@@ -16,7 +16,7 @@ class DataWriter:  # TODO: UT
         self.stack_file_path = None  # os.path.join(dump_dir, DataWriter.stack_json_name)
         self.construct_file_path = None  # os.path.join(dump_dir, DataWriter.construct_json_name)
         self.dump_tensor_data_dir = None
-        self.batch_size = 1000
+        self.buffer_size = 1000
         self.cache_data = {"data": {}}
         self.cache_stack = {}
         self.cache_construct = {}
@@ -41,8 +41,14 @@ class DataWriter:  # TODO: UT
         self.dump_tensor_data_dir = dump_data_dir
 
     def update_data(self, new_data):
-        self.cache_data["data"].update(new_data)
-        if len(self.cache_data["data"]) >= self.batch_size:
+        key = next(iter(new_data.keys()))  # assert len(new_data.keys()) == 1
+        if key in self.cache_data["data"]:
+            self.cache_data["data"][key].update(new_data[key])
+        else:
+            self.cache_data["data"].update(new_data)
+
+    def flush_data_when_buffer_is_full(self):
+        if len(self.cache_data["data"]) >= self.buffer_size:
             self.write_data_json(self.dump_file_path)
 
     def update_stack(self, new_data):
