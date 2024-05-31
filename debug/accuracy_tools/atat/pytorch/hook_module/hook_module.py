@@ -45,10 +45,10 @@ class HOOKModule(nn.Module):
             else:
                 HOOKModule.module_count[self.prefix] += 1
                 self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
-            self.forward_pre_hook, self.forward_hook, self.backward_hook = build_hook(self.prefix)
-            self.register_forward_pre_hook(self.forward_pre_hook, with_kwargs=True)
-            self.register_forward_hook(self.forward_hook, with_kwargs=True)
-            self.register_backward_hook(self.backward_hook)
+            forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
+            self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
+            self.register_forward_hook(forward_hook, with_kwargs=True)
+            self.register_backward_hook(backward_hook)
 
     def __call__(self, *input, **kwargs):
         changed = False
