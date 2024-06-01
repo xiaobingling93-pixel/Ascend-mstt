@@ -33,7 +33,7 @@ class Service:
 
     def build_hook(self, module_type, name):
         def pre_hook(repair, api_or_module_name, module, args, kwargs):
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
             if not self.switch:
                 return
@@ -45,7 +45,7 @@ class Service:
             return args, kwargs
 
         def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
             if not self.switch:
                 return
