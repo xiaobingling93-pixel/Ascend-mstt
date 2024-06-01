@@ -36,7 +36,7 @@ class Service:
             self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
             nonlocal module_type, pid
             if not self.switch:
-                return
+                return args, kwargs
             if repair:
                 args, kwargs = repair.convert(api_or_module_name, module_type, args, kwargs)
             if self.collect_data:

@@ -189,6 +189,8 @@ class DataProcessor:
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
+        if tensor_json['Max'] is None:
+            return
         if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
             tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
             self.has_overflow = True
