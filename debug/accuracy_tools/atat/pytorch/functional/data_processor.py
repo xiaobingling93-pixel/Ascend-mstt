@@ -192,6 +192,8 @@ class DataProcessor:
 
     def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
         if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
+            if tensor_json['Max'] is None:
+                return
             if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
                 tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
                 self.has_overflow = True
