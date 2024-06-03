@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from compare.compare import Comparator
 from common.logger import logger
+from common.json_parser import convert_json
 
 
 def _run_ut_parser(parser):
@@ -24,7 +25,7 @@ def _run_ut_parser(parser):
 
 def get_ops_ut(module):
     for name, obj in inspect.getmembers(module):
-        if inspect.isclass(obj) and name.startswith("UT"):
+        if inspect.isclass(obj) and name.endswith("UT"):
             return obj
 
 
@@ -85,17 +86,17 @@ def _run_ut():
         op_type = files['type']
         if op_type in api_mapping_dict:
             module_name = "common_ut"
-            api_name = op_type + "_" + api_mapping_dict[op_type]
+            api_name = op_type + "_" + api_mapping_dict[op_type] + "_" + op_name
         else:
             module_name = op_type + "_ut"
             api_name = op_name
         
-        if not os.path.exists(f"ut_cast/{module_name}.py"):
+        if not os.path.exists(f"ut_case/{module_name}.py"):
             logger.warning(f"{op_type} not support compare now")
             continue
     
         if json_path:
-            kwargs = load_json(json_path)
+            kwargs = convert_json(load_json(json_path))
             args = [load_npy(npy_path) for npy_path in sorted(input_paths)]
             output = [load_npy(npy_path) for npy_path in sorted(output_paths)]
             module = importlib.import_module(f"ut_case.{module_name}")

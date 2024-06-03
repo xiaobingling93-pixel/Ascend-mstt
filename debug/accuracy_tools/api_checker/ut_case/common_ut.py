@@ -17,14 +17,14 @@ class CommonUT(UTBase):
     def __init__(self, name, args, kwargs, output, real_data=False, stack=None, comparator=None):
         super().__init__(name, args, kwargs, output, real_data, stack, comparator)
         
-        pattern = re.compile(r"^(.*?)_(.*)$")
+        pattern = re.compile(r"^(.*?)_(.*?)_(.*)$")
         match = pattern.match(self.name)
         
         if match:
             self.name_ms = match.group(1)
             logger.info(f"Common UT compare mindspore api: {self.name_ms}")
             self.name_py = match.group(2)
-            self.name = self.name_ms + "_" + self.name
+            self.name = match.group(3)
         else:
             logger.warning("No match UT found")
     
