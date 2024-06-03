@@ -18,7 +18,7 @@ class PrecisionDebugger:
     def __init__(self, config_path=None, task=None, dump_path=None, level=None):
         if not hasattr(self, 'initialized'):
             self.initialized = True
-            common_config, task_config = parse_json_config(config_path)
+            common_config, task_config = parse_json_config(config_path, task)
             self.config = DebuggerConfig(common_config, task_config, task, dump_path, level)
             self.service = Service(self.config)
     

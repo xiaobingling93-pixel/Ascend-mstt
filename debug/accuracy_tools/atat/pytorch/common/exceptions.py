@@ -9,9 +9,11 @@ class CodedException(Exception):
 
 class MsaccException(CodedException):
     INVALID_PARAM_ERROR = 0
-
+    OVERFLOW_NUMS_ERROR = 1
+    
     err_strs = {
-        INVALID_PARAM_ERROR: "[msacc] 无效参数： "
+        INVALID_PARAM_ERROR: "[msacc] 无效参数： ",
+        OVERFLOW_NUMS_ERROR: "[msacc] 超过预设溢出次数 当前溢出次数:"
     }
 
 
