@@ -24,7 +24,7 @@ PrecisionDebugger(config_path=None)
 
 | 参数名      | 说明                                                         | 是否必选 |
 | ----------- | ------------------------------------------------------------ | -------- |
-| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用../../config目录下的config.json文件的默认配置。 | 否       |
+| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用../../config目录下的config.json文件的默认配置。config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config/config.json)文件。 | 否       |
 
 ### start函数
 
