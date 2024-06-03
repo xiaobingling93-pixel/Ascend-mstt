@@ -10,6 +10,7 @@ from ..common.exceptions import MsaccException
 from ..common.utils import Const
 from ..common import recursive_apply_transform
 
+bits_for_overflow = 8
 
 def build_data_processor(config, data_writer):
     if config.task == DataProcessor.full:
@@ -342,7 +343,7 @@ def overflow_debug_mode_enable():
 
 def check_overflow_npu():
     if overflow_debug_mode_enable():
-        float_status = torch.zeros(8).npu()
+        float_status = torch.zeros(bits_for_overflow).npu()
         result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
         if (result.cpu()[0] != 0):
             return True
@@ -353,7 +354,7 @@ def check_overflow_npu():
 
 def clear_overflow_npu():
     if overflow_debug_mode_enable():
-        float_status = torch.zeros(8).npu()
+        float_status = torch.zeros(bits_for_overflow).npu()
         torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
     else:
         torch_npu._C._clear_overflow_npu()
