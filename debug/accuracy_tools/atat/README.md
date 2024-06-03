@@ -65,15 +65,15 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    工具通过在训练脚本中添加PrecisionDebugger接口的方式对API执行精度数据dump操作。
 
-   PyTorch场景：详见[PyTorch_精度数据采集](./Pytorch/doc/dump.md)。
+   PyTorch场景：详见[PyTorch_精度数据采集](./pytorch/doc/dump.md)。
 
-   MindSpore场景：详见[MindSpore_精度数据采集](./MindSpore/doc/dump.md)。
+   MindSpore场景：详见[MindSpore_精度数据采集](./mindspore/doc/dump.md)。
 
 3. 执行精度预检。
 
    在昇腾NPU上扫描用户训练模型中所有API，进行API复现，给出精度情况的诊断和分析。
 
-   PyTorch场景：详见[PyTorch_精度预检工具](./Pytorch/doc/api_accuracy_checker.md)。
+   PyTorch场景：详见[PyTorch_精度预检工具](./pytorch/doc/api_accuracy_checker.md)。
 
    MindSpore场景：暂不支持。
 
@@ -81,7 +81,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    进行PyTorch整网API粒度的数据dump、精度比对和溢出检测，从而定位训练场景下的精度问题。
 
-   PyTorch场景：详见[PyTorch_精度比对工具](./Pytorch/doc/ptdbg_ascend_overview.md)。
+   PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_overview.md)。
 
    MindSpore场景：暂不支持。
 
@@ -89,7 +89,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    溢出解析是在执行精度数据dump时，配置了溢出检测dump，那么对于输入正常但输出存在溢出的API，可以判断是否为正常溢出。
 
-   PyTorch场景：详见[PyTorch_溢出解析工具](./Pytorch/doc/run_overflow_check.md)。（暂不支持）
+   PyTorch场景：详见[PyTorch_溢出解析工具](./pytorch/doc/run_overflow_check.md)。（暂不支持）
 
    MindSpore场景：暂不支持。
 
@@ -97,7 +97,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    用于比对前后两次NPU ACL层级dump数据的一致性。
 
-   PyTorch场景：详见[PyTorch_数据解析工具](./Pytorch/doc/parse_tool.md)。
+   PyTorch场景：详见[PyTorch_数据解析工具](./pytorch/doc/parse_tool.md)。
 
    MindSpore场景：暂不支持。
 
