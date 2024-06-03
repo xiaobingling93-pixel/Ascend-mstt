@@ -128,6 +128,8 @@ class Const:
     BACKWARD = 'backward'
     FORWARD = 'forward'
     PRE_FORWARD = "pre_forward"
+    START = "start"
+    STOP = "stop"
 
     # dump mode
     ALL = "all"
