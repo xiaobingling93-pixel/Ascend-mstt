@@ -332,7 +332,8 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         if self.overflow_nums == -1:
             return 
         if self.real_overflow_dump_times >= self.overflow_nums:
-            raise ValueError(f"[overflow {self.real_overflow_dump_times} times]")
+            raise MsaccException(MsaccException.OVERFLOW_NUMS_ERROR,
+                                 str(self.real_overflow_dump_times))
 
 
 def overflow_debug_mode_enable():
