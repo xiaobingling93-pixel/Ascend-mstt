@@ -15,7 +15,7 @@ class ArgMaxWithValue(Cell):
         return self.argmaxwithvalue(input_x)
     
 
-class AddUT(UTBase):
+class ArgMaxWithValueUT(UTBase):
     def __init__(self, name, args, kwargs, output, real_data=False, stack=None, comparator=None):
         super().__init__(name, args, kwargs, output, real_data, stack, comparator)
         len_args = len(args)

@@ -15,7 +15,7 @@ class Assign(Cell):
         return self.assign(variable, value)
     
 
-class AddUT(UTBase):
+class AssignUT(UTBase):
     def __init__(self, name, args, kwargs, output, real_data=False, stack=None, comparator=None):
         super().__init__(name, args, kwargs, output, real_data, stack, comparator)
     
