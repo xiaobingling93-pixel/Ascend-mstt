@@ -5,27 +5,35 @@ from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 class PreheatCounter:
     def __init__(self) -> None:
         self.api_called_time: dict = defaultdict(int)
-        self.api_sampled_time: dict = defaultdict(int)
+        self.api_sample_time: dict = defaultdict(int)
         self.one_step_used_api: dict = defaultdict(int)
         self.api_thd: dict = defaultdict(dict)
         self.preheat_record: dict = defaultdict(dict)
         self.dtype_map: dict = {}
         self.if_preheat: dict = defaultdict(dict)
+        self.step = 0
 
-    def reset(self):
-        self.__init__()
+    def clear_step(self):
+        self.preheat_record.clear()
+        self.api_called_time.clear()
+        self.api_sample_time.clear()
+    
+    def check_step(self, current_step):
+        if current_step != self.step:
+            self.clear_step()
+            self.step = current_step
 
     def add_api_called_time(self, api_name: str):
         self.api_called_time[api_name] += 1
 
     def get_api_called_time(self, api_name: str) -> int:
         return self.api_called_time[api_name]
+    
+    def add_api_sample_time(self, api_name: str):
+        self.api_sample_time[api_name] += 1
 
-    def add_api_sampled_time(self, api_name: str):
-        self.api_sampled_time[api_name] += 1
-
-    def get_api_sampled_time(self, api_name: str) -> int:
-        return self.api_called_time[api_name]
+    def get_api_sample_time(self, api_name: str) -> int:
+        return self.api_sample_time[api_name]
 
     def add_one_step_used_api(self, api_name: str):
         self.one_step_used_api[api_name] += 1
@@ -33,11 +41,8 @@ class PreheatCounter:
     def get_one_step_used_api(self, api_name: str):
         return self.one_step_used_api[api_name]
 
-    def update_preheat_record(self, step, api_name, dtype, cmp_result):
+    def update_preheat_record(self, api_name, dtype, cmp_result):
         # 记录预热阶段CPU标杆比对的结果
-        if step != self.step:
-            self.preheat_record = defaultdict(dict)
-            self.step = step
         if str(dtype) not in self.preheat_record[api_name].keys():
             self.preheat_record[api_name][str(dtype)] = list()
         self.preheat_record[api_name][str(dtype)].append(cmp_result)

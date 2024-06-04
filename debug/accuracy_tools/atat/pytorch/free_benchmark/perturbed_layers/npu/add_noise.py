@@ -1,7 +1,7 @@
 import torch
 from atat.pytorch.free_benchmark import (
     print_info_log_rank_0,
-    print_error_log_rank_0,
+    print_warn_log_rank_0,
 )
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.params import DataParams
@@ -30,14 +30,14 @@ class AddNoiseLayer(NpuBaseLayer):
         判断是否需要添加扰动
         """
         if not self.perturbed_value:
-            print_error_log_rank_0(
+            print_warn_log_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"dtype unsupported. Cancel perturbation."
             )
             return False
-        if tensor_obj.numel() == 0 or not torch.is_floating_point(tensor_obj):
-            print_info_log_rank_0(
-                f"[atat] Free benchmark: For {self.api_name}, unsupported tensor types."
+        if tensor_obj.numel() == 0:
+            print_warn_log_rank_0(
+                f"[atat] Free benchmark: For {self.api_name}, tensor shape must > 0."
                 f" Cancel adding noise."
             )
             return False
@@ -47,13 +47,13 @@ class AddNoiseLayer(NpuBaseLayer):
         try:
             max_val = TorchC.max(TorchC.abs(tensor_obj)).item()
         except Exception:
-            print_info_log_rank_0(
+            print_warn_log_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"when calculate maximun value, tensor is changed to float32."
             )
             max_val = TorchC.max(TorchC.abs(tensor_obj.to(torch.float32))).item()
         if max_val < abs_tol:
-            print_info_log_rank_0(
+            print_warn_log_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"Maximun value is less than the  minimun threshold. Cancel add noise."
             )
@@ -61,9 +61,6 @@ class AddNoiseLayer(NpuBaseLayer):
         return True
 
     def add_noise(self, tensor_obj):
-        self.perturbed_value = ThresholdConfig.PERTURBATION_VALUE_DICT.get(
-            tensor_obj.dtype
-        )
         if isinstance(tensor_obj, torch.Tensor):
             self.perturbed_value = ThresholdConfig.PERTURBATION_VALUE_DICT.get(
                 tensor_obj.dtype
@@ -72,7 +69,7 @@ class AddNoiseLayer(NpuBaseLayer):
                 return tensor_obj
             noise = self._get_noise(tensor_obj)
             result = TorchC.where(
-                TorchC.abs(tensor_obj) > self.perturbed_value**0.5,
+                TorchC.gt(TorchC.abs(tensor_obj), self.perturbed_value**0.5),
                 TorchC.add(noise, tensor_obj),
                 tensor_obj,
             ).to(tensor_obj.dtype)
@@ -92,5 +89,5 @@ class AddNoiseLayer(NpuBaseLayer):
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.ADD_NOISE} of {self.api_name}."
         )
-        params.perturbed_value = self.add_noise(params.args[params.index])
+        params.perturbed_value = self.add_noise(params.args[params.valid_input_index])
         return self.perturbed_result(params)
