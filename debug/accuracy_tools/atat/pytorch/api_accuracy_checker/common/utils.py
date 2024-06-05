@@ -76,6 +76,7 @@ class Const:
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
+    NPU = 'NPU'
 
     # dump mode
     ALL = "all"
