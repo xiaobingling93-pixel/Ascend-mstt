@@ -5,7 +5,7 @@ import torch.multiprocessing as mp
 
 from api_accuracy_checker.tensor_transport_layer.attl import move2target_device
 from api_accuracy_checker.common.utils import print_error_log, print_warn_log, \
-    print_info_log, logger
+    print_info_log, logger, Const
 
 
 def run_ut_process(xpu_id, compare, consumer_queue, func, config):
@@ -30,7 +30,7 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
                            f"is_fwd_success: {is_fwd_success}, "
                            f"is_bwd_success: {is_bwd_success}")
         except Exception as err:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
             if "expected scalar type Long" in str(err):
                 print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")

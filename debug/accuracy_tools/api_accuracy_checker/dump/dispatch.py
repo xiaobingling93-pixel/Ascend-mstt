@@ -5,7 +5,7 @@ import yaml
 import torch
 from torch.utils._python_dispatch import TorchDispatchMode
 from api_accuracy_checker.tensor_transport_layer.attl import ApiData
-from api_accuracy_checker.common.utils import get_tensor_rank, print_info_log
+from api_accuracy_checker.common.utils import get_tensor_rank, print_info_log, Const
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.dump.dump import DumpUtil
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
@@ -60,7 +60,7 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         if cur_rank not in DumpUtil.rank_list:
             return res
         cur_api_number = self.counter.index_dict.setdefault(aten_api, 0)
-        api_name = f'Aten*{aten_api}*{cur_api_number}'
+        api_name = f'Aten{Const.DELIMITER}{aten_api}{Const.DELIMITER}{cur_api_number}'
         print_info_log(f"tools is dumping api: {api_name}")
         api_data = ApiData(api_name, args, kwargs, res, DumpUtil.call_num, cur_rank)
         self.attl.send(api_data)
