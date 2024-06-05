@@ -2,7 +2,7 @@ import importlib
 from abc import ABC
 
 import torch
-from atat.pytorch.free_benchmark import Const, print_error_log_rank_0
+from atat.pytorch.free_benchmark import Const, print_warn_log_rank_0
 
 from atat.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
 from atat.pytorch.free_benchmark.common.enums import (
@@ -10,6 +10,12 @@ from atat.pytorch.free_benchmark.common.enums import (
     FuzzLevel,
     DeviceType,
 )
+from atat.pytorch.free_benchmark.compare.grad_saver import GradSaver
+from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
+from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
+    FuzzHandlerFactory,
+)
+
 
 class FreeBenchmarkCheck(ABC):
 
@@ -34,6 +40,12 @@ class FreeBenchmarkCheck(ABC):
         origin_func = (
             module._slow_forward if torch._C._get_tracing_state() else module.forward
         )
+        handler_params = make_handler_params(name, self.config, self.current_iter)
+        grad_saver = GradSaver(origin_func, handler_params)
+        grad_saver.kwargs = kwargs
+        grad_saver.register_compare_func_for_inputs(args, data_processor)
+        grad_saver.cache_backward_input(args)
+        setattr(module, "grad_saver", grad_saver)
 
     def forward(self, name, module, args, kwargs, output):
         if not self.config.fuzz_stage == Const.FORWARD:
@@ -42,11 +54,19 @@ class FreeBenchmarkCheck(ABC):
             module._slow_forward if torch._C._get_tracing_state() else module.forward
         )
         data_params = data_pre_deal(name, origin_func, args, kwargs)
-        if data_params.index == -1:
+        if data_params.valid_input_index == -1:
             return output, []
         data_params.original_result = output
         data_params.fuzz_stage = self.config.fuzz_stage
 
+        layer = LayerFactory.create(
+            name, self.config.fuzz_device, self.config.pert_mode
+        )
+        layer.handle(data_params)
+        handler_params = make_handler_params(name, self.config, self.current_iter)
+        handler = FuzzHandlerFactory.create(handler_params)
+        handler.handle(data_params)
+        return output, handler.get_unequal_rows()
 
     def backward(self, name, module, grad_output):
 
@@ -55,7 +75,7 @@ class FreeBenchmarkCheck(ABC):
         try:
             grad_saver = getattr(module, "grad_saver")
         except AttributeError:
-            print_error_log_rank_0(
+            print_warn_log_rank_0(
                 f"[atat] Free benchmark:  get grad saver failed. api_name:{name}"
             )
             return
@@ -71,7 +91,7 @@ class FreeBenchmarkCheck(ABC):
                 _new_grad_output, need_grad_tensors, _inner_args
             )
         except Exception as e:
-            print_error_log_rank_0(
+            print_warn_log_rank_0(
                 f"[atat] Free benchmark: grad vjp calculate failed. api_name:{name} error: {e}"
             )
             return

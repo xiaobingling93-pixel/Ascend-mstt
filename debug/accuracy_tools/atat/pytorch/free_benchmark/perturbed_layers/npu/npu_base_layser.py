@@ -1,11 +1,8 @@
 from abc import abstractmethod
 from typing import Any
 import torch
-
-from atat.pytorch.free_benchmark import (
-    print_info_log_rank_0,
-    print_error_log_rank_0,
-)
+from atat.pytorch.free_benchmark.common.constant import CommonField, ThresholdConfig
+from atat.pytorch.free_benchmark.common.utils import TorchC
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.perturbed_layers.base_layer import BaseLayer
 
@@ -38,8 +35,8 @@ class NpuBaseLayer(BaseLayer):
 
     @staticmethod
     def perturbed_result(params: DataParams) -> Any:
-        args_front = params.args[: params.index]
-        args_rear = params.args[params.index + 1 :]
+        args_front = params.args[: params.valid_input_index]
+        args_rear = params.args[params.valid_input_index + 1 :]
         # 此处会将有inplace属性的算子换为非inplace
         if "inplace" in params.kwargs:
             params.kwargs["inplace"] = False

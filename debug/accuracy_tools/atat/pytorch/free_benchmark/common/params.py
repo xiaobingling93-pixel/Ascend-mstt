@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
-from atat.pytorch.free_benchmark import Const, print_error_log_rank_0
+from atat.pytorch.free_benchmark import Const, print_warn_log_rank_0
 from atat.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
@@ -16,13 +16,12 @@ from atat.pytorch.free_benchmark.common.utils import Tools
 class DataParams:
     args: Optional[Tuple] = None
     kwargs: Optional[Dict] = None
-    index: Optional[int] = None
+    valid_input_index: Optional[int] = None
     original_result: Optional[Any] = None
     perturbed_result: Optional[Any] = None
     is_consistent: Optional[bool] = True
     perturbed_value: Optional[Any] = None
     origin_func: Optional[Callable] = None
-    cpu_grads: Optional[Any] = None
     api_type: Optional[str] = None
     fuzz_stage: Optional[str] = None
     grad_unequal_flag: Optional[bool] = True
@@ -76,12 +75,10 @@ def check_args_type(args: Tuple) -> int:
 
 def data_pre_deal(name, func, args, kwargs):
     data_params = DataParams(args=args, kwargs=kwargs, origin_func=func)
-    # data_params.api_type = name.split(Const.SEP)[0]
-    # TODO unsupported api type
     index = check_args_type(args)
-    data_params.index = index
+    data_params.valid_input_index = index
     if index == -1:
-        print_error_log_rank_0(
+        print_warn_log_rank_0(
             f"[atat] Free benchmark: 无标杆工具不支持当前算子的输入类型 {name}."
         )
     return data_params

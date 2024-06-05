@@ -1,6 +1,7 @@
 import torch
 import math
 
+from atat.pytorch.free_benchmark import print_warn_log_rank_0
 from atat.pytorch.free_benchmark.common.utils import TorchC
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 
@@ -29,7 +30,9 @@ class SingleCompare:
             actual.dtype, ThresholdConfig.BENCHMARK_THD_DICT.get(torch.float32)
         )
         if self.filter_overflow(golden) > 0:
-            raise RuntimeError("inf and nan in golden tensor is not supported.")
+            print_warn_log_rank_0("[atat] Free Benchmark: inf and nan"
+                                  "in golden tensor is not supported.")
+            return True
         actual = self.replace_inf_or_nan(actual)
         actual = actual.to(torch.float64)
         golden = golden.to(torch.float64).to(actual.device)
@@ -49,16 +52,16 @@ class SingleCompare:
         golden_abs = TorchC.abs(golden)
         # 使用绝对误差的元素
         self.absolute_err = TorchC.max(TorchC.where(
-            TorchC.lt(TorchC.abs(actual), self.threshold.SMALL_VALUE), diff_abs, 0
+            TorchC.lt(TorchC.abs(actual), self.threshold.small_value), diff_abs, 0
         ))
         diff_rel = TorchC.div(diff_abs, golden_abs)
         # 使用相对误差的元素
         self.relative_err = TorchC.max(TorchC.where(
-            TorchC.ge(TorchC.abs(actual), self.threshold.SMALL_VALUE), diff_rel, 0
+            TorchC.ge(TorchC.abs(actual), self.threshold.small_value), diff_rel, 0
         ))
         # 获取误差均衡性
         divided = TorchC.where(
-            TorchC.ge(TorchC.abs(golden), self.threshold.SMALL_VALUE, golden_abs, 1)
+            TorchC.ge(TorchC.abs(golden), self.threshold.small_value), golden_abs, 1
         )
         self.eb = TorchC.mean(TorchC.div(diff_value, divided))
 
@@ -94,7 +97,7 @@ class SingleCompare:
     def replace_inf_or_nan(tensor):
         finite_mask = TorchC.isfinite(tensor)
         inf_or_nan_mask = TorchC.logical_not(finite_mask)
-        inf_or_nan_num = TorchC.sum(inf_or_nan_mask).items()
+        inf_or_nan_num = TorchC.sum(inf_or_nan_mask).item()
         if inf_or_nan_num > 0:
             tensor[inf_or_nan_mask] = 1
         return tensor
