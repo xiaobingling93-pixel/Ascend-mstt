@@ -207,6 +207,21 @@ class DataProcessor:
             single_arg.update({"value": arg})
         return single_arg
 
+    def is_dump_for_data_mode(self, forward_backward, input_output):
+        """
+        Compare the parameters with data_mode to determine whether to dump.
+
+        Args:
+            forward_backward(str): The forward or backward mode to check.
+            input_output(str): The input or output mode to check.
+
+        Return:
+            bool: True if the parameters are in data_mode or data_mode is all, False otherwise.
+        """
+        return (Const.ALL in self.config.data_mode or
+                forward_backward in self.config.data_mode or
+                input_output in self.config.data_mode)
+
     @staticmethod
     def handle_tensor_extremum_nan_inf(data_clone, operator):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
@@ -295,42 +310,66 @@ class DataProcessor:
                         module_input_output: ModuleForwardInputsOutputs):
         pass
 
-    def analyze_forward(self, name, module,
-                        module_input_output: ModuleForwardInputsOutputs):
-        self.api_data_category = "input"
-        args_info_list = self.analyze_element(module_input_output.args_tuple)
-        self.api_data_category = "kwargs"
-        kwargs_info_list = self.analyze_element(module_input_output.kwargs)
-        self.api_data_category = "output"
-        output_info_list = self.analyze_element(module_input_output.output_tuple)
-        api_info_struct = {name: {"input_args": args_info_list,
-                                  "input_kwargs": kwargs_info_list,
-                                  "output": output_info_list}}
+    def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT): # check whether data_mode contains forward or input
+            api_info_struct[name] = {}
+            self.api_data_category = Const.INPUT
+            args_info_list = self.analyze_element(module_input_output.args_tuple)
+            api_info_struct[name][Const.INPUT_ARGS] = args_info_list
+
+            self.api_data_category = Const.KWARGS
+            kwargs_info_list = self.analyze_element(module_input_output.kwargs)
+            api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
+
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT): # check whether data_mode contains forward or output
+            api_info_struct[name] = api_info_struct.get(name, {})
+            self.api_data_category = Const.OUTPUT
+            output_info_list = self.analyze_element(module_input_output.output_tuple)
+            api_info_struct[name][Const.OUTPUT] = output_info_list
+
         return api_info_struct
 
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
-        self.api_data_category = "input"
-        args_info_list = self.analyze_element(module_input_output.args_tuple)
-        self.api_data_category = "kwargs"
-        kwargs_info_list = self.analyze_element(module_input_output.kwargs)
-        api_info_struct = {name: {"input_args": args_info_list,
-                                  "input_kwargs": kwargs_info_list}}
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT):
+            api_info_struct[name] = {}
+            self.api_data_category = Const.INPUT
+            args_info_list = self.analyze_element(module_input_output.args_tuple)
+            api_info_struct[name][Const.INPUT_ARGS] = args_info_list
+
+            self.api_data_category = Const.KWARGS
+            kwargs_info_list = self.analyze_element(module_input_output.kwargs)
+            api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
+
         return api_info_struct
 
     def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
         concat_args = module_input_output.concat_args_and_kwargs()
-        self.api_data_category = "output"
-        output_info_list = self.analyze_element(concat_args)
-        api_info_struct = {name: {"output": output_info_list}}
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
+            api_info_struct[name] = {}
+            self.api_data_category = Const.OUTPUT
+            output_info_list = self.analyze_element(concat_args)
+            api_info_struct[name][Const.OUTPUT] = output_info_list
+
         return api_info_struct
 
-    def analyze_backward(self, name, module,
-                         module_input_output: ModuleBackwardInputsOutputs):
-        self.api_data_category = "output"
-        input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
-        self.api_data_category = "input"
-        output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
-        api_info_struct = {name: {"grad_input": input_info_list, "grad_output": output_info_list}}  # TODO: magic str
+
+    def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
+            api_info_struct[name] = {}
+            self.api_data_category = Const.OUTPUT
+            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            api_info_struct[name][Const.GRAD_INPUT] = input_info_list
+
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.INPUT):
+            api_info_struct[name] = api_info_struct.get(name, {})
+            self.api_data_category = Const.INPUT
+            output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
+            api_info_struct[name][Const.GRAD_OUTPUT] = output_info_list
+
         return api_info_struct
 
 
