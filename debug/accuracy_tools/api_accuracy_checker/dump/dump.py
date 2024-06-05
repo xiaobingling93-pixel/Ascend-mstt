@@ -93,7 +93,6 @@ class DumpUtil(object):
                 if DumpUtil.attl.socket_manager is not None:
                     logger.debug(f"进程{os.getpid()} 已完成,准备发送STOP信号")
                     DumpUtil.attl.socket_manager.send_stop_signal()
-                    logger.debug(f"has stop rank_{dist.get_rank()} process")
                 else:
                     while True:
                         time.sleep(2)
@@ -121,6 +120,7 @@ def pretest_info_dump(name, out_feat, module, phase):
 def pretest_real_data_transport(name, out_feat, module, phase):
     if not DumpUtil.get_dump_switch():
         return
+    name = name.replace('*', Const.DELIMITER)
     if phase == Const.FORWARD and (DumpUtil.phase == "all" or DumpUtil.phase == phase):
         cur_rank = get_tensor_rank(module.input_args, out_feat)
         if cur_rank not in DumpUtil.rank_list:

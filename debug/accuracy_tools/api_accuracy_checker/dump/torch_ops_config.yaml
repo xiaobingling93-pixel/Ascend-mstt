@@ -1,4 +1,6 @@
 aten_ops_blacklist:
+  - npu_binary_cross_entropy_with_logits_backward
+  - npu_ciou_backward
   - _cudnn_rnn
   - _local_scalar_dense
   - _pin_memory
