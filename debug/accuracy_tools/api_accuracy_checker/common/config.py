@@ -25,6 +25,7 @@ class Config:
             'jit_compile': bool,
             'precision': int,
             'is_online': bool,
+            'nfs_path': str,
             'is_benchmark_device': bool,
             'host': str,
             'port': int,
@@ -53,6 +54,9 @@ class Config:
             invalid_api = [i for i in value if i not in WrapApi]
             if invalid_api:
                 raise ValueError(f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
+        if key == 'nfs_path':
+            if value and not os.path.exists(value):
+                raise ValueError(f"nfs path {value} doesn't exist.")
         return value
 
     def __getattr__(self, item):

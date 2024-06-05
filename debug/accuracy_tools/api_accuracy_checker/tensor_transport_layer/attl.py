@@ -1,6 +1,8 @@
 import io
+import os.path
 import time
 import re
+from pathlib import Path
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
 from collections import namedtuple
@@ -11,6 +13,7 @@ import torch
 from api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from api_accuracy_checker.common.utils import logger
+from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import remove_path
 
 
 ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
@@ -25,6 +28,7 @@ class ATTLConfig:
     connect_ip: str
     connect_port: int
     # storage_config
+    nfs_path: str = None
     check_sum: bool = True
     queue_size: int = 50
 
@@ -40,7 +44,10 @@ class ATTL:
         self.message_end = False
         self.kill_progress = False
         self.check_attl_config()
-        if self.session_config.is_benchmark_device:
+        if self.session_config.nfs_path:
+            self.nfs_path = Path(self.session_config.nfs_path)
+        elif self.session_config.is_benchmark_device:
+
             self.socket_manager = TCPServer(self.session_config.connect_port,
                                             self.data_queue,
                                             self.session_config.check_sum)
@@ -52,12 +59,16 @@ class ATTL:
             self.socket_manager.start()
 
     def check_attl_config(self):
+        if self.session_config.nfs_path:
+            if os.path.exists(self.session_config.nfs_path):
+                return
+            else:
+                raise Exception(f"nfs path {self.session_config.nfs_path} doesn't exists.")
         ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
         if not re.match(ipv4_pattern, self.session_config.connect_ip):
             raise Exception(f"host {self.session_config.connect_ip} is invalid.")
         if not (0 < self.session_config.connect_port <= 65535):
             raise Exception(f"port {self.session_config.connect_port} is invalid.")
-
 
     def stop_serve(self):
         if isinstance(self.socket_manager, TCPServer):
@@ -66,7 +77,7 @@ class ATTL:
     def client_handle(self, data, rank: int = 0, step: int = 0):
         self.socket_manager.add_to_sending_queue(data, rank=rank, step=step)
 
-    def send(self, buffer: BufferType):
+    def send(self, buffer: BufferType) -> None:
         """
         npu major in 'send' (client)
         """
@@ -120,6 +131,28 @@ class ATTL:
                 return buffer
 
         return buffer
+
+    def upload(self, buffer: BufferType):
+        if isinstance(buffer, ApiData):
+            buffer = move2target_device(buffer, torch.device('cpu'))
+            file_path = os.path.join(self.session_config.nfs_path, buffer.name + ".pt")
+        else:
+            file_path = os.path.join(self.session_config.nfs_path, buffer + f"_{int(time.time())}")
+
+        torch.save(buffer, file_path)
+
+    def download(self):
+        for file_type in ("start*", "*.pt", "end*"):
+            cur_file = next(self.nfs_path.glob(file_type), None)
+            if cur_file is not None:
+                break
+
+        if cur_file is None:
+            return None
+        else:
+            buffer = torch.load(cur_file)
+            remove_path(cur_file)
+            return buffer
 
 
 def move2device_exec(obj, device):

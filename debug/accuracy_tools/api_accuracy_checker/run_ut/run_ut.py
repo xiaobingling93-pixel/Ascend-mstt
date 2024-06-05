@@ -236,26 +236,49 @@ def run_api_online(config, compare):
     attl = init_attl()
     dispatcher = ConsumerDispatcher(compare=compare)
     dispatcher.start(handle_func=run_torch_api_online, config=config)
-    while True:
-        api_data = attl.recv()
-        if api_data == 'STOP_':
-            continue
-        if api_data == 'KILL_':
-            time.sleep(1)
-            print_info_log("==========接收到STOP信号==========")
-            dispatcher.stop()
-            attl.stop_serve()
-            time.sleep(1)
-            break
-        if not isinstance(api_data, ApiData):
-            continue
-        api_full_name = api_data.name
 
-        if msCheckerConfig.white_list:
-            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
-            if api_name not in set(msCheckerConfig.white_list):
+    def tcp_communication_flow():
+        while True:
+            api_data = attl.recv()
+            if api_data == 'STOP_':
                 continue
-        dispatcher.update_consume_queue(api_data)
+            if api_data == 'KILL_':
+                time.sleep(1)
+                print_info_log("==========接收到STOP信号==========")
+                dispatcher.stop()
+                attl.stop_serve()
+                time.sleep(1)
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+
+            if msCheckerConfig.white_list:
+                [_, api_name, _] = api_full_name.split("*")
+                if api_name not in set(msCheckerConfig.white_list):
+                    continue
+            dispatcher.update_consume_queue(api_data)
+
+    def shared_storage_communication_flow():
+        flag_num = -1
+        while True:
+            api_data = attl.download()
+            if api_data == "start":
+                if flag_num == -1:
+                    flag_num += 1
+                flag_num += 1
+            if api_data == "end":
+                flag_num -= 1
+            if flag_num == 0:
+                dispatcher.stop()
+                break
+            if isinstance(api_data, ApiData):
+                dispatcher.update_consume_queue(api_data)
+
+    if msCheckerConfig.nfs_path:
+        shared_storage_communication_flow()
+    else:
+        tcp_communication_flow()
 
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
@@ -394,7 +417,10 @@ def get_validated_details_csv_path(validated_result_csv_path):
 
 
 def init_attl():
-    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True, connect_ip=msCheckerConfig.host, connect_port=msCheckerConfig.port))
+    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
+                                  connect_ip=msCheckerConfig.host,
+                                  connect_port=msCheckerConfig.port,
+                                  nfs_path=msCheckerConfig.nfs_path if msCheckerConfig.nfs_path else None))
     return attl
 
 
