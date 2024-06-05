@@ -33,7 +33,7 @@ class PreheatHandler(FuzzHandler):
                 f"api_name {self.params.api_name}, "
                 f"curr_called_seq: {curr_called_seq}/{total_count}"
             )
-        preheat_counter.add_api_sample_time(self.pure_name)
+            preheat_counter.add_api_sample_time(self.pure_name)
         return res
 
     def _get_sample_count_per_step(self) -> set:

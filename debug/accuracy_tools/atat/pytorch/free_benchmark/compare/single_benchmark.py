@@ -62,7 +62,7 @@ class SingleCompare:
         # 获取误差均衡性
         divided = TorchC.where(
             TorchC.ge(TorchC.abs(golden), self.threshold.small_value), golden_abs, 1
-        )
+            )
         self.eb = TorchC.mean(TorchC.div(diff_value, divided))
 
     def compare_dict_seq(self, actual, golden):

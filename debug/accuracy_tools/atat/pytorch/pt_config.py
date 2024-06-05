@@ -40,7 +40,23 @@ class OverflowCheckConfig(BaseConfig):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
+        
+class FreeBenchmarkCheckConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.fuzz_device = json_config.get("fuzz_device")
+        self.pert_mode = json_config.get("pert_mode")
+        self.handler_type = json_config.get("handler_type")
+        self.fuzz_level = json_config.get("fuzz_level")
+        self.fuzz_stage = json_config.get("fuzz_stage")
+        self.if_preheat = json_config.get("if_preheat")
+        self.preheat_step = json_config.get("preheat_step")
+        self.max_sample = json_config.get("max_sample")
+        self.check_freebenchmark_config()
 
+    def check_freebenchmark_config(self):
+        if self.if_preheat and  self.handler_type == "fix":
+            raise Exception("Preheating is not supported in fix handler type")
 
 def parse_task_config(task, json_config):
     default_dic = {}
@@ -53,6 +69,9 @@ def parse_task_config(task, json_config):
     elif task == Const.OVERFLOW_CHECK:
         config_dic = json_config.get(Const.OVERFLOW_CHECK) if json_config.get(Const.OVERFLOW_CHECK) else default_dic
         return OverflowCheckConfig(config_dic)
+    elif task == Const.FREE_BENCHMARK:
+        config_dic = json_config.get(Const.FREE_BENCHMARK) if json_config.get(Const.FREE_BENCHMARK) else default_dic
+        return FreeBenchmarkCheckConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
 

@@ -21,6 +21,20 @@ class DebuggerConfig:
         self.repair_api_str = None
         self.on_step_end = None
         self.repair_type = None
+        
+        if self.task == "free_benchmark":
+            self.fuzz_device = task_config.fuzz_device if task_config.fuzz_device else 'npu'
+            self.handler_type = task_config.handler_type if task_config.handler_type else 'check'
+            self.pert_mode = task_config.pert_mode if task_config.pert_mode else 'improve_precision'
+            self.fuzz_level = task_config.fuzz_level if task_config.fuzz_level else 'L1'
+            self.fuzz_stage = task_config.fuzz_stage if task_config.fuzz_stage else 'forward'
+            self.preheat_config = {
+                "if_preheat": task_config.if_preheat if task_config.if_preheat is not None else True, 
+                "preheat_step": task_config.preheat_step if task_config.preheat_step else 15, 
+                "max_sample": task_config.max_sample if task_config.max_sample else 20, 
+            }
+
+        
 
         self.check()
         if self.step:

@@ -21,3 +21,4 @@ class FixHandler(FuzzHandler):
                 f"[atat] Free Benchmark: For {self.params.api_name} "
                 f"Fix output failed. "
             )
+        return data_params.original_result

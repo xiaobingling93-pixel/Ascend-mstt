@@ -4,6 +4,7 @@ from atat.pytorch.free_benchmark.perturbed_layers.npu.improve_precision import (
     ImprovePrecisionLayer,
 )
 from atat.pytorch.free_benchmark.perturbed_layers.npu.add_noise import AddNoiseLayer
+from atat.pytorch.free_benchmark.perturbed_layers.npu.bit_noise import BitNoiseLayer
 from atat.pytorch.free_benchmark.perturbed_layers.npu.no_change import NoChangeLayer
 from atat.pytorch.free_benchmark.perturbed_layers.npu.change_value import (
     ChangeValueLayer,
@@ -17,6 +18,7 @@ class LayerFactory:
             PerturbationMode.ADD_NOISE: AddNoiseLayer,
             PerturbationMode.CHANGE_VALUE: ChangeValueLayer,
             PerturbationMode.NO_CHANGE: NoChangeLayer,
+            PerturbationMode.BIT_NOISE: BitNoiseLayer,
             PerturbationMode.IMPROVE_PRECISION: ImprovePrecisionLayer,
         },
         DeviceType.CPU: {PerturbationMode.TO_CPU: CpuLayer},

@@ -9,6 +9,7 @@ from atat.pytorch.free_benchmark.common.enums import (
     PerturbationMode,
     FuzzLevel,
     DeviceType,
+    HandlerType
 )
 from atat.pytorch.free_benchmark.compare.grad_saver import GradSaver
 from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
@@ -32,11 +33,15 @@ class FreeBenchmarkCheck(ABC):
 
     def update_iter(self, update_iter):
         self.current_iter = update_iter
+    
+    def if_fix(self):
+        if self.config.handler_type==HandlerType.FIX:
+            return True
+        return False
 
     def pre_forward(self, name, module, data_processor, args, kwargs):
         if not self.config.fuzz_stage == Const.BACKWARD:
             return
-            # TODO 只支持check模式
         origin_func = (
             module._slow_forward if torch._C._get_tracing_state() else module.forward
         )
