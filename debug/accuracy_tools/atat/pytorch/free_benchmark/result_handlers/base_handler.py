@@ -162,7 +162,7 @@ class FuzzHandler(ABC):
             is_consistent = threshold >= ratio >= 1 / threshold
         return is_consistent, ratio
 
-    def cmp_output_npu_with_preheat(self, data_params: DataParams):
+    def cmp_output_npu(self, data_params: DataParams):
         npu_consistent = True
         max_fuzz_ratio = 0
         try:

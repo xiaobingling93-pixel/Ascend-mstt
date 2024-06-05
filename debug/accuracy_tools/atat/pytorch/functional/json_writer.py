@@ -1,7 +1,9 @@
 import os
+import csv
 from pathlib import Path
 import json
 from ..common.log import print_info_log_rank_0
+from ..common.utils import Const
 
 
 class DataWriter:  # TODO: UT
@@ -15,6 +17,7 @@ class DataWriter:  # TODO: UT
         self.dump_file_path = None  # os.path.join(dump_dir, DataWriter.dump_json_name)
         self.stack_file_path = None  # os.path.join(dump_dir, DataWriter.stack_json_name)
         self.construct_file_path = None  # os.path.join(dump_dir, DataWriter.construct_json_name)
+        self.free_benchmark_file_path = None  
         self.dump_tensor_data_dir = None
         self.buffer_size = 1000
         self.cache_data = {"data": {}}
@@ -34,11 +37,12 @@ class DataWriter:  # TODO: UT
             os.remove(self.construct_file_path)
         Path(self.construct_file_path).touch()
 
-    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir):
+    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path):
         self.dump_file_path = dump_file_path
         self.stack_file_path = stack_file_path
         self.construct_file_path = construct_file_path
         self.dump_tensor_data_dir = dump_data_dir
+        self.free_benchmark_file_path = free_benchmark_file_path
 
     def update_data(self, new_data):
         key = next(iter(new_data.keys()))  # assert len(new_data.keys()) == 1
@@ -94,3 +98,18 @@ class DataWriter:  # TODO: UT
         self.write_data_json(self.dump_file_path)
         self.write_stack_info_json(self.stack_file_path)
         self.write_construct_info_json(self.construct_file_path)
+
+    @staticmethod
+    def write_data_to_csv(result: list, result_header: tuple, file_path: str):
+        if len(result) == 0:
+            return
+        is_exists = os.path.exists(file_path)
+        append = "a+" if is_exists else "w+"
+        with os.fdopen(
+            os.open(file_path, Const.WRITE_FLAGS, Const.WRITE_MODES), append, newline=""
+        ) as csv_file:
+            spawn_writer = csv.writer(csv_file)
+            if not is_exists:
+                spawn_writer.writerow(result_header)
+            spawn_writer.writerows([result,])
+            

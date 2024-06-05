@@ -35,10 +35,10 @@ class BaseScope(ABC):
         if not isinstance(api_list, list):
             raise ScopeException(ScopeException.InvalidApiStr,
                 f"api_list参数须配置为列表，实际类型为{type(api_list)}.")
-        for api_list in api_list:
-            if not isinstance(api_list, str):
+        for api in api_list:
+            if not isinstance(api, str):
                 raise ScopeException(ScopeException.InvalidApiStr,
-                    f"api_list中的元素须配置为字符串，实际类型为{type(api_list)}.")
+                    f"api_list中的元素须配置为字符串，实际类型为{type(api)}.")
         if isinstance(scope, str):
             scope = [scope]
             return scope, api_list

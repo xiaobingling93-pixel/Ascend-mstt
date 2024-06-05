@@ -19,8 +19,7 @@ class FuzzHandlerFactory:
     @staticmethod
     def create(params: HandlerParams):
         if_preheat = params.preheat_config.get(PreheatConfig.IF_PREHEAT)
-        preheat_step = params.preheat_config.get(PreheatConfig.PREHEAT_STEP)
-        if not if_preheat or preheat_step <= params.step:
+        if not if_preheat:
             handler = FuzzHandlerFactory.result_handlers.get(params.handler_type)
         else:
             handler = FuzzHandlerFactory.result_handlers.get(HandlerType.PREHEAT)

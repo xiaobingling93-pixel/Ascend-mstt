@@ -3,12 +3,14 @@ import zlib
 import numpy as np
 import os
 import inspect
+from dataclasses import dataclass, asdict
 import torch_npu
-from dataclasses import dataclass
 from typing import Tuple, List, Dict, Optional, Union
 from ..common.exceptions import MsaccException
 from ..common.utils import Const
 from ..common import recursive_apply_transform
+from ..functional. json_writer import DataWriter
+from ..free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 bits_for_overflow = 8
 
@@ -19,12 +21,15 @@ def build_data_processor(config, data_writer):
         return DataProcessor(config, data_writer)
     elif config.task == DataProcessor.overflow:
         return OverflowTensorDataProcessor(config, data_writer)
+    elif config.task == DataProcessor.free_benchmark:
+        return FreeBenchmarkDataProcessor(config, data_writer)
     else:
         raise MsaccException(MsaccException.INVALID_PARAM_ERROR,
-                                  "task should be in [{}, {}, {}]".format(
+                                  "task should be in [{}, {}, {}, {}]".format(
                                       DataProcessor.full,
                                       DataProcessor.summary,
-                                      DataProcessor.overflow
+                                      DataProcessor.overflow,
+                                      DataProcessor.free_benchmark
                                   ))
 
 
@@ -34,14 +39,19 @@ class ModuleForwardInputsOutputs:
     kwargs: Optional[Dict]
     output: Union[Tuple, torch.Tensor]
 
-    def __init__(self, args, kwargs, output):
-        if not isinstance(args, tuple):
-            args = (args, )
-        if not isinstance(output, tuple):
-            output = (output, )
-        self.args = args
-        self.kwargs = kwargs
-        self.output = output
+    @property
+    def args_tuple(self):
+        if not isinstance(self.args, tuple):
+            return (self.args, )
+        else:
+            return self.args
+        
+    @property
+    def output_tuple(self):
+        if not isinstance(self.output, tuple):
+            return (self.output, )
+        else:
+            return self.output
 
     def concat_args_and_kwargs(self):
         args = self.args + tuple(self.kwargs.values())
@@ -53,19 +63,26 @@ class ModuleBackwardInputsOutputs:
     grad_output: Optional[Tuple]
     grad_input: Optional[Tuple]
 
-    def __init__(self, grad_input, grad_output):
-        if not isinstance(grad_input, tuple):
-            grad_input = (grad_input, )
-        if not isinstance(grad_output, tuple):
-            grad_output = (grad_output,)
-        self.grad_input = grad_input
-        self.grad_output = grad_output
+    @property
+    def grad_input_tuple(self):
+        if not isinstance(self.grad_input, tuple):
+            return (self.grad_input, )
+        else:
+            return self.grad_input
+        
+    @property
+    def grad_output_tuple(self):
+        if not isinstance(self.grad_output, tuple):
+            return (self.grad_output, )
+        else:
+            return self.grad_output
 
 
 class DataProcessor:
     full = "tensor"
     summary = "statistics"
     overflow = "overflow_check"
+    free_benchmark = "free_benchmark"
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -79,6 +96,18 @@ class DataProcessor:
         self.config = config
         self.api_data_category = None
         self.has_overflow = False
+        self.current_iter = 0
+
+        # 需要对forward的output进行更改
+        self._return_forward_new_output = False
+        self._forward_new_output = None
+    
+    def if_return_forward_new_output(self):
+        return self._return_forward_new_output
+    
+    def get_forward_new_output(self):
+        self._return_forward_new_output = False
+        return self._forward_new_output
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -125,6 +154,9 @@ class DataProcessor:
                 return builtin_type(arg), type(arg).__name__
         return arg, ''
 
+    def update_iter(self, current_iter):
+        self.current_iter = current_iter
+        
     def visit_and_clear_overflow_status(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
@@ -259,14 +291,18 @@ class DataProcessor:
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
-    def analyze_forward(self, name,
+    def analyze_pre_forward(self, name, module,
+                        module_input_output: ModuleForwardInputsOutputs):
+        pass
+
+    def analyze_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
         self.api_data_category = "input"
-        args_info_list = self.analyze_element(module_input_output.args)
+        args_info_list = self.analyze_element(module_input_output.args_tuple)
         self.api_data_category = "kwargs"
         kwargs_info_list = self.analyze_element(module_input_output.kwargs)
         self.api_data_category = "output"
-        output_info_list = self.analyze_element(module_input_output.output)
+        output_info_list = self.analyze_element(module_input_output.output_tuple)
         api_info_struct = {name: {"input_args": args_info_list,
                                   "input_kwargs": kwargs_info_list,
                                   "output": output_info_list}}
@@ -274,7 +310,7 @@ class DataProcessor:
 
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
         self.api_data_category = "input"
-        args_info_list = self.analyze_element(module_input_output.args)
+        args_info_list = self.analyze_element(module_input_output.args_tuple)
         self.api_data_category = "kwargs"
         kwargs_info_list = self.analyze_element(module_input_output.kwargs)
         api_info_struct = {name: {"input_args": args_info_list,
@@ -288,17 +324,18 @@ class DataProcessor:
         api_info_struct = {name: {"output": output_info_list}}
         return api_info_struct
 
-    def analyze_backward(self, name,
+    def analyze_backward(self, name, module,
                          module_input_output: ModuleBackwardInputsOutputs):
         self.api_data_category = "output"
-        input_info_list = self.analyze_element(module_input_output.grad_input)
+        input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
         self.api_data_category = "input"
-        output_info_list = self.analyze_element(module_input_output.grad_output)
+        output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
         api_info_struct = {name: {"grad_input": input_info_list, "grad_output": output_info_list}}  # TODO: magic str
         return api_info_struct
 
 
 class FullTensorDataProcessor(DataProcessor):
+    
     def _analyze_tensor(self, tensor, suffix):
         self.data_path = self.data_writer.dump_tensor_data_dir
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
@@ -328,20 +365,20 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
 
-    def analyze_forward(self, name,
+    def analyze_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_forward(name, module_input_output)
+        api_info_struct = super().analyze_forward(name, module, module_input_output)
         if self.has_overflow:
             self.save_overflow_data()
             self.inc_and_check_overflow_times()
             return api_info_struct
         return None
 
-    def analyze_backward(self, name,
+    def analyze_backward(self, name, module,
                         module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_backward(name, module_input_output)
+        api_info_struct = super().analyze_backward(name, module, module_input_output)
         if self.has_overflow:
             self.save_overflow_data()
             self.inc_and_check_overflow_times()
@@ -360,6 +397,54 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         if self.real_overflow_dump_times >= self.overflow_nums:
             raise MsaccException(MsaccException.OVERFLOW_NUMS_ERROR,
                                  str(self.real_overflow_dump_times))
+
+
+class FreeBenchmarkDataProcessor(DataProcessor):
+
+    def __init__(self, config, data_writer):
+        super().__init__(config, data_writer)
+        self.checker = FreeBenchmarkCheck(config=config)
+    
+    def update_iter(self, current_iter):
+        self.current_iter = current_iter
+        self.checker.update_iter(current_iter)
+
+    def update_unequal_rows(self, unequal_rows: List[UnequalRow]):
+        if len(unequal_rows) == 0:
+            return
+        for row in unequal_rows:
+            data_dict = asdict(row)
+            self.data_writer.write_data_to_csv(
+                data_dict.values(),
+                data_dict.keys(),
+                self.data_writer.free_benchmark_file_path
+            )
+        return
+
+    def analyze_pre_forward(self, name, module,
+                        module_input_output: ModuleForwardInputsOutputs):
+        args = module_input_output.args
+        kwargs = module_input_output.kwargs
+        self.checker.pre_forward(name, module, self, args, kwargs)
+
+    def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        new_output, unequal_rows = self.checker.forward(
+            name,
+            module,
+            module_input_output.args,
+            module_input_output.kwargs,
+            module_input_output.output,
+            )
+        self.update_unequal_rows(unequal_rows)
+        if self.checker.if_fix():
+            self._return_forward_new_output = True
+            self._forward_new_output = new_output
+        return None
+
+    def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
+        self.checker.backward(name, module, module_input_output.grad_output)
+        return None
+    
 
 
 def overflow_debug_mode_enable():
