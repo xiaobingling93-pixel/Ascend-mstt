@@ -166,7 +166,7 @@ python3 compare.py
    
 3. NPU环境下执行训练dump溢出数据。
 
-   针对输入正常但输出存在溢出的API，会在训练执行目录下将溢出的API信息dump并保存为`dump.json`通过《[溢出解析工具](./run_overflow_check.md)对json文件进行解析，输出溢出API为正常溢出还是非正常溢出，从而帮助用户快速判断。
+   针对输入正常但输出存在溢出的API，会在训练执行目录下将溢出的API信息dump并保存为`dump.json`通过《[溢出解析工具](./run_overflow_check.md)》对json文件进行解析，输出溢出API为正常溢出还是非正常溢出，从而帮助用户快速判断。
 
    溢出解析工具执行命令如下：
 

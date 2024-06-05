@@ -20,7 +20,7 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 ```
 
-说明：上述参数config_path外，其他参数均在[config.json](../../config/config.json)文件中可配，此处的参数优先级高于config.json文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config/config.json)文件。
+说明：上述参数除config_path外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于config.json文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
 
 **参数说明**
 
@@ -29,8 +29,7 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 | config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用../../config目录下的config.json文件的默认配置。 | 否       |
 | task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否       |
 | dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | 是       |
-| rank        | 指定对某张卡上的数据进行dump，int类型。默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于0的正整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0到7，实际训练运行0到3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。rank为list格式，可配置多个rank，参数示例：rank=[1]或rank=[1, 2]。 | 否       |
-| step        | 指定dump某个step的数据，int类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置多个step，参数示例：step=[0]或step=[0,1,2]。 | 否       |
+| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据，仅MindSpore场景支持。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否       |
 
 ### start函数
 
@@ -151,8 +150,6 @@ pt文件保存的前缀和PyTorch对应关系如下：
 | Distributed | torch.distributed   |
 
 ## 工具支持的API列表
-
-
 
 atat工具维护固定的API支持列表，若需要删除或增加dump的API，可以在atat/pytorch/hook_module/support_wrap_ops.yaml文件内手动修改，如下示例：
 
