@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2019-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -32,7 +32,10 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from .file_check_util import FileOpen, FileChecker, FileCheckConst
+# from .file_check_util import FileOpen, FileChecker, FileCheckConst
+from .file_check import FileOpen, FileChecker, FileCheckConst
+from .utils import Const
+from .log import print_warn_log, print_error_log, print_info_log
 
 try:
     import torch_npu
@@ -57,66 +60,66 @@ prefixes = ['api_stack', 'list', 'range', 'acl']
 npu_distributed_api = ['isend', 'irecv']
 
 
-class Const:
-    """
-    Class for const
-    """
-    MODEL_TYPE = ['.onnx', '.pb', '.om']
-    DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
-    SEMICOLON = ";"
-    COLON = ":"
-    EQUAL = "="
-    COMMA = ","
-    DOT = "."
-    DUMP_RATIO_MAX = 100
-    SUMMERY_DATA_NUMS = 256
-    FLOAT_EPSILON = np.finfo(float).eps
-    SUPPORT_DUMP_MODE = ['api', 'acl']
-    ON = 'ON'
-    OFF = 'OFF'
-    BACKWARD = 'backward'
-    FORWARD = 'forward'
-    PRE_FORWARD = "pre_forward"
-
-    # dump mode
-    ALL = "all"
-    LIST = "list"
-    RANGE = "range"
-    STACK = "stack"
-    ACL = "acl"
-    API_LIST = "api_list"
-    API_STACK = "api_stack"
-    DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
-    AUTO = "auto"
-    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
-    SUMMARY = "summary"
-    MD5 = "md5"
-    SUMMARY_MODE = [ALL, SUMMARY, MD5]
-
-    WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
-    WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
-
-    PKL_SUFFIX = ".pkl"
-    NUMPY_SUFFIX = ".npy"
-    ONE_GB = 1 * 1024 * 1024 * 1024
-    TEN_GB = 10 * 1024 * 1024 * 1024
-    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
-    FILE_NAME_LENGTH = 255
-    DIRECTORY_LENGTH = 4096
-    DISTRIBUTED_PREFIX_LENGTH = 60
-    SUMMARY_COLUMN_NUM = 6
-    STACK_COLUMN_NUM = 2
-    # env dump path
-    ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
-    DUMP_DIR = "dump_data"
-
-    ENV_ENABLE = "1"
-    ENV_DISABLE = "0"
-
-    MAX_SEED_VALUE = 2**32 - 1
-
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-                    "_reduce_scatter_base", "_all_gather_base"]
+# class Const:
+#     """
+#     Class for const
+#     """
+#     MODEL_TYPE = ['.onnx', '.pb', '.om']
+#     DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
+#     SEMICOLON = ";"
+#     COLON = ":"
+#     EQUAL = "="
+#     COMMA = ","
+#     DOT = "."
+#     DUMP_RATIO_MAX = 100
+#     SUMMERY_DATA_NUMS = 256
+#     FLOAT_EPSILON = np.finfo(float).eps
+#     SUPPORT_DUMP_MODE = ['api', 'acl']
+#     ON = 'ON'
+#     OFF = 'OFF'
+#     BACKWARD = 'backward'
+#     FORWARD = 'forward'
+#     PRE_FORWARD = "pre_forward"
+#
+#     # dump mode
+#     ALL = "all"
+#     LIST = "list"
+#     RANGE = "range"
+#     STACK = "stack"
+#     ACL = "acl"
+#     API_LIST = "api_list"
+#     API_STACK = "api_stack"
+#     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+#     AUTO = "auto"
+#     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
+#     SUMMARY = "summary"
+#     MD5 = "md5"
+#     SUMMARY_MODE = [ALL, SUMMARY, MD5]
+#
+#     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
+#     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
+#
+#     PKL_SUFFIX = ".pkl"
+#     NUMPY_SUFFIX = ".npy"
+#     ONE_GB = 1 * 1024 * 1024 * 1024
+#     TEN_GB = 10 * 1024 * 1024 * 1024
+#     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+#     FILE_NAME_LENGTH = 255
+#     DIRECTORY_LENGTH = 4096
+#     DISTRIBUTED_PREFIX_LENGTH = 60
+#     SUMMARY_COLUMN_NUM = 6
+#     STACK_COLUMN_NUM = 2
+#     # env dump path
+#     ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
+#     DUMP_DIR = "dump_data"
+#
+#     ENV_ENABLE = "1"
+#     ENV_DISABLE = "0"
+#
+#     MAX_SEED_VALUE = 2**32 - 1
+#
+#     INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+#                     "_reduce_scatter_base", "_all_gather_base"]
 
 
 class CompareConst:
@@ -274,41 +277,41 @@ def make_dump_path_if_not_exists(dump_path):
             print_error_log('{} already exists and is not a directory.'.format(dump_path))
 
 
-def _print_log(level, msg, end='\n'):
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-    pid = os.getgid()
-    print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg, end=end)
-    sys.stdout.flush()
-
-
-def print_info_log(info_msg, end='\n'):
-    """
-    Function Description:
-        print info log.
-    Parameter:
-        info_msg: the info message.
-    """
-    _print_log("INFO", info_msg, end=end)
-
-
-def print_error_log(error_msg):
-    """
-    Function Description:
-        print error log.
-    Parameter:
-        error_msg: the error message.
-    """
-    _print_log("ERROR", error_msg)
-
-
-def print_warn_log(warn_msg):
-    """
-    Function Description:
-        print warn log.
-    Parameter:
-        warn_msg: the warning message.
-    """
-    _print_log("WARNING", warn_msg)
+# def _print_log(level, msg, end='\n'):
+#     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
+#     pid = os.getgid()
+#     print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg, end=end)
+#     sys.stdout.flush()
+#
+#
+# def print_info_log(info_msg, end='\n'):
+#     """
+#     Function Description:
+#         print info log.
+#     Parameter:
+#         info_msg: the info message.
+#     """
+#     _print_log("INFO", info_msg, end=end)
+#
+#
+# def print_error_log(error_msg):
+#     """
+#     Function Description:
+#         print error log.
+#     Parameter:
+#         error_msg: the error message.
+#     """
+#     _print_log("ERROR", error_msg)
+#
+#
+# def print_warn_log(warn_msg):
+#     """
+#     Function Description:
+#         print warn log.
+#     Parameter:
+#         warn_msg: the warning message.
+#     """
+#     _print_log("WARNING", warn_msg)
 
 
 def check_mode_valid(mode, scope=None, api_list=None):

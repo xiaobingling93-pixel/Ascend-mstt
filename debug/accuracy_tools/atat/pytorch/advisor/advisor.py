@@ -20,8 +20,11 @@ import pandas as pd
 
 from .advisor_result import AdvisorResult
 from .advisor_const import AdvisorConst
-from ..common.utils_compare import CompareException, CompareConst, Const
-from ..common.utils_compare import print_info_log, print_warn_log, print_error_log
+# from ..common.utils_compare import CompareException, CompareConst, Const
+from ..common.utils_compare import CompareException, CompareConst
+from ..common.utils import Const
+# from ..common.utils_compare import print_info_log, print_warn_log, print_error_log
+from ..common.log import print_info_log, print_warn_log, print_error_log
 from ..common.file_check_util import FileChecker, FileCheckConst
 
 
