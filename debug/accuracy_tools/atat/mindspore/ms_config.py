@@ -15,7 +15,7 @@ class TensorConfig(BaseConfig):
         if self.data_mode is not None and len(self.data_mode) > 0:
             if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
                 raise Exception("data_mode must be all, input or output")
-        if self.file_format not in ["npy", "bin"]:
+        if self.file_format and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
 
 
@@ -44,7 +44,7 @@ class OverflowCheck(BaseConfig):
         if self.data_mode is not None and len(self.data_mode) > 0:
             if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
                 raise Exception("data_mode must be all, input or output")
-        if self.check_mode not in ["all", "aicore", "atomic"]:
+        if self.check_mode and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
 
 
