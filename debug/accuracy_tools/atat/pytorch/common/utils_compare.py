@@ -32,7 +32,6 @@ from pathlib import Path
 import numpy as np
 import torch
 
-# from .file_check_util import FileOpen, FileChecker, FileCheckConst
 from .file_check import FileOpen, FileChecker, FileCheckConst
 from .utils import Const
 from .log import print_warn_log, print_error_log, print_info_log

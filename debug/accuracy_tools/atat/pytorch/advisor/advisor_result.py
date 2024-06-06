@@ -18,11 +18,8 @@ import os
 import time
 
 from .advisor_const import AdvisorConst
-# from ..common.utils_compare import Const
 from ..common.utils import Const
-# from ..common.utils_compare import print_info_log, print_error_log
 from ..common.log import print_info_log, print_error_log
-# from ..common.file_check_util import change_mode, FileCheckConst
 from ..common.file_check import change_mode, FileCheckConst
 
 
