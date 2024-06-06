@@ -111,7 +111,7 @@ int32_t main(int32_t argc, char *argv[])
     size_t biasSize = 640 * sizeof(float);
     size_t ySize = 1024 * 640 * sizeof(float);
     size_t workspaceSize = 16 * 1024 * 1024 * sizeof(float);  // AscendC::GetUserWorkspace中预留空间
-    size_t tilingSize = 48 * sizeof(uint32_t);
+    size_t tilingSize = 96 * sizeof(uint32_t);
     uint32_t blockDim = 1;
 
     CHECK_ACL(aclInit(nullptr));
