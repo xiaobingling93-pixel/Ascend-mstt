@@ -254,7 +254,7 @@ def run_api_online(config, compare):
             api_full_name = api_data.name
 
             if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split("*")
+                [_, api_name, _] = api_full_name.split(Const.DELIMITER)
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             dispatcher.update_consume_queue(api_data)

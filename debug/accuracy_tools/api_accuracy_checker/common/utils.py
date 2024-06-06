@@ -689,5 +689,5 @@ def _create_logger(level=logging.INFO):
     return logger_
 
 
-log_level = logging.DEBUG if os.environ.get("API_ACCUCARY_CHECK_LOG_LEVEL") == 1 else logging.INFO
+log_level = logging.DEBUG if os.environ.get("API_ACCUCARY_CHECK_LOG_LEVEL") == "1" else logging.INFO
 logger = _create_logger(log_level)
