@@ -335,7 +335,6 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 for i, (npu_val, bench_val) in enumerate(zip(npu_summery_data, bench_summery_data)):
                     if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
                         diff = npu_val - bench_val
-                        relative = 0
                         if bench_val != 0:
                             relative = str(abs((diff/bench_val) * 100)) + '%'
                         else:
