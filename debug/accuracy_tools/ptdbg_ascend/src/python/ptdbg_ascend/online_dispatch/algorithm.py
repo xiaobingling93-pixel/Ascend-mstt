@@ -9,7 +9,6 @@ class CompareColumn:
         self.bench_type = CompareConst.NA
         self.npu_type = CompareConst.NA
         self.shape = CompareConst.NA
-        self.cosine_sim = CompareConst.NA
         self.max_abs_err = CompareConst.NA
         self.rel_err_hundredth = CompareConst.NA
         self.rel_err_thousandth = CompareConst.NA
