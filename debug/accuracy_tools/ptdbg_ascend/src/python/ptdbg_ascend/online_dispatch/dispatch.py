@@ -185,8 +185,6 @@ class PtdbgDispatch(TorchDispatchMode):
             logger_debug(f'Dispatch exit: Device[{self.device_id}], Pid[{os.getpid()} Input[{input_num}] '
                          f'Output[{output_num}] Total[{total_num}] API_Total[{self.api_index}]]')
 
-        save_csv(self.all_summery, self.call_stack_list, self.csv_path)
-
     def enable_autogard(self, aten_api):
         if aten_api in self.npu_adjust_autogard:
             torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)

@@ -33,11 +33,11 @@ COMPARE_LOGO = '''
                                                  |_|    
 '''
 
-CSV_COLUMN_NAME = [CompareConst.NPU_NAME, 
+CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
                    CompareConst.BENCH_NAME,
-                   CompareConst.NPU_DTYPE, 
+                   CompareConst.NPU_DTYPE,
                    CompareConst.BENCH_DTYPE,
-                   CompareConst.NPU_SHAPE, 
+                   CompareConst.NPU_SHAPE,
                    CompareConst.BENCH_SHAPE,
                    CompareConst.NPU_MAX,
                    CompareConst.NPU_MIN,
@@ -45,11 +45,11 @@ CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
                    CompareConst.BENCH_MAX,
                    CompareConst.BENCH_MIN,
                    CompareConst.BENCH_MEAN,
-                   CompareConst.COSINE, 
-                   CompareConst.MAX_ABS_ERR, 
+                   CompareConst.COSINE,
+                   CompareConst.MAX_ABS_ERR,
                    CompareConst.MAX_RELATIVE_ERR,
-                   CompareConst.ACCURACY, 
-                   CompareConst.STACK, 
+                   CompareConst.ACCURACY,
+                   CompareConst.STACK,
                    CompareConst.ERROR_MESSAGE]
 
 FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
@@ -101,7 +101,7 @@ def data_to_cpu(data, deep, data_cpu):
             tensor_copy = data.cpu().detach()
         if tensor_copy.dtype in [torch.float16, torch.half, torch.bfloat16]:
             tensor_copy = tensor_copy.float()
-        
+
         if deep == 0:
             data_cpu.append(tensor_copy)
         return tensor_copy
@@ -177,9 +177,9 @@ def logger_logo():
 def get_sys_info():
     mem = psutil.virtual_memory()
     cpu_percent = psutil.cpu_percent(interval=1)
-    sys_info = f'Total: {mem.total / 1024 / 1024:.2f}MB '\
-               f'Free: {mem.available / 1024 / 1024:.2f} MB '\
-               f'Used: {mem.used / 1024 / 1024:.2f} MB '\
+    sys_info = f'Total: {mem.total / 1024 / 1024:.2f}MB ' \
+               f'Free: {mem.available / 1024 / 1024:.2f} MB ' \
+               f'Used: {mem.used / 1024 / 1024:.2f} MB ' \
                f'CPU: {cpu_percent}% '
     return sys_info
 

@@ -218,7 +218,7 @@ def dispatch_workflow(run_param: DispatchRunParam, cpu_args, cpu_kwargs, all_sum
 
     accuracy_reached = False
     with TimeStatistics("COMPARE OUTPUT", run_param):
-        run_param.comparator.comapre_output(prefix_output, cpu_out, npu_out_cpu, None, None)
+        run_param.comparator.compare_output(prefix_output, cpu_out, npu_out_cpu, None, None)
 
     # user set dump or auto mode will dump
     if run_param.dump_flag or (run_param.auto_dump_flag and not accuracy_reached):
