@@ -119,42 +119,6 @@ def max_rel_err_standard(max_rel_errs):
     return np.all(bool_result), bool_result
 
 
-def cosine_standard(compare_result):
-    bool_result = np.array(compare_result) > 0.99
-    return np.all(bool_result), bool_result
-
-
-def cosine_sim(cpu_output, npu_output):
-    msg = ""
-    n_value = npu_output.reshape(-1)
-    b_value = cpu_output.reshape(-1)
-    cos = CompareConst.NA
-    np.seterr(divide="ignore", invalid="ignore")
-    if n_value.shape != b_value.shape:
-        msg = f"Shape of npu and bench outputs don't match. NPU: {n_value.shape}, bench: {b_value.shape}."
-        return -1, False, msg
-    if len(n_value) == 1:
-        msg = "All the data in npu dump data is scalar. Please refer to other compare algorithms."
-        return cos, True, msg
-    n_value_max = np.max(np.abs(n_value))
-    b_value_max = np.max(np.abs(b_value))
-    if n_value_max <= np.finfo(float).eps and b_value_max <= np.finfo(float).eps:
-        return cos, True, msg
-    elif n_value_max <= np.finfo(float).eps:
-        msg = "All the data is zero in npu dump data."
-        return CompareConst.NA, False, msg
-    elif b_value_max <= np.finfo(float).eps:
-        msg = "All the data is zero in bench dump data."
-        return CompareConst.NA, False, msg
-    else:
-        n_value = n_value_max.astype(float) / n_value_max
-        b_value = b_value_max.astype(float) / b_value_max
-        cos = np.dot(n_value, b_value) / (np.linalg.norm(n_value) * np.linalg.norm(b_value))
-        if np.isnan(cos):
-            msg = "Dump data has NaN when comparing with Cosine Similarity."
-        return cos, cos > 0.99, msg
-
-
 def compare_uint8_data(b_value, n_value):
     if (b_value == n_value).all():
         return 1, True
