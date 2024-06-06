@@ -49,9 +49,12 @@ class Service:
             nonlocal module_type, pid
             if not self.switch:
                 return
+            
             if self.collect_data:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
+                if self.collect_data.if_return_forward_new_output():
+                    return self.collect_data.get_forward_new_output()
             if repair:
                 output = repair.invert(api_or_module_name, module_type, output)
 
@@ -81,6 +84,7 @@ class Service:
         self.current_iter += 1
         if self.step_post_process:
             self.step_post_process()
+        self.collect_data.update_iter(self.current_iter)
 
     @staticmethod
     def check_model_valid(model):
@@ -133,7 +137,8 @@ class Service:
         dump_file_path = os.path.join(dump_dir, "dump.json")
         stack_file_path = os.path.join(dump_dir, "stack.json")
         construct_file_path = os.path.join(dump_dir, "construct.json")
-        self.collect_data.update_dump_paths(dump_file_path, stack_file_path, construct_file_path, dump_data_dir)
+        free_benchmark_file_path = os.path.join(self.config.dump_path, "free_benchmark.csv")
+        self.collect_data.update_dump_paths(dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
 
     def register_hook_new(self):
         hook_name = self.config.task

@@ -67,3 +67,9 @@ class StepException(CodedException):
     err_strs = {
         InvalidPostProcess: "[msacc] 错误的step后处理配置: ",
     }
+
+class FreeBenchmarkException(CodedException):
+    UnsupportedType = 0
+    err_strs = {
+        UnsupportedType: "[msacc] Free benchmark get unsupported type: "
+    }

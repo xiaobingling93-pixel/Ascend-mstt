@@ -162,6 +162,8 @@ def run_ut(config):
     for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
+        if is_npu_fusion_api(api_full_name): # TODO run_ut does not support to the npu fusion api
+            continue
         try:
             if msCheckerConfig.white_list:
                 [_, api_name, _] = api_full_name.split(Const.SEP)
@@ -192,6 +194,10 @@ def run_ut(config):
     change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
     compare.print_pretest_result()
+
+
+def is_npu_fusion_api(api_name):
+    return api_name.split(Const.SEP)[0] == Const.NPU
 
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):

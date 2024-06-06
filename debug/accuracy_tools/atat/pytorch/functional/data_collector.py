@@ -1,7 +1,7 @@
 
 import os
 from ..module_processer import ModuleProcesser
-from .scope import BaseScope, build_scope
+from .scope import BaseScope, build_scope, ListScope
 from .json_writer import DataWriter
 from ..common.log import print_info_log, print_info_log_rank_0, print_error_log_rank_0
 from ..common.utils import Const
@@ -15,7 +15,9 @@ def build_collect_data(config):
 
 class DataCollector:
     overflow_task = "overflow_check"
-    tasks_need_tensor_data = ["overflow_check", "tensor"]
+    tensor_task = "tensor"
+    freebenchmark_task = "free_benchmark"
+    tasks_need_tensor_data = [overflow_task, tensor_task, freebenchmark_task]
     level_without_construct = "L1"
 
     def __init__(self, config):
@@ -23,7 +25,16 @@ class DataCollector:
         self.data_writer = DataWriter()
         self.data_processor = build_data_processor(config, self.data_writer)
         self.module_count = {}
-        self.scope = build_scope(None, self.config.scope, self.config.list)
+        if config.task == DataCollector.freebenchmark_task:
+            self.scope = build_scope(ListScope, self.config.scope, self.config.list)
+        else:
+            self.scope = build_scope(None, self.config.scope, self.config.list)
+    
+    def if_return_forward_new_output(self):
+        return self.data_processor.if_return_forward_new_output()
+    
+    def get_forward_new_output(self):
+        return self.data_processor.get_forward_new_output()
 
     @property
     def dump_data_dir(self):
@@ -38,6 +49,7 @@ class DataCollector:
 
     def write_json(self):
         self.data_writer.write_json()
+
 
     def update_data(self, data_info, msg=''):
         if self.config.task == DataProcessor.overflow:
@@ -59,6 +71,9 @@ class DataCollector:
         return getattr(module, "op_is_inplace", False)
 
     def pre_forward(self, name, module_type, module, pid, module_input_output):
+        backward_name = name.replace("forward", "backward")
+        if self.check_scope_and_pid(self.scope, backward_name, pid):
+            self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
         if not self.is_inplace(module):
             return
         print_info_log(f"API {name} is inplace.")
@@ -80,13 +95,14 @@ class DataCollector:
         msg = f"Calibrator is collecting data on {name}. "
         if "forward" in name:
             if not self.is_inplace(module):
-                data_info = self.data_processor.analyze_forward(name, module_input_output)
+                data_info = self.data_processor.analyze_forward(name, module, module_input_output)
             else:
                 data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
             self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         else:
-            data_info = self.data_processor.analyze_backward(name, module_input_output)
-        msg = self.update_data(data_info, msg)
+            data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        if data_info:
+            msg = self.update_data(data_info, msg)
         print_info_log(msg)
         self.data_writer.flush_data_when_buffer_is_full()
 
@@ -113,3 +129,6 @@ class DataCollector:
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
+    
+    def update_iter(self, current_iter):
+        self.data_processor.update_iter(current_iter)
