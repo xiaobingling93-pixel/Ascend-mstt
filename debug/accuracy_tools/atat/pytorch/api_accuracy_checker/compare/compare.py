@@ -114,9 +114,10 @@ class Comparator:
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, 
                               self.COLUMN_BACKWARD_SUCCESS, "Message"]]
-        write_csv(summary_test_rows, self.save_path)
-
-        write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
+        if not os.path.exists(self.save_path):
+            write_csv(summary_test_rows, self.save_path)
+        if not os.path.exists(self.detail_save_path):
+            write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
 
     def write_summary_csv(self, test_result):
         test_rows = []
