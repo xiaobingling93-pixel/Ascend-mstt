@@ -347,7 +347,7 @@ class FullTensorDataProcessor(DataProcessor):
         return single_arg
 
 
-class OverflowTensorDataProcessor(FullTensorDataProcessor):
+class OverflowTensorDataProcessor(DataProcessor):
     __slots__ = ["cached_tensors_and_file_paths"]
 
     def __init__(self, config, data_writer):
@@ -364,30 +364,27 @@ class OverflowTensorDataProcessor(FullTensorDataProcessor):
         self.cached_tensors_and_file_paths.update({file_path: tensor})
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
+        return single_arg
 
     def analyze_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_forward(name, module, module_input_output)
-        if self.has_overflow:
-            self.save_overflow_data()
-            self.inc_and_check_overflow_times()
-            return api_info_struct
-        return None
+        api_info_struct = super().analyze_forward(name, module_input_output)
+        self.maybe_save_overflow_data_and_check_overflow_times()
+        return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module,
                         module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_backward(name, module, module_input_output)
-        if self.has_overflow:
-            self.save_overflow_data()
-            self.inc_and_check_overflow_times()
-            return api_info_struct
-        return None
+        api_info_struct = super().analyze_backward(name, module_input_output)
+        self.maybe_save_overflow_data_and_check_overflow_times()
+        return api_info_struct if self.has_overflow else None
 
-    def save_overflow_data(self):
-        for file_path, tensor in self.cached_tensors_and_file_paths.items():
-            torch.save(tensor, file_path)
+    def maybe_save_overflow_data_and_check_overflow_times(self):
+        if self.has_overflow:
+            for file_path, tensor in self.cached_tensors_and_file_paths.items():
+                torch.save(tensor, file_path)
+            self.inc_and_check_overflow_times()
         self.cached_tensors_and_file_paths = {}
 
     def inc_and_check_overflow_times(self):
