@@ -16,14 +16,19 @@ except ImportError:
 else:
     is_npu = True
 
-from ..common.utils import Const, CompareConst, add_time_as_suffix, check_file_or_directory_path, \
+from ..common.utils import Const, CompareConst, check_file_or_directory_path, \
     check_path_before_create
 from ..common.version import __version__
 from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
-    DispatchRunParam, save_csv
+    DispatchRunParam
 from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
     DispatchException
 from ..common.file_check_util import FileOpen
+from .compare import Comparator
+
+current_time = time.strftime("%Y%m%d%H%M%S")
+RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
+DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 
 class PtdbgDispatch(TorchDispatchMode):
@@ -49,8 +54,8 @@ class PtdbgDispatch(TorchDispatchMode):
         self.all_summery = []
         self.call_stack_list = []
         self.process_num = process_num
-        self.check_param()
         self.filter_dump_api()
+        self.check_param()
         # guarantee file uniqueness
         time.sleep(1)
         time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
@@ -62,12 +67,14 @@ class PtdbgDispatch(TorchDispatchMode):
         self.root_path = os.path.join(os.path.realpath(dump_path), dir_name)
         self.root_cpu_path = os.path.join(self.root_path, f'cpu')
         self.root_npu_path = os.path.join(self.root_path, f'npu')
-        file_name = add_time_as_suffix(f'compare_result_rank{self.device_id}')
-        self.csv_path = os.path.join(self.root_path, file_name)
         check_path_before_create(self.root_cpu_path)
         check_path_before_create(self.root_npu_path)
         Path(self.root_cpu_path).mkdir(mode=0o750, parents=True, exist_ok=True)
         Path(self.root_npu_path).mkdir(mode=0o750, parents=True, exist_ok=True)
+
+        self.result_csv_path = os.path.join(self.root_path, RESULT_FILE_NAME)
+        self.detail_csv_path = os.path.join(self.root_path, DETAILS_FILE_NAME)
+        self.comparator = Comparator(self.result_csv_path, self.detail_csv_path, False)
 
         self.aten_ops_blacklist = []
         self.npu_adjust_autogard = []
@@ -211,7 +218,7 @@ class PtdbgDispatch(TorchDispatchMode):
             self.single_api_index_dict[aten_api] += 1
 
         run_param = DispatchRunParam(self.debug_flag, self.device_id, self.root_npu_path, self.root_cpu_path,
-                                     self.process_num)
+                                     self.process_num, self.comparator)
         run_param.dump_flag, run_param.auto_dump_flag = self.get_dump_flag(aten_api)
         run_param.func_name = func.__name__
         run_param.aten_api = aten_api

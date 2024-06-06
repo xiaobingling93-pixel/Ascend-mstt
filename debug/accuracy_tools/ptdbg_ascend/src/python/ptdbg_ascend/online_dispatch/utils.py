@@ -52,6 +52,21 @@ CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
                    CompareConst.STACK, 
                    CompareConst.ERROR_MESSAGE]
 
+FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
+BOOL_TYPE = [bool, np.uint8]
+INT_TYPE = [np.int32, np.int64]
+
+
+class CompareConst:
+    NAN = np.nan
+    NA = "N/A"
+    PASS = 'pass'
+    WARNING = 'warning'
+    ERROR = 'error'
+    SKIP = 'SKIP'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
+
 
 def get_callstack():
     callstack = []
@@ -179,3 +194,20 @@ class DispatchException(Exception):
 
     def __str__(self):
         return self.err_msg
+
+
+def check_dtype_comparable(x, y):
+    if x.dtype in FLOAT_TYPE:
+        if y.dtype in FLOAT_TYPE:
+            return True
+        return False
+    if x.dtype in BOOL_TYPE:
+        if y.dtype in BOOL_TYPE:
+            return True
+        return False
+    if x.dtype in INT_TYPE:
+        if y.dtype in INT_TYPE:
+            return True
+        return False
+    logger_warn(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
+    return False

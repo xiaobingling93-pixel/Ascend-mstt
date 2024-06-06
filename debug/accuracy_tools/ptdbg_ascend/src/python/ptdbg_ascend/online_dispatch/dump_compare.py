@@ -7,13 +7,13 @@ import pandas as pd
 import torch
 from ..common.utils import Const, CompareConst, add_time_as_suffix
 from ..compare.acc_compare import cosine_similarity, get_max_abs_err, get_max_relative_err, check_accuracy
-from .utils import np_save_data, logger_debug, logger_error, logger_user, COLOR_RED, COLOR_GREEN, COLOR_RESET, \
-    CSV_COLUMN_NAME
+from .utils import np_save_data, logger_debug, logger_error, logger_warn, logger_user, COLOR_RED, COLOR_GREEN, \
+    COLOR_RESET, CSV_COLUMN_NAME
 from ..common.file_check_util import FileOpen, change_mode, FileCheckConst
 
 
 class DispatchRunParam:
-    def __init__(self, debug_flag, device_id, root_npu_path, root_cpu_path, process_num):
+    def __init__(self, debug_flag, device_id, root_npu_path, root_cpu_path, process_num, comparator):
         # static parameters are initialized by constructors, and dynamic parameters are constructed at run time
         self.debug_flag = debug_flag
         self.device_id = device_id
@@ -29,6 +29,7 @@ class DispatchRunParam:
         self.api_index = None
         self.dump_flag = None
         self.auto_dump_flag = None
+        self.comparator = comparator
 
 
 class TimeStatistics:
@@ -209,23 +210,15 @@ def save_temp_summery(api_index, single_api_summery, path, lock):
     lock.release()
 
 
-def dispatch_workflow(run_param, cpu_args, cpu_kwargs, all_summery, func, npu_out_cpu, cpu_out, lock):
+def dispatch_workflow(run_param: DispatchRunParam, cpu_args, cpu_kwargs, all_summery, func, npu_out_cpu, cpu_out, lock):
     single_api_summery = []
 
     prefix_input = f'{run_param.aten_api}_{run_param.single_api_index}_input'
     prefix_output = f'{run_param.aten_api}_{run_param.single_api_index}_output'
-    with TimeStatistics("COMPARE INPUT", run_param):
-        # assume the input is the same
-        compare_data(run_param, cpu_args, cpu_args, prefix_input, single_api_summery, False)
-        if len(cpu_kwargs) > 0:
-            for k, v in cpu_kwargs.items():
-                # kwargs_prefix_name must be the same as the name when dump_data
-                kwargs_prefix_name = prefix_input + f'_{k}'
-                compare_data(run_param, v, v, kwargs_prefix_name, single_api_summery, False)
 
     accuracy_reached = False
     with TimeStatistics("COMPARE OUTPUT", run_param):
-        accuracy_reached = compare_data(run_param, npu_out_cpu, cpu_out, prefix_output, single_api_summery, True)
+        run_param.comparator.comapre_output(prefix_output, cpu_out, npu_out_cpu, None, None)
 
     # user set dump or auto mode will dump
     if run_param.dump_flag or (run_param.auto_dump_flag and not accuracy_reached):
