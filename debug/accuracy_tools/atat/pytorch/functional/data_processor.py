@@ -238,14 +238,15 @@ class DataProcessor:
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
+        data_clone = tensor.detach()
         if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
             if tensor_json['Max'] is None:
                 return
             if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
+                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "max")
                 self.has_overflow = True
             if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
+                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "min")
                 self.has_overflow = True
         else:
             self.has_overflow = check_overflow_npu()
@@ -408,14 +409,14 @@ class OverflowTensorDataProcessor(DataProcessor):
     def analyze_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_forward(name, module_input_output)
+        api_info_struct = super().analyze_forward(name, module, module_input_output)
         self.maybe_save_overflow_data_and_check_overflow_times()
         return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module,
                         module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_backward(name, module_input_output)
+        api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.maybe_save_overflow_data_and_check_overflow_times()
         return api_info_struct if self.has_overflow else None
 
