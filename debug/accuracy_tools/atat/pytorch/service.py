@@ -61,7 +61,6 @@ class Service:
             return output
 
         def backward_hook(repair, api_or_module_name, module, grad_input, grad_output):
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
             nonlocal module_type, pid
             if not self.switch:
                 return
