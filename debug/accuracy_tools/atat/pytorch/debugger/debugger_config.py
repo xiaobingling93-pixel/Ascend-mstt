@@ -1,7 +1,6 @@
 from ..common import print_warn_log_rank_0, seed_all
 from ...core.utils import Const
 
-
 class DebuggerConfig:
     def __init__(self, common_config, task_config, task, dump_path, level):
         self.dump_path = dump_path if dump_path else common_config.dump_path
@@ -33,9 +32,7 @@ class DebuggerConfig:
                 "preheat_step": task_config.preheat_step if task_config.preheat_step else 15, 
                 "max_sample": task_config.max_sample if task_config.max_sample else 20, 
             }
-
-        
-
+            
         self.check()
         if self.step:
             self.step.sort()
@@ -68,4 +65,9 @@ class DebuggerConfig:
             for s in self.step:
                 if not isinstance(s, int) or s < 0:
                     raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
-                
+    
+    def check_model(self, model):
+        if self.level in ["L0", "mix"] and not model:
+            raise Exception(
+                f"For level {self.level}, PrecisionDebugger must receive a model argument.",
+            )

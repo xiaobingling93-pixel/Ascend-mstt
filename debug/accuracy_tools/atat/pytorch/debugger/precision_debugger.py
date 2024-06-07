@@ -1,36 +1,51 @@
+import torch
 from .debugger_config import DebuggerConfig
 from ..service import Service
 from ..common import print_warn_log_rank_0
 from ..pt_config import parse_json_config
+from ..common.exceptions import MsaccException
 
 
 class PrecisionDebugger:
     _instance = None
 
-    def __new__(cls, config_path=None, task=None, dump_path=None, level=None):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(PrecisionDebugger, cls).__new__(cls)
             cls._instance.config = None
-            cls._instance.model = None
             cls._instance.enable_dataloader = False
         return cls._instance
 
-    def __init__(self, config_path=None, task=None, dump_path=None, level=None):
-        if not hasattr(self, 'initialized'):
+    def __init__(
+        self,
+        config_path=None,
+        task=None,
+        dump_path=None,
+        level=None,
+        model=None,
+        step=None,
+    ):
+        if not hasattr(self, "initialized"):
             self.initialized = True
+            self.model = self.check_model_valid(model)
             common_config, task_config = parse_json_config(config_path, task)
-            self.config = DebuggerConfig(common_config, task_config, task, dump_path, level)
+            if step:
+                common_config.step = step
+            self.config = DebuggerConfig(
+                common_config, task_config, task, dump_path, level
+            )
+            self.config.check_model(self.model)
             self.service = Service(self.config)
-    
+
     @classmethod
-    def start(cls, model):
+    def start(cls):
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
         if instance.enable_dataloader:
             print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(model)
+            instance.service.start(instance.model)
 
     @classmethod
     def stop(cls):
@@ -47,3 +62,11 @@ class PrecisionDebugger:
         if not cls._instance:
             raise Exception("PrecisionDebugger instance is not created.")
         cls._instance.service.step()
+
+    @staticmethod
+    def check_model_valid(model):
+        if not model or isinstance(model, torch.nn.Module):
+            return model
+        raise MsaccException(
+            MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
+        )
