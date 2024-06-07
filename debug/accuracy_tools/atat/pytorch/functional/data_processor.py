@@ -409,14 +409,14 @@ class OverflowTensorDataProcessor(DataProcessor):
     def analyze_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_forward(name, module_input_output)
+        api_info_struct = super().analyze_forward(name, module, module_input_output)
         self.maybe_save_overflow_data_and_check_overflow_times()
         return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module,
                         module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
-        api_info_struct = super().analyze_backward(name, module_input_output)
+        api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.maybe_save_overflow_data_and_check_overflow_times()
         return api_info_struct if self.has_overflow else None
 
