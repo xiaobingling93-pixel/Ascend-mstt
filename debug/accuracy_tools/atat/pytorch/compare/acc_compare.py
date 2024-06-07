@@ -338,7 +338,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         if bench_val != 0:
                             relative = str(abs((diff/bench_val) * 100)) + '%'
                         else:
-                            relative = 0
+                            relative = "N/A"
                         result_item[start_idx + i] = diff
                         result_item[start_idx + i + 4] = relative
                         magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
