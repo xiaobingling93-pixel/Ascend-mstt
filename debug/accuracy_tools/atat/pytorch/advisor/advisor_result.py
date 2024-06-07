@@ -18,8 +18,7 @@ import os
 import time
 
 from .advisor_const import AdvisorConst
-from ..common.utils import Const
-from ..common.log import print_info_log, print_error_log
+from ...core.utils import Const, print_info_log, print_error_log
 from ..common.file_check import change_mode, FileCheckConst
 
 

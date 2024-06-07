@@ -17,8 +17,8 @@
 import os
 import sys
 import re
-from ..common.utils_compare import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, task_dumppath_get
+from ...core.utils import print_error_log, CompareException, check_compare_param, \
+    check_configuration_param, task_dumppath_get, check_file_or_directory_path
 from .acc_compare import compare_core
 
 

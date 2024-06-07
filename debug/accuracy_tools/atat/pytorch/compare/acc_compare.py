@@ -27,10 +27,9 @@ import pandas as pd
 
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
-from ..common.utils_compare import check_compare_param, add_time_as_suffix, CompareException, \
-    CompareConst, format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
-from ..common.utils import Const
-from ..common.log import print_info_log, print_warn_log, print_error_log
+from ...core.utils import check_compare_param, add_time_as_suffix, CompareException, CompareConst, \
+    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
+    print_warn_log, print_error_log, Const
 from ..common.file_check import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
