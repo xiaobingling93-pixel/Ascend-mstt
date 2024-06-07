@@ -103,7 +103,7 @@ class DataCollector:
             data_info = self.data_processor.analyze_backward(name, module, module_input_output)
         if data_info:
             msg = self.update_data(data_info, msg)
-        print_info_log(msg)
+            print_info_log(msg)
         self.data_writer.flush_data_when_buffer_is_full()
 
     def module_count_func(self, name, name_template):

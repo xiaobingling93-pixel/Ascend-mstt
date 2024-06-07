@@ -7,7 +7,6 @@ from .functional.scope import BaseScope
 from .common.utils import get_rank_if_initialized, is_gpu, Const
 from .common.file_check import FileChecker, FileCheckConst, check_path_before_create
 from .common import print_info_log_rank_0
-from .common.exceptions import MsaccException
 from .hook_module.api_registry import api_register
 from .hook_module import remove_dropout
 from .functional.data_processor import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
@@ -33,7 +32,7 @@ class Service:
 
     def build_hook(self, module_type, name):
         def pre_hook(repair, api_or_module_name, module, args, kwargs):
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
             if not self.switch:
                 return args, kwargs
@@ -45,7 +44,7 @@ class Service:
             return args, kwargs
 
         def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
             if not self.switch:
                 return
@@ -86,19 +85,13 @@ class Service:
             self.step_post_process()
         self.collect_data.update_iter(self.current_iter)
 
-    @staticmethod
-    def check_model_valid(model):
-        if isinstance(model, torch.nn.Module):
-            return model
-        raise MsaccException(MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。")
-
     def start(self, model):
+        self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
             raise Exception("atat: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
             return
-        self.model = self.check_model_valid(model)
         if self.first_start:
             self.current_rank = get_rank_if_initialized()
             if self.config.rank and self.current_rank not in self.config.rank:
@@ -150,9 +143,6 @@ class Service:
         if self.config.level in ["L0", "mix"]:
             assert self.model is not None
             print_info_log_rank_0("The init dump mode is enabled, and the module dump function will not be available")
-            if not isinstance(self.model, torch.nn.Module):
-                raise MsaccException(MsaccException.INVALID_PARAM_ERROR,
-                                          "The argument model must be an object of torch.nn.Module")
             for name, module in self.model.named_modules():
                 if module == self.model:
                     continue

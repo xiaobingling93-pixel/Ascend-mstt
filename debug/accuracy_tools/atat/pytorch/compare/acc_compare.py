@@ -318,7 +318,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 
             if summary_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " "]
+                               " ", " ", " ", " ", " ", " ", " ", " "]
             else:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                " ", " ", " ", " ", " "]
@@ -334,7 +334,12 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 for i, (npu_val, bench_val) in enumerate(zip(npu_summery_data, bench_summery_data)):
                     if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
                         diff = npu_val - bench_val
+                        if bench_val != 0:
+                            relative = str(abs((diff/bench_val) * 100)) + '%'
+                        else:
+                            relative = "N/A"
                         result_item[start_idx + i] = diff
+                        result_item[start_idx + i + 4] = relative
                         magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
                         if magnitude_diff > 0.5:
                             warning_flag = True

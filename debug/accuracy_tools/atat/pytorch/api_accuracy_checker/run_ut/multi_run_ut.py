@@ -9,8 +9,8 @@ import threading
 from collections import namedtuple
 from itertools import cycle
 from tqdm import tqdm
-from ...common.file_check import FileCheckConst, FileChecker, \
-    check_file_suffix, check_link, FileOpen
+from ...common import parse_json_info_forward_backward
+from ...common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen
 from ..compare.compare import Comparator
 from .run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
 from ..common.utils import print_error_log, print_warn_log, print_info_log, create_directory
@@ -18,12 +18,19 @@ from ...common.file_check import check_path_before_create
 
 
 def split_json_file(input_file, num_splits, filter_api):
-    with FileOpen(input_file, 'r') as file:
-        data = json.load(file)
-        if filter_api:
-            data = preprocess_forward_content(data)
+    forward_data, backward_data, real_data_path = parse_json_info_forward_backward(input_file)
+    if filter_api:
+        forward_data = preprocess_forward_content(forward_data)
+    for data_name in list(forward_data.keys()):
+        forward_data[f"{data_name}.forward"] = forward_data.pop(data_name)
+    for data_name in list(backward_data.keys()):
+        backward_data[f"{data_name}.backward"] = backward_data.pop(data_name)
 
-    items = list(data.items())
+    with FileOpen(input_file, 'r') as file:
+        input_data = json.load(file)
+        input_data.pop("data")
+
+    items = list(forward_data.items())
     total_items = len(items)
     chunk_size = total_items // num_splits
     split_files = []
@@ -31,9 +38,18 @@ def split_json_file(input_file, num_splits, filter_api):
     for i in range(num_splits):
         start = i * chunk_size
         end = (i + 1) * chunk_size if i < num_splits - 1 else total_items
+
+        split_forward_data = dict(items[start:end])
+        temp_data = {
+            **input_data,
+            "data":{
+                **split_forward_data,
+                **backward_data
+            }
+        }
         split_filename = f"temp_part{i}.json"
         with FileOpen(split_filename, 'w') as split_file:
-            json.dump(dict(items[start:end]), split_file)
+            json.dump(temp_data, split_file)
         split_files.append(split_filename)
 
     return split_files, total_items
@@ -43,11 +59,14 @@ def signal_handler(signum, frame):
     print_warn_log(f'Signal handler called with signal {signum}')
     raise KeyboardInterrupt()
 
+
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
 
 
-ParallelUTConfig = namedtuple('ParallelUTConfig', ['forward_files', 'backward_files', 'out_path', 'num_splits', 'save_error_data_flag', 'jit_compile_flag', 'device_id', 'result_csv_path', 'total_items', 'real_data_path'])
+ParallelUTConfig = namedtuple('ParallelUTConfig', ['api_files', 'out_path', 'num_splits',
+                                                   'save_error_data_flag', 'jit_compile_flag', 'device_id',
+                                                   'result_csv_path', 'total_items', 'real_data_path'])
 
 
 def run_parallel_ut(config):
@@ -58,10 +77,12 @@ def run_parallel_ut(config):
     print_info_log(f"Starting parallel UT with {config.num_splits} processes")
     progress_bar = tqdm(total=config.total_items, desc="Total items", unit="items")
 
-    def create_cmd(fwd, bwd, dev_id):
+    def create_cmd(api_info, dev_id):
+        dirname, filename = os.path.split(os.path.abspath(__file__))
+        run_ut_path = os.path.join(dirname, "run_ut.py")
         cmd = [
-            sys.executable, 'run_ut.py',
-            '-api_info', fwd,
+            sys.executable, run_ut_path,
+            '-api_info', api_info,
             *(['-o', config.out_path] if config.out_path else []),
             '-d', str(dev_id),
             *(['-j'] if config.jit_compile_flag else []),
@@ -84,7 +105,7 @@ def run_parallel_ut(config):
                     sys.stdout.flush()
         except ValueError as e:
             print_warn_log(f"An error occurred while reading subprocess output: {e}")
-    
+
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
             try:
@@ -96,9 +117,9 @@ def run_parallel_ut(config):
             except Exception as e:
                 print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
             time.sleep(1)
-    
-    for fwd, bwd in zip(config.forward_files, config.backward_files):
-        cmd = create_cmd(fwd, bwd, next(device_id_cycle))
+
+    for api_info in config.api_files:
+        cmd = create_cmd(api_info, next(device_id_cycle))
         process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
@@ -114,7 +135,7 @@ def run_parallel_ut(config):
                 process.wait(timeout=1)
             except subprocess.TimeoutExpired:
                 process.kill()
-        for file in config.forward_files:
+        for file in config.api_files:
             check_link(file)
             try:
                 os.remove(file)
@@ -124,7 +145,7 @@ def run_parallel_ut(config):
     try:
         for process in processes:
             process.communicate(timeout=None)
-    except KeyboardInterrupt: 
+    except KeyboardInterrupt:
         print_warn_log("Interrupted by user, terminating processes and cleaning up...")
     except Exception as e:
         print_error_log(f"An unexpected error occurred: {e}")
@@ -143,30 +164,28 @@ def run_parallel_ut(config):
 
 
 def prepare_config(args):
-    check_link(args.forward_input_file)
-    check_link(args.backward_input_file) if args.backward_input_file else None
-    forward_file = os.path.realpath(args.forward_input_file)
-    backward_file = os.path.realpath(args.backward_input_file) if args.backward_input_file else None
-    check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+    check_link(args.api_info_file)
+    api_info = os.path.realpath(args.api_info_file)
+    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
-    forward_splits, total_items = split_json_file(args.forward_input_file, args.num_splits, args.filter_api)
-    backward_splits = [backward_file] * args.num_splits if backward_file else [None] * args.num_splits
+    split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
+
     result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
-        print_info_log(f"UT task result will be saved in {result_csv_path}")
-        print_info_log(f"UT task details will be saved in {details_csv_path}")
     else:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-        print_info_log(f"UT task result will be saved in {result_csv_path}")
-        print_info_log(f"UT task details will be saved in {details_csv_path}")
-    return ParallelUTConfig(forward_splits, backward_splits, out_path, args.num_splits, args.save_error_data, args.jit_compile, args.device_id, result_csv_path, total_items, args.real_data_path)
+    print_info_log(f"UT task result will be saved in {result_csv_path}")
+    print_info_log(f"UT task details will be saved in {details_csv_path}")
+    return ParallelUTConfig(split_files, out_path, args.num_splits, args.save_error_data,
+                            args.jit_compile, args.device_id, result_csv_path,
+                            total_items, args.real_data_path)
 
 
 def main():
@@ -176,6 +195,7 @@ def main():
     args = parser.parse_args()
     config = prepare_config(args)
     run_parallel_ut(config)
+
 
 if __name__ == '__main__':
     main()
