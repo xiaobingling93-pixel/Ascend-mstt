@@ -4,9 +4,11 @@
 
 ## 在线精度预检流程
 
+在线精度预检当前支持**局域网场景**和**共享存储场景**，请根据不同的场景选择对应的配置。
+
 在线精度预检操作流程如下：
 
-1. 准备GPU和NPU可正常运行的训练环境，PyTorch版本大于等于2.0，并保证两台Host在同一局域网内可正常通信。
+1. 准备GPU和NPU可正常运行的训练环境，PyTorch版本大于等于2.0，并保证两台Host在同一局域网内可正常通信或能通过共享存储进行通信。
 2. GPU和NPU Host设备上同时安装预检工具，详见《[Ascend模型精度预检工具](./README.md)》，其中在线预检要多安装twisted依赖，该依赖为Python模块。
 3. 分别配置GPU侧、NPU侧的config.yaml文件。
 4. 在GPU侧运行run_ut.py。
@@ -31,16 +33,100 @@
 | error_data_path     | 配置保存精度未达标的API输入输出数据路径，str类型。在线预检模式下该参数不生效。 | 否       |
 | precision           | 浮点数表示位数，int类型，默认取小数点后14位。                | 否       |
 | is_online           | 在线预检模式开关，bool类型，可取值True（开启）、False（关闭），默认关闭。 | 是       |
+| nfs_path            | 在线预检模式共享存储目录路径，str类型，用于GPU设备和NPU设备间进行通信。配置该参数后host和port不生效。 | 是       |
 | is_benchmark_device | 在线预检模式标杆设备，bool类型，可取值True（开启）、False（关闭），默认关闭。GPU侧配置开启，表示为标杆设备；NPU侧配置关闭，表示为待比对设备。 | 是       |
-| host                | 在线预检模式信息接收端IP，str类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机地址127.0.0.1或本机局域网IP，NPU侧须配置为GPU侧的局域网IP地址。 | 是       |
-| port                | 在线预检模式信息接收端端口号，int类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机可用端口，NPU侧须配置为GPU侧的端口号。 | 是       |
+| host                | 在线预检模式局域网场景信息接收端IP，str类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机地址127.0.0.1或本机局域网IP，NPU侧须配置为GPU侧的局域网IP地址。局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。 | 是       |
+| port                | 在线预检模式局域网场景信息接收端端口号，int类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机可用端口，NPU侧须配置为GPU侧的端口号。局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。 | 是       |
 | rank_list           | 指定在线预检的Rank ID，默认值为[0]，list[int]类型，应配置为大于等于0的整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则在线预检输出数据为空。GPU和NPU须配置一致。 | 否       |
+
+#### 局域网场景配置示例
+
+若复制下列示例，请删除注释后使用。
+
+GPU侧：
+
+```yaml
+dump_path: './'        # GPU侧配置生效
+real_data: False 
+enable_dataloader: False
+target_iter: [1]        # GPU侧和NPU侧的配置值需相同
+white_list: []        # GPU侧配置生效
+error_data_path: './'
+precision: 14
+is_online: True        # 在线预检模式开关，配置开启
+nfs_path: ""        # 局域网场景配置为空
+is_benchmark_device: True        # 标杆设备，GPU侧配置开启
+host: "127.0.0.1"        # GPU侧配置为本地回环地址或本地局域网地址
+port: 59208        # GPU侧配置为本地局域网可用端口号
+rank_list: [0]
+```
+
+NPU侧：
+
+```yaml
+dump_path: './'        # GPU侧配置生效，NPU侧无需配置
+real_data: False
+enable_dataloader: False
+target_iter: [1]        # GPU侧和NPU侧的配置值需相同
+white_list: []        # GPU侧配置生效，NPU侧无需配置
+error_data_path: './'
+precision: 14
+is_online: True        # 在线预检模式开关，配置开启
+nfs_path: ""        # 局域网场景配置为空
+is_benchmark_device: False        # 标杆设备，NPU侧配置关闭
+host: "xx.xx.xx.x"        # 配置为GPU侧Host局域网地址
+port: 59208        # 配置为GPU侧Host局域网可用端口号
+rank_list: [0]
+```
+
+#### 共享存储场景配置示例
+
+若复制下列示例，请删除注释后使用。
+
+GPU侧：
+
+```yaml
+dump_path: './'        # GPU侧配置生效
+real_data: False
+enable_dataloader: False
+target_iter: [1]        # GPU侧和NPU侧的配置值需相同
+white_list: []        # GPU侧配置生效
+error_data_path: './'
+precision: 14
+is_online: True        # 在线预检模式开关，配置开启
+nfs_path: "/nfs/xxx/data"        # 共享存储场景配置为共享存储目录路径
+is_benchmark_device: True        # 标杆设备，GPU侧配置开启
+host: ""        # 共享存储场景无需配置
+port: -1        # 共享存储场景无需配置
+rank_list: [0]
+```
+
+NPU侧：
+
+```yaml
+dump_path: './'        # GPU侧配置生效，NPU侧无需配置
+real_data: False
+enable_dataloader: False
+target_iter: [1]        # GPU侧和NPU侧的配置值需相同
+white_list: []        # GPU侧配置生效，NPU侧无需配置
+error_data_path: './'
+precision: 14
+is_online: True        # 在线预检模式开关，配置开启
+nfs_path: "/nfs/xxx/data"        # 共享存储场景配置为共享存储目录路径
+is_benchmark_device: False        # 标杆设备，NPU侧配置关闭
+host: ""        # 共享存储场景无需配置
+port: -1        # 共享存储场景无需配置
+rank_list: [0]
+```
 
 ### 在GPU侧运行run_ut.py
 
 由于GPU侧为通信接收端，需先于NPU侧执行run_ut操作。
 
-GPU侧配置好config.yaml文件后执行run_ut.py脚本，此时GPU处于预检等待状态，当NPU侧启动训练后将预检的API输入和输出数据发送到GPU侧时，GPU启动预检操作。
+GPU侧配置好config.yaml文件后执行run_ut.py脚本，此时GPU处于预检等待状态：
+
+- 局域网场景：当NPU侧启动训练后将预检的API输入和输出数据发送到GPU侧时，GPU启动预检操作。
+- 共享存储场景：当NPU侧启动训练后将预检的API输入和输出数据发送到共享存储时，GPU启动预检操作。
 
 命令如下：
 
