@@ -22,7 +22,6 @@ class Config:
             'target_iter': list,
             'white_list': list,
             'error_data_path': str,
-            'jit_compile': bool,
             'precision': int,
             'is_online': bool,
             'nfs_path': str,
