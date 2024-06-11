@@ -428,7 +428,7 @@ def run_ut_command(args):
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         initialize_save_error_data()
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, args.real_data_path)
+                                args.result_csv_path, real_data_path)
     run_ut(run_ut_config)
 
 
