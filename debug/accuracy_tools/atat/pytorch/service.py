@@ -106,6 +106,8 @@ class Service:
     def stop(self):
         if self.config.step and self.current_iter not in self.config.step:
             return
+        if self.config.rank and self.current_rank not in self.config.rank:
+            return
         self.switch = False
         self.collect_data.write_json()
 
