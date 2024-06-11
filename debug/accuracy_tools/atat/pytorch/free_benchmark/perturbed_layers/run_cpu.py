@@ -16,6 +16,4 @@ class CpuLayer(BaseLayer):
         new_args = Tools.convert_device_and_dtype(params.args, DeviceType.CPU, change_dtype=True)
         new_kwargs = Tools.convert_device_and_dtype(params.kwargs, DeviceType.CPU, change_dtype=True)
         params.perturbed_result = params.origin_func(*new_args, **new_kwargs)
-        if "inplace" in new_kwargs:
-            new_kwargs["inplace"] = False
-        return self.perturbed_result(params)
+        return params.perturbed_result

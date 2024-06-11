@@ -16,18 +16,19 @@ else:
     current_device = "npu"
 import torch
 from tqdm import tqdm
-from .data_generate import gen_api_params, gen_args
-from ..common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const, create_directory
-from ..compare.compare import Comparator
-from ..hook_module.wrap_tensor import TensorOPTemplate
-from ..hook_module.wrap_functional import FunctionalOPTemplate
-from ..hook_module.wrap_torch import TorchOPTemplate
-from ..common.config import msCheckerConfig
-from ..dump.api_info import APIInfo
-from ...common.parse_json import parse_json_info_forward_backward
-from ...common.file_check import check_path_before_create
-from ...common.file_check import FileOpen, FileCheckConst, FileChecker, \
+
+from atat.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
+from atat.pytorch.api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, \
+    api_info_preprocess, print_error_log, initialize_save_path, Const, create_directory
+from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
+from atat.pytorch.api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
+from atat.pytorch.api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
+from atat.pytorch.api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
+from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from atat.pytorch.api_accuracy_checker.dump.api_info import APIInfo
+from atat.pytorch.common.parse_json import parse_json_info_forward_backward
+from atat.pytorch.common.file_check import check_path_before_create
+from atat.pytorch.common.file_check import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link
 
 current_time = time.strftime("%Y%m%d%H%M%S")

@@ -125,9 +125,16 @@ class Const:
     SUPPORT_DUMP_MODE = ['api', 'acl']
     ON = 'ON'
     OFF = 'OFF'
+    KWARGS = 'kwargs'
+    INPUT = 'input'
+    OUTPUT = 'output'
     BACKWARD = 'backward'
     FORWARD = 'forward'
     PRE_FORWARD = "pre_forward"
+    INPUT_ARGS = 'input_args'
+    INPUT_KWARGS = 'input_kwargs'
+    GRAD_INPUT = 'grad_input'
+    GRAD_OUTPUT = 'grad_output'
     START = "start"
     STOP = "stop"
 
