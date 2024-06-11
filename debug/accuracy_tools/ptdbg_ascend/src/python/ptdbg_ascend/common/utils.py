@@ -41,7 +41,7 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1']
+torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True
@@ -77,6 +77,7 @@ class Const:
     BACKWARD = 'backward'
     FORWARD = 'forward'
     PRE_FORWARD = "pre_forward"
+    DELIMITER = '.'
 
     # dump mode
     ALL = "all"
@@ -115,8 +116,10 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-                    "_reduce_scatter_base", "_all_gather_base"]
+    INPLACE_LIST = [
+        "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
+        ]
 
 
 class CompareConst:
@@ -162,7 +165,7 @@ class CompareConst:
 
     SUMMARY_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
-        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, ACCURACY, ERROR_MESSAGE
+        NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, RESULT, ERROR_MESSAGE
     ]
 
     MD5_COMPARE_RESULT_HEADER = [
@@ -173,6 +176,9 @@ class CompareConst:
     NAN = 'Nan'
     SHAPE_UNMATCH = 'shape unmatched'
     DTYPE_UNMATCH = 'dtype unmatched'
+    PASS = 'Pass'
+    WARNING = 'Warning'
+    DIFF = 'Different'
 
     # accuracy standards
     COS_THRESHOLD = 0.99
@@ -198,6 +204,8 @@ class VersionCheck:
     V1_11 = "1.11"
     V2_0 = "2.0"
     V2_1 = "2.1"
+    V2_2 = "2.2"
+    
 
     @staticmethod
     def check_torch_version(version):
@@ -448,14 +456,14 @@ def is_starts_with(string, prefix_list):
 
 def check_stack_mode(pkl_fp):
     api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    api_pattern = r'\[\"([0-9a-zA-Z_.]+.(for|back)ward).(in|out)put(\.[0-9]+)?'
     is_stack_mode = False
     for index, line in enumerate(pkl_fp):
         if index == 0:
             api_match = re.search(api_pattern, line)
             api_prefix = api_match.group(1)
         elif api_prefix and line.startswith(f'["{api_prefix}'):
-            if line.startswith(f'["{api_prefix}_stack_info'):
+            if line.startswith(f'["{api_prefix}.stack_info'):
                 is_stack_mode = True
                 break
         else:

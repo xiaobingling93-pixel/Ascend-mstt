@@ -17,12 +17,17 @@ else:
 import torch
 from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
+from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const, create_directory
+    print_error_log, initialize_save_path, Const, create_directory, Const
 from api_accuracy_checker.compare.compare import Comparator
+from api_accuracy_checker.compare.compare_column import CompareColumn
+from api_accuracy_checker.compare.compare_utils import CompareConst
 from api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
 from api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
 from api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
+from api_accuracy_checker.hook_module.wrap_aten import AtenOPTemplate
+from api_accuracy_checker.hook_module.wrap_npu_custom import NPUOPTemplate
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.dump.api_info import APIInfo
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
@@ -31,14 +36,19 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link
 
+if msCheckerConfig.is_online:
+    from api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec
+    from api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
-RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
-DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
+RESULT_FILE_NAME = f"accuracy_checking_result_" + current_time + ".csv"
+DETAILS_FILE_NAME = f"accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path'])
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
+not_raise_dtype_set = {'type_as'}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -66,6 +76,12 @@ def exec_api(api_type, api_name, args, kwargs):
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
         out = torch_api.forward(*args, **kwargs)
+    if api_type == "Aten":
+        torch_api = AtenOPTemplate(api_name)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "NPU":
+        torch_api = NPUOPTemplate(api_name, None, False)
+        out = torch_api.forward(*args, **kwargs)
     return out
 
 
@@ -73,7 +89,18 @@ def deal_detach(arg, to_detach=True):
     return arg.detach() if to_detach else arg
 
 
-def deal_dtype(arg, raise_dtype=None):
+def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
+    '''
+    将标杆数据的dtype转换为raise_dtype
+    输入：
+        api_name：api名称
+        arg：标杆输入
+        raise_dtype：需要转换的dtype
+    输出： 
+        arg: 转换dtype的标杆输入
+    '''
+    if api_name in hf_32_standard_api and arg.dtype == torch.float32:
+        return arg
     if raise_dtype is None or arg.dtype not in Const.RAISE_PRECISION or raise_dtype == arg.dtype:
         return arg
     return arg.type(raise_dtype)
@@ -108,13 +135,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(deal_dtype(arg_in.clone(), raise_dtype), to_detach).requires_grad_()
+                arg_in = deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype), to_detach).requires_grad_()
                 temp_arg_in = arg_in * 1
                 arg_in = temp_arg_in.type_as(arg_in)
                 arg_in.retain_grad()
                 return arg_in
             else:
-                return deal_detach(deal_dtype(arg_in.clone(), raise_dtype=raise_dtype), to_detach)
+                return deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
         else:
             return arg_in
 
@@ -142,6 +169,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
+    raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
     cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
@@ -156,71 +184,129 @@ def run_ut(config):
         error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
         print_info_log(f"UT task error_datas will be saved in {error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
-    with FileOpen(config.result_csv_path, 'r') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)
-        api_name_set = {row[0] for row in csv_reader}
+    if msCheckerConfig.is_online:
+        run_api_online(config, compare)
+    else:
+        with FileOpen(config.result_csv_path, 'r') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader)
+            api_name_set = {row[0] for row in csv_reader}
+        run_api_offline(config, compare, api_name_set)
+    for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
+        change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        print_info_log(f"UT task result csv is saved in {result_csv_path}")
+        print_info_log(f"UT task details csv is saved in {details_csv_path}")
+    compare.print_pretest_result()
+
+
+def run_api_offline(config, compare, api_name_set):
     for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
         try:
             if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split("*")
+                [_, api_name, _] = api_full_name.split(Const.DELIMITER)
                 if api_name not in set(msCheckerConfig.white_list):
                     continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
-            is_fwd_success, is_bwd_success = compare.compare_output(api_full_name,
-                                                                    data_info.bench_out,
-                                                                    data_info.device_out,
-                                                                    data_info.bench_grad_out,
-                                                                    data_info.device_grad_out)
+            is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
             if config.save_error_data:
                 do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split("*")
+            [_, api_name, _] = api_full_name.split(Const.DELIMITER)
             if "expected scalar type Long" in str(err):
                 print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
-            compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
+            err_column = CompareColumn()
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
             else:
                 torch.npu.empty_cache()
             gc.collect()
-    change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    compare.print_pretest_result()
+
+
+def run_api_online(config, compare):
+    attl = init_attl()
+    dispatcher = ConsumerDispatcher(compare=compare)
+    dispatcher.start(handle_func=run_torch_api_online, config=config)
+
+    def tcp_communication_flow():
+        while True:
+            api_data = attl.recv()
+            if api_data == 'STOP_':
+                continue
+            if api_data == 'KILL_':
+                time.sleep(1)
+                print_info_log("==========接收到STOP信号==========")
+                dispatcher.stop()
+                attl.stop_serve()
+                time.sleep(1)
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+
+            if msCheckerConfig.white_list:
+                [_, api_name, _] = api_full_name.split(Const.DELIMITER)
+                if api_name not in set(msCheckerConfig.white_list):
+                    continue
+            dispatcher.update_consume_queue(api_data)
+
+    def shared_storage_communication_flow():
+        flag_num = -1
+        while True:
+            api_data = attl.download()
+            if api_data == "start":
+                if flag_num == -1:
+                    flag_num += 1
+                flag_num += 1
+            if api_data == "end":
+                flag_num -= 1
+            if flag_num == 0:
+                dispatcher.stop()
+                break
+            if isinstance(api_data, ApiData):
+                dispatcher.update_consume_queue(api_data)
+
+    if msCheckerConfig.nfs_path:
+        shared_storage_communication_flow()
+    else:
+        tcp_communication_flow()
 
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        api_full_name = api_full_name.replace("*", ".")
         for element in data_info.in_fwd_data_list:
             UtAPIInfo(api_full_name + '.forward.input', element)
-        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
-        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_out)
+        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_output)
+        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_output)
         UtAPIInfo(api_full_name + '.backward.input', data_info.grad_in)
-        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
-        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
+        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad)
+        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split("*")
+    backward_message = ''
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
     if not need_grad:
-        print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward."
-                       % api_full_name)
+        print_warn_log(f"{api_full_name} {Backward_Message.UNSUPPORT_BACKWARD_MESSAGE.format(api_full_name)}")
+        backward_message += Backward_Message.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        print_warn_log(
-            "%s function backward result is None, skip backward." % api_full_name)
+        print_warn_log(f"{api_full_name} {Backward_Message.NO_BACKWARD_RESULT_MESSAGE.format(api_full_name)}")
+        backward_message += Backward_Message.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
@@ -239,17 +325,31 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         grad_index = grad_input_index.get('grad_index')
 
     if need_backward:
-        backward_args = backward_content[api_full_name]
-        grad = gen_args(backward_args, real_data_path=real_data_path)[0]
-        bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
-        bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
-        device_grad = grad.clone().detach().to(current_device)
-        device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
+        if need_to_backward(grad_index, out):
+            backward_args = backward_content[api_full_name]
+            grad = gen_args(backward_args, api_name, real_data_path=real_data_path)[0]
+            bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
+            bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
+            device_grad = grad.clone().detach().to(current_device)
+            device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
+        else:
+            backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
 
-    if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
-                          in_fwd_data_list)
-    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
+
+
+def run_torch_api_online(api_full_name, api_data, backward_content):
+    in_fwd_data_list = []
+    [api_type, api_name, _] = api_full_name.split(Const.DELIMITER)
+    args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
+    in_fwd_data_list.append(args)
+    in_fwd_data_list.append(kwargs)
+    if kwargs.get("device"):
+        del kwargs["device"]
+
+    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = move2device_exec(device_out, "cpu")
+    return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
@@ -257,16 +357,20 @@ def get_api_info(api_info_dict, api_name, real_data_path):
     need_grad = True
     if api_info_dict.get("kwargs") and "out" in api_info_dict.get("kwargs"):
         need_grad = False
-    args, kwargs = gen_api_params(api_info_dict, need_grad, convert_type, real_data_path)
+    args, kwargs = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
     return args, kwargs, need_grad
+
+
+def need_to_backward(grad_index, out):
+    if grad_index is None and isinstance(out, (list, tuple)):
+        return False
+    return True
 
 
 def run_backward(args, grad, grad_index, out):
 
     if grad_index is not None:
         out[grad_index].backward(grad)
-    elif isinstance(out, (list, tuple)):
-        raise NotImplementedError("Multiple backward is not supported.")
     else:
         out.backward(grad)
     args_grad = []
@@ -312,13 +416,21 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
+def init_attl():
+    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
+                                  connect_ip=msCheckerConfig.host,
+                                  connect_port=msCheckerConfig.port,
+                                  nfs_path=msCheckerConfig.nfs_path if msCheckerConfig.nfs_path else None))
+    return attl
+
+
 def _run_ut_parser(parser):
     parser.add_argument("-forward", "--forward_input_file", dest="forward_input_file", default="", type=str,
-                        help="<Required> The api param tool forward result file: generate from api param tool, "
+                        help="<Optional> The api param tool forward result file: generate from api param tool, "
                              "a json file.",
-                        required=True)
+                        required=False)
     parser.add_argument("-backward", "--backward_input_file", dest="backward_input_file", default="", type=str,
-                        help="<Required> The api param tool backward result file: generate from api param tool, "
+                        help="<Optional> The api param tool backward result file: generate from api param tool, "
                              "a json file.",
                         required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
@@ -357,29 +469,37 @@ def _run_ut_parser(parser):
 def preprocess_forward_content(forward_content):
     processed_content = {}
     base_keys_variants = {}
+    arg_cache = {}
+
     for key, value in forward_content.items():
-        base_key = key.rsplit('*', 1)[0]
-        new_args = value['args']
-        new_kwargs = value['kwargs']
-        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
-        if base_key in base_keys_variants:
+        base_key = key.rsplit(Const.DELIMITER, 1)[0]
+
+        if key not in arg_cache:
+            new_args = value['args']
+            new_kwargs = value['kwargs']
+            filtered_new_args = [
+                {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
+                for arg in new_args if isinstance(arg, dict)
+            ]
+            arg_cache[key] = (filtered_new_args, new_kwargs)
+
+        filtered_new_args, new_kwargs = arg_cache[key]
+
+        if base_key not in base_keys_variants:
+            processed_content[key] = value
+            base_keys_variants[base_key] = {key}
+        else:
             is_duplicate = False
-            for variant in base_keys_variants.get(base_key, []):
-                try:
-                    existing_args = processed_content[variant].get('args', [])
-                    existing_kwargs = processed_content[variant].get('kwargs', {})
-                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
-                except KeyError as e:
-                    print_error_log(f"KeyError: {e} when processing {key}")
-                if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
+            for variant in base_keys_variants[base_key]:
+                existing_args, existing_kwargs = arg_cache[variant]
+                if existing_args == filtered_new_args and existing_kwargs == new_kwargs:
                     is_duplicate = True
                     break
+
             if not is_duplicate:
                 processed_content[key] = value
-                base_keys_variants[base_key].append(key)
-        else:
-            processed_content[key] = value
-            base_keys_variants[base_key] = [key]
+                base_keys_variants[base_key].add(key)
+
     return processed_content
 
 
@@ -403,18 +523,23 @@ def run_ut_command(args):
     except Exception as error:
         print_error_log(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.forward_input_file)
-    forward_file = os.path.realpath(args.forward_input_file)
-    check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content = get_json_contents(forward_file)
+    forward_content = {}
+    if args.forward_input_file:
+        check_link(args.forward_input_file)
+        forward_file = os.path.realpath(args.forward_input_file)
+        check_file_suffix(forward_file, FileCheckConst.JSON_SUFFIX)
+        forward_content = get_json_contents(forward_file)
     if args.filter_api:
+        print_info_log("Start filtering the api in the forward_input_file.")
         forward_content = preprocess_forward_content(forward_content)
+        print_info_log("Finish filtering the api in the forward_input_file.")
     backward_content = {}
     if args.backward_input_file:
         check_link(args.backward_input_file)
@@ -438,13 +563,16 @@ def run_ut_command(args):
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad_out, device_grad_out, device_out, bench_out, grad_in, in_fwd_data_list):
-        self.bench_grad_out = bench_grad_out
-        self.device_grad_out = device_grad_out
-        self.device_out = device_out
-        self.bench_out = bench_out
+    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, 
+                 backward_message, rank=0):
+        self.bench_grad = bench_grad
+        self.device_grad = device_grad
+        self.device_output = device_output
+        self.bench_output = bench_output
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
+        self.backward_message = backward_message
+        self.rank = rank
 
 
 class UtAPIInfo(APIInfo):

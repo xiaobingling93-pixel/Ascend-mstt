@@ -316,7 +316,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             err_msg = ""
             if md5_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2], n_struct[2] == b_struct[2]]
+                               n_struct[2], b_struct[2], CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 result.append(result_item)
@@ -336,16 +336,21 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
-                for i, val in enumerate(zip(npu_summery_data, bench_summery_data)):
-                    if all(isinstance(value, (float, int)) for value in val):
-                        result_item[start_idx + i] = val[0] - val[1]
+                warning_flag = False
+                for i, (npu_val, bench_val) in enumerate(zip(npu_summery_data, bench_summery_data)):
+                    if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
+                        diff = npu_val - bench_val
+                        result_item[start_idx + i] = diff
+                        magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
+                        if magnitude_diff > 0.5:
+                            warning_flag = True
                     else:
                         result_item[start_idx + i] = CompareConst.NAN
-                replace_res = map(lambda x: f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x,
-                                  result_item[start_idx:])
-                result_item[start_idx:] = list(replace_res)
+                accuracy_check = CompareConst.WARNING if warning_flag else ""
+                err_msg += "Need double check api accuracy." if warning_flag else ""
+                result_item[start_idx:] = [f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x for x in result_item[start_idx:]]
 
-            result_item.append(CompareConst.ACCURACY_CHECK_YES)
+            result_item.append(accuracy_check if summary_compare else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
             if has_stack and index == 0 and key == "input_struct":
                 result_item.extend(npu_stack_info)
@@ -622,9 +627,8 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
         compare_process([npu_pkl, bench_pkl, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
         if summary_compare:
             print_info_log(f"Summary compare result is {file_path}")
-            return
 
-    if not md5_compare:
+    if not md5_compare and not summary_compare:
         _do_multi_process(input_parma, file_path)
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
     if auto_analyze:
@@ -705,10 +709,6 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     if stack_mode:
         header.append(CompareConst.STACK)
     result_df = pd.DataFrame(result, columns=header)
-    if summary_compare and not md5_compare:
-        header.remove(CompareConst.ACCURACY)
-        header.remove(CompareConst.ERROR_MESSAGE)
-        result_df = result_df[header]
     result_df.to_csv(output_csv_handle, index=False)
 
 

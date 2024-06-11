@@ -19,6 +19,7 @@ _PYTORCH_VERSION_1_8 = "1.8"
 _PYTORCH_VERSION_1_11 = "1.11"
 _PYTORCH_VERSION_2_0 = "2.0"
 _PYTORCH_VERSION_2_1 = "2.1"
+_PYTORCH_VERSION_2_2 = "2.2"
 _PYTHON_BIN_PATH_ENV = "ADAPTER_TARGET_PYTHON_PATH"
 _ASCEND_INSTALLED_PATH_ENV = "ASCEND_INSTALLED_PATH"
 
@@ -50,7 +51,7 @@ def setup_python(env_path):
     """Get python install path."""
     default_python_bin_path = sys.executable
     ask_python_bin_path = ('Please specify the location of python with valid '
-                           'pytorch 1.11/2.0/2.1 site-packages installed. [Default '
+                           'pytorch 1.11/2.0/2.1/2.2 site-packages installed. [Default '
                            'is %s]\n(You can make this quiet by set env '
                            '[ADAPTER_TARGET_PYTHON_PATH]): ') % default_python_bin_path
     custom_python_bin_path = env_path
@@ -80,9 +81,10 @@ def setup_python(env_path):
             if (not compile_args[0].startswith(_PYTORCH_VERSION_1_8)) and \
                     (not compile_args[0].startswith(_PYTORCH_VERSION_1_11)) and \
                     (not compile_args[0].startswith(_PYTORCH_VERSION_2_0)) and \
-                    (not compile_args[0].startswith(_PYTORCH_VERSION_2_1)):
-                print('Currently supported Pytorch version is %s/%s, we got %s.'
-                      % (_PYTORCH_VERSION_1_11, _PYTORCH_VERSION_2_0, _PYTORCH_VERSION_2_1, compile_args[0]))
+                    (not compile_args[0].startswith(_PYTORCH_VERSION_2_1)) and \
+                    (not compile_args[0].startswith(_PYTORCH_VERSION_2_2)):
+                print('Currently supported Pytorch version is %s/%s/%s/%s, we got %s.'
+                      % (_PYTORCH_VERSION_1_11, _PYTORCH_VERSION_2_0, _PYTORCH_VERSION_2_1, _PYTORCH_VERSION_2_2, compile_args[0]))
                 continue
         except subprocess.CalledProcessError:
             print('Pytorch is not installed or does not work properly.')

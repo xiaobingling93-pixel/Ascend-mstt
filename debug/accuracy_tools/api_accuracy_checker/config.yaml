@@ -4,6 +4,11 @@ enable_dataloader: False
 target_iter: [1]
 white_list: []
 error_data_path: './'
-jit_compile: True
 precision: 14
+is_online: False
+nfs_path: ""
+is_benchmark_device: True
+host: ""
+port: -1
+rank_list: [0]
  

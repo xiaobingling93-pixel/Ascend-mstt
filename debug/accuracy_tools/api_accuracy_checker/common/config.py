@@ -22,8 +22,13 @@ class Config:
             'target_iter': list,
             'white_list': list,
             'error_data_path': str,
-            'jit_compile': bool,
-            'precision': int
+            'precision': int,
+            'is_online': bool,
+            'nfs_path': str,
+            'is_benchmark_device': bool,
+            'host': str,
+            'port': int,
+            'rank_list': list
         }
         if key not in validators:
             raise ValueError(f"{key} must be one of {validators.keys()}")
@@ -48,6 +53,9 @@ class Config:
             invalid_api = [i for i in value if i not in WrapApi]
             if invalid_api:
                 raise ValueError(f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
+        if key == 'nfs_path':
+            if value and not os.path.exists(value):
+                raise ValueError(f"nfs path {value} doesn't exist.")
         return value
 
     def __getattr__(self, item):
@@ -56,13 +64,20 @@ class Config:
     def __str__(self):
         return '\n'.join(f"{key}={value}" for key, value in self.config.items())
 
-    def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None):
+    def update_config(self, dump_path=None, real_data=None, target_iter=None, white_list=None, enable_dataloader=None,
+                      is_online=None, is_benchmark_device=True, port=None, host=None, rank_list=None):
         args = {
-            "dump_path": dump_path if dump_path else self.config.get("dump_path", './'),
-            "real_data": real_data if real_data else self.config.get("real_data", False),
-            "target_iter": target_iter if target_iter else self.config.get("target_iter", [1]),
-            "white_list": white_list if white_list else self.config.get("white_list", []),
-            "enable_dataloader": enable_dataloader if enable_dataloader else self.config.get("enable_dataloader", False)
+            "dump_path": dump_path if dump_path is not None else self.config.get("dump_path", './'),
+            "real_data": real_data if real_data is not None else self.config.get("real_data", False),
+            "target_iter": target_iter if target_iter is not None else self.config.get("target_iter", [1]),
+            "white_list": white_list if white_list is not None else self.config.get("white_list", []),
+            "enable_dataloader": enable_dataloader
+            if enable_dataloader is not None else self.config.get("enable_dataloader", False),
+            "is_online": is_online if is_online is not None else self.config.get("is_online", False),
+            "is_benchmark_device": is_benchmark_device,
+            "host": host if host is not None else self.config.get("host", ""),
+            "port": port if port is not None else self.config.get("port", -1),
+            "rank_list": rank_list if rank_list is not None else self.config.get("rank_list", [0])
         }
         for key, value in args.items():
             if key in self.config:
