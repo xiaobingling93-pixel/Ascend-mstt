@@ -10,7 +10,8 @@ class CommonConfig:
         self.step = json_config.get('step')
         self.level = json_config.get('level')
         self.seed = json_config.get('seed')
-        self.is_deterministic = json_config.get('is_deterministic')
+        self.is_deterministic = json_config.get('is_deterministic', False)
+        self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()
 
     def _check_config(self):
@@ -24,8 +25,10 @@ class CommonConfig:
             raise Exception("level is invalid")
         if self.seed is not None and not isinstance(self.seed, int):
             raise Exception("seed is invalid")
-        if self.is_deterministic is not None and not isinstance(self.is_deterministic, bool):
+        if not isinstance(self.is_deterministic, bool):
             raise Exception("is_deterministic is invalid")
+        if not isinstance(self.enable_dataloader, bool):
+            raise Exception("enable_dataloader is invalid")
         
 
 # 基础配置类

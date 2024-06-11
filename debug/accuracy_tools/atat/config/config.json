@@ -6,6 +6,7 @@
     "level": "L1", 
     "seed": 1234,
     "is_deterministic": false, 
+    "enable_dataloader": false,
     "tensor": {
         "scope": [], 
         "list":[], 

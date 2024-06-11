@@ -1,4 +1,5 @@
 import torch
+from torch.utils.data import dataloader
 from .debugger_config import DebuggerConfig
 from ..service import Service
 from ..common import print_warn_log_rank_0
@@ -36,6 +37,10 @@ class PrecisionDebugger:
             )
             self.config.check_model(self.model)
             self.service = Service(self.config)
+            self.enable_dataloader = self.config.enable_dataloader
+            if self.enable_dataloader:
+                print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
+                dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
     @classmethod
     def start(cls):
@@ -70,3 +75,17 @@ class PrecisionDebugger:
         raise MsaccException(
             MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
         )
+
+
+def iter_tracer(func):
+    def func_wrapper(*args, **kwargs):
+        debugger_instance = PrecisionDebugger._instance
+        debugger_instance.enable_dataloader = False
+        if not debugger_instance.service.first_start:
+            debugger_instance.stop()
+            debugger_instance.step()
+        result = func(*args, **kwargs)
+        debugger_instance.start()
+        debugger_instance.enable_dataloader = True
+        return result
+    return func_wrapper
