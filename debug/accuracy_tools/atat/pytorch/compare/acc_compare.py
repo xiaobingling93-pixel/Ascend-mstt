@@ -30,7 +30,7 @@ from ..advisor.advisor import Advisor
 from ...core.utils import check_compare_param, add_time_as_suffix, CompareException, CompareConst, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
     print_warn_log, print_error_log, Const
-from ..common.file_check import FileChecker, FileCheckConst, change_mode, FileOpen
+from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
 def correct_data(result):

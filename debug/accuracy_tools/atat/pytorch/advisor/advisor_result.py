@@ -19,7 +19,7 @@ import time
 
 from .advisor_const import AdvisorConst
 from ...core.utils import Const, print_info_log, print_error_log
-from ..common.file_check import change_mode, FileCheckConst
+from ...core.file_check_util import FileCheckConst, change_mode
 
 
 class AdvisorResult:

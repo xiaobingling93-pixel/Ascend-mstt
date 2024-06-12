@@ -1,6 +1,6 @@
 import os
 import yaml
-from ..common.file_check import FileOpen
+from ...core.file_check_util import FileOpen
 from ...core.utils import CompareException
 
 
