@@ -385,7 +385,7 @@ def is_starts_with(string, prefix_list):
 
 def _check_json(json_file_handle, file_name):
     tensor_line = json_file_handle.readline()
-    if len(tensor_line) == 0:
+    if not tensor_line:
         print_error_log("dump file {} have empty line!".format(file_name))
         raise CompareException(CompareException.INVALID_DUMP_FILE)
     json_file_handle.seek(0, 0)
