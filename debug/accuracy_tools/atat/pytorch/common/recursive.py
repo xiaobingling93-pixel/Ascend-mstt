@@ -3,7 +3,7 @@ import torch
 _recursive_key_stack = []
 def recursive_apply_transform(args, transform):
     global _recursive_key_stack
-    if isinstance(args, (list, tuple)):
+    if type(args) in (list, tuple):
         transform_result = []
         for i, arg in enumerate(args):
             _recursive_key_stack.append(str(i))
