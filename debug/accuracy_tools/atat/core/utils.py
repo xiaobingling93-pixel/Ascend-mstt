@@ -637,10 +637,8 @@ def md5_find(data):
     for key_op in data:
         for api_info in data[key_op]:
             if isinstance(data[key_op][api_info], list):
-                for i in range(len(data[key_op][api_info])):
-                    if data[key_op][api_info][i] == None:
-                        continue
-                    elif 'md5' in data[key_op][api_info][i]:
+                for data_detail in data[key_op][api_info]:
+                    if data_detail and 'md5' in data_detail:
                         return True
             elif 'md5' in data[key_op][api_info]:
                 return True
@@ -660,19 +658,18 @@ def task_dumppath_get(input_param):
     if npu_json_data['task'] != bench_json_data['task']:
         print_error_log(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    else:
-        if npu_json_data['task'] == 'tensor':
+    if npu_json_data['task'] == Const.TENSOR:
+        summary_compare = False
+        md5_compare = False
+    elif npu_json_data['task'] == Const.STATISTICS:
+        md5_compare = md5_find(npu_json_data['data'])
+        if md5_compare:
             summary_compare = False
-            md5_compare = False
-        elif npu_json_data['task'] == 'statistics':
-            md5_compare = md5_find(npu_json_data['data'])
-            if md5_compare:
-                summary_compare = False
-            else:
-                summary_compare = True
         else:
-            print_error_log(f"Compare is not required for overflow_check.")
-            raise CompareException(CompareException.INVALID_TASK_ERROR)
-        input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
-        input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
-        return summary_compare, md5_compare
+            summary_compare = True
+    else:
+        print_error_log(f"Compare is not required for overflow_check or free_benchmark.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
+    input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
+    return summary_compare, md5_compare
