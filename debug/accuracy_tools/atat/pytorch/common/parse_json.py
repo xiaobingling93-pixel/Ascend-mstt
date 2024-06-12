@@ -14,7 +14,7 @@ def parse_json_info_forward_backward(json_path):
     with open(json_path, 'r') as f:
         dump_json = json.load(f)
 
-    real_data_path = dump_json.get("dump_path")
+    real_data_path = dump_json.get("dump_data_dir")
     dump_data = dump_json.get("data")
     if not dump_data:
         raise ParseJsonException(ParseJsonException.InvalidDumpJson, "dump数据中没有data字段")
