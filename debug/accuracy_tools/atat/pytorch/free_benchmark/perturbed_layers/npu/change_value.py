@@ -16,7 +16,7 @@ class ChangeValueLayer(NpuBaseLayer):
 
     def _check_details(self, tensor_obj):
         """
-        判断是否需要添加扰动,  bit翻转
+        判断是否需要添加扰动,  首尾交换
         """
         if tensor_obj.size(0) < 2:
             print_warn_log_rank_0(
