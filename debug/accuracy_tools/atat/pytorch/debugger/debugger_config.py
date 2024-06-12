@@ -9,7 +9,8 @@ class DebuggerConfig:
         self.step = common_config.step if common_config.step else []
         self.level = level or common_config.level or "L1"
         self.seed = common_config.seed if common_config.seed else 1234
-        self.is_deterministic = common_config.is_deterministic if common_config.is_deterministic else False
+        self.is_deterministic = common_config.is_deterministic
+        self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
         self.data_mode =  task_config.data_mode if task_config.data_mode else ["all"]
