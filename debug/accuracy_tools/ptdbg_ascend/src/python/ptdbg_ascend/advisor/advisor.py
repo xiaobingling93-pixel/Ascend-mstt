@@ -35,11 +35,7 @@ class Advisor:
         self.out_path = os.path.realpath(out_path)
 
     def _parse_input_data(self):
-        try:
-            data_columns = self.input_data.columns.values
-        except AttributeError as e:
-            print_error_log('Failed to parse the input data')
-            raise CompareException(CompareException.NONE_ERROR) from e
+        data_columns = self.input_data.columns.values
         if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
             self.file_type = Const.ALL
         elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):

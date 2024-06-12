@@ -26,10 +26,11 @@ import numpy as np
 import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill
+from collections import namedtuple
 
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
-from ..common.utils import check_compare_param, add_time, \
+from ..common.utils import check_compare_param, add_time_with_xlsx, \
     print_info_log, print_warn_log, print_error_log, CompareException, Const, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
     is_summary_compare, is_md5_compare
@@ -40,7 +41,7 @@ def correct_data(result):
     if result == CompareConst.NAN:
         return result
     if float(result) > 0.99999:
-        return '1.0'
+        return 1.0
     return result
 
 
@@ -53,7 +54,7 @@ def cosine_similarity(n_value, b_value):
     b_norm = np.linalg.norm(b_value)
     message = ''
     if a_norm <= Const.FLOAT_EPSILON and b_norm <= Const.FLOAT_EPSILON:
-        result = '1.0'
+        result = 1.0
     elif a_norm <= Const.FLOAT_EPSILON:
         message = 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.'
         result = CompareConst.NAN
@@ -231,6 +232,7 @@ def rename_api(npu_name, process):
 
 
 def merge_tensor(tensor_list):
+    """Return a dictionary of one API with its name, input, output, summery and stack info"""
     op_dict = {}
     op_dict["op_name"] = []
     op_dict["input_struct"] = []
@@ -261,6 +263,7 @@ def merge_tensor(tensor_list):
 
 
 def read_op(ops_queue, pkl_file_handle, stack_mode):
+    """Read input pkl file and get one API info with dictionary format once"""
     tensor_list = []
     read_err = False
     read_output_flag = {"last_line": False, "curr_line": False}
@@ -296,6 +299,7 @@ def read_op(ops_queue, pkl_file_handle, stack_mode):
 
 
 def match_op(npu_queue, bench_queue, fuzzy_match):
+    """Match NPU with bench API"""
     for b_index, b_op in enumerate(bench_queue[0: -1]):
         if check_op(npu_queue[-1], b_op, fuzzy_match):
             return len(npu_queue) - 1, b_index
@@ -308,6 +312,7 @@ def match_op(npu_queue, bench_queue, fuzzy_match):
 
 
 def get_accuracy(result, n_dict, b_dict, highlight_dict, summary_compare=False, md5_compare=False):
+    """Compare and add one API's input and output results to dataframe"""
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
         npu_stack_info = n_dict.get("stack_info", None)
@@ -396,41 +401,48 @@ def get_accuracy(result, n_dict, b_dict, highlight_dict, summary_compare=False, 
     last_len = len(result)
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
     get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
+    # check whether to highlight API rows if using summary compare
     if summary_compare:
         find_error_rows(result[last_len:], last_len, n_num_input, highlight_dict, summary_compare)
 
 
-def check_order_magnitude(api_in, api_out, red, yellow, blue, num, summary_compare=False):
-    # check if order magnitude diff larger than 1
+def check_order_magnitude(info, color_columns, summary_compare=True):
+    """Check if order magnitude diff of max_diff larger than 1"""
+    api_in, api_out, num = info
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
     if api_in[max_diff_index] > api_out[max_diff_index]:
         return
     in_order = 0 if api_in[max_diff_index] == 0 else math.log10(abs(api_in[max_diff_index]))
     out_order = 0 if api_out[max_diff_index] == 0 else math.log10(abs(api_out[max_diff_index]))
     if abs(in_order - out_order) >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
-        yellow.append(num)
+        color_columns.yellow.append(num)
 
 
-def check_one_thousand_error_ratio(api_in, api_out, red, yellow, blue, num, summary_compare=False):
+def check_one_thousand_error_ratio(info, color_columns, summary_compare=True):
+    """Compare output's one thousand error ratio with input's """
+    api_in, api_out, num = info
     one_thousand_index = get_header_index('One Thousandth Err Ratio', summary_compare)
     if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
         return
     if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
-        red.append(num)
+        color_columns.red.append(num)
     elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
-        yellow.append(num)
+        color_columns.yellow.append(num)
 
 
-def check_cosine_similarity(api_in, api_out, red, yellow, blue, num, summary_compare=False):
+def check_cosine_similarity(info, color_columns, summary_compare=True):
+    """Check if output's cosine similarity more than 0.1 smaller than input's"""
+    api_in, api_out, num = info
     cosine_index = get_header_index('Cosine', summary_compare)
-    if isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
+    if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
         return
     if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
-        yellow.append(num)
+        color_columns.yellow.append(num)
 
 
-def check_max_relative_diff(api_in, api_out, red, yellow, blue, num, summary_compare=True):
-    # check max_diff / bench_max
+def check_max_relative_diff(info, color_columns, summary_compare=True):
+    """Compare the output value of max_diff / bench_max with input"""
+    api_in, api_out, num = info
     max_diff_index = get_header_index('Max diff', summary_compare)
     bench_max_index = get_header_index('Bench max', summary_compare)
     input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
@@ -438,26 +450,26 @@ def check_max_relative_diff(api_in, api_out, red, yellow, blue, num, summary_com
     if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff, (float, int)):
         return
     if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
-        red.append(num)
+        color_columns.red.append(num)
     elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
-        yellow.append(num)
+        color_columns.yellow.append(num)
 
 
-def check_overflow(line, red, yellow, blue, num, summary_compare=False):
-    # check if Inf or Nan exists, or large number
+def check_overflow(info, color_columns, summary_compare=False):
+    """Check if Inf or Nan exists in NPU max/min, or large number in Max diff"""
+    line, num = info
     npu_max_index = get_header_index('NPU max', summary_compare)
     npu_min_index = get_header_index('NPU min', summary_compare)
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
     if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
-        red.append(num)
+        color_columns.red.append(num)
         return
     # check if Max_Diff > 1e+10
     if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
-        red.append(num)
+        color_columns.red.append(num)
 
 
 def get_header_index(header_name, summary_compare=False):
-    header = []
     if summary_compare:
         header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
     else:
@@ -469,6 +481,7 @@ def get_header_index(header_name, summary_compare=False):
 
 
 class HighlightRules:
+    """Highlight rules to check whether API errors"""
     # rules for every line: pass in every line of api to check if error exists
     basic_rules = {
         "check_overflow": check_overflow
@@ -487,19 +500,26 @@ class HighlightRules:
 
 
 def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False):
+    """Find error api and return dict with highlight information red or yellow"""
     npu_max_index = get_header_index('NPU max', summary_compare)
     bench_max_index = get_header_index('Bench max', summary_compare)
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
 
-    red, yellow, blue = [], [], []
+    red_lines, yellow_lines = [], [] #lines to highlight red or yellow
+    LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
+    ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
+    ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+    color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+
     for i, line in enumerate(result):
         num = last_len + i
+        line_info = LineInfo(line_data=line, num_pointer=num)
         for rule in HighlightRules.basic_rules.values():
-            rule(line, red, yellow, blue, num, summary_compare)
+            rule(line_info, color_columns, summary_compare)
 
     for n, api_out in enumerate(result[n_num_input:len(result)]):
         num = last_len + n_num_input + n
-        if num in red:
+        if num in red_lines:
             continue
         if not isinstance(api_out[npu_max_index], (float, int)) \
                 or not isinstance(api_out[bench_max_index], (float, int)) \
@@ -511,19 +531,88 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compa
                     or not isinstance(api_in[max_diff_index], (float, int)):
                 continue
 
+            api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
             if summary_compare:
                 for rule in HighlightRules.summary_compare_rules.values():
-                    rule(api_in, api_out, red, yellow, blue, num, summary_compare)
+                    rule(api_info, color_columns, summary_compare)
             else:
                 for rule in HighlightRules.compare_rules.values():
-                    rule(api_in, api_out, red, yellow, blue, num, summary_compare)
+                    rule(api_info, color_columns, summary_compare)
 
-    highlight_dict['red_rows'].extend(list(set(red)))
-    highlight_dict['yellow_rows'].extend(list(set(yellow) - set(red)))
-    highlight_dict['blue_rows'].extend(list(set(blue) - set(yellow) - set(red)))
+    highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
+    highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+
+
+def get_name_and_state(name):
+    """Get api/module name and state"""
+    if "input" in name:
+        api_name = name.split("input")[0]
+        state = "input"
+    else:
+        api_name = name.split("output")[0]
+        state = "output"
+    return api_name, state
+
+
+def find_compare_result_error_rows(result_df, highlight_dict):
+    """Group the API with its input and output, then find error API with func find_error_rows"""
+    result = result_df.values
+    start, input_num, output_num, end = 0, 0, 0, len(result_df)
+    last_api_name, last_state = None, None
+    num, last_len = 0, 0
+    for i in range(len(result)):
+        api_name, state = get_name_and_state(result[i][0])
+        if last_api_name:
+            if api_name == last_api_name:
+                if state == last_state:
+                    num += 1
+                else:
+                    input_num = num
+                    num, last_state = 1, state
+            else:
+                output_num = num
+                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+                num, last_api_name, last_state = 1, api_name, state
+                start += input_num + output_num
+                input_num, output_num = 1, 0
+        else:
+            num, last_api_name, last_state = 1, api_name, state
+    if state:
+        if state == "input":
+            input_num = num
+        else:
+            output_num = num
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+
+
+def highlight_rows_xlsx(result_df, highlight_dict, file_path):
+    """Write and highlight results in Excel"""
+    print_info_log('Compare result is %s' % file_path)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+
+    # write header
+    for j, col_name in enumerate(result_df.columns, start=1):
+        ws.cell(row=1, column=j, value=col_name)
+
+    for i, row in enumerate(result_df.iterrows(), start=2):
+        for j, value in enumerate(row[1], start=1):
+            if not isinstance(value, (float, int)):
+                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
+            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+
+            if (i - 2) in highlight_dict['red_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.RED,
+                                                            end_color=CompareConst.RED, fill_type="solid")
+            elif (i - 2) in highlight_dict['yellow_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
+                                                            end_color=CompareConst.YELLOW, fill_type="solid")
+    wb.save(file_path)
 
 
 def _do_multi_process(input_parma, result_df):
+    """Use multiprocess to handle real data"""
     try:
         result_df = _handle_multi_process(compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
         return result_df
@@ -533,6 +622,7 @@ def _do_multi_process(input_parma, result_df):
 
 
 def read_dump_data(result_df):
+    """Return a dict to pair npu name with bench name"""
     try:
         npu_dump_name_list = result_df.iloc[0:, 0].tolist()
         bench_dump_name_list = result_df.iloc[0:, 1].tolist()
@@ -551,6 +641,7 @@ def read_dump_data(result_df):
 
 
 def _handle_multi_process(func, input_parma, result_df, lock):
+    """To split and multiprocess real data"""
     process_num = int((multiprocessing.cpu_count() + 1) / 2)
     op_name_mapping_dict = read_dump_data(result_df)
 
@@ -583,6 +674,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
 
 
 def compare_ops(idx, dump_path_dict, result_df, lock, input_parma):
+    """Return a dataframe with compare results of real data"""
     cos_result = []
     max_err_result = []
     max_relative_err_result = []
@@ -650,6 +742,7 @@ def check_accuracy(cos, max_abs_err):
 
 
 def compare_by_op(op_name, op_name_mapping_dict, input_parma):
+    """Compare single NPU data with bench data"""
     npu_bench_name_list = op_name_mapping_dict[op_name]
     if npu_bench_name_list[1] == CompareConst.NAN:
         return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, CompareConst.NO_BENCH, CompareConst.NAN, CompareConst.NAN
@@ -741,12 +834,13 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
 
 
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
-                 suffix='.xlsx', fuzzy_match=False, summary_compare=False, md5_compare=False):
+                 suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
+    """Compare NPU with bench data then return compare results and advise"""
     print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
-    file_name = add_time("compare_result")  + suffix
+    file_name = add_time_with_xlsx("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
-    highlight_dict = {'red_rows': [], 'yellow_rows': [], 'blue_rows': []}
+    highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
     with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
             FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
@@ -761,65 +855,6 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
     if auto_analyze:
         advisor = Advisor(result_df, output_path)
         advisor.analysis()
-
-
-def find_compare_result_error_rows(result_df, highlight_dict):
-    result = result_df.values
-    start, input_num, output_num, end = 0, 0, 0, len(result_df)
-    last_api_name, last_state = None, None
-    num, last_len = 0, 0
-    for i in range(len(result)):
-        full_name_list = result[i][0].split(".")
-        api_name, state = ".".join(full_name_list[0:4]), full_name_list[4]
-        if last_api_name:
-            if api_name == last_api_name:
-                if state == last_state:
-                    num += 1
-                else:
-                    input_num = num
-                    num, last_state = 1, state
-            else:
-                output_num = num
-                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
-                num, last_api_name, last_state = 1, api_name, state
-                start += input_num + output_num
-                input_num, output_num = 1, 0
-        else:
-            num, last_api_name, last_state = 1, api_name, state
-    if state:
-        if state == "input":
-            input_num = num
-        else:
-            output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
-
-
-def highlight_rows_xlsx(result_df, highlight_dict, file_path):
-    print_info_log('Compare result is %s' % file_path)
-
-    wb = openpyxl.Workbook()
-    ws = wb.active
-
-    # write header
-    for j, col_name in enumerate(result_df.columns, start=1):
-        ws.cell(row=1, column=j, value=col_name)
-
-    for i, row in enumerate(result_df.iterrows(), start=2):
-        for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)):
-                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
-
-            if (i - 2) in highlight_dict['red_rows']:
-                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.RED,
-                                                            end_color=CompareConst.RED, fill_type="solid")
-            elif (i - 2) in highlight_dict['yellow_rows']:
-                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
-                                                            end_color=CompareConst.YELLOW, fill_type="solid")
-            elif (i - 2) in highlight_dict['blue_rows']:
-                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.BLUE,
-                                                            end_color=CompareConst.BlUE, fill_type="solid")
-    wb.save(file_path)
 
 
 def parse(pkl_file, module_name_prefix):
@@ -858,6 +893,7 @@ def parse(pkl_file, module_name_prefix):
 
 
 def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summary_compare=False, md5_compare=False):
+    """Read input pkl files, compare summary/md5 data between NPU and bench and return dataframe"""
     npu_pkl_handle, bench_pkl_handle = file_handles
     if fuzzy_match:
         print_warn_log("This task uses fuzzy matching, which may affect the accuracy of the comparison.")

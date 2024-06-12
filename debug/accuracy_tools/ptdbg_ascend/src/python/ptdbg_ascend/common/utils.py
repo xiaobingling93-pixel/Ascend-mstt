@@ -648,8 +648,8 @@ def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
-def add_time(name):
-    return '{}_{}'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+def add_time_with_xlsx(name):
+    return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
 def get_time():
@@ -657,7 +657,7 @@ def get_time():
 
 
 def format_value(value):
-    return '{:.12f}'.format(value)
+    return float('{:.12f}'.format(value))
 
 
 def torch_device_guard(func):

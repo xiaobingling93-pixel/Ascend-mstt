@@ -47,13 +47,18 @@ class TestCommonUtilsMethods(unittest.TestCase):
         csv_name = '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
         self.assertEqual(common.add_time_as_suffix(name), csv_name)
 
+    def test_add_time_with_xlsx(self):
+        name = "op_cmp"
+        xlsx_name = '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+        self.assertEqual(common.add_time_with_xlsx(name), xlsx_name)
+
     def test_get_time(self):
         time = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
         self.assertEqual(common.get_time(), time)
 
     def test_format_value(self):
         value = 12345.6789
-        format_value = '{:.12f}'.format(value)
+        format_value = float('{:.12f}'.format(value))
         self.assertEqual(common.format_value(value), format_value)
 
     def test_modify_dump_path(self):

@@ -4,6 +4,8 @@ import numpy as np
 import os
 from ptdbg_ascend.compare import acc_compare as compare
 from ptdbg_ascend.common.utils import CompareConst
+from collections import namedtuple
+import pandas as pd
 
 
 npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1', 'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],\
@@ -73,26 +75,52 @@ aten_result = [['Aten__native_batch_norm_legit_functional.default_0_forward_inpu
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.4', 'Nan', 'torch.float32', 'Nan', [256], 'Nan', ' ', ' ', ' ', ' ', ' ', 61.7945556640625, 42.59713363647461, 52.03831481933594, 'Nan', 'Nan', 'Nan', 'Yes', '']
     ]
 
-highlight_dict = {'red_rows': [], 'yellow_rows': [], 'blue_rows': []}
+highlight_dict = {'red_rows': [], 'yellow_rows': []}
+LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
+ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
+ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
+num_0, num_1, num_2, num_3 = 0, 1, 2, 3
+summary_line_input = ['Functional_batch_norm_0_forward_input.0', 'Functional_batch_norm_0_forward_input.0', 'torch.float16',
+                      'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1, 'Yes', '']
+summary_line_1 = ['Functional_batch_norm_0_forward_output.0', 'Functional_batch_norm_0_forward_output.0', 'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 'Warning', '']
+summary_line_2 = ['Functional_batch_norm_0_forward_output.1', 'Functional_batch_norm_0_forward_output.1', 'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1, 'Warning', '']
+summary_line_3 = ['Functional_batch_norm_0_forward_output.2', 'Functional_batch_norm_0_forward_output.2', 'torch.float16',
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 'Warning', '']
+api_summary_info_1 = ApiInfo(api_input=summary_line_input, api_output=summary_line_1, num_pointer=num_1)
+api_summary_info_2 = ApiInfo(api_input=summary_line_input, api_output=summary_line_2, num_pointer=num_2)
+api_summary_info_3 = ApiInfo(api_input=summary_line_input, api_output=summary_line_3, num_pointer=num_3)
+line_input = ['Functional_batch_norm_0_forward_input.0', 'Functional_batch_norm_0_forward_input.0', 'torch.float16',
+              'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 1, 1, 0.95, 1, 1, 1, 1, 1, 1.01, 1, 1, 1, 'Yes', '']
+line_1 = ['Functional_batch_norm_0_forward_output.0', 'Functional_batch_norm_0_forward_output.0', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 1, 1, 0.59, 1, 'nan', 0, 1, 1, 19, 1, 1, 1, 'Warning', '']
+line_2 = ['Functional_batch_norm_0_forward_output.1', 'Functional_batch_norm_0_forward_output.1', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14],  0.9, 1, 1, 0.8, 1, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1, 'Warning', '']
+line_3 = ['Functional_batch_norm_0_forward_output.2', 'Functional_batch_norm_0_forward_output.2', 'torch.float16',
+          'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.8, 1.1e+10, 1, 0.85, 1, 9, 0.12, 0, 1, 1, 0.1, 1, 1, 1, 'Warning', '']
+api_info_1 = ApiInfo(api_input=line_input, api_output=line_1, num_pointer=num_1)
+api_info_2 = ApiInfo(api_input=line_input, api_output=line_2, num_pointer=num_2)
+api_info_3 = ApiInfo(api_input=line_input, api_output=line_3, num_pointer=num_3)
 
 class TestUtilsMethods(unittest.TestCase):
     def test_correct_data(self):
         input_1 = 'NAN'
         result_1 = compare.correct_data(input_1)
         self.assertEqual(result_1, 'NAN')
-        input_2 = '0.99999'
+        input_2 = 0.99999
         result_2 = compare.correct_data(input_2)
-        self.assertEqual(result_2, '0.99999')
-        input_3 = '0.999991'
+        self.assertEqual(result_2, 0.99999)
+        input_3 = 0.999991
         result_3 = compare.correct_data(input_3)
-        self.assertEqual(result_3, '1.0')
+        self.assertEqual(result_3, 1.0)
 
     def test_cosine_similarity_when_all_result_less_than_epsilon(self):
         n_value = np.array([0, 0, 0])
         b_value = np.array([0, 0, 0])
         result, message = compare.cosine_similarity(n_value, b_value)
-        self.assertEqual(result, '1.0')
+        self.assertEqual(result, 1.0)
         self.assertEqual(message, '')
 
     def test_cosine_similarity_when_only_npu_result_less_than_epsilon(self):
@@ -114,7 +142,7 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 2, 3])
         result, message = compare.cosine_similarity(n_value, b_value)
         
-        self.assertEqual(result, '1.0')
+        self.assertEqual(result, 1.0)
         self.assertEqual(message, '')
 
     def test_cosine_similarity_when_all_result_greater_than_epsilon_with_nan(self):
@@ -149,7 +177,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value = np.array([1, 2, 3])
         b_value = np.array([1, 2, 3])
         max_relative_err, message = compare.get_max_relative_err(n_value, b_value)
-        self.assertEqual(max_relative_err, "0.000000000000")
+        self.assertEqual(max_relative_err, 0.000000000000)
         self.assertEqual(message, "")
 
     def test_check_graph_mode(self):
@@ -197,3 +225,84 @@ class TestUtilsMethods(unittest.TestCase):
         result = []
         compare.get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
         self.assertEqual(result, aten_result)
+
+    def test_check_order_magnitude(self):
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_order_magnitude(api_summary_info_1, color_columns, summary_compare=True)
+        self.assertEqual(yellow_lines,[num_1])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_order_magnitude(api_summary_info_2, color_columns, summary_compare=True)
+        self.assertEqual(yellow_lines, [])
+
+    def test_check_max_relative_diff(self):
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_max_relative_diff(api_summary_info_1, color_columns, summary_compare=True)
+        self.assertEqual(red_lines, [num_1])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_max_relative_diff(api_summary_info_2, color_columns, summary_compare=True)
+        self.assertEqual(yellow_lines, [num_2])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_max_relative_diff(api_summary_info_3, color_columns, summary_compare=True)
+        self.assertEqual(red_lines, [])
+        self.assertEqual(yellow_lines, [])
+
+    def test_check_one_thousand_error_ratio(self):
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_one_thousand_error_ratio(api_info_1, color_columns, summary_compare=False)
+        self.assertEqual(red_lines, [num_1])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_one_thousand_error_ratio(api_info_2, color_columns, summary_compare=False)
+        self.assertEqual(yellow_lines, [num_2])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_one_thousand_error_ratio(api_info_3, color_columns, summary_compare=False)
+        self.assertEqual(red_lines, [])
+        self.assertEqual(yellow_lines, [])
+
+    def test_check_cosine_similarity(self):
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_cosine_similarity(api_info_1, color_columns, summary_compare=False)
+        self.assertEqual(yellow_lines, [num_1])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_cosine_similarity(api_info_2, color_columns, summary_compare=False)
+        self.assertEqual(yellow_lines, [])
+
+    def test_check_overflow(self):
+        line_info0 = LineInfo(line_data=line_input, num_pointer=num_0)
+        line_info1 = LineInfo(line_data=line_1, num_pointer=num_1)
+        line_info2 = LineInfo(line_data=line_2, num_pointer=num_2)
+        line_info3 = LineInfo(line_data=line_3, num_pointer=num_3)
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_overflow(line_info1, color_columns, summary_compare=False)
+        self.assertEqual(red_lines, [num_1])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_overflow(line_info2, color_columns, summary_compare=False)
+        self.assertEqual(red_lines, [])
+        red_lines, yellow_lines = [], []
+        color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+        compare.check_overflow(line_info3, color_columns, summary_compare=False)
+        self.assertEqual(red_lines, [num_3])
+
+    def test_find_error_rows(self):
+        summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
+        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        compare.find_error_rows(summary_result, 0, 1, highlight_dict, summary_compare=True)
+        self.assertEqual(highlight_dict,{'red_rows': [num_1], 'yellow_rows':[num_2]})
+
+    def test_find_compare_result_error_rows(self):
+        result = [line_input, line_1, line_2, line_3]
+        result_df = pd.DataFrame(result)
+        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        compare.find_compare_result_error_rows(result_df, highlight_dict)
+        self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
