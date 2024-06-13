@@ -63,6 +63,8 @@ def gen_data(info, need_grad, convert_type, real_data_path=None):
             data = eval(data_type)(data)
         except Exception as err:
             print_error_log("Failed to convert the type to numpy: %s" % str(err))
+    elif data_type == "torch.Size":
+        data = torch.Size(info.get("value"))
     else:
         data = info.get('value')
         if info.get("type") == "slice":
@@ -277,6 +279,8 @@ def gen_list_kwargs(kwargs_item_value, convert_type, real_data_path=None):
     for item in kwargs_item_value:
         if item.get('type') in TENSOR_DATA_LIST:
             item_value = gen_data(item, False, convert_type, real_data_path)
+        elif item.get('type') == "torch.Size":
+            item_value = torch.Size(item.get('value'))
         else:
             item_value = item.get('value')
         kwargs_item_result.append(item_value)
