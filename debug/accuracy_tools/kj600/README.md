@@ -1,8 +1,8 @@
-# kj600 模型训练状态监控工具
+# TensorProbe (codename:kj600) 模型训练状态监控工具
 
 ## 简介
 
-本项目开发了名为kj600的模型训练状态监控工具，能够收集和聚合模型训练过程中的层和优化器的中间状态，帮助诊断模型训练过程中出现的异常情况。
+本项目开发了一个模型训练状态监控工具，能够收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
 
 ## 安装
 
@@ -41,16 +41,27 @@ pip install -e .
     "targets": {  
         "language_model.encoder.layers.0": {"input": "tuple[2]:0", "output": "tensor", "input_grad":"tuple[2]:0", "output_grad":"tuple[1]:0"}  
     },
-    "module_ranks": "1,2,3,4",
-    "ur_distribution": true
+    "print_struct": false,
+    "module_ranks": [1,2,3,4],
+    "ur_distribution": true,
+    "xy_distribution": true,
+    "mv_distribution": true,
+    "wg_distribution": true,
+    "mg_direction": true,
+    "cc_distribution": {"enable":true, "cc_codeline":[]},
+    "alert": {
+        "rules": [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
+    },
+    "ops": ["min", "max", "norm", "zeros", "id"],
+    "eps": 1e-8
 }  
 ```
 
-每个要监控的module有特定的输入输出格式（依赖于模型实现），所以我们需要指定前向输入输出格式和反向计算时输入张量的梯度和输出张量的梯度格式。 如果不清楚的话可以先猜测， 格式规范与实际输入不同时会报详细错误。 我们也会随时更新更多常用module的格式规范。
+每个要监控的module有特定的输入输出格式（依赖于模型实现），所以我们需要指定前向输入输出格式和反向计算时输入张量的梯度和输出张量的梯度格式。 如果不清楚的话可以填空字段（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后工具会打印详细的模型结构。 我们也会随时更新更多常用module的格式规范。
 
 下面详细解释各个字段：
 
-"targets"：必选字段，指定需要监控的大模型层， 例如transformer的第0层language_model.encoder.layers.0。如果不清楚层命名， 可以使用空的json配置文件， 之后监控工具会打印模型中torch module的名字， 你可以从中选择你关心的module。
+"targets"：必选字段，指定需要监控的大模型层， 例如transformer的第0层language_model.encoder.layers.0。如果不清楚模型结构， 可以填空字段（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出， 你可以从中选择你关心的module。
 
 "input"：可选字段，"tuple[2]:0"的意思是目标module的前向input参数为长度为2的tuple， 我们关心的是tuple第0个元素。
 
@@ -62,9 +73,25 @@ pip install -e .
 
 "module_ranks"：可选字段，用于在分布式训练场景中希望控制在哪些rank开启module监控。如果不填，则默认在所有rank开启。
 
-"ur_distribution": 可选字段，若为true则会统计adam优化器的update和ratio的数值分布，并展示在heatmap里，默认为false。
+"print_struct"：可选字段，设置为true后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出。不填默认为false。
 
-"mg_direction": 可选字段，若为true则会统计adam优化器的动量与当前梯度方向一致的参数比例。
+"ur_distribution": 可选字段，若为true则会统计adam优化器指定模块（targets中指定）参数的update和ratio向量的数值分布，并展示在heatmap里，默认为false。
+
+"xy_distribution": 可选字段， 若为true则会监控指定module（targets中指定）的输入输出张量。 默认为false。
+
+"mv_distribution": 可选字段， 若为true则会监控指定模块中的参数的优化器状态， 默认为false。
+
+"wg_distribution": 可选字段， 若为true则会监控指定模块的参数梯度， 默认为false。 
+
+"alert": 必选字段。 指定自动报警的异常检测机制及其相应的阈值。目前实现的异常检测是AnomalyTurbulence。 如果统计标量超出历史均值的指定浮动范围(threshold指定， 0.5意味着上浮或者下浮50%）。 目前报警是在控制台打印， 未来会实现发邮件和写数据库。 
+
+"mg_direction": 可选字段，若为true则会统计adam优化器的一阶矩（$m_{t-1}$）和当前梯度($g_t$)符号一致的参数比例。
+
+"cc_distribution": 可选字段， 其中“enable”字段控制开关；“cc_codeline”字段指定监控的代码行，如"train.py\\[23\\]"，默认为空列表，不特别指定。"cc_log_only"字段控制是否监控数据,为true时,仅记录调用到的算子及其调用栈。
+
+"ops": 可选字段，与ur_distribution、xy_distribution、mv_distribution、wg_distribution、mg_direction、cc_distribution配合，监控所选张量的min、max、norm、zeros值。其中，zeros代表监控所选张量的元素小于eps的比例，id代表监控所选的非张量本身，默认为[]。
+
+"eps": 可选字段，若ops里包含"zeros"则需要配置，默认为1e-8。
 
 下面给出transformer架构模型中常见的module的前向计算的输入输出和反向计算输入张量的梯度和输出张量的梯度格式，以供参考：
 
@@ -98,11 +125,14 @@ pip install -e .
 
    ```
        from kj600.module_hook import TrainerMon
-       hooker = TrainerMon("./llama2_config.json")
-       hooker.hook_modules(model=model, global_batch_size=args.global_batch_size, dp=args.data_parallel_size, micro_batch_size=args.micro_batch_size, fwd_or_bkd=0) 
+       hooker = TrainerMon("./llama2_config.json", params_have_main_grad=True, opt_ty="Megatron_DistributedOptimizer") # or opt_ty=Megatron_Float16OptimizerWithFloat16Params
+       hooker.hook_modules(model=model, grad_acc_steps=args.global_batch_size//args.data_parallel_size//args.micro_batch_size) 
    ```
+   params_have_main_grad: 若为True则参数权重梯度为main_grad，否则为grad，默认为True。
+   
+   如果不是Megatron-LM的训练框架， 可以设置对应的梯度累积步数grad_acc_steps。 
 
-   如果要监控混合精度优化器的动量和方差， 需要在混合精度优化器构造后加入如下代码：
+   如果要监控混合精度优化器的动量和方差， 需要在混合精度优化器构造后加入如下代码。 目前只支持Megatron_DistributedOptimizer， 使用bf16或者fp16混合精度时开启分布式优化器。 或者Megatron_Float16OptimizerWithFloat16Params， 使用bf16或者fp16混合精度选项并且不开启分布式优化器。 
 
    ```
    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(

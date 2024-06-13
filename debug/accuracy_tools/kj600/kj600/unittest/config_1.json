@@ -1,8 +1,0 @@
-{
-    "targets": {
-        "fc": {"input": "tuple[1]:0", "output": "tensor", "input_grad":"tuple[1]:0", "output_grad":"tuple[1]:0"}, 
-        "relu": {"input": "tuple[1]:0", "output": "tensor", "input_grad":"tuple[1]:0", "output_grad":"tuple[1]:0"}
-    },
-    "ur_distribution": true,
-    "mg_direction": true
-}

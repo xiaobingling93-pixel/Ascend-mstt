@@ -6,6 +6,26 @@ from torch.autograd.functional import jacobian
 def square_sum(x: torch.tensor):
     return (x * x).sum()
 
+@torch.no_grad()
+def get_min(x: torch.tensor):
+    return torch.min(x)
+
+
+@torch.no_grad()
+def get_max(x: torch.tensor):
+    return torch.max(x)
+
+
+@torch.no_grad()
+def get_zeros(x: torch.tensor, eps: float):
+    return torch.sum(torch.abs(x) < eps) / x.numel()
+
+@torch.no_grad()
+def get_sign_matches(x: torch.tensor, y:torch.tensor):
+    xs = x.sign()
+    ys = y.sign()
+    same_direction_ratio  = ((xs * ys).sum()/ys.numel() + 1)/2
+    return same_direction_ratio
 
 @torch.no_grad()
 def eff_rank(param: torch.tensor, threshold=1e-10):
