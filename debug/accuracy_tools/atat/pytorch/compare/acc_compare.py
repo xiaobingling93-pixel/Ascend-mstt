@@ -233,7 +233,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
     op_dict["input_struct"] = []
     op_dict["kwargs_struct"] = []
     op_dict["output_struct"] = []
-    op_dict["summery"] = []
+    op_dict["summary"] = []
     op_dict["stack_info"] = []
 
     all_mode_bool = summary_compare == False and md5_compare == False
@@ -260,7 +260,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             elif tensor['full_op_name'].find("output") != -1:
                 op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
 
-        op_dict["summery"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
+        op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
 
         if all_mode_bool:
             op_dict["data_name"].append(tensor['data_name'])
@@ -323,15 +323,15 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                " ", " ", " ", " ", " "]
 
-            npu_summery_data = n_dict.get("summery")[n_start + index]
-            result_item.extend(npu_summery_data)
-            bench_summery_data = b_dict.get("summery")[b_start + index]
-            result_item.extend(bench_summery_data)
+            npu_summary_data = n_dict.get("summary")[n_start + index]
+            result_item.extend(npu_summary_data)
+            bench_summary_data = b_dict.get("summary")[b_start + index]
+            result_item.extend(bench_summary_data)
 
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 warning_flag = False
-                for i, (npu_val, bench_val) in enumerate(zip(npu_summery_data, bench_summery_data)):
+                for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
                     if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
                         diff = npu_val - bench_val
                         if bench_val != 0:
@@ -374,10 +374,10 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     continue
                 result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
                                n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
-                summery_data = n_dict.get("summery")[n_start + index]
-                result_item.extend(summery_data)
-                summery_data = [CompareConst.NAN for _ in range(len(n_dict.get("summery")[0]))]
-                result_item.extend(summery_data)
+                summary_data = n_dict.get("summary")[n_start + index]
+                result_item.extend(summary_data)
+                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get("summary")[0]))]
+                result_item.extend(summary_data)
 
                 err_msg = ""
                 result_item.append(CompareConst.ACCURACY_CHECK_YES)
@@ -684,12 +684,12 @@ def parse(pkl_file, module_name_prefix):
                     print("    {}".format(item[3]))
                 continue
             if len(msg) > 5:
-                summery_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
+                summary_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
                     .format(msg[0], msg[3], msg[4], msg[5][0], msg[5][1], msg[5][2])
                 if not title_printed:
                     print("\nStatistic Info:")
                     title_printed = True
-                print(summery_info)
+                print(summary_info)
 
 
 def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
@@ -903,10 +903,10 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result_item.extend([CompareConst.NAN] * 4)
         else:
             result_item.extend([CompareConst.NAN] * 5)
-        summery_data = n_dict.get("summery")[index]
-        result_item.extend(summery_data)
-        summery_data = [CompareConst.NAN] * 4
-        result_item.extend(summery_data)
+        summary_data = n_dict.get("summary")[index]
+        result_item.extend(summary_data)
+        summary_data = [CompareConst.NAN] * 4
+        result_item.extend(summary_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
