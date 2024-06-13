@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2019-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -27,11 +27,10 @@ import pandas as pd
 
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
-from ..common.utils_compare import check_compare_param, add_time_as_suffix, \
-    print_info_log, print_warn_log, print_error_log, CompareException, Const, \
-    CompareConst, format_value, check_file_not_exists, check_configuration_param, \
-    task_dumppath_get
-from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
+from ...core.utils import check_compare_param, add_time_as_suffix, CompareException, CompareConst, \
+    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
+    print_warn_log, print_error_log, Const
+from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
 
 
 def correct_data(result):

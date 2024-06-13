@@ -20,9 +20,8 @@ import pandas as pd
 
 from .advisor_result import AdvisorResult
 from .advisor_const import AdvisorConst
-from ..common.utils_compare import CompareException, CompareConst, Const
-from ..common.utils_compare import print_info_log, print_warn_log, print_error_log
-from ..common.file_check_util import FileChecker, FileCheckConst
+from ...core.utils import CompareException, CompareConst, Const, print_info_log, print_warn_log, print_error_log
+from ...core.file_check_util import FileChecker, FileCheckConst
 
 
 class Advisor:

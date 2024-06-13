@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -18,9 +18,8 @@ import os
 import time
 
 from .advisor_const import AdvisorConst
-from ..common.utils_compare import Const
-from ..common.utils_compare import print_info_log, print_error_log
-from ..common.file_check_util import change_mode, FileCheckConst
+from ...core.utils import Const, print_info_log, print_error_log
+from ...core.file_check_util import FileCheckConst, change_mode
 
 
 class AdvisorResult:
