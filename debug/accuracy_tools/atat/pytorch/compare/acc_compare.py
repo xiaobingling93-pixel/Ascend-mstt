@@ -726,7 +726,7 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
                 parsed_item['Norm'] = item['value']
                 parsed_item['data_name'] = '-1'
                 item_list.append(parsed_item)
-            if item['type'] == 'slice':
+            elif item['type'] == 'slice':
                 parsed_item['full_op_name'] = full_op_name
                 parsed_item['dtype'] = 'slice'
                 parsed_item['shape'] = str(np.shape(np.array(item['value'])))
