@@ -718,12 +718,12 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
             if item['type'] == 'torch.Size':
                 parsed_item['full_op_name'] = full_op_name
                 parsed_item['dtype'] = 'torch.Size'
-                parsed_item['shape'] = '[]'
+                parsed_item['shape'] = str(item['value'])
                 parsed_item['md5'] = None
-                parsed_item['Max'] = item['value']
-                parsed_item['Min'] = item['value']
-                parsed_item['Mean'] = item['value']
-                parsed_item['Norm'] = item['value']
+                parsed_item['Max'] = None
+                parsed_item['Min'] = None
+                parsed_item['Mean'] = None
+                parsed_item['Norm'] = None
                 parsed_item['data_name'] = '-1'
                 item_list.append(parsed_item)
             elif item['type'] == 'slice':
