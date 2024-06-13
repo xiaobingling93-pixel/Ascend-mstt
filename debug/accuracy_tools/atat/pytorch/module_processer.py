@@ -3,6 +3,7 @@ import torch
 from torch.utils.hooks import BackwardHook
 from .functional.scope import ModuleRangeScope
 from .common.utils import Const
+from ..core.log import print_warn_log
 
 
 class ModuleProcesser:
@@ -18,7 +19,22 @@ class ModuleProcesser:
             self.scope = None
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
+        BackwardHook.setup_output_hook = ModuleProcesser.wrapper_setup_output_hook(BackwardHook.setup_output_hook)
         self.module_count = {}
+
+    @staticmethod
+    def wrapper_setup_output_hook(func):
+        @wraps(func)
+        def decorated(*args, **kwargs):
+            # BackwardHook中的setup_output_hook定义为setup_output_hook(self, args)，因此处理第二个位置参数，即*args[1]
+            if not isinstance(args[1], (torch.Tensor, tuple)):
+                print_warn_log("For backward hooks to be called, "
+                               f"module output should be a Tensor or a tuple of Tensors but received {type(args[1])}, "
+                               "therefore skipping dump this data.")
+                return args[1]
+            return func(*args, **kwargs)
+
+        return decorated
 
     @staticmethod
     def clone_return_value(func):
