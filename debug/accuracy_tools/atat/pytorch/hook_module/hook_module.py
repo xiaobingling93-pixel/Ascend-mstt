@@ -45,7 +45,6 @@ class HOOKModule(nn.Module):
             else:
                 HOOKModule.module_count[self.prefix] += 1
                 self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
-            self.mindstudio_reserved_name = self.prefix
             forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
             self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
             self.register_forward_hook(forward_hook, with_kwargs=True)

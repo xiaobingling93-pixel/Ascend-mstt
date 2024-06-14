@@ -32,8 +32,11 @@ class Service:
 
     def build_hook(self, module_type, name):
         def pre_hook(repair, api_or_module_name, module, args, kwargs):
-            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
+            if module_type == BaseScope.Module_Type_Module:
+                api_or_module_name = module.mindstudio_reserved_name
+            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+
             if not self.switch:
                 return args, kwargs
             if repair:
@@ -44,11 +47,13 @@ class Service:
             return args, kwargs
 
         def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
-            self.collect_data.visit_and_clear_overflow_status(module.mindstudio_reserved_name)
             nonlocal module_type, pid
+            if module_type == BaseScope.Module_Type_Module:
+                api_or_module_name = module.mindstudio_reserved_name
+            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+
             if not self.switch:
                 return
-            
             if self.collect_data:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
@@ -61,6 +66,10 @@ class Service:
 
         def backward_hook(repair, api_or_module_name, module, grad_input, grad_output):
             nonlocal module_type, pid
+            if module_type == BaseScope.Module_Type_Module:
+                api_or_module_name = module.mindstudio_reserved_name
+            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+
             if not self.switch:
                 return
             if self.collect_data:
@@ -68,12 +77,8 @@ class Service:
                 self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
 
         pid = os.getpid()
-        if module_type == BaseScope.Module_Type_Module:
-            forward_name_template = name + Const.SEP + "{}" + Const.SEP + "forward"
-            backward_name_template = name + Const.SEP + "{}" + Const.SEP + "backward"
-        else:
-            forward_name_template = name + "forward"
-            backward_name_template = name + "backward"
+        forward_name_template = name + Const.FORWARD
+        backward_name_template = name + Const.BACKWARD
         pre_forward_hook = functools.partial(pre_hook, self.repair, forward_name_template)
         forward_hook = functools.partial(forward_hook, self.repair, forward_name_template)
         backward_hook = functools.partial(backward_hook, None, backward_name_template)
@@ -155,10 +160,14 @@ class Service:
                 module.register_forward_hook(forward_hook, with_kwargs=True)
                 module.register_full_backward_hook(backward_hook)
 
-                module.register_forward_pre_hook(self.module_processor.node_hook(prefix + "forward", "start"))
-                module.register_forward_hook(self.module_processor.node_hook(prefix + "forward", "stop"))
-                module.register_full_backward_pre_hook(self.module_processor.node_hook(prefix + "backward", "start"))
-                module.register_full_backward_hook(self.module_processor.node_hook(prefix + "backward", "stop"))
+                module.register_forward_pre_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                module.register_forward_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
+                module.register_full_backward_pre_hook(
+                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                module.register_full_backward_hook(
+                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
