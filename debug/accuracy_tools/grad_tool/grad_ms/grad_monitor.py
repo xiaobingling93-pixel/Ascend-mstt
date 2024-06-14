@@ -10,9 +10,9 @@ class MsGradientMonitor(BaseMonitor):
     def __init__(self, config_file: str):
         super(MsGradientMonitor, self).__init__(config_file)
         grad_context.init_context(self.config)
-        csv_generator.init(grad_context)
 
     def monitor(self, module):
+        csv_generator.init(grad_context)
         hook_optimizer(module)
 
     def stop(self):
