@@ -110,8 +110,8 @@ class CompareConst:
     # compare result column name
     NPU_NAME = "NPU Name"
     BENCH_NAME = "Bench Name"
-    NPU_DTYPE = "NPU Tensor Dtype"
-    BENCH_DTYPE = "Bench Tensor Dtype"
+    NPU_DTYPE = "NPU Dtype"
+    BENCH_DTYPE = "Bench Dtype"
     NPU_SHAPE = "NPU Tensor Shape"
     BENCH_SHAPE = "Bench Tensor Shape"
     NPU_MAX = "NPU max"
@@ -129,8 +129,12 @@ class CompareConst:
     COSINE = "Cosine"
     MAX_ABS_ERR = "MaxAbsErr"
     MAX_RELATIVE_ERR = "MaxRelativeErr"
+    MIN_RELATIVE_ERR = "MinRelativeErr"
+    MEAN_RELATIVE_ERR = "MeanRelativeErr"
+    NORM_RELATIVE_ERR = "NormRelativeErr"
     ACCURACY = "Accuracy Reached or Not"
     STACK = "NPU_Stack_Info"
+    DATA_NAME = "Data_name"
     ERROR_MESSAGE = "Err_message"
     ONE_THOUSANDTH_ERR_RATIO = "One Thousandth Err Ratio"
     FIVE_THOUSANDTHS_ERR_RATIO = "Five Thousandths Err Ratio"
@@ -146,6 +150,7 @@ class CompareConst:
 
     SUMMARY_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
+        MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR,
         NPU_MAX, NPU_MIN, NPU_MEAN, NPU_NORM, BENCH_MAX, BENCH_MIN, BENCH_MEAN, BENCH_NORM, RESULT, ERROR_MESSAGE
     ]
 
@@ -155,6 +160,7 @@ class CompareConst:
 
     # compare result data
     NAN = 'Nan'
+    NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
     DTYPE_UNMATCH = 'dtype unmatched'
     PASS = 'Pass'
@@ -201,6 +207,8 @@ class CompareException(Exception):
     INVALID_COMPARE_MODE = 17
     OVER_SIZE_FILE_ERROR = 18
     INVALID_SUMMARY_MODE = 19
+    INVALID_TASK_ERROR = 20
+
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -335,49 +343,21 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False):  # 添加默认值来让不传参时能通过参数检查
+def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False, md5_compare=False):
     if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
         print_error_log("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    check_file_or_directory_path(input_parma.get("npu_pkl_path"), False)
-    check_file_or_directory_path(input_parma.get("bench_pkl_path"), False)
-    if not summary_compare:
+    check_file_or_directory_path(input_parma.get("npu_json_path"), False)
+    check_file_or_directory_path(input_parma.get("bench_json_path"), False)
+    check_file_or_directory_path(input_parma.get("stack_json_path"), False)
+    if not summary_compare and not md5_compare:
         check_file_or_directory_path(input_parma.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
-         FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
-        check_pkl_file(input_parma, npu_pkl, bench_pkl, stack_mode)
-
-
-def is_summary_compare(input_param):
-    npu_pkl_path = input_param.get("npu_pkl_path", None)
-    bench_pkl_path = input_param.get("bench_pkl_path", None)
-    npu_dump_data_dir = input_param.get("npu_dump_data_dir", None)
-    bench_dump_data_dir = input_param.get("bench_dump_data_dir", None)
-    if not npu_pkl_path or not bench_pkl_path:
-        print_error_log(f"Please check the pkl path is valid.")
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-    if not (npu_dump_data_dir and bench_dump_data_dir):
-        return True
-    if npu_dump_data_dir and bench_dump_data_dir:
-        return False
-    print_error_log(f"Please check the dump data dir is valid.")
-    raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def is_md5_compare(input_parma):
-    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
-        pkl_lines = npu_pkl.readline()
-    try:
-        line = json.loads(pkl_lines)
-    except JSONDecodeError as err:
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from err
-    if len(line) < 3:
-        return False
-    if line[2]:
-        return True
-    return False
+    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
+         FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
+         FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
+        check_json_file(input_parma, npu_json, bench_json, stack_json)
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
@@ -403,54 +383,22 @@ def check_file_or_directory_path(path, isdir=False):
     path_checker.common_check()
 
 
-def _check_pkl(pkl_file_handle, file_name):
-    tensor_line = pkl_file_handle.readline()
-    if len(tensor_line) == 0:
-        print_error_log("dump file {} have empty line!".format(file_name))
-        raise CompareException(CompareException.INVALID_DUMP_FILE)
-    pkl_file_handle.seek(0, 0)
-
-
 def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
 
-def check_stack_mode(pkl_fp):
-    api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
-    is_stack_mode = False
-    for index, line in enumerate(pkl_fp):
-        if index == 0:
-            api_match = re.search(api_pattern, line)
-            api_prefix = api_match.group(1)
-        elif api_prefix and line.startswith(f'["{api_prefix}'):
-            if line.startswith(f'["{api_prefix}_stack_info'):
-                is_stack_mode = True
-                break
-        else:
-            break
-    pkl_fp.seek(0, 0)
-    return is_stack_mode
+def _check_json(json_file_handle, file_name):
+    tensor_line = json_file_handle.readline()
+    if not tensor_line:
+        print_error_log("dump file {} have empty line!".format(file_name))
+        raise CompareException(CompareException.INVALID_DUMP_FILE)
+    json_file_handle.seek(0, 0)
 
 
-def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
-    _check_pkl(npu_pkl, input_param.get("npu_pkl_path"))
-    _check_pkl(bench_pkl, input_param.get("bench_pkl_path"))
-
-    npu_pkl_stack_mode = check_stack_mode(npu_pkl)
-    bench_pkl_stack_mode = check_stack_mode(bench_pkl)
-
-    if not npu_pkl_stack_mode and not bench_pkl_stack_mode:
-        if stack_mode:
-            print_error_log("The current file does not contain stack information, please turn off the stack_mode")
-            raise CompareException(CompareException.INVALID_COMPARE_MODE)
-    elif npu_pkl_stack_mode and bench_pkl_stack_mode:
-        if not stack_mode:
-            print_error_log("The current file contains stack information, please turn on the stack_mode")
-            raise CompareException(CompareException.INVALID_COMPARE_MODE)
-    else:
-        print_error_log("The dump mode of the two files is not same, please check the dump files")
-        raise CompareException(CompareException.INVALID_COMPARE_MODE)
+def check_json_file(input_param, npu_json, bench_json, stack_json):
+    _check_json(npu_json, input_param.get("npu_json_path"))
+    _check_json(bench_json, input_param.get("bench_json_path"))
+    _check_json(stack_json, input_param.get("stack_json_path"))
 
 
 def check_file_size(input_file, max_size):
@@ -687,3 +635,45 @@ def check_inplace_op(prefix):
     match_op = re.findall(r"Distributed_(.+?)_\d", prefix)
     op_name = match_op[0] if match_op else None
     return op_name in Const.INPLACE_LIST
+
+
+def md5_find(data):
+    for key_op in data:
+        for api_info in data[key_op]:
+            if isinstance(data[key_op][api_info], list):
+                for data_detail in data[key_op][api_info]:
+                    if data_detail and 'md5' in data_detail:
+                        return True
+            elif 'md5' in data[key_op][api_info]:
+                return True
+    return False
+
+
+def task_dumppath_get(input_param):
+    npu_json_path = input_param.get("npu_json_path", None)
+    bench_json_path = input_param.get("bench_json_path", None)
+    if not npu_json_path or not bench_json_path:
+        print_error_log(f"Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    with FileOpen(npu_json_path, 'r') as npu_f:
+        npu_json_data = json.load(npu_f)
+    with FileOpen(bench_json_path, 'r') as bench_f:
+        bench_json_data = json.load(bench_f)
+    if npu_json_data['task'] != bench_json_data['task']:
+        print_error_log(f"Please check the dump task is consistent.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    if npu_json_data['task'] == Const.TENSOR:
+        summary_compare = False
+        md5_compare = False
+    elif npu_json_data['task'] == Const.STATISTICS:
+        md5_compare = md5_find(npu_json_data['data'])
+        if md5_compare:
+            summary_compare = False
+        else:
+            summary_compare = True
+    else:
+        print_error_log(f"Compare is not required for overflow_check or free_benchmark.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+    input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
+    input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
+    return summary_compare, md5_compare

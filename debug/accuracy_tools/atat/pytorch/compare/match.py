@@ -1,7 +1,7 @@
 import os
 import yaml
-from ..common.file_check_util import FileOpen
-from ..common.utils_compare import CompareException
+from ...core.file_check_util import FileOpen
+from ...core.utils import CompareException
 
 
 class AtenIrMapping():

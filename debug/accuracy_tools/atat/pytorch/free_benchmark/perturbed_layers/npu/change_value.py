@@ -12,11 +12,11 @@ class ChangeValueLayer(NpuBaseLayer):
     def __init__(self, api_name):
         super().__init__(api_name)
         self.head: int = 0
-        self.tail: int = 1
+        self.tail: int = -1
 
     def _check_details(self, tensor_obj):
         """
-        判断是否需要添加扰动,  首尾交换
+        判断是否需要添加扰动,  首尾值交换
         """
         if tensor_obj.size(0) < 2:
             print_warn_log_rank_0(
@@ -35,13 +35,13 @@ class ChangeValueLayer(NpuBaseLayer):
             if new_tensor.ndim == 1:
                 temp_first = TorchC.clone(new_tensor[self.head])
                 temp_last = TorchC.clone(new_tensor[self.tail])
-                new_tensor[self.head] = temp_first
-                new_tensor[self.tail] = temp_last
+                new_tensor[self.head] = temp_last
+                new_tensor[self.tail] = temp_first
             else:
                 temp_first = TorchC.clone(new_tensor[self.head][self.head])
                 temp_last = TorchC.clone(new_tensor[self.tail][self.tail])
-                new_tensor[self.head][self.head] = temp_first
-                new_tensor[self.tail][self.tail] = temp_last
+                new_tensor[self.head][self.head] = temp_last
+                new_tensor[self.tail][self.tail] = temp_first
                 
             self.is_added = True
             return new_tensor
