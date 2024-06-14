@@ -11,7 +11,7 @@ class NoChangeLayer(NpuBaseLayer):
 
     def no_change(self, tensor_obj):
         """
-        交换张量首尾
+        不对输入做任何改变、直接二次执行
         """
         self.is_added = True
         return tensor_obj
