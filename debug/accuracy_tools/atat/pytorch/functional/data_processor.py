@@ -259,7 +259,7 @@ class DataProcessor:
             if self.has_overflow:
                 clear_overflow_npu()
 
-    def _analyze_tensor(self, tensor):
+    def _analyze_tensor(self, tensor, suffix):
         tensor_max, tensor_min, tensor_mean, tensor_norm = self.get_stat_info(tensor)
 
         tensor_json = {}
@@ -278,13 +278,10 @@ class DataProcessor:
 
         return tensor_json
 
-    def analyze_single_element(self, element):
-        if isinstance(element, torch.device):
-            return self.torch_object_key["device"](element)
-        
-        if isinstance(element, torch.dtype):
-            return self.torch_object_key["dtype"](element)
-        
+    def analyze_single_element(self, element, suffix_stack):
+        if suffix_stack and suffix_stack[-1] in self.torch_object_key:
+            return self.torch_object_key[suffix_stack[-1]](element)
+                
         if isinstance(element, torch.Size):
             return self._analyze_torch_size(element)
 
@@ -293,7 +290,7 @@ class DataProcessor:
             return self._analyze_numpy(converted_numpy, numpy_type)
 
         if isinstance(element, torch.Tensor):
-            return self._analyze_tensor(element)
+            return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
 
         if isinstance(element, (bool, int, float, str, slice)):
             return self._analyze_builtin(element)
@@ -394,7 +391,7 @@ class FullTensorDataProcessor(DataProcessor):
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         torch.save(tensor, file_path)
-        single_arg = super()._analyze_tensor(tensor)
+        single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
 
@@ -414,7 +411,7 @@ class OverflowTensorDataProcessor(DataProcessor):
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         self.cached_tensors_and_file_paths.update({file_path: tensor})
-        single_arg = super()._analyze_tensor(tensor)
+        single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
 
