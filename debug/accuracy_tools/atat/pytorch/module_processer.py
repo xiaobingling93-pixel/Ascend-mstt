@@ -72,7 +72,7 @@ class ModuleProcesser:
             if self.scope:
                 self.scope.end_module(module.mindstudio_reserved_name)
 
-        if "start" in start_or_stop:
+        if Const.START in start_or_stop:
             return pre_hook
         else:
             return end_hook

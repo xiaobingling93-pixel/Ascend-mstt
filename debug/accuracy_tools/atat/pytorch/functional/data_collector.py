@@ -82,11 +82,7 @@ class DataCollector:
             self.update_data(data_info)
 
     def __call__(self, name_template, module_type, module, pid, module_input_output):
-        if module_type == BaseScope.Module_Type_Module:
-            name = module.mindstudio_reserved_name
-        else:
-            name = name_template
-
+        name = name_template
         if self.config.level != DataCollector.level_without_construct:
             self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
             self.data_writer.update_construct(ModuleProcesser.module_node)
