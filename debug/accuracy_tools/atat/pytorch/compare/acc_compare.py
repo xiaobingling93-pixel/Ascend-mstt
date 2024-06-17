@@ -712,7 +712,7 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
             parsed_item = item
             parsed_item['full_op_name'] = full_op_name
             item_list.append(parsed_item)
-        else:
+        elif 'type' in item:
             parsed_item = {}
             if item['type'] == 'slice':
                 parsed_item['full_op_name'] = full_op_name
@@ -736,6 +736,15 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
                 parsed_item['Norm'] = item['value']
                 parsed_item['data_name'] = '-1'
                 item_list.append(parsed_item)
+        else:
+            for key, value in item.items():
+                if isinstance(value, dict):
+                    parsed_item = value
+                    parts = full_op_name.split('.')
+                    parts.insert(-1, key)
+                    full_op_name_new = '.'.join(parts)
+                    parsed_item['full_op_name'] = full_op_name_new
+                    item_list.append(parsed_item)
     else:
         for j in range(len(item)):
             op_item_parse(item[j], full_op_name, j, top_bool=False)

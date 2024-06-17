@@ -3,7 +3,6 @@ import torch
 from torch.utils.hooks import BackwardHook
 from .functional.scope import ModuleRangeScope
 from .common.utils import Const
-from ..core.log import print_warn_log
 
 
 class ModuleProcesser:
@@ -26,11 +25,9 @@ class ModuleProcesser:
     def wrapper_setup_output_hook(func):
         @wraps(func)
         def decorated(*args, **kwargs):
-            # BackwardHook中的setup_output_hook定义为setup_output_hook(self, args)，因此处理第二个位置参数，即*args[1]
+            # setup_output_hook传入非tensor数据，工具后续dump会报错，处理方式是非tensor数据不传入
+            # setup_output_hook定义为setup_output_hook(self, args)，因此处理第二个位置参数，即*args[1]
             if not isinstance(args[1], (torch.Tensor, tuple)):
-                print_warn_log("For backward hooks to be called, "
-                               f"module output should be a Tensor or a tuple of Tensors but received {type(args[1])}, "
-                               "therefore skipping dump this data.")
                 return args[1]
             return func(*args, **kwargs)
 
