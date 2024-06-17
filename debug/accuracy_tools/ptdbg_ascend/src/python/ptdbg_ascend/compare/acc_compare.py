@@ -254,7 +254,7 @@ def merge_tensor(tensor_list):
         if tensor[1] <= Const.DUMP_RATIO_MAX:
             op_dict["summery"].append(tensor[5])
 
-    return op_dict
+    return op_dict if op_dict["op_name"] else {}
 
 
 def read_op(ops_queue, pkl_file_handle, stack_mode):
@@ -281,7 +281,9 @@ def read_op(ops_queue, pkl_file_handle, stack_mode):
 
         if (read_output_flag.get("last_line") and not read_output_flag.get("curr_line")) \
                 or (len(tensor_line) == 0 and read_output_flag.get("curr_line")):  # end of file scenario
-            ops_queue.append(merge_tensor(tensor_list))
+            merge_list = merge_tensor(tensor_list)
+            if merge_list:
+                ops_queue.append(merge_list)
             # the pos of the handle needs to restore to the start of the next api.
             pkl_file_handle.seek(curr_pos, 0)
             break
@@ -679,11 +681,13 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     bench_ops_queue = []
     result = []
     while True:
+        last_npu_ops_len = len(npu_ops_queue)
         npu_file_flag = read_op(npu_ops_queue, npu_pkl_handle, stack_mode)
         bench_file_flag = read_op(bench_ops_queue, bench_pkl_handle, stack_mode)
-        if (not npu_file_flag and not bench_file_flag) \
-                or (len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0):
+        if not npu_file_flag and not bench_file_flag:
             break
+        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or len(npu_ops_queue) == last_npu_ops_len:
+            continue
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
         if n_match_point == -1 and b_match_point == -1:
             continue
