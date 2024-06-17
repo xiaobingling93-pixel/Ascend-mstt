@@ -1,9 +1,16 @@
 import torch
+import numpy as np
+from .log import print_warn_log
 
 _recursive_key_stack = []
+special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, np.integer, np.floating, np.bool_, np.complexfloating, \
+                np.str_, np.byte, np.unicode_, bool, int, float, str, slice)
 def recursive_apply_transform(args, transform):
     global _recursive_key_stack
-    if isinstance(args, (list, tuple)):
+    if isinstance(args, special_type):
+        arg_transform = transform(args, _recursive_key_stack)
+        return arg_transform
+    elif isinstance(args, (list, tuple)):
         transform_result = []
         for i, arg in enumerate(args):
             _recursive_key_stack.append(str(i))
@@ -18,6 +25,4 @@ def recursive_apply_transform(args, transform):
             _recursive_key_stack.pop()
         return transform_result
     else:
-        arg_transform = transform(args, _recursive_key_stack)
-        return arg_transform
-
+        print_warn_log(f"Data type {type(args)} is not supported.")

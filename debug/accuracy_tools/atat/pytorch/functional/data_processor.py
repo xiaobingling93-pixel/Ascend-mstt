@@ -206,6 +206,12 @@ class DataProcessor:
             single_arg.update({"type": type(arg).__name__})
             single_arg.update({"value": arg})
         return single_arg
+    
+    def _analyze_torch_size(self, arg):
+        single_arg = {}
+        single_arg.update({"type": "torch.Size"})
+        single_arg.update({"value": list(arg)})
+        return single_arg
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """
@@ -275,6 +281,9 @@ class DataProcessor:
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
+                
+        if isinstance(element, torch.Size):
+            return self._analyze_torch_size(element)
 
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
