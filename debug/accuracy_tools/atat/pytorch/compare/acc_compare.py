@@ -261,7 +261,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             elif tensor['full_op_name'].find("output") != -1:
                 op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
 
-        op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
+        op_dict["summery"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
 
         if all_mode_bool:
             op_dict["data_name"].append(tensor['data_name'])
