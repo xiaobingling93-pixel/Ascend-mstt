@@ -268,6 +268,7 @@ class TestUtilsMethods(unittest.TestCase):
     def test_get_accuracy(self):
         result = []
         compare.get_accuracy(result, npu_dict, bench_dict, highlight_dict)
+
         self.assertEqual(result, o_result)
 
     def test_get_accuracy_graph_mode(self):
