@@ -9,6 +9,7 @@ import torch.nn.functional
 
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
+from api_accuracy_checker.run_ut.run_ut import UtDataInfo
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -47,7 +48,7 @@ class TestCompare(unittest.TestCase):
         # 对其他值进行比较，确保它们符合预期
         detailed_result_total[0][3] = 1.0
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
          '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
         self.assertTrue(test_final_success)
 
@@ -61,35 +62,37 @@ class TestCompare(unittest.TestCase):
         detailed_result_total[1][3] = 1.0
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass', 
+         ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
          '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'], 
          ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ',
-          ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
+          ' ', ' ', ' ', ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
-        api_name = 'Functional*conv2d*0'
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        api_name = 'Functional.conv2d.0'
+        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertFalse(is_fwd_success)
         self.assertFalse(is_bwd_success)
 
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, bench_out, npu_out)
+        data_info = UtDataInfo(None, None, bench_out, npu_out, None, None, None)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info)
         self.assertTrue(is_fwd_success)
         self.assertTrue(is_bwd_success)
 
     def test_record_results(self):
-        args = ('Functional*conv2d*0', False, 'N/A', [['torch.float64', 'torch.float32', (32, 64, 112, 112), 1.0,
+        args = ('Functional.conv2d.0', False, 'N/A', [['torch.float64', 'torch.float32', (32, 64, 112, 112), 1.0,
                                                        0.012798667686, 'N/A', 0.81631212311, 0.159979121213, 'N/A',
-                                                       'error', '\n']], None)
-        self.compare.record_results(*args)
+                                                       'error', '\n']], None, 0)
+        self.compare.record_results(args)
         with open(self.details_csv_path, 'r') as file:
             csv_reader = csv.reader(file)
             next(csv_reader)
             api_name_list = [row[0] for row in csv_reader]
-        self.assertEqual(api_name_list[0], 'Functional*conv2d*0.forward.output.0')
+        self.assertEqual(api_name_list[0], 'Functional.conv2d.0.forward.output.0')
         
     def test_compare_torch_tensor(self):
         cpu_output = torch.Tensor([1.0, 2.0, 3.0])
@@ -109,3 +112,11 @@ class TestCompare(unittest.TestCase):
         npu_out = 1
         status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
         self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))
+    
+    def test_compare_float_tensor(self):
+        cpu_output = torch.Tensor([1.0, 2.0, 3.0])
+        npu_output = torch.Tensor([1.0, 2.0, 3.0])
+        compare_column = CompareColumn()
+        status, compare_column, message = self.compare._compare_float_tensor("api", cpu_output.numpy(), npu_output.numpy(),
+                                                                             compare_column, npu_output.dtype)
+        self.assertEqual(status, "pass")

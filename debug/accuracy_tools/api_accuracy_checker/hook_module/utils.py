@@ -27,3 +27,6 @@ with FileOpen(yaml_path, 'r') as f:
     WrapFunctionalOps = Ops.get('functional')
     WrapTensorOps = Ops.get('tensor')
     WrapTorchOps = Ops.get('torch')
+    WrapAtenOps = Ops.get('aten')
+    WrapNPUOps = Ops.get('torch_npu')
+    WhiteAtenOps = Ops.get('white_aten_ops')

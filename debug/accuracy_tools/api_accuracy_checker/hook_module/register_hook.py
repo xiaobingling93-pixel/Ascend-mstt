@@ -18,6 +18,14 @@ import torch
 
 from api_accuracy_checker.hook_module import wrap_torch, wrap_functional, wrap_tensor
 
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+else:
+    is_gpu = False
+    from api_accuracy_checker.hook_module import wrap_npu_custom
+
 
 def initialize_hook(hook):
     wrap_tensor.wrap_tensor_ops_and_bind(hook)
@@ -34,4 +42,10 @@ def initialize_hook(hook):
     for attr_name in dir(wrap_functional.HOOKFunctionalOP):
         if attr_name.startswith("wrap_"):
             setattr(torch.nn.functional, attr_name[5:], getattr(wrap_functional.HOOKFunctionalOP, attr_name))
+
+    if not is_gpu:
+        wrap_npu_custom.wrap_npu_ops_and_bind(hook)
+        for attr_name in dir(wrap_npu_custom.HOOKNpuOP):
+            if attr_name.startswith("wrap_"):
+                setattr(torch_npu, attr_name[5:], getattr(wrap_npu_custom.HOOKNpuOP, attr_name))
 

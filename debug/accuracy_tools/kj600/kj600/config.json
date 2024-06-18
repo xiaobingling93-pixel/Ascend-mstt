@@ -1,0 +1,10 @@
+// config.json examples
+//
+// example1:
+// {
+//     "targets": {
+//         "fc": {"input": "tuple[1]:0", "output": "tensor", "input_grad":"tuple[1]:0", "output_grad":"tuple[1]:0"}, 
+//         "relu": {"input": "tuple[1]:0", "output": "tensor", "input_grad":"tuple[1]:0", "output_grad":"tuple[1]:0"}
+//     },
+//     "module_ranks":"1,2,3,4"
+// }

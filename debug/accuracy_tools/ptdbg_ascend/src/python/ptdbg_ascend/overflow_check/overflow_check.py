@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import numpy as np
 import torch
 
 try:
@@ -10,7 +11,7 @@ except ImportError:
 else:
     is_gpu = False
 
-from ..common.utils import print_warn_log, get_time, print_info_log
+from ..common.utils import print_warn_log, get_time, print_info_log, Const
 from ..dump.dump import forward_init_status, forward_acl_dump
 from .utils import OverFlowUtil, dump_overflow, check_overflow_npu, clear_overflow_npu
 from ..dump.utils import DumpUtil, Const, get_tensor_rank, create_dirs_if_not_exist, check_single_rank_folder
@@ -55,6 +56,11 @@ def check_data_overflow(x):
             if len(x.shape) == 0:
                 tensor_max = x.cpu().detach().float().numpy().tolist()
                 tensor_min = tensor_max
+            elif torch.is_complex(x):
+                data_np = x.detach().cpu().numpy()
+                data_abs = np.abs(data_np)
+                tensor_max = np.max(data_abs).item()
+                tensor_min = np.min(data_abs).item()
             else:
                 tensor_max = torch._C._VariableFunctionsClass.max(x).cpu().detach().float().numpy().tolist()
                 tensor_min = torch._C._VariableFunctionsClass.min(x).cpu().detach().float().numpy().tolist()
@@ -142,7 +148,7 @@ def overflow_check(name, **kwargs):
                     backward_api_info.update({name: BackwardAPIInfo(name, out_feat)})
             OverFlowUtil.inc_overflow_dump_times()
             dump_file_name = os.path.join(dump_dir,
-                                          "{}_{}.pkl".format(module_name, OverFlowUtil.real_overflow_dump_times))
+                                          "{}_{}.pkl".format(module_name.replace(Const.DELIMITER, '_'), OverFlowUtil.real_overflow_dump_times))
             dump_overflow(module_name, in_feat, out_feat, dump_file_name)
             dump.pkl_name = dump_file_name
 

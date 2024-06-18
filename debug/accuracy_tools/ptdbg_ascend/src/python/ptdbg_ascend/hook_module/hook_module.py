@@ -20,7 +20,7 @@ import threading
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
-
+from ..common.utils import Const
 
 class HOOKModule(nn.Module):
     module_count = {}
@@ -43,12 +43,12 @@ class HOOKModule(nn.Module):
 
             if self.prefix not in HOOKModule.module_count:
                 HOOKModule.module_count[self.prefix] = 1
-                self.prefix += '0_'
+                self.prefix += '0' + Const.DELIMITER
             else:
                 HOOKModule.module_count[self.prefix] += 1
-                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + '_'
-            self.register_forward_hook(hook(self.prefix + "forward"))
-            self.register_backward_hook(hook(self.prefix + "backward"))
+                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.DELIMITER
+            self.register_forward_hook(hook(self.prefix + Const.FORWARD))
+            self.register_backward_hook(hook(self.prefix + Const.BACKWARD))
 
     def __call__(self, *input, **kwargs):
         changed = False

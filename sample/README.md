@@ -40,7 +40,7 @@ source set_env.sh
     ```
     COMPILER_FLAG		:= -xcce -O2 -std=c++17
     修改为：
-    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g -mllvm -cce-aicore-function-stack-size=0x8000 -mllvm -cce-aicore-stack-size=0x8000 -mllvm -cce-aicore-jump-expand=true
+    COMPILER_FLAG		:= -xcce -O0 -std=c++17 -g --cce-ignore-always-inline=true
     ```
 
 2. 运行阶段：

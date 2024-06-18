@@ -1,20 +1,27 @@
 # 进行比对及结果展示
 import os
 import csv
+from collections import namedtuple
+
 import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log
+from api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log, Const
 from api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, DETAIL_TEST_ROWS, \
-    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, apis_threshold
+    precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, \
+    ThousandthStandardApi, apis_threshold
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, get_mean_rel_err, \
     get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps
+    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from api_accuracy_checker.common.config import msCheckerConfig
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
+
+
+ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
+                                       'fwd_compare_alg_results', 'bwd_compare_alg_results', 'rank'])
 
 
 class Comparator:
@@ -25,9 +32,17 @@ class Comparator:
     COLUMN_STACK_INFO = "Traceback callstack info"
 
     def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, stack_info_json_path=None):
-        self.save_path = result_csv_path
-        self.detail_save_path = details_csv_path
-        if not is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
+        self.save_path_str = result_csv_path
+        self.detail_save_path_str = details_csv_path
+        self.save_path_list = [result_csv_path]
+        self.detail_save_path_list = [details_csv_path]
+        if msCheckerConfig.is_online:
+            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
+            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
+            self.save_path_list = [self.save_path_str.format(rank) for rank in msCheckerConfig.rank_list]
+            self.detail_save_path_list = [self.detail_save_path_str.format(rank) for rank in msCheckerConfig.rank_list]
+
+        if not is_continue_run_ut:
             self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
@@ -35,12 +50,18 @@ class Comparator:
             self.stack_info = None
 
         self.test_result_cnt = {
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-            "total_num": 0, "forward_or_backward_fail_num": 0
+            "success_num": 0, "warning_num": 0, "error_num": 0,
+            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
+            "total_num": 0, "total_skip_num": 0
         }
 
+    @staticmethod
+    def get_path_from_rank(rank, path_list, path_pattern):
+        return path_list[-1] if len(path_list) == 1 else path_pattern.format(rank)
+
     def print_pretest_result(self):
-        self.get_statistics_from_result_csv()
+        for save_path in self.save_path_list:
+            self.get_statistics_from_result_csv(save_path)
         total_tests = self.test_result_cnt.get("total_num", 0)
         if total_tests != 0:
             passing_rate = "{:.2%}".format(self.test_result_cnt.get("success_num", 0) / total_tests)
@@ -73,17 +94,12 @@ class Comparator:
         console.print(table_total)
         console.print(table_detail)
 
-    def get_statistics_from_result_csv(self):
+    def get_statistics_from_result_csv(self, save_path):
         checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.SPACE, CompareConst.SKIP, "skip"]
-        self.test_result_cnt = {
-            "success_num": 0, "warning_num": 0, "error_num": 0,
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
-            "total_num": 0, "total_skip_num": 0
-        }
-        with FileOpen(self.save_path, 'r') as file:
+        with FileOpen(save_path, 'r') as file:
             reader = csv.reader(file)
             result_csv_rows = [row for row in reader]
-        result_csv_name = os.path.basename(self.save_path)
+        result_csv_name = os.path.basename(save_path)
         for item in result_csv_rows[1:]:
             if not isinstance(item, list) or len(item) < 3:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
@@ -97,7 +113,7 @@ class Comparator:
                 self.test_result_cnt["total_skip_num"] += 1
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE]:
+            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE, CompareConst.SKIP]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
@@ -114,9 +130,11 @@ class Comparator:
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, 
                               self.COLUMN_BACKWARD_SUCCESS, "Message"]]
-        write_csv(summary_test_rows, self.save_path)
-
-        write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
+        for save_path, detail_save_path in zip(self.save_path_list, self.detail_save_path_list):
+            if not os.path.exists(save_path):
+                write_csv(summary_test_rows, save_path)
+            if not os.path.exists(detail_save_path):
+                write_csv(DETAIL_TEST_ROWS, detail_save_path)
 
     def write_summary_csv(self, test_result):
         test_rows = []
@@ -125,13 +143,14 @@ class Comparator:
 
         name = test_result[0]
         df_row = list(test_result[:3])
-        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
-            df_row.append(test_result[3])
+        if test_result[1] == "SKIP":
+            df_row.append(test_result[3][0][-1])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
         test_rows.append(df_row)
-        write_csv(test_rows, self.save_path)
+        save_path = self.get_path_from_rank(test_result[-1], self.save_path_list, self.save_path_str)
+        write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
         test_rows = []
@@ -152,24 +171,44 @@ class Comparator:
                                 if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
 
-        write_csv(test_rows, self.detail_save_path)
+        detail_save_path = self.get_path_from_rank(test_result[-1],
+                                                   self.detail_save_path_list,
+                                                   self.detail_save_path_str)
+        write_csv(test_rows, detail_save_path)
 
-    def record_results(self, *args):
+    def record_results(self, args):
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
-    def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
-        _, api_name, _ = full_api_name.split("*")
+    def compare_output(self, full_api_name, data_info):
+        _, api_name, _ = full_api_name.split(Const.DELIMITER)
+        bench_output, device_output = data_info.bench_output, data_info.device_output
+        bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
+        backward_message = data_info.backward_message
         compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
+        # forward result compare
         fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
-        if not (bench_grad and npu_grad):
+        # backward result compare
+        if bench_grad is None or device_grad is None:
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
             if "dropout" in full_api_name:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], npu_grad[0])
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], device_grad[0])
             else:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, npu_grad)
-        self.record_results(full_api_name, fwd_success_status, bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE, fwd_compare_alg_results, bwd_compare_alg_results)
+                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, device_grad)
+        if backward_message:
+            backward_column = CompareColumn()
+            bwd_compare_alg_results = [backward_column.to_column_value(CompareConst.SKIP, backward_message)]
+        else:
+            bwd_success_status = bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE
+
+        result_info = ResultInfo(full_api_name,
+                                 fwd_success_status,
+                                 bwd_success_status,
+                                 fwd_compare_alg_results,
+                                 bwd_compare_alg_results,
+                                 data_info.rank)
+        self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
             or bwd_success_status == CompareConst.SPACE
 
@@ -178,10 +217,11 @@ class Comparator:
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
             status, compare_result, message = [], [], []
-            if len(bench_output) != len(device_output):
+            if len(bench_output) > len(device_output):
                 status = [CompareConst.ERROR]
                 message = ["bench and npu output structure is different."]
             else:
+                device_output = device_output[:len(bench_output)]
                 for b_out_i, n_out_i in zip(bench_output, device_output):
                     status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
                     status.append(status_i)
@@ -268,6 +308,10 @@ class Comparator:
         message = ""
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
+        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
+        if api_name in ThousandthStandardApi:
+            thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+            compare_column.rel_err_thousandth = thousand_res
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
             if api_name in BinaryStandardApi:
@@ -282,6 +326,19 @@ class Comparator:
                 compare_column.inf_nan_error_ratio = check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol)
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
+            elif api_name in ULPStandardApi:
+                if bench_output.size == 0:
+                    compare_column.max_ulp_error = 0
+                    compare_column.mean_ulp_error = 0
+                    compare_column.ulp_error_proportion = 0
+                else:
+                    ulp_err = get_ulp_err(bench_output, device_output, dtype)
+                    compare_column.max_ulp_error = np.max(ulp_err)
+                    compare_column.mean_ulp_error = np.mean(ulp_err)
+                    if dtype == torch.float32:
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 32) / bench_output.size
+                    else:
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 1) / bench_output.size
             else:
                 dtype_config = precision_configs.get(dtype)    
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
@@ -290,6 +347,8 @@ class Comparator:
                 rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
                 compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
                 compare_column.EB = get_error_balance(bench_output, device_output)
+                if rel_err.size == 0:
+                    return CompareConst.ERROR, compare_column, "Relative error result list is empty."
                 compare_column.Max_rel_error = get_max_rel_err(rel_err)
                 compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
@@ -306,7 +365,6 @@ class Comparator:
             message += "Max abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
             return CompareConst.PASS, compare_column, message
 
-        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if dtype in [torch.float16, torch.bfloat16]:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
@@ -358,7 +416,7 @@ class Comparator:
     def _compare_bool_tensor(bench_output, device_output):
         error_nums = (bench_output != device_output).sum()
         if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
+            return 0, CompareConst.PASS, ""
         error_rate = float(error_nums / bench_output.size)
         result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
         return error_rate, result, ""
