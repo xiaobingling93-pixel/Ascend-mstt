@@ -19,7 +19,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ascend_training_accuracy_tools',
-    version='0.0.1',
+    version='0.0.3',
     description='This is a pytorch precision comparison tools',
     long_description='This is a pytorch precision comparison tools, include ptdbg and api accuracy checker',
     packages=find_packages(),
