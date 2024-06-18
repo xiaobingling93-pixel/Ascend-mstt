@@ -49,14 +49,19 @@ class HOOKDistributedOP(object):
 class DistributedOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Distributed_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Distributed" + Const.DELIMITER + str(op_name) + Const.DELIMITER
         super().__init__(hook)
         if self.op_name_ in Const.INPLACE_LIST:
             self.register_forward_pre_hook(hook(self.prefix + Const.PRE_FORWARD))
 
     @torch_device_guard
     def forward(self, *args, **kwargs):
-        return distributed_func.get(self.op_name_)(*args, **kwargs)
+        if kwargs.get("async_op") or self.op_name_ in ["isend", "irecv"]:
+            handle = distributed_func.get(self.op_name_)(*args, **kwargs)
+            handle.wait()
+            return handle
+        else:
+            return distributed_func.get(self.op_name_)(*args, **kwargs)
 
 
 def wrap_distributed_op(op_name, hook):

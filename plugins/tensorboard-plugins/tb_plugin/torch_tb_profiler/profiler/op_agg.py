@@ -145,11 +145,15 @@ class ModuleAggregator:
         stack_lists_group_by_name: Dict[str, List[OperatorAgg]] = defaultdict(list)
         stack_lists_group_by_name_input: Dict[str, List[OperatorAgg]] = defaultdict(list)
         for agg in agg_result[2].values():
-            assert (len(agg.callstacks) == 1)
+            if len(agg.callstacks) != 1:
+                logger.error(f'Incorrect length of callstacks, expected 1 but got {len(agg.callstacks)}')
+                break
             if list(agg.callstacks)[0]:
                 stack_lists_group_by_name[agg.name].append(agg)
         for agg in agg_result[3].values():
-            assert (len(agg.callstacks) == 1)
+            if len(agg.callstacks) != 1:
+                logger.error(f'Incorrect length of callstacks, expected 1 but got {len(agg.callstacks)}')
+                break
             if list(agg.callstacks)[0]:
                 key = agg.name + '###' + str(agg.input_shape)
                 stack_lists_group_by_name_input[key].append(agg)

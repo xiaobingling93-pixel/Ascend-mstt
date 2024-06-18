@@ -1,14 +1,39 @@
 from ptdbg_ascend import compare
+from ptdbg_ascend.common.file_check_util import FileChecker
+import argparse
+import os.path
 
 pkl_path = "%s"
 dump_data_dir = "%s"
 
+parser = argparse.ArgumentParser(description="compare data")
+parser.add_argument("--npu_pkl_path", type=str, default=pkl_path, help="npu保存数据的pkl路径")
+parser.add_argument("--bench_pkl_path", type=str, default=pkl_path, help="对比数据的pkl路径")
+parser.add_argument("--output_path", type=str, default="./", help="导出对比数据的路径")
+
+args = parser.parse_args()
+npu_pkl_path = args.npu_pkl_path
+bench_pkl_path = args.bench_pkl_path
+output_path = args.output_path
+
+suffix = ".pkl"
+npu_path_checker = FileChecker(npu_pkl_path, "file", "read", suffix)
+npu_path_checker.common_check()
+bench_path_checker = FileChecker(bench_pkl_path, "file", "read", suffix)
+bench_path_checker.common_check()
+
+npu_dump_data_dir = npu_pkl_path[:-len(suffix)]
+bench_dump_data_dir = bench_pkl_path[:-len(suffix)]
+if not os.path.exists(npu_dump_data_dir) or not os.path.exists(bench_dump_data_dir):
+    npu_dump_data_dir = ""
+    bench_dump_data_dir = ""
+
 dump_path_param = {
-    "npu_pkl_path": ,
-    "bench_pkl_path": ,
-    "npu_dump_data_dir": ,
-    "bench_dump_data_dir": ,
+    "npu_pkl_path": npu_pkl_path,
+    "bench_pkl_path": bench_pkl_path,
+    "npu_dump_data_dir": npu_dump_data_dir,
+    "bench_dump_data_dir": bench_dump_data_dir,
     "is_print_compare_log": True
 }
 
-compare(dump_path_param, output_path="", stack_mode=%s)
+compare(dump_path_param, output_path=output_path, stack_mode=%s)

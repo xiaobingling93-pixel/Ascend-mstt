@@ -21,7 +21,7 @@ import torch
 import yaml
 
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard, print_info_log
+from ..common.utils import torch_device_guard, print_info_log, Const
 from ..common.file_check_util import FileOpen
 
 
@@ -84,7 +84,7 @@ class HOOKFunctionalOP(object):
 class FunctionalOPTemplate(HOOKModule):
     def __init__(self, op_name, hook):
         self.op_name_ = op_name
-        self.prefix_op_name_ = "Functional_" + str(op_name) + "_"
+        self.prefix_op_name_ = "Functional" + Const.DELIMITER + str(op_name) + Const.DELIMITER
         super().__init__(hook)
 
     @torch_device_guard
