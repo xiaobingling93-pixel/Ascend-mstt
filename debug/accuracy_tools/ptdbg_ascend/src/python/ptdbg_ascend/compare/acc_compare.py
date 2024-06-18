@@ -250,7 +250,7 @@ def merge_tensor(tensor_list):
         op_dict["op_name"].append(tensor[0])
         if len(tensor) != Const.SUMMARY_COLUMN_NUM:
             print_error_log(f"This summary data is not complete. {tensor}")
-            raise CompareException(CompareException.INVALID_DATA_ERROR)    
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
         if tensor[0].find("input") != -1:
             op_dict["input_struct"].append((tensor[3], tensor[4], tensor[2]))
         elif tensor[0].find("output") != -1:
@@ -281,7 +281,7 @@ def read_op(ops_queue, pkl_file_handle, stack_mode):
             tensor_data = json.loads(tensor_line)
             if not isinstance(tensor_data, list):
                 print_error_log(f"This data is not a list, please check the dump data pkl file. {tensor_data}")
-                raise CompareException(CompareException.INVALID_DATA_ERROR) 
+                raise CompareException(CompareException.INVALID_DATA_ERROR)
             read_output_flag["last_line"] = read_output_flag.get("curr_line")
             read_output_flag["curr_line"] = True if tensor_data[0].find(end_flag) != -1 else False
 
