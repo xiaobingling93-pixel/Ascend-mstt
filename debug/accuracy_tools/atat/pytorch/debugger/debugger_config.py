@@ -13,8 +13,11 @@ class DebuggerConfig:
         self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
-        self.data_mode =  task_config.data_mode if task_config.data_mode else ["all"]
-        self.backward_input = task_config.backward_input
+        self.data_mode = task_config.data_mode if task_config.data_mode else ["all"]
+        self.backward_input_list = task_config.backward_input if task_config.backward_input else []
+        self.backward_input = {}
+        self.acl_config = common_config.acl_config if common_config.acl_config else ""
+        self.is_forward_acl_dump = True
         self.summary_mode = task_config.summary_mode if task_config.summary_mode else Const.STATISTICS
         self.overflow_num = task_config.overflow_num if task_config.overflow_num else 1
         self.repair_scope = None
@@ -37,6 +40,17 @@ class DebuggerConfig:
         self.check()
         if self.step:
             self.step.sort()
+        if self.level == "L2":
+            if not self.scope or not isinstance(self.scope, list) or len(self.scope) != 1:
+                raise ValueError("scope must be configured as a list with one api name")
+            if isinstance(self.scope[0], str) and Const.BACKWARD in self.scope[0] and not self.backward_input:
+                raise ValueError("backward_input must be configured when scope contains 'backward'")
+            if Const.BACKWARD in self.scope[0]:
+                self.is_forward_acl_dump = False
+                for index in range(len(self.scope)):
+                    # Do this replace operation to let the acl backward dump can be done in forward hook.
+                    self.scope[index] = self.scope[index].replace(Const.BACKWARD, Const.FORWARD)
+                    self.backward_input[self.scope[index]] = self.backward_input_list[index]
         seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
