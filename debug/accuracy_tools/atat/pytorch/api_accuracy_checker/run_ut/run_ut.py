@@ -66,6 +66,9 @@ def exec_api(api_type, api_name, args, kwargs):
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
         out = torch_api.forward(*args, **kwargs)
+    if api_type == "Distributed":
+        print_info_log("Distributed api is not supported for run ut. SKIP")
+        return None
     return out
 
 
