@@ -18,7 +18,7 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, task_dumppath_get
+    check_configuration_param, is_summary_compare, is_md5_compare
 from .acc_compare import compare_core
 
 
@@ -36,23 +36,28 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
                 raise CompareException(CompareException.INVALID_PATH_ERROR)
         return contents
 
-
-    def extract_json(dirname, stack_json=False):
-        json_path = ''
+    def extract_pkl_and_data_dir(dirname):
+        pkl_path, dump_data_dir, pkl_name, dump_data_dirname = '', '', '', ''
         for fname in os.listdir(dirname):
             full_path = os.path.join(dirname, fname)
-            if full_path.endswith('.json'):
-                json_path = full_path
-                if not stack_json and 'stack' not in json_path:
-                    break
-                if stack_json and 'stack' in json_path:
-                    break
-
+            if os.path.isdir(full_path):
+                dump_data_dir = full_path
+                dump_data_dirname = fname
+            elif full_path.endswith('.pkl'):
+                pkl_path = full_path
+                pkl_name = fname
         # Provide robustness on invalid directory inputs
-        if not json_path:
+        if not pkl_path:
             print_error_log(f'No file is found in dump dir {dirname}. ')
             raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
-        return json_path
+        name_body, ext = os.path.splitext(pkl_name)
+        pattern = re.compile(f'{name_body}$')
+        match = pattern.match(dump_data_dirname)
+        if dump_data_dir and match is None:
+            print_error_log('The names of pkl and directory do not match! '
+                f'Please check the names and remove irrelevant files in {dirname}. ')
+            raise CompareException(CompareException.INVALID_FILE_ERROR)
+        return pkl_path, dump_data_dir
 
 
     if kwargs.get('suffix'):
@@ -72,19 +77,18 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     for nr, br in zip(npu_ranks, bench_ranks):
         n_dir = os.path.join(npu_dump_dir, nr)
         b_dir = os.path.join(bench_dump_dir, br)
-        s_dir = b_dir
-        npu_json_path = extract_json(n_dir, stack_json=False)
-        bench_json_path = extract_json(b_dir, stack_json=False)
-        stack_json_path = extract_json(s_dir, stack_json=True)
-
+        npu_pkl_path, npu_dump_data_dir = extract_pkl_and_data_dir(n_dir)
+        bench_pkl_path, bench_dump_data_dir = extract_pkl_and_data_dir(b_dir)
         dump_result_param = {
-            'npu_json_path': npu_json_path,
-            'bench_json_path': bench_json_path,
-            'stack_json_path': stack_json_path,
+            'npu_pkl_path': npu_pkl_path,
+            'bench_pkl_path': bench_pkl_path,
+            'npu_dump_data_dir': npu_dump_data_dir,
+            'bench_dump_data_dir': bench_dump_data_dir,
             'is_print_compare_log': True
         }
         try:
-            summary_compare, md5_compare = task_dumppath_get(dump_result_param)
+            summary_compare = is_summary_compare(dump_result_param)
+            md5_compare = is_md5_compare(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
         except CompareException as error:

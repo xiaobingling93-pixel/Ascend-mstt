@@ -41,7 +41,7 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1']
+torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
         torch_without_guard_version = True
@@ -77,6 +77,7 @@ class Const:
     BACKWARD = 'backward'
     FORWARD = 'forward'
     PRE_FORWARD = "pre_forward"
+    DELIMITER = '.'
 
     # dump mode
     ALL = "all"
@@ -113,10 +114,12 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
 
-    MAX_SEED_VALUE = 2**32 - 1
+    MAX_SEED_VALUE = 2 ** 32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-                    "_reduce_scatter_base", "_all_gather_base"]
+    INPLACE_LIST = [
+        "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
+    ]
 
 
 class CompareConst:
@@ -126,8 +129,8 @@ class CompareConst:
     # compare result column name
     NPU_NAME = "NPU Name"
     BENCH_NAME = "Bench Name"
-    NPU_DTYPE = "NPU Dtype"
-    BENCH_DTYPE = "Bench Dtype"
+    NPU_DTYPE = "NPU Tensor Dtype"
+    BENCH_DTYPE = "Bench Tensor Dtype"
     NPU_SHAPE = "NPU Tensor Shape"
     BENCH_SHAPE = "Bench Tensor Shape"
     NPU_MAX = "NPU max"
@@ -147,7 +150,6 @@ class CompareConst:
     MAX_RELATIVE_ERR = "MaxRelativeErr"
     ACCURACY = "Accuracy Reached or Not"
     STACK = "NPU_Stack_Info"
-    DATA_NAME = "Data_name"
     ERROR_MESSAGE = "Err_message"
     ONE_THOUSANDTH_ERR_RATIO = "One Thousandth Err Ratio"
     FIVE_THOUSANDTHS_ERR_RATIO = "Five Thousandths Err Ratio"
@@ -172,7 +174,6 @@ class CompareConst:
 
     # compare result data
     NAN = 'Nan'
-    NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
     DTYPE_UNMATCH = 'dtype unmatched'
     PASS = 'Pass'
@@ -203,6 +204,7 @@ class VersionCheck:
     V1_11 = "1.11"
     V2_0 = "2.0"
     V2_1 = "2.1"
+    V2_2 = "2.2"
 
     @staticmethod
     def check_torch_version(version):
@@ -237,7 +239,6 @@ class CompareException(Exception):
     INVALID_COMPARE_MODE = 17
     OVER_SIZE_FILE_ERROR = 18
     INVALID_SUMMARY_MODE = 19
-    INVALID_TASK_ERROR = 20
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -322,11 +323,18 @@ def check_mode_valid(mode, scope=None, api_list=None):
         raise ValueError("api_list param set invalid, it's must be a list.")
     mode_check = {
         Const.ALL: lambda: None,
-        Const.RANGE: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end].") if len(scope) != 2 else None,
-        Const.LIST: lambda:  ValueError("set_dump_switch, scope param set invalid, it's should not be an empty list.") if len(scope) == 0 else None,
-        Const.STACK: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end] or [].") if len(scope) > 2 else None,
-        Const.ACL: lambda:  ValueError("set_dump_switch, scope param set invalid, only one api name is supported in acl mode.") if len(scope) != 1 else None,
-        Const.API_LIST: lambda:  ValueError("Current dump mode is 'api_list', but the content of api_list parameter is empty or valid.") if len(api_list) < 1 else None,
+        Const.RANGE: lambda: ValueError("set_dump_switch, scope param set invalid, it's must be [start, end].") if len(
+            scope) != 2 else None,
+        Const.LIST: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, it's should not be an empty list.") if len(scope) == 0 else None,
+        Const.STACK: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, it's must be [start, end] or [].") if len(scope) > 2 else None,
+        Const.ACL: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, only one api name is supported in acl mode.") if len(
+            scope) != 1 else None,
+        Const.API_LIST: lambda: ValueError(
+            "Current dump mode is 'api_list', but the content of api_list parameter is empty or valid.") if len(
+            api_list) < 1 else None,
         Const.API_STACK: lambda: None,
     }
     if mode not in Const.DUMP_MODE:
@@ -349,7 +357,8 @@ def check_dump_mode_valid(dump_mode):
         print_warn_log("Please set dump_mode as a list.")
         dump_mode = [dump_mode]
     if not all(mode in ["all", "forward", "backward", "input", "output"] for mode in dump_mode):
-        raise ValueError("Please set dump_mode as a list containing one or more of the following: 'all', 'forward', 'backward', 'input', 'output'.")
+        raise ValueError(
+            "Please set dump_mode as a list containing one or more of the following: 'all', 'forward', 'backward', 'input', 'output'.")
     if 'input' not in dump_mode and 'output' not in dump_mode:
         dump_mode.extend(['input', 'output'])
     if 'forward' not in dump_mode and 'backward' not in dump_mode:
@@ -372,66 +381,49 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False, md5_compare=False):
+def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False):  # 添加默认值来让不传参时能通过参数检查
     if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
         print_error_log("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    check_file_or_directory_path(input_parma.get("npu_json_path"), False)
-    check_file_or_directory_path(input_parma.get("bench_json_path"), False)
-    check_file_or_directory_path(input_parma.get("stack_json_path"), False)
-    if not summary_compare and not md5_compare:
+    check_file_or_directory_path(input_parma.get("npu_pkl_path"), False)
+    check_file_or_directory_path(input_parma.get("bench_pkl_path"), False)
+    if not summary_compare:
         check_file_or_directory_path(input_parma.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-         FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-         FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-        check_json_file(input_parma, npu_json, bench_json, stack_json)
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
+            FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
+        check_pkl_file(input_parma, npu_pkl, bench_pkl, stack_mode)
 
 
-def md5_find(data):
-    for key_op in data:
-        for api_info in data[key_op]:
-            if isinstance(data[key_op][api_info], list):
-                for i in range(len(data[key_op][api_info])):
-                    if data[key_op][api_info][i] == None:
-                        continue
-                    elif 'md5' in data[key_op][api_info][i]:
-                        return True
-            elif 'md5' in data[key_op][api_info]:
-                return True
-    return False
-
-
-def task_dumppath_get(input_param):
-    npu_json_path = input_param.get("npu_json_path", None)
-    bench_json_path = input_param.get("bench_json_path", None)
-    if not npu_json_path or not bench_json_path:
-        print_error_log(f"Please check the json path is valid.")
+def is_summary_compare(input_param):
+    npu_pkl_path = input_param.get("npu_pkl_path", None)
+    bench_pkl_path = input_param.get("bench_pkl_path", None)
+    npu_dump_data_dir = input_param.get("npu_dump_data_dir", None)
+    bench_dump_data_dir = input_param.get("bench_dump_data_dir", None)
+    if not npu_pkl_path or not bench_pkl_path:
+        print_error_log(f"Please check the pkl path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    with FileOpen(npu_json_path, 'r') as npu_f:
-        npu_json_data = json.load(npu_f)
-    with FileOpen(bench_json_path, 'r') as bench_f:
-        bench_json_data = json.load(bench_f)
-    if npu_json_data['task'] != bench_json_data['task']:
-        print_error_log(f"Please check the dump task is consistent.")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
-    else:
-        if npu_json_data['task'] == 'tensor':
-            summary_compare = False
-            md5_compare = False
-        elif npu_json_data['task'] == 'statistics':
-            md5_compare = md5_find(npu_json_data['data'])
-            if md5_compare:
-                summary_compare = False
-            else:
-                summary_compare = True
-        else:
-            print_error_log(f"Compare is not required for overflow_check.")
-            raise CompareException(CompareException.INVALID_TASK_ERROR)
-        input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
-        input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
-        return summary_compare, md5_compare
+    if not (npu_dump_data_dir and bench_dump_data_dir):
+        return True
+    if npu_dump_data_dir and bench_dump_data_dir:
+        return False
+    print_error_log(f"Please check the dump data dir is valid.")
+    raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+
+def is_md5_compare(input_parma):
+    with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl:
+        pkl_lines = npu_pkl.readline()
+    try:
+        line = json.loads(pkl_lines)
+    except JSONDecodeError as err:
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from err
+    if len(line) < 3:
+        return False
+    if line[2]:
+        return True
+    return False
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
@@ -465,28 +457,22 @@ def _check_pkl(pkl_file_handle, file_name):
     pkl_file_handle.seek(0, 0)
 
 
-def _check_json(json_file_handle, file_name):
-    tensor_line = json_file_handle.readline()
-    if len(tensor_line) == 0:
-        print_error_log("dump file {} have empty line!".format(file_name))
-        raise CompareException(CompareException.INVALID_DUMP_FILE)
-    json_file_handle.seek(0, 0)
-
-
 def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
 
 def check_stack_mode(pkl_fp):
     api_prefix = ""
-    api_pattern = r'\[\"([0-9a-zA-Z_.]+_(for|back)ward)_(in|out)put(\.[0-9]+)?'
+    api_match = ""
+    api_pattern = r'\[\"([0-9a-zA-Z_.]+.(for|back)ward).(in|out)put(\.[0-9]+)?'
     is_stack_mode = False
     for index, line in enumerate(pkl_fp):
-        if index == 0:
-            api_match = re.search(api_pattern, line)
-            api_prefix = api_match.group(1)
+        if not api_match:
+            if re.search(api_pattern, line):
+                api_match = re.search(api_pattern, line)
+                api_prefix = api_match.group(1)
         elif api_prefix and line.startswith(f'["{api_prefix}'):
-            if line.startswith(f'["{api_prefix}_stack_info'):
+            if line.startswith(f'["{api_prefix}.stack_info'):
                 is_stack_mode = True
                 break
         else:
@@ -513,12 +499,6 @@ def check_pkl_file(input_param, npu_pkl, bench_pkl, stack_mode):
     else:
         print_error_log("The dump mode of the two files is not same, please check the dump files")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
-
-
-def check_json_file(input_param, npu_json, bench_json, stack_json):
-    _check_json(npu_json, input_param.get("npu_json_path"))
-    _check_json(bench_json, input_param.get("bench_json_path"))
-    _check_json(stack_json, input_param.get("stack_json_path"))
 
 
 def check_file_size(input_file, max_size):
@@ -670,11 +650,13 @@ def format_value(value):
 def torch_device_guard(func):
     if is_gpu or torch_without_guard_version:
         return func
+
     # Parse args/kwargs matched torch.device objects
 
     @torch_npu_device_guard
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -718,16 +700,15 @@ def get_process_rank(model):
         return 0, False
     if local_device.type == 'cpu':
         print_warn_log("Warning: the debugger is unable to get the rank id. "
-            "This may cause the dumpped data to be corrupted in the "
-            "case of distributed training. (You may ignore this if you are using only one card.) "
-            "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
+                       "This may cause the dumpped data to be corrupted in the "
+                       "case of distributed training. (You may ignore this if you are using only one card.) "
+                       "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
         return 0, False
     else:
         return local_device.index, True
 
 
 def parameter_adapter(func):
-
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
@@ -753,6 +734,7 @@ def parameter_adapter(func):
         if self.op_name_ == "__eq__" and args[1] is None:
             return False
         return func(self, *args, **kwargs)
+
     return inner
 
 
@@ -764,7 +746,7 @@ def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
 
     try:
         with FileOpen(template_path, 'r') as ftemp, \
-           os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
+                os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
             code_temp = ftemp.read()
             fout.write(code_temp % (pkl_file_path, dump_path, is_api_stack))
     except OSError:
