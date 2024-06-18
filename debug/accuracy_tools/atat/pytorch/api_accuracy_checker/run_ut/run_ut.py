@@ -199,7 +199,7 @@ def run_ut(config):
 
 def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
-    flag = split_name in [Const.NPU, "Distributed"]
+    flag = split_name in [Const.NPU, Const.DISTRIBUTED]
     if flag:
         print_info_log(f"{split_name} api is not supported for run ut. SKIP.")
     return flag
