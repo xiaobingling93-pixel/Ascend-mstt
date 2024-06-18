@@ -10,6 +10,7 @@ class CommonConfig:
         self.step = json_config.get('step')
         self.level = json_config.get('level')
         self.seed = json_config.get('seed')
+        self.acl_config = json_config.get('acl_config')
         self.is_deterministic = json_config.get('is_deterministic', False)
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()

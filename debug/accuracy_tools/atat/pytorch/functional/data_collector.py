@@ -1,13 +1,20 @@
 
 import os
+import torch
 from ..module_processer import ModuleProcesser
 from .scope import BaseScope, build_scope, ListScope
 from .json_writer import DataWriter
-from ..common.log import print_info_log, print_info_log_rank_0, print_error_log_rank_0
+from ..common.log import print_info_log, print_warn_log, print_info_log_rank_0, print_error_log_rank_0
 from ..common.utils import Const
 from ..common.file_check import FileOpen
 from .data_processor import build_data_processor, DataProcessor
 
+try:
+    import torch_npu
+except ImportError:
+    pass
+
+forward_init_status = False
 
 def build_collect_data(config):
     return DataCollector(config)
@@ -17,8 +24,9 @@ class DataCollector:
     overflow_task = "overflow_check"
     tensor_task = "tensor"
     freebenchmark_task = "free_benchmark"
+    multi_output_apis = ["_sort_", "npu_flash_attention"]
     tasks_need_tensor_data = [overflow_task, tensor_task, freebenchmark_task]
-    level_without_construct = "L1"
+    level_without_construct = ["L1", "L2"]
 
     def __init__(self, config):
         self.config = config
@@ -83,11 +91,16 @@ class DataCollector:
 
     def __call__(self, name_template, module_type, module, pid, module_input_output):
         name = name_template
-        if self.config.level != DataCollector.level_without_construct:
+        if self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
             self.data_writer.update_construct(ModuleProcesser.module_node)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
+
+        if self.config.level == "L2":
+            self.acl_dump(module, module_input_output, name)
+            return
+
         msg = f"Calibrator is collecting data on {name}. "
         if "forward" in name:
             if not self.is_inplace(module):
@@ -128,3 +141,62 @@ class DataCollector:
     
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)
+
+    def acl_dump(self, module, module_input_output, module_name):
+        if self.config.is_forward_acl_dump:
+            self.forward_acl_dump(module, module_input_output, module_name)
+        else:
+            self.dump_mode_backward_acl_dump(module, module_input_output, module_name)
+
+    def op_need_trigger(self, module_name):
+        if 'Tensor___getitem___' in module_name:
+            return True
+        return False
+
+    def forward_acl_dump(self, module, module_input_output, module_name):
+        global forward_init_status
+        if not forward_init_status:
+            forward_init_status = True
+            torch_npu.npu.synchronize()
+            torch_npu.npu.init_dump()
+            torch_npu.npu.set_dump(self.config.acl_config)
+            torch_npu.npu.synchronize()
+            if self.op_need_trigger(module_name):
+                module.forward(*module_input_output.args, **module_input_output.kwargs).cpu()
+            else:
+                module.forward(*module_input_output.args, **module_input_output.kwargs)
+            torch_npu.npu.synchronize()
+            torch_npu.npu.finalize_dump()
+            torch_npu.npu.synchronize()
+        forward_init_status = False
+        print_info_log("Dump %s op file." % module_name)
+
+    def acl_backward_dump_status(self, output, grad, module_name):
+        if isinstance(output, torch.Tensor):
+            output.backward(grad, retain_graph=True)
+            return True
+
+        for api_name in DataCollector.multi_output_apis:
+            if api_name in module_name:
+                output[0].backward(grad, retain_graph=True)
+                return True
+        return False
+
+    def dump_mode_backward_acl_dump(self, module, module_input_output, module_name):
+        global forward_init_status
+        grad_path = self.config.backward_input.get(module_name)
+        if not forward_init_status:
+            forward_init_status = True
+            output = module.forward(*module_input_output.args, **module_input_output.kwargs)
+            grad = torch.load(grad_path).to("npu").requires_grad_()
+            torch_npu.npu.init_dump()
+            torch_npu.npu.set_dump(self.config.acl_config)
+            torch_npu.npu.synchronize()
+            if not self.acl_backward_dump_status(output, grad, module_name):
+                print_warn_log("The output of {} is not of tensor type and cannot be automatically derived. "
+                               "you can manually construct a single API backward case for ACL dump.".format(
+                    module_name))
+            torch_npu.npu.synchronize()
+            torch_npu.npu.finalize_dump()
+        forward_init_status = False
+        print_info_log("Dump %s op file." % module_name)

@@ -7,6 +7,7 @@
     "seed": 1234,
     "is_deterministic": false, 
     "enable_dataloader": false,
+    "acl_config": "",
     "tensor": {
         "scope": [], 
         "list":[], 

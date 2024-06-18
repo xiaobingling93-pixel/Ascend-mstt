@@ -104,11 +104,14 @@ class Service:
             self.register_hook_new()
             self.first_start = False
         self.switch = True
-        self.create_dirs()
-        print_info_log_rank_0(f"Dump switch is turned on at step {self.current_iter}. "
-                              f"Dump data will be saved in {self.dump_iter_dir}.")
+        print_info_log_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
+        if self.config.level != "L2":
+            self.create_dirs()
+            print_info_log_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        if self.config.level == "L2":
+            return
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
@@ -169,7 +172,7 @@ class Service:
                 module.register_full_backward_hook(
                     self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
-        if self.config.level in ["mix", "L1"]:
+        if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_modularity()
 
