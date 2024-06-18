@@ -114,12 +114,12 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
 
-    MAX_SEED_VALUE = 2**32 - 1
+    MAX_SEED_VALUE = 2 ** 32 - 1
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
-        ]
+    ]
 
 
 class CompareConst:
@@ -205,7 +205,6 @@ class VersionCheck:
     V2_0 = "2.0"
     V2_1 = "2.1"
     V2_2 = "2.2"
-    
 
     @staticmethod
     def check_torch_version(version):
@@ -324,11 +323,18 @@ def check_mode_valid(mode, scope=None, api_list=None):
         raise ValueError("api_list param set invalid, it's must be a list.")
     mode_check = {
         Const.ALL: lambda: None,
-        Const.RANGE: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end].") if len(scope) != 2 else None,
-        Const.LIST: lambda:  ValueError("set_dump_switch, scope param set invalid, it's should not be an empty list.") if len(scope) == 0 else None,
-        Const.STACK: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end] or [].") if len(scope) > 2 else None,
-        Const.ACL: lambda:  ValueError("set_dump_switch, scope param set invalid, only one api name is supported in acl mode.") if len(scope) != 1 else None,
-        Const.API_LIST: lambda:  ValueError("Current dump mode is 'api_list', but the content of api_list parameter is empty or valid.") if len(api_list) < 1 else None,
+        Const.RANGE: lambda: ValueError("set_dump_switch, scope param set invalid, it's must be [start, end].") if len(
+            scope) != 2 else None,
+        Const.LIST: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, it's should not be an empty list.") if len(scope) == 0 else None,
+        Const.STACK: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, it's must be [start, end] or [].") if len(scope) > 2 else None,
+        Const.ACL: lambda: ValueError(
+            "set_dump_switch, scope param set invalid, only one api name is supported in acl mode.") if len(
+            scope) != 1 else None,
+        Const.API_LIST: lambda: ValueError(
+            "Current dump mode is 'api_list', but the content of api_list parameter is empty or valid.") if len(
+            api_list) < 1 else None,
         Const.API_STACK: lambda: None,
     }
     if mode not in Const.DUMP_MODE:
@@ -351,7 +357,8 @@ def check_dump_mode_valid(dump_mode):
         print_warn_log("Please set dump_mode as a list.")
         dump_mode = [dump_mode]
     if not all(mode in ["all", "forward", "backward", "input", "output"] for mode in dump_mode):
-        raise ValueError("Please set dump_mode as a list containing one or more of the following: 'all', 'forward', 'backward', 'input', 'output'.")
+        raise ValueError(
+            "Please set dump_mode as a list containing one or more of the following: 'all', 'forward', 'backward', 'input', 'output'.")
     if 'input' not in dump_mode and 'output' not in dump_mode:
         dump_mode.extend(['input', 'output'])
     if 'forward' not in dump_mode and 'backward' not in dump_mode:
@@ -385,7 +392,7 @@ def check_compare_param(input_parma, output_path, stack_mode=False, summary_comp
         check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
     with FileOpen(input_parma.get("npu_pkl_path"), "r") as npu_pkl, \
-         FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
+            FileOpen(input_parma.get("bench_pkl_path"), "r") as bench_pkl:
         check_pkl_file(input_parma, npu_pkl, bench_pkl, stack_mode)
 
 
@@ -643,11 +650,13 @@ def format_value(value):
 def torch_device_guard(func):
     if is_gpu or torch_without_guard_version:
         return func
+
     # Parse args/kwargs matched torch.device objects
 
     @torch_npu_device_guard
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -691,16 +700,15 @@ def get_process_rank(model):
         return 0, False
     if local_device.type == 'cpu':
         print_warn_log("Warning: the debugger is unable to get the rank id. "
-            "This may cause the dumpped data to be corrupted in the "
-            "case of distributed training. (You may ignore this if you are using only one card.) "
-            "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
+                       "This may cause the dumpped data to be corrupted in the "
+                       "case of distributed training. (You may ignore this if you are using only one card.) "
+                       "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
         return 0, False
     else:
         return local_device.index, True
 
 
 def parameter_adapter(func):
-
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
@@ -726,6 +734,7 @@ def parameter_adapter(func):
         if self.op_name_ == "__eq__" and args[1] is None:
             return False
         return func(self, *args, **kwargs)
+
     return inner
 
 
@@ -737,7 +746,7 @@ def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
 
     try:
         with FileOpen(template_path, 'r') as ftemp, \
-           os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
+                os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
             code_temp = ftemp.read()
             fout.write(code_temp % (pkl_file_path, dump_path, is_api_stack))
     except OSError:
