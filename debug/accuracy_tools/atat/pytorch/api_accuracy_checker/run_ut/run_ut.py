@@ -66,9 +66,6 @@ def exec_api(api_type, api_name, args, kwargs):
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
         out = torch_api.forward(*args, **kwargs)
-    if api_type == "Distributed":
-        print_info_log("Distributed api is not supported for run ut. SKIP")
-        return None
     return out
 
 
@@ -166,7 +163,7 @@ def run_ut(config):
     for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
-        if is_npu_fusion_api(api_full_name): # TODO run_ut does not support to the npu fusion api
+        if is_unsupported_api(api_full_name): # TODO run_ut does not support to the npu fusion api and distributed api
             continue
         try:
             if msCheckerConfig.white_list:
@@ -200,8 +197,12 @@ def run_ut(config):
     compare.print_pretest_result()
 
 
-def is_npu_fusion_api(api_name):
-    return api_name.split(Const.SEP)[0] == Const.NPU
+def is_unsupported_api(api_name):
+    split_name = api_name.split(Const.SEP)[0]
+    flag = split_name in [Const.NPU, "Distributed"]
+    if flag:
+        print_info_log(f"{split_name} api is not supported for run ut. SKIP.")
+    return flag
 
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
