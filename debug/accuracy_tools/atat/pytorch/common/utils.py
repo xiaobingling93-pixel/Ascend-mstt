@@ -45,6 +45,14 @@ npu_distributed_api = ['isend', 'irecv']
 
 def parameter_adapter(func):
 
+    def handle_masked_select(input_tensor, indices):
+        masked_select_func = getattr(torch._C._VariableFunctionsClass, "masked_select")
+        if input_tensor.dtype == torch.bfloat16:
+            # masked_select在NPU上输入数据dtype类型为bfloat16会报错，提示不支持此类型
+            return masked_select_func(input_tensor.to(torch.float32), indices).to(torch.bfloat16)
+        else:
+            return masked_select_func(input_tensor, indices)
+
     @wraps(func)
     def inner(self, *args, **kwargs):
         if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
@@ -54,7 +62,7 @@ def parameter_adapter(func):
                 indices = indices.bool()
             if indices.dtype == torch.bool:
                 if indices.shape == input_tensor.shape:
-                    return getattr(torch._C._VariableFunctionsClass, "masked_select")(input_tensor, indices)
+                    return handle_masked_select(input_tensor, indices)
                 else:
                     indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
                     return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
