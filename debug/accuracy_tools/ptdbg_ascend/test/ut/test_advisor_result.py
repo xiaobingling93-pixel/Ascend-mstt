@@ -6,6 +6,7 @@ import os
 import shutil
 import unittest
 from ptdbg_ascend.advisor.advisor import Advisor
+import pandas
 
 
 class TestAdvisor(unittest.TestCase):
@@ -18,7 +19,8 @@ class TestAdvisor(unittest.TestCase):
         shutil.rmtree("test_result/", ignore_errors=True)
 
     def test_advisor_summary_file(self):
-        advisor = Advisor("resources/compare/compare_result_20230703104808.csv", self.output_path)
+        input_data = pandas.read_csv("resources/compare/compare_result_20230703104808.csv")
+        advisor = Advisor(input_data, self.output_path)
         advisor.analysis()
         filenames = os.listdir(self.output_path)
         for filename in filenames:
