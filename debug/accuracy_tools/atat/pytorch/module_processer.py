@@ -18,20 +18,20 @@ class ModuleProcesser:
             self.scope = None
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
-        BackwardHook.setup_output_hook = ModuleProcesser.wrapper_setup_output_hook(BackwardHook.setup_output_hook)
+        BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)
         self.module_count = {}
 
     @staticmethod
-    def wrapper_setup_output_hook(func):
+    def filter_tensor_and_tuple(func):
         @wraps(func)
-        def decorated(*args, **kwargs):
+        def wrap_by_filter_tensor_and_tuple(*args, **kwargs):
             # setup_output_hook传入非tensor数据，工具后续dump会报错，处理方式是非tensor数据不传入
             # setup_output_hook定义为setup_output_hook(self, args)，因此处理第二个位置参数，即*args[1]
             if not isinstance(args[1], (torch.Tensor, tuple)):
                 return args[1]
             return func(*args, **kwargs)
 
-        return decorated
+        return wrap_by_filter_tensor_and_tuple
 
     @staticmethod
     def clone_return_value(func):
