@@ -77,6 +77,7 @@ class Const:
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    DISTRIBUTED = 'Distributed'
 
     # dump mode
     ALL = "all"
