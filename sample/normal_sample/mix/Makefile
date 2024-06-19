@@ -8,7 +8,7 @@ DAV_FLAG                    := --cce-aicore-arch=dav-c220
 ASCENDC_INC_FLAG 			:= -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/impl -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw/interface -I${ASCEND_HOME_PATH}/include # 参考device_intf.cmake的配置简化
 TILING_INC_FLAG				:= -I${ASCEND_HOME_PATH}/compiler/tikcpp/tikcfw
 HOST_INC_FLAG				:= -I${ASCEND_HOME_PATH}/include
-LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++ -lprofapi -lmmpa
+LINK_LIBS					:= -L${ASCEND_HOME_PATH}/lib64 -lruntime -lascendcl -lstdc++ -lprofapi -lmmpa -lascendalog -lregister -lerror_manager
 LINK_STATIC_LIBS			:= ${ASCEND_HOME_PATH}/lib64/libascendc_runtime.a
 
 all: build
