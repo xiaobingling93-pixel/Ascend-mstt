@@ -101,7 +101,7 @@ class DataCollector:
             self.acl_dump(module, module_input_output, name)
             return
 
-        msg = f"Calibrator is collecting data on {name}. "
+        msg = f"msProbe is collecting data on {name}. "
         if "forward" in name:
             if not self.is_inplace(module):
                 data_info = self.data_processor.analyze_forward(name, module, module_input_output)
