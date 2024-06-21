@@ -41,7 +41,7 @@ class RepairAPI(ABC):
         if is_target:
             args = recursive_apply_transform(args, self.fx)
             kwargs = recursive_apply_transform(kwargs, self.fx)
-            print_info_log_rank_0(f"[calibrator] convert inputs of {name} to "
+            print_info_log_rank_0(f"[msProbe] convert inputs of {name} to "
                                   f"{self.towards}.")
         return args, kwargs
 
@@ -49,7 +49,7 @@ class RepairAPI(ABC):
         is_target = self.check_name_and_module_type(name, module_type)
         if is_target:
             out_feat = recursive_apply_transform(out_feat, self.inv_fx)
-            print_info_log_rank_0(f"[calibrator] convert outputs of {name} back to "\
+            print_info_log_rank_0(f"[msProbe] convert outputs of {name} back to "\
                                   f"{self.saved}.")
         return out_feat
 
