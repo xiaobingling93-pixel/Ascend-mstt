@@ -201,7 +201,12 @@ class DataProcessor:
         single_arg = {}
         if isinstance(arg, slice):
             single_arg.update({"type": "slice"})
-            single_arg.update({"value": [arg.start, arg.stop, arg.step]})
+            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
+            values = [
+                value if not isinstance(value, torch.Tensor) else value.item()
+                for value in [arg.start, arg.stop, arg.step]
+            ]
+            single_arg.update({"value": values})
         else:
             single_arg.update({"type": type(arg).__name__})
             single_arg.update({"value": arg})
