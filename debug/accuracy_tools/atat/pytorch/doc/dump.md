@@ -17,10 +17,10 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 **原型**
 
 ```Python
-PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
+PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, model=None, step=None)
 ```
 
-说明：上述参数除config_path外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于config.json文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
+说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于config.json文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
 
 **参数说明**
 
@@ -29,7 +29,48 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 | config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用../../config目录下的config.json文件的默认配置。 | 否       |
 | task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否       |
 | dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | 是       |
-| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据，仅MindSpore场景支持。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否       |
+| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否       |
+| model       | 指定具体的torch.nn.Module，默认未配置，level配置为"L0"或"mix"时必须配置该参数。配置示例参见“**model配置代码示例**”。 | 否       |
+| step        | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]。 | 否       |
+
+#### model配置代码示例
+
+示例中定义了一个nn.Module类型的简单网络，在进行数据dump时使用原型函数PrecisionDebugger并传入config_path参数和model参数，其中model参数传入数据的类型为torch.nn.Module类型或torch.nn.Module子类型。
+
+```python
+#根据需要import包
+import os
+import torch
+import torch.nn as nn
+import torch_npu
+import torch.nn.functional as F
+from atat.pytorch import PrecisionDebugger
+
+torch.npu.set_device("npu:0")
+#定义一个简单的网络
+class ModuleOP(nn.Module)
+def __init__(self) -> None:
+    super().__init__()
+    self.linear_1 = nn.Linear(in_features=8,out_features=4)
+    self.linear_2 = nn.Linear(in_features=4,out_features=2)
+def forward(self,x):
+    x1 = self.linear_1(x)
+    x2 = self.linear_2(x1)
+    r1 = F.relu(x2)
+    return r1
+
+if __name__ == "__main__"
+module = ModuleOP()
+
+#注册工具
+debugger = PrecisionDebugger('./config.json',model=module)
+debugger.start()
+x = torch.randn(10,8)
+out = module(x)
+loss = out.sum()
+loss.backward()
+debugger.stop()
+```
 
 ### start函数
 
@@ -42,7 +83,7 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None)
 **原型**
 
 ```Python
-debugger.start(model)
+debugger.start()
 ```
 
 该函数为类函数，可以使用debugger.start()也可以使用PrecisionDebugger.start()。
@@ -88,12 +129,12 @@ debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path
 
 # 模型初始化
 # 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
-debugger.start(model)
+debugger.start()
 
 # 需要dump的代码片段1
 
 debugger.stop()
-debugger.start(model)
+debugger.start()
 
 # 需要dump的代码片段2
 

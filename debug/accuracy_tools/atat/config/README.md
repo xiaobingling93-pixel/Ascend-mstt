@@ -1,6 +1,6 @@
 # 配置文件说明
 
-当前配置文件主要为PrecisionDebugger接口执行dump或无标杆比对操作时，调用的配置，当PrecisionDebugger接口未指定该配置文件时，使用该文件的默认配置。配置文件详见[config.json](./config.json)。
+当前配置文件主要为PrecisionDebugger接口执行dump或无标杆比对操作时调用的配置，当PrecisionDebugger接口未指定该配置文件时，使用该文件的默认配置。配置文件详见[config.json](./config.json)。
 
 ## 参数说明
 
@@ -11,8 +11,8 @@
 | task              | dump的任务类型，str类型。可取值"free_benchmark"（无标杆比对）、"statistics"（仅dump API统计信息，默认值）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测）。配置示例："task": "tensor"。根据task参数取值的不同，可以配置不同场景参数，详见：“**task配置为free_benchmark**”，“**task配置为statistics**”，“**task配置为tensor**”，“**task配置为overflow_check**”。 | 否       |
 | dump_path         | 设置dump数据目录路径，str类型。配置示例："dump_path": "./dump_path"。 | 是       |
 | rank              | 指定对某张卡上的数据进行dump，list[int]类型，默认未配置（表示dump所有卡的数据），须根据实际卡的Rank ID配置。应配置为大于等于0的整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0到7，实际训练运行0到3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。配置示例："rank": [1]。 | 否       |
-| step              | 指定dump某个step的数据，list[int]类型，默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如："step": [0,1,2]。 | 否       |
-| level             | dump级别，str类型，根据不同级别dump不同数据。可取值"L0"（dump module模块级精度数据，仅PyTorch场景支持，使用背景详见“**模块级精度数据dump说明**”）、"L1"（dump API级精度数据，默认值）、"L2"（dump kernel级精度数据，仅MindSpore场景支持）、"mix"（dump module模块级和API级精度数据）。配置示例："level": "L1"。 | 否       |
+| step              | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如："step": [0,1,2]。 | 否       |
+| level             | dump级别，str类型，根据不同级别dump不同数据。可取值"L0"（dump module模块级精度数据，仅PyTorch场景支持，使用背景详见“**模块级精度数据dump说明**”）、"L1"（dump API级精度数据，默认值）、"L2"（dump kernel级精度数据）、"mix"（dump module模块级和API级精度数据，即"L0"+"L1"）。配置示例："level": "L1"。 | 否       |
 | seed              | 随机种子数，int类型，默认值为：1234。通过固定随机数保证模型的输入或输出一致，可固定的随机数详见“**固定随机数范围**”。配置示例："seed": 1234。 | 否       |
 | is_deterministic  | 确定性计算模式，bool类型。可取值true（开启）或false（关闭），默认关闭。配置示例："is_deterministic": true。<br/>即使在相同的硬件和输入下，API多次执行的结果也可能不同，开启确定性计算是为了保证在相同的硬件和输入下，API多次执行的结果相同。<br/>确定性计算会导致API执行性能降低，建议在发现模型多次执行结果不同的情况下开启。<br/>rnn类算子、ReduceSum、ReduceMean等算子可能与确定性计算存在冲突，若开启确定性计算后多次执行的结果不相同，则考虑存在这些算子。 | 否       |
 | enable_dataloader | 自动控制开关，bool类型。可取值true（开启）或false（关闭），默认为false。配置为True后自动识别step参数指定的迭代，并在该迭代执行完成后退出训练，此时start、stop和step函数可不配置，开启该开关要求训练脚本是通过torch.utils.data.dataloader方式加载数据。仅支持PyTorch单卡训练使用，分布式训练场景下存在数据dump不全问题，**下个版本即将废弃该功能**。 | 否       |
