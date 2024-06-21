@@ -12,7 +12,7 @@
         "scope": [], 
         "list":[], 
         "data_mode": ["all"], 
-        "backward_input": "", 
+        "backward_input": [],
         "file_format": "npy" 
     },
     "statistics": {

@@ -329,7 +329,7 @@ def acl_dump(module, module_name, name_prefix):
 
 
 def Op_Need_Trigger(module_name):
-    if 'Tensor___getitem___' in module_name:
+    if 'Tensor.__getitem__.' in module_name:
         return True
     return False
 
