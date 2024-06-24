@@ -43,7 +43,7 @@ class DebuggerConfig:
         if self.level == "L2":
             if not self.scope or not isinstance(self.scope, list) or len(self.scope) != 1:
                 raise ValueError("scope must be configured as a list with one api name")
-            if isinstance(self.scope[0], str) and Const.BACKWARD in self.scope[0] and not self.backward_input:
+            if isinstance(self.scope[0], str) and Const.BACKWARD in self.scope[0] and not self.backward_input_list:
                 raise ValueError("backward_input must be configured when scope contains 'backward'")
             if Const.BACKWARD in self.scope[0]:
                 self.is_forward_acl_dump = False

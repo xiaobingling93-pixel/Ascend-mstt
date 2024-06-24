@@ -24,5 +24,5 @@ def recursive_apply_transform(args, transform):
             transform_result[k] = recursive_apply_transform(arg, transform)
             _recursive_key_stack.pop()
         return transform_result
-    else:
+    elif args is not None:
         print_warn_log(f"Data type {type(args)} is not supported.")
