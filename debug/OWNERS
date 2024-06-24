@@ -1,0 +1,10 @@
+options:
+  no_parent_owners: true
+approvers:
+- wangchao285
+- kun_8
+- binghamhuang
+reviewers:
+- lv-kaimeng
+- litian_drinksnow
+- wangchao285
