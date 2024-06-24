@@ -7,6 +7,8 @@ from dataclasses import dataclass, asdict
 import torch_npu
 from typing import Tuple, List, Dict, Optional, Union
 from ..common.exceptions import MsaccException
+from ..common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
+from ..common.log import print_warn_log
 from ..common.utils import Const
 from ..common import recursive_apply_transform
 from ..functional. json_writer import DataWriter
@@ -45,7 +47,7 @@ class ModuleForwardInputsOutputs:
             return (self.args, )
         else:
             return self.args
-        
+
     @property
     def output_tuple(self):
         if not isinstance(self.output, tuple):
@@ -69,7 +71,7 @@ class ModuleBackwardInputsOutputs:
             return (self.grad_input, )
         else:
             return self.grad_input
-        
+
     @property
     def grad_output_tuple(self):
         if not isinstance(self.grad_output, tuple):
@@ -101,10 +103,10 @@ class DataProcessor:
         # 需要对forward的output进行更改
         self._return_forward_new_output = False
         self._forward_new_output = None
-    
+
     def if_return_forward_new_output(self):
         return self._return_forward_new_output
-    
+
     def get_forward_new_output(self):
         self._return_forward_new_output = False
         return self._forward_new_output
@@ -156,7 +158,7 @@ class DataProcessor:
 
     def update_iter(self, current_iter):
         self.current_iter = current_iter
-        
+
     def visit_and_clear_overflow_status(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
@@ -211,7 +213,7 @@ class DataProcessor:
             single_arg.update({"type": type(arg).__name__})
             single_arg.update({"value": arg})
         return single_arg
-    
+
     def _analyze_torch_size(self, arg):
         single_arg = {}
         single_arg.update({"type": "torch.Size"})
@@ -286,7 +288,7 @@ class DataProcessor:
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
-                
+
         if isinstance(element, torch.Size):
             return self._analyze_torch_size(element)
 
@@ -389,13 +391,17 @@ class DataProcessor:
 
 
 class FullTensorDataProcessor(DataProcessor):
-    
+
     def _analyze_tensor(self, tensor, suffix):
         self.data_path = self.data_writer.dump_tensor_data_dir
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
-        torch.save(tensor, file_path)
+        if not path_len_exceeds_limit(file_path):
+            torch.save(tensor, file_path)
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        else:
+            print_warn_log(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
@@ -415,7 +421,10 @@ class OverflowTensorDataProcessor(DataProcessor):
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
-        self.cached_tensors_and_file_paths.update({file_path: tensor})
+        if not path_len_exceeds_limit(file_path):
+            self.cached_tensors_and_file_paths.update({file_path: tensor})
+        else:
+            print_warn_log(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
@@ -438,13 +447,14 @@ class OverflowTensorDataProcessor(DataProcessor):
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 torch.save(tensor, file_path)
+                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
             self.inc_and_check_overflow_times()
         self.cached_tensors_and_file_paths = {}
 
     def inc_and_check_overflow_times(self):
         self.real_overflow_dump_times += 1
         if self.overflow_nums == -1:
-            return 
+            return
         if self.real_overflow_dump_times >= self.overflow_nums:
             raise MsaccException(MsaccException.OVERFLOW_NUMS_ERROR,
                                  str(self.real_overflow_dump_times))
@@ -455,7 +465,7 @@ class FreeBenchmarkDataProcessor(DataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.checker = FreeBenchmarkCheck(config=config)
-    
+
     def update_iter(self, current_iter):
         self.current_iter = current_iter
         self.checker.update_iter(current_iter)
@@ -495,7 +505,7 @@ class FreeBenchmarkDataProcessor(DataProcessor):
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.checker.backward(name, module, module_input_output.grad_output)
         return None
-    
+
 
 
 def overflow_debug_mode_enable():
