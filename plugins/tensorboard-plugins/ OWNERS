@@ -1,0 +1,10 @@
+options:
+  no_parent_owners: true
+approvers:
+- wo-wenjie
+- ly-qianxiao
+- leo920320
+reviewers:
+- wo-wenjie
+- ly-qianxiao
+- leo920320
