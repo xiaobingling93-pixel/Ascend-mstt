@@ -713,7 +713,7 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
             parsed_item = item
             parsed_item['full_op_name'] = full_op_name
             item_list.append(parsed_item)
-        else:
+        elif 'type' in item:
             parsed_item = {}
             if item['type'] == 'torch.Size':
                 parsed_item['full_op_name'] = full_op_name
@@ -748,10 +748,43 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
                 parsed_item['Norm'] = item['value']
                 parsed_item['data_name'] = '-1'
                 item_list.append(parsed_item)
+        else:
+            resolve_api_special_parameters(item, full_op_name, item_list)
     else:
         for j in range(len(item)):
             op_item_parse(item[j], full_op_name, j, top_bool=False)
     return item_list
+
+
+def resolve_api_special_parameters(data_dict, full_op_name, item_list):
+    """
+    Function Description:
+        解析下面格式的数据, 是api参数的一种特殊格式
+        {
+         "last_hidden_state": {
+          "type": "torch.Tensor",
+          "dtype": "torch.bfloat16",
+          ...
+         },
+         "loss": {
+          "type": "torch.Tensor",
+          "dtype": "torch.float32",
+          ...
+         }
+        }
+    Parameter:
+        data_dict: 字典格式的数据
+        full_op_name: 参数的全名字符串
+        item_list: 参数信息集合        
+    """
+    for key, value in data_dict.items():
+        if isinstance(value, dict):
+            parsed_item = value
+            parts = full_op_name.split(".")
+            parts.insert(-1, key)
+            full_op_name_new = ".".join(parts)
+            parsed_item['full_op_name'] = full_op_name_new
+            item_list.append(parsed_item)
 
 
 def read_op(op_data, op_name):
