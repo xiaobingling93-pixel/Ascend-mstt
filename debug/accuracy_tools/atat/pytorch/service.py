@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import functools
 import torch
-from .functional import build_repair, build_collect_data, build_step_post_process
+from .functional import build_repair, build_data_collector, build_step_post_process
 from .functional.scope import BaseScope
 from .common.utils import get_rank_if_initialized, is_gpu, Const
 from .common.file_check import FileChecker, FileCheckConst, check_path_before_create
@@ -20,8 +20,8 @@ class Service:
     def __init__(self, config):
         self.model = None
         self.config = config
-        self.collect_data = build_collect_data(config)
-        self.module_processor = ModuleProcesser(self.collect_data.scope)
+        self.data_collector = build_data_collector(config)
+        self.module_processor = ModuleProcesser(self.data_collector.scope)
         self.repair = build_repair(config)
         self.step_post_process = build_step_post_process(config)
         self.switch = False
@@ -35,30 +35,30 @@ class Service:
             nonlocal module_type, pid
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
 
             if not self.switch:
                 return args, kwargs
             if repair:
                 args, kwargs = repair.convert(api_or_module_name, module_type, args, kwargs)
-            if self.collect_data:
+            if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-                self.collect_data.pre_forward(api_or_module_name, module_type, module, pid, module_input_output)
+                self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
             return args, kwargs
 
         def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
             nonlocal module_type, pid
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
 
             if not self.switch:
                 return
-            if self.collect_data:
+            if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-                self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
-                if self.collect_data.if_return_forward_new_output():
-                    return self.collect_data.get_forward_new_output()
+                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
+                if self.data_collector.if_return_forward_new_output():
+                    return self.data_collector.get_forward_new_output()
             if repair:
                 output = repair.invert(api_or_module_name, module_type, output)
 
@@ -68,13 +68,13 @@ class Service:
             nonlocal module_type, pid
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.collect_data.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
 
             if not self.switch:
                 return
-            if self.collect_data:
+            if self.data_collector:
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
-                self.collect_data(api_or_module_name, module_type, module, pid, module_input_output)
+                self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
 
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
@@ -88,7 +88,7 @@ class Service:
         self.current_iter += 1
         if self.step_post_process:
             self.step_post_process()
-        self.collect_data.update_iter(self.current_iter)
+        self.data_collector.update_iter(self.current_iter)
 
     def start(self, model):
         self.model = model
@@ -117,8 +117,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
-        self.collect_data.write_json()
-
+        self.data_collector.write_json()
 
     def create_dirs(self):
         check_path_before_create(self.config.dump_path)
@@ -131,7 +130,7 @@ class Service:
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         if not os.path.exists(dump_dir):
             Path(dump_dir).mkdir(mode=0o750, parents=True, exist_ok=True)
-        if self.config.task in self.collect_data.tasks_need_tensor_data:
+        if self.config.task in self.data_collector.tasks_need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
             Path(dump_data_dir).mkdir(mode=0o750, exist_ok=True)
         else:
@@ -141,7 +140,8 @@ class Service:
         stack_file_path = os.path.join(dump_dir, "stack.json")
         construct_file_path = os.path.join(dump_dir, "construct.json")
         free_benchmark_file_path = os.path.join(self.config.dump_path, "free_benchmark.csv")
-        self.collect_data.update_dump_paths(dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
+        self.data_collector.update_dump_paths(
+            dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
 
     def register_hook_new(self):
         hook_name = self.config.task
@@ -178,4 +178,3 @@ class Service:
 
         if "acc_cmp_dump" in hook_name:
             remove_dropout()
-
