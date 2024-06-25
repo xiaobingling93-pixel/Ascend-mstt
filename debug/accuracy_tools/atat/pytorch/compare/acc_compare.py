@@ -1045,7 +1045,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
 
             npu_op_data = npu_json_data['data'][op_name_npu]
             npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
-            if op_name_npu in stack_json_data:
+            if npu_op_parsed_list and op_name_npu in stack_json_data:
                 npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
             else:
                 npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
@@ -1060,7 +1060,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
 
             bench_op_data = bench_json_data['data'][op_name_bench]
             bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
-            if op_name_bench in stack_json_data:
+            if bench_op_parsed_list and op_name_bench in stack_json_data:
                 bench_op_parsed_list.append(
                     {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
             else:
@@ -1072,7 +1072,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
             continue
 
         if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0:
-            break
+            continue
 
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
         if n_match_point == -1 and b_match_point == -1:
