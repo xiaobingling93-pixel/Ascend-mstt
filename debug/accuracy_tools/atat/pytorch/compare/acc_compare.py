@@ -297,11 +297,8 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
         if all_mode_bool:
             npu_data_name = n_dict.get("data_name", None)
             bench_data_name = b_dict.get("data_name", None)
-        has_data_name = False
 
         for index in range(min_len):
-            if all_mode_bool:
-                has_data_name = npu_data_name[n_start + index] and bench_data_name[b_start + index]
 
             n_name = n_dict['op_name'][n_start + index]
             b_name = b_dict['op_name'][b_start + index]
@@ -315,8 +312,6 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     result_item.extend(npu_stack_info)
                 else:
                     result_item.append(CompareConst.NONE)
-                if all_mode_bool and has_data_name:
-                    result_item.append(npu_data_name[n_start + index])
                 result.append(result_item)
                 continue
 
@@ -359,16 +354,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 result_item.extend(npu_stack_info)
             else:
                 result_item.append(CompareConst.NONE)
-            if all_mode_bool and has_data_name:
+            if all_mode_bool:
                 result_item.append(npu_data_name[n_start + index])
 
             result.append(result_item)
 
         if n_len > b_len:
             for index in range(b_len, n_len):
-                if all_mode_bool:
-                    has_data_name = npu_data_name[n_start + index] and bench_data_name[b_start + index]
-
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
                 if md5_compare:
@@ -391,7 +383,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     result_item.extend(npu_stack_info)
                 else:
                     result_item.append(CompareConst.NONE)
-                if all_mode_bool and has_data_name:
+                if all_mode_bool:
                     result_item.append(npu_data_name[n_start + index])
 
                 result.append(result_item)
