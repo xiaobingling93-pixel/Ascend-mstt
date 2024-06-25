@@ -1037,7 +1037,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
     read_err_bench = True
 
     while True:
-        if not read_err_npu or not read_err_bench:
+        if not read_err_npu and not read_err_bench:
             break
         try:
             last_npu_ops_len = len(npu_ops_queue)
@@ -1056,7 +1056,6 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
                 npu_ops_queue.append(npu_merge_list)
         except StopIteration:
             read_err_npu = False
-            continue
         try:
             op_name_bench = next(ops_bench_iter)
             read_err_bench = True
@@ -1074,7 +1073,6 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
                 bench_ops_queue.append(bench_merge_list)
         except StopIteration:
             read_err_bench = False
-            continue
 
         if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or len(npu_ops_queue) == last_npu_ops_len:
             continue
