@@ -176,6 +176,6 @@ class Service:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_modularity()
 
-        if "acc_cmp_dump" in hook_name:
+        if Const.STATISTICS in hook_name or Const.TENSOR in hook_name:
             remove_dropout()
 
