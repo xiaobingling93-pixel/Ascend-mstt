@@ -271,7 +271,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
     if not op_dict["kwargs_struct"]:
         del op_dict["kwargs_struct"]
-    return op_dict
+    return op_dict if op_dict["op_name"] else {}
 
 
 def match_op(npu_queue, bench_queue, fuzzy_match):
@@ -1040,17 +1040,20 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
         if not read_err_npu or not read_err_bench:
             break
         try:
+            last_npu_ops_len = len(npu_ops_queue)
             op_name_npu = next(ops_npu_iter)
             read_err_npu = True
 
             npu_op_data = npu_json_data['data'][op_name_npu]
             npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
-            if npu_op_parsed_list and op_name_npu in stack_json_data:
+            if op_name_npu in stack_json_data:
                 npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
             else:
                 npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
 
-            npu_ops_queue.append(merge_tensor(npu_op_parsed_list, summary_compare, md5_compare))
+            npu_merge_list = merge_tensor(npu_op_parsed_list, summary_compare, md5_compare)
+            if npu_merge_list:
+                npu_ops_queue.append(npu_merge_list)
         except StopIteration:
             read_err_npu = False
             continue
@@ -1060,18 +1063,20 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
 
             bench_op_data = bench_json_data['data'][op_name_bench]
             bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
-            if bench_op_parsed_list and op_name_bench in stack_json_data:
+            if op_name_bench in stack_json_data:
                 bench_op_parsed_list.append(
                     {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
             else:
                 bench_op_parsed_list.append({'full_op_name': op_name_bench, 'full_info': None})
 
-            bench_ops_queue.append(merge_tensor(bench_op_parsed_list, summary_compare, md5_compare))
+            bench_merge_list = merge_tensor(bench_op_parsed_list, summary_compare, md5_compare)
+            if bench_merge_list:
+                bench_ops_queue.append(bench_merge_list)
         except StopIteration:
             read_err_bench = False
             continue
 
-        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0:
+        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or len(npu_ops_queue) == last_npu_ops_len:
             continue
 
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
