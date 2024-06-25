@@ -2,7 +2,7 @@ import os
 import hashlib
 from abc import ABC, abstractmethod
 import torch
-from grad_tool.common.utils import print_info_log
+from grad_tool.common.utils import print_info_log, create_directory
 
 
 class LevelOps:
@@ -34,7 +34,7 @@ class LevelOps:
     @staticmethod
     def save_grad_direction(param_name, grad, save_path):
         if not os.path.exists(save_path):
-            os.makedirs(save_path)
+            create_directory(save_path)
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         torch.save(is_positive, f'{save_path}/{param_name}.pt')
