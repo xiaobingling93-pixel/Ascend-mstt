@@ -22,12 +22,16 @@ import stat
 import sys
 import torch
 
+import math
 import numpy as np
 import pandas as pd
+import openpyxl
+from openpyxl.styles import PatternFill
+from collections import namedtuple
 
 from .match import graph_mapping
 from ..advisor.advisor import Advisor
-from ...core.utils import check_compare_param, add_time_as_suffix, CompareException, CompareConst, \
+from ...core.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
     print_warn_log, print_error_log, Const
 from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
@@ -37,7 +41,7 @@ def correct_data(result):
     if result == CompareConst.NAN:
         return result
     if float(result) > 0.99999:
-        return '1.0'
+        return 1.0
     return result
 
 
@@ -50,7 +54,7 @@ def cosine_similarity(n_value, b_value):
     b_norm = np.linalg.norm(b_value)
     message = ''
     if a_norm <= Const.FLOAT_EPSILON and b_norm <= Const.FLOAT_EPSILON:
-        result = '1.0'
+        result = 1.0
     elif a_norm <= Const.FLOAT_EPSILON:
         message = 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.'
         result = CompareConst.NAN
@@ -405,22 +409,19 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
     get_accuracy_core(n_num_input + n_num_kwarg, n_num_output, b_num_input + b_num_kwarg, b_num_output, 'output_struct')
 
 
-def _do_multi_process(input_parma, result_path):
+def _do_multi_process(input_parma, result_df):
     try:
-        _handle_multi_process(compare_ops, input_parma, result_path, multiprocessing.Manager().RLock())
-    except FileNotFoundError as error:
-        print("File not Found. compare failed!")
-        return
-    except IOError as error:
-        print("IOEError. compare failed!")
-        return
+        result_df = _handle_multi_process(compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
+        return result_df
+    except ValueError as e:
+        print_error_log('result dataframe is not found.')
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
 
-def read_dump_path(result_path):
+def read_dump_data(result_df):
     try:
-        csv_pd = pd.read_csv(result_path)
-        npu_dump_name_list = csv_pd.iloc[0:, 0].tolist()
-        npu_dump_tensor_list = csv_pd.iloc[0:, -1].tolist()
+        npu_dump_name_list = result_df.iloc[0:, 0].tolist()
+        npu_dump_tensor_list = result_df.iloc[0:, -1].tolist()
         # bench_dump_name_list = csv_pd.iloc[0:, 1].tolist()
         op_name_mapping_dict = {}
         for index, _ in enumerate(npu_dump_name_list):
@@ -429,46 +430,47 @@ def read_dump_path(result_path):
             # bench_dump_name = bench_dump_name_list[index]
             op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
         return op_name_mapping_dict
-    except FileNotFoundError as e:
-        print_error_log('{} file is not found.'.format(result_path))
-        raise CompareException(CompareException.OPEN_FILE_ERROR) from e
-    except IOError as e:
-        print_error_log('{} read csv failed.'.format(result_path))
-        raise CompareException(CompareException.READ_FILE_ERROR) from e
+    except ValueError as e:
+        print_error_log('result dataframe is not found.')
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    except IndexError as e:
+        print_error_log('result dataframe elements can not be access.')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
 
-def _handle_multi_process(func, input_parma, result_path, lock):
+def _handle_multi_process(func, input_parma, result_df, lock):
     process_num = int((multiprocessing.cpu_count() + 1) / 2)
-    op_name_mapping_dict = read_dump_path(result_path)
-    op_names = []
-    for _ in range(process_num):
-        op_names.append([])
-    all_op_names = list(op_name_mapping_dict.keys())
-    for i, op_name in enumerate(all_op_names):
-        op_names[i % process_num].append(op_name)
-    all_tasks = []
+    op_name_mapping_dict = read_dump_data(result_df)
+
+    df_chunk_size = len(result_df) // process_num
+    if df_chunk_size > 0:
+        df_chunks = [result_df.iloc[i:i + df_chunk_size] for i in range(0, len(result_df), df_chunk_size)]
+    else:
+        df_chunks = [result_df]
+
+    results = []
     pool = multiprocessing.Pool(process_num)
 
     def err_call(args):
         print_error_log('multiprocess compare failed! Reason: {}'.format(args))
         try:
             pool.terminate()
-            if os.path.exists(result_path):
-                os.remove(result_path)
         except OSError as e:
             print_error_log("pool terminate failed")
 
-    for process_idx, fusion_op_names in enumerate(op_names):
-        idx = [process_num, process_idx]
-        task = pool.apply_async(func,
-                                args=(idx, fusion_op_names, op_name_mapping_dict, result_path, lock, input_parma),
+    for process_idx, df_chunk in enumerate(df_chunks):
+        idx = df_chunk_size * process_idx
+        result = pool.apply_async(func,
+                                args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
                                 error_callback=err_call)
-        all_tasks.append(task)
+        results.append(result)
+    final_results = [r.get() for r in results]
     pool.close()
     pool.join()
+    return pd.concat(final_results, ignore_index=True)
 
 
-def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_parma):
+def compare_ops(idx, dump_path_dict, result_df, lock, input_parma):
     cos_result = []
     max_err_result = []
     max_relative_err_result = []
@@ -476,15 +478,11 @@ def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_p
     one_thousand_err_ratio_result = []
     five_thousand_err_ratio_result = []
     is_print_compare_log = input_parma.get("is_print_compare_log")
-    for i, op_name in enumerate(fusion_op_names):
+    for i in range(len(result_df)):
+        op_name = result_df.iloc[i, 0]
         if is_print_compare_log:
             print("start compare: {}".format(op_name))
-
-        if op_name == '-1':
-            cos_sim = max_abs_err = max_relative_err = err_msg = one_thousand_err_ratio = five_thousand_err_ratio = CompareConst.NONE
-        else:
-            cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
-
+        cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
         if is_print_compare_log:
             print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
         cos_result.append(cos_sim)
@@ -493,32 +491,30 @@ def compare_ops(idx, fusion_op_names, dump_path_dict, result_path, lock, input_p
         err_mess.append(err_msg)
         one_thousand_err_ratio_result.append(one_thousand_err_ratio)
         five_thousand_err_ratio_result.append(five_thousand_err_ratio)
-    _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result,
-                     five_thousand_err_ratio_result, result_path, lock)
+    result_df = _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result,
+                                 five_thousand_err_ratio_result, result_df, lock)
+    return result_df
 
 
-def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_path, lock):
+def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_df, lock):
     lock.acquire()
     try:
-        csv_pd = pd.read_csv(result_path, dtype=str)
-        process_num = idx[0]
-        process_idx = idx[1]
         for i, _ in enumerate(cos_result):
-            process_index = i * process_num + process_idx
-            csv_pd.loc[process_index, CompareConst.COSINE] = cos_result[i]
-            csv_pd.loc[process_index, CompareConst.MAX_ABS_ERR] = max_err_result[i]
-            csv_pd.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = max_relative_err_result[i]
-            csv_pd.loc[process_index, CompareConst.ERROR_MESSAGE] = err_msg[i]
-            csv_pd.loc[process_index, CompareConst.ACCURACY] = check_accuracy(cos_result[i], max_err_result[i])
-            csv_pd.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = one_thousand_err_ratio_result[i]
-            csv_pd.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = five_thousand_err_ratio_result[i]
-        csv_pd.to_csv(result_path, index=False)
-    except FileNotFoundError as e:
-        print_error_log('{} file is not found.'.format(result_path))
-        raise CompareException(CompareException.OPEN_FILE_ERROR) from e
-    except IOError as e:
-        print_error_log('{} read csv failed.'.format(result_path))
-        raise CompareException(CompareException.READ_FILE_ERROR) from e
+            process_index = i + idx
+            result_df.loc[process_index, CompareConst.COSINE] = cos_result[i]
+            result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = max_err_result[i]
+            result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = max_relative_err_result[i]
+            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = err_msg[i]
+            result_df.loc[process_index, CompareConst.ACCURACY] = check_accuracy(cos_result[i], max_err_result[i])
+            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = one_thousand_err_ratio_result[i]
+            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = five_thousand_err_ratio_result[i]
+        return result_df
+    except ValueError as e:
+        print_error_log('result dataframe is not found.')
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    except IndexError as e:
+        print_error_log('result dataframe elements can not be access.')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
     finally:
         lock.release()
 
@@ -619,6 +615,212 @@ def handle_inf_nan(n_value, b_value):
     return n_value, b_value
 
 
+def check_order_magnitude(info, color_columns, summary_compare=True):
+    """Check if order magnitude diff of max_diff larger than 1"""
+    api_in, api_out, num = info
+    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+    if api_in[max_diff_index] > api_out[max_diff_index]:
+        return
+    in_order = 0 if api_in[max_diff_index] == 0 else math.log10(abs(api_in[max_diff_index]))
+    out_order = 0 if api_out[max_diff_index] == 0 else math.log10(abs(api_out[max_diff_index]))
+    if abs(in_order - out_order) >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
+        color_columns.yellow.append(num)
+
+
+def check_one_thousand_error_ratio(info, color_columns, summary_compare=True):
+    """Compare output's one thousand error ratio with input's """
+    api_in, api_out, num = info
+    one_thousand_index = get_header_index('One Thousandth Err Ratio', summary_compare)
+    if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
+        return
+    if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
+        color_columns.red.append(num)
+    elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
+        color_columns.yellow.append(num)
+
+
+def check_cosine_similarity(info, color_columns, summary_compare=True):
+    """Check if output's cosine similarity more than 0.1 smaller than input's"""
+    api_in, api_out, num = info
+    cosine_index = get_header_index('Cosine', summary_compare)
+    if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
+        return
+    if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
+        color_columns.yellow.append(num)
+
+
+def check_max_relative_diff(info, color_columns, summary_compare=True):
+    """Compare the output value of max_diff / bench_max with input"""
+    api_in, api_out, num = info
+    max_diff_index = get_header_index('Max diff', summary_compare)
+    bench_max_index = get_header_index('Bench max', summary_compare)
+    input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
+    output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(0.01, api_out[bench_max_index])))
+    if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff, (float, int)):
+        return
+    if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
+        color_columns.red.append(num)
+    elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
+        color_columns.yellow.append(num)
+
+
+def check_overflow(info, color_columns, summary_compare=False):
+    """Check if Inf or Nan exists in NPU max/min, or large number in Max diff"""
+    line, num = info
+    npu_max_index = get_header_index('NPU max', summary_compare)
+    npu_min_index = get_header_index('NPU min', summary_compare)
+    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+    if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
+        color_columns.red.append(num)
+        return
+    # check if Max_Diff > 1e+10
+    if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
+        color_columns.red.append(num)
+
+
+def get_header_index(header_name, summary_compare=False):
+    if summary_compare:
+        header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+    else:
+        header = CompareConst.COMPARE_RESULT_HEADER[:]
+    if header_name not in header:
+        print_error_log(f"{header_name} not in data name")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    return header.index(header_name)
+
+
+class HighlightRules:
+    """Highlight rules to check whether API errors"""
+    # rules for every line: pass in every line of api to check if error exists
+    basic_rules = {
+        "check_overflow": check_overflow
+    }
+
+    # rules compare output with input: pass in input, output to check if output errors compare to input
+    compare_rules = {
+        "check_order_magnitude": check_order_magnitude,
+        "check_one_thousand_error": check_one_thousand_error_ratio,
+        "check_cosine_similarity": check_cosine_similarity
+    }
+    summary_compare_rules = {
+        "check_order_magnitude": check_order_magnitude,
+        "check_max_relative_diff": check_max_relative_diff,
+    }
+
+
+def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False):
+    """Find error api and return dict with highlight information red or yellow"""
+    npu_max_index = get_header_index('NPU max', summary_compare)
+    bench_max_index = get_header_index('Bench max', summary_compare)
+    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+
+    red_lines, yellow_lines = [], [] #lines to highlight red or yellow
+    LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
+    ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
+    ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+    color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+
+    for i, line in enumerate(result):
+        num = last_len + i
+        line_info = LineInfo(line_data=line, num_pointer=num)
+        for rule in HighlightRules.basic_rules.values():
+            rule(line_info, color_columns, summary_compare)
+
+    for n, api_out in enumerate(result[n_num_input:len(result)]):
+        num = last_len + n_num_input + n
+        if num in red_lines:
+            continue
+        if not isinstance(api_out[npu_max_index], (float, int)) \
+                or not isinstance(api_out[bench_max_index], (float, int)) \
+                or not isinstance(api_out[max_diff_index],(float, int)):
+            continue
+        for m, api_in in enumerate(result[0:n_num_input]):
+            if not isinstance(api_in[npu_max_index], (float, int)) \
+                    or not isinstance(api_in[bench_max_index], (float, int)) \
+                    or not isinstance(api_in[max_diff_index], (float, int)):
+                continue
+
+            api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
+            if summary_compare:
+                for rule in HighlightRules.summary_compare_rules.values():
+                    rule(api_info, color_columns, summary_compare)
+            else:
+                for rule in HighlightRules.compare_rules.values():
+                    rule(api_info, color_columns, summary_compare)
+
+    highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
+    highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+
+
+def get_name_and_state(name):
+    """Get api/module name and state"""
+    if "input" in name:
+        api_name = name.split("input")[0]
+        state = "input"
+    else:
+        api_name = name.split("output")[0]
+        state = "output"
+    return api_name, state
+
+
+def find_compare_result_error_rows(result_df, highlight_dict):
+    """Group the API with its input and output, then find error API with func find_error_rows"""
+    result = result_df.values
+    start, input_num, output_num, end = 0, 0, 0, len(result_df)
+    last_api_name, last_state = None, None
+    num, last_len = 0, 0
+    for i in range(len(result)):
+        api_name, state = get_name_and_state(result[i][0])
+        if last_api_name:
+            if api_name == last_api_name:
+                if state == last_state:
+                    num += 1
+                else:
+                    input_num = num
+                    num, last_state = 1, state
+            else:
+                output_num = num
+                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+                num, last_api_name, last_state = 1, api_name, state
+                start += input_num + output_num
+                input_num, output_num = 1, 0
+        else:
+            num, last_api_name, last_state = 1, api_name, state
+    if state:
+        if state == "input":
+            input_num = num
+        else:
+            output_num = num
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+
+
+def highlight_rows_xlsx(result_df, highlight_dict, file_path):
+    """Write and highlight results in Excel"""
+    print_info_log('Compare result is %s' % file_path)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+
+    # write header
+    for j, col_name in enumerate(result_df.columns, start=1):
+        ws.cell(row=1, column=j, value=col_name)
+
+    for i, row in enumerate(result_df.iterrows(), start=2):
+        for j, value in enumerate(row[1], start=1):
+            if not isinstance(value, (float, int)):
+                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
+            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+
+            if (i - 2) in highlight_dict['red_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.RED,
+                                                            end_color=CompareConst.RED, fill_type="solid")
+            elif (i - 2) in highlight_dict['yellow_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
+                                                            end_color=CompareConst.YELLOW, fill_type="solid")
+    wb.save(file_path)
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
@@ -637,24 +839,23 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
 def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
                  suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
     print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
-    file_name = add_time_as_suffix("compare_result" + suffix)
+    file_name = add_time_with_xlsx("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
+    highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
     with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
             FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json, \
-            os.fdopen(os.open(file_path, os.O_RDWR | os.O_CREAT, stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP), 'w+') \
-                    as fout:
-        compare_process([npu_json, bench_json, stack_json, fout], stack_mode, fuzzy_match, summary_compare, md5_compare)
-        if summary_compare:
-            print_info_log(f"Summary compare result is {file_path}")
+            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
+        result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match, highlight_dict,
+                                    summary_compare, md5_compare)
 
     if not md5_compare and not summary_compare:
-        _do_multi_process(input_parma, file_path)
-    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        result_df = _do_multi_process(input_parma, result_df)
+    find_compare_result_error_rows(result_df, highlight_dict)
+    highlight_rows_xlsx(result_df, highlight_dict, file_path)
     if auto_analyze:
-        advisor = Advisor(file_path, output_path)
+        advisor = Advisor(result_df, output_path)
         advisor.analysis()
 
 
@@ -825,8 +1026,8 @@ def read_op(op_data, op_name):
     return op_parsed_list
 
 
-def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
-    npu_json_handle, bench_json_handle, stack_json_handle, output_csv_handle = file_handles
+def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summary_compare=False, md5_compare=False):
+    npu_json_handle, bench_json_handle, stack_json_handle = file_handles
     npu_json_data = json.load(npu_json_handle)
     bench_json_data = json.load(bench_json_handle)
     stack_json_data = json.load(stack_json_handle)
@@ -921,7 +1122,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
                 del row[-1]
 
     result_df = pd.DataFrame(result, columns=header)
-    result_df.to_csv(output_csv_handle, index=False)
+    return result_df
 
 
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
