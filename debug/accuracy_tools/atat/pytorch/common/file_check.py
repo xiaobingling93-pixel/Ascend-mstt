@@ -17,7 +17,7 @@
 import os
 import re
 
-from .log import print_error_log
+from .log import print_error_log, print_warn_log
 from .exceptions import FileCheckException
 from .utils import Const
 
@@ -278,8 +278,7 @@ def create_directory(dir_path):
 
 
 def check_path_before_create(path):
-    if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
-            Const.FILE_NAME_LENGTH:
+    if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
     if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
@@ -296,3 +295,7 @@ def change_mode(path, mode):
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR,
                                  'Failed to change {} authority. {}'.format(path, str(ex))) from ex
 
+
+def path_len_exceeds_limit(file_path):
+    return len(os.path.realpath(file_path)) > Const.DIRECTORY_LENGTH or \
+        len(os.path.basename(file_path)) > Const.FILE_NAME_LENGTH
