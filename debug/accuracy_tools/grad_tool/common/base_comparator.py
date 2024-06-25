@@ -3,6 +3,7 @@ from typing import List
 from abc import ABC, abstractmethod
 
 from tqdm import tqdm
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from grad_tool.common.constant import GradConst
@@ -71,15 +72,35 @@ class BaseComparator(ABC):
             head_tuple = tuple(['step'] + [str(step) for step in steps])
             write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
 
+    @staticmethod
+    def _get_grad_weight_order(path1, path2):
+        for summary_file in os.listdir(path1):
+            if not summary_file.endswith(".csv"):
+                continue
+            if not os.path.exists(os.path.join(path2, summary_file)):
+                continue
+            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
+            return summary_csv["param_name"]
+        raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
+    
+    @staticmethod
+    def _get_name_matched_grad_file(param_name, grad_files):
+        for grad_file in grad_files:
+            if param_name == grad_file[:grad_file.rfind('.')]:
+                return grad_file
+        raise RuntimeError("no matched grad_file for comparison, please dump data in same configuration")
+
     @classmethod
     def _calculate_separated_similarities(cls, path1, path2, steps):
         similarities = {}
         print_info_log(f"{len(steps)} steps will be compared")
+        grad_weight_order = cls._get_grad_weight_order(path1, path2)
         for step in tqdm(steps, desc="culculate similarities (by step)"):
             grad_files = cls._get_matched_grad_files(path1, path2, step)
             same_count_summary = 0
             total_count_summary = 0
-            for grad_file in grad_files:
+            for grad_name in grad_weight_order:
+                grad_file = cls._get_name_matched_grad_file(grad_name, grad_files)
                 grad1 = os.path.join(path1, f"step_{step}", grad_file)
                 grad2 = os.path.join(path2, f"step_{step}", grad_file)
                 same_count, total_count = cls._calculate_similarity(grad1, grad2)
