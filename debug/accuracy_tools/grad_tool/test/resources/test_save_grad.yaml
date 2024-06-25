@@ -1,6 +1,0 @@
-level: L2
-param_list: 
-rank: 
-step: 
-bounds: 
-output_path: ./output/test_save_grad
