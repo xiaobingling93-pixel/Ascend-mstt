@@ -20,9 +20,9 @@ import multiprocessing
 import os.path
 import stat
 import sys
+import math
 import torch
 
-import math
 import numpy as np
 import pandas as pd
 import openpyxl
@@ -755,14 +755,14 @@ def get_name_and_state(name):
     return api_name, state
 
 
-def find_compare_result_error_rows(result_df, highlight_dict):
+def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
     """Group the API with its input and output, then find error API with func find_error_rows"""
     result = result_df.values
     start, input_num, output_num, end = 0, 0, 0, len(result_df)
     last_api_name, last_state = None, None
     num, last_len = 0, 0
-    for i in range(len(result)):
-        api_name, state = get_name_and_state(result[i][0])
+    for res_i in result:
+        api_name, state = get_name_and_state(res_i[0])
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
@@ -772,7 +772,7 @@ def find_compare_result_error_rows(result_df, highlight_dict):
                     num, last_state = 1, state
             else:
                 output_num = num
-                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare)
                 num, last_api_name, last_state = 1, api_name, state
                 start += input_num + output_num
                 input_num, output_num = 1, 0
@@ -783,7 +783,7 @@ def find_compare_result_error_rows(result_df, highlight_dict):
             input_num = num
         else:
             output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict)
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
@@ -844,7 +844,7 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
 
     if not md5_compare and not summary_compare:
         result_df = _do_multi_process(input_parma, result_df)
-    find_compare_result_error_rows(result_df, highlight_dict)
+    find_compare_result_error_rows(result_df, highlight_dict, summary_compare)
     highlight_rows_xlsx(result_df, highlight_dict, file_path)
     if auto_analyze:
         advisor = Advisor(result_df, output_path)
