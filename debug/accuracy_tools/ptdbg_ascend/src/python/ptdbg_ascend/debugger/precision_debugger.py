@@ -11,6 +11,7 @@ from ..overflow_check.overflow_check import overflow_check
 from ..hook_module.register_hook import register_hook_core, init_overflow_nums
 from ..hook_module.hook_module import HOOKModule
 from .debugger_config import DebuggerConfig
+from torch.autograd.function import Function
 
 
 from torch.autograd.function import Function
@@ -121,16 +122,16 @@ class PrecisionDebugger:
                 cls.stop()
 
     @classmethod
-    def start_ex(self, var):
+    def start_ex(cls, var):
         class DumpBegin(Function):
             @staticmethod
             def forward(ctx, x):
-                self.start()
+                cls.start()
                 return x
             
             @staticmethod
             def backward(ctx, x):
-                self.stop()
+                cls.stop()
                 return x
             
         if var is None:
@@ -160,16 +161,16 @@ class PrecisionDebugger:
                 generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
 
     @classmethod
-    def stop_ex(self, var):
+    def stop_ex(cls, var):
         class DumpEnd(Function):
             @staticmethod
             def forward(ctx, x):
-                self.stop()
+                cls.stop()
                 return x
-            
+
             @staticmethod
             def backward(ctx, x):
-                self.start()
+                cls.start()
                 return x
             
         if var is None:
