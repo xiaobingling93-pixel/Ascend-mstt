@@ -414,7 +414,7 @@ def save_numpy_data(file_path, data):
     save_numpy_data
     """
     if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
+        create_directory(os.path.dirname(file_path))
     np.save(file_path, data)
 
 
