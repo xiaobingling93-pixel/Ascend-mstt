@@ -11,10 +11,7 @@ from ..overflow_check.overflow_check import overflow_check
 from ..hook_module.register_hook import register_hook_core, init_overflow_nums
 from ..hook_module.hook_module import HOOKModule
 from .debugger_config import DebuggerConfig
-from torch.autograd.function import Function
 
-
-from torch.autograd.function import Function
 
 class PrecisionDebugger:
     _instance = None
@@ -122,27 +119,6 @@ class PrecisionDebugger:
                 cls.stop()
 
     @classmethod
-    def start_ex(cls, var):
-        class DumpBegin(Function):
-            @staticmethod
-            def forward(ctx, x):
-                cls.start()
-                return x
-            
-            @staticmethod
-            def backward(ctx, x):
-                cls.stop()
-                return x
-            
-        if var is None:
-            raise Exception('Please add tensor as argument or use PrecisionDebugger.start().')
-        if not isinstance(var, torch.Tensor):
-            raise Exception('Please pass tensor as parameter.')
-        if not var.requires_grad:
-            raise Exception('Please make sure the gradients need to be computed or the require_grad attribute is True.')
-        return DumpBegin.apply(var)
-
-    @classmethod
     def stop(cls):
         instance = cls._instance
         if not instance:
@@ -159,27 +135,6 @@ class PrecisionDebugger:
                 DumpUtil.dump_thread_pool.shutdown(wait=True)
             if check_is_npu() and DumpUtil.dump_switch_mode in [Const.ALL, Const.API_STACK, Const.LIST, Const.RANGE, Const.API_LIST]:
                 generate_compare_script(DumpUtil.dump_data_dir, get_pkl_file_path(), DumpUtil.dump_switch_mode)
-
-    @classmethod
-    def stop_ex(cls, var):
-        class DumpEnd(Function):
-            @staticmethod
-            def forward(ctx, x):
-                cls.stop()
-                return x
-
-            @staticmethod
-            def backward(ctx, x):
-                cls.start()
-                return x
-            
-        if var is None:
-            raise Exception('Please add tensor as argument or use PrecisionDebugger.stop().')
-        if not isinstance(var, torch.Tensor):
-            raise Exception('Please pass tensor as parameter.')
-        if not var.requires_grad:
-            raise Exception('Please make sure the gradients need to be computed or the require_grad attribute is True.')
-        return DumpEnd.apply(var)
 
     @classmethod
     def step(cls):
