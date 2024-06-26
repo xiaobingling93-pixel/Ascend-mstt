@@ -1035,6 +1035,8 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
     ops_bench_iter = iter(bench_json_data['data'])
     read_err_npu = True
     read_err_bench = True
+    last_npu_ops_len = 0
+    last_bench_ops_len = 0
 
     while True:
         if not read_err_npu and not read_err_bench:
@@ -1057,6 +1059,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
         except StopIteration:
             read_err_npu = False
         try:
+            last_bench_ops_len = len(bench_ops_queue)
             op_name_bench = next(ops_bench_iter)
             read_err_bench = True
 
@@ -1074,7 +1077,8 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
         except StopIteration:
             read_err_bench = False
 
-        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or len(npu_ops_queue) == last_npu_ops_len:
+        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or (
+                len(npu_ops_queue) == last_npu_ops_len and len(bench_ops_queue) == last_bench_ops_len):
             continue
 
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
