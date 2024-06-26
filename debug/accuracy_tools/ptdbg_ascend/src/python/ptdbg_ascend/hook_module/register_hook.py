@@ -17,7 +17,7 @@
 
 import functools
 import os
-
+import warnings
 from inspect import isfunction
 import torch
 import torch.distributed as dist
@@ -62,6 +62,10 @@ def add_clear_overflow(func, pid):
 
 
 def register_hook(model, hook, **kwargs):
+    message = """The current version of ptdbg will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
+    Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
+    warnings.warn(message)
     check_register_hook(hook, **kwargs)
     print_info_log("Please disable dataloader shuffle before running the program.")
     overflow_nums = kwargs.get('overflow_nums', 1)

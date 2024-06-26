@@ -85,3 +85,7 @@ ATT分支名称格式为：版本号-ATT，而版本号命名规则如下：
 2. 新建 xxx 分支
 3. 提交代码
 4. 新建 Pull Request
+
+##  版本过渡提示
+
+当前版本预检和ptdbg维护到2024/09/30，准备于2024/09/30下线，相关目录att/debug/accuracy_tools/api_accuracy_checker和att/debug/accuracy_tools/ptdbg_ascend将于2024/09/30删除。新版本的预检和ptdbg已经合到att/debug/accuracy_tools/atat目录下。

@@ -35,6 +35,7 @@ from ..common.utils import check_compare_param, add_time_with_xlsx, \
     CompareConst, format_value, check_file_not_exists, check_configuration_param, \
     is_summary_compare, is_md5_compare
 from ..common.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen
+import warnings
 
 
 def correct_data(result):
@@ -821,6 +822,10 @@ def handle_inf_nan(n_value, b_value):
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
+        message = """The current version of ptdbg will be deprecated on September 30, 2024.
+        The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
+        Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
+        warnings.warn(message)        
         summary_compare = is_summary_compare(input_parma)
         md5_compare = is_md5_compare(input_parma)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)

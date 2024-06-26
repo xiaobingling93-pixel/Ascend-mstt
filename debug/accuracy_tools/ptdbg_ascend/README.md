@@ -1,5 +1,9 @@
 # **PyTorch精度工具**
 
+## 版本过渡提示
+
+当前版本ptdbg维护到2024/09/30，准备于2024/09/30下线，相关目录att/debug/accuracy_tools/ptdbg_ascend将于2024/09/30删除。新版本ptdbg已经合到att/debug/accuracy_tools/atat目录下。
+
 ## 快速安装
 
 进行PyTorch精度比对需要将ptdbg_ascend精度工具分别安装在CPU或GPU环境以及NPU环境下。

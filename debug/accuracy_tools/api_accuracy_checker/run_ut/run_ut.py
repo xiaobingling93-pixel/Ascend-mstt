@@ -5,6 +5,7 @@ import re
 import sys
 import time
 import gc
+import warnings
 from collections import namedtuple
 try:
     import torch_npu
@@ -584,5 +585,9 @@ class UtAPIInfo(APIInfo):
 
 
 if __name__ == '__main__':
+    message = """The current version of api_precision_checker will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
+    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
+    warnings.warn(message)    
     _run_ut()
     print_info_log("UT task completed.")

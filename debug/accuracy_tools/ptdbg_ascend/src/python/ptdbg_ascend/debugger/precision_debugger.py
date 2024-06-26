@@ -1,6 +1,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 import torch
+import warnings
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
     CompareException, print_warn_log
 from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count
@@ -97,6 +98,10 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls):
+        message = """The current version of ptdbg will be deprecated on September 30, 2024.
+        The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
+        Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
+        warnings.warn(message)        
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")

@@ -6,7 +6,7 @@ import math
 from collections import namedtuple
 import torch
 import pandas as pd
-
+import warnings
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
     CompareException, create_directory
 from api_accuracy_checker.common.config import msCheckerConfig
@@ -558,6 +558,10 @@ def _api_precision_compare_parser(parser):
 
 
 if __name__ == '__main__':
+    message = """The current version of api_precision_checker will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
+    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
+    warnings.warn(message)
     _api_precision_compare()
     print_info_log("Compare task completed.")
     
