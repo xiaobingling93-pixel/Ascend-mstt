@@ -18,9 +18,8 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare, is_md5_compare
+    check_configuration_param, is_summary_compare, is_md5_compare, Const, WarningManager
 from .acc_compare import compare_core
-import warnings
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
@@ -61,10 +60,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         return pkl_path, dump_data_dir
 
 
-    message = """The current version of ptdbg will be deprecated on September 30, 2024.
-    The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
-    Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
-    warnings.warn(message)
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     if kwargs.get('suffix'):
         print_error_log("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)

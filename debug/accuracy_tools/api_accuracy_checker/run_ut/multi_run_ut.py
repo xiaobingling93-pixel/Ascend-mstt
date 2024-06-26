@@ -6,7 +6,6 @@ import argparse
 import time
 import signal
 import threading
-import warnings
 from collections import namedtuple
 from itertools import cycle
 from tqdm import tqdm
@@ -14,7 +13,7 @@ from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileChec
     check_file_suffix, check_link, FileOpen
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
-from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, create_directory
+from api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, create_directory, Const, WarningManager
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import check_path_before_create
 
 
@@ -180,8 +179,6 @@ def main():
     run_parallel_ut(config)
 
 if __name__ == '__main__':
-    message = """The current version of api_precision_checker will be deprecated on September 30, 2024.
-    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
-    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
-    warnings.warn(message)
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     main()

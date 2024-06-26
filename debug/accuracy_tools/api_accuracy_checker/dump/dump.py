@@ -16,13 +16,12 @@
 """
 import os
 import time
-import warnings
 import torch.distributed as dist
 
 from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
 from api_accuracy_checker.dump.info_dump import write_api_info_json, initialize_output_json
 from api_accuracy_checker.common.utils import print_error_log, CompareException, print_info_log, \
-    get_tensor_rank, logger, Const
+    get_tensor_rank, logger, Const, WarningManager
 from api_accuracy_checker.hook_module.register_hook import initialize_hook
 from api_accuracy_checker.common.config import msCheckerConfig
 
@@ -49,10 +48,8 @@ def check_dataloader_status():
 
 
 def start():
-    message = """The current version of api_precision_checker will be deprecated on September 30, 2024.
-    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
-    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
-    warnings.warn(message)
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     check_dataloader_status()
     if not DumpUtil.get_dump_switch():
         DumpUtil.incr_iter_num_maybe_exit()

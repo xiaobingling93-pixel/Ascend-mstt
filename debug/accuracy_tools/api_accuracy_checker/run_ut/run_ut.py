@@ -5,7 +5,6 @@ import re
 import sys
 import time
 import gc
-import warnings
 from collections import namedtuple
 try:
     import torch_npu
@@ -20,7 +19,7 @@ from tqdm import tqdm
 from api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, api_info_preprocess, \
-    print_error_log, initialize_save_path, Const, create_directory, Const
+    print_error_log, initialize_save_path, Const, create_directory, Const, WarningManager
 from api_accuracy_checker.compare.compare import Comparator
 from api_accuracy_checker.compare.compare_column import CompareColumn
 from api_accuracy_checker.compare.compare_utils import CompareConst
@@ -585,9 +584,7 @@ class UtAPIInfo(APIInfo):
 
 
 if __name__ == '__main__':
-    message = """The current version of api_precision_checker will be deprecated on September 30, 2024.
-    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
-    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
-    warnings.warn(message)    
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     _run_ut()
     print_info_log("UT task completed.")

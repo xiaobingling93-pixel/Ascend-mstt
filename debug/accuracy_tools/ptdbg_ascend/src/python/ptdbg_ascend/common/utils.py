@@ -31,7 +31,7 @@ from functools import wraps
 from pathlib import Path
 import numpy as np
 import torch
-
+import warnings
 from .file_check_util import FileOpen, FileChecker, FileCheckConst
 
 try:
@@ -121,6 +121,10 @@ class Const:
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
     ]
 
+    # version message tips
+    VERSION_MESSAGE = """The current version of ptdbg will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
+    Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
 
 class CompareConst:
     """
@@ -828,3 +832,9 @@ def check_inplace_op(prefix):
     match_op = re.findall(r"Distributed_(.+?)_\d", prefix)
     op_name = match_op[0] if match_op else None
     return op_name in Const.INPLACE_LIST
+
+
+class WarningManager:
+    def warn(self, message=None, enable_warnings=True):
+        if enable_warnings:
+            warnings.warn(message)
