@@ -943,7 +943,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result.append(result_item)
             continue
         if summary_compare:
-            result_item.extend([CompareConst.NAN] * 4)
+            result_item.extend([CompareConst.NAN] * 8)
         else:
             result_item.extend([CompareConst.NAN] * 5)
         summary_data = n_dict.get("summary")[index]
@@ -954,4 +954,9 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
+        if result_item[1] == "Nan":
+            if index == 0:
+                result_item.extend(["-1"])
+            else:
+                result_item.extend(["None", "-1"])
         result.append(result_item)
