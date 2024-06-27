@@ -213,28 +213,57 @@ GradComparator.compare_distributed("配置文件里写的输出目录",
 
 ## 公开接口
 
+**接口说明**
+
 ```python
 GradientMonitor.monitor(module)
 ```
-
-**参数说明**
 
 | 参数  | 说明                 | 是否必选 |
 | ----- | -------------------- | -------- |
 | module |Pytorch框架下传入模型，必须是torch.nn.Module；MindSpore框架下传入优化器。 | 是       |
 
+**接口说明**
 
 ```python
 GradientMonitor.__init__(config_path)
 ```
 
-**参数说明**
-
 | 参数    | 说明                                                         | 是否必选 |
 | ----------- | ------------------------------------------------------------ | -------- |
 | config_path | 配置文件路径，需要以.yaml结尾。                                 | 是      |
 
+**接口说明**
 
+```python
+GradComparator.compare(rank_dir_path1,
+                       rank_dir_path2,
+                       output_path,
+                       framework="PyTorch")
+```
+
+| 参数  | 说明                 | 是否必选 |
+| ----- | -------------------- | -------- |
+| rank_dir_path1 |需要比对的其中一个rank_id级目录。 | 是       |
+| rank_dir_path2 |需要比对的其中一个rank_id级目录，与rank_dir_path1可以互换。 | 是       |
+| output_path |输出结果目录，不存在会新建。 | 是       |
+| framework |传入框架名字，可选Pytorch或者MindSpore。 | 是       |
+
+**接口说明**
+
+```python
+GradComparator.compare_distributed(grad_output_path1,
+                                   grad_output_path2,
+                                   output_path,
+                                   framework="PyTorch")
+```
+
+| 参数  | 说明                 | 是否必选 |
+| ----- | -------------------- | -------- |
+| grad_output_path1 |需要比对的其中一个dump目录，也就是配置文件里写的output_path。 | 是       |
+| grad_output_path2 |需要比对的其中一个dump目录，也就是配置文件里写的output_path，与grad_output_path1可以互换。 | 是       |
+| output_path |输出结果目录，不存在会新建。 | 是       |
+| framework |传入框架名字，可选Pytorch或者MindSpore。 | 是       |
 
 # FAQ 
 
