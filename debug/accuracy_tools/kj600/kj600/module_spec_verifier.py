@@ -2,10 +2,12 @@ import json
 import re
 import abc
 import torch
+from kj600.utils import check_file_before_read
 
 
 def get_config(file_path='config.json'):
     with open(file_path, 'r') as file:
+        check_file_before_read(file_path)
         config = json.load(file)
         return config
 
