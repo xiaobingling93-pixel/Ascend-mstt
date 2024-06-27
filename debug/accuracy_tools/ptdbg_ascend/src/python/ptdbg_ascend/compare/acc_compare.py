@@ -410,11 +410,11 @@ def check_order_magnitude(info, color_columns, summary_compare=True):
     """Check if order magnitude diff of max_diff larger than 1"""
     api_in, api_out, num = info
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
-    if api_in[max_diff_index] > api_out[max_diff_index]:
+    if abs(api_in[max_diff_index]) > abs(api_out[max_diff_index]):
         return
-    in_order = 0 if api_in[max_diff_index] == 0 else math.log10(abs(api_in[max_diff_index]))
-    out_order = 0 if api_out[max_diff_index] == 0 else math.log10(abs(api_out[max_diff_index]))
-    if abs(in_order - out_order) >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
+    in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
+    out_order = 0 if abs(api_out[max_diff_index]) < 1 else math.log10(abs(api_out[max_diff_index]))
+    if out_order - in_order >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
         color_columns.yellow.append(num)
 
 

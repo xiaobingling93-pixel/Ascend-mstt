@@ -136,7 +136,7 @@ num_0, num_1, num_2, num_3 = 0, 1, 2, 3
 summary_line_input = ['Functional_batch_norm_0_forward_input.0', 'Functional_batch_norm_0_forward_input.0', 'torch.float16',
                       'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.01, 0, 0, 0, 1, 1, 1, 1, 1.01, 1, 1, 1, 'Yes', '']
 summary_line_1 = ['Functional_batch_norm_0_forward_output.0', 'Functional_batch_norm_0_forward_output.0', 'torch.float16',
-                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 1, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 'Warning', '']
+                  'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 10, 0, 0, 0, 2, 0, 1, 1, 1, 1, 1, 1, 'Warning', '']
 summary_line_2 = ['Functional_batch_norm_0_forward_output.1', 'Functional_batch_norm_0_forward_output.1', 'torch.float16',
                   'torch.float32', [256, 256, 14, 14], [256, 256, 14, 14], 0.02, 0, 0, 0, 0.12, 0, 1, 1, 0.1, 1, 1, 1, 'Warning', '']
 summary_line_3 = ['Functional_batch_norm_0_forward_output.2', 'Functional_batch_norm_0_forward_output.2', 'torch.float16',
