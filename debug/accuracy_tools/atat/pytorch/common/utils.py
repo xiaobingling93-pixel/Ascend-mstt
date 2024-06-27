@@ -162,6 +162,7 @@ class Const:
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
+    OVERWRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 
     PKL_SUFFIX = ".pkl"

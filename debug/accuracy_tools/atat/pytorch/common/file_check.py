@@ -297,5 +297,5 @@ def change_mode(path, mode):
 
 
 def path_len_exceeds_limit(file_path):
-    return len(os.path.realpath(file_path)) > Const.DIRECTORY_LENGTH or \
-        len(os.path.basename(file_path)) > Const.FILE_NAME_LENGTH
+    return len(os.path.realpath(file_path)) > FileCheckConst.DIRECTORY_LENGTH or \
+        len(os.path.basename(file_path)) > FileCheckConst.FILE_NAME_LENGTH

@@ -2,6 +2,7 @@ import os
 import csv
 from pathlib import Path
 import json
+from ..common.file_check import FileCheckConst, change_mode
 from ..common.log import print_info_log_rank_0
 from ..common.utils import Const
 
@@ -26,16 +27,20 @@ class DataWriter:  # TODO: UT
 
     def initialize_json_file(self, **kwargs):
         kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, "data": {}})
-        with open(self.dump_file_path, 'w') as f:
+        with os.fdopen(
+            os.open(self.dump_file_path, Const.OVERWRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), 'w'
+        ) as f:
             json.dump(kwargs, f)
 
         if os.path.exists(self.stack_file_path):
             os.remove(self.stack_file_path)
         Path(self.stack_file_path).touch()
+        change_mode(self.stack_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
         if os.path.exists(self.construct_file_path):
             os.remove(self.construct_file_path)
         Path(self.construct_file_path).touch()
+        change_mode(self.construct_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path):
         self.dump_file_path = dump_file_path
@@ -106,7 +111,7 @@ class DataWriter:  # TODO: UT
         is_exists = os.path.exists(file_path)
         append = "a+" if is_exists else "w+"
         with os.fdopen(
-            os.open(file_path, Const.WRITE_FLAGS, Const.WRITE_MODES), append, newline=""
+            os.open(file_path, Const.WRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), append, newline=""
         ) as csv_file:
             spawn_writer = csv.writer(csv_file)
             if not is_exists:
