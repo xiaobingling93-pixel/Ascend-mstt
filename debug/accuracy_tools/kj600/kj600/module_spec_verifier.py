@@ -2,11 +2,11 @@ import json
 import re
 import abc
 import torch
-from kj600.utils import check_file_before_read
+from kj600.utils import check_file_valid_readable
 
 
 def get_config(file_path='config.json'):
-    check_file_before_read(file_path)
+    check_file_valid_readable(file_path)
     with open(file_path, 'r') as file:
         config = json.load(file)
         return config
