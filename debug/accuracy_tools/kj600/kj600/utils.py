@@ -79,23 +79,10 @@ def check_path_writability(path):
         raise RuntimeError("The file path is not writable.")
 
 
-def _user_interactive_confirm(message):
-    while True:
-        check_message = input(message + " Enter 'c' to continue or enter 'e' to exit: ")
-        if check_message == "c":
-            break
-        elif check_message == "e":
-            print_warn_log("User canceled.")
-            raise RuntimeError("User canceled.")
-        else:
-            print("Input is error, please enter 'c' or 'e'.")
-
-
 def check_file_size(file_path, max_size=FILE_MAX_SIZE):
     file_size = os.path.getsize(file_path)
     if file_size >= max_size:
-        _user_interactive_confirm(f'The size of file path {file_path} exceeds {max_size} bytes.'
-                                  f'Do you want to continue?')
+        raise RuntimeError("The file size excess limit.")
 
 
 def check_path_exists(path):
