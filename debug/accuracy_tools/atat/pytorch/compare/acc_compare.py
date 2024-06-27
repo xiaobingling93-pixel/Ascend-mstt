@@ -954,7 +954,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
-        if result_item[1] == "Nan":
+        if not md5_compare and not summary_compare and result_item[1] == "Nan":
             if index == 0:
                 result_item.extend(["-1"])
             else:
