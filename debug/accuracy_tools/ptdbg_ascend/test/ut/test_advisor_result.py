@@ -11,7 +11,7 @@ import pandas
 
 class TestAdvisor(unittest.TestCase):
     def setUp(self) -> None:
-        os.makedirs("test_result/output", exist_ok=True)
+        os.makedirs("test_result/output", mode=0o700, exist_ok=True)
         self.output_path = os.path.abspath("test_result/output")
         self.has_error = False
 
