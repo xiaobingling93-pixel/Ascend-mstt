@@ -106,9 +106,10 @@ def check_path_exists(path):
 def check_file_valid(path):
     check_path_exists(path)
     check_link(path)
-    check_path_length(path)
-    check_path_pattern_vaild(path)
-    check_file_size(path)
+    real_path = os.path.realpath(path)
+    check_path_length(real_path)
+    check_path_pattern_vaild(real_path)
+    check_file_size(real_path)
 
 
 def check_file_valid_readable(path):
