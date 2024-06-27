@@ -21,7 +21,7 @@ import multiprocessing
 import os.path
 import stat
 import sys
-
+import warnings
 import numpy as np
 import pandas as pd
 import openpyxl
@@ -821,6 +821,8 @@ def handle_inf_nan(n_value, b_value):
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
+        message = Const.VERSION_MESSAGE
+        warnings.warn(message)        
         summary_compare = is_summary_compare(input_parma)
         md5_compare = is_md5_compare(input_parma)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)

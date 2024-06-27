@@ -16,13 +16,12 @@
 """
 import os
 import time
-
 import torch.distributed as dist
 
 from api_accuracy_checker.dump.api_info import ForwardAPIInfo, BackwardAPIInfo
 from api_accuracy_checker.dump.info_dump import write_api_info_json, initialize_output_json
 from api_accuracy_checker.common.utils import print_error_log, CompareException, print_info_log, \
-    get_tensor_rank, logger, Const
+    get_tensor_rank, logger, Const, WarningManager
 from api_accuracy_checker.hook_module.register_hook import initialize_hook
 from api_accuracy_checker.common.config import msCheckerConfig
 
@@ -49,6 +48,8 @@ def check_dataloader_status():
 
 
 def start():
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     check_dataloader_status()
     if not DumpUtil.get_dump_switch():
         DumpUtil.incr_iter_num_maybe_exit()
