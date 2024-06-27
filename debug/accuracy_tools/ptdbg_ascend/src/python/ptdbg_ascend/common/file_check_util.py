@@ -112,7 +112,7 @@ class FileChecker:
         self.check_path_ability()
         if self.is_script:
             check_path_owner_consistent(self.file_path)
-        check_path_pattern_vaild(self.file_path)
+        check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
         return self.file_path
@@ -167,7 +167,7 @@ class FileOpen:
         self.file_path = os.path.realpath(self.file_path)
         check_path_length(self.file_path)
         self.check_ability_and_owner()
-        check_path_pattern_vaild(self.file_path)
+        check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
 
@@ -251,7 +251,7 @@ def check_path_owner_consistent(path):
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR)
 
 
-def check_path_pattern_vaild(path):
+def check_path_pattern_valid(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
         print_error_log('The file path %s contains special characters.' % path)
         raise FileCheckException(FileCheckException.INVALID_PATH_ERROR)

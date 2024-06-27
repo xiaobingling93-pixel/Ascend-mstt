@@ -37,7 +37,7 @@ from .utils import (DumpUtil, check_if_in_api_list, make_dump_data_dir, get_tens
 from ..common.utils import (print_warn_log, Const, print_info_log, modify_dump_path, check_inplace_op, CompareConst,
                             get_md5_for_tensor, print_error_log)
 from ..dump.utils import check_writable
-from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_vaild, check_path_length
+from ..common.file_check_util import FileOpen, change_mode, FileCheckConst, check_path_pattern_valid, check_path_length
 
 forward_init_status = False
 backward_init_status = False

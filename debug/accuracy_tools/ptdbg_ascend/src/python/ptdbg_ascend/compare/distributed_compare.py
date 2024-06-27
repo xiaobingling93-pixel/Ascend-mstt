@@ -18,21 +18,37 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare, is_md5_compare
+    check_configuration_param, is_summary_compare, is_md5_compare, check_regex_prefix_format_valid
 from .acc_compare import compare_core
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     def check_and_return_dir_contents(dump_dir, prefix):
+        """
+        check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
+        pattern: ^{prefix}(?:0|[0-9][1-9]*)?$
+
+        Args:
+            dump_dir (str): dump dir
+            prefix (str): prefix for the patterns, prefix should be less than 20 characters and alphanumeric/-/_ only
+
+        Returns:
+            content [list]: dir contents
+        Raises:
+            CompareException: invalid path
+            ValueError: prefix not match the patterns
+
+        """
+        check_regex_prefix_format_valid(prefix)
         check_file_or_directory_path(dump_dir, True)
         contents = os.listdir(dump_dir)
         pattern = re.compile(f'^{prefix}[0-9]+$')
         for name in contents:
-            match = pattern.match(name)
-            if match is None:
-                msg = (f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump output. "
-                        f"Please check and delete irrelevant files in {dump_dir} and try again.")
-                print_error_log(msg)
+            if not pattern.match(name):
+                print_error_log(
+                    f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
+                    f"output. Please check and delete irrelevant files in {dump_dir} and try again."
+                )
                 raise CompareException(CompareException.INVALID_PATH_ERROR)
         return contents
 
@@ -46,19 +62,22 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             elif full_path.endswith('.pkl'):
                 pkl_path = full_path
                 pkl_name = fname
+
+        name_body, ext = os.path.splitext(pkl_name)
         # Provide robustness on invalid directory inputs
         if not pkl_path:
             print_error_log(f'No file is found in dump dir {dirname}. ')
             raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
-        name_body, ext = os.path.splitext(pkl_name)
+        # Check if the name of pkl file meets the criteria, and raise ValueError if not
+        check_regex_prefix_format_valid(name_body)
+
         pattern = re.compile(f'{name_body}$')
         match = pattern.match(dump_data_dirname)
         if dump_data_dir and match is None:
             print_error_log('The names of pkl and directory do not match! '
-                f'Please check the names and remove irrelevant files in {dirname}. ')
+                            f'Please check the names and remove irrelevant files in {dirname}. ')
             raise CompareException(CompareException.INVALID_FILE_ERROR)
         return pkl_path, dump_data_dir
-
 
     if kwargs.get('suffix'):
         print_error_log("Argument 'suffix' is not supported for compare_distributed.")
@@ -70,9 +89,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
     if len(npu_ranks) != len(bench_ranks):
-        print_error_log('The number of ranks in the two runs are different. '
-            'Unable to match the ranks. Please use another folder to compare '
-            'or use compare() api and manually match the ranks.')
+        print_error_log('The number of ranks in the two runs are different. Unable to match the ranks. Please use '
+                        'another folder to compare or use compare() api and manually match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     for nr, br in zip(npu_ranks, bench_ranks):
         n_dir = os.path.join(npu_dump_dir, nr)
