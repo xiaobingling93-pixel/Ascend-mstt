@@ -9,10 +9,11 @@
 ###  1. 安装依赖
 
 | 依赖软件    |
-| ----------- |
-| PyTorch     |
+|-------------|
+| torch       |
 | torch_npu   |
 | torchvision |
+| tensorboard |
 
 ###  2. 安装 kj600
 
@@ -57,41 +58,28 @@ pip install -e .
 }  
 ```
 
-每个要监控的module有特定的输入输出格式（依赖于模型实现），所以我们需要指定前向输入输出格式和反向计算时输入张量的梯度和输出张量的梯度格式。 如果不清楚的话可以填空字段（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后工具会打印详细的模型结构。 我们也会随时更新更多常用module的格式规范。
+每个要监控的module都有自己特定的输入输出格式（依赖于模型实现），所以我们需要指定前向输入输出格式和反向计算时输入张量的梯度和输出张量的梯度格式。 如果不清楚的话可以将"targets"填为空（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后工具会打印详细的模型结构。 我们也会随时更新更多常用module的格式规范。
 
 下面详细解释各个字段：
 
-"targets"：必选字段，指定需要监控的大模型层， 例如transformer的第0层language_model.encoder.layers.0。如果不清楚模型结构， 可以填空字段（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出， 你可以从中选择你关心的module。
-
-"input"：可选字段，"tuple[2]:0"的意思是目标module的前向input参数为长度为2的tuple， 我们关心的是tuple第0个元素。
-
-"output"：必选字段，"tensor"的意思是目标module的前向output参数类型为tensor
-
-"input_grad"：可选字段，"tuple[2]:0"的意思是目标module的后向input_grad参数是长度为2的tuple， 我们关心的是tuple的第0个元素。
-
-"output_grad"：必选字段，"tuple[1]:0"的意思是目标module的后向input_grad参数是长度为1的tuple， 我们关心的是tuple的第0个元素。
-
-"module_ranks"：可选字段，用于在分布式训练场景中希望控制在哪些rank开启module监控。如果不填，则默认在所有rank开启。
-
-"print_struct"：可选字段，设置为true后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出。不填默认为false。
-
-"ur_distribution": 可选字段，若为true则会统计adam优化器指定模块（targets中指定）参数的update和ratio向量的数值分布，并展示在heatmap里，默认为false。
-
-"xy_distribution": 可选字段， 若为true则会监控指定module（targets中指定）的输入输出张量。 默认为false。
-
-"mv_distribution": 可选字段， 若为true则会监控指定模块中的参数的优化器状态， 默认为false。
-
-"wg_distribution": 可选字段， 若为true则会监控指定模块的参数梯度， 默认为false。 
-
-"alert": 必选字段。 指定自动报警的异常检测机制及其相应的阈值。目前实现的异常检测是AnomalyTurbulence。 如果统计标量超出历史均值的指定浮动范围(threshold指定， 0.5意味着上浮或者下浮50%）。 目前报警是在控制台打印， 未来会实现发邮件和写数据库。 
-
-"mg_direction": 可选字段，若为true则会统计adam优化器的一阶矩（$m_{t-1}$）和当前梯度($g_t$)符号一致的参数比例。
-
-"cc_distribution": 可选字段， 其中“enable”字段控制开关；“cc_codeline”字段指定监控的代码行，如"train.py\\[23\\]"，默认为空列表，不特别指定。"cc_log_only"字段控制是否监控数据,为true时,仅记录调用到的算子及其调用栈。
-
-"ops": 可选字段，与ur_distribution、xy_distribution、mv_distribution、wg_distribution、mg_direction、cc_distribution配合，监控所选张量的min、max、norm、zeros值。其中，zeros代表监控所选张量的元素小于eps的比例，id代表监控所选的非张量本身，默认为[]。
-
-"eps": 可选字段，若ops里包含"zeros"则需要配置，默认为1e-8。
+| 字段名字                                                       | 是否必选    | 解释   | 
+| ------------------------------------------------------------ | -------- | -------- | 
+|"targets"| 必选 |指定需要监控的大模型层， 例如transformer的第0层language_model.encoder.layers.0。如果不清楚模型结构， 可以将"targets"填为空（"targets":{}），然后将 "print_struct" 字段设置为 true， 之后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出， 你可以从中选择你关心的module。|
+|"input"| 可选 |"tuple[2]:0"的意思是目标module的前向input参数为长度为2的tuple， 我们关心的是tuple第0个元素。|
+|"output"| 必选 |"tensor"的意思是目标module的前向output参数类型为tensor|
+|"input_grad"| 可选 |"tuple[2]:0"的意思是目标module的后向input_grad参数是长度为2的tuple， 我们关心的是tuple的第0个元素。|
+|"output_grad"| 必选 |"tuple[1]:0"的意思是目标module的后向input_grad参数是长度为1的tuple， 我们关心的是tuple的第0个元素。|
+|"print_struct"| 可选 |设置为true后监控工具会打印模型中torch module的名字和详细结构，并在第1个step后退出。不填默认为false。|
+|"module_ranks"| 可选 |用于在分布式训练场景中希望控制在哪些rank开启module监控。如果不填，则默认在所有rank开启。|
+|"ur_distribution"|  可选 |若为true则会统计adam优化器指定模块（targets中指定）参数的update和ratio向量的数值分布，并展示在heatmap里，默认为false。依赖histc算子， 需要CANN8.0.rc2以上版本， 否则会有严重的性能问题。 |
+|"xy_distribution"|  可选 | 若为true则会监控指定module（targets中指定）的输入输出张量。 默认为false。|
+|"mv_distribution"|  可选 | 若为true则会监控指定模块中的参数的优化器状态， 默认为false。需要在TrainerMon构造函数正确指定opt_ty. 目前只支持megatron的混合精度优化器以及megatron的分布式优化器。 Deepspeed的分布式优化器实现暂不支持。 |
+|"wg_distribution"|  可选 | 若为true则会监控指定模块的参数梯度， 默认为false。 |
+|"alert"|  必选 |  指定自动报警的异常检测机制及其相应的阈值。目前实现的异常检测是AnomalyTurbulence。 如果统计标量超出历史均值的指定浮动范围(threshold指定， 0.5意味着上浮或者下浮50%）。 目前报警是在控制台打印， 未来会实现发邮件和写数据库。|
+|"mg_direction"| 可选 | 若为true则会统计adam优化器的一阶矩（$m_{t-1}$）和当前梯度($g_t$)符号一致的参数比例。|
+|"cc_distribution"|  可选 | 其中“enable”字段控制开关；“cc_codeline”字段指定监控的代码行，如:"train.py\\[23\\]"，默认为空列表，不特别指定。"cc_log_only"字段控制是否监控数据,为true时,仅记录调用到的算子及其调用栈。|
+|"ops"|  可选 |与ur_distribution、xy_distribution、mv_distribution、wg_distribution、mg_direction、cc_distribution配合，监控所选张量的min、max、norm、zeros值。其中，zeros代表监控所选张量的元素小于eps的比例，id代表监控所选的非张量本身，默认为[]。|
+|"eps"|  可选 |若ops里包含"zeros"则需要配置，默认为1e-8。|
 
 下面给出transformer架构模型中常见的module的前向计算的输入输出和反向计算输入张量的梯度和输出张量的梯度格式，以供参考：
 
@@ -171,3 +159,37 @@ ssh -N -L localhost:6006:localhost:6006 your_username@remote_server_address
 在工具配置文件中加入"params_effrank"："权重矩阵参数名"
 "params_effrank": ["language_model.encoder.layers.0.self_attention.query_key_value.weight"]
 
+## 公开接口
+
+**接口说明**
+
+```python
+TrainerMon.__init__(config_file_path, params_have_main_grad=True, opt_ty=None) -> None
+```
+
+| 参数  | 说明                  | 是否必选 |
+| ----- | -------------------- | -------- |
+| config_file_path |自己写的json配置文件路径。 | 是       |
+| params_have_main_grad |权重是否使用main_grad，是就为True，否则为False。默认为True。 | 否       |
+| opt_ty |优化器类型，有两个选项，Megatron_DistributedOptimizer：使用bf16或者fp16混合精度时开启分布式优化器；Megatron_Float16OptimizerWithFloat16Params：使用bf16或者fp16混合精度选项并且不开启分布式优化器，也适用于常规的adam优化器。如果使用的不是adam优化器，使用None。默认为None。 | 否      |
+
+**接口说明**
+
+```python
+TrainerMon.hook_modules(model, grad_acc_steps) -> None
+```
+
+| 参数  | 说明                  | 是否必选 |
+| ----- | -------------------- | -------- |
+| model |需要监控的模型，需要是一个torch.nn.Module。 | 是       |
+| grad_acc_steps | 梯度累积步数。 | 是      |
+
+**接口说明**
+
+```python
+TrainerMon.set_wrapped_optimizer(_wrapped_optimizer) -> None
+```
+
+| 参数  | 说明                  | 是否必选 |
+| ----- | -------------------- | -------- |
+| _wrapped_optimizer |megatron创建好的混合精度优化器。 | 是       |

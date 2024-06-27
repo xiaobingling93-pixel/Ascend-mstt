@@ -6,9 +6,8 @@ import math
 from collections import namedtuple
 import torch
 import pandas as pd
-
 from api_accuracy_checker.common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
-    CompareException, create_directory
+    CompareException, create_directory, Const, WarningManager
 from api_accuracy_checker.common.config import msCheckerConfig
 from api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
 API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
@@ -558,6 +557,8 @@ def _api_precision_compare_parser(parser):
 
 
 if __name__ == '__main__':
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     _api_precision_compare()
     print_info_log("Compare task completed.")
     

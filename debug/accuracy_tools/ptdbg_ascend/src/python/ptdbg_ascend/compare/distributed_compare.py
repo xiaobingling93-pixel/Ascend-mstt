@@ -18,7 +18,7 @@ import os
 import sys
 import re
 from ..common.utils import print_error_log, CompareException, check_compare_param, check_file_or_directory_path, \
-    check_configuration_param, is_summary_compare, is_md5_compare, check_regex_prefix_format_valid
+    check_configuration_param, is_summary_compare, is_md5_compare, Const, WarningManager, check_regex_prefix_format_valid
 from .acc_compare import compare_core
 
 
@@ -79,6 +79,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             raise CompareException(CompareException.INVALID_FILE_ERROR)
         return pkl_path, dump_data_dir
 
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     if kwargs.get('suffix'):
         print_error_log("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)

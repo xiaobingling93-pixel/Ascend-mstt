@@ -841,10 +841,9 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     ops_npu_iter = iter(npu_json_data['data'])
     ops_bench_iter = iter(bench_json_data['data'])
     read_err_npu = True
-    read_err_bench = True
 
     while True:
-        if not read_err_npu or not read_err_bench:
+        if not read_err_npu:
             break
         try:
             op_name_npu = next(ops_npu_iter)
@@ -860,10 +859,8 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
             npu_ops_queue.append(merge_tensor(npu_op_parsed_list, summary_compare, md5_compare))
         except StopIteration:
             read_err_npu = False
-            continue
         try:
             op_name_bench = next(ops_bench_iter)
-            read_err_bench = True
 
             bench_op_data = bench_json_data['data'][op_name_bench]
             bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
@@ -875,11 +872,12 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
 
             bench_ops_queue.append(merge_tensor(bench_op_parsed_list, summary_compare, md5_compare))
         except StopIteration:
-            read_err_bench = False
-            continue
+            pass
 
-        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0:
+        if not npu_ops_queue:
             break
+        if not bench_ops_queue:
+            continue
 
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
         if n_match_point == -1 and b_match_point == -1:
@@ -945,7 +943,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result.append(result_item)
             continue
         if summary_compare:
-            result_item.extend([CompareConst.NAN] * 4)
+            result_item.extend([CompareConst.NAN] * 8)
         else:
             result_item.extend([CompareConst.NAN] * 5)
         summary_data = n_dict.get("summary")[index]
@@ -956,4 +954,9 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
+        if not md5_compare and not summary_compare and result_item[1] == CompareConst.NAN:
+            if index == 0:
+                result_item.extend(["-1"])
+            else:
+                result_item.extend([CompareConst.NONE, "-1"])
         result.append(result_item)
