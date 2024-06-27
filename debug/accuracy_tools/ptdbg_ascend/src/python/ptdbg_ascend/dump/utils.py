@@ -10,7 +10,7 @@ from ..dump import dump
 from ..common.utils import print_error_log, CompareException, DumpException, Const, get_time, print_info_log, \
     check_mode_valid, check_switch_valid, check_dump_mode_valid, check_summary_only_valid, generate_compare_script, \
     check_is_npu, check_file_valid, make_dump_path_if_not_exists, check_path_before_create, print_warn_log, check_summary_mode_valid
-from ..common.file_check_util import FileChecker, FileCheckConst, check_path_length, check_path_pattern_vaild
+from ..common.file_check_util import FileChecker, FileCheckConst, check_path_length, check_path_pattern_valid
 
 from ..common.version import __version__
 
@@ -203,7 +203,7 @@ def create_dirs_if_not_exist(rank, dump_file):
     rank_dir = os.path.join(dump_path, f"rank{rank}")
     dump_file = os.path.join(rank_dir, file_name)
     if not os.path.isdir(rank_dir):
-        check_path_pattern_vaild(dump_file)
+        check_path_pattern_valid(dump_file)
         check_path_length(dump_file, name_length=200)
         Path(rank_dir).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     return dump_file
@@ -313,7 +313,7 @@ def make_dump_dirs():
     dump_root_dir = load_env_dump_path(DumpUtil.dump_path)
     tag_dir = os.path.join(dump_root_dir, DumpUtil.dump_dir_tag + f'_v{__version__}')
     check_path_length(tag_dir)
-    check_path_pattern_vaild(tag_dir)
+    check_path_pattern_valid(tag_dir)
     Path(tag_dir).mkdir(mode=0o750, parents=True, exist_ok=True)
     DumpUtil.dump_dir = tag_dir
     dump_file_path = os.path.join(tag_dir, dump_file_name)
