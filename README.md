@@ -1,8 +1,13 @@
-# ATT
+# 变更通知
 
-Ascend Training Tools，昇腾训练工具链。【Powered by MindStudio】
+原Ascend Training Tools工具更名为MindStudio Training Tools，MindStudio训练工具链。变更计划如下：
 
-针对训练&大模型场景，提供端到端命令行&可视化调试调优工具，帮助用户快速提高模型开发效率。
+1. 2024.06.25本代码仓名称变更为mstt。
+2. 2024.07.25 URL变更为[https://gitee.com/ascend/mstt](https://gitee.com/ascend/mstt)，原始URL将不再维护。
+
+# MindStudio Training Tools
+
+MindStudio Training Tools，MindStudio训练工具链。针对训练&大模型场景，提供端到端命令行&可视化调试调优工具，帮助用户快速提高模型开发效率。
 
 ## 模型训练迁移全流程
 ![输入图片说明](debug/resources/model_training_migration_process.png)
@@ -59,7 +64,7 @@ Tensorboard支持NPU性能数据可视化插件PyTorch Profiler TensorBoard NPU 
 
 ## 分支维护策略
 
-ATT工具版本分支的维护阶段如下：
+MindStudio Training Tools工具版本分支的维护阶段如下：
 
 | **状态**            | **时间** | **说明**                                         |
 | ------------------- | -------- | ------------------------------------------------ |
@@ -71,9 +76,9 @@ ATT工具版本分支的维护阶段如下：
 
 ## 现有分支的维护状态
 
-ATT分支名称格式为：版本号-ATT，而版本号命名规则如下：
-1. ATT仓每年发布4个版本，每个版本都将对应一个分支；以v6.0为例，其将对应v6.0.RC1、v6.0.RC2、v6.0.RC3以及v6.0.0四个版本，在仓库中将存在与之对应的分支（增加后缀ATT，例如v6.0.0-ATT）；
-2. 同时每个版本都将对应一个标签，例如v6.0.RC1-ATT，后续在对分支进行维护过程中将定期进行对应版本标签的更新，例如对v6.0.RC1-ATT标签再次更新之后将打标签v6.0.RC1.1，后续更新末尾数字依次增加。
+MindStudio Training Tools分支版本号命名规则如下：
+
+mstt仓每年发布4个版本，每个版本都将对应一个分支；以v6.0为例，其将对应v6.0.RC1、v6.0.RC2、v6.0.RC3以及v6.0.0四个版本，在仓库中将存在与之对应的分支。
 
 | **分支**      | **状态** | **发布日期** | **后续状态**               | **EOL日期** |
 | ------------- | -------- | ------------ | ------------------------ | ----------- |

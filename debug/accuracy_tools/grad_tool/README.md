@@ -14,10 +14,10 @@
 
 ## 工具安装
 
-1. 将att仓代码下载到本地，并配置环境变量。假设下载后att仓路径为 $ATT_HOME，环境变量应配置为：
+1. 将mstt仓代码下载到本地，并配置环境变量。假设下载路径为$MSTT_HOME，环境变量应配置为：
 
    ```bash
-   export PYTHONPATH=$PYTHONPATH:$ATT_HOME/debug/accuracy_tools/
+   export PYTHONPATH=$PYTHONPATH:$MSTT_HOME/debug/accuracy_tools/
    ```
 
 2. 安装依赖
