@@ -836,9 +836,13 @@ def get_md5_for_tensor(x):
 
 
 def check_path_before_create(path):
+    if os.path.islink(path):
+        print_error_log('The file path {} is a symbolic link, which is not allowed.'.format(path))
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
     if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
             Const.FILE_NAME_LENGTH:
-        print_error_log('The file path length exceeds limit.')
+        print_error_log('The file path {} length exceeds limit.'.format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
