@@ -17,7 +17,6 @@
 
 import functools
 import os
-
 from inspect import isfunction
 import torch
 import torch.distributed as dist
@@ -27,7 +26,7 @@ from .hook_module import HOOKModule
 from .api_registry import api_register
 from .wrap_functional import remove_dropout
 from ..common.utils import check_file_or_directory_path, print_error_log, CompareException, Const, \
-    print_info_log, print_warn_log, get_process_rank, torch_without_guard_version
+    print_info_log, print_warn_log, get_process_rank, torch_without_guard_version, WarningManager
 from ..dump.utils import make_dump_dirs, DumpUtil
 from ..overflow_check.utils import OverFlowUtil, clear_overflow_npu
 
@@ -62,6 +61,8 @@ def add_clear_overflow(func, pid):
 
 
 def register_hook(model, hook, **kwargs):
+    wm = WarningManager()
+    wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)
     check_register_hook(hook, **kwargs)
     print_info_log("Please disable dataloader shuffle before running the program.")
     overflow_nums = kwargs.get('overflow_nums', 1)

@@ -1061,7 +1061,6 @@ def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summa
         try:
             last_bench_ops_len = len(bench_ops_queue)
             op_name_bench = next(ops_bench_iter)
-            read_err_bench = True
 
             bench_op_data = bench_json_data['data'][op_name_bench]
             bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
@@ -1145,7 +1144,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result.append(result_item)
             continue
         if summary_compare:
-            result_item.extend([CompareConst.NAN] * 4)
+            result_item.extend([CompareConst.NAN] * 8)
         else:
             result_item.extend([CompareConst.NAN] * 5)
         summary_data = n_dict.get("summary")[index]
@@ -1156,4 +1155,9 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
+        if not md5_compare and not summary_compare and result_item[1] == CompareConst.NAN:
+            if index == 0:
+                result_item.extend(["-1"])
+            else:
+                result_item.extend([CompareConst.NONE, "-1"])
         result.append(result_item)

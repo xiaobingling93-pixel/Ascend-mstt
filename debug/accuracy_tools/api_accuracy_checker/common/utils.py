@@ -25,6 +25,7 @@ import sys
 import time
 import csv
 import logging
+import warnings
 from datetime import datetime, timezone
 
 import numpy as np
@@ -104,6 +105,10 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
+    VERSION_MESSAGE = """The current version of api_precision_checker will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
+    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
 
 
 class CompareConst:
@@ -414,7 +419,7 @@ def save_numpy_data(file_path, data):
     save_numpy_data
     """
     if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
+        create_directory(os.path.dirname(file_path))
     np.save(file_path, data)
 
 
@@ -687,6 +692,12 @@ def _create_logger(level=logging.INFO):
     ch.setLevel(level)
     logger_.addHandler(ch)
     return logger_
+
+
+class WarningManager:
+    def warn(self, message=None, enable_warnings=True):
+        if enable_warnings:
+            warnings.warn(message)
 
 
 log_level = logging.DEBUG if os.environ.get("API_ACCUCARY_CHECK_LOG_LEVEL") == "1" else logging.INFO

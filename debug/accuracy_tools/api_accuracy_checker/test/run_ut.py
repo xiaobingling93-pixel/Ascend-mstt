@@ -13,7 +13,7 @@ def run_ut():
     if os.path.exists(report_dir):
         shutil.rmtree(report_dir)
 
-    os.makedirs(report_dir)
+    os.makedirs(report_dir, mode=0o750)
 
     cmd = ["python3", "-m", "pytest", ut_path, "--junitxml=" + report_dir + "/final.xml",
            "--cov=" + src_dir, "--cov-branch", "--cov-report=xml:" + report_dir + "/coverage.xml"]

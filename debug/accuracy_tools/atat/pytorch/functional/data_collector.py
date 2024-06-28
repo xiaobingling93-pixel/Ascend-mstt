@@ -16,7 +16,7 @@ except ImportError:
 
 forward_init_status = False
 
-def build_collect_data(config):
+def build_data_collector(config):
     return DataCollector(config)
 
 
@@ -78,7 +78,7 @@ class DataCollector:
     def is_inplace(module):
         return getattr(module, "op_is_inplace", False)
 
-    def pre_forward(self, name, module_type, module, pid, module_input_output):
+    def pre_forward_data_collect(self, name, module, pid, module_input_output):
         backward_name = name.replace("forward", "backward")
         if self.check_scope_and_pid(self.scope, backward_name, pid):
             self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
@@ -89,8 +89,13 @@ class DataCollector:
             data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
             self.update_data(data_info)
 
-    def __call__(self, name_template, module_type, module, pid, module_input_output):
-        name = name_template
+    def forward_data_collect(self, name, module, pid, module_input_output):
+        self.collect_data(name, module, pid, module_input_output, Const.FORWARD)
+
+    def backward_data_collect(self, name, module, pid, module_input_output):
+        self.collect_data(name, module, pid, module_input_output, Const.BACKWARD)
+
+    def collect_data(self, name, module, pid, module_input_output, forward_or_backward):
         if self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
             self.data_writer.update_construct(ModuleProcesser.module_node)
@@ -102,14 +107,17 @@ class DataCollector:
             return
 
         msg = f"msProbe is collecting data on {name}. "
-        if "forward" in name:
+        if forward_or_backward == Const.FORWARD:
             if not self.is_inplace(module):
                 data_info = self.data_processor.analyze_forward(name, module, module_input_output)
             else:
                 data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
             self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        else:
+        elif forward_or_backward == Const.BACKWARD:
             data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        else:
+            raise ValueError(f"Unsupported forward_or_backward value: {forward_or_backward}")
+
         if data_info:
             msg = self.update_data(data_info, msg)
             print_info_log(msg)

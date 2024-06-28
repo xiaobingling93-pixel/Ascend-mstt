@@ -41,6 +41,8 @@ class Const:
     """
     MODEL_TYPE = ['.onnx', '.pb', '.om']
     DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
+    REGEX_PREFIX_MAX_LENGTH = 20
+    REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     SEMICOLON = ";"
     COLON = ":"
     EQUAL = "="
@@ -433,6 +435,27 @@ def check_file_size(input_file, max_size):
 def check_file_not_exists(file_path):
     if os.path.exists(file_path) or os.path.islink(file_path):
         remove_path(file_path)
+
+
+def check_regex_prefix_format_valid(prefix):
+    """
+        validate the format of the regex prefix
+
+    Args:
+        prefix (str): The prefix string to validate.
+
+    Returns:
+        no returns
+
+    Raises:
+        ValueError: if the prefix length exceeds Const.REGEX_PREFIX_MAX_LENGTH characters or the prefix do not match
+        the given pattern Const.REGEX_PREFIX_PATTERN
+    """
+    if len(prefix) > Const.REGEX_PREFIX_MAX_LENGTH:
+        raise ValueError(f"Maximum length of prefix is {Const.REGEX_PREFIX_MAX_LENGTH}, while current length "
+                         f"is {len(prefix)}")
+    if not re.match(Const.REGEX_PREFIX_PATTERN, prefix):
+        raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
 
 def remove_path(path):

@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 
+
 def run_ut():
     cur_dir = os.path.realpath(os.path.dirname(__file__))
     top_dir = os.path.realpath(os.path.dirname(cur_dir))
@@ -13,11 +14,11 @@ def run_ut():
     if os.path.exists(report_dir):
         shutil.rmtree(report_dir)
 
-    os.makedirs(report_dir)
+    os.makedirs(report_dir, mode=0o700)
 
     cmd = ["python3", "-m", "pytest", ut_path, "--junitxml=" + report_dir + "/final.xml",
            "--cov=" + src_dir, "--cov-branch", "--cov-report=xml:" + report_dir + "/coverage.xml"]
-    
+
     result_ut = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     while result_ut.poll() is None:

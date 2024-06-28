@@ -162,6 +162,7 @@ class Const:
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
+    OVERWRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
 
     PKL_SUFFIX = ".pkl"
@@ -185,3 +186,10 @@ class Const:
 
     INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
                     "_reduce_scatter_base", "_all_gather_base", "all_to_all_single"]
+
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
+    LEVEL_LIST = ["L0", "L1", "L2", "mix"]
+    STATISTICS = "statistics"
+    TENSOR = "tensor"
+    OVERFLOW_CHECK = "overflow_check"
+    FREE_BENCHMARK = "free_benchmark"

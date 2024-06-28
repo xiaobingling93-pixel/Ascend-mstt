@@ -2,7 +2,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 import torch
 from ..common.utils import Const, check_switch_valid, generate_compare_script, check_is_npu, print_error_log, \
-    CompareException, print_warn_log
+    CompareException, print_warn_log, WarningManager
 from ..dump.dump import DumpUtil, acc_cmp_dump, write_to_disk, get_pkl_file_path, reset_module_count
 from ..dump.utils import set_dump_path, set_dump_switch_print_info, generate_dump_path_str, \
         set_dump_switch_config, set_backward_input
@@ -97,6 +97,8 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls):
+        wm = WarningManager()
+        wm.warn(message=Const.VERSION_MESSAGE, enable_warnings=True)     
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")

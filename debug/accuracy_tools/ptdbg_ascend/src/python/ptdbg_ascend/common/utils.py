@@ -31,7 +31,7 @@ from functools import wraps
 from pathlib import Path
 import numpy as np
 import torch
-
+import warnings
 from .file_check_util import FileOpen, FileChecker, FileCheckConst
 
 try:
@@ -63,6 +63,8 @@ class Const:
     """
     MODEL_TYPE = ['.onnx', '.pb', '.om']
     DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
+    REGEX_PREFIX_MAX_LENGTH = 20
+    REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     SEMICOLON = ";"
     COLON = ":"
     EQUAL = "="
@@ -121,6 +123,10 @@ class Const:
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
     ]
 
+    # version message tips
+    VERSION_MESSAGE = """The current version of ptdbg will be deprecated on September 30, 2024.
+    The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
+    Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
 
 class CompareConst:
     """
@@ -211,6 +217,7 @@ class CompareConst:
     MAX_RELATIVE_OUT_RED = 0.5
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
+
 
 class VersionCheck:
     """
@@ -448,6 +455,27 @@ def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=F
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
+def check_regex_prefix_format_valid(prefix):
+    """
+        validate the format of the regex prefix
+
+    Args:
+        prefix (str): The prefix string to validate.
+
+    Returns:
+        no returns
+
+    Raises:
+        ValueError: if the prefix length exceeds Const.REGEX_PREFIX_MAX_LENGTH characters or the prefix do not match
+        the given pattern Const.REGEX_PREFIX_PATTERN
+    """
+    if len(prefix) > Const.REGEX_PREFIX_MAX_LENGTH:
+        raise ValueError(f"Maximum length of prefix is {Const.REGEX_PREFIX_MAX_LENGTH}, while current length "
+                         f"is {len(prefix)}")
+    if not re.match(Const.REGEX_PREFIX_PATTERN, prefix):
+        raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
+
+
 def check_file_or_directory_path(path, isdir=False):
     """
     Function Description:
@@ -621,7 +649,7 @@ def save_numpy_data(file_path, data):
     save_numpy_data
     """
     if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
+        create_directory(os.path.dirname(file_path))
     np.save(file_path, data)
 
 
@@ -812,9 +840,13 @@ def get_md5_for_tensor(x):
 
 
 def check_path_before_create(path):
+    if os.path.islink(path):
+        print_error_log('The file path {} is a symbolic link, which is not allowed.'.format(path))
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
     if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
             Const.FILE_NAME_LENGTH:
-        print_error_log('The file path length exceeds limit.')
+        print_error_log('The file path {} length exceeds limit.'.format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
@@ -828,3 +860,9 @@ def check_inplace_op(prefix):
     match_op = re.findall(r"Distributed_(.+?)_\d", prefix)
     op_name = match_op[0] if match_op else None
     return op_name in Const.INPLACE_LIST
+
+
+class WarningManager:
+    def warn(self, message=None, enable_warnings=True):
+        if enable_warnings:
+            warnings.warn(message)
