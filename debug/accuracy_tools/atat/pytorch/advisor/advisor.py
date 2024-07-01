@@ -29,18 +29,12 @@ class Advisor:
     Class for generate advisor
     """
 
-    def __init__(self, input_file, out_path=""):
-        self.input_file = os.path.realpath(input_file)
+    def __init__(self, input_data, out_path=""):
+        self.input_data = input_data
         self.out_path = os.path.realpath(out_path)
 
-    def _parse_input_file(self):
-        try:
-            df = pd.read_csv(self.input_file, on_bad_lines='skip')
-        except OSError as os_err:
-            print_error_log('Failed to parse the input file %s. %s'
-                            % (self.input_file, str(os_err)))
-            raise CompareException(CompareException.PARSE_FILE_ERROR) from os_err
-        data_columns = df.columns.values
+    def _parse_input_data(self):
+        data_columns = self.input_data.columns.values
         if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
             self.file_type = Const.ALL
         elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
@@ -48,17 +42,12 @@ class Advisor:
         elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
             self.file_type = Const.SUMMARY
         else:
-            print_error_log('Compare result file does not meet the required conditions.')
-            raise CompareException(CompareException.INVALID_FILE_ERROR)
-        df.reset_index(inplace=True)
-        # The value of index is consistent with the line number of csv, csv file first line is 2
-        df.iloc[:, 0] += 2
+            print_error_log('Compare result does not meet the required conditions.')
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
+        df = self.input_data.reset_index()
         return df
 
     def _check_path_vaild(self):
-        input_file_checker = FileChecker(self.input_file, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                         FileCheckConst.CSV_SUFFIX)
-        input_file_checker.common_check()
         out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
         out_path_checker.common_check()
 
@@ -115,8 +104,8 @@ class Advisor:
 
     def analysis(self):
         self._check_path_vaild()
-        analyze_data = self._parse_input_file()
-        print_info_log("Start analyzing the comparison result: %s" % self.input_file)
+        analyze_data = self._parse_input_data()
+        print_info_log("Start analyzing the comparison result: %s" % self.file_type)
         self.analyze_unmatched(analyze_data)
         if self.file_type == Const.ALL:
             failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]

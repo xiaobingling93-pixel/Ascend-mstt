@@ -184,6 +184,23 @@ class CompareConst:
     # compare const
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble]
 
+    # highlight xlsx color const
+    RED = "FFFF0000"
+    YELLOW = "FFFF00"
+    BLUE = "0000FF"
+
+    # highlight rules const
+    OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
+    MAX_DIFF_RED = 1e+10
+    ORDER_MAGNITUDE_DIFF_YELLOW = 1
+    ONE_THOUSAND_ERROR_IN_RED = 0.9
+    ONE_THOUSAND_ERROR_OUT_RED = 0.6
+    ONE_THOUSAND_ERROR_DIFF_YELLOW = 0.1
+    COSINE_DIFF_YELLOW = 0.1
+    MAX_RELATIVE_OUT_RED = 0.5
+    MAX_RELATIVE_OUT_YELLOW = 0.1
+    MAX_RELATIVE_IN_YELLOW = 0.01
+
 
 class CompareException(Exception):
     """
@@ -562,12 +579,16 @@ def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
+def add_time_with_xlsx(name):
+    return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
 def get_time():
     return datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
 
 
 def format_value(value):
-    return '{:.12f}'.format(value)
+    return float('{:.12f}'.format(value))
 
 
 def check_seed_all(seed, mode):
