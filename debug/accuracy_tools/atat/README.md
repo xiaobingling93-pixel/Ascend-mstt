@@ -1,6 +1,6 @@
 # MindStudio精度调试工具
 
-MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，是ATT工具链下精度调试部分的工具包。主要包括精度预检和精度比对等子工具，当前适配场景包括PyTorch和MindSpore。
+MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，是MindStudio Training Tools工具链下精度调试部分的工具包。主要包括精度预检和精度比对等子工具，当前适配场景包括PyTorch和MindSpore。
 
 ## 工具安装
 

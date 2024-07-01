@@ -131,7 +131,7 @@ GPU侧配置好config.yaml文件后执行run_ut.py脚本，此时GPU处于预检
 命令如下：
 
 ```bash
-cd $ATT_HOME/debug/accuracy_tools/api_accuracy_checker/run_ut
+cd $MSTT_HOME/debug/accuracy_tools/api_accuracy_checker/run_ut
 python run_ut.py
 ```
 
