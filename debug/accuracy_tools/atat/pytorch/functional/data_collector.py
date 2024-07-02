@@ -1,12 +1,10 @@
-
 import os
 import torch
 from ..module_processer import ModuleProcesser
-from .scope import BaseScope, build_scope, ListScope
+from .scope import build_scope, ListScope
 from .json_writer import DataWriter
-from ..common.log import print_info_log, print_warn_log, print_info_log_rank_0, print_error_log_rank_0
+from ..common.log import print_info_log, print_warn_log
 from ..common.utils import Const
-from ..common.file_check import FileOpen
 from .data_processor import build_data_processor, DataProcessor
 
 try:
@@ -15,6 +13,7 @@ except ImportError:
     pass
 
 forward_init_status = False
+
 
 def build_data_collector(config):
     return DataCollector(config)
@@ -37,10 +36,10 @@ class DataCollector:
             self.scope = build_scope(ListScope, self.config.scope, self.config.list)
         else:
             self.scope = build_scope(None, self.config.scope, self.config.list)
-    
+
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()
-    
+
     def get_forward_new_output(self):
         return self.data_processor.get_forward_new_output()
 
@@ -57,7 +56,6 @@ class DataCollector:
 
     def write_json(self):
         self.data_writer.write_json()
-
 
     def update_data(self, data_info, msg=''):
         if self.config.task == DataProcessor.overflow:
@@ -90,15 +88,7 @@ class DataCollector:
             self.update_data(data_info)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
-        self.collect_data(name, module, pid, module_input_output, Const.FORWARD)
-
-    def backward_data_collect(self, name, module, pid, module_input_output):
-        self.collect_data(name, module, pid, module_input_output, Const.BACKWARD)
-
-    def collect_data(self, name, module, pid, module_input_output, forward_or_backward):
-        if self.config.level not in DataCollector.level_without_construct:
-            self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
-            self.data_writer.update_construct(ModuleProcesser.module_node)
+        self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
 
@@ -106,18 +96,28 @@ class DataCollector:
             self.acl_dump(module, module_input_output, name)
             return
 
-        msg = f"msProbe is collecting data on {name}. "
-        if forward_or_backward == Const.FORWARD:
-            if not self.is_inplace(module):
-                data_info = self.data_processor.analyze_forward(name, module, module_input_output)
-            else:
-                data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
-            self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        elif forward_or_backward == Const.BACKWARD:
-            data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        if not self.is_inplace(module):
+            data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         else:
-            raise ValueError(f"Unsupported forward_or_backward value: {forward_or_backward}")
+            data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
+        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        self.handle_data(name, data_info)
 
+    def backward_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        self.handle_data(name, data_info)
+
+    def update_construct(self, name):
+        if self.config.level not in DataCollector.level_without_construct:
+            self.data_writer.update_construct({name: ModuleProcesser.api_parent_node})
+            self.data_writer.update_construct(ModuleProcesser.module_node)
+
+    def handle_data(self, name, data_info):
+        msg = f"msProbe is collecting data on {name}. "
         if data_info:
             msg = self.update_data(data_info, msg)
             print_info_log(msg)
@@ -146,7 +146,7 @@ class DataCollector:
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
-    
+
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)
 
