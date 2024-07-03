@@ -34,6 +34,20 @@ class PtGradientMonitor(BaseMonitor):
         self._step = -1
         self._param2name = defaultdict(str)
 
+    @property
+    def output_path(self):
+        return self._output_path
+
+    def monitor(self, model):
+        print_rank_0("> parameter names:")
+        for name, param in model.named_parameters():
+            self._param2name[param] = name
+            print_rank_0(f"\t{name}")
+        setattr(self, "_rank", get_rank_id())
+        if torch.distributed.is_initialized() and not data_in_list_target(getattr(self, "_rank"), self._target_ranks):
+            return
+        self._hook_optimizer()
+
     def _rank_in_targets(self):
         if not hasattr(self, "_rank"):
             raise AttributeError("grad monitor need attribute {_rank}")
@@ -66,17 +80,3 @@ class PtGradientMonitor(BaseMonitor):
                       GradStatCsv.generate_csv_header(level=self._level_adp, bounds=self._bounds))
 
         register_optimizer_step_pre_hook(optimizer_pre_step_hook)
-
-    @property
-    def output_path(self):
-        return self._output_path
-
-    def monitor(self, model):
-        print_rank_0("> parameter names:")
-        for name, param in model.named_parameters():
-            self._param2name[param] = name
-            print_rank_0(f"\t{name}")
-        setattr(self, "_rank", get_rank_id())
-        if torch.distributed.is_initialized() and not data_in_list_target(getattr(self, "_rank"), self._target_ranks):
-            return
-        self._hook_optimizer()
