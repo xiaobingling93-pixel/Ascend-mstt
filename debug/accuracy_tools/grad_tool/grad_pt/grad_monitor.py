@@ -67,6 +67,10 @@ class PtGradientMonitor(BaseMonitor):
 
         register_optimizer_step_pre_hook(optimizer_pre_step_hook)
 
+    @property
+    def output_path(self):
+        return self._output_path
+
     def monitor(self, model):
         print_rank_0("> parameter names:")
         for name, param in model.named_parameters():
@@ -76,7 +80,3 @@ class PtGradientMonitor(BaseMonitor):
         if torch.distributed.is_initialized() and not data_in_list_target(getattr(self, "_rank"), self._target_ranks):
             return
         self._hook_optimizer()
-
-    @property
-    def output_path(self):
-        return self._output_path
