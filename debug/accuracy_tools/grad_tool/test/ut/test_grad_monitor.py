@@ -57,8 +57,8 @@ def get_grad_monitor():
 class TestGradMonitor(unittest.TestCase):
     def test_compare(self):
         gm = get_grad_monitor()
-        compare_output_path = os.path.join(os.path.dirname(gm.grad_monitor._output_path), "grad_compare")
-        GradComparator.compare_distributed(gm.grad_monitor._output_path, gm.grad_monitor._output_path,
+        compare_output_path = os.path.join(os.path.dirname(gm.grad_monitor.output_path), "grad_compare")
+        GradComparator.compare_distributed(gm.grad_monitor.output_path, gm.grad_monitor.output_path,
                                            compare_output_path)
         items = os.listdir(compare_output_path)
         self.assertEqual(len(items), 1)
