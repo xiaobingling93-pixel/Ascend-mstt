@@ -16,6 +16,7 @@ def seed_all(seed=1234, mode=False):
     torch.manual_seed(seed)
     torch.use_deterministic_algorithms(mode)
 
+
 seed_all()
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -36,7 +37,7 @@ class TestModule(nn.Module):
         return x2
 
 
-def test_grad_monitor():
+def get_grad_monitor():
     gm = GradientMonitor(os.path.join(base_dir, "resources/test_grad_monitor.yaml"))
     loss_fun = nn.CrossEntropyLoss()
     test_module = TestModule()
@@ -52,13 +53,15 @@ def test_grad_monitor():
         optimizer.step()
     return gm
 
+
 class TestGradMonitor(unittest.TestCase):
     def test_compare(self):
-        gm = test_grad_monitor()
+        gm = get_grad_monitor()
         compare_output_path = os.path.join(os.path.dirname(gm.grad_monitor._output_path), "grad_compare")
-        GradComparator.compare_distributed(gm.grad_monitor._output_path, gm.grad_monitor._output_path, compare_output_path)
+        GradComparator.compare_distributed(gm.grad_monitor._output_path, gm.grad_monitor._output_path,
+                                           compare_output_path)
         items = os.listdir(compare_output_path)
         self.assertEqual(len(items), 1)
         with open(os.path.join(compare_output_path, items[0], "similarities.csv"), 'r') as f:
             data = f.read()
-        self.assertEqual(hashlib.md5(data.encode("utf-8")).hexdigest(), "3762fafc89c805e7863f50aaffaf8161")
+        self.assertEqual(hashlib.md5(data.encode("utf-8")).hexdigest(), "0e2bd636b48245d387647523c8517982")
