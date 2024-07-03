@@ -25,7 +25,7 @@ inputs = [torch.rand(10, 10) for _ in range(10)]
 labels = [torch.randint(0, 5, (10,)) for _ in range(10)]
 
 
-class TestModule(nn.Module):
+class MockModule(nn.Module):
     def __init__(self):
         super().__init__()
         self.linear = nn.Linear(10, 5)
@@ -40,7 +40,7 @@ class TestModule(nn.Module):
 def get_grad_monitor():
     gm = GradientMonitor(os.path.join(base_dir, "resources/test_grad_monitor.yaml"))
     loss_fun = nn.CrossEntropyLoss()
-    test_module = TestModule()
+    test_module = MockModule()
     nn.init.constant_(test_module.linear.weight, 1.0)
     nn.init.constant_(test_module.linear.bias, 1.0)
     gm.monitor(test_module)
