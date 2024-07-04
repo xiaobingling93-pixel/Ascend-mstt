@@ -160,7 +160,13 @@ class CompareConst:
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
 
+    # compare standard
+    THOUSAND_RATIO_THRESHOLD = 0.001
+    FIVE_THOUSAND_RATIO_THRESHOLD = 0.005
+    COSINE_THRESHOLD = 0.9999
+
     # compare result data
+    READ_NONE = 'No data'
     NAN = 'Nan'
     NONE = 'None'
     SHAPE_UNMATCH = 'shape unmatched'
@@ -168,6 +174,7 @@ class CompareConst:
     PASS = 'Pass'
     WARNING = 'Warning'
     DIFF = 'Different'
+    UNSUPPORTED = 'unsupported'
 
     # accuracy standards
     COS_THRESHOLD = 0.99
@@ -721,3 +728,14 @@ def task_dumppath_get(input_param):
     input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
     input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
     return summary_compare, md5_compare
+
+
+def get_header_index(header_name, summary_compare=False):
+    if summary_compare:
+        header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+    else:
+        header = CompareConst.COMPARE_RESULT_HEADER[:]
+    if header_name not in header:
+        print_error_log(f"{header_name} not in data name")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    return header.index(header_name)

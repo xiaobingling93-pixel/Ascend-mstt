@@ -30,114 +30,13 @@ from openpyxl.styles import PatternFill
 from collections import namedtuple
 
 from .match import graph_mapping
+from .highlight import HighlightRules, get_header_index
+from .npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
 from ..advisor.advisor import Advisor
 from ...core.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
     print_warn_log, print_error_log, Const
 from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
-
-
-def correct_data(result):
-    if result == CompareConst.NAN:
-        return result
-    if float(result) > 0.99999:
-        return 1.0
-    return result
-
-
-def cosine_similarity(n_value, b_value):
-    np.seterr(divide='ignore', invalid='ignore')
-    if len(n_value) == 1:
-        return "unsupported", "This tensor is scalar."
-    num = n_value.dot(b_value)
-    a_norm = np.linalg.norm(n_value)
-    b_norm = np.linalg.norm(b_value)
-    message = ''
-    if a_norm <= Const.FLOAT_EPSILON and b_norm <= Const.FLOAT_EPSILON:
-        result = 1.0
-    elif a_norm <= Const.FLOAT_EPSILON:
-        message = 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.'
-        result = CompareConst.NAN
-    elif b_norm <= Const.FLOAT_EPSILON:
-        message = 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.'
-        result = CompareConst.NAN
-    else:
-        cos = num / (a_norm * b_norm)
-        if np.isnan(cos):
-            message = 'Cannot compare by Cosine Similarity, the dump data has NaN.'
-            result = CompareConst.NAN
-        else:
-            result = format_value(cos)
-    result = correct_data(result)
-    return result, message
-
-
-def get_rmse(n_value, b_value):
-    if len(n_value) == 0 and len(b_value) == 0:
-        rmse = '0'
-    elif len(n_value) == 0:
-        rmse = CompareConst.NAN
-    elif len(b_value) == 0:
-        rmse = CompareConst.NAN
-    else:
-        rmse = np.linalg.norm(n_value - b_value) / np.sqrt(len(n_value))
-    if np.isnan(rmse):
-        rmse = CompareConst.NAN
-    return rmse, ""
-
-
-def get_mape(n_value, b_value):
-    if len(n_value) == 0 and len(b_value) == 0:
-        mape = '0'
-    elif len(n_value) == 0:
-        mape = CompareConst.NAN
-    elif len(b_value) == 0:
-        mape = CompareConst.NAN
-    elif not np.all(n_value) and not np.all(b_value):
-        mape = '0'
-    elif not np.all(b_value):
-        mape = CompareConst.NAN
-    else:
-        mape_val = np.sum(np.abs((n_value - b_value) / b_value)) / len(b_value) * 100
-        mape = CompareConst.NAN if np.isnan(mape_val) else str(round(mape_val, 4)) + '%'
-    return mape, ""
-
-
-def get_max_abs_err(n_value, b_value):
-    temp_res = n_value - b_value
-    max_value = np.max(np.abs(temp_res))
-    return format_value(max_value), ""
-
-
-def get_relative_err(n_value, b_value):
-    np.seterr(divide='ignore', invalid='ignore')
-    if b_value.dtype in CompareConst.FLOAT_TYPE:
-        zero_mask = (b_value == 0)
-        b_value[zero_mask] += np.finfo(b_value.dtype).eps
-        n_value[zero_mask] += np.finfo(b_value.dtype).eps
-    else:
-        n_value, b_value = n_value.astype(float), b_value.astype(float)
-        zero_mask = (b_value == 0)
-        b_value[zero_mask] += np.finfo(float).eps
-        n_value[zero_mask] += np.finfo(float).eps
-    relative_err = np.divide((n_value - b_value), b_value)
-    return np.abs(relative_err)
-
-
-def get_max_relative_err(n_value, b_value, input_relative_err=None):
-    if input_relative_err is None:
-        relative_err = get_relative_err(n_value, b_value)
-    else:
-        relative_err = input_relative_err
-    max_relative_err = np.max(np.abs(relative_err))
-    if np.isnan(max_relative_err):
-        message = 'Cannot compare by MaxRelativeError, the data contains nan in dump data.'
-        return CompareConst.NAN, message
-    return format_value(max_relative_err), ""
-
-
-def rel_err_ratio(relative_err, threshold):
-    return format_value(np.sum(relative_err < threshold) / np.size(relative_err))
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -474,7 +373,7 @@ def compare_ops(idx, dump_path_dict, result_df, lock, input_parma):
         op_name = result_df.iloc[i, 0]
         if is_print_compare_log:
             print("start compare: {}".format(op_name))
-        cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio = compare_by_op(op_name, dump_path_dict, input_parma)
+        cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = compare_by_op(op_name, dump_path_dict, input_parma)
         if is_print_compare_log:
             print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
         cos_result.append(cos_sim)
@@ -530,65 +429,43 @@ def check_accuracy(cos, max_abs_err):
     return CompareConst.ACCURACY_CHECK_YES
 
 
+def read_npy_data(dir_path, file_name):
+    data_path = os.path.join(dir_path, file_name)
+    path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
+                               FileCheckConst.PT_SUFFIX, False)
+    data_path = path_checker.common_check()
+    data_value = torch.load(data_path, map_location=torch.device('cpu')).detach().numpy()
+    return data_value
+
+
 def compare_by_op(op_name, op_name_mapping_dict, input_parma):
     npu_bench_name_list = op_name_mapping_dict[op_name]
     data_name = npu_bench_name_list[1]
-    if data_name == '-1' or data_name == -1:
-        return CompareConst.NONE, CompareConst.NONE, CompareConst.NONE, CompareConst.NO_BENCH, CompareConst.NONE, CompareConst.NONE
-    try:
-        n_path = os.path.join(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
-        b_path = os.path.join(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
-        n_path_checker = FileChecker(n_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.PT_SUFFIX, False)
-        b_path_checker = FileChecker(b_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                     FileCheckConst.PT_SUFFIX, False)
-        n_path = n_path_checker.common_check()
-        b_path = b_path_checker.common_check()
-        n_value = torch.load(n_path, map_location=torch.device('cpu')).detach().numpy()
-        b_value = torch.load(b_path, map_location=torch.device('cpu')).detach().numpy()
-    except IOError as error:
-        return CompareConst.NAN, CompareConst.NAN, CompareConst.NAN, "Dump file: {} not found.".format(error.filename), CompareConst.NAN, CompareConst.NAN
-    relative_err = get_relative_err(n_value, b_value)
-    if len(n_value.shape) == 0:
-        if n_value.dtype == bool:
-            n_value = n_value.astype(float)
-            b_value = b_value.astype(float)
-        max_abs_err, _ = get_max_abs_err(n_value, b_value)
-        max_relative_err, _ = get_max_relative_err(n_value, b_value, input_relative_err=relative_err)
-        return "unsupported", max_abs_err, max_relative_err, "This is type of scalar data, can not compare.", CompareConst.NAN, CompareConst.NAN
-    if n_value.size == 0:
-        return "unsupported", 0, 0, "This is empty data, can not compare.", 0, 0
-    if n_value.shape != b_value.shape:
-        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, "Shape of NPU and bench Tensor do not match. Skipped.", CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH
-    if n_value.dtype != b_value.dtype:
-        print_warn_log("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
-        err_msg = " Dtype of NPU and bench Tensor do not match."
+    error_file, relative_err, error_flag = None, None, False
+    if data_name == '-1' or data_name == -1:  # 没有真实数据路径
+        n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
+        error_flag = True
     else:
-        err_msg = ""
+        try:
+            n_value = read_npy_data(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
+            b_value = read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
+        except IOError as error:
+            error_file = error.filename
+            n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
+            error_flag = True
 
-    n_value, b_value = handle_inf_nan(n_value, b_value)
-    if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
-        return "N/A", "N/A", "N/A", "The position of inf or nan in NPU and bench Tensor do not match.", "N/A", "N/A"
+    n_value, b_value, error_flag = get_error_type(n_value, b_value, error_flag)
+    if not error_flag:
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
 
-    n_value = n_value.reshape(-1).astype(float)
-    b_value = b_value.reshape(-1).astype(float)
-    err_msg = ""
-    cos_sim, message = cosine_similarity(n_value, b_value)
-
-    abs_err = np.abs(n_value - b_value)
-    max_abs_err = format_value(np.max(abs_err))
-    max_relative_err, message = get_max_relative_err(n_value, b_value, input_relative_err=relative_err)
-    one_thousand_err_ratio = rel_err_ratio(relative_err, 0.001)
-    five_thousand_err_ratio = rel_err_ratio(relative_err, 0.005)
-
-    if not err_msg:
-        err_msg += message
-    else:
-        err_msg = err_msg + ' ' + message
+    err_msg = get_error_message(n_value, b_value, op_name, error_flag, error_file=error_file)
+    result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
     if npu_bench_name_list[0] != npu_bench_name_list[1]:
         err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
-    return cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio
+    result_list.append(err_msg)
+    return result_list
 
 
 def handle_inf_nan(n_value, b_value):
@@ -607,117 +484,26 @@ def handle_inf_nan(n_value, b_value):
     return n_value, b_value
 
 
-def check_order_magnitude(info, color_columns, summary_compare=True):
-    """Check if order magnitude diff of max_diff larger than 1"""
-    api_in, api_out, num = info
-    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
-    if api_in[max_diff_index] > api_out[max_diff_index]:
-        return
-    in_order = 0 if api_in[max_diff_index] == 0 else math.log10(abs(api_in[max_diff_index]))
-    out_order = 0 if api_out[max_diff_index] == 0 else math.log10(abs(api_out[max_diff_index]))
-    if abs(in_order - out_order) >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
-        color_columns.yellow.append(num)
-
-
-def check_one_thousand_error_ratio(info, color_columns, summary_compare=True):
-    """Compare output's one thousand error ratio with input's """
-    api_in, api_out, num = info
-    one_thousand_index = get_header_index('One Thousandth Err Ratio', summary_compare)
-    if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
-        return
-    if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
-        color_columns.red.append(num)
-    elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
-        color_columns.yellow.append(num)
-
-
-def check_cosine_similarity(info, color_columns, summary_compare=True):
-    """Check if output's cosine similarity more than 0.1 smaller than input's"""
-    api_in, api_out, num = info
-    cosine_index = get_header_index('Cosine', summary_compare)
-    if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
-        return
-    if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
-        color_columns.yellow.append(num)
-
-
-def check_max_relative_diff(info, color_columns, summary_compare=True):
-    """Compare the output value of max_diff / bench_max with input"""
-    api_in, api_out, num = info
-    max_diff_index = get_header_index('Max diff', summary_compare)
-    bench_max_index = get_header_index('Bench max', summary_compare)
-    input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
-    output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(0.01, api_out[bench_max_index])))
-    if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff, (float, int)):
-        return
-    if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
-        color_columns.red.append(num)
-    elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
-        color_columns.yellow.append(num)
-
-
-def check_overflow(info, color_columns, summary_compare=False):
-    """Check if Inf or Nan exists in NPU max/min, or large number in Max diff"""
-    line, num = info
-    npu_max_index = get_header_index('NPU max', summary_compare)
-    npu_min_index = get_header_index('NPU min', summary_compare)
-    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
-    if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
-        color_columns.red.append(num)
-        return
-    # check if Max_Diff > 1e+10
-    if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
-        color_columns.red.append(num)
-
-
-def get_header_index(header_name, summary_compare=False):
-    if summary_compare:
-        header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
-    else:
-        header = CompareConst.COMPARE_RESULT_HEADER[:]
-    if header_name not in header:
-        print_error_log(f"{header_name} not in data name")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    return header.index(header_name)
-
-
-class HighlightRules:
-    """Highlight rules to check whether API errors"""
-    # rules for every line: pass in every line of api to check if error exists
-    basic_rules = {
-        "check_overflow": check_overflow
-    }
-
-    # rules compare output with input: pass in input, output to check if output errors compare to input
-    compare_rules = {
-        "check_order_magnitude": check_order_magnitude,
-        "check_one_thousand_error": check_one_thousand_error_ratio,
-        "check_cosine_similarity": check_cosine_similarity
-    }
-    summary_compare_rules = {
-        "check_order_magnitude": check_order_magnitude,
-        "check_max_relative_diff": check_max_relative_diff,
-    }
-
-
 def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False):
-    """Find error api and return dict with highlight information red or yellow"""
+    """找到单个API中需要高亮的行"""
     npu_max_index = get_header_index('NPU max', summary_compare)
     bench_max_index = get_header_index('Bench max', summary_compare)
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
 
-    red_lines, yellow_lines = [], [] #lines to highlight red or yellow
+    red_lines, yellow_lines = [], []
     LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
     ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
     ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
     color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
+    # 对单行API的输入或输出进行误差判断
     for i, line in enumerate(result):
         num = last_len + i
         line_info = LineInfo(line_data=line, num_pointer=num)
         for rule in HighlightRules.basic_rules.values():
-            rule(line_info, color_columns, summary_compare)
+            rule.apply(line_info, color_columns, summary_compare)
 
+    # 对API的输出与输入比较，进行误差判断
     for n, api_out in enumerate(result[n_num_input:len(result)]):
         num = last_len + n_num_input + n
         if num in red_lines:
@@ -735,10 +521,10 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compa
             api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
             if summary_compare:
                 for rule in HighlightRules.summary_compare_rules.values():
-                    rule(api_info, color_columns, summary_compare)
+                    rule.apply(api_info, color_columns, summary_compare)
             else:
                 for rule in HighlightRules.compare_rules.values():
-                    rule(api_info, color_columns, summary_compare)
+                    rule.apply(api_info, color_columns, summary_compare)
 
     highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
     highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
@@ -756,7 +542,7 @@ def get_name_and_state(name):
 
 
 def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
-    """Group the API with its input and output, then find error API with func find_error_rows"""
+    """将dataframe根据API分组，并找到有误差的算子用于高亮"""
     result = result_df.values
     start, input_num, output_num, end = 0, 0, 0, len(result_df)
     last_api_name, last_state = None, None
@@ -839,7 +625,7 @@ def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
     with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
             FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
             FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-        result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match, highlight_dict,
+        result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                     summary_compare, md5_compare)
 
     if not md5_compare and not summary_compare:
@@ -1018,7 +804,7 @@ def read_op(op_data, op_name):
     return op_parsed_list
 
 
-def compare_process(file_handles, stack_mode, fuzzy_match, highlight_dict, summary_compare=False, md5_compare=False):
+def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
     npu_json_handle, bench_json_handle, stack_json_handle = file_handles
     npu_json_data = json.load(npu_json_handle)
     bench_json_data = json.load(bench_json_handle)
