@@ -12,7 +12,7 @@
 
    | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
    | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 0.0.1 | 2024-03-15 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
+   | 0.0.1 | 2024-03-15 | 1.11.0/2.0/2.1  | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/mstt/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
 
 2. whl包校验。
 

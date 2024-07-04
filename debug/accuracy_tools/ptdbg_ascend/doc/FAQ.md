@@ -2,13 +2,13 @@
 ## 工具使用
 ### 1. 环境变量方式导入ptdbg_ascend
 
-当需要使用export att/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/common的目录下，手动添加一个version.py，并加上以下版本号信息，其中‘3.4’为当前ptdbg_ascend的版本
+当需要使用export mstt/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/common的目录下，手动添加一个version.py，并加上以下版本号信息，其中‘3.4’为当前ptdbg_ascend的版本
 
 ```
 __version__ = '3.4'
 ```
 ### 2. dump指定融合算子
-dump指定操作当前支持dump指定融合算子的输入输出，需要在att/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
+dump指定操作当前支持dump指定融合算子的输入输出，需要在mstt/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
 ```
 def npu_forward_fused_softmax(self, input_, mask):
     resl = torch_npu.npu_scaled_masked_softmax(input_, mask, self.scale, False)
