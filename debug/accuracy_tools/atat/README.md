@@ -6,7 +6,11 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
 精度工具合一软件包名称：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
 
-1. whl包获取。
+1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、torch、tqdm依赖。
+
+   若环境中已安装部分依赖，不需要重复安装。
+
+2. whl包获取。
 
    请通过下表链接下载工具whl包。
 
@@ -16,7 +20,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
    | 0.0.2 | 2024-05-23 | 1.11.0/2.0/2.1/2.2 | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
    | 0.0.1 | 2024-03-15 | 1.11.0/2.0/2.1     | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
 
-2. whl包校验。
+3. whl包校验。
 
    1. 根据以上下载链接下载whl包到Linux安装环境。
 
@@ -35,7 +39,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
       5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 *ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
       ```
 
-3. 执行如下命令进行安装。
+4. 执行如下命令进行安装。
 
    ```bash
    pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl
@@ -104,16 +108,36 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
 上述流程中的工具均为atat工具的子工具，使用相同的命令行，格式如下：
 
+精度预检工具
+
 ```bash
-atat [-h] -f <framework> parse run_ut multi_run_ut api_precision_compare run_overflow_check
+atat -f <framework> run_ut [-h]
 ```
 
-| 参数 | 说明                                     |
-| ---- | ---------------------------------------- |
-| -f   | 框架，当前支持配置为pytorch和mindspore。 |
-| -h   | 帮助信息。                               |
+```bash
+atat -f <framework> multi_run_ut [-h]
+```
 
-其他参数在上述对应的工具手册中详细介绍。
+```bash
+atat -f <framework> api_precision_compare [-h]
+```
+
+溢出解析工具
+
+```bash
+atat -f <framework> run_overflow_check [-h]
+```
+
+数据解析工具
+
+```bash
+atat -f <framework> parse [-h]
+```
+
+| 参数 | 说明                                                   |
+| ---- | ------------------------------------------------------ |
+| -f   | 框架，请按所使用框架配置，当前支持pytorch或mindspore。 |
+| -h   | 帮助信息。                                             |
 
 ## 贡献
 

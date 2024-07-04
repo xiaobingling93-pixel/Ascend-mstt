@@ -20,11 +20,9 @@
    export PYTHONPATH=$PYTHONPATH:$MSTT_HOME/debug/accuracy_tools/
    ```
 
-2. 安装依赖
+2. 使用pip命令安装matplotlib、mindspore、numpy、pandas、PyYAML、torch、tqdm依赖。
 
-   ```bash
-   pip3 install pandas pyyaml tqdm matplotlib
-   ```
+   若环境中已安装部分依赖，不需要重复安装。
 
 ## 使用方式
 
