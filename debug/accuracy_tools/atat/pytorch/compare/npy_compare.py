@@ -1,5 +1,5 @@
-import numpy as np
 import abc
+import numpy as np
 from ...core.utils import CompareConst, Const, print_warn_log, format_value
 
 
@@ -30,7 +30,7 @@ def get_error_type(n_value, b_value, error_flag):
         return CompareConst.NONE, CompareConst.NONE, True
     if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
         return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, True
-    if len(n_value.shape) == 0:  # 判断数据是否为标量
+    if not n_value.shape:  # 判断数据是否为标量
         return n_value, b_value, False
 
     n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
@@ -41,7 +41,7 @@ def get_error_type(n_value, b_value, error_flag):
 
 def reshape_value(n_value, b_value):
     """返回reshape后的数据"""
-    if len(n_value.shape) == 0:  # 判断数据是否为标量
+    if not n_value.shape:  # 判断数据是否为标量
         if n_value.dtype == bool:
             n_value = n_value.astype(float)
             b_value = b_value.astype(float)
@@ -66,7 +66,7 @@ def get_error_message(n_value, b_value, op_name, error_flag, error_file=None):
         if n_value == CompareConst.NAN:
             return "The position of inf or nan in NPU and bench Tensor do not match."
     else:
-        if len(n_value.shape) == 0:
+        if not n_value.shape:
             return "This is type of scalar data, can not compare."
         if n_value.dtype != b_value.dtype:
             print_warn_log("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
@@ -96,18 +96,18 @@ class GetCosineSimilarity(TensorComparisonBasic):
             if n_value == CompareConst.READ_NONE:
                 return CompareConst.NONE, ''
             if n_value == CompareConst.NONE:
-                return "unsupported", ''
+                return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ''
             if n_value == CompareConst.NAN:
                 return "N/A", ''
 
-        if len(n_value.shape) == 0:
-            return "unsupported", ''
+        if not n_value.shape:
+            return CompareConst.UNSUPPORTED, ''
 
         with np.errstate(divide='ignore', invalid='ignore'):
             if len(n_value) == 1:
-                return "unsupported", "This tensor is scalar."
+                return CompareConst.UNSUPPORTED, "This tensor is scalar."
             num = n_value.dot(b_value)
             a_norm = np.linalg.norm(n_value)
             b_norm = np.linalg.norm(b_value)
@@ -150,9 +150,9 @@ def get_relative_err(n_value, b_value):
     with np.errstate(divide='ignore', invalid='ignore'):
         if b_value.dtype not in CompareConst.FLOAT_TYPE:
             n_value, b_value = n_value.astype(float), b_value.astype(float)
-        eps = np.finfo(b_value.dtype).eps
-        n_value = np.where(b_value == 0, eps, n_value)
-        b_value = np.where(b_value == 0, eps, b_value)
+        zero_mask = (b_value == 0)
+        b_value[zero_mask] += np.finfo(b_value.dtype).eps
+        n_value[zero_mask] += np.finfo(b_value.dtype).eps
         relative_err = np.divide((n_value - b_value), b_value)
     return np.abs(relative_err)
 
@@ -192,7 +192,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.NAN:
                 return "N/A", ""
 
-        if len(n_value.shape) == 0:
+        if not n_value.shape:
             return CompareConst.NAN, ""
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
@@ -212,7 +212,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.NAN:
                 return "N/A", ""
 
-        if len(n_value.shape) == 0:
+        if not n_value.shape:
             return CompareConst.NAN, ""
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)

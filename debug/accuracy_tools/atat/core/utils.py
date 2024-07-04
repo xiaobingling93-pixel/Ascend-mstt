@@ -174,6 +174,7 @@ class CompareConst:
     PASS = 'Pass'
     WARNING = 'Warning'
     DIFF = 'Different'
+    UNSUPPORTED = 'unsupported'
 
     # accuracy standards
     COS_THRESHOLD = 0.99

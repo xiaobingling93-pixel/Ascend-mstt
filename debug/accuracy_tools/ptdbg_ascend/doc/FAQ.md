@@ -43,7 +43,7 @@ torch版本和硬件差异属于正常情况
 
 **故障原因**
 
-执行ptdbg_ascend的dump操作之前，同一命令行视图下先安装了精度预检工具，并配置了精度预检工具的环境变量：export PYTHONPATH=$PYTHONPATH:$ATT_HOME/debug/accuracy_tools/，导致ptdbg_ascend的dump操作读取到错误的路径。
+执行ptdbg_ascend的dump操作之前，同一命令行视图下先安装了精度预检工具，并配置了精度预检工具的环境变量：export PYTHONPATH=$PYTHONPATH:$MSTT_HOME/debug/accuracy_tools/，导致ptdbg_ascend的dump操作读取到错误的路径。
 
 **故障处理**
 

@@ -109,7 +109,7 @@ mssanitizer ./*.fatbin  # 默认进行memcheck检查
    ```
 2. 添加运行时依赖库路径
     ```
-    # SOC_VERSION 使用npu-smi info查询NPU Name，如：名字为910A，则填入：Ascend910A
+    # SOC_VERSION为NPU名称，可通过npu-smi info命令进行查询。
     export LD_LIBRARY_PATH=${ASCEND_HOME_PATH}/tools/simulator/${SOC_VERSION}/lib/:$LD_LIBRARY_PATH  
     ```
 3. 使用算子调优工具进行仿真调优，获取仿真性能数据，`--output`参数省略，使用默认值`./`
