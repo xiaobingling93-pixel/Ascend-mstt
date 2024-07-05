@@ -3,7 +3,7 @@ import unittest
 import os
 import torch
 from grad_tool.grad_pt.grad_stat_csv import GradStatCsv
-from grad_tool.grad_pt.level_adapter import LevelAdapter
+from grad_tool.grad_pt.grad_monitor import PtGradientMonitor
 
 
 grad_tensor = torch.tensor([[-2, 2], [0.2, 0.3]])
@@ -12,39 +12,27 @@ grad_tensor = torch.tensor([[-2, 2], [0.2, 0.3]])
 class TestGradCSV(unittest.TestCase):
     def test_level_L0_header(self):
         self.assertEqual(['param_name', 'MD5', 'max', 'min', 'norm', 'shape'], 
-                         GradStatCsv.generate_csv_header(level=LevelAdapter.level_adapter("L0"), bounds=[-1, 0, 1]))
+                         GradStatCsv.generate_csv_header(PtGradientMonitor.level_adp["L0"], [-1, 0, 1]))
 
     def test_level_L1_header(self):
         self.assertEqual(['param_name', 'max', 'min', 'norm', 'shape'], 
-                         GradStatCsv.generate_csv_header(level=LevelAdapter.level_adapter("L1"), bounds=[-1, 0, 1]))
+                         GradStatCsv.generate_csv_header(PtGradientMonitor.level_adp["L1"], [-1, 0, 1]))
 
     def test_level_L2_header(self):
         self.assertEqual(['param_name', '(-inf, -1]', '(-1, 0]', '(0, 1]', '(1, inf)', '=0', 'max', 'min', 'norm', 'shape'], 
-                         GradStatCsv.generate_csv_header(level=LevelAdapter.level_adapter("L2"), bounds=[-1, 0, 1]))
+                         GradStatCsv.generate_csv_header(PtGradientMonitor.level_adp["L2"], [-1, 0, 1]))
 
     def test_level_L0_content(self):
-        generated_csv_line = GradStatCsv.generate_csv_line(
-                level=LevelAdapter.level_adapter("L0"), 
-                param_name="model.conv2d", 
-                grad=grad_tensor,
-                bounds=[-1, 0, 1])
+        generated_csv_line = GradStatCsv.generate_csv_line("model.conv2d", PtGradientMonitor.level_adp["L0"], grad_tensor, [-1, 0, 1])
         self.assertEqual(['model.conv2d', '678a6c7d9d9716682b56fda097d0936c', 2.0, -2.0, 2.851315498352051, [2, 2]],
                          generated_csv_line)
 
     def test_level_L1_content(self):
-        generated_csv_line = GradStatCsv.generate_csv_line(
-                level=LevelAdapter.level_adapter("L1"), 
-                param_name="model.conv2d", 
-                grad=grad_tensor,
-                bounds=[-1, 0, 1])
+        generated_csv_line = GradStatCsv.generate_csv_line("model.conv2d", PtGradientMonitor.level_adp["L1"], grad_tensor, [-1, 0, 1])
         self.assertEqual(['model.conv2d', 2.0, -2.0, 2.851315498352051, [2, 2]],
                          generated_csv_line)
 
     def test_level_L2_content(self):
-        generated_csv_line = GradStatCsv.generate_csv_line(
-                level=LevelAdapter.level_adapter("L2"), 
-                param_name="model.conv2d", 
-                grad=grad_tensor,
-                bounds=[-1, 0, 1])
+        generated_csv_line = GradStatCsv.generate_csv_line("model.conv2d", PtGradientMonitor.level_adp["L2"], grad_tensor, [-1, 0, 1])
         self.assertEqual(['model.conv2d', 0.25, 0.0, 0.5, 0.25, 0.0, 2.0, -2.0, 2.851315498352051, [2, 2]],
                          generated_csv_line)
