@@ -3,7 +3,6 @@ import uuid
 import json
 from collections import defaultdict
 from datetime import datetime
-from functools import partial
 import torch
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
@@ -13,8 +12,8 @@ from kj600.features import eff_rank, get_sign_matches
 from kj600.visualizer import HeatmapVisualizer
 from kj600.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
 from kj600.anomaly_inform import AnomalyInformFactory
-from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name
-from kj600.distributed.wrap_distributed import api_register, create_hook
+from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
+from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
 from kj600.utils import print_warn_log, print_info_log, get_param_struct
 
 
@@ -55,18 +54,26 @@ class OptimizerContext:
 
 class CommunicationContext:
     def __init__(self) -> None:
-        self.indata = {}
-        self.outdata = {}
+        self.data = {}
+
+    @staticmethod
+    def _agg(data):
+        aggregated_data = {}
+        for op, tag2tensorlist in data.items():
+            aggregated_data[op] = {}
+            for tag, tensorlist in tag2tensorlist.items():
+                aggregated_data[op][tag] = op_aggregate(op, tensorlist)
+        return aggregated_data
 
     def reset(self):
-        self.indata = {}
-        self.outdata = {}
+        self.data = {}
+
+    def aggregate(self):
+        self.data = self._agg(self.data)
 
 class TrainerMon:
 
-    @staticmethod
-    def set_wrapped_optimizer(_wrapped_optimizer):
-        MixPrecsionOptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
+    tensor_metrics = TensorMetrics()
 
     # opt_ty: "Megatron_Float16OptimizerWithFloat16Params" or "Megatron_DistributedOptimizer"
     def __init__(self, config_file_path, params_have_main_grad=True, opt_ty=None) -> None:
@@ -82,6 +89,13 @@ class TrainerMon:
         self.xy_distribution = self.config.get('xy_distribution', False)
         if not self.xy_distribution:
             print_rank_0("> module input/output input_grad/output_grad is not monitored. ")
+        
+        # backward hook cause megatron-lm pipeline parallel schedule assert exception. 
+        # TBD: backward hook cause output tensor is view of some base tensor. root cause invesigation pending.
+        self.forward_only = self.config.get('forward_only', False) 
+        if self.forward_only: 
+            print_rank_0("> only module forward is monitored. ")
+
         self.ur_distribution = self.config.get('ur_distribution', False)
         if not self.ur_distribution:
             print_rank_0("> update vector and ratio vector of adam is not monitored. ")
@@ -97,11 +111,13 @@ class TrainerMon:
         self.cc_distribution = self.config.get("cc_distribution", {})
         if not self.cc_distribution.get('enable', False):
             print_rank_0("> cc operator is not monitored.")
+            self.cc_log_only = False
         else:
             self.cc_codeline = self.cc_distribution.get('cc_codeline', [])
             self.cc_log_only = self.cc_distribution.get('cc_log_only', False)
             self.cc_logged_stack = defaultdict(set)
-            api_register.initialize_hook(partial(create_hook, context=self.cc_context, monitor=self))
+            self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
+            api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
 
         alert_setting = self.config.get('alert', {"rules":[]})
@@ -116,9 +132,9 @@ class TrainerMon:
         if dist.is_initialized():
             if (dist.get_rank() in self.module_rank_list) or len(self.module_rank_list) == 0:
                 self.summary_writer = SummaryWriterWithAD(
-                    os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}"), self.alert_rules, anomaly_inform)
+                    os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}"), self.alert_rules, unique_id, anomaly_inform)
         else:
-            self.summary_writer = SummaryWriterWithAD(os.path.join(output_base_dir, f"{cur_time}-{unique_id}"), self.alert_rules, anomaly_inform)
+            self.summary_writer = SummaryWriterWithAD(os.path.join(output_base_dir, f"{cur_time}-{unique_id}"), self.alert_rules, unique_id, anomaly_inform)
         # A HeatmapVisualizer instance is associated with an image
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
@@ -139,11 +155,28 @@ class TrainerMon:
     def __del__(self):
         if hasattr(self, "summary_writer"):
             self.summary_writer.close()
+    
+    @staticmethod
+    def set_wrapped_optimizer(_wrapped_optimizer):
+        MixPrecsionOptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
+
+    @staticmethod
+    def adhoc_check(target_tensor:torch.tensor, module_name:str, tensor_name:str, rank_list, ops_list):
+        rank = None
+        if dist.is_initialized():
+            rank = dist.get_rank()
+            if (rank not in rank_list) and len(rank_list) != 0:
+                return
+        TrainerMon.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
     def _smallest_rank_print(self, msg):
         if dist.is_initialized():
-            if dist.get_rank() == min(self.module_rank_list):
-                print_info_log(msg)
+            if self.module_rank_list:
+                if dist.get_rank() == min(self.module_rank_list):
+                    print_info_log(msg)
+            else:
+                if dist.get_rank() == 0:
+                    print_info_log(msg)
         else:
             print_info_log(msg)
 
@@ -233,8 +266,9 @@ class TrainerMon:
             if name in target_names:
                 submodule.register_forward_hook(fwd_hook_fun)
                 self.module_fwd_hook_context_by_module[submodule] = ModuleHookContext(name)
-                submodule.register_full_backward_hook(bwd_hook_fun)
-                self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
+                if not self.forward_only:
+                    submodule.register_full_backward_hook(bwd_hook_fun)
+                    self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
                 print_rank_0(f"> {name} is monitored successfully")
                 hooked_count += 1
         return hooked_count
@@ -287,16 +321,15 @@ class TrainerMon:
     def generate_cc_metrics(self, cc_name, cc_tensor):
         metrics = defaultdict(dict)
         rank = dist.get_rank() if dist.is_initialized() else None
-        for op, tag2tensor in cc_tensor.indata.items():
-            for tag, tensor in tag2tensor.items():
-                key = get_summary_writer_tag_name(cc_name, tag, rank)
-                metrics[op].update({key: tensor})
-        for op, tag2tensor in cc_tensor.outdata.items():
+        for op, tag2tensor in cc_tensor.data.items():
             for tag, tensor in tag2tensor.items():
                 key = get_summary_writer_tag_name(cc_name, tag, rank)
                 metrics[op].update({key: tensor})
         cc_tensor.reset()
         return metrics
+
+    def write_adhoc_check(self, step):
+        TrainerMon.tensor_metrics.flush(self.summary_writer)
 
     def write_xy_tb(self, step):
         if not self.xy_distribution:
@@ -326,7 +359,7 @@ class TrainerMon:
                     raise Exception("exit after first step when print model struct")
             if self.cc_log_only and context.step > 0:
                 self._smallest_rank_print("> Used communication ops and corresponding stack")
-                self._smallest_rank_print(json.dumps({k:list(v) for k,v in self.cc_logged_stack.items()}, indent=4))
+                self._smallest_rank_print(json.dumps({k:[i.split(';') for i in v] for k,v in self.cc_logged_stack.items()}, indent=4))
                 raise Exception("exit after first step when print cc stack")
             
 
@@ -362,11 +395,11 @@ class TrainerMon:
             metric_dict = {}
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
-            if self.cc_distribution:
-                for k, c in self.cc_context.items():
-                    cc_metrics = self.generate_cc_metrics(k, c)
-                    for op, m in cc_metrics.items():
-                        metric_dict[op].update(m)
+            for k, c in self.cc_context.items():
+                c.aggregate()
+                cc_metrics = self.generate_cc_metrics(k, c)
+                for op, m in cc_metrics.items():
+                    metric_dict[op].update(m)
             if not metric_dict:
                 return
             context.metric_list.append(metric_dict)
@@ -377,6 +410,7 @@ class TrainerMon:
             rank = dist.get_rank() if dist.is_initialized() else None
 
             self.write_xy_tb(context.step)
+            self.write_adhoc_check(context.step)
 
             if self.ur_distribution:
                 for param_name, _ in context.param_adam_update.items():
