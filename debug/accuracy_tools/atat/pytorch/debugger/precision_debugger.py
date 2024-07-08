@@ -1,10 +1,5 @@
 import torch
 from torch.utils.data import dataloader
-# from .debugger_config import DebuggerConfig
-# from ..service import Service
-# from ..common import print_warn_log_rank_0
-# from ..pt_config import parse_json_config
-# from ..common.exceptions import MsaccException
 from atat.pytorch.debugger.debugger_config import DebuggerConfig
 from atat.pytorch.service import Service
 from atat.pytorch.common import print_warn_log_rank_0
@@ -46,32 +41,6 @@ class PrecisionDebugger:
             if self.enable_dataloader:
                 print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
-    #
-    # @classmethod
-    # def start(cls):
-    #     instance = cls._instance
-    #     if not instance:
-    #         raise Exception("No instance of PrecisionDebugger found.")
-    #     if instance.enable_dataloader:
-    #         print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
-    #     else:
-    #         instance.service.start(instance.model)
-    #
-    # @classmethod
-    # def stop(cls):
-    #     instance = cls._instance
-    #     if not instance:
-    #         raise Exception("PrecisionDebugger instance is not created.")
-    #     if instance.enable_dataloader:
-    #         print_warn_log_rank_0("DataLoader is enabled, stop() skipped.")
-    #     else:
-    #         instance.service.stop()
-    #
-    # @classmethod
-    # def step(cls):
-    #     if not cls._instance:
-    #         raise Exception("PrecisionDebugger instance is not created.")
-    #     cls._instance.service.step()
 
     @staticmethod
     def check_model_valid(model):

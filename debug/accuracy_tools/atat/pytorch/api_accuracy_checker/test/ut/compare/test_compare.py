@@ -33,13 +33,11 @@ class TestCompare(unittest.TestCase):
         dummmy_input = torch.randn(100, 100)
         bench_out = torch.nn.functional.dropout2d(dummmy_input, 0.3)
         npu_out = torch.nn.functional.dropout2d(dummmy_input, 0.3)
-        # self.assertTrue(self.compare._compare_dropout("api", bench_out, npu_out))
         self.assertTrue(self.compare.compare_dropout("api", bench_out, npu_out))
 
     def test_compare_core_wrapper(self):
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        # test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
         test_final_success, detailed_result_total = self.compare.compare_core_wrapper("api", bench_out, npu_out)
         actual_cosine_similarity = detailed_result_total[0][3]
         # 设置一个小的公差值
@@ -54,7 +52,6 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(test_final_success)
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
-        # test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
         test_final_success, detailed_result_total = self.compare.compare_core_wrapper("api", bench_out, npu_out)
         actual_cosine_similarity = detailed_result_total[0][3]
         self.assertTrue(np.isclose(actual_cosine_similarity, 1.0, atol=tolerance))
@@ -98,20 +95,17 @@ class TestCompare(unittest.TestCase):
         cpu_output = torch.Tensor([1.0, 2.0, 3.0])
         npu_output = torch.Tensor([1.0, 2.0, 3.0])
         compare_column = CompareColumn()
-        # status, compare_column, message = self.compare._compare_torch_tensor("api", cpu_output, npu_output, compare_column)
         status, compare_column, message = self.compare.compare_torch_tensor("api", cpu_output, npu_output, compare_column)
         self.assertEqual(status, "pass")
 
     def test_compare_bool_tensor(self):
         cpu_output = np.array([True, False, True])
         npu_output = np.array([True, False, True])
-        # self.assertEqual(self.compare._compare_bool_tensor(cpu_output, npu_output), (0.0, 'pass', ''))
         self.assertEqual(self.compare.compare_bool_tensor(cpu_output, npu_output), (0.0, 'pass', ''))
         
     def test_compare_builtin_type(self):
         compare_column = CompareColumn()
         bench_out = 1
         npu_out = 1
-        # status, compare_result, message = self.compare._compare_builtin_type(bench_out, npu_out, compare_column)
         status, compare_result, message = self.compare.compare_builtin_type(bench_out, npu_out, compare_column)
         self.assertEqual((status, compare_result.error_rate, message), ('pass', 0, ''))

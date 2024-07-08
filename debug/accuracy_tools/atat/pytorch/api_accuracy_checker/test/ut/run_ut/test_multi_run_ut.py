@@ -69,7 +69,6 @@ class TestMultiRunUT(unittest.TestCase):
     @patch('api_accuracy_checker.run_ut.multi_run_ut.check_file_suffix')
     @patch('api_accuracy_checker.run_ut.multi_run_ut.FileChecker')
     @patch('api_accuracy_checker.run_ut.multi_run_ut.split_json_file', return_value=(['forward_split1.json', 'forward_split2.json'], 2))
-    # def test_prepare_config(self, mock_split_json_file, mock_FileChecker, mock_check_file_suffix, mock_check_link, mock_realpath, mock_remove):
     def test_prepare_config(self, mock_FileChecker):
         mock_FileChecker_instance = MagicMock()
         mock_FileChecker_instance.common_check.return_value = './'

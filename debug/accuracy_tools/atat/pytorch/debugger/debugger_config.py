@@ -1,5 +1,3 @@
-# from ..common import print_warn_log_rank_0, seed_all
-# from ...core.utils import Const
 from atat.pytorch.common import print_warn_log_rank_0, seed_all
 from atat.core.utils import Const
 
@@ -54,9 +52,6 @@ class DebuggerConfig:
                     # Do this replace operation to let the acl backward dump can be done in forward hook.
                     self.scope[index] = self.scope[index].replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
-                # for api in self.scope:
-                #     api = api.replace(Const.BACKWARD, Const.FORWARD)
-                #     self.backward_input[api] = self.backward_input_list[index]
         seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
@@ -72,20 +67,6 @@ class DebuggerConfig:
         self._check_rank()
         self._check_step()
         return True
-    #
-    # def _check_rank(self):
-    #     if self.rank:
-    #         for rank_id in self.rank:
-    #             if not isinstance(rank_id, int) or rank_id < 0:
-    #                 raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
-    #         else:
-    #             print_warn_log_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
-    #
-    # def _check_step(self):
-    #     if self.step:
-    #         for s in self.step:
-    #             if not isinstance(s, int) or s < 0:
-    #                 raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
     
     def check_model(self, model):
         if self.level in ["L0", "mix"] and not model:

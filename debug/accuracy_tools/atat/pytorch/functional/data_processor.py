@@ -103,13 +103,6 @@ class DataProcessor:
         # 需要对forward的output进行更改
         self._return_forward_new_output = False
         self._forward_new_output = None
-    #
-    # def if_return_forward_new_output(self):
-    #     return self._return_forward_new_output
-    #
-    # def get_forward_new_output(self):
-    #     self._return_forward_new_output = False
-    #     return self._forward_new_output
 
     @staticmethod
     def get_md5_for_tensor(x):
@@ -139,37 +132,6 @@ class DataProcessor:
         single_arg.update({"type": "torch.dtype"})
         single_arg.update({"value": str(element)})
         return single_arg
-    #
-    # @staticmethod
-    # def _convert_numpy_to_builtin(arg):
-    #     type_mapping = {
-    #         np.integer: int,
-    #         np.floating: float,
-    #         np.bool_: bool,
-    #         np.complexfloating: complex,
-    #         np.str_: str,
-    #         np.byte: bytes,
-    #         np.unicode_: str
-    #     }
-    #     for numpy_type, builtin_type in type_mapping.items():
-    #         if isinstance(arg, numpy_type):
-    #             return builtin_type(arg), type(arg).__name__
-    #     return arg, ''
-    #
-    # def update_iter(self, current_iter):
-    #     self.current_iter = current_iter
-    #
-    # def visit_and_clear_overflow_status(self, api_or_module_name):
-    #     if self.current_api_or_module_name != api_or_module_name:
-    #         self.current_api_or_module_name = api_or_module_name
-    #         self.has_overflow = False
-    #
-    # @staticmethod
-    # def _analyze_numpy(value, numpy_type):
-    #     single_arg = {}
-    #     single_arg.update({"type": numpy_type})
-    #     single_arg.update({"value": value})
-    #     return single_arg
 
     @staticmethod
     def get_stat_info(data):
@@ -200,44 +162,6 @@ class DataProcessor:
             tensor_norm = torch._C._VariableFunctionsClass.norm(data_clone).item()
 
         return tensor_max, tensor_min, tensor_mean, tensor_norm
-
-    # @staticmethod
-    # def _analyze_builtin(arg):
-    #     single_arg = {}
-    #     if isinstance(arg, slice):
-    #         single_arg.update({"type": "slice"})
-    #         # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-    #         values = [
-    #             value if not isinstance(value, torch.Tensor) else value.item()
-    #             for value in [arg.start, arg.stop, arg.step]
-    #         ]
-    #         single_arg.update({"value": values})
-    #     else:
-    #         single_arg.update({"type": type(arg).__name__})
-    #         single_arg.update({"value": arg})
-    #     return single_arg
-    #
-    # @staticmethod
-    # def _analyze_torch_size(arg):
-    #     single_arg = {}
-    #     single_arg.update({"type": "torch.Size"})
-    #     single_arg.update({"value": list(arg)})
-    #     return single_arg
-    #
-    # def is_dump_for_data_mode(self, forward_backward, input_output):
-    #     """
-    #     Compare the parameters with data_mode to determine whether to dump.
-    #
-    #     Args:
-    #         forward_backward(str): The forward or backward mode to check.
-    #         input_output(str): The input or output mode to check.
-    #
-    #     Return:
-    #         bool: True if the parameters are in data_mode or data_mode is all, False otherwise.
-    #     """
-    #     return (Const.ALL in self.config.data_mode or
-    #             forward_backward in self.config.data_mode or
-    #             input_output in self.config.data_mode)
 
     @staticmethod
     def handle_tensor_extremum_nan_inf(data_clone, operator):
@@ -347,41 +271,6 @@ class DataProcessor:
         return (Const.ALL in self.config.data_mode or
                 forward_backward in self.config.data_mode or
                 input_output in self.config.data_mode)
-    #
-    # def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
-    #     data_clone = tensor.detach()
-    #     if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
-    #         if tensor_json['Max'] is None:
-    #             return
-    #         if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-    #             tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "max")
-    #             self.has_overflow = True
-    #         if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-    #             tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "min")
-    #             self.has_overflow = True
-    #     else:
-    #         self.has_overflow = check_overflow_npu()
-    #         if self.has_overflow:
-    #             clear_overflow_npu()
-    #
-    # def _analyze_tensor(self, tensor, suffix):
-    #     tensor_max, tensor_min, tensor_mean, tensor_norm = self.get_stat_info(tensor)
-    #
-    #     tensor_json = {}
-    #     tensor_json.update({'type': 'torch.Tensor'})
-    #     tensor_json.update({'dtype': str(tensor.dtype)})
-    #     tensor_json.update({"shape": tensor.shape})
-    #     tensor_json.update({"Max": tensor_max})
-    #     tensor_json.update({"Min": tensor_min})
-    #     self._analyze_maybe_overflow_tensor(tensor_json, tensor)
-    #     tensor_json.update({"Mean": tensor_mean})
-    #     tensor_json.update({"Norm": tensor_norm})
-    #     tensor_json.update({"requires_grad": tensor.requires_grad})
-    #     if self.config.summary_mode == "md5":
-    #         tensor_md5 = self.get_md5_for_tensor(tensor)
-    #         tensor_json.update({"md5": tensor_md5})
-    #
-    #     return tensor_json
 
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
@@ -402,24 +291,6 @@ class DataProcessor:
 
     def analyze_element(self, element):
         return recursive_apply_transform(element, self.analyze_single_element)
-    #
-    # @staticmethod
-    # def analyze_api_call_stack(name):
-    #     stack_str = []
-    #     for (_, path, line, func, code, _) in inspect.stack()[5:]:
-    #         if not code:
-    #             continue
-    #         stack_line = " ".join([
-    #             "File", ", ".join([
-    #                 path,
-    #                 " ".join(["line", str(line)]),
-    #                 " ".join(["in", func]),
-    #                 " ".join(["\n", code[0].strip()])
-    #             ])
-    #         ])
-    #         stack_str.append(stack_line)
-    #     stack_info_struct = {name: stack_str}
-    #     return stack_info_struct
 
     def analyze_pre_forward(self, name, module,
                         module_input_output: ModuleForwardInputsOutputs):
@@ -645,6 +516,7 @@ def overflow_debug_mode_enable():
     overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
     return overflow_mode == Const.ENV_ENABLE
 
+
 def check_overflow_npu():
     if overflow_debug_mode_enable():
         float_status = torch.zeros(bits_for_overflow).npu()
@@ -656,12 +528,14 @@ def check_overflow_npu():
     else:
         return torch_npu._C._check_overflow_npu()
 
+
 def clear_overflow_npu():
     if overflow_debug_mode_enable():
         float_status = torch.zeros(bits_for_overflow).npu()
         torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
     else:
         torch_npu._C._clear_overflow_npu()
+
 
 class OverflowConst:
     """
