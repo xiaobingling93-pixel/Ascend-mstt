@@ -1,16 +1,15 @@
+import math
 from typing import Any
 
-import torch
-import math
 from atat.pytorch.free_benchmark import print_info_log_rank_0, print_warn_log_rank_0
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
+from atat.pytorch.free_benchmark.common.counter import preheat_counter
 from atat.pytorch.free_benchmark.common.enums import DeviceType
-from atat.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
+from atat.pytorch.free_benchmark.common.params import DataParams
+from atat.pytorch.free_benchmark.common.params import HandlerParams
 from atat.pytorch.free_benchmark.common.utils import Tools
 from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
-from atat.pytorch.free_benchmark.common.counter import preheat_counter
 from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
-from atat.pytorch.free_benchmark.common.params import HandlerParams
 
 
 class PreheatHandler(FuzzHandler):
@@ -21,6 +20,75 @@ class PreheatHandler(FuzzHandler):
 
     def get_threshold(self, dtype):
         return preheat_counter.get_api_thd(self.pure_name, dtype)
+
+    def compare_npu_and_cpu(self, data_params: DataParams):
+        args = Tools.convert_device_and_dtype(
+            data_params.args, DeviceType.CPU, change_dtype=True
+        )
+        kwargs = Tools.convert_device_and_dtype(
+            data_params.kwargs, DeviceType.CPU, change_dtype=True
+        )
+        cpu_result = data_params.origin_func(*args, **kwargs)
+        return SingleCompare().compare_seq(data_params.original_result, cpu_result)
+
+    def preheat(self, max_fuzz_ratio, cpu_consistent, first_dtype):
+        # 存储当前step所有输出比值和对应npu\cpu比对结果
+        preheat_counter.update_preheat_record(
+            self.pure_name,
+            first_dtype,
+            (max_fuzz_ratio, cpu_consistent),
+        )
+        if self._need_adjust_threshold():
+            self._adjust_threshold()
+
+    def handle(self, data_params: DataParams) -> Any:
+
+        if isinstance(data_params.perturbed_result, bool) or not Tools.is_float_tensor(
+                data_params.perturbed_result
+        ):
+            return data_params.original_result
+
+        if self.params.step == 0:
+            preheat_counter.add_one_step_used_api(self.pure_name)
+            return data_params.original_result
+
+        # 如果当前api,step需要预热
+        npu_consistent, max_fuzz_ratio = self.cmp_output_npu(data_params)
+        data_params.is_consistent = npu_consistent
+
+        preheat_counter.check_step(self.params.step)
+
+        if self.params.preheat_config.get("preheat_step") <= self.params.step:
+            return data_params.original_result
+
+        if not data_params.grad_unequal_flag:
+            data_params.grad_unequal_flag = True
+            data_params.is_consistent = False
+            return data_params.original_result
+        preheat_counter.add_api_called_time(self.pure_name)
+
+        if not self._is_take_a_sample():
+            return data_params.original_result
+
+        cpu_consistent = True
+        try:
+            cpu_consistent = self.compare_npu_and_cpu(data_params)
+        except Exception as e:
+            print_warn_log_rank_0(
+                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"when campare to cpu exception raise {e}"
+            )
+        try:
+            first_dtype = Tools.get_first_tensor_dtype(data_params.perturbed_result)
+        except RuntimeError:
+            print_warn_log_rank_0(
+                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"the output sequence does not contain tensors."
+            )
+        if preheat_counter.get_api_preheat(self.pure_name, str(first_dtype)):
+            self.preheat(max_fuzz_ratio, cpu_consistent, first_dtype)
+
+        return data_params.original_result
 
     def _is_take_a_sample(self) -> bool:
         need_sample_set = self._get_need_sample_set()
@@ -60,17 +128,6 @@ class PreheatHandler(FuzzHandler):
                 count = total_count
             need_sample_set.add(count)
         return need_sample_set
-
-
-    def compare_npu_and_cpu(self, data_params: DataParams):
-        args = Tools.convert_device_and_dtype(
-            data_params.args, DeviceType.CPU, change_dtype=True
-        )
-        kwargs = Tools.convert_device_and_dtype(
-            data_params.kwargs, DeviceType.CPU, change_dtype=True
-        )
-        cpu_result = data_params.origin_func(*args, **kwargs)
-        return SingleCompare().compare_seq(data_params.original_result, cpu_result)
 
     def _need_adjust_threshold(self) -> bool:
         sample_count_per_step = self._get_sample_count_per_step()
@@ -112,63 +169,3 @@ class PreheatHandler(FuzzHandler):
             preheat_counter.update_api_thd(
                 self.pure_name, dtype_str, new_thd, threshold
             )
-
-    def preheat(self, max_fuzz_ratio, cpu_consistent, first_dtype):
-        # 存储当前step所有输出比值和对应npu\cpu比对结果
-        preheat_counter.update_preheat_record(
-            self.pure_name,
-            first_dtype,
-            (max_fuzz_ratio, cpu_consistent),
-        )
-        if self._need_adjust_threshold():
-            self._adjust_threshold()
-
-    def handle(self, data_params: DataParams) -> Any:
-
-        if isinstance(data_params.perturbed_result, bool) or not Tools.is_float_tensor(
-            data_params.perturbed_result
-        ):
-            return data_params.original_result
-
-        if self.params.step == 0:
-            preheat_counter.add_one_step_used_api(self.pure_name)
-            return data_params.original_result
-        
-        # 如果当前api,step需要预热
-        npu_consistent, max_fuzz_ratio = self.cmp_output_npu(data_params)
-        data_params.is_consistent = npu_consistent
-
-        preheat_counter.check_step(self.params.step)
-
-        if self.params.preheat_config.get("preheat_step") <= self.params.step:
-            return data_params.original_result
-
-        if not data_params.grad_unequal_flag:
-            data_params.grad_unequal_flag = True
-            data_params.is_consistent = False
-            return data_params.original_result
-        preheat_counter.add_api_called_time(self.pure_name)
-
-
-        if not self._is_take_a_sample():
-            return data_params.original_result
-        
-        cpu_consistent = True
-        try:
-            cpu_consistent = self.compare_npu_and_cpu(data_params)
-        except Exception as e:
-            print_warn_log_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
-                f"when campare to cpu exception raise {e}"
-            )
-        try:
-            first_dtype = Tools.get_first_tensor_dtype(data_params.perturbed_result)
-        except RuntimeError:
-            print_warn_log_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
-                f"the output sequence does not contain tensors."
-            )
-        if preheat_counter.get_api_preheat(self.pure_name, str(first_dtype)):
-            self.preheat(max_fuzz_ratio, cpu_consistent, first_dtype)
-
-        return data_params.original_result

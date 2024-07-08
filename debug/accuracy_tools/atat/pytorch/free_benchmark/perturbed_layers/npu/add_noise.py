@@ -4,15 +4,47 @@ from atat.pytorch.free_benchmark import (
     print_warn_log_rank_0,
 )
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
+from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.utils import TorchC
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
 
 class AddNoiseLayer(NpuBaseLayer):
+
+    def add_noise(self, tensor_obj):
+        if isinstance(tensor_obj, torch.Tensor):
+            self.perturbed_value = ThresholdConfig.PERTURBATION_VALUE_DICT.get(
+                tensor_obj.dtype
+            )
+            if not self.pre_check(tensor_obj):
+                return tensor_obj
+            noise = self._get_noise(tensor_obj)
+            result = TorchC.where(
+                TorchC.gt(TorchC.abs(tensor_obj), self.perturbed_value ** 0.5),
+                TorchC.add(noise, tensor_obj),
+                tensor_obj,
+            ).to(tensor_obj.dtype)
+            self.is_added = True
+            return result
+        if isinstance(tensor_obj, dict):
+            return {key: self.add_noise(value) for key, value in tensor_obj.items()}
+        if isinstance(tensor_obj, (tuple, list)):
+            return type(tensor_obj)([self.add_noise(value) for value in tensor_obj])
+        return tensor_obj
+
+    def handle(self, params: DataParams) -> torch.Any:
+        """
+        对输入添加扰动并返回
+        """
+        print_info_log_rank_0(
+            f"[atat] Free benchmark: Perturbation is "
+            f"{PerturbationMode.ADD_NOISE} of {self.api_name}."
+        )
+        params.perturbed_value = self.add_noise(params.args[params.valid_input_index])
+        return self.perturbed_result(params)
 
     def _get_noise(self, tensor_obj):
         dtype = tensor_obj.dtype
@@ -59,35 +91,3 @@ class AddNoiseLayer(NpuBaseLayer):
             )
             return False
         return True
-
-    def add_noise(self, tensor_obj):
-        if isinstance(tensor_obj, torch.Tensor):
-            self.perturbed_value = ThresholdConfig.PERTURBATION_VALUE_DICT.get(
-                tensor_obj.dtype
-            )
-            if not self.pre_check(tensor_obj):
-                return tensor_obj
-            noise = self._get_noise(tensor_obj)
-            result = TorchC.where(
-                TorchC.gt(TorchC.abs(tensor_obj), self.perturbed_value**0.5),
-                TorchC.add(noise, tensor_obj),
-                tensor_obj,
-            ).to(tensor_obj.dtype)
-            self.is_added = True
-            return result
-        if isinstance(tensor_obj, dict):
-            return {key: self.add_noise(value) for key, value in tensor_obj.items()}
-        if isinstance(tensor_obj, (tuple, list)):
-            return type(tensor_obj)([self.add_noise(value) for value in tensor_obj])
-        return tensor_obj
-
-    def handle(self, params: DataParams) -> torch.Any:
-        """
-        对输入添加扰动并返回
-        """
-        print_info_log_rank_0(
-            f"[atat] Free benchmark: Perturbation is "
-            f"{PerturbationMode.ADD_NOISE} of {self.api_name}."
-        )
-        params.perturbed_value = self.add_noise(params.args[params.valid_input_index])
-        return self.perturbed_result(params)

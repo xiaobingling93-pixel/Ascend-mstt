@@ -1,9 +1,9 @@
-import torch
 import math
 
+import torch
 from atat.pytorch.free_benchmark import print_warn_log_rank_0
-from atat.pytorch.free_benchmark.common.utils import TorchC
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
+from atat.pytorch.free_benchmark.common.utils import TorchC
 
 
 class SingleCompare:
@@ -12,6 +12,37 @@ class SingleCompare:
         self.absolute_err = None
         self.eb = None
         self.threshold = None
+
+    @staticmethod
+    def filter_overflow(tensor) -> int:
+        inf_num = TorchC.sum(TorchC.isinf(tensor))
+        nan_num = TorchC.sum(TorchC.isnan(tensor))
+        return inf_num + nan_num
+
+    @staticmethod
+    def replace_inf_or_nan(tensor):
+        finite_mask = TorchC.isfinite(tensor)
+        inf_or_nan_mask = TorchC.logical_not(finite_mask)
+        inf_or_nan_num = TorchC.sum(inf_or_nan_mask).item()
+        if inf_or_nan_num > 0:
+            tensor[inf_or_nan_mask] = 1
+        return tensor
+
+    def compare_dict_seq(self, actual, golden):
+        if len(actual) != len(golden):
+            return False
+        for key, value in golden.items():
+            if not self.compare_seq(value, actual.get(key)):
+                return False
+        return True
+
+    def compare_list_seq(self, actual, golden):
+        if len(actual) != len(golden):
+            return False
+        for index_, value in enumerate(golden):
+            if not self.compare_seq(value, actual[index_]):
+                return False
+        return True
 
     def compare_seq(self, actual, golden):
         if isinstance(golden, torch.Tensor):
@@ -45,6 +76,11 @@ class SingleCompare:
             return False
         return True
 
+    def compare_float_seq(self, actual, golden):
+        return math.isclose(actual, golden)
+
+    def compare_other_seq(self, actual, golden):
+        return actual == golden
 
     def _cal_compare_metrics(self, actual, golden):
         diff_value = TorchC.subtract(actual, golden)
@@ -62,42 +98,5 @@ class SingleCompare:
         # 获取误差均衡性
         divided = TorchC.where(
             TorchC.ge(TorchC.abs(golden), self.threshold.small_value), golden_abs, 1
-            )
+        )
         self.eb = TorchC.mean(TorchC.div(diff_value, divided))
-
-    def compare_dict_seq(self, actual, golden):
-        if len(actual) != len(golden):
-            return False
-        for key, value in golden.items():
-            if not self.compare_seq(value, actual.get(key)):
-                return False
-        return True
-
-    def compare_list_seq(self, actual, golden):
-        if len(actual) != len(golden):
-            return False
-        for index_, value in enumerate(golden):
-            if not self.compare_seq(value, actual[index_]):
-                return False
-        return True
-
-    def compare_float_seq(self, actual, golden):
-        return math.isclose(actual, golden)
-
-    def compare_other_seq(self, actual, golden):
-        return actual == golden
-
-    @staticmethod
-    def filter_overflow(tensor) -> int:
-        inf_num = TorchC.sum(TorchC.isinf(tensor))
-        nan_num = TorchC.sum(TorchC.isnan(tensor))
-        return inf_num + nan_num
-
-    @staticmethod
-    def replace_inf_or_nan(tensor):
-        finite_mask = TorchC.isfinite(tensor)
-        inf_or_nan_mask = TorchC.logical_not(finite_mask)
-        inf_or_nan_num = TorchC.sum(inf_or_nan_mask).item()
-        if inf_or_nan_num > 0:
-            tensor[inf_or_nan_mask] = 1
-        return tensor

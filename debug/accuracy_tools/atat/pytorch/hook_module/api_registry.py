@@ -17,14 +17,16 @@
 
 import torch
 import torch.distributed as dist
+
 from . import wrap_torch, wrap_functional, wrap_tensor, wrap_vf, wrap_distributed, wrap_aten
-from .wrap_torch import get_torch_ops
+from .wrap_aten import get_aten_ops
+from .wrap_distributed import get_distributed_ops
 from .wrap_functional import get_functional_ops
 from .wrap_tensor import get_tensor_ops
+from .wrap_torch import get_torch_ops
 from .wrap_vf import get_vf_ops
-from .wrap_distributed import get_distributed_ops
-from .wrap_aten import get_aten_ops
-from ..common.utils import torch_without_guard_version, npu_distributed_api, is_gpu
+from ..common.utils import torch_without_guard_version, npu_distributed_api, is_gpu, Const
+
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
 if not is_gpu:
@@ -108,19 +110,19 @@ class ApiRegistry:
         self.store_ori_attr(torch.Tensor, get_tensor_ops(), self.tensor_ori_attr)
         wrap_tensor.wrap_tensor_ops_and_bind(hook)
         for attr_name in dir(wrap_tensor.HOOKTensor):
-            if attr_name.startswith("wrap_"):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 self.tensor_hook_attr[attr_name[5:]] = getattr(wrap_tensor.HOOKTensor, attr_name)
 
         self.store_ori_attr(torch, get_torch_ops(), self.torch_ori_attr)
         wrap_torch.wrap_torch_ops_and_bind(hook)
         for attr_name in dir(wrap_torch.HOOKTorchOP):
-            if attr_name.startswith("wrap_"):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 self.torch_hook_attr[attr_name[5:]] = getattr(wrap_torch.HOOKTorchOP, attr_name)
 
         self.store_ori_attr(torch.nn.functional, get_functional_ops(), self.functional_ori_attr)
         wrap_functional.wrap_functional_ops_and_bind(hook)
         for attr_name in dir(wrap_functional.HOOKFunctionalOP):
-            if attr_name.startswith("wrap_"):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 self.functional_hook_attr[attr_name[5:]] = getattr(wrap_functional.HOOKFunctionalOP, attr_name)
 
         self.store_ori_attr(dist, get_distributed_ops(), self.distributed_ori_attr)
@@ -128,9 +130,9 @@ class ApiRegistry:
         if not is_gpu and not torch_without_guard_version:
             self.store_ori_attr(torch_npu.distributed, npu_distributed_api, self.npu_distributed_ori_attr)
         for attr_name in dir(wrap_distributed.HOOKDistributedOP):
-            if attr_name.startswith("wrap_"):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 self.distributed_hook_attr[attr_name[5:]] = getattr(wrap_distributed.HOOKDistributedOP, attr_name)
-                if not is_gpu and not torch_without_guard_version and attr_name[5:] in npu_distributed_api:  
+                if not is_gpu and not torch_without_guard_version and attr_name[5:] in npu_distributed_api:
                     self.npu_distributed_hook_attr[attr_name[5:]] = getattr(wrap_distributed.HOOKDistributedOP,
                                                                             attr_name)
 
@@ -138,20 +140,20 @@ class ApiRegistry:
             self.store_ori_attr(torch.ops.aten, get_aten_ops(), self.aten_ori_attr)
             wrap_aten.wrap_aten_ops_and_bind(hook)
             for attr_name in dir(wrap_aten.HOOKAtenOP):
-                if attr_name.startswith("wrap_"):
+                if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                     self.aten_hook_attr[attr_name[5:]] = getattr(wrap_aten.HOOKAtenOP, attr_name)
 
         self.store_ori_attr(torch._VF, get_vf_ops(), self.vf_ori_attr)
         wrap_vf.wrap_vf_ops_and_bind(hook)
         for attr_name in dir(wrap_vf.HOOKVfOP):
-            if attr_name.startswith("wrap_"):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 self.vf_hook_attr[attr_name[5:]] = getattr(wrap_vf.HOOKVfOP, attr_name)
 
         if not is_gpu:
             self.store_ori_attr(torch_npu, get_npu_ops(), self.torch_npu_ori_attr)
             wrap_npu_custom.wrap_npu_ops_and_bind(hook)
             for attr_name in dir(wrap_npu_custom.HOOKNpuOP):
-                if attr_name.startswith("wrap_"):
+                if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                     self.torch_npu_hook_attr[attr_name[5:]] = getattr(wrap_npu_custom.HOOKNpuOP, attr_name)
 
 
