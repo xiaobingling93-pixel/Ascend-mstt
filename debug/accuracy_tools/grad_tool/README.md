@@ -267,3 +267,6 @@ GradComparator.compare_distributed(grad_output_path1,
 
 # FAQ 
 
+**比对时报错：TypeError: can't convert xla:0 device type tensor to numpy. Use Tensor.cpu() to copy the tensor to host memory first.**
+
+表示torch.load的map_location参数没生效，tensor没被加载到cpu上，可能由torch和cann包不匹配导致
