@@ -1,7 +1,7 @@
 import os
 import yaml
 from ..common.utils import check_file_or_directory_path
-from ..hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+from ...hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 from ...common.file_check import FileOpen
 
 WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
@@ -47,7 +47,8 @@ class Config:
                 raise ValueError("All elements in white_list must be of str type")
             invalid_api = [i for i in value if i not in WrapApi]
             if invalid_api:
-                raise ValueError(f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
+                raise ValueError(
+                    f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
         return value
 
     def __getattr__(self, item):

@@ -5,8 +5,7 @@ import math
 from collections import namedtuple
 import pandas as pd
 
-from ..common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
-    CompareException, create_directory
+from ..common.utils import write_csv
 from ..common.config import msCheckerConfig
 from ..compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
@@ -14,7 +13,9 @@ from ..compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_F
     convert_str_to_float, CompareMessage
 from ..compare.compare_column import ApiPrecisionOutputColumn
 from ..run_ut.run_ut import get_validated_result_csv_path
-from ...common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create
+from ...common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create, create_directory
+from ...common.log import print_info_log, print_warn_log, print_error_log
+from atat.core.utils import CompareException
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 unsupported_message = 'This data type does not support benchmark compare.'
