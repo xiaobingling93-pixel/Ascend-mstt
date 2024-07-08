@@ -37,7 +37,6 @@ from ...core.utils import check_compare_param, add_time_with_xlsx, CompareExcept
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
     print_warn_log, print_error_log, Const
 from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
-from ..common.utils import Const
 
 
 def check_graph_mode(a_op_name, b_op_name):
