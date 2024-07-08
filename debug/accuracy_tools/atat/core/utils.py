@@ -39,6 +39,7 @@ class Const:
     """
     Class for const
     """
+    SEP = "."
     MODEL_TYPE = ['.onnx', '.pb', '.om']
     DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
     REGEX_PREFIX_MAX_LENGTH = 20
