@@ -4,9 +4,13 @@ import sys
 import torch_npu
 import torch
 from tqdm import tqdm
-from ..run_ut.run_ut import exec_api, generate_device_params, get_api_info
-from ..common.utils import print_info_log, print_warn_log, get_json_contents, print_error_log
-from ...common.file_check import check_link
+# from ..run_ut.run_ut import exec_api, generate_device_params, get_api_info
+# from ..common.utils import print_info_log, print_warn_log, get_json_contents, print_error_log
+# from ...common.file_check import check_link
+from atat.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
+from atat.pytorch.api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, \
+    print_error_log
+from atat.pytorch.common.file_check import check_link
 
 
 def check_tensor_overflow(x):

@@ -9,12 +9,20 @@ import threading
 from collections import namedtuple
 from itertools import cycle
 from tqdm import tqdm
-from ...common import parse_json_info_forward_backward
-from ...common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen
-from ..compare.compare import Comparator
-from .run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
-from ..common.utils import print_error_log, print_warn_log, print_info_log, create_directory
-from ...common.file_check import check_path_before_create
+# from ...common import parse_json_info_forward_backward
+# from ...common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen
+# from ..compare.compare import Comparator
+# from .run_ut import _run_ut_parser, get_validated_result_csv_path, get_validated_details_csv_path, preprocess_forward_content
+# from ..common.utils import print_error_log, print_warn_log, print_info_log, create_directory
+# from ...common.file_check import check_path_before_create
+from atat.pytorch.common import parse_json_info_forward_backward
+from atat.pytorch.common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen
+from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
+from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, \
+    get_validated_details_csv_path, preprocess_forward_content
+from atat.pytorch.api_accuracy_checker.common.utils import print_error_log, print_warn_log, print_info_log, \
+    create_directory
+from atat.pytorch.common.file_check import check_path_before_create
 
 
 def split_json_file(input_file, num_splits, filter_api):

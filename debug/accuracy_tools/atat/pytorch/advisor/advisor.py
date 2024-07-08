@@ -32,24 +32,54 @@ class Advisor:
     def __init__(self, input_data, out_path=""):
         self.input_data = input_data
         self.out_path = os.path.realpath(out_path)
+        self.file_type = Const.ALL
+    #
+    # def _parse_input_data(self):
+    #     data_columns = self.input_data.columns.values
+    #     if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
+    #         self.file_type = Const.ALL
+    #     elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
+    #         self.file_type = Const.MD5
+    #     elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
+    #         self.file_type = Const.SUMMARY
+    #     else:
+    #         print_error_log('Compare result does not meet the required conditions.')
+    #         raise CompareException(CompareException.INVALID_DATA_ERROR)
+    #     df = self.input_data.reset_index()
+    #     return df
+    #
+    # def _check_path_vaild(self):
+    #     out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
+    #     out_path_checker.common_check()
+    #
+    # def gen_advisor_message(self, node_name):
+    #     if AdvisorConst.FORWARD in node_name:
+    #         if AdvisorConst.INPUT in node_name:
+    #             message = AdvisorConst.FORWARD_INPUT_SUGGEST
+    #         else:
+    #             message = AdvisorConst.FORWARD_OUTPUT_SUGGEST
+    #             message = self.deterministic_advisor(message, node_name)
+    #     else:
+    #         if AdvisorConst.INPUT in node_name:
+    #             message = AdvisorConst.BACKWARD_INPUT_SUGGEST
+    #         else:
+    #             message = AdvisorConst.BACKWARD_OUTPUT_SUGGEST
+    #             message = self.deterministic_advisor(message, node_name)
+    #     message = self.batch_norm_advisor(message, node_name)
+    #     return message
 
-    def _parse_input_data(self):
-        data_columns = self.input_data.columns.values
-        if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
-            self.file_type = Const.ALL
-        elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
-            self.file_type = Const.MD5
-        elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
-            self.file_type = Const.SUMMARY
-        else:
-            print_error_log('Compare result does not meet the required conditions.')
-            raise CompareException(CompareException.INVALID_DATA_ERROR)
-        df = self.input_data.reset_index()
-        return df
+    @staticmethod
+    def deterministic_advisor(message, node_name):
+        for api_name in AdvisorConst.NEED_DETERMINISTIC_API:
+            if api_name in node_name:
+                return AdvisorConst.DETERMINISTIC_SUGGEST
+        return message
 
-    def _check_path_vaild(self):
-        out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
-        out_path_checker.common_check()
+    @staticmethod
+    def batch_norm_advisor(message, node_name):
+        if AdvisorConst.FUNC_BATCH_NORM in node_name and AdvisorConst.FORWARD_INPUT_1 in node_name:
+            message = AdvisorConst.BATCH_NORM_SUGGEST
+        return message
 
     def gen_advisor_message(self, node_name):
         if AdvisorConst.FORWARD in node_name:
@@ -65,19 +95,6 @@ class Advisor:
                 message = AdvisorConst.BACKWARD_OUTPUT_SUGGEST
                 message = self.deterministic_advisor(message, node_name)
         message = self.batch_norm_advisor(message, node_name)
-        return message
-
-    @staticmethod
-    def deterministic_advisor(message, node_name):
-        for api_name in AdvisorConst.NEED_DETERMINISTIC_API:
-            if api_name in node_name:
-                return AdvisorConst.DETERMINISTIC_SUGGEST
-        return message
-
-    @staticmethod
-    def batch_norm_advisor(message, node_name):
-        if AdvisorConst.FUNC_BATCH_NORM in node_name and AdvisorConst.FORWARD_INPUT_1 in node_name:
-            message = AdvisorConst.BATCH_NORM_SUGGEST
         return message
 
     def analyze_unmatched(self, analyze_data):
@@ -120,3 +137,21 @@ class Advisor:
             result = self.gen_advisor_result(failing_data)
         message_list = result.print_advisor_log()
         result.gen_summary_file(self.out_path, message_list)
+
+    def _parse_input_data(self):
+        data_columns = self.input_data.columns.values
+        if {CompareConst.ACCURACY, CompareConst.NPU_NAME}.issubset(data_columns):
+            self.file_type = Const.ALL
+        elif {CompareConst.RESULT, CompareConst.NPU_MD5}.issubset(data_columns):
+            self.file_type = Const.MD5
+        elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
+            self.file_type = Const.SUMMARY
+        else:
+            print_error_log('Compare result does not meet the required conditions.')
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
+        df = self.input_data.reset_index()
+        return df
+
+    def _check_path_vaild(self):
+        out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
+        out_path_checker.common_check()

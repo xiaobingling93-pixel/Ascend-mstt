@@ -1,21 +1,26 @@
 import torch
 from torch.utils.data import dataloader
-from .debugger_config import DebuggerConfig
-from ..service import Service
-from ..common import print_warn_log_rank_0
-from ..pt_config import parse_json_config
-from ..common.exceptions import MsaccException
+# from .debugger_config import DebuggerConfig
+# from ..service import Service
+# from ..common import print_warn_log_rank_0
+# from ..pt_config import parse_json_config
+# from ..common.exceptions import MsaccException
+from atat.pytorch.debugger.debugger_config import DebuggerConfig
+from atat.pytorch.service import Service
+from atat.pytorch.common import print_warn_log_rank_0
+from atat.pytorch.pt_config import parse_json_config
+from atat.pytorch.common.exceptions import MsaccException
 
 
 class PrecisionDebugger:
-    _instance = None
+    instance = None
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
-            cls._instance.config = None
-            cls._instance.enable_dataloader = False
-        return cls._instance
+        if cls.instance is None:
+            cls.instance = super(PrecisionDebugger, cls).__new__(cls)
+            cls.instance.config = None
+            cls.instance.enable_dataloader = False
+        return cls.instance
 
     def __init__(
         self,
@@ -41,32 +46,32 @@ class PrecisionDebugger:
             if self.enable_dataloader:
                 print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
-
-    @classmethod
-    def start(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception("No instance of PrecisionDebugger found.")
-        if instance.enable_dataloader:
-            print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
-        else:
-            instance.service.start(instance.model)
-
-    @classmethod
-    def stop(cls):
-        instance = cls._instance
-        if not instance:
-            raise Exception("PrecisionDebugger instance is not created.")
-        if instance.enable_dataloader:
-            print_warn_log_rank_0("DataLoader is enabled, stop() skipped.")
-        else:
-            instance.service.stop()
-
-    @classmethod
-    def step(cls):
-        if not cls._instance:
-            raise Exception("PrecisionDebugger instance is not created.")
-        cls._instance.service.step()
+    #
+    # @classmethod
+    # def start(cls):
+    #     instance = cls._instance
+    #     if not instance:
+    #         raise Exception("No instance of PrecisionDebugger found.")
+    #     if instance.enable_dataloader:
+    #         print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
+    #     else:
+    #         instance.service.start(instance.model)
+    #
+    # @classmethod
+    # def stop(cls):
+    #     instance = cls._instance
+    #     if not instance:
+    #         raise Exception("PrecisionDebugger instance is not created.")
+    #     if instance.enable_dataloader:
+    #         print_warn_log_rank_0("DataLoader is enabled, stop() skipped.")
+    #     else:
+    #         instance.service.stop()
+    #
+    # @classmethod
+    # def step(cls):
+    #     if not cls._instance:
+    #         raise Exception("PrecisionDebugger instance is not created.")
+    #     cls._instance.service.step()
 
     @staticmethod
     def check_model_valid(model):
@@ -76,10 +81,36 @@ class PrecisionDebugger:
             MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
         )
 
+    @classmethod
+    def start(cls):
+        instance = cls.instance
+        if not instance:
+            raise Exception("No instance of PrecisionDebugger found.")
+        if instance.enable_dataloader:
+            print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
+        else:
+            instance.service.start(instance.model)
+
+    @classmethod
+    def stop(cls):
+        instance = cls.instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if instance.enable_dataloader:
+            print_warn_log_rank_0("DataLoader is enabled, stop() skipped.")
+        else:
+            instance.service.stop()
+
+    @classmethod
+    def step(cls):
+        if not cls.instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        cls.instance.service.step()
+
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        debugger_instance = PrecisionDebugger._instance
+        debugger_instance = PrecisionDebugger.instance
         debugger_instance.enable_dataloader = False
         if not debugger_instance.service.first_start:
             debugger_instance.stop()
