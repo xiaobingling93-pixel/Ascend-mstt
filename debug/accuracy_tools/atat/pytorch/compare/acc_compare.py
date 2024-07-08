@@ -37,6 +37,7 @@ from ...core.utils import check_compare_param, add_time_with_xlsx, CompareExcept
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
     print_warn_log, print_error_log, Const
 from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
+from ..common.utils import Const
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -125,7 +126,7 @@ def fuzzy_check_name(npu_name, bench_name):
 def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
     torch_func_index, in_out = npu_split[0], npu_split[1]
-    torch_func_split = torch_func_index.rsplit("_", 2)
+    torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
 

@@ -226,7 +226,7 @@ def fuzzy_check_name(npu_name, bench_name):
 def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
     torch_func_index, in_out = npu_split[0], npu_split[1]
-    torch_func_split = torch_func_index.rsplit("_", 2)
+    torch_func_split = torch_func_index.rsplit(".", 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
 
