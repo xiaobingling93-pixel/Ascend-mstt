@@ -136,7 +136,7 @@ class DataProcessor:
     @staticmethod
     def get_stat_info(data):
         if data.is_meta:
-            return
+            return None, None, None, None
         data_clone = data.detach()
         if data_clone.numel() == 0:
             tensor_max = None
@@ -399,7 +399,6 @@ class FullTensorDataProcessor(DataProcessor):
         self.data_path = self.data_writer.dump_tensor_data_dir
 
     def _analyze_tensor(self, tensor, suffix):
-        # self.data_path = self.data_writer.dump_tensor_data_dir
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
@@ -424,7 +423,6 @@ class OverflowTensorDataProcessor(DataProcessor):
         self.data_path = self.data_writer.dump_tensor_data_dir
 
     def _analyze_tensor(self, tensor, suffix):
-        # self.data_path = self.data_writer.dump_tensor_data_dir
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + ".pt")
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
