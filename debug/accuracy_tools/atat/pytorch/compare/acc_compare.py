@@ -28,6 +28,7 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill
 from collections import namedtuple
+from dataclasses import dataclass
 
 from .match import graph_mapping
 from .highlight import HighlightRules, get_header_index
@@ -139,7 +140,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
     op_dict["summary"] = []
     op_dict["stack_info"] = []
 
-    all_mode_bool = summary_compare == False and md5_compare == False
+    all_mode_bool = not (summary_compare or md5_compare)
     if all_mode_bool:
         op_dict["data_name"] = []
 
@@ -192,7 +193,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
         bench_stack_info = b_dict.get("stack_info", None)
         has_stack = npu_stack_info and bench_stack_info
 
-        all_mode_bool = summary_compare == False and md5_compare == False
+        all_mode_bool = not (summary_compare or md5_compare)
         if all_mode_bool:
             npu_data_name = n_dict.get("data_name", None)
             bench_data_name = b_dict.get("data_name", None)
@@ -206,7 +207,8 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             err_msg = ""
             if md5_compare:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2], CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
+                               n_struct[2], b_struct[2],
+                               CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 else:
@@ -233,7 +235,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
                         diff = npu_val - bench_val
                         if bench_val != 0:
-                            relative = str(abs((diff/bench_val) * 100)) + '%'
+                            relative = str(abs((diff / bench_val) * 100)) + '%'
                         else:
                             relative = "N/A"
                         result_item[start_idx + i] = diff
@@ -245,7 +247,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         result_item[start_idx + i] = CompareConst.NONE
                 accuracy_check = CompareConst.WARNING if warning_flag else ""
                 err_msg += "Need double check api accuracy." if warning_flag else ""
-                result_item[start_idx:] = [f'{str(x)}\t' if str(x) in ('inf', '-inf', 'nan') else x for x in result_item[start_idx:]]
+                for i in range(start_idx, len(result_item)):
+                    if str(result_item[i]) in ('inf', '-inf', 'nan'):
+                        result_item[i] = f'{result_item[i]}\t'
 
             result_item.append(accuracy_check if summary_compare else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
@@ -313,12 +317,10 @@ def read_dump_data(result_df):
     try:
         npu_dump_name_list = result_df.iloc[0:, 0].tolist()
         npu_dump_tensor_list = result_df.iloc[0:, -1].tolist()
-        # bench_dump_name_list = csv_pd.iloc[0:, 1].tolist()
         op_name_mapping_dict = {}
         for index, _ in enumerate(npu_dump_name_list):
             npu_dump_name = npu_dump_name_list[index]
             npu_dump_tensor = npu_dump_tensor_list[index]
-            # bench_dump_name = bench_dump_name_list[index]
             op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
         return op_name_mapping_dict
     except ValueError as e:
@@ -352,8 +354,8 @@ def _handle_multi_process(func, input_parma, result_df, lock):
     for process_idx, df_chunk in enumerate(df_chunks):
         idx = df_chunk_size * process_idx
         result = pool.apply_async(func,
-                                args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
-                                error_callback=err_call)
+                                  args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
+                                  error_callback=err_call)
         results.append(result)
     final_results = [r.get() for r in results]
     pool.close()
@@ -372,33 +374,67 @@ def compare_ops(idx, dump_path_dict, result_df, lock, input_parma):
     for i in range(len(result_df)):
         op_name = result_df.iloc[i, 0]
         if is_print_compare_log:
-            print("start compare: {}".format(op_name))
-        cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = compare_by_op(op_name, dump_path_dict, input_parma)
+            print_info_log("start compare: {}".format(op_name))
+        cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = compare_by_op(
+            op_name, dump_path_dict, input_parma)
         if is_print_compare_log:
-            print("[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
+            print_info_log(
+                "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, "
+                "five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
+                                                    one_thousand_err_ratio, five_thousand_err_ratio))
         cos_result.append(cos_sim)
         max_err_result.append(max_abs_err)
         max_relative_err_result.append(max_relative_err)
         err_mess.append(err_msg)
         one_thousand_err_ratio_result.append(one_thousand_err_ratio)
         five_thousand_err_ratio_result.append(five_thousand_err_ratio)
-    result_df = _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_mess, one_thousand_err_ratio_result,
-                                 five_thousand_err_ratio_result, result_df, lock)
-    return result_df
+
+    cr = ComparisonResult(
+        cos_result=cos_result,
+        max_err_result=max_err_result,
+        max_relative_err_result=max_relative_err_result,
+        err_msgs=err_mess,
+        one_thousand_err_ratio_result=one_thousand_err_ratio_result,
+        five_thousand_err_ratio_result=five_thousand_err_ratio_result
+    )
+
+    return _save_cmp_result(idx, cr, result_df, lock)
 
 
-def _save_cmp_result(idx, cos_result, max_err_result, max_relative_err_result, err_msg, one_thousand_err_ratio_result, five_thousand_err_ratio_result, result_df, lock):
+@dataclass
+class ComparisonResult:
+    cos_result: list
+    max_err_result:  list
+    max_relative_err_result: list
+    err_msgs: list
+    one_thousand_err_ratio_result: list
+    five_thousand_err_ratio_result: list
+
+
+def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
+    """
+        Save comparison results into the result DataFrame with thread safety.
+    Args:
+        offset: offset for index
+        result: data struct of ComparisonResult
+        result_df: result of DataFrame
+        lock: thread lock
+
+    Returns:
+        comparison results in DataFrame
+    """
+
     lock.acquire()
     try:
-        for i, _ in enumerate(cos_result):
-            process_index = i + idx
-            result_df.loc[process_index, CompareConst.COSINE] = cos_result[i]
-            result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = max_err_result[i]
-            result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = max_relative_err_result[i]
-            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = err_msg[i]
-            result_df.loc[process_index, CompareConst.ACCURACY] = check_accuracy(cos_result[i], max_err_result[i])
-            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = one_thousand_err_ratio_result[i]
-            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = five_thousand_err_ratio_result[i]
+        for i, _ in enumerate(result.cos_result):
+            process_index = i + offset
+            result_df.loc[process_index, CompareConst.COSINE] = result.cos_result[i]
+            result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
+            result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
+            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
+            result_df.loc[process_index, CompareConst.ACCURACY] = check_accuracy(result.cos_result[i], result.max_err_result[i])
+            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = result.one_thousand_err_ratio_result[i]
+            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result.five_thousand_err_ratio_result[i]
         return result_df
     except ValueError as e:
         print_error_log('result dataframe is not found.')
@@ -473,7 +509,11 @@ def handle_inf_nan(n_value, b_value):
     b_inf = np.isinf(b_value)
     n_nan = np.isnan(n_value)
     b_nan = np.isnan(b_value)
-    if np.any(n_inf) or np.any(b_inf) or np.any(n_nan) or np.any(b_nan):
+
+    # merge boolean expressions
+    any_inf = np.any(n_inf) or np.any(b_inf)
+    any_nan = np.any(n_nan) or np.any(b_nan)
+    if any_inf or any_nan:
         if np.array_equal(n_inf, b_inf) and np.array_equal(n_nan, b_nan):
             n_value[n_inf] = 0
             b_value[b_inf] = 0
@@ -510,9 +550,9 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compa
             continue
         if not isinstance(api_out[npu_max_index], (float, int)) \
                 or not isinstance(api_out[bench_max_index], (float, int)) \
-                or not isinstance(api_out[max_diff_index],(float, int)):
+                or not isinstance(api_out[max_diff_index], (float, int)):
             continue
-        for m, api_in in enumerate(result[0:n_num_input]):
+        for _, api_in in enumerate(result[0:n_num_input]):
             if not isinstance(api_in[npu_max_index], (float, int)) \
                     or not isinstance(api_in[bench_max_index], (float, int)) \
                     or not isinstance(api_in[max_diff_index], (float, int)):
@@ -558,7 +598,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
                     num, last_state = 1, state
             else:
                 output_num = num
-                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare)
+                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
+                                summary_compare)
                 num, last_api_name, last_state = 1, api_name, state
                 start += input_num + output_num
                 input_num, output_num = 1, 0
@@ -614,8 +655,32 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
                  md5_compare=md5_compare)
 
 
-def compare_core(input_parma, output_path, stack_mode=False, auto_analyze=True,
-                 suffix='', fuzzy_match=False, summary_compare=False, md5_compare=False):
+def compare_core(input_parma, output_path, **kwargs):
+    """
+    Compares data from multiple JSON files and generates a comparison report.
+
+    Args:
+        input_parma (dict): A dictionary containing paths to JSON files ("npu_json_path", "bench_json_path",
+                            "stack_json_path").
+        output_path (str): The path where the output Excel report will be saved.
+        **kwargs: Additional keyword arguments including:
+        - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
+        - auto_analyze (bool, optional): If True, triggers automatic analysis after comparison. Defaults to True.
+        - suffix (str, optional): Suffix to append to the output file name. Defaults to ''.
+        - fuzzy_match (bool, optional): Enables fuzzy matching during comparison. Defaults to False.
+        - summary_compare (bool, optional): Enables summary comparison mode. Defaults to False.
+        - md5_compare (bool, optional): Enables MD5 comparison. Defaults to False.
+
+    Returns:
+    """
+    # get kwargs or set default value
+    stack_mode = kwargs.get('stack_mode', False)
+    auto_analyze = kwargs.get('auto_analyze', True)
+    suffix = kwargs.get('suffix', '')
+    fuzzy_match = kwargs.get('fuzzy_match', False)
+    summary_compare = kwargs.get('summary_compare', False)
+    md5_compare = kwargs.get('md5_compare', False)
+
     print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_with_xlsx("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
@@ -658,29 +723,33 @@ def parse(pkl_file, module_name_prefix):
                 continue
 
             if info_prefix.find("stack_info") != -1:
-                print("\nTrace back({}):".format(msg[0]))
+                print_info_log("\nTrace back({}):".format(msg[0]))
                 for item in reversed(msg[1]):
-                    print("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
-                    print("    {}".format(item[3]))
+                    print_info_log("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
+                    print_info_log("    {}".format(item[3]))
                 continue
             if len(msg) > 5:
                 summary_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
                     .format(msg[0], msg[3], msg[4], msg[5][0], msg[5][1], msg[5][2])
                 if not title_printed:
-                    print("\nStatistic Info:")
+                    print_info_log("\nStatistic Info:")
                     title_printed = True
-                print(summary_info)
+                print_info_log(summary_info)
 
 
 def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
-    if item == None or (isinstance(item, dict) and len(item) == 0):
+    if item_list is None:
+        item_list = []
+    if item is None or (isinstance(item, dict) and not item):
         if not top_bool:
-            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
+                   'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
         else:
-            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
+                   'shape': None, 'md5': None, 'data_name': '-1'}
         item_list.append(tmp)
         return item_list
-    if index == None:
+    if index is None:
         if isinstance(item, dict):
             full_op_name = op_name + '.0'
         else:
@@ -731,7 +800,7 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
         for j in range(len(item)):
-            op_item_parse(item[j], full_op_name, j, top_bool=False)
+            op_item_parse(item[j], full_op_name, j, item_list=item_list, top_bool=False)
     return item_list
 
 
@@ -862,8 +931,10 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
         except StopIteration:
             read_err_bench = False
 
-        if len(npu_ops_queue) == 0 or len(bench_ops_queue) == 0 or (
-                len(npu_ops_queue) == last_npu_ops_len and len(bench_ops_queue) == last_bench_ops_len):
+        # merge all boolean expressions
+        both_empty = not npu_ops_queue and not bench_ops_queue
+        no_change = (len(npu_ops_queue) == last_npu_ops_len) and (len(bench_ops_queue) == last_bench_ops_len)
+        if both_empty or no_change:
             continue
 
         n_match_point, b_match_point = match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
@@ -889,7 +960,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     else:
         header = CompareConst.COMPARE_RESULT_HEADER[:]
 
-    all_mode_bool = summary_compare == False and md5_compare == False
+    all_mode_bool = not (summary_compare or md5_compare)
     if stack_mode:
         if all_mode_bool:
             header.append(CompareConst.STACK)

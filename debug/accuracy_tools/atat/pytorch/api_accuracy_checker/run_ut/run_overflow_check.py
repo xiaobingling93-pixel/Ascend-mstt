@@ -36,7 +36,7 @@ def check_tensor_overflow(x):
 
 def check_data_overflow(x):
     if isinstance(x, (tuple, list)) and x:
-        for i, item in enumerate(x):
+        for _, item in enumerate(x):
             if check_data_overflow(item):
                 return True
         return False

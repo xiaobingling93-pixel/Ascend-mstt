@@ -104,6 +104,22 @@ class APIInfo:
         else:
             return os.path.join(save_path, dir_name)
 
+    @staticmethod
+    def _convert_numpy_to_builtin(arg):
+        type_mapping = {
+            np.integer: int,
+            np.floating: float,
+            np.bool_: bool,
+            np.complexfloating: complex,
+            np.str_: str,
+            np.bytes_: bytes,
+            np.unicode_: str
+        }
+        for numpy_type, builtin_type in type_mapping.items():
+            if isinstance(arg, numpy_type):
+                return builtin_type(arg), get_type_name(str(type(arg)))
+        return arg, ''
+
     def analyze_element(self, element):
         if isinstance(element, (list, tuple)):
             out = []
@@ -180,21 +196,6 @@ class APIInfo:
         single_arg.update({'type': numpy_type})
         single_arg.update({'value': value})
         return single_arg
-    
-    def _convert_numpy_to_builtin(self, arg):
-        type_mapping = {
-            np.integer: int,
-            np.floating: float,
-            np.bool_: bool,
-            np.complexfloating: complex,
-            np.str_: str,
-            np.bytes_: bytes,
-            np.unicode_: str
-        }
-        for numpy_type, builtin_type in type_mapping.items():
-            if isinstance(arg, numpy_type):
-                return builtin_type(arg), get_type_name(str(type(arg)))
-        return arg, ''
 
 
 class ForwardAPIInfo(APIInfo):

@@ -21,6 +21,9 @@ import stat
 import torch
 import numpy as np
 from functools import wraps
+
+from .exceptions import DistributedNotInitializedError
+
 try:
     import torch_npu
 except ImportError:
@@ -93,9 +96,13 @@ def torch_device_guard(func):
 
 
 def get_rank_if_initialized():
+    """
+        return rank id if it is initialized or raise Exception: DistributedNotInitializedError
+    """
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
-    return None
+    else:
+        raise DistributedNotInitializedError("torch distributed environment is not initialized")
 
 
 def seed_all(seed=1234, mode=False):

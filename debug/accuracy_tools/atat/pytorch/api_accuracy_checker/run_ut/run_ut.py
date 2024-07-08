@@ -160,7 +160,7 @@ def run_ut(config):
         csv_reader = csv.reader(file)
         next(csv_reader)
         api_name_set = {row[0] for row in csv_reader}
-    for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
+    for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name): # TODO run_ut does not support to the npu fusion api and distributed api

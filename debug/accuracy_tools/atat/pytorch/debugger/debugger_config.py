@@ -67,6 +67,12 @@ class DebuggerConfig:
         self._check_step()
         return True
 
+    def check_model(self, model):
+        if self.level in ["L0", "mix"] and not model:
+            raise Exception(
+                f"For level {self.level}, PrecisionDebugger must receive a model argument.",
+            )
+
     def _check_rank(self):
         if self.rank:
             for rank_id in self.rank:
@@ -81,8 +87,3 @@ class DebuggerConfig:
                 if not isinstance(s, int) or s < 0:
                     raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
     
-    def check_model(self, model):
-        if self.level in ["L0", "mix"] and not model:
-            raise Exception(
-                f"For level {self.level}, PrecisionDebugger must receive a model argument.",
-            )

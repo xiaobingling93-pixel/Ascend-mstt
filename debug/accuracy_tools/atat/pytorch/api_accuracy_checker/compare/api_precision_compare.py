@@ -1,23 +1,26 @@
 import argparse
+import math
 import os
 import sys
-import math
 from collections import namedtuple
+
 import pandas as pd
 
+from ..common.config import msCheckerConfig
 from ..common.utils import print_info_log, print_warn_log, print_error_log, write_csv, \
     CompareException, create_directory
-from ..common.config import msCheckerConfig
+from ..compare.compare_column import ApiPrecisionOutputColumn
 from ..compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
     convert_str_to_float, CompareMessage
-from ..compare.compare_column import ApiPrecisionOutputColumn
 from ..run_ut.run_ut import get_validated_result_csv_path
 from ...common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 unsupported_message = 'This data type does not support benchmark compare.'
+
+DEFAULT_THRESHOLD = 1
 
 benchmark_algorithms_thresholds = {
     'small_value': {
@@ -83,6 +86,25 @@ class BenchmarkStandard:
     def __str__(self):
         return "%s" % (self.api_name)
 
+    @staticmethod
+    def _get_status(ratio, algorithm):
+        error_threshold = benchmark_algorithms_thresholds.get(algorithm, {}).get('error_threshold', DEFAULT_THRESHOLD)
+        warning_threshold = benchmark_algorithms_thresholds.get(algorithm, {}).get('warning_threshold',
+                                                                                   DEFAULT_THRESHOLD)
+        if ratio > error_threshold:
+            return CompareConst.ERROR
+        elif ratio > warning_threshold:
+            return CompareConst.WARNING
+        return CompareConst.PASS
+
+    @staticmethod
+    def _calc_ratio(x, y, default_value=1.0):
+        x, y = convert_str_to_float(x), convert_str_to_float(y)
+        if math.isclose(y, 0.0):
+            return 1.0 if math.isclose(x, 0.0) else default_value
+        else:
+            return abs(x / y)
+
     def get_result(self):
         self._compare_ratio()
         self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
@@ -99,6 +121,11 @@ class BenchmarkStandard:
         elif CompareConst.WARNING in self.check_result_list:
             self.final_result = CompareConst.WARNING
 
+    def to_column_value(self):
+        return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio,
+                self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio,
+                self.mean_rel_err_status, self.eb_ratio, self.eb_status]
+
     def _compare_ratio(self):
         self.small_value_err_ratio = self._calc_ratio(
             self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
@@ -113,29 +140,6 @@ class BenchmarkStandard:
                                                    10000.0)
         self.eb_ratio = self._calc_ratio(self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                          self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
-
-    def to_column_value(self):
-        return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio,
-                self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio,
-                self.mean_rel_err_status, self.eb_ratio, self.eb_status]
-
-    @staticmethod
-    def _get_status(ratio, algorithm):
-        error_threshold = benchmark_algorithms_thresholds.get(algorithm).get('error_threshold')
-        warning_threshold = benchmark_algorithms_thresholds.get(algorithm).get('warning_threshold')
-        if ratio > error_threshold:
-            return CompareConst.ERROR
-        elif ratio > warning_threshold:
-            return CompareConst.WARNING
-        return CompareConst.PASS
-
-    @staticmethod
-    def _calc_ratio(x, y, default_value=1.0):
-        x, y = convert_str_to_float(x), convert_str_to_float(y)
-        if math.isclose(y, 0.0):
-            return 1.0 if math.isclose(x, 0.0) else default_value
-        else:
-            return abs(x / y)
 
 
 def write_detail_csv(content, save_path):

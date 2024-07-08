@@ -20,15 +20,14 @@ import re
 import shutil
 import stat
 import subprocess
-import sys
 import time
 import json
-from json.decoder import JSONDecodeError
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
 
 from .file_check_util import FileOpen, FileChecker, FileCheckConst
+from .log import print_info_log, print_warn_log, print_error_log
 
 
 device = collections.namedtuple('device', ['type', 'index'])
@@ -271,43 +270,6 @@ def make_dump_path_if_not_exists(dump_path):
             print_error_log('{} already exists and is not a directory.'.format(dump_path))
 
 
-def _print_log(level, msg, end='\n'):
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-    pid = os.getgid()
-    print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg, end=end)
-    sys.stdout.flush()
-
-
-def print_info_log(info_msg, end='\n'):
-    """
-    Function Description:
-        print info log.
-    Parameter:
-        info_msg: the info message.
-    """
-    _print_log("INFO", info_msg, end=end)
-
-
-def print_error_log(error_msg):
-    """
-    Function Description:
-        print error log.
-    Parameter:
-        error_msg: the error message.
-    """
-    _print_log("ERROR", error_msg)
-
-
-def print_warn_log(warn_msg):
-    """
-    Function Description:
-        print warn log.
-    Parameter:
-        warn_msg: the warning message.
-    """
-    _print_log("WARNING", warn_msg)
-
-
 def check_mode_valid(mode, scope=None, api_list=None):
     if scope is None:
         scope = []
@@ -491,7 +453,7 @@ def get_dump_data_path(dump_dir):
     file_is_exist = False
 
     check_file_or_directory_path(dump_dir, True)
-    for dir_path, sub_paths, files in os.walk(dump_dir):
+    for dir_path, _, files in os.walk(dump_dir):
         if len(files) != 0:
             dump_data_path = dir_path
             file_is_exist = True
