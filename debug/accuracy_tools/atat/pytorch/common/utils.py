@@ -194,7 +194,6 @@ class Const:
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
 
-    ONE_HUNDRED_MB = 100 * 1024 * 1024
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
