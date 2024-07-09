@@ -8,14 +8,14 @@ from atat.pytorch.common.exceptions import MsaccException
 
 
 class PrecisionDebugger:
-    instance = None
+    _instance = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.instance is None:
-            cls.instance = super(PrecisionDebugger, cls).__new__(cls)
-            cls.instance.config = None
-            cls.instance.enable_dataloader = False
-        return cls.instance
+        if cls._instance is None:
+            cls._instance = super(PrecisionDebugger, cls).__new__(cls)
+            cls._instance.config = None
+            cls._instance.enable_dataloader = False
+        return cls._instance
 
     def __init__(
         self,
@@ -52,7 +52,7 @@ class PrecisionDebugger:
 
     @classmethod
     def start(cls):
-        instance = cls.instance
+        instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
         if instance.enable_dataloader:
@@ -62,7 +62,7 @@ class PrecisionDebugger:
 
     @classmethod
     def stop(cls):
-        instance = cls.instance
+        instance = cls._instance
         if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
         if instance.enable_dataloader:
@@ -72,14 +72,20 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        if not cls.instance:
+        if not cls._instance:
             raise Exception("PrecisionDebugger instance is not created.")
-        cls.instance.service.step()
+        cls._instance.service.step()
+
+    @classmethod
+    def get_instance(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = cls(*args, **kwargs)
+        return cls._instance
 
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        debugger_instance = PrecisionDebugger.instance
+        debugger_instance = PrecisionDebugger.get_instance()
         debugger_instance.enable_dataloader = False
         if not debugger_instance.service.first_start:
             debugger_instance.stop()
