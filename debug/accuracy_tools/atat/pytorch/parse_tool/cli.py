@@ -14,17 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-from .lib.interactive_cli import InteractiveCli
+from atat.pytorch.parse_tool.lib.interactive_cli import InteractiveCli
+from atat.core.utils import print_info_log
 
 
 def _run_interactive_cli(cli=None):
-    print("Interactive command mode")
+    print_info_log("Interactive command mode")
     if not cli:
         cli = InteractiveCli()
     try:
         cli.cmdloop(intro="Start Parsing........")
     except KeyboardInterrupt:
-        print("Exit parsing.......")
+        print_info_log("Exit parsing.......")
 
 
 def parse():
