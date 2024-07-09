@@ -198,3 +198,22 @@ class Const:
     FREE_BENCHMARK = "free_benchmark"
 
     ATTR_NAME_PREFIX = "wrap_"
+
+    FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
+    BOOL_TYPE = [bool, np.uint8]
+    INT_TYPE = [np.int32, np.int64]
+    NPU = 'NPU'
+    DISTRIBUTED = 'Distributed'
+
+    RAISE_PRECISION = {
+        torch.float16: torch.float32,
+        torch.bfloat16: torch.float32,
+        torch.float32: torch.float64
+    }
+    CONVERT = {
+        "int32_to_int64": ["torch.int32", "torch.int64"],
+    }
+
+    CONVERT_API = {
+        "int32_to_int64": ["cross_entropy"]
+    }
