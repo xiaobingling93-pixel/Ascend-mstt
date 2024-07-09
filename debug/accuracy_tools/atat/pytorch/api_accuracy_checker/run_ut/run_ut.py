@@ -6,6 +6,7 @@ import sys
 import time
 import gc
 from collections import namedtuple
+
 try:
     import torch_npu
 except ImportError:
@@ -18,18 +19,18 @@ import torch
 from tqdm import tqdm
 
 from atat.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from atat.pytorch.api_accuracy_checker.common.utils import print_info_log, print_warn_log, get_json_contents, \
-    api_info_preprocess, print_error_log, initialize_save_path, Const, create_directory
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
+    initialize_save_path, UtDataProcessor
 from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
-from atat.pytorch.api_accuracy_checker.hook_module.wrap_tensor import TensorOPTemplate
-from atat.pytorch.api_accuracy_checker.hook_module.wrap_functional import FunctionalOPTemplate
-from atat.pytorch.api_accuracy_checker.hook_module.wrap_torch import TorchOPTemplate
+from atat.pytorch.hook_module.wrap_tensor import TensorOPTemplate
+from atat.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
+from atat.pytorch.hook_module.wrap_torch import TorchOPTemplate
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.pytorch.api_accuracy_checker.dump.api_info import APIInfo
 from atat.pytorch.common.parse_json import parse_json_info_forward_backward
-from atat.pytorch.common.file_check import check_path_before_create
 from atat.pytorch.common.file_check import FileOpen, FileCheckConst, FileChecker, \
-    change_mode, check_file_suffix, check_link
+    change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
+from atat.pytorch.common.log import print_info_log, print_warn_log, print_error_log
+from atat.pytorch.common.utils import Const
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
@@ -163,7 +164,7 @@ def run_ut(config):
     for i, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
-        if is_unsupported_api(api_full_name): # TODO run_ut does not support to the npu fusion api and distributed api
+        if is_unsupported_api(api_full_name):  # TODO run_ut does not support to the npu fusion api and distributed api
             continue
         try:
             if msCheckerConfig.white_list:
@@ -207,13 +208,14 @@ def is_unsupported_api(api_name):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
+        processor = UtDataProcessor(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
         for element in data_info.in_fwd_data_list:
-            UtAPIInfo(api_full_name + '.forward.input', element)
-        UtAPIInfo(api_full_name + '.forward.output.bench', data_info.bench_out)
-        UtAPIInfo(api_full_name + '.forward.output.device', data_info.device_out)
-        UtAPIInfo(api_full_name + '.backward.input', data_info.grad_in)
-        UtAPIInfo(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
-        UtAPIInfo(api_full_name + '.backward.output.device', data_info.device_grad_out)
+            processor.save_tensors_in_element(api_full_name + '.forward.input', element)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.bench', data_info.bench_out)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.device', data_info.device_out)
+        processor.save_tensors_in_element(api_full_name + '.backward.input', data_info.grad_in)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.device', data_info.device_grad_out)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
@@ -365,7 +367,8 @@ def preprocess_forward_content(forward_content):
         base_key = key.rsplit(Const.SEP, 1)[0]
         new_args = value['args']
         new_kwargs = value['kwargs']
-        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if isinstance(arg, dict)]
+        filtered_new_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in new_args if
+                             isinstance(arg, dict)]
         if base_key in base_keys_variants:
             is_duplicate = False
             for variant in base_keys_variants.get(base_key, []):
@@ -444,14 +447,6 @@ class UtDataInfo:
         self.bench_out = bench_out
         self.grad_in = grad_in
         self.in_fwd_data_list = in_fwd_data_list
-
-
-class UtAPIInfo(APIInfo):
-    def __init__(self, api_name, element):
-        super().__init__(api_name,
-                         save_path=self.get_full_save_path(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR),
-                         is_save_data=True)
-        self.analyze_element(element)
 
 
 if __name__ == '__main__':
