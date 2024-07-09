@@ -145,6 +145,8 @@ class Const:
     GRAD_OUTPUT = 'grad_output'
     START = "start"
     STOP = "stop"
+    MAX = 'Max'
+    MIN = 'Min'
 
     # dump mode
     ALL = "all"
@@ -178,6 +180,7 @@ class Const:
     # env dump path
     ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
     DUMP_DIR = "dump_data"
+    DATA = "data"
 
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
@@ -193,6 +196,8 @@ class Const:
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
+
+    ATTR_NAME_PREFIX = "wrap_"
 
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     BOOL_TYPE = [bool, np.uint8]

@@ -1,8 +1,8 @@
 import torch
 from atat.pytorch.free_benchmark import print_warn_log_rank_0, print_info_log_rank_0
+from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.utils import TorchC
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
@@ -13,18 +13,6 @@ class ChangeValueLayer(NpuBaseLayer):
         super().__init__(api_name)
         self.head: int = 0
         self.tail: int = -1
-
-    def _check_details(self, tensor_obj):
-        """
-        判断是否需要添加扰动,  首尾值交换
-        """
-        if tensor_obj.size(0) < 2:
-            print_warn_log_rank_0(
-                f"[atat] Free Benchmark: For {self.api_name}, "
-                f"size 0 must greater than 1. Cancel change value."
-            )
-            return False
-        return True
 
     def change_value(self, tensor_obj):
         """
@@ -42,7 +30,7 @@ class ChangeValueLayer(NpuBaseLayer):
                 temp_last = TorchC.clone(new_tensor[self.tail][self.tail])
                 new_tensor[self.head][self.head] = temp_last
                 new_tensor[self.tail][self.tail] = temp_first
-                
+
             self.is_added = True
             return new_tensor
         if isinstance(tensor_obj, dict):
@@ -61,3 +49,15 @@ class ChangeValueLayer(NpuBaseLayer):
         )
         params.perturbed_value = self.change_value(params.args[params.valid_input_index])
         return self.perturbed_result(params)
+
+    def _check_details(self, tensor_obj):
+        """
+        判断是否需要添加扰动,  首尾值交换
+        """
+        if tensor_obj.size(0) < 2:
+            print_warn_log_rank_0(
+                f"[atat] Free Benchmark: For {self.api_name}, "
+                f"size 0 must greater than 1. Cancel change value."
+            )
+            return False
+        return True

@@ -1,11 +1,12 @@
-import os
 import json
+import os
+
 from ..core.common_config import CommonConfig, BaseConfig
-from ..core.utils import Const
 from ..core.file_check_util import FileOpen
+from ..core.utils import Const
 
 
-#特定任务配置类
+# 特定任务配置类
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
@@ -26,7 +27,7 @@ class StatisticsConfig(BaseConfig):
     def _check_summary_mode(self):
         if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
             raise Exception("summary_mode is invalid")
-        
+
 
 class OverflowCheckConfig(BaseConfig):
     def __init__(self, json_config):
@@ -34,13 +35,14 @@ class OverflowCheckConfig(BaseConfig):
         self.overflow_num = json_config.get("overflow_nums")
         self.check_mode = json_config.get("check_mode")
         self.check_overflow_config()
-    
+
     def check_overflow_config(self):
         if self.overflow_num is not None and not isinstance(self.overflow_num, int):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
-        
+
+
 class FreeBenchmarkCheckConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
@@ -55,8 +57,10 @@ class FreeBenchmarkCheckConfig(BaseConfig):
         self.check_freebenchmark_config()
 
     def check_freebenchmark_config(self):
-        if self.if_preheat and  self.handler_type == "fix":
+        if self.if_preheat and self.handler_type == "fix":
             raise Exception("Preheating is not supported in fix handler type")
+        if self.preheat_step and self.preheat_step == 0:
+            raise Exception("preheat_step cannot be 0")
 
 def parse_task_config(task, json_config):
     default_dic = {}

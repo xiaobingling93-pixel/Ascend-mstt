@@ -1,4 +1,3 @@
-
 class CodedException(Exception):
     def __init__(self, code, error_info=''):
         self.error_info = self.err_strs.get(code) + error_info
@@ -10,7 +9,7 @@ class CodedException(Exception):
 class MsaccException(CodedException):
     INVALID_PARAM_ERROR = 0
     OVERFLOW_NUMS_ERROR = 1
-    
+
     err_strs = {
         INVALID_PARAM_ERROR: "[msacc] 无效参数： ",
         OVERFLOW_NUMS_ERROR: "[msacc] 超过预设溢出次数 当前溢出次数:"
@@ -68,8 +67,11 @@ class StepException(CodedException):
         InvalidPostProcess: "[msacc] 错误的step后处理配置: ",
     }
 
+
 class FreeBenchmarkException(CodedException):
     UnsupportedType = 0
+    InvalidGrad = 1
     err_strs = {
-        UnsupportedType: "[msacc] Free benchmark get unsupported type: "
+        UnsupportedType: "[msacc] Free benchmark get unsupported type: ",
+        InvalidGrad: "[msacc] Free benchmark gradient invalid: ",
     }
