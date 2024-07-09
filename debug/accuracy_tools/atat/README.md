@@ -14,11 +14,12 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    请通过下表链接下载工具whl包。
 
-   | 版本  | 发布日期   | 支持PyTorch版本    | 下载链接                                                     | 校验码                                                       |
-   | ----- | ---------- | ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 0.0.3 | 2024-06-11 | 1.11.0/2.0/2.1/2.2 | [ascend_training_accuracy_tools-0.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.3-py3-none-any.whl) | f46d9714704859e2d67861a65bbb3c76b0a250cf6e238b978b5b959ab1fe125a |
-   | 0.0.2 | 2024-05-23 | 1.11.0/2.0/2.1/2.2 | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
-   | 0.0.1 | 2024-03-15 | 1.11.0/2.0/2.1     | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
+   | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
+   | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 1.0   | 2024-07-09 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/1.0/ascend_training_accuracy_tools-1.0-py3-none-any.whl) | 5016dfe886c5d340ec6f60a959673355855f313c91f100680da814efb49f8e81 |
+   | 0.0.3 | 2024-06-11 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-0.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.3-py3-none-any.whl) | f46d9714704859e2d67861a65bbb3c76b0a250cf6e238b978b5b959ab1fe125a |
+   | 0.0.2 | 2024-05-23 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
+   | 0.0.1 | 2024-03-15 | 2.0/2.1         | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
 
 3. whl包校验。
 

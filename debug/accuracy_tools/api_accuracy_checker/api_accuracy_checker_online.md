@@ -21,7 +21,7 @@
 
 安装完成预检工具后，需要分别在GPU和NPU环境下配置config.yaml文件。其中需要重点关注文件中的is_online、is_benchmark_device、host和port参数的配置，保障在线预检时GPU和NPU两台设备间的通信正常。
 
-文件路径为：att/debug/accuracy_tools/api_accuracy_checker/config.yaml
+文件路径为：mstt/debug/accuracy_tools/api_accuracy_checker/config.yaml
 
 | 参数名称            | 说明                                                         | 是否必选 |
 | ------------------- | ------------------------------------------------------------ | -------- |

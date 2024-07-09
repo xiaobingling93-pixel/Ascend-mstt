@@ -464,7 +464,6 @@ tensor:
   - rad2deg
   - rad2deg_
   - ravel
-  - real
   - reciprocal
   - reciprocal_
   - relu

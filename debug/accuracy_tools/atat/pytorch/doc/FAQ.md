@@ -75,7 +75,7 @@
 
 ### dump指定融合算子
 
-dump指定操作当前支持dump指定融合算子的输入输出，需要在att/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
+dump指定操作当前支持dump指定融合算子的输入输出，需要在mstt/debug/accuracy_tools/ptdbg_ascend/src/python/ptdbg_ascend/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
 
 ```
 def npu_forward_fused_softmax(self, input_, mask):
