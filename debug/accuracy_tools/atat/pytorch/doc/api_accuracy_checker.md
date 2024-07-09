@@ -66,7 +66,7 @@ run_ut预检操作包括如下场景：
    atat -f pytorch run_ut -api_info ./dump.json -save_error_data
    ```
 
-   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过修改att/debug/accuracy_tools/api_accuracy_checker目录下，config.yaml文件的error_data_path参数来配置保存路径，详见“config.yaml文件说明”。
+   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过修改mstt/debug/accuracy_tools/api_accuracy_checker目录下，config.yaml文件的error_data_path参数来配置保存路径，详见“config.yaml文件说明”。
 
 #### 使用multi_run_ut.py执行多线程预检
 
@@ -107,13 +107,13 @@ atat -f pytorch run_ut -api_info ./dump.json -csv_path /home/xxx/ut/accuracy_che
 
 run_ut过程支持API预检白名单，操作方式如下：
 
-修改att/debug/accuracy_tools/api_accuracy_checker目录下config.yaml文件的white_list参数，配置需要预检的API名称，详见“config.yaml文件说明”。
+修改mstt/debug/accuracy_tools/api_accuracy_checker目录下config.yaml文件的white_list参数，配置需要预检的API名称，详见“config.yaml文件说明”。
 
 ### config.yaml文件说明
 
 config.yaml文件可以通过配置参数来控制dump和run_ut操作的真实数据模式以及白名单等功能。
 
-文件路径为：att/debug/accuracy_tools/atat/pytorch/api_accuracy_checker/config.yaml 
+文件路径为：mstt/debug/accuracy_tools/atat/pytorch/api_accuracy_checker/config.yaml 
 
 | 参数名称          | 说明                                                         | 是否必选 |
 | ----------------- | ------------------------------------------------------------ | -------- |
