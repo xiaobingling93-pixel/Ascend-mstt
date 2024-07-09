@@ -24,14 +24,14 @@ PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, model
 
 **参数说明**
 
-| 参数名      | 说明                                                         | 是否必选 |
-| ----------- | ------------------------------------------------------------ | -------- |
-| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用../../config目录下的config.json文件的默认配置。 | 否       |
-| task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否       |
-| dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | 是       |
-| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否       |
-| model       | 指定具体的torch.nn.Module，默认未配置，level配置为"L0"或"mix"时必须配置该参数。配置示例参见“**model配置代码示例**”。 | 否       |
-| step        | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]。 | 否       |
+| 参数名      | 说明                                                         | 是否必选                            |
+| ----------- | ------------------------------------------------------------ | ----------------------------------- |
+| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用[config.json](../../config)文件的默认配置。<br>使用本参数指定config.json文件时，需要手动配置该文件中的dump_path参数。 | 否                                  |
+| task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否                                  |
+| dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | config_path参数未配置时，本参数必选 |
+| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否                                  |
+| model       | 指定具体的torch.nn.Module，默认未配置，level配置为"L0"或"mix"时必须配置该参数。配置示例参见“**model配置代码示例**”。 | 否                                  |
+| step        | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]。 | 否                                  |
 
 #### model配置代码示例
 

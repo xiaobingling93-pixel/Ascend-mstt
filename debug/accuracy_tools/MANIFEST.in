@@ -3,3 +3,4 @@ recursive-include ptdbg_ascend/src/python/ptdbg_ascend/ *.yaml
 recursive-include ptdbg_ascend/src/python/ptdbg_ascend/ *.template
 recursive-include atat/ *
 recursive-exclude api_accuracy_checker/test *
+recursive-exclude atat/test *

@@ -39,6 +39,7 @@ class Const:
     """
     Class for const
     """
+    SEP = "."
     MODEL_TYPE = ['.onnx', '.pb', '.om']
     DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
     REGEX_PREFIX_MAX_LENGTH = 20
@@ -683,7 +684,7 @@ def check_path_before_create(path):
 def check_inplace_op(prefix):
     if len(prefix) > Const.DISTRIBUTED_PREFIX_LENGTH:
         return False
-    match_op = re.findall(r"Distributed_(.+?)_\d", prefix)
+    match_op = re.findall(r"Distributed\.(.+?)\.\d", prefix)
     op_name = match_op[0] if match_op else None
     return op_name in Const.INPLACE_LIST
 
