@@ -205,7 +205,7 @@ class UtDataProcessor:
 
     def save_tensors_in_element(self, element):
         if isinstance(element, torch.Tensor):
-            api_args = self.api_name + '.' + str(self.index)
+            api_args = self.api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
             write_pt(file_path, element.contiguous().cpu().detach())
