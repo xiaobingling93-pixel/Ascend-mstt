@@ -1,32 +1,14 @@
 import torch
 from atat.pytorch.free_benchmark import Const, print_info_log_rank_0
 from atat.pytorch.free_benchmark.common.constant import CommonField
-from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
+from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
 
 class ImprovePrecisionLayer(NpuBaseLayer):
-
-    def _set_improve_valus(self, inputs):
-        # TODO why
-        if inputs.dtype in [torch.float16, torch.bfloat16]:
-            self.perturbed_value = torch.float32
-
-    def _change_dtype(self, inputs):
-        if hasattr(inputs, CommonField.DEVICE):
-            device = inputs.device
-            if device is CommonField.META:
-                new_inputs = inputs.to(
-                    device=CommonField.META, dtype=self.perturbed_value
-                )
-            else:
-                new_inputs = inputs.to(dtype=self.perturbed_value).to(device)
-        else:
-            new_inputs = inputs.to(dtype=self.perturbed_value)
-        return new_inputs
 
     def improve_tensor_precision(self, tensor_obj):
         if (
@@ -62,3 +44,20 @@ class ImprovePrecisionLayer(NpuBaseLayer):
             new_kwargs["inplace"] = False
         params.perturbed_result = params.origin_func(*new_args, **new_kwargs)
         return params.perturbed_result
+
+    def _set_improve_valus(self, inputs):
+        if inputs.dtype in [torch.float16, torch.bfloat16]:
+            self.perturbed_value = torch.float32
+
+    def _change_dtype(self, inputs):
+        if hasattr(inputs, CommonField.DEVICE):
+            device = inputs.device
+            if device is CommonField.META:
+                new_inputs = inputs.to(
+                    device=CommonField.META, dtype=self.perturbed_value
+                )
+            else:
+                new_inputs = inputs.to(dtype=self.perturbed_value).to(device)
+        else:
+            new_inputs = inputs.to(dtype=self.perturbed_value)
+        return new_inputs

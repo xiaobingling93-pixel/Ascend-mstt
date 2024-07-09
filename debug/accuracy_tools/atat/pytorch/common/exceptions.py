@@ -71,8 +71,10 @@ class StepException(CodedException):
 
 class FreeBenchmarkException(CodedException):
     UnsupportedType = 0
+    InvalidGrad = 1
     err_strs = {
-        UnsupportedType: "[msacc] Free benchmark get unsupported type: "
+        UnsupportedType: "[msacc] Free benchmark get unsupported type: ",
+        InvalidGrad: "[msacc] Free benchmark gradient invalid: ",
     }
 
 

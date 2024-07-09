@@ -70,7 +70,7 @@ class DebuggerConfig:
     def check_model(self, model):
         if self.level in ["L0", "mix"] and not model:
             raise Exception(
-                f"For level {self.level}, PrecisionDebugger must receive a model argument.",
+                f"For level {self.level}, PrecisionDebugger must receive a model argument."
             )
 
     def _check_rank(self):
