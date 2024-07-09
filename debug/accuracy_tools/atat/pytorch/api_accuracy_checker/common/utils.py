@@ -197,15 +197,17 @@ def get_full_data_path(data_path, real_data_path):
 
 
 class UtDataProcessor:
-    def __init__(self, api_name, element, save_path):
-        self.api_name = api_name
+    def __init__(self, save_path):
         self.save_path = save_path
         self.index = 0
-        self.save_tensors_in_element(element)
 
-    def save_tensors_in_element(self, element):
+    def save_tensors_in_element(self, api_name, element):
+        self.index = 0
+        self._save_recursive(api_name, element)
+
+    def _save_recursive(self, api_name, element):
         if isinstance(element, torch.Tensor):
-            api_args = self.api_name + Const.SEP + str(self.index)
+            api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
             write_pt(file_path, element.contiguous().cpu().detach())
@@ -214,9 +216,9 @@ class UtDataProcessor:
             self.index += 1
         elif isinstance(element, (list, tuple)):
             for item in element:
-                self.save_tensors_in_element(item)
+                self._save_recursive(api_name, item)
         elif isinstance(element, dict):
             for value in element.values():
-                self.save_tensors_in_element(value)
+                self._save_recursive(api_name, value)
         else:
             self.index += 1

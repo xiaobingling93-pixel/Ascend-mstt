@@ -208,14 +208,14 @@ def is_unsupported_api(api_name):
 
 def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        save_path = os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR)
+        processor = UtDataProcessor(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
         for element in data_info.in_fwd_data_list:
-            UtDataProcessor(api_full_name + '.forward.input', element, save_path)
-        UtDataProcessor(api_full_name + '.forward.output.bench', data_info.bench_out, save_path)
-        UtDataProcessor(api_full_name + '.forward.output.device', data_info.device_out, save_path)
-        UtDataProcessor(api_full_name + '.backward.input', data_info.grad_in, save_path)
-        UtDataProcessor(api_full_name + '.backward.output.bench', data_info.bench_grad_out, save_path)
-        UtDataProcessor(api_full_name + '.backward.output.device', data_info.device_grad_out, save_path)
+            processor.save_tensors_in_element(api_full_name + '.forward.input', element)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.bench', data_info.bench_out)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.device', data_info.device_out)
+        processor.save_tensors_in_element(api_full_name + '.backward.input', data_info.grad_in)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.device', data_info.device_grad_out)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
