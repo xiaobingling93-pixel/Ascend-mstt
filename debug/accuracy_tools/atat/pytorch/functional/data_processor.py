@@ -135,14 +135,8 @@ class DataProcessor:
 
     @staticmethod
     def get_stat_info(data):
-        if data.is_meta:
-            tensor_max = None
-            tensor_min = None
-            tensor_mean = None
-            tensor_norm = None
-            return tensor_max, tensor_min, tensor_mean, tensor_norm
         data_clone = data.detach()
-        if data_clone.numel() == 0:
+        if data.is_meta or data_clone.numel() == 0:
             tensor_max = None
             tensor_min = None
             tensor_mean = None
