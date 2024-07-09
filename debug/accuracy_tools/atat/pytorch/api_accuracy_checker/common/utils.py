@@ -28,9 +28,9 @@ except ImportError:
 else:
     IS_GPU = False
 
-from ...common.log import print_warn_log, print_error_log
-from ...common.file_check import FileCheckConst, FileChecker, FileOpen, change_mode, create_directory
-from ...common.utils import Const
+from atat.pytorch.common.log import print_warn_log, print_error_log
+from atat.pytorch.common.file_check import FileCheckConst, FileChecker, FileOpen, change_mode, create_directory
+from atat.pytorch.common.utils import Const
 from atat.core.utils import CompareException
 
 
@@ -216,7 +216,7 @@ class UtDataProcessor:
             for item in element:
                 self.save_tensors_in_element(item)
         elif isinstance(element, dict):
-            for key, value in element.items():
+            for value in element.values():
                 self.save_tensors_in_element(value)
         else:
             self.index += 1

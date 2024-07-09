@@ -4,9 +4,9 @@ import sys
 import torch_npu
 import torch
 from tqdm import tqdm
-from ..common.utils import get_json_contents
-from ...common.file_check import check_link
-from ...common.log import print_info_log, print_warn_log, print_error_log
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
+from atat.pytorch.common.file_check import check_link
+from atat.pytorch.common.log import print_info_log, print_warn_log, print_error_log
 
 
 def check_tensor_overflow(x):

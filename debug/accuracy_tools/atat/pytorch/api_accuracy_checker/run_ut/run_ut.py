@@ -145,8 +145,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
 
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value
-                  in input_kwargs.items()}
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
 
 
@@ -376,8 +375,7 @@ def preprocess_forward_content(forward_content):
                 try:
                     existing_args = processed_content[variant].get('args', [])
                     existing_kwargs = processed_content[variant].get('kwargs', {})
-                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in
-                                              existing_args if isinstance(arg, dict)]
+                    filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
                 except KeyError as e:
                     print_error_log(f"KeyError: {e} when processing {key}")
                 if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
