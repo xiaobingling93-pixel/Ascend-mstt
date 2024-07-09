@@ -18,7 +18,6 @@ class Config:
         validators = {
             'white_list': list,
             'error_data_path': str,
-            'jit_compile': bool,
             'precision': int
         }
         if key not in validators:
