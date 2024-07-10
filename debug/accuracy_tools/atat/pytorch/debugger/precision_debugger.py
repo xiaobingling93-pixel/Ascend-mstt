@@ -76,16 +76,16 @@ class PrecisionDebugger:
             raise Exception("PrecisionDebugger instance is not created.")
         cls._instance.service.step()
 
-    @classmethod
-    def get_instance(cls, *args, **kwargs):
+    @property
+    def instance(cls):
         if cls._instance is None:
-            cls._instance = cls(*args, **kwargs)
+            cls._instance = cls()
         return cls._instance
 
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        debugger_instance = PrecisionDebugger.get_instance()
+        debugger_instance = PrecisionDebugger.instance
         debugger_instance.enable_dataloader = False
         if not debugger_instance.service.first_start:
             debugger_instance.stop()
