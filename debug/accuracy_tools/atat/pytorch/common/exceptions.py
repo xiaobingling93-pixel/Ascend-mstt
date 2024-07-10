@@ -1,5 +1,6 @@
 class CodedException(Exception):
     def __init__(self, code, error_info=''):
+        super().__init__()
         self.error_info = self.err_strs.get(code) + error_info
 
     def __str__(self):
@@ -75,3 +76,12 @@ class FreeBenchmarkException(CodedException):
         UnsupportedType: "[msacc] Free benchmark get unsupported type: ",
         InvalidGrad: "[msacc] Free benchmark gradient invalid: ",
     }
+
+
+class DistributedNotInitializedError(Exception):
+    def __init__(self, msg):
+        super().__init__()
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg

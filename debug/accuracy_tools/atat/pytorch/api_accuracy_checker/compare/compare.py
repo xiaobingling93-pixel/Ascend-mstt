@@ -39,6 +39,42 @@ class Comparator:
             "total_num": 0, "forward_or_backward_fail_num": 0
         }
 
+    @staticmethod
+    def _compare_dropout(api_name, bench_output, device_output):
+        tensor_num = bench_output.numel()
+        if tensor_num >= 100:
+            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
+                return CompareConst.PASS, 1
+            else:
+                return CompareConst.ERROR, 0
+        else:
+            return CompareConst.PASS, 1
+
+    @staticmethod
+    def _compare_builtin_type(bench_output, device_output, compare_column):
+        if not isinstance(bench_output, (bool, int, float, str)):
+            return CompareConst.PASS, compare_column, ""
+        if bench_output != device_output:
+            return CompareConst.ERROR, compare_column, ""
+        compare_column.error_rate = 0
+        return CompareConst.PASS, compare_column, ""
+
+    @staticmethod
+    def _compare_bool_tensor(bench_output, device_output):
+        error_nums = (bench_output != device_output).sum()
+        if bench_output.size == 0:
+            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
+        error_rate = float(error_nums / bench_output.size)
+        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
+        return error_rate, result, ""
+
+    @staticmethod
+    def _get_absolute_threshold_attribute(api_name, dtype):
+        small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
+        small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
+        rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
+        return small_value_threshold, small_value_atol, rtol
+
     def print_pretest_result(self):
         self.get_statistics_from_result_csv()
         total_tests = self.test_result_cnt.get("total_num", 0)
@@ -333,40 +369,3 @@ class Comparator:
                 return CompareConst.WARNING, compare_column, message
             message += "Relative error is less than 0.0001, consider as pass.\n"
         return CompareConst.PASS, compare_column, message
-
-    @staticmethod
-    def _compare_dropout(api_name, bench_output, device_output):
-        tensor_num = bench_output.numel()
-        if tensor_num >= 100:
-            if abs((bench_output == 0).sum() - (device_output == 0).cpu().sum()) / tensor_num < 0.1:
-                return CompareConst.PASS, 1
-            else:
-                return CompareConst.ERROR, 0
-        else:
-            return CompareConst.PASS, 1
-
-    @staticmethod
-    def _compare_builtin_type(bench_output, device_output, compare_column):
-        if not isinstance(bench_output, (bool, int, float, str)):
-            return CompareConst.PASS, compare_column, ""
-        if bench_output != device_output:
-            return CompareConst.ERROR, compare_column, ""
-        compare_column.error_rate = 0
-        return CompareConst.PASS, compare_column, ""
-
-
-    @staticmethod
-    def _compare_bool_tensor(bench_output, device_output):
-        error_nums = (bench_output != device_output).sum()
-        if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
-        error_rate = float(error_nums / bench_output.size)
-        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
-        return error_rate, result, ""
-    
-    @staticmethod
-    def _get_absolute_threshold_attribute(api_name, dtype):
-        small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
-        small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
-        rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
-        return small_value_threshold, small_value_atol, rtol

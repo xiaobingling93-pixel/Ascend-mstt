@@ -1,16 +1,18 @@
+import functools
 import os
 from pathlib import Path
-import functools
-import torch
-from .functional import build_repair, build_data_collector, build_step_post_process
-from .functional.scope import BaseScope
-from .common.utils import get_rank_if_initialized, is_gpu, Const
-from .common.file_check import FileChecker, FileCheckConst, check_path_before_create
+
 from .common import print_info_log_rank_0
-from .hook_module.api_registry import api_register
-from .hook_module import remove_dropout
+from .common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from .common.utils import get_rank_if_initialized, is_gpu, Const, DistributedNotInitializedError
+from .functional import build_repair, build_data_collector, build_step_post_process
 from .functional.data_processor import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from .functional.scope import BaseScope
+from .hook_module import remove_dropout
+from .hook_module.api_registry import api_register
 from .module_processer import ModuleProcesser
+
+from ..core.utils import DumpException
 
 
 class Service:
@@ -29,6 +31,7 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.first_touch_dir = True
+        self.dump_iter_dir = None
 
     def build_hook(self, module_type, name):
         def pre_hook(repair, api_or_module_name, module, args, kwargs):
@@ -53,7 +56,7 @@ class Service:
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
 
             if not self.switch:
-                return
+                return None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -98,7 +101,11 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.first_start:
-            self.current_rank = get_rank_if_initialized()
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
@@ -151,12 +158,13 @@ class Service:
 
         print_info_log_rank_0("The {} hook function is successfully mounted to the model.".format(hook_name))
         if self.config.level in ["L0", "mix"]:
-            assert self.model is not None
+            if self.model is None:
+                raise DumpException("Model is None")
             print_info_log_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             for name, module in self.model.named_modules():
                 if module == self.model:
                     continue
-                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP +\
+                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
                 pre_forward_hook, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
