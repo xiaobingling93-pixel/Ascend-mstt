@@ -34,6 +34,19 @@ class Advisor:
         self.out_path = os.path.realpath(out_path)
         self.file_type = None
 
+    @staticmethod
+    def deterministic_advisor(message, node_name):
+        for api_name in AdvisorConst.NEED_DETERMINISTIC_API:
+            if api_name in node_name:
+                return AdvisorConst.DETERMINISTIC_SUGGEST
+        return message
+
+    @staticmethod
+    def batch_norm_advisor(message, node_name):
+        if AdvisorConst.FUNC_BATCH_NORM in node_name and AdvisorConst.FORWARD_INPUT_1 in node_name:
+            message = AdvisorConst.BATCH_NORM_SUGGEST
+        return message
+
     def analyze_unmatched(self, analyze_data):
         if self.file_type == Const.ALL:
             accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
