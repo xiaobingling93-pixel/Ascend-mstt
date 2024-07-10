@@ -1,8 +1,7 @@
 from abc import abstractmethod
 from typing import Any
+
 import torch
-from atat.pytorch.free_benchmark.common.constant import CommonField, ThresholdConfig
-from atat.pytorch.free_benchmark.common.utils import TorchC
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.perturbed_layers.base_layer import BaseLayer
 
@@ -13,12 +12,21 @@ class NpuBaseLayer(BaseLayer):
         self.perturbed_value = None  # 扰动的元素
         self.is_added = False  # 标记当前算子输入是否调整
 
+    @staticmethod
+    def perturbed_result(params: DataParams) -> Any:
+        args_front = params.args[: params.valid_input_index]
+        args_rear = params.args[params.valid_input_index + 1:]
+        # 此处会将有inplace属性的算子换为非inplace
+        if "inplace" in params.kwargs:
+            params.kwargs["inplace"] = False
+        params.perturbed_result = params.origin_func(
+            *args_front, params.perturbed_value, *args_rear, **params.kwargs
+        )
+        return params.perturbed_result
+
     @abstractmethod
     def handle(self, params: DataParams) -> Any:
         pass
-
-    def _check_details(self, tensor_obj):
-        return True
 
     def pre_check(self, tensor_obj):
         """
@@ -33,14 +41,5 @@ class NpuBaseLayer(BaseLayer):
             return False
         return True
 
-    @staticmethod
-    def perturbed_result(params: DataParams) -> Any:
-        args_front = params.args[: params.valid_input_index]
-        args_rear = params.args[params.valid_input_index + 1 :]
-        # 此处会将有inplace属性的算子换为非inplace
-        if "inplace" in params.kwargs:
-            params.kwargs["inplace"] = False
-        params.perturbed_result = params.origin_func(
-            *args_front, params.perturbed_value, *args_rear, **params.kwargs
-        )
-        return params.perturbed_result
+    def _check_details(self, tensor_obj):
+        return True

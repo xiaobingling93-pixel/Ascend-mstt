@@ -1,11 +1,13 @@
 import os
+
 import torch
-from ..module_processer import ModuleProcesser
-from .scope import build_scope, ListScope
+
+from .data_processor import build_data_processor, DataProcessor
 from .json_writer import DataWriter
+from .scope import build_scope, ListScope
 from ..common.log import print_info_log, print_warn_log
 from ..common.utils import Const
-from .data_processor import build_data_processor, DataProcessor
+from ..module_processer import ModuleProcesser
 
 try:
     import torch_npu
@@ -37,12 +39,6 @@ class DataCollector:
         else:
             self.scope = build_scope(None, self.config.scope, self.config.list)
 
-    def if_return_forward_new_output(self):
-        return self.data_processor.if_return_forward_new_output()
-
-    def get_forward_new_output(self):
-        return self.data_processor.get_forward_new_output()
-
     @property
     def dump_data_dir(self):
         return self.data_writer.dump_tensor_data_dir
@@ -50,6 +46,20 @@ class DataCollector:
     @property
     def dump_file_path(self):
         return self.data_writer.dump_file_path
+
+    @staticmethod
+    def check_scope_and_pid(scope, name, pid):
+        return (not scope or scope.check(name)) and pid == os.getpid()
+
+    @staticmethod
+    def is_inplace(module):
+        return getattr(module, "op_is_inplace", False)
+
+    def if_return_forward_new_output(self):
+        return self.data_processor.if_return_forward_new_output()
+
+    def get_forward_new_output(self):
+        return self.data_processor.get_forward_new_output()
 
     def visit_and_clear_overflow_status(self, api_or_module_name):
         self.data_processor.visit_and_clear_overflow_status(api_or_module_name)
@@ -67,14 +77,6 @@ class DataCollector:
         else:
             self.data_writer.update_data(data_info)
         return msg
-
-    @staticmethod
-    def check_scope_and_pid(scope, name, pid):
-        return (not scope or scope.check(name)) and pid == os.getpid()
-
-    @staticmethod
-    def is_inplace(module):
-        return getattr(module, "op_is_inplace", False)
 
     def pre_forward_data_collect(self, name, module, pid, module_input_output):
         backward_name = name.replace("forward", "backward")

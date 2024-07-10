@@ -21,6 +21,9 @@ import stat
 import torch
 import numpy as np
 from functools import wraps
+
+from .exceptions import DistributedNotInitializedError
+
 try:
     import torch_npu
 except ImportError:
@@ -93,9 +96,13 @@ def torch_device_guard(func):
 
 
 def get_rank_if_initialized():
+    """
+        return rank id if it is initialized or raise Exception: DistributedNotInitializedError
+    """
     if torch.distributed.is_initialized():
         return torch.distributed.get_rank()
-    return None
+    else:
+        raise DistributedNotInitializedError("torch distributed environment is not initialized")
 
 
 def seed_all(seed=1234, mode=False):
@@ -145,6 +152,8 @@ class Const:
     GRAD_OUTPUT = 'grad_output'
     START = "start"
     STOP = "stop"
+    MAX = 'Max'
+    MIN = 'Min'
 
     # dump mode
     ALL = "all"
@@ -178,6 +187,7 @@ class Const:
     # env dump path
     ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
     DUMP_DIR = "dump_data"
+    DATA = "data"
 
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
@@ -193,6 +203,8 @@ class Const:
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
+
+    ATTR_NAME_PREFIX = "wrap_"
 
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     BOOL_TYPE = [bool, np.uint8]

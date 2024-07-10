@@ -32,36 +32,7 @@ class Advisor:
     def __init__(self, input_data, out_path=""):
         self.input_data = input_data
         self.out_path = os.path.realpath(out_path)
-        self.file_type = Const.ALL
-
-    @staticmethod
-    def deterministic_advisor(message, node_name):
-        for api_name in AdvisorConst.NEED_DETERMINISTIC_API:
-            if api_name in node_name:
-                return AdvisorConst.DETERMINISTIC_SUGGEST
-        return message
-
-    @staticmethod
-    def batch_norm_advisor(message, node_name):
-        if AdvisorConst.FUNC_BATCH_NORM in node_name and AdvisorConst.FORWARD_INPUT_1 in node_name:
-            message = AdvisorConst.BATCH_NORM_SUGGEST
-        return message
-
-    def gen_advisor_message(self, node_name):
-        if AdvisorConst.FORWARD in node_name:
-            if AdvisorConst.INPUT in node_name:
-                message = AdvisorConst.FORWARD_INPUT_SUGGEST
-            else:
-                message = AdvisorConst.FORWARD_OUTPUT_SUGGEST
-                message = self.deterministic_advisor(message, node_name)
-        else:
-            if AdvisorConst.INPUT in node_name:
-                message = AdvisorConst.BACKWARD_INPUT_SUGGEST
-            else:
-                message = AdvisorConst.BACKWARD_OUTPUT_SUGGEST
-                message = self.deterministic_advisor(message, node_name)
-        message = self.batch_norm_advisor(message, node_name)
-        return message
+        self.file_type = None
 
     def analyze_unmatched(self, analyze_data):
         if self.file_type == Const.ALL:
@@ -84,6 +55,22 @@ class Advisor:
         print_warn_log("Find %s accuracy not reached, the line is %s" % (node_name, index))
         result = AdvisorResult(node_name, index, message)
         return result
+
+    def gen_advisor_message(self, node_name):
+        if AdvisorConst.FORWARD in node_name:
+            if AdvisorConst.INPUT in node_name:
+                message = AdvisorConst.FORWARD_INPUT_SUGGEST
+            else:
+                message = AdvisorConst.FORWARD_OUTPUT_SUGGEST
+                message = self.deterministic_advisor(message, node_name)
+        else:
+            if AdvisorConst.INPUT in node_name:
+                message = AdvisorConst.BACKWARD_INPUT_SUGGEST
+            else:
+                message = AdvisorConst.BACKWARD_OUTPUT_SUGGEST
+                message = self.deterministic_advisor(message, node_name)
+        message = self.batch_norm_advisor(message, node_name)
+        return message
 
     def analysis(self):
         self._check_path_vaild()

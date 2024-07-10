@@ -1,12 +1,12 @@
 import torch
-from atat.pytorch.free_benchmark import print_info_log_rank_0, print_warn_log_rank_0
-from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
+from atat.pytorch.common.exceptions import FreeBenchmarkException
+from atat.pytorch.free_benchmark import print_warn_log_rank_0
 from atat.pytorch.free_benchmark.common.constant import CommonField
-from atat.pytorch.free_benchmark.common.utils import Tools
+from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
+from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
 from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
 )
-from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
 
 
 class GradSaver:
@@ -39,9 +39,20 @@ class GradSaver:
                             handler, grad, perturbed_grad, index=input_index
                         )
                         data_processor.update_unequal_rows(handler.get_unequal_rows())
+                    except IndexError:
+                        print_warn_log_rank_0(
+                            f"[atat] Free benchmark: grad index out of range. api:{self.handler_params.api_name}."
+                            f"index:{new_grad_index}, perturbation grad len {len(self.perturbed_grad_input)}"
+                        )
+                        return grad
+                    except FreeBenchmarkException as e:
+                        print_warn_log_rank_0(
+                            f"[atat] Free benchmark: grad input check error: {e}"
+                        )
+                        return grad
                     except Exception as e:
                         print_warn_log_rank_0(
-                            f"[atat] Free benchmark: grad compara error: {e}"
+                            f"[atat] Free benchmark: grad compare error: {e}"
                         )
                         return grad
                     return grad
@@ -72,27 +83,20 @@ class GradSaver:
 
     def check_grad_input(self, origin_grad, new_grad_index):
         if self.perturbed_grad_input is None:
-            print_info_log_rank_0(
-                f"[atat] Free benchmark: grad not exsits : {self.api_name}."
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.InvalidGrad,
+                f"grad not exists : {self.api_name}."
             )
-            return None
-        try:
-            with torch.no_grad():
-                perturbed_grad = self.perturbed_grad_input[new_grad_index].to(
-                    origin_grad.device
-                )
-        except IndexError:
-            print_warn_log_rank_0(
-                f"[atat] Free benchmark: grad index out of range. api:{self.handler_params.api_name}."
-                f"index:{new_grad_index}, perturbation grad len {len(self.perturbed_grad_input)}"
+        with torch.no_grad():
+            perturbed_grad = self.perturbed_grad_input[new_grad_index].to(
+                origin_grad.device
             )
-            return None
         if origin_grad.shape != perturbed_grad.shape:
-            print_warn_log_rank_0(
-                f"[atat] Free benchmark: grad shapes are unconsistent. api:{self.handler_params.api_name}."
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.InvalidGrad,
+                f"grad shapes are inconsistent. api:{self.handler_params.api_name}."
                 f"origin:{origin_grad.shape}, perturbation: {perturbed_grad.shape}"
             )
-            return None
         return perturbed_grad
 
     def cache_backward_input(self, backward_input_list):
@@ -117,12 +121,12 @@ class GradSaver:
         for object_ in self.backward_input:
             if isinstance(object_, dict) and CommonField.FUZZ_TENSOR in object_.keys():
                 tensor_ = torch.tensor(
-                        object_.get(CommonField.FUZZ_TENSOR).data,
-                        dtype=object_.get(CommonField.FUZZ_TENSOR).dtype,
-                        device=object_.get(CommonField.DEVICE),
-                        requires_grad=object_.get(CommonField.REQUIRES_GRAD),
-                    )
-                
+                    object_.get(CommonField.FUZZ_TENSOR).data,
+                    dtype=object_.get(CommonField.FUZZ_TENSOR).dtype,
+                    device=object_.get(CommonField.DEVICE),
+                    requires_grad=object_.get(CommonField.REQUIRES_GRAD),
+                )
+
                 if tensor_.requires_grad:
                     inner_args_tmp.append(CommonField.HOLD_PLACE)
                     need_grad_tensors.append(tensor_)

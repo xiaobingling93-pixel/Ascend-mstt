@@ -1,7 +1,7 @@
 import torch
 from atat.pytorch.free_benchmark import print_info_log_rank_0
-from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
+from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
@@ -15,7 +15,6 @@ class NoChangeLayer(NpuBaseLayer):
         """
         self.is_added = True
         return tensor_obj
-
 
     def handle(self, params: DataParams) -> torch.Any:
         """

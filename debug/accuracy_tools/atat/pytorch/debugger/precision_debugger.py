@@ -42,13 +42,9 @@ class PrecisionDebugger:
                 print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
-    @staticmethod
-    def check_model_valid(model):
-        if not model or isinstance(model, torch.nn.Module):
-            return model
-        raise MsaccException(
-            MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
-        )
+    @property
+    def instance(self):
+        return self._instance
 
     @classmethod
     def start(cls):
