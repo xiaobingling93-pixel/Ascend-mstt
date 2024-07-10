@@ -200,15 +200,18 @@ class Comparator:
 
     def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
         _, api_name, _ = full_api_name.split(Const.SEP)
-        compare_func = self._compare_dropout if "dropout" in full_api_name else self._compare_core_wrapper
-        fwd_success_status, fwd_compare_alg_results = compare_func(api_name, bench_output, device_output)
+        if "dropout" in full_api_name:
+            fwd_success_status, fwd_compare_alg_results = self._compare_dropout(bench_output, device_output)
+        else:
+            fwd_success_status, fwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_output,
+                                                                                     device_output)
         if not (bench_grad and npu_grad):
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
             if "dropout" in full_api_name:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad[0], npu_grad[0])
+                bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
             else:
-                bwd_success_status, bwd_compare_alg_results = compare_func(api_name, bench_grad, npu_grad)
+                bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_grad, npu_grad)
         self.record_results(full_api_name, fwd_success_status,
                             bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE,
                             fwd_compare_alg_results, bwd_compare_alg_results)
