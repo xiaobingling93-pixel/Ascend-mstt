@@ -234,21 +234,6 @@ class DataProcessor:
             self.current_api_or_module_name = api_or_module_name
             self.has_overflow = False
 
-    def if_return_forward_new_output(self):
-        return self._return_forward_new_output
-
-    def get_forward_new_output(self):
-        self._return_forward_new_output = False
-        return self._forward_new_output
-
-    def update_iter(self, current_iter):
-        self.current_iter = current_iter
-
-    def visit_and_clear_overflow_status(self, api_or_module_name):
-        if self.current_api_or_module_name != api_or_module_name:
-            self.current_api_or_module_name = api_or_module_name
-            self.has_overflow = False
-
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """
         Compare the parameters with data_mode to determine whether to dump.
