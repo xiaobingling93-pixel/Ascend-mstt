@@ -72,11 +72,13 @@ class PrecisionDebugger:
             raise Exception("PrecisionDebugger instance is not created.")
         cls._instance.service.step()
 
-    @property
-    def instance(cls):
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+    @staticmethod
+    def check_model_valid(model):
+        if not model or isinstance(model, torch.nn.Module):
+            return model
+        raise MsaccException(
+            MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
+        )
 
 
 def iter_tracer(func):
