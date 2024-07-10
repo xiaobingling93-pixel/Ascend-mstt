@@ -426,7 +426,6 @@ class OverflowTensorDataProcessor(DataProcessor):
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_dump_times = 0
         self.overflow_nums = config.overflow_num
-        self.data_path = self.data_writer.dump_tensor_data_dir
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
@@ -514,6 +513,7 @@ class FreeBenchmarkDataProcessor(DataProcessor):
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.checker.backward(name, module, module_input_output.grad_output)
+
 
 def overflow_debug_mode_enable():
     overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
