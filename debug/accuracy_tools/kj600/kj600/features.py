@@ -1,5 +1,6 @@
 import torch
 from torch.autograd.functional import jacobian
+from kj600.utils import print_info_log
 
 
 @torch.no_grad()
@@ -10,6 +11,9 @@ def square_sum(x: torch.tensor):
 def get_min(x: torch.tensor):
     return torch.min(x)
 
+@torch.no_grad()
+def get_norm(x: torch.tensor):
+    return torch.norm(x, p=2)
 
 @torch.no_grad()
 def get_max(x: torch.tensor):
@@ -24,7 +28,11 @@ def get_zeros(x: torch.tensor, eps: float):
 def get_sign_matches(x: torch.tensor, y:torch.tensor):
     xs = x.sign()
     ys = y.sign()
-    same_direction_ratio  = ((xs * ys).sum()/ys.numel() + 1)/2
+    try:
+        same_direction_ratio = ((xs * ys).sum()/ys.numel() + 1)/2
+    except RuntimeError as e:
+        print_info_log(f"RuntimeError: {e}")
+        same_direction_ratio = torch.tensor(0.)
     return same_direction_ratio
 
 @torch.no_grad()
@@ -69,4 +77,6 @@ def lambda_max_subsample(module: torch.nn.Module, x: torch.tensor, num_iteration
 def cal_histc(tensor_cal, bins_total, min_val, max_val):
     return torch.histc(tensor_cal, bins=bins_total, min=min_val, max=max_val)
 
-
+@torch.no_grad()
+def get_nans(t):
+    return torch.isnan(t).sum()

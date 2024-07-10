@@ -59,10 +59,11 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 class SummaryWriterWithAD(SummaryWriter):
-    def __init__(self, path, ad_rules, anomaly_inform=False):
+    def __init__(self, path, ad_rules, job_id, anomaly_inform=False):
         super().__init__(path)
         self.tag2scalars = defaultdict(list)
         self.ad_rules = ad_rules
+        self.job_id = job_id
         self.anomaly_inform = anomaly_inform
     
     def _ad(self, scalar_value, history):
@@ -80,5 +81,5 @@ class SummaryWriterWithAD(SummaryWriter):
             print(f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}")
             exception_message = f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}"
             if self.anomaly_inform:
-                self.anomaly_inform.run(exception_message)  
+                self.anomaly_inform.run(exception_message, self.job_id)
         return super().add_scalar(tag, scalar_value, global_step, walltime, new_style, double_precision)

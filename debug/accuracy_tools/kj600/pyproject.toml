@@ -9,6 +9,10 @@ dependencies = [
     "torch",
     "torch_npu",
     "torchvision",
+    "tensorboard",
+    "matplotlib",
+    "sqlalchemy",
+    "pymysql"
 ]
 
 [tool.setuptools.packages]

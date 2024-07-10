@@ -8,12 +8,15 @@
 
 ###  1. 安装依赖
 
-| 依赖软件    |
+| 依赖软件        |
 |-------------|
 | torch       |
 | torch_npu   |
 | torchvision |
 | tensorboard |
+| matplotlib  |
+| sqlalchemy  |
+| pymysql     |
 
 ###  2. 安装 kj600
 
@@ -27,8 +30,8 @@ pip install git+https://gitee.com/xiangsen2/kj600.git
 
 ```
 git clone https://gitee.com/xiangsen2/kj600.git
-cd KJ600
-pip install -e .
+cd kj600
+pip install .
 ```
 
 #  快速上手
@@ -48,10 +51,10 @@ pip install -e .
     "xy_distribution": true,
     "mv_distribution": true,
     "wg_distribution": true,
-    "mg_direction": true,
     "cc_distribution": {"enable":true, "cc_codeline":[]},
     "alert": {
-        "rules": [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
+        "rules": [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}],
+        "inform": {"recipient": "database", "connection_str": "mysql+pymysql://username:password@host:port/database"}
     },
     "ops": ["min", "max", "norm", "zeros", "id"],
     "eps": 1e-8
@@ -75,9 +78,8 @@ pip install -e .
 |"xy_distribution"|  可选 | 若为true则会监控指定module（targets中指定）的输入输出张量。 默认为false。|
 |"mv_distribution"|  可选 | 若为true则会监控指定模块中的参数的优化器状态， 默认为false。需要在TrainerMon构造函数正确指定opt_ty. 目前只支持megatron的混合精度优化器以及megatron的分布式优化器。 Deepspeed的分布式优化器实现暂不支持。 |
 |"wg_distribution"|  可选 | 若为true则会监控指定模块的参数梯度， 默认为false。 |
-|"alert"|  必选 |  指定自动报警的异常检测机制及其相应的阈值。目前实现的异常检测是AnomalyTurbulence。 如果统计标量超出历史均值的指定浮动范围(threshold指定， 0.5意味着上浮或者下浮50%）。 目前报警是在控制台打印， 未来会实现发邮件和写数据库。|
-|"mg_direction"| 可选 | 若为true则会统计adam优化器的一阶矩（$m_{t-1}$）和当前梯度($g_t$)符号一致的参数比例。|
-|"cc_distribution"|  可选 | 其中“enable”字段控制开关；“cc_codeline”字段指定监控的代码行，如:"train.py\\[23\\]"，默认为空列表，不特别指定。"cc_log_only"字段控制是否监控数据,为true时,仅记录调用到的算子及其调用栈。|
+|"alert"|  必选 | · "rules": 指定自动报警的异常检测机制及其相应的阈值。目前实现的异常检测是AnomalyTurbulence。 如果统计标量超出历史均值的指定浮动范围(threshold指定， 0.5意味着上浮或者下浮50%）则在控制台打印报警信息。<br>· "inform": 自动报警需要的配置，若想关闭自动报警删掉inform的配置即可。其中"recipient"指定自动报警的通知方式，可选值为"database"或"email"，默认为"database"。<br>- 若"recipient"为"database"，则需要指定"connection_str"字段，即数据库的连接URL，默认为{"recipient":"database", "connection_str": "mysql+pymysql://username:password@host:port/database"}，若有特殊字符需要转义。<br>- 若"recipient"为"email"，则需要指定"send_email_address"-发送方邮箱地址，"receive_email_address"-接收方邮箱地址，"send_email_username"-发送方邮箱用户名，"send_email_password"-发送方邮箱密码，"smtp_server"-发送方邮箱对应的SMTP服务器，"smtp_port"-发送方邮箱对应的SMTP端口号。默认为:<br>{"recipient":"email", send_email_address": "sender@huawei.com", "receive_email_address": "receiver@huawei.com", "send_email_username": "username", "send_email_password": "******", "smtp_server": "smtpscn.huawei.com", "smtp_port": "587"}|
+|"cc_distribution"|  可选 | 其中“enable”字段控制开关；需要监控通信算子时，务必尽量早地实例化`TrainerMon`, 因为监控通过劫持原始func后挂hook实现，部分加速库初始化时会保存原始function，避免监控失效。“cc_codeline”字段指定监控的代码行，如:`train.py\\[23\\]`，默认为空列表，不特别指定；"cc_pre_hook"字段控制是否监控通信前的数据； "cc_log_only"为true时,仅记录调用到的算子及其调用栈, 不监控通信的输入输出|
 |"ops"|  可选 |与ur_distribution、xy_distribution、mv_distribution、wg_distribution、mg_direction、cc_distribution配合，监控所选张量的min、max、norm、zeros值。其中，zeros代表监控所选张量的元素小于eps的比例，id代表监控所选的非张量本身，默认为[]。|
 |"eps"|  可选 |若ops里包含"zeros"则需要配置，默认为1e-8。|
 
@@ -109,7 +111,7 @@ pip install -e .
 
 2. 在训练器中加入代码，开启kj600训练监控。
 
-   例如在ModelLink/pretrain_gpt.py的model_provider GPTModel构造后加入以下代码：
+   例如在ModelLink/pretrain_gpt.py的model_provider GPTModel构造后加入以下代码,  **注意优化器类型opt_ty** ：
 
    ```
        from kj600.module_hook import TrainerMon
@@ -154,12 +156,11 @@ tensorboard --logdir=$KJ600_OUTPUT_DIR
 ```
 ssh -N -L localhost:6006:localhost:6006 your_username@remote_server_address
 ```
-## 高级用法
-### 有效秩(有内存和速度问题）
-在工具配置文件中加入"params_effrank"："权重矩阵参数名"
-"params_effrank": ["language_model.encoder.layers.0.self_attention.query_key_value.weight"]
 
-## 公开接口
+# 高级用法
+TBD
+
+# 公开接口
 
 **接口说明**
 
