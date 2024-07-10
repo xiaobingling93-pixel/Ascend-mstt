@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -114,7 +114,10 @@ class ParseTool:
         self.util.check_path_valid(args.golden_dump_path)
         self.util.check_path_format(args.my_dump_path, Const.NPY_SUFFIX)
         self.util.check_path_format(args.golden_dump_path, Const.NPY_SUFFIX)
-        self.compare.compare_data(args.my_dump_path, args.golden_dump_path, args.save, args.rtol, args.atol, args.count)
+        compare_data_args = namedtuple('compare_data_args', ['my_dump_path', 'golden_dump_path', 'save', 'rtol', 'atol', 'count'])
+        compare_data_args.__new__.__defaults__ = (False, 0.001, 0.001, 20)
+        res = compare_data_args(args.my_dump_path, args.golden_dump_path, args.save, args.rtol, args.atol, args.count)
+        self.compare.compare_data(res)
 
     @catch_exception
     def do_compare_converted_dir(self, args):

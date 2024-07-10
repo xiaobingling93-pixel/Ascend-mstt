@@ -42,6 +42,10 @@ class PrecisionDebugger:
                 print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
+    @property
+    def instance(self):
+        return self._instance
+
     @classmethod
     def start(cls):
         instance = cls._instance
@@ -79,7 +83,7 @@ class PrecisionDebugger:
 
 def iter_tracer(func):
     def func_wrapper(*args, **kwargs):
-        debugger_instance = PrecisionDebugger._instance
+        debugger_instance = PrecisionDebugger.instance
         debugger_instance.enable_dataloader = False
         if not debugger_instance.service.first_start:
             debugger_instance.stop()

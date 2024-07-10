@@ -3,9 +3,14 @@ from ..common.exceptions import ScopeException
 from ..common.utils import Const
 
 
-def build_scope(scope_class, scope=[], api_list=[]):
+def build_scope(scope_class, scope=None, api_list=None):
     if not scope and not api_list:
         return None
+    if scope is None:
+        scope = []
+    if api_list is None:
+        api_list = []
+
     if scope_class:
         return scope_class(scope, api_list)
     return build_range_scope_according_to_scope_name(scope, api_list)
@@ -30,6 +35,11 @@ class BaseScope(ABC):
     Module_Type_Module = "Module"
     Module_Type_API = "api"
 
+    def __init__(self, scope, api_list):
+        scope, api_list = self.rectify_args(scope, api_list)
+        self.scope = scope
+        self.api_list = api_list
+
     @staticmethod
     def rectify_args(scope, api_list):
         if not isinstance(api_list, list):
@@ -51,10 +61,9 @@ class BaseScope(ABC):
                 f"scope列表元素要求类型为字符串，实际类型为{type(s)}.")
         return scope, api_list
 
-    def __init__(self, scope, api_list):
-        scope, api_list = self.rectify_args(scope, api_list)
-        self.scope = scope
-        self.api_list = api_list
+    @abstractmethod
+    def check(self, name):
+        pass
 
     def check_api_list(self, api_name):
         if not self.api_list:
@@ -62,11 +71,7 @@ class BaseScope(ABC):
         for api_str in self.api_list:
             if api_str in api_name:
                 return True
-
-    @abstractmethod
-    def check(self, name):
-        pass
-
+        return False
 
 class ListScope(BaseScope):
     @staticmethod
@@ -83,6 +88,12 @@ class ListScope(BaseScope):
 
 
 class RangeScope(BaseScope, ABC):
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.in_scope = False
+        self.is_valid = self.check_scope_is_valid()
+
     @staticmethod
     def rectify_args(scope, api_list):
         scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
@@ -98,11 +109,6 @@ class RangeScope(BaseScope, ABC):
     @abstractmethod
     def check_scope_is_valid(self):
         pass
-
-    def __init__(self, *args):
-        super().__init__(*args)
-        self.in_scope = False
-        self.is_valid = self.check_scope_is_valid()
 
     def begin_module(self, module_name):
         pass
@@ -169,6 +175,3 @@ class ModuleRangeScope(RangeScope):
         if not self.scope or self.in_scope:
             return self.check_api_list(module_name)
         return False
-
-
-

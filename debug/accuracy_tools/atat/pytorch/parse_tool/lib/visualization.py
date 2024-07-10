@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import numpy as np
 from atat.pytorch.parse_tool.lib.config import Const
 from atat.pytorch.parse_tool.lib.utils import Util
 from atat.pytorch.parse_tool.lib.parse_exception import ParseException
+from atat.pytorch.common.file_check import FileOpen
 
 
 class Visualization:
@@ -35,9 +36,10 @@ class Visualization:
             raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
         table = self.util.create_table('', ['Index', 'Data'])
         flatten_data = np_data.flatten()
-        for i in range(min(16, int(np.ceil(flatten_data.size / 8)))):
-            last_idx = min(flatten_data.size, i * 8 + 8)
-            table.add_row(str(i * 8), ' '.join(flatten_data[i * 8: last_idx].astype('str').tolist()))
+        tablesize = 8
+        for i in range(min(16, int(np.ceil(flatten_data.size / tablesize)))):
+            last_idx = min(flatten_data.size, i * tablesize + tablesize)
+            table.add_row(str(i * tablesize), ' '.join(flatten_data[i * tablesize: last_idx].astype('str').tolist()))
         summary = ['[yellow]%s[/yellow]' % self.util.gen_npy_info_txt(np_data), 'Path: %s' % target_file,
                    "TextFile: %s.txt" % target_file]
         self.util.print_panel(self.util.create_columns([table, "\n".join(summary)]), target_file)
@@ -54,7 +56,7 @@ class Visualization:
         self.util.check_path_valid(path)
         self.util.check_path_format(path, Const.PKL_SUFFIX)
         self.util.check_str_param(api_name)
-        with open(path, "r") as pkl_handle:
+        with FileOpen(path, "r") as pkl_handle:
             title_printed = False
             while True:
                 pkl_line = pkl_handle.readline()
@@ -78,7 +80,7 @@ class Visualization:
                             self.util.log.info("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
                             self.util.log.info("    {}".format(item[3]))
                         continue
-                if len(msg) > 5:
+                if len(msg) > 5 and len(msg[5]) >=  3:
                     summery_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
                         .format(msg[0], msg[3], msg[4], msg[5][0], msg[5][1], msg[5][2])
                     if not title_printed:

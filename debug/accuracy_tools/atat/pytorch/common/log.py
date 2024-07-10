@@ -1,15 +1,21 @@
 import os
 import time
 import sys
+
 from .utils import get_rank_if_initialized
+from .exceptions import DistributedNotInitializedError
 
 
 def on_rank_0(func):
     def func_rank_0(*args, **kwargs):
-        current_rank = get_rank_if_initialized()
+        try:
+            current_rank = get_rank_if_initialized()
+        except DistributedNotInitializedError:
+            current_rank = None
+
         if current_rank is None or current_rank == 0:
             return func(*args, **kwargs)
-
+        
     return func_rank_0
 
 
@@ -17,7 +23,10 @@ def _print_log(level, msg, end='\n'):
     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
     pid = os.getpid()
     full_msg = current_time + "(" + str(pid) + ")-[" + level + "]" + msg
-    current_rank = get_rank_if_initialized()
+    try:
+        current_rank = get_rank_if_initialized()
+    except DistributedNotInitializedError:
+        current_rank = None
     if current_rank is not None:
         full_msg = f"[rank {current_rank}]-" + full_msg
     print(full_msg, end=end)

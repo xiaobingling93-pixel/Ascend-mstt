@@ -21,8 +21,8 @@ import torch
 import yaml
 
 from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard, Const
 from ..common.file_check import FileOpen
+from ..common.utils import torch_device_guard, Const
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
@@ -32,8 +32,6 @@ with FileOpen(yaml_path, 'r') as f:
 
 def get_vf_ops():
     global WrapVfOps
-    # _all_functional_ops = dir(torch.nn.functional)
-    # assert set(WrapFunctionalOps) <= set(_all_functional_ops)
     return WrapVfOps
 
 

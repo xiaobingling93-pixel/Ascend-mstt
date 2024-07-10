@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -78,8 +78,9 @@ class Compare:
             )
         return self.util.execute_command(cmd)
 
-    def compare_data(self, left, right, save_txt=False, rl=0.001, al=0.001, diff_count=20):
+    def compare_data(self, args):
         """Compare data"""
+        (left, right, save_txt, rl, al, diff_count) = args
         if left is None or right is None:
             raise ParseException("invalid input or output")
         try:
@@ -130,11 +131,9 @@ class Compare:
             else:
                 data_right = np.pad(data_right, (0, data_left.shape[0] - data_right.shape[0]), 'constant')
         all_close = np.allclose(data_left, data_right, atol=al, rtol=rl)
-        if np.sqrt(np.dot(data_left, data_left)) * np.sqrt(np.dot(data_right, data_right)) == 0:
-            self.log.exception("The divisor cannot be zero")
-        else:
-            cos_sim = np.dot(data_left, data_right) / (
-                np.sqrt(np.dot(data_left, data_left)) * np.sqrt(np.dot(data_right, data_right)))
+        np.seterr(divide='raise')
+        cos_sim = np.dot(data_left, data_right) / (
+            np.sqrt(np.dot(data_left, data_left)) * np.sqrt(np.dot(data_right, data_right)))
         err_cnt = 0
         total_cnt = data_left.shape[0]
         diff_table_columns = ['Index', 'Left', 'Right', 'Diff']
@@ -177,10 +176,7 @@ class Compare:
         bench_data_mean = np.mean(bench_data)
         abs_error = np.abs(data - bench_data)
         bench_data = self.util.deal_with_value_if_has_zero(bench_data)
-        if bench_data == 0:
-            self.log.exception("The divisor cannot be zero")
-        else:
-            rel_error = np.abs(abs_error / bench_data)
+        rel_error = np.abs(abs_error / bench_data)
         abs_diff_max = abs_error.max()
         rel_diff_max = np.max(rel_error)
         compare_result = [[filename, bench_filename, data_mean, bench_data_mean, md5_consistency, abs_diff_max,
