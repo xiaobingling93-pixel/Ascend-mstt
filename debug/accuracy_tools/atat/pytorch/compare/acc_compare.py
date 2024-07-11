@@ -470,7 +470,10 @@ def read_npy_data(dir_path, file_name):
     path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                FileCheckConst.PT_SUFFIX, False)
     data_path = path_checker.common_check()
-    data_value = torch.load(data_path, map_location=torch.device('cpu')).detach().numpy()
+    data_value = torch.load(data_path, map_location=torch.device('cpu')).detach()
+    if data_value.dtype == torch.bfloat16:
+        data_value = data_value.to(torch.float32)
+    data_value = data_value.numpy()
     return data_value
 
 
