@@ -145,8 +145,10 @@ class TrainerMon:
 
         self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         if opt_ty is None:
-            assert not self.ur_distribution, "ur_distribution cannot be enabled with unknown optimizer."
-            assert not self.mv_distribution, "mv_distribution cannot be enabled with unknown optimizer."
+            if self.ur_distribution:
+                raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
+            if self.mv_distribution:
+                raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
         self.module_struct = {}
@@ -168,110 +170,6 @@ class TrainerMon:
             if (rank not in rank_list) and len(rank_list) != 0:
                 return
         TrainerMon.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
-
-    def _smallest_rank_print(self, msg):
-        if dist.is_initialized():
-            if self.module_rank_list:
-                if dist.get_rank() == min(self.module_rank_list):
-                    print_info_log(msg)
-            else:
-                if dist.get_rank() == 0:
-                    print_info_log(msg)
-        else:
-            print_info_log(msg)
-
-    def _hook_module(self, target_names, module: torch.nn.Module, fwd_or_bkd):
-        if '_modules' not in module.__dict__:
-            # nothing to hook
-            return 0
-
-        def fwd_hook_fun(module, module_input, module_output):
-            context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
-            if self.print_struct:
-                self.module_struct[context.module_name].update(
-                    {"input": f"{get_param_struct(module_input)}", "output": f"{get_param_struct(module_output)}"})
-                return
-            if not self.xy_distribution:
-                return
-            if not context.format_by_arg:
-                context.set_format_by_arg('input', self.config['targets'])
-                context.set_format_by_arg('output', self.config['targets'])
-            if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg['input'], module_input, context.module_name, 'input')
-                context.focused_out_col = validate_config_spec(context.format_by_arg['output'], module_output, context.module_name, 'output')
-                context.verified = True
-            # expect output be tensor type
-            tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
-                tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'input', cared_input))
-            cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
-            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output', cared_output))
-            metric_dict = {}
-            for metric_name in self.ops:
-                metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
-            if context.micro_step == 0 and context.actv:
-                print_warn_log(
-                    f"actv context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
-                context.actv.clear()
-            context.actv.append(metric_dict)
-
-            context.micro_step += 1
-            if context.micro_step == self.micro_batch_number:
-                context.micro_step = 0
-                context.step += 1
-            return
-
-        def bwd_hook_fun(module, input_grad, output_grad):
-            context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
-            if self.print_struct:
-                self.module_struct[context.module_name].update(
-                    {"input_grad": f"{get_param_struct(input_grad)}", "output_grad": f"{get_param_struct(output_grad)}"})
-                return
-            if not self.xy_distribution:
-                return
-            if not context.format_by_arg:
-                context.set_format_by_arg('input_grad', self.config['targets'])
-                context.set_format_by_arg('output_grad', self.config['targets'])
-            if not context.verified:
-                if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg['input_grad'], input_grad, context.module_name, 'input_grad')
-                context.focused_out_col = validate_config_spec(context.format_by_arg['output_grad'], output_grad, context.module_name, 'output_grad')
-                context.verified = True
-
-            tbtag_tensor_map = {}
-            if not context.ignore_in:
-                cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
-                tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'input_grad', cared_input_grad))
-            cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
-            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output_grad', cared_output_grad))
-            metric_dict = {}
-            for metric_name in self.ops:
-                metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
-            if context.micro_step == 0 and context.actvgrad:
-                print_warn_log(f"actvgrad context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
-                context.actvgrad.clear()
-            context.actvgrad.append(metric_dict)
-
-            context.micro_step += 1
-            if context.micro_step == self.micro_batch_number:
-                context.micro_step = 0
-                context.step += 1
-            return
-
-        hooked_count = 0
-        for name, submodule in module.named_modules():
-            self.module_struct[name] = {}
-            if name in target_names:
-                submodule.register_forward_hook(fwd_hook_fun)
-                self.module_fwd_hook_context_by_module[submodule] = ModuleHookContext(name)
-                if not self.forward_only:
-                    submodule.register_full_backward_hook(bwd_hook_fun)
-                    self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
-                print_rank_0(f"> {name} is monitored successfully")
-                hooked_count += 1
-        return hooked_count
 
     def hook_modules(self, model:torch.nn.Module, grad_acc_steps):
         # fwd=0, bkd=1
@@ -430,3 +328,107 @@ class TrainerMon:
             register_optimizer_step_pre_hook(optimizer_pre_step_hook)
             register_optimizer_step_post_hook(optimizer_post_step_hook)
         return
+
+    def _smallest_rank_print(self, msg):
+        if dist.is_initialized():
+            if self.module_rank_list:
+                if dist.get_rank() == min(self.module_rank_list):
+                    print_info_log(msg)
+            else:
+                if dist.get_rank() == 0:
+                    print_info_log(msg)
+        else:
+            print_info_log(msg)
+
+    def _hook_module(self, target_names, module: torch.nn.Module, fwd_or_bkd):
+        if '_modules' not in module.__dict__:
+            # nothing to hook
+            return 0
+
+        def fwd_hook_fun(module, module_input, module_output):
+            context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
+            if self.print_struct:
+                self.module_struct[context.module_name].update(
+                    {"input": f"{get_param_struct(module_input)}", "output": f"{get_param_struct(module_output)}"})
+                return
+            if not self.xy_distribution:
+                return
+            if not context.format_by_arg:
+                context.set_format_by_arg('input', self.config['targets'])
+                context.set_format_by_arg('output', self.config['targets'])
+            if not context.verified:
+                if not context.ignore_in:
+                    context.focused_in_col = validate_config_spec(context.format_by_arg['input'], module_input, context.module_name, 'input')
+                context.focused_out_col = validate_config_spec(context.format_by_arg['output'], module_output, context.module_name, 'output')
+                context.verified = True
+            # expect output be tensor type
+            tbtag_tensor_map = {}
+            if not context.ignore_in:
+                cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
+                tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'input', cared_input))
+            cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
+            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output', cared_output))
+            metric_dict = {}
+            for metric_name in self.ops:
+                metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
+            if context.micro_step == 0 and context.actv:
+                print_warn_log(
+                    f"actv context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
+                context.actv.clear()
+            context.actv.append(metric_dict)
+
+            context.micro_step += 1
+            if context.micro_step == self.micro_batch_number:
+                context.micro_step = 0
+                context.step += 1
+            return
+
+        def bwd_hook_fun(module, input_grad, output_grad):
+            context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
+            if self.print_struct:
+                self.module_struct[context.module_name].update(
+                    {"input_grad": f"{get_param_struct(input_grad)}", "output_grad": f"{get_param_struct(output_grad)}"})
+                return
+            if not self.xy_distribution:
+                return
+            if not context.format_by_arg:
+                context.set_format_by_arg('input_grad', self.config['targets'])
+                context.set_format_by_arg('output_grad', self.config['targets'])
+            if not context.verified:
+                if not context.ignore_in:
+                    context.focused_in_col = validate_config_spec(context.format_by_arg['input_grad'], input_grad, context.module_name, 'input_grad')
+                context.focused_out_col = validate_config_spec(context.format_by_arg['output_grad'], output_grad, context.module_name, 'output_grad')
+                context.verified = True
+
+            tbtag_tensor_map = {}
+            if not context.ignore_in:
+                cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
+                tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'input_grad', cared_input_grad))
+            cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
+            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output_grad', cared_output_grad))
+            metric_dict = {}
+            for metric_name in self.ops:
+                metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
+            if context.micro_step == 0 and context.actvgrad:
+                print_warn_log(f"actvgrad context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
+                context.actvgrad.clear()
+            context.actvgrad.append(metric_dict)
+
+            context.micro_step += 1
+            if context.micro_step == self.micro_batch_number:
+                context.micro_step = 0
+                context.step += 1
+            return
+
+        hooked_count = 0
+        for name, submodule in module.named_modules():
+            self.module_struct[name] = {}
+            if name in target_names:
+                submodule.register_forward_hook(fwd_hook_fun)
+                self.module_fwd_hook_context_by_module[submodule] = ModuleHookContext(name)
+                if not self.forward_only:
+                    submodule.register_full_backward_hook(bwd_hook_fun)
+                    self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
+                print_rank_0(f"> {name} is monitored successfully")
+                hooked_count += 1
+        return hooked_count
