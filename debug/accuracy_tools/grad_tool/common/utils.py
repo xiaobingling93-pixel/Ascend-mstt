@@ -211,3 +211,12 @@ def create_directory(dir_path):
         os.makedirs(dir_path, mode=GradConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
         raise RuntimeError("Failed to create directory. Please check the path permission or disk space.") from ex
+
+def change_mode(path, mode):
+    check_path_exists(path)
+    check_link(path)
+    try:
+        os.chmod(path, mode)
+    except PermissionError as ex:
+        print_error_log(f'Failed to change {path} authority. {str(ex)}')
+        raise ex
