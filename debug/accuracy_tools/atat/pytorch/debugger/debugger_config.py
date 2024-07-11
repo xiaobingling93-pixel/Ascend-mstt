@@ -1,5 +1,6 @@
-from ..common import print_warn_log_rank_0, seed_all
-from ...core.utils import Const
+from atat.pytorch.common import print_warn_log_rank_0, seed_all
+from atat.core.utils import Const
+
 
 class DebuggerConfig:
     def __init__(self, common_config, task_config, task, dump_path, level):
@@ -86,4 +87,3 @@ class DebuggerConfig:
             for s in self.step:
                 if not isinstance(s, int) or s < 0:
                     raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
-    

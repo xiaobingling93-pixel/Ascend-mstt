@@ -1,10 +1,10 @@
 import torch
 from torch.utils.data import dataloader
-from .debugger_config import DebuggerConfig
-from ..service import Service
-from ..common import print_warn_log_rank_0
-from ..pt_config import parse_json_config
-from ..common.exceptions import MsaccException
+from atat.pytorch.debugger.debugger_config import DebuggerConfig
+from atat.pytorch.service import Service
+from atat.pytorch.common import print_warn_log_rank_0
+from atat.pytorch.pt_config import parse_json_config
+from atat.pytorch.common.exceptions import MsaccException
 
 
 class PrecisionDebugger:

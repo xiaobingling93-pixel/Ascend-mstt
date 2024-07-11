@@ -510,11 +510,9 @@ class FreeBenchmarkDataProcessor(DataProcessor):
         if self.checker.if_fix():
             self._return_forward_new_output = True
             self._forward_new_output = new_output
-        return None
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.checker.backward(name, module, module_input_output.grad_output)
-        return None
 
 
 def overflow_debug_mode_enable():
