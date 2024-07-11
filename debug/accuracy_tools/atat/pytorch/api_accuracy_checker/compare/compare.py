@@ -1,6 +1,7 @@
 # 进行比对及结果展示
 import os
 import csv
+from collections import namedtuple
 import torch
 import numpy as np
 from rich.table import Table
@@ -8,14 +9,18 @@ from rich.console import Console
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log, Const
 from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
-    apis_threshold
+    ULPStandardApi, ThousandthStandardApi, apis_threshold
 from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from atat.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps
+    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from atat.pytorch.common.file_check import FileOpen
+
+
+ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
+                                       'fwd_compare_alg_results', 'bwd_compare_alg_results', 'rank'])
 
 
 class Comparator:
@@ -136,7 +141,7 @@ class Comparator:
                 self.test_result_cnt["total_skip_num"] += 1
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE]:
+            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE, CompareConst.SKIP]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
@@ -165,8 +170,8 @@ class Comparator:
 
         name = test_result[0]
         df_row = list(test_result[:3])
-        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
-            df_row.append(test_result[3])
+        if test_result[1] == "SKIP":
+            df_row.append(test_result[3][0][-1])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
@@ -194,27 +199,40 @@ class Comparator:
 
         write_csv(test_rows, self.detail_save_path)
 
-    def record_results(self, *args):
+    def record_results(self, args):
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
-    def compare_output(self, full_api_name, bench_output, device_output, bench_grad=None, npu_grad=None):
+    def compare_output(self, full_api_name, data_info):
         _, api_name, _ = full_api_name.split(Const.SEP)
+        bench_output, device_output = data_info.bench_output, data_info.device_output
+        bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
+        backward_message = data_info.backward_message
         if "dropout" in full_api_name:
             fwd_success_status, fwd_compare_alg_results = self._compare_dropout(bench_output, device_output)
         else:
             fwd_success_status, fwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_output,
                                                                                      device_output)
-        if not (bench_grad and npu_grad):
+        if not (bench_grad and device_grad):
             bwd_success_status, bwd_compare_alg_results = (CompareConst.SPACE, [])
         else:
             if "dropout" in full_api_name:
-                bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
+                bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], device_grad[0])
             else:
-                bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_grad, npu_grad)
-        self.record_results(full_api_name, fwd_success_status,
-                            bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE,
-                            fwd_compare_alg_results, bwd_compare_alg_results)
+                bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_grad,
+                                                                                         device_grad)
+        if backward_message:
+            backward_column = CompareColumn()
+            bwd_compare_alg_results = [backward_column.to_column_value(CompareConst.SKIP, backward_message)]
+        else:
+            bwd_success_status = bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE
+        result_info = ResultInfo(full_api_name,
+                                 fwd_success_status,
+                                 bwd_success_status,
+                                 fwd_compare_alg_results,
+                                 bwd_compare_alg_results,
+                                 data_info.rank)
+        self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
 
@@ -223,10 +241,11 @@ class Comparator:
         test_final_success = CompareConst.PASS
         if isinstance(bench_output, (list, tuple)):
             status, compare_result, message = [], [], []
-            if len(bench_output) != len(device_output):
+            if len(bench_output) > len(device_output):
                 status = [CompareConst.ERROR]
                 message = ["bench and npu output structure is different."]
             else:
+                device_output = device_output[:len(bench_output)]
                 for b_out_i, n_out_i in zip(bench_output, device_output):
                     status_i, compare_result_i, message_i = self._compare_core(api_name, b_out_i, n_out_i)
                     status.append(status_i)
@@ -313,6 +332,10 @@ class Comparator:
         message = ""
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
+        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
+        if api_name in ThousandthStandardApi:
+            thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+            compare_column.rel_err_thousandth = thousand_res
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
             if api_name in BinaryStandardApi:
@@ -328,6 +351,19 @@ class Comparator:
                                                                          dtype, rtol)
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
+            elif api_name in ULPStandardApi:
+                if bench_output.size == 0:
+                    compare_column.max_ulp_error = 0
+                    compare_column.mean_ulp_error = 0
+                    compare_column.ulp_error_proportion = 0
+                else:
+                    ulp_err = get_ulp_err(bench_output, device_output, dtype)
+                    compare_column.max_ulp_error = np.max(ulp_err)
+                    compare_column.mean_ulp_error = np.mean(ulp_err)
+                    if dtype == torch.float32:
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 32) / bench_output.size
+                    else:
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > 1) / bench_output.size
             else:
                 dtype_config = precision_configs.get(dtype)
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
@@ -336,6 +372,8 @@ class Comparator:
                 rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
                 compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
                 compare_column.EB = get_error_balance(bench_output, device_output)
+                if rel_err.size == 0:
+                    return CompareConst.ERROR, compare_column, "Relative error result list is empty."
                 compare_column.Max_rel_error = get_max_rel_err(rel_err)
                 compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
 
@@ -352,7 +390,6 @@ class Comparator:
             message += "Max abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n"
             return CompareConst.PASS, compare_column, message
 
-        rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if dtype in [torch.float16, torch.bfloat16]:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
             compare_column.rel_err_hundredth = hundred_res
