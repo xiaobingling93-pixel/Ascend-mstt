@@ -194,7 +194,7 @@ class Comparator:
 
         write_csv(test_rows, self.detail_save_path)
 
-    def record_results(self, *args):
+    def record_results(self, args):
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
@@ -212,9 +212,9 @@ class Comparator:
                 bwd_success_status, bwd_compare_alg_results = self._compare_dropout(bench_grad[0], npu_grad[0])
             else:
                 bwd_success_status, bwd_compare_alg_results = self._compare_core_wrapper(api_name, bench_grad, npu_grad)
-        self.record_results(full_api_name, fwd_success_status,
+        self.record_results((full_api_name, fwd_success_status,
                             bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE,
-                            fwd_compare_alg_results, bwd_compare_alg_results)
+                            fwd_compare_alg_results, bwd_compare_alg_results))
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
 

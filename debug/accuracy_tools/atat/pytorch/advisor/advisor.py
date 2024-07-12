@@ -16,12 +16,11 @@
 """
 
 import os
-import pandas as pd
 
-from .advisor_result import AdvisorResult
 from .advisor_const import AdvisorConst
-from ...core.utils import CompareException, CompareConst, Const, print_info_log, print_warn_log, print_error_log
+from .advisor_result import AdvisorResult
 from ...core.file_check_util import FileChecker, FileCheckConst
+from ...core.utils import CompareException, CompareConst, Const, print_info_log, print_warn_log, print_error_log
 
 
 class Advisor:
@@ -49,16 +48,17 @@ class Advisor:
 
     def analyze_unmatched(self, analyze_data):
         if self.file_type == Const.ALL:
-            accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
+            accuracy_unmatched = analyze_data[
+                analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
         else:
-            accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) | 
+            accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) |
                                               (analyze_data[CompareConst.BENCH_SHAPE] == CompareConst.NAN)]
         num_unmatch = len(accuracy_unmatched)
         if num_unmatch != 0:
             for i in range(len(accuracy_unmatched)):
                 item = accuracy_unmatched.iloc[i]
                 print_warn_log("The tensor name matches but the shape or dtype does not match: {}"
-                            .format(item[CompareConst.NPU_NAME]))
+                               .format(item[CompareConst.NPU_NAME]))
 
     def gen_advisor_result(self, pd_data):
         first_failing_data = pd_data.iloc[0]

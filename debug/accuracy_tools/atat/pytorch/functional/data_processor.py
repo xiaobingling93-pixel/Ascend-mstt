@@ -6,7 +6,11 @@ from typing import Tuple, List, Dict, Optional, Union
 
 import numpy as np
 import torch
-import torch_npu
+try:
+    import torch_npu
+except ImportError:
+    torch_npu = None
+
 
 from ..common import recursive_apply_transform
 from ..common.exceptions import MsaccException

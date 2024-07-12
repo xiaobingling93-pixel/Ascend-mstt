@@ -27,7 +27,7 @@ def get_ignore_dirs(cur_dir):
 def run_ut():
     cur_dir = os.path.realpath(os.path.dirname(__file__))
     ut_path = cur_dir
-    ignore_dirs = get_ignore_dirs(cur_dir)
+    ignored_dirs = get_ignore_dirs(cur_dir)
     cov_dir = os.path.dirname(cur_dir)
     report_dir = os.path.join(cur_dir, "report")
     final_xml_path = os.path.join(report_dir, "final.xml")
@@ -37,22 +37,37 @@ def run_ut():
         shutil.rmtree(report_dir)
     os.makedirs(report_dir)
 
-    cmd = ["python3", "-m", "pytest", ut_path, "--junitxml=" + final_xml_path, "--cov=" + cov_dir,
-           "--cov-branch", "--cov-report=xml:" + cov_report_path] + ignore_dirs
-    result_ut = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while result_ut.poll() is None:
-        line = result_ut.stdout.readline().strip()
-        if line:
-            print_info_log(str(line))
+    pytest_cmd = [
+                     "python3", "-m", "pytest",
+                     ut_path,
+                     f"--junitxml={final_xml_path}",
+                     f"--cov={cov_dir}",
+                     "--cov-branch",
+                     f"--cov-report=xml:{cov_report_path}",
+                 ] + ignored_dirs
 
-    ut_flag = False
-    if result_ut.returncode == 0:
-        ut_flag = True
-        print_info_log("run ut successfully.")
-    else:
-        print_error_log("run ut failed.")
+    try:
+        with subprocess.Popen(
+                pytest_cmd,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+        ) as proc:
+            for line in proc.stdout:
+                print_info_log(line.strip())
 
-    return ut_flag
+            proc.wait()
+
+            if proc.returncode == 0:
+                print_info_log("Unit tests executed successfully.")
+                return True
+            else:
+                print_error_log("Unit tests execution failed.")
+                return False
+    except Exception as e:
+        print_error_log(f"An error occurred during test execution: {e}")
+        return False
 
 
 if __name__ == "__main__":

@@ -105,6 +105,7 @@ class Const:
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
 
+
 class CompareConst:
     """
     Class for compare module const
@@ -234,7 +235,6 @@ class CompareException(Exception):
     OVER_SIZE_FILE_ERROR = 18
     INVALID_SUMMARY_MODE = 19
     INVALID_TASK_ERROR = 20
-
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
