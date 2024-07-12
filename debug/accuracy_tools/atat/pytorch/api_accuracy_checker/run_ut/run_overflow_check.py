@@ -1,7 +1,13 @@
 import argparse
 import os
 import sys
-import torch_npu
+
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+else:
+    is_gpu = False
 import torch
 from tqdm import tqdm
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
