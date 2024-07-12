@@ -129,7 +129,7 @@ def gen_random_tensor(info, convert_type):
 
 def fp32_to_hf32_to_fp32(input_tensor):
     # 将输入的float32 tensor转为hf32 tensor，再转为float32 tensor
-    input_np = input_tensor.numpy()
+    input_np = input_tensor.detach().numpy()
     input_int = input_np.view(numpy.int32)
     input_int = numpy.right_shift(numpy.right_shift(input_int, 11) + 1, 1)
     input_int = numpy.left_shift(input_int, 12)
