@@ -23,7 +23,8 @@ from atat.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_param
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
     initialize_save_path, UtDataProcessor
 from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
-from  atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst
 from atat.pytorch.hook_module.wrap_tensor import TensorOPTemplate
 from atat.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from atat.pytorch.hook_module.wrap_torch import TorchOPTemplate
@@ -276,10 +277,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
 
-    if grad_index is not None:
-        return UtDataInfo(bench_grad_out, device_grad_out, device_out[grad_index], out[grad_index], bench_grad,
-                          in_fwd_data_list)
-    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list)
+    return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
 def get_api_info(api_info_dict, api_name, real_data_path):
