@@ -43,7 +43,7 @@ def run_ut():
     while result_ut.poll() is None:
         line = result_ut.stdout.readline().strip()
         if line:
-            print_info_log(str(line))
+            print(line)
 
     ut_flag = False
     if result_ut.returncode == 0:
