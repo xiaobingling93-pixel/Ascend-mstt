@@ -192,8 +192,6 @@ class BenchmarkStandard(Standard):
                                         self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
         self.compare_message += eb_message
-        return small_value_inf_nan_consistency, rmse_inf_nan_consistency, max_rel_inf_nan_consistency, \
-               mean_rel_inf_nan_consistency, eb_inf_nan_consistency
 
 
 class ULPStandard(Standard):

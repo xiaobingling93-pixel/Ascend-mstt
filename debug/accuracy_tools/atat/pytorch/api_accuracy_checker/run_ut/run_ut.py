@@ -408,7 +408,7 @@ def preprocess_forward_content(forward_content):
         else:
             is_duplicate = False
             for variant in base_keys_variants[base_key]:
-                existing_args, existing_kwargs = arg_cache[variant]
+                existing_args, existing_kwargs = arg_cache.get(variant)
                 if existing_args == filtered_new_args and existing_kwargs == new_kwargs:
                     is_duplicate = True
                     break
