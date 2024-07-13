@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.utils import check_seed_all, Const, CompareException
+from atat.core.utils import check_seed_all, Const, CompareException, check_inplace_op
 
 
 class TestUtils(TestCase):
@@ -30,3 +30,11 @@ class TestUtils(TestCase):
             check_seed_all(1234, 1)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_print_error_log.assert_called_with("seed_all mode must be bool.")
+        
+    def test_check_inplace_op(self):
+        test_prefix_1 = "Distributed.broadcast.0.forward.input.0"
+        self.assertTrue(check_inplace_op(test_prefix_1))
+        test_prefix_2 = "Distributed_broadcast_0_forward_input_0"
+        self.assertFalse(check_inplace_op(test_prefix_2))
+        test_prefix_3 = "Torch.sum.0.backward.output.0"
+        self.assertFalse(check_inplace_op(test_prefix_3))

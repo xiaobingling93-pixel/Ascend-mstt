@@ -27,7 +27,6 @@ def get_ignore_dirs(cur_dir):
 def run_ut():
     cur_dir = os.path.realpath(os.path.dirname(__file__))
     ut_path = cur_dir
-    ignored_dirs = get_ignore_dirs(cur_dir)
     cov_dir = os.path.dirname(cur_dir)
     report_dir = os.path.join(cur_dir, "report")
     final_xml_path = os.path.join(report_dir, "final.xml")
@@ -44,7 +43,7 @@ def run_ut():
                      f"--cov={cov_dir}",
                      "--cov-branch",
                      f"--cov-report=xml:{cov_report_path}",
-                 ] + ignored_dirs
+                 ]
 
     try:
         with subprocess.Popen(

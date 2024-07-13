@@ -214,7 +214,7 @@ class DataProcessor:
             tensor_stat.mean = tensor_stat.max
             tensor_stat.norm = tensor_stat.max
         else:
-            if not data_clone.is_floating_point():
+            if not data_clone.is_floating_point() or data_clone.dtype == torch.float64:
                 data_clone = data_clone.float()
             tensor_stat.max = torch._C._VariableFunctionsClass.max(data_clone).item()
             tensor_stat.min = torch._C._VariableFunctionsClass.min(data_clone).item()

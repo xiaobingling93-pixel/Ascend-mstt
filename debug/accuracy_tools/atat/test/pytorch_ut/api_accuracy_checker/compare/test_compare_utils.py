@@ -2,7 +2,8 @@ import unittest
 
 import numpy as np
 
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable
+from atat.pytorch.api_accuracy_checker.common.utils import CompareException
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, convert_str_to_float
 
 
 class TestCompareUtils(unittest.TestCase):
@@ -26,3 +27,23 @@ class TestCompareUtils(unittest.TestCase):
         x = np.array([1, 2, 3], dtype=np.int32)
         y = np.array([True, False, True], dtype=np.bool_)
         self.assertFalse(check_dtype_comparable(x, y))
+
+    def test_convert_str_to_float_when_valid_float(self):
+        self.assertEqual(convert_str_to_float("123.45"), 123.45)
+
+    def test_convert_str_to_float_when_valid_int(self):
+        self.assertEqual(convert_str_to_float("123.0"), 123.0)
+
+    def test_convert_str_to_float_when_valid_int_with_spaces(self):
+        self.assertEqual(convert_str_to_float("   123.0   "), 123.0)
+
+    def test_convert_str_to_float_when_empty_string(self):
+        with self.assertRaises(CompareException) as cm:
+            convert_str_to_float('')
+        self.assertEqual(cm.exception.code, CompareException.INVALID_DATA_ERROR)
+
+    def test_convert_str_to_float_when_invalid_inf_string(self):
+        with self.assertRaises(CompareException) as cm:
+            convert_str_to_float('inf')
+        self.assertEqual(cm.exception.code, CompareException.INVALID_DATA_ERROR)
+
