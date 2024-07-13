@@ -19,9 +19,6 @@ class BaseLogger:
         sys.stdout.flush()
 
     def get_rank(self):
-        """
-        This should be implemented by subclasses to return the appropriate rank.
-        """
         return self.rank
 
     def info(self, msg):

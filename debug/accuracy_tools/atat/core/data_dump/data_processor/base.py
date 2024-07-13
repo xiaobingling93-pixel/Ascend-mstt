@@ -50,10 +50,8 @@ class TensorStatInfo:
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (
-        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
-        bool, int, float, str, slice
-    )
+    special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
+                    bool, int, float, str, slice)
     
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -187,7 +185,6 @@ class BaseDataProcessor:
             self.api_data_category = Const.INPUT
             args_info_list = self.analyze_element(module_input_output.args_tuple)
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
-
             self.api_data_category = Const.KWARGS
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
@@ -197,7 +194,6 @@ class BaseDataProcessor:
             self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(module_input_output.output_tuple)
             api_info_struct[name][Const.OUTPUT] = output_info_list
-
         return api_info_struct
     
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
@@ -207,11 +203,9 @@ class BaseDataProcessor:
             self.api_data_category = Const.INPUT
             args_info_list = self.analyze_element(module_input_output.args_tuple)
             api_info_struct[name][Const.INPUT_ARGS] = args_info_list
-
             self.api_data_category = Const.KWARGS
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
-
         return api_info_struct
     
     def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
@@ -222,7 +216,6 @@ class BaseDataProcessor:
             self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(concat_args)
             api_info_struct[name][Const.OUTPUT] = output_info_list
-
         return api_info_struct
     
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):

@@ -24,7 +24,6 @@ class DataProcessorFactory:
     @classmethod
     def create_processor(cls, config, data_writer):
         cls.register_processors(config.framework)
-        
         task = Const.KERNEL_DUMP if config.level == "L2" else config.task
         key = (config.framework, task)
         processor_class = cls._data_processor.get(key)
@@ -43,14 +42,12 @@ class DataProcessorFactory:
                 KernelDumpDataProcessor as PytorchKernelDumpDataProcessor 
             )
             from ....pytorch.module_processer import ModuleProcesser
-            
             cls.register_processor(Const.PT_FRAMEWORK, Const.STATISTICS, PytorchStatisticsDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.TENSOR, PytorchTensorDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.OVERFLOW_CHECK, PytorchOverflowCheckDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.FREE_BENCHMARK, PytorchFreeBenchmarkDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.KERNEL_DUMP, PytorchKernelDumpDataProcessor)
-            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)
-                                                                 
+            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)                                              
         elif framework == Const.MS_FRAMEWORK:
             from .mindspore_processor import (
                 StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
@@ -58,7 +55,6 @@ class DataProcessorFactory:
                 OverflowCheckDataProcessor as MindsporeOverflowCheckDataProcessor,
                 FreeBenchmarkDataProcessor as MindsporeFreeBenchmarkDataProcessor
             )
-
             cls.register_processor(Const.MS_FRAMEWORK, Const.STATISTICS, MindsporeStatisticsDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.TENSOR, MindsporeTensorDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.OVERFLOW_CHECK, MindsporeOverflowCheckDataProcessor)

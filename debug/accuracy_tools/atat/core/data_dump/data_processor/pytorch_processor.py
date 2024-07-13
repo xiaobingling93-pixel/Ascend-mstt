@@ -18,9 +18,7 @@ except ImportError:
 
 
 class PytorchDataProcessor(BaseDataProcessor):
-    pytorch_special_type = (
-         torch.device, torch.dtype, torch.Size, torch.Tensor
-    )
+    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor)
     
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -69,7 +67,7 @@ class PytorchDataProcessor(BaseDataProcessor):
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
         else:
-            if not data_clone.is_floating_point():
+            if not data_clone.is_floating_point() or data_clone.dtype == torch.float64:
                 data_clone = data_clone.float()
             tensor_stat.max = torch._C._VariableFunctionsClass.max(data_clone).item()
             tensor_stat.min = torch._C._VariableFunctionsClass.min(data_clone).item()
@@ -84,21 +82,17 @@ class PytorchDataProcessor(BaseDataProcessor):
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
-                
         if isinstance(element, torch.Size):
             return self._analyze_torch_size(element)
-
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)
-
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-
         if isinstance(element, (bool, int, float, str, slice)):
             return self._analyze_builtin(element)
         return None
-
+        
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
     
@@ -107,7 +101,6 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
-
         tensor_json = {}
         tensor_json.update({'type': 'torch.Tensor'})
         tensor_json.update({'dtype': str(tensor.dtype)})
@@ -120,7 +113,6 @@ class PytorchDataProcessor(BaseDataProcessor):
         if self.config.summary_mode == "md5":
             tensor_md5 = self.get_md5_for_tensor(tensor)
             tensor_json.update({"md5": tensor_md5})
-
         return tensor_json
 
 

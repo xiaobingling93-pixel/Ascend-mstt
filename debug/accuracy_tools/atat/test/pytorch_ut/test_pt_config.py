@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch, mock_open
 
-from atat.core.utils import Const
+from atat.core.common.utils import Const
 from atat.pytorch.pt_config import parse_json_config
 
 

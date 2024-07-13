@@ -138,8 +138,7 @@ class Service:
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level in ["L0", "mix"]:
             if self.model is None:
-                logger.error_on_rank_0("The model is None.")
-                raise MsaccException(MsaccException.INVALID_PARAM_ERROR)
+                logger.error_log_with_exp("The model is None.", MsaccException.INVALID_PARAM_ERROR)
             logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             for name, module in self.model.named_modules():
                 if module == self.model:
