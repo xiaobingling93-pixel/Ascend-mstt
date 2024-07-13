@@ -17,9 +17,8 @@
 import os
 import re
 
-from .log import print_error_log, print_warn_log
-from .exceptions import FileCheckException
-from .utils import Const
+from atat.core.common.log import logger
+from atat.core.common.exceptions import FileCheckException
 
 
 class FileCheckConst:
@@ -32,6 +31,7 @@ class FileCheckConst:
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     PKL_SUFFIX = ".pkl"
     NUMPY_SUFFIX = ".npy"
     JSON_SUFFIX = ".json"
@@ -78,7 +78,7 @@ class FileChecker:
     @staticmethod
     def _check_path_type(path_type):
         if path_type not in [FileCheckConst.DIR, FileCheckConst.FILE]:
-            print_error_log(f'The path_type must be {FileCheckConst.DIR} or {FileCheckConst.FILE}.')
+            logger.error(f'The path_type must be {FileCheckConst.DIR} or {FileCheckConst.FILE}.')
             raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         return path_type
 
@@ -144,7 +144,7 @@ class FileOpen:
     def check_file_path(self):
         support_mode = self.SUPPORT_READ_MODE + self.SUPPORT_WRITE_MODE + self.SUPPORT_READ_WRITE_MODE
         if self.mode not in support_mode:
-            print_error_log("File open not support %s mode" % self.mode)
+            logger.error("File open not support %s mode" % self.mode)
             raise FileCheckException(FileCheckException.ILLEGAL_PARAM_ERROR)
         check_link(self.file_path)
         self.file_path = os.path.realpath(self.file_path)
@@ -171,7 +171,7 @@ class FileOpen:
 def check_link(path):
     abs_path = os.path.abspath(path)
     if os.path.islink(abs_path):
-        print_error_log('The file path {} is a soft link.'.format(path))
+        logger.error('The file path {} is a soft link.'.format(path))
         raise FileCheckException(FileCheckException.SOFT_LINK_ERROR)
 
 
@@ -179,58 +179,58 @@ def check_path_length(path, name_length=None):
     file_max_name_length = name_length if name_length else FileCheckConst.FILE_NAME_LENGTH
     if len(path) > FileCheckConst.DIRECTORY_LENGTH or \
             len(os.path.basename(path)) > file_max_name_length:
-        print_error_log('The file path length exceeds limit.')
+        logger.error('The file path length exceeds limit.')
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_exists(path):
     if not os.path.exists(path):
-        print_error_log('The file path %s does not exist.' % path)
+        logger.error('The file path %s does not exist.' % path)
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_path_readability(path):
     if not os.access(path, os.R_OK):
-        print_error_log('The file path %s is not readable.' % path)
+        logger.error('The file path %s is not readable.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_writability(path):
     if not os.access(path, os.W_OK):
-        print_error_log('The file path %s is not writable.' % path)
+        logger.error('The file path %s is not writable.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_executable(path):
     if not os.access(path, os.X_OK):
-        print_error_log('The file path %s is not executable.' % path)
+        logger.error('The file path %s is not executable.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_other_user_writable(path):
     st = os.stat(path)
     if st.st_mode & 0o002:
-        print_error_log('The file path %s may be insecure because other users have write permissions. ' % path)
+        logger.error('The file path %s may be insecure because other users have write permissions. ' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
     if file_owner != os.getuid():
-        print_error_log('The file path %s may be insecure because is does not belong to you.' % path)
+        logger.error('The file path %s may be insecure because is does not belong to you.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        print_error_log('The file path {} contains special characters.'.format(path))
+        logger.error('The file path {} contains special characters.' %(path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_file_size(file_path, max_size):
     file_size = os.path.getsize(file_path)
     if file_size >= max_size:
-        print_error_log(f'The size of file path {file_path} exceeds {max_size} bytes.')
+        logger.error(f'The size of file path {file_path} exceeds {max_size} bytes.')
         raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
 
 
@@ -245,18 +245,18 @@ def check_common_file_size(file_path):
 def check_file_suffix(file_path, file_suffix):
     if file_suffix:
         if not file_path.endswith(file_suffix):
-            print_error_log(f"The {file_path} should be a {file_suffix} file!")
+            logger.error(f"The {file_path} should be a {file_suffix} file!")
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
 def check_path_type(file_path, file_type):
     if file_type == FileCheckConst.FILE:
         if not os.path.isfile(file_path):
-            print_error_log(f"The {file_path} should be a file!")
+            logger.error(f"The {file_path} should be a file!")
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
     if file_type == FileCheckConst.DIR:
         if not os.path.isdir(file_path):
-            print_error_log(f"The {file_path} should be a dictionary!")
+            logger.error(f"The {file_path} should be a dictionary!")
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
@@ -281,7 +281,7 @@ def check_path_before_create(path):
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
-    if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
+    if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
 

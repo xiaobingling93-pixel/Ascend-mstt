@@ -1,7 +1,7 @@
 import math
 from typing import Any
 
-from atat.pytorch.free_benchmark import print_info_log_rank_0, print_warn_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.counter import preheat_counter
 from atat.pytorch.free_benchmark.common.enums import DeviceType
@@ -74,14 +74,14 @@ class PreheatHandler(FuzzHandler):
         try:
             cpu_consistent = self.compare_npu_and_cpu(data_params)
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
                 f"when campare to cpu exception raise {e}"
             )
         try:
             first_dtype = Tools.get_first_tensor_dtype(data_params.perturbed_result)
         except RuntimeError:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
                 f"the output sequence does not contain tensors."
             )
@@ -96,7 +96,7 @@ class PreheatHandler(FuzzHandler):
         res = curr_called_seq in need_sample_set
         if res:
             total_count = preheat_counter.get_one_step_used_api(self.pure_name)
-            print_info_log_rank_0(
+            logger.info_on_rank_0(
                 f"[atat] Free benchmark: preheat sample in step{self.params.step}"
                 f"api_name {self.params.api_name}, "
                 f"curr_called_seq: {curr_called_seq}/{total_count}"

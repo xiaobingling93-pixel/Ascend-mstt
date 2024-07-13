@@ -27,9 +27,9 @@ from atat.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from atat.pytorch.hook_module.wrap_torch import TorchOPTemplate
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from atat.pytorch.common.parse_json import parse_json_info_forward_backward
-from atat.pytorch.common.file_check import FileOpen, FileCheckConst, FileChecker, \
+from atat.core.common.file_check import FileOpen, FileCheckConst, FileChecker, \
     change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
-from atat.pytorch.common.log import print_info_log, print_warn_log, print_error_log
+from atat.pytorch.common.log import logger
 from atat.pytorch.common.utils import Const
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -150,12 +150,12 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
 
 
 def run_ut(config):
-    print_info_log("start UT test")
-    print_info_log(f"UT task result will be saved in {config.result_csv_path}")
-    print_info_log(f"UT task details will be saved in {config.details_csv_path}")
+    logger.info("start UT test")
+    logger.info(f"UT task result will be saved in {config.result_csv_path}")
+    logger.info(f"UT task details will be saved in {config.details_csv_path}")
     if config.save_error_data:
         error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
-        print_info_log(f"UT task error_datas will be saved in {error_data_path}")
+        logger.info(f"UT task error_datas will be saved in {error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
         csv_reader = csv.reader(file)
@@ -182,10 +182,10 @@ def run_ut(config):
         except Exception as err:
             [_, api_name, _] = api_full_name.split(Const.SEP)
             if "expected scalar type Long" in str(err):
-                print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
+                logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
-                print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
+                logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
             compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err)))
         finally:
             if is_gpu:
@@ -202,7 +202,7 @@ def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
     flag = split_name in [Const.NPU, Const.DISTRIBUTED]
     if flag:
-        print_info_log(f"{split_name} api is not supported for run ut. SKIP.")
+        logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag
 
 
@@ -226,11 +226,11 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
     if not need_grad:
-        print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward."
+        logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward."
                        % api_full_name)
     if api_name in not_backward_list:
         need_grad = False
-        print_warn_log(
+        logger.warning(
             "%s function backward result is None, skip backward." % api_full_name)
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
@@ -377,7 +377,7 @@ def preprocess_forward_content(forward_content):
                     existing_kwargs = processed_content[variant].get('kwargs', {})
                     filtered_existing_args = [{k: v for k, v in arg.items() if k not in ['Max', 'Min']} for arg in existing_args if isinstance(arg, dict)]
                 except KeyError as e:
-                    print_error_log(f"KeyError: {e} when processing {key}")
+                    logger.error(f"KeyError: {e} when processing {key}")
                 if filtered_existing_args == filtered_new_args and existing_kwargs == new_kwargs:
                     is_duplicate = True
                     break
@@ -408,7 +408,7 @@ def run_ut_command(args):
         else:
             torch.npu.set_device(used_device)
     except Exception as error:
-        print_error_log(f"Set device id failed. device id is: {args.device_id}")
+        logger.error(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
     check_link(args.api_info_file)
     api_info = os.path.realpath(args.api_info_file)
@@ -451,4 +451,4 @@ class UtDataInfo:
 
 if __name__ == '__main__':
     _run_ut()
-    print_info_log("UT task completed.")
+    logger.info("UT task completed.")

@@ -1,7 +1,7 @@
 # 定义比对算法及比对标准
 import torch
 import numpy as np
-from .compare_utils import CompareConst
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst
 
 
 #cos

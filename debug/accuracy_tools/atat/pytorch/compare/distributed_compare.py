@@ -17,10 +17,11 @@
 import os
 import sys
 import re
-from ...core.utils import print_error_log, CompareException, check_compare_param, \
+from atat.core.common.utils import CompareException, check_compare_param, \
     check_configuration_param, task_dumppath_get, check_file_or_directory_path, check_regex_prefix_format_valid
-from .acc_compare import compare_core
-from ...core.file_check_util import create_directory
+from atat.pytorch.compare.acc_compare import compare_core
+from atat.core.common.file_check import create_directory
+from atat.pytorch.common.log import logger
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
@@ -46,7 +47,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
         for name in contents:
             if not pattern.match(name):
-                print_error_log(
+                logger.error(
                     f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
                     f"output. Please check and delete irrelevant files in {dump_dir} and try again."
                 )
@@ -66,12 +67,12 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
 
         # Provide robustness on invalid directory inputs
         if not json_path:
-            print_error_log(f'No file is found in dump dir {dirname}. ')
+            logger.error(f'No file is found in dump dir {dirname}. ')
             raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
         return json_path
 
     if kwargs.get('suffix'):
-        print_error_log("Argument 'suffix' is not supported for compare_distributed.")
+        logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
     stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
@@ -80,7 +81,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
     if len(npu_ranks) != len(bench_ranks):
-        print_error_log('The number of ranks in the two runs are different. '
+        logger.error('The number of ranks in the two runs are different. '
                         'Unable to match the ranks. Please use another folder to compare '
                         'or use compare() api and manually match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
@@ -104,7 +105,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
         except CompareException as error:
-            print_error_log('Compare failed. Please check the arguments and do it again!')
+            logger.error('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
         compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
                      md5_compare=md5_compare, **kwargs)

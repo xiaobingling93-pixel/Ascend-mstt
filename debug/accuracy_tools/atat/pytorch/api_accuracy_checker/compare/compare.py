@@ -5,7 +5,8 @@ import torch
 import numpy as np
 from rich.table import Table
 from rich.console import Console
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, print_warn_log, Const
+from atat.pytorch.common.log import logger
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, Const
 from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
     apis_threshold
@@ -15,7 +16,7 @@ from atat.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_er
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
     check_small_value, check_norm_value, get_abs_bench_with_eps
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.pytorch.common.file_check import FileOpen
+from atat.core.common.file_check import FileOpen
 
 
 class Comparator:
@@ -84,7 +85,7 @@ class Comparator:
         else:
             passing_rate = "0%"
 
-        print_warn_log("The follwing tables will be deprecated in the future."
+        logger.warning("The follwing tables will be deprecated in the future."
                        "The following results are for reference only.")
         console = Console()
         table_total = Table(
