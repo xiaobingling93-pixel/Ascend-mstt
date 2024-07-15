@@ -28,12 +28,13 @@ from collections import namedtuple
 from atat.pytorch.parse_tool.lib.config import Const
 from atat.pytorch.parse_tool.lib.file_desc import DumpDecodeFileDesc, FileDesc
 from atat.pytorch.parse_tool.lib.parse_exception import ParseException
-from atat.pytorch.common.file_check import change_mode, check_other_user_writable,\
+from atat.core.common.file_check import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
-from atat.pytorch.common.file_check import FileCheckConst
-from atat.pytorch.common.file_check import FileOpen
-from atat.core.utils import check_file_or_directory_path
-from atat.core.utils import print_warn_log
+from atat.core.common.file_check import FileCheckConst
+from atat.core.common.file_check import FileOpen
+from atat.core.common.utils import check_file_or_directory_path
+from atat.pytorch.common.log import logger
+
 
 try:
     from rich.traceback import install
@@ -49,7 +50,7 @@ except ImportError as err:
     Table = None
     Columns = None
     rich_print = None
-    print_warn_log(
+    logger.warning(
         "Failed to import rich, Some features may not be available. Please run 'pip install rich' to fix it.")
 
 
@@ -258,13 +259,13 @@ class Util:
 
     def create_columns(self, content):
         if not Columns:
-            self.log.error("No Module named rich, please install it")
+            self.log.error("No module named rich, please install it")
             raise ParseException(ParseException.PARSE_NO_MODULE_ERROR)
         return Columns(content)
 
     def create_table(self, title, columns):
         if not Table:
-            self.log.error("No Module named rich, please install it and restart parse tool")
+            self.log.error("No module named rich, please install it and restart parse tool")
             raise ParseException(ParseException.PARSE_NO_MODULE_ERROR)
         table = Table(title=title)
         for column_name in columns:

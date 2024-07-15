@@ -65,6 +65,14 @@ class TestCommonUtilsMethods(unittest.TestCase):
         dump_path = "/usr/dump"
         mode = "api_stack"
         self.assertEqual(common.modify_dump_path(dump_path, mode), "/usr/api_stack_dump")
+    
+    def test_check_inplace_op(self):
+        test_prefix_1 = "Distributed.broadcast.0.forward.input.0"
+        self.assertTrue(common.check_inplace_op(test_prefix_1))
+        test_prefix_2 = "Distributed_broadcast_0_forward_input_0"
+        self.assertFalse(common.check_inplace_op(test_prefix_2))
+        test_prefix_3 = "Torch.sum.0.backward.output.0"
+        self.assertFalse(common.check_inplace_op(test_prefix_3))
 
     def test_create_directory(self):
         pass

@@ -1,7 +1,8 @@
-from .utils import Const
+from atat.core.common.utils import Const
+from atat.core.common.log import logger
+from atat.core.common.exceptions import MsaccException
 
 
-# 公共配置类
 class CommonConfig:
     def __init__(self, json_config):
         self.task = json_config.get('task')
@@ -17,22 +18,25 @@ class CommonConfig:
 
     def _check_config(self):
         if self.task and self.task not in Const.TASK_LIST:
-            raise Exception("task is invalid")
+            logger.error_log_with_exp(
+                "task is invalid, it should be one of {}".format(Const.TASK_LIST), MsaccException.INVALID_PARAM_ERROR)
         if self.rank is not None and not isinstance(self.rank, list):
-            raise Exception("rank is invalid")
+            logger.error_log_with_exp("rank is invalid, it should be a list", MsaccException.INVALID_PARAM_ERROR)
         if self.step is not None and not isinstance(self.step, list):
-            raise Exception("step is invalid")
+            logger.error_log_with_exp("step is invalid, it should be a list", MsaccException.INVALID_PARAM_ERROR)
         if self.level and self.level not in Const.LEVEL_LIST:
-            raise Exception("level is invalid")
+            logger.error_log_with_exp(
+                "level is invalid, it should be one of {}".format(Const.LEVEL_LIST), MsaccException.INVALID_PARAM_ERROR)
         if self.seed is not None and not isinstance(self.seed, int):
-            raise Exception("seed is invalid")
+            logger.error_log_with_exp("seed is invalid, it should be an integer", MsaccException.INVALID_PARAM_ERROR)
         if not isinstance(self.is_deterministic, bool):
-            raise Exception("is_deterministic is invalid")
+            logger.error_log_with_exp(
+                "is_deterministic is invalid, it should be a boolean", MsaccException.INVALID_PARAM_ERROR)
         if not isinstance(self.enable_dataloader, bool):
-            raise Exception("enable_dataloader is invalid")
+            logger.error_log_with_exp(
+                "enable_dataloader is invalid, it should be a boolean", MsaccException.INVALID_PARAM_ERROR)
         
 
-# 基础配置类
 class BaseConfig:
     def __init__(self, json_config):
         self.scope = json_config.get('scope')
@@ -46,9 +50,9 @@ class BaseConfig:
 
     def check_config(self):
         if self.scope is not None and not isinstance(self.scope, list):
-            raise Exception("scope is invalid")
+            logger.error_log_with_exp("scope is invalid, it should be a list", MsaccException.INVALID_PARAM_ERROR)
         if self.list is not None and not isinstance(self.list, list):
-            raise Exception("list is invalid")
+            logger.error_log_with_exp("list is invalid, it should be a list", MsaccException.INVALID_PARAM_ERROR)
         if self.data_mode is not None and not isinstance(self.data_mode, list):
-            raise Exception("data_mode is invalid")
+            logger.error_log_with_exp("data_mode is invalid, it should be a list", MsaccException.INVALID_PARAM_ERROR)
         

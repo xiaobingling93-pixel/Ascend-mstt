@@ -2,55 +2,45 @@ import functools
 import os
 from pathlib import Path
 
-from .common import print_info_log_rank_0
-from .common.file_check import FileChecker, FileCheckConst, check_path_before_create
-from .common.utils import get_rank_if_initialized, is_gpu, Const, DistributedNotInitializedError
-from .functional import build_repair, build_data_collector, build_step_post_process
-from .functional.data_processor import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
-from .functional.scope import BaseScope
-from .hook_module import remove_dropout
-from .hook_module.api_registry import api_register
-from .module_processer import ModuleProcesser
-
-from ..core.utils import DumpException
+from atat.pytorch.common.log import logger
+from atat.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from atat.core.common.utils import Const
+from atat.core.common.exceptions import DistributedNotInitializedError, MsaccException
+from atat.core.data_dump.data_collector import build_data_collector
+from atat.core.data_dump.scope import BaseScope
+from atat.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from atat.pytorch.common.utils import get_rank_if_initialized
+from atat.pytorch.module_processer import ModuleProcesser
+from atat.pytorch.hook_module import remove_dropout
+from atat.pytorch.hook_module.api_registry import api_register
 
 
 class Service:
-    make_dir_flag = True
-    REGISTER_HOOK_KWARGS = ["overflow_nums", "dump_mode", "dump_config"]
-
     def __init__(self, config):
         self.model = None
         self.config = config
         self.data_collector = build_data_collector(config)
         self.module_processor = ModuleProcesser(self.data_collector.scope)
-        self.repair = build_repair(config)
-        self.step_post_process = build_step_post_process(config)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
-        self.first_touch_dir = True
         self.dump_iter_dir = None
 
     def build_hook(self, module_type, name):
-        def pre_hook(repair, api_or_module_name, module, args, kwargs):
-            nonlocal module_type, pid
+        def pre_hook(api_or_module_name, module, args, kwargs):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
 
             if not self.switch:
                 return args, kwargs
-            if repair:
-                args, kwargs = repair.convert(api_or_module_name, module_type, args, kwargs)
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
             return args, kwargs
 
-        def forward_hook(repair, api_or_module_name, module, args, kwargs, output):
-            nonlocal module_type, pid
+        def forward_hook(api_or_module_name, module, args, kwargs, output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
@@ -62,13 +52,9 @@ class Service:
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
-            if repair:
-                output = repair.invert(api_or_module_name, module_type, output)
-
             return output
 
-        def backward_hook(repair, api_or_module_name, module, grad_input, grad_output):
-            nonlocal module_type, pid
+        def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
@@ -82,15 +68,13 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, self.repair, forward_name_template)
-        forward_hook = functools.partial(forward_hook, self.repair, forward_name_template)
-        backward_hook = functools.partial(backward_hook, None, backward_name_template)
+        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
+        forward_hook = functools.partial(forward_hook, forward_name_template)
+        backward_hook = functools.partial(backward_hook, backward_name_template)
         return pre_forward_hook, forward_hook, backward_hook
 
     def step(self):
         self.current_iter += 1
-        if self.step_post_process:
-            self.step_post_process()
         self.data_collector.update_iter(self.current_iter)
 
     def start(self, model):
@@ -111,10 +95,10 @@ class Service:
             self.register_hook_new()
             self.first_start = False
         self.switch = True
-        print_info_log_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
+        logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2":
             self.create_dirs()
-            print_info_log_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
+            logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
         if self.config.level == "L2":
@@ -151,16 +135,11 @@ class Service:
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
 
     def register_hook_new(self):
-        hook_name = self.config.task
-
-        if "overflow_check" in hook_name and not is_gpu:
-            pass
-
-        print_info_log_rank_0("The {} hook function is successfully mounted to the model.".format(hook_name))
+        logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level in ["L0", "mix"]:
             if self.model is None:
-                raise DumpException("Model is None")
-            print_info_log_rank_0("The init dump mode is enabled, and the module dump function will not be available")
+                logger.error_log_with_exp("The model is None.", MsaccException.INVALID_PARAM_ERROR)
+            logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             for name, module in self.model.named_modules():
                 if module == self.model:
                     continue
@@ -184,5 +163,5 @@ class Service:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_modularity()
 
-        if Const.STATISTICS in hook_name or Const.TENSOR in hook_name:
+        if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
             remove_dropout()

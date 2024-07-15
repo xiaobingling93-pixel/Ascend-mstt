@@ -1,7 +1,6 @@
 from typing import Any
 
-import torch
-from atat.pytorch.free_benchmark import print_warn_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.enums import DeviceType
 from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
 from atat.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
@@ -34,7 +33,7 @@ class CheckerHandler(FuzzHandler):
             else:
                 self.other_compare(data_params)
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
                 f"when campare the result exception raise {e}"
             )

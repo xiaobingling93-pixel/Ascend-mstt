@@ -1,6 +1,7 @@
 import abc
 import numpy as np
-from ...core.utils import CompareConst, Const, print_warn_log, format_value
+from atat.core.common.utils import CompareConst, Const, format_value
+from atat.pytorch.common.log import logger
 
 
 def  handle_inf_nan(n_value, b_value):
@@ -69,7 +70,7 @@ def get_error_message(n_value, b_value, op_name, error_flag, error_file=None):
         if not n_value.shape:
             return "This is type of scalar data, can not compare."
         if n_value.dtype != b_value.dtype:
-            print_warn_log("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
+            logger.warning("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
             return "Dtype of NPU and bench Tensor do not match."
     return ""
 

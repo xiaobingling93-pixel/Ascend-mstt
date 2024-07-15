@@ -20,7 +20,7 @@ import numpy as np
 from atat.pytorch.parse_tool.lib.config import Const
 from atat.pytorch.parse_tool.lib.utils import Util
 from atat.pytorch.parse_tool.lib.parse_exception import ParseException
-from atat.pytorch.common.file_check import FileOpen
+from atat.core.common.file_check import FileOpen
 
 
 class Visualization:

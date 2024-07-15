@@ -1,7 +1,7 @@
 import math
 import statistics
 
-from kj600.features import square_sum, get_max, get_min, get_zeros
+from kj600.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
 
 
 def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):
@@ -23,6 +23,29 @@ def register_config_metric(key, cls=None):
     config_metric_registry[key] = cls
     return cls
 
+class TensorMetrics:
+    def __init__(self) -> None:
+        self.metrics = {} #tensor_tag --> []
+        self.cur_idx = {}
+
+    fun_map = {"norm": get_norm, "max": get_max, "min": get_min}
+    #get stats and insert into metrics dictionary
+    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank, eps=1e-8):
+        prefix = get_summary_writer_tag_name(module_name, tensor_name, rank)
+        for stat_op in stat_ops:
+            y = TensorMetrics.fun_map[stat_op](tensor)
+            key = f"{prefix}_{stat_op}"
+            if key not in self.metrics:
+                self.metrics[key] = []
+                self.cur_idx[key] = 0
+            self.metrics[key].append(y)
+
+    def flush(self, tb_writer):
+        for key, metric_list in self.metrics.items():
+            start = self.cur_idx[key]
+            for v in metric_list[start:]:
+                tb_writer.add_scalar(key, v.item(), global_step=self.cur_idx[key])
+                self.cur_idx[key] += 1
 
 class Metric(object):
     @staticmethod
@@ -91,6 +114,17 @@ class ZerosMetric(Metric):
             zeros_value = statistics.mean([item[metric_name][key].item() for item in metric_value])
             summary_writer.add_scalar(f'{key}_zeros', zeros_value, step)
 
+@register_config_metric("nans")
+class NaNsMetric(Metric):
+    @staticmethod
+    def get_metric_value(t, eps):
+        return get_nans(t)
+    
+    @staticmethod
+    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
+        for key in metric_value[0][metric_name].keys():
+            nans_value = sum([v[metric_name][key].item() for v in metric_value])
+            summary_writer.add_scalar(f'{key}_nans', nans_value, step)
 
 @register_config_metric("id")
 class IdentMetric(Metric):

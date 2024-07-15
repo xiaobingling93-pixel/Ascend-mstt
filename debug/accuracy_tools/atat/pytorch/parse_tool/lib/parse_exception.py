@@ -15,7 +15,7 @@
 # limitations under the License.
 """
 import logging
-from atat.pytorch.common.exceptions import FileCheckException
+from atat.core.common.exceptions import FileCheckException
 
 
 class ParseException(Exception):

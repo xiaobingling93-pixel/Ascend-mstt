@@ -4,10 +4,10 @@ import sys
 import torch_npu
 import torch
 from tqdm import tqdm
+from atat.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
-from atat.pytorch.common.file_check import check_link
-from atat.pytorch.common.log import print_info_log, print_warn_log, print_error_log
-
+from atat.core.common.file_check import check_link
+from atat.pytorch.common.log import logger
 
 def check_tensor_overflow(x):
     if isinstance(x, torch.Tensor) and x.numel() != 0 and x.dtype != torch.bool:
@@ -45,7 +45,7 @@ def check_data_overflow(x):
 
 
 def run_overflow_check(forward_file):
-    print_info_log("start UT test")
+    logger.info("start UT test")
     forward_content = get_json_contents(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
         try:
@@ -53,13 +53,13 @@ def run_overflow_check(forward_file):
         except Exception as err:
             api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
             if "not implemented for 'Half'" in str(err):
-                print_warn_log(f"API {api_name} not support half tensor in CPU, please add {api_name} to CONVERT_API "
+                logger.warning(f"API {api_name} not support half tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'fp16_to_fp32' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             elif "expected scalar type Long" in str(err):
-                print_warn_log(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
+                logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
-                print_error_log(f"Run {api_full_name} UT Error: %s" % str(err))
+                logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
 
 
 def run_torch_api(api_full_name, api_info_dict):
@@ -68,7 +68,7 @@ def run_torch_api(api_full_name, api_info_dict):
     api_name = api_full_name.split(".", 1)[1].rsplit(".", 2)[0]
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path='')
     if not need_grad:
-        print_warn_log("%s function with out=... arguments don't support automatic differentiation, skip backward." 
+        logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
@@ -78,9 +78,9 @@ def run_torch_api(api_full_name, api_info_dict):
     cpu_overflow = check_data_overflow(out)
     npu_overflow = torch_npu.npu.utils.npu_check_overflow(npu_out)
     if cpu_overflow == npu_overflow:
-        print_warn_log("The %s overflow is a normal overflow." % api_full_name)
+        logger.warning("The %s overflow is a normal overflow." % api_full_name)
     else:
-        print_warn_log("The %s overflow is an abnormal overflow." % api_full_name)
+        logger.warning("The %s overflow is an abnormal overflow." % api_full_name)
     return
 
 
@@ -111,11 +111,11 @@ def _run_overflow_check_command(args):
     try:
         torch.npu.set_device(npu_device)
     except Exception as error:
-        print_error_log(f"Set NPU device id failed. device id is: {args.device_id}")
+        logger.error(f"Set NPU device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
     run_overflow_check(api_info)
 
 
 if __name__ == '__main__':
     _run_overflow_check()
-    print_info_log("UT task completed.")
+    logger.info("UT task completed.")

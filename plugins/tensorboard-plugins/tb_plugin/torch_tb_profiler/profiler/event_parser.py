@@ -88,10 +88,6 @@ class NodeParserMixin:
                 runtime_nodes = externalid_to_runtime.pop(op.external_id, [])
                 if runtime_nodes:
                     op.runtimes.extend(runtime_nodes)
-        for ext_id in externalid_to_runtime:
-            if ext_id != 0:
-                logger.warning("{} Runtime with external id {} don't correlate to any operator!".format(
-                    len(externalid_to_runtime[ext_id]), ext_id))
 
         if len(corrid_to_device) > 0:
             node_count_dict = defaultdict(int)
@@ -138,13 +134,6 @@ class NodeParserMixin:
                 if rt_node.device_nodes is None:
                     rt_node.device_nodes = []
                 rt_node.device_nodes.append(device_node)
-
-                # Check the external_id
-                if rt_node.external_id != device_node.external_id:
-                    logger.warning(
-                        'Runtime and Device-op have same correlation id %s but with different external id!'
-                        ' (runtime external_id, device external_id): (%s, %s)' %
-                        (corrid, rt_node.external_id, device_node.external_id))
             else:
                 corrid_to_device[corrid].append(device_node)
             self.device_node_list.append(device_node)

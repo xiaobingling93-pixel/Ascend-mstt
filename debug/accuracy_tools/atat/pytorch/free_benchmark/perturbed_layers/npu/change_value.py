@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import print_warn_log_rank_0, print_info_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.utils import TorchC
@@ -43,7 +43,7 @@ class ChangeValueLayer(NpuBaseLayer):
         """
         对输入添加扰动并返回
         """
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.CHANGE_VALUE} of {self.api_name}."
         )
@@ -55,7 +55,7 @@ class ChangeValueLayer(NpuBaseLayer):
         判断是否需要添加扰动,  首尾值交换
         """
         if tensor_obj.size(0) < 2:
-            print_warn_log_rank_0(
+            logger.info_on_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"size 0 must greater than 1. Cancel change value."
             )

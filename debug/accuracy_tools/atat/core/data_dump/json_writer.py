@@ -1,14 +1,15 @@
-import csv
-import json
 import os
+import csv
+import fcntl
+import json
 from pathlib import Path
 
-from ..common.file_check import FileCheckConst, change_mode
-from ..common.log import print_info_log_rank_0
-from ..common.utils import Const
+from atat.core.common.file_check import FileCheckConst, change_mode
+from atat.core.common.log import logger
+from atat.core.common.utils import Const
 
 
-class DataWriter:  # TODO: UT
+class DataWriter:
 
     def __init__(self, init_json=None) -> None:
         self.dump_count = 0
@@ -25,22 +26,22 @@ class DataWriter:  # TODO: UT
 
     @staticmethod
     def write_data_to_csv(result: list, result_header: tuple, file_path: str):
-        if len(result) == 0:
+        if not result:
             return
         is_exists = os.path.exists(file_path)
         append = "a+" if is_exists else "w+"
         with os.fdopen(
-                os.open(file_path, Const.WRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), append, newline=""
+            os.open(file_path, Const.WRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), append, newline=""
         ) as csv_file:
             spawn_writer = csv.writer(csv_file)
             if not is_exists:
                 spawn_writer.writerow(result_header)
-            spawn_writer.writerows([result, ])
+            spawn_writer.writerows([result,])
 
     def initialize_json_file(self, **kwargs):
         kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
         with os.fdopen(
-                os.open(self.dump_file_path, Const.OVERWRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), 'w'
+            os.open(self.dump_file_path, Const.OVERWRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), 'w'
         ) as f:
             json.dump(kwargs, f)
 
@@ -54,7 +55,7 @@ class DataWriter:  # TODO: UT
         Path(self.construct_file_path).touch()
         change_mode(self.construct_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
-    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir,
+    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir, 
                           free_benchmark_file_path):
         self.dump_file_path = dump_file_path
         self.stack_file_path = stack_file_path
@@ -80,8 +81,7 @@ class DataWriter:  # TODO: UT
         self.cache_construct.update(new_data)
 
     def write_data_json(self, file_path):
-        import fcntl
-        print_info_log_rank_0(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
+        logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
         if Path(file_path).exists() and os.path.getsize(file_path) > 0:
             with open(file_path, "r+") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
@@ -99,14 +99,12 @@ class DataWriter:  # TODO: UT
         self.cache_data[Const.DATA].clear()
 
     def write_stack_info_json(self, file_path):
-        import fcntl
         with open(file_path, 'w+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(self.cache_stack, f, indent=1)
             fcntl.flock(f, fcntl.LOCK_UN)
 
     def write_construct_info_json(self, file_path):
-        import fcntl
         with open(file_path, 'w+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(self.cache_construct, f, indent=1)

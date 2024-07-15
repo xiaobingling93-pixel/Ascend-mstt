@@ -1,104 +1,127 @@
+from abc import ABC, abstractmethod
+from collections import namedtuple
 import hashlib
 import torch
-from grad_tool.grad_pt.level_adapter import Level
+from grad_tool.grad_pt.utils import GradConst
 
-
-class GradExtremeOps:
-    @staticmethod
-    def tensor_max(tensor):
-        return torch._C._VariableFunctionsClass.max(tensor).cpu().detach().float().numpy().tolist()
-
-    @staticmethod
-    def tensor_min(tensor):
-        return torch._C._VariableFunctionsClass.min(tensor).cpu().detach().float().numpy().tolist()
-
-    @staticmethod
-    def tensor_norm(tensor):
-        return torch._C._VariableFunctionsClass.norm(tensor).cpu().detach().float().numpy().tolist()
-
-
-class GradExtremes:
-    extremes = {
-        "max": GradExtremeOps.tensor_max,
-        "min": GradExtremeOps.tensor_min,
-        "norm": GradExtremeOps.tensor_norm
-    }
-
-
-class GradStatOps:
-    @staticmethod
-    def md5_header(**kwargs):
-        level: Level = kwargs.get("level")
-        return level.MD5_header()
-
-    @staticmethod
-    def intervals_header(**kwargs):
-        level: Level = kwargs.get("level")
-        bounds = kwargs.get("bounds")
-        return level.intervals_header(bounds)
-
-    @staticmethod
-    def extremes_header(**kwargs):
-        return GradExtremes.extremes.keys()
-
-    @staticmethod
-    def shape_header(**kwargs):
-        return ["shape"]
-
-    @staticmethod
-    def md5_content(**kwargs):
-        grad = kwargs.get("grad")
-        level: Level = kwargs.get("level")
-        return level.MD5_content(grad)
-
-    @staticmethod
-    def count_distribution(**kwargs):
-        level: Level = kwargs.get("level")
-        grad = kwargs.get("grad")
-        bounds = kwargs.get("bounds")
-        return level.count_grad_distribution(grad, bounds)
-
-    @staticmethod
-    def extremes_content(**kwargs):
-        grad = kwargs.get("grad")
-        return [f(grad) for f in GradExtremes.extremes.values()]
-
-    @staticmethod
-    def shape_content(**kwargs):
-        grad = kwargs.get("grad")
-        return [list(grad.shape)]
+CSV_header_input = namedtuple("CSV_header_input", ["bounds"])
+CSV_content_input = namedtuple("CSV_content_input", ["grad", "bounds"])
 
 
 class GradStatCsv:
-    CSV = {
-            "MD5": {
-                "header": GradStatOps.md5_header,
-                "content": GradStatOps.md5_content
-            },
-            "distribution": {
-                "header": GradStatOps.intervals_header,
-                "content": GradStatOps.count_distribution
-            },
-            "extremes": {
-                "header": GradStatOps.extremes_header,
-                "content": GradStatOps.extremes_content
-            },
-            "shape": {
-                "header": GradStatOps.shape_header,
-                "content": GradStatOps.shape_content
-            },
-        }
+    csv = {}
 
     @staticmethod
-    def generate_csv_header(**kwargs):
+    def generate_csv_header(level, bounds):
         header = ["param_name"]
-        for func in GradStatCsv.CSV.values():
-            header.extend(func["header"](**kwargs))
+        for key in level["header"]:
+            csv_header_input = CSV_header_input(bounds=bounds)
+            header.extend(GradStatCsv.csv[key].generate_csv_header(csv_header_input))
         return header
 
     @staticmethod
-    def generate_csv_line(**kwargs):
-        line = [kwargs.get("param_name")]
-        for func in GradStatCsv.CSV.values():
-            line.extend(func["content"](**kwargs))
+    def generate_csv_line(param_name, level, grad, bounds):
+        line = [param_name]
+        for key in level["header"]:
+            csv_content_input = CSV_content_input(grad=grad, bounds=bounds)
+            line.extend(GradStatCsv.csv[key].generate_csv_content(csv_content_input))
         return line
+
+
+def register_csv_item(key, cls=None):
+    if cls is None:
+        # 无参数时，返回装饰器函数
+        return lambda cls: register_csv_item(key, cls)
+    GradStatCsv.csv[key] = cls
+    return cls
+
+
+class CsvItem(ABC):
+    @abstractmethod
+    def generate_csv_header(csv_header_input):
+        pass
+
+    @abstractmethod
+    def generate_csv_content(csv_content_input):
+        pass
+
+
+@register_csv_item(GradConst.md5)
+class CSV_md5(CsvItem):
+    def generate_csv_header(csv_header_input):
+        return ["MD5"]
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        tensor_bytes = grad.cpu().detach().float().numpy().tobytes()
+        md5_hash = hashlib.md5(tensor_bytes)
+        return [md5_hash.hexdigest()]
+
+
+@register_csv_item(GradConst.distribution)
+class CSV_distribution(CsvItem):
+    def generate_csv_header(csv_header_input):
+        bounds = csv_header_input.bounds
+        intervals = []
+        for i, _ in enumerate(bounds):
+            if i == 0:
+                intervals.append(f"(-inf, {bounds[i]}]")
+            else:
+                intervals.append(f"({bounds[i-1]}, {bounds[i]}]")
+        intervals.extend([f"({bounds[-1]}, inf)", "=0"])
+        return intervals 
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        bounds = csv_content_input.bounds
+        grad = grad.cpu().detach()
+        if grad.dtype == torch.bfloat16:
+            grad = grad.to(torch.float32)
+        element_num = grad.numel()
+        grad_equal_0_num = (grad == 0).sum().item()
+        bound = torch.Tensor(bounds)
+        bucketsize_result = torch.bucketize(grad, bound)
+        interval_nums = [(bucketsize_result == i).sum().item() for i in range(len(bound) + 1)]
+        interval_nums.append(grad_equal_0_num)
+        return_list = [x / element_num if element_num != 0 else 0 for x in interval_nums]
+        return return_list
+
+
+@register_csv_item(GradConst.max)
+class CSV_max(CsvItem):
+    def generate_csv_header(csv_header_input):
+        return ["max"]
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        return [torch.max(grad).cpu().detach().float().numpy().tolist()]
+
+
+@register_csv_item(GradConst.min)
+class CSV_max(CsvItem):
+    def generate_csv_header(csv_header_input):
+        return ["min"]
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        return [torch.min(grad).cpu().detach().float().numpy().tolist()]
+
+
+@register_csv_item(GradConst.norm)
+class CSV_max(CsvItem):
+    def generate_csv_header(csv_header_input):
+        return ["norm"]
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        return [torch.norm(grad).cpu().detach().float().numpy().tolist()]
+    
+
+@register_csv_item(GradConst.shape)
+class CSV_shape(CsvItem):
+    def generate_csv_header(csv_header_input):
+        return ["shape"]
+
+    def generate_csv_content(csv_content_input):
+        grad = csv_content_input.grad
+        return [list(grad.shape)]

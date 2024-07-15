@@ -1,31 +1,27 @@
 import os
-from functools import wraps
-from collections import defaultdict
 import yaml
 import re
 import inspect
-import functools
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-import torch.utils.hooks as full_hooks
 
 from ..module_metric import get_metrics
 
 try:
     import torch_npu
 except ImportError:
-    is_gpu = True
-else:
-    is_gpu = False
+    pass
 
+PREFIX_POST = "post"
 
-cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "distributed_ops.yaml")
-with open(yaml_path) as f:
+OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
+with open(OpsPath) as f:
     WrapDistributedOps = yaml.safe_load(f).get('distributed')
 
-npu_distributed_api = ['isend', 'irecv']
+StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
+with open(StackBlackListPath) as f:
+    StackBlackList = yaml.safe_load(f).get('stack')
 
 distributed_func = {}
 for f in dir(dist):
@@ -42,11 +38,14 @@ def get_distributed_ops():
 
 
 class DistributedOPTemplate(nn.Module):
-    def __init__(self, op_name, hook):
+    def __init__(self, op_name, pre_hooks, post_hooks):
         super(DistributedOPTemplate, self).__init__()
-        self.op_name_ = op_name
-        self.prefix_op_name_ = str(op_name)
-        self.register_forward_hook(hook(), with_kwargs=True)
+        self.op_name_ = str(op_name)
+        self.__name__ = self.op_name_
+        for pre_hook in pre_hooks:
+            self.register_forward_pre_hook(pre_hook, with_kwargs=True)
+        for hook in post_hooks:
+            self.register_forward_hook(hook, with_kwargs=True)
 
     def forward(self, *args, **kwargs):
         return distributed_func.get(self.op_name_)(*args, **kwargs)
@@ -88,10 +87,10 @@ class ApiRegistry:
         self.set_api_attr(dist.distributed_c10d, self.distributed_attr_origin)
         setattr(dist.Work, 'wait', ORIGIN_WAIT)
    
-    def initialize_hook(self, hook):
+    def initialize_hook(self, pre_hooks, post_hooks):
         self.store_ori_attr(dist, get_distributed_ops(), self.distributed_attr_origin)
         for op_name in get_distributed_ops():
-            self.distributed_attr_hooked[op_name] = DistributedOPTemplate(op_name, hook)
+            self.distributed_attr_hooked[op_name] = DistributedOPTemplate(op_name, pre_hooks, post_hooks)
 
     def redirect_wait(self):
         global ORIGIN_WAIT
@@ -108,33 +107,47 @@ class ApiRegistry:
         dist.Work.wait = wrapped_wait(dist.Work)
 
 
+def stack_filter(stack):
+    for pattern in StackBlackList:
+        if re.search(pattern, stack):
+            return False
+    return True
+
 def get_callstack():
     callstack = []
     for (_, path, line, func, code, _) in inspect.stack():
         stack_line = f'{path}[{line}]'
-        callstack.append(stack_line)
+        if stack_filter(stack_line):
+            callstack.append(stack_line+'   '+func)
     return callstack
 
-def op_aggregate(op, t1, t2):
+@torch.no_grad()
+def op_aggregate(op, tensorlist):
+    if isinstance(tensorlist, torch.Tensor):
+        return tensorlist
+    if not tensorlist:
+        return torch.nan
     if op == 'min':
-        return min(t1, t2)
+        return min(tensorlist)
     if op == 'max':
-        return max(t1, t2)
+        return max(tensorlist)
     if op == 'norm':
-        return (t1**2+t2**2)**0.5
+        return sum(tensorlist)
     if op == 'zeros': # TODO wrong
-        return (t1+t2)/2
+        return sum(tensorlist) / len(tensorlist) if len(tensorlist) != 0 else 0
+    return torch.nan
 
 def update_data(old, new):
-    updated = {op:{} for op in new.keys()}
-    if old:
-        for op, tag2tensor in old.items():
-            for tag, t_old in tag2tensor.items():
-                t_new = new[op][tag]
-                updated[op][tag] = op_aggregate(op, t_old, t_new)     
-    else:
-        updated = new
-    return updated
+    for op, tag2tensorlist in new.items():
+        if op not in old:
+            old[op] = {}
+        for tag, tensor in tag2tensorlist.items():
+            if tag not in old[op]:
+                old[op][tag] = [tensor]
+            else:
+                old[op][tag].append(tensor)
+    return old
+    
 
 def is_target_line(codeline):
     stack = get_callstack()
@@ -146,46 +159,71 @@ def is_target_line(codeline):
             return True
     return False
 
-def catch_data(cc_context, ops, module, args, out=None):
+@torch.no_grad()
+def catch_data(cc_context, ops, args, prefix):
     tensor_args = {}
     for arg in args:
         if isinstance(arg, torch.Tensor):
-            tensor_args[f'input_{len(tensor_args)}'] = arg
+            tensor_args[f'{prefix}_{len(tensor_args)}'] = arg
         elif isinstance(arg, list):
-            arg = torch.stack(arg)
-            tensor_args[f'input_{len(tensor_args)}'] = arg
+            if isinstance(arg[0], torch.Tensor):
+                stacked_arg = torch.stack(arg)
+            elif isinstance(arg[0], dist.P2POp):
+                stacked_arg = torch.stack([op.tensor for op in arg])
+            tensor_args[f'{prefix}_{len(tensor_args)}'] = stacked_arg
+            
     new_data = {op: get_metrics(op, tensor_args, 1e-8) for op in ops}
-    cc_context.indata=update_data(cc_context.indata, new_data)
-    if out and isinstance(out, dist.Work):
-        tensor_res = {}
-        for res in out.result():
-            if isinstance(res, torch.Tensor):
-                tensor_res[f'output_{len(tensor_res)}'] = res
-        new_data = {op: get_metrics(op, tensor_res, 1e-8) for op in ops}
-        cc_context.outdata=update_data(cc_context.outdata, new_data)
+    cc_context.data=update_data(cc_context.data, new_data)
 
-def create_store_func(context, ops, module, args, out):
+def create_async_callback_func(context, ops, args, prefix):
     def store_data():
-        catch_data(context, ops, module, args, out)
+        catch_data(context, ops, args, prefix)
     return store_data
 
-def create_hook(context, monitor):
-    def cc_hook(module, args, kwargs, out=None):
-        if monitor.cc_log_only:
-            stack = ';'.join(get_callstack()[4:7])
-            monitor.cc_logged_stack[module.prefix_op_name_].add(stack)
-            return out
+
+def create_hooks(context, monitor):
+
+    def cc_log_hook(module, args, kwargs):
+        stack = ';'.join(get_callstack())
+        monitor.cc_logged_stack[module.op_name_].add(stack)
+        return
+        
+    def cc_pre_hook(module, args, kwargs): 
+        if not is_target_line(monitor.cc_codeline):
+            return
         args = args + tuple(kwargs.values())
-        if (dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []):
-            return out
+        catch_data(context[module.op_name_], monitor.ops, args, 'pre')
+        return
+
+    def cc_hook(module, args, kwargs, out=None):
         if not is_target_line(monitor.cc_codeline):
             return out
+        args = args + tuple(kwargs.values())
         if out: # async
-            PENDING_ASYNC_CC_BY_HANDLE[out] = create_store_func(context[module.prefix_op_name_], monitor.ops, module, args, out)
+            if isinstance(out, dist.Work):
+                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], monitor.ops, args, PREFIX_POST)
+            elif isinstance(out, list): # batch_isend_irecv
+                for o in out:
+                    PENDING_ASYNC_CC_BY_HANDLE[o] = create_async_callback_func(context[module.op_name_], monitor.ops, args, PREFIX_POST)
             return out
-        catch_data(context[module.prefix_op_name_], monitor.ops, module, args, out)
+        catch_data(context[module.op_name_], monitor.ops, args, PREFIX_POST)
         return out
-    return cc_hook
+    
+    pre_hooks = []
+    hooks = []
+    if (dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []):
+        return [pre_hooks, hooks]
+    
+    if monitor.cc_log_only:
+        pre_hooks.append(cc_log_hook)
+        return [pre_hooks, hooks]
+    
+    if monitor.cc_pre_hook:
+        pre_hooks.append(cc_pre_hook)
+    
+    hooks.append(cc_hook)
+    
+    return [pre_hooks, hooks]
 
 api_register = ApiRegistry()
 

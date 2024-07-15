@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import print_info_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.common.utils import Tools
 from atat.pytorch.free_benchmark.common.enums import DeviceType
@@ -10,7 +10,7 @@ class CpuLayer(BaseLayer):
 
     def handle(self, params: DataParams) -> torch.Any:
 
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is to_cpu of {self.api_name}."
         )
         new_args = Tools.convert_device_and_dtype(params.args, DeviceType.CPU, change_dtype=True)

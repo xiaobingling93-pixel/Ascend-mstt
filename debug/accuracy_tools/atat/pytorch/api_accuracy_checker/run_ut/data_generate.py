@@ -20,8 +20,8 @@ import math
 import torch
 import numpy
 
-from ..common.utils import Const, check_file_or_directory_path, check_object_type, print_warn_log, \
-    print_error_log, get_full_data_path, CompareException
+from atat.pytorch.api_accuracy_checker.common.utils import Const, check_file_or_directory_path, check_object_type, get_full_data_path, CompareException
+from atat.pytorch.common.log import logger
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
@@ -62,7 +62,7 @@ def gen_data(info, need_grad, convert_type, real_data_path=None):
         try:
             data = eval(data_type)(data)
         except Exception as err:
-            print_error_log("Failed to convert the type to numpy: %s" % str(err))
+            logger.error("Failed to convert the type to numpy: %s" % str(err))
     elif data_type == "torch.Size":
         data = torch.Size(info.get("value"))
     else:
@@ -170,7 +170,7 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
         low, high = int(low), int(high)
         tensor = torch.randint(low, high + 1, shape, dtype=eval(data_dtype))
     else:
-        print_error_log('Dtype is not supported: ' + data_dtype)
+        logger.error('Dtype is not supported: ' + data_dtype)
         raise NotImplementedError()
     if tensor.nelement() == 0:
         return tensor
@@ -231,7 +231,7 @@ def gen_args(args_info, need_grad=True, convert_type=None, real_data_path=None):
         elif arg is None:
             data = None
         else:
-            print_warn_log(f'Warning: {arg} is not supported')
+            logger.warning(f'Warning: {arg} is not supported')
             raise NotImplementedError()
         args_result.append(data)
     return args_result
@@ -304,6 +304,6 @@ def gen_api_params(api_info, need_grad=True, convert_type=None, real_data_path=N
     if api_info.get("input_args"):
         args_params = gen_args(api_info.get("input_args"), need_grad, convert_type, real_data_path)
     else:
-        print_warn_log(f'Warning: No args in {api_info} ')
+        logger.warning(f'Warning: No args in {api_info} ')
         args_params = []
     return args_params, kwargs_params

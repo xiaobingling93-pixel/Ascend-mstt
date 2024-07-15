@@ -356,3 +356,16 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         compare.find_compare_result_error_rows(result_df, highlight_dict)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
+        
+    def test_rename_api(self):
+        test_name_1 = "Distributed.broadcast.0.forward.input.0"
+        expect_name_1 = "Distributed.broadcast.input.0"
+        actual_name_1 = compare.rename_api(test_name_1, "forward")
+        self.assertEqual(actual_name_1, expect_name_1)
+        
+        test_name_2 = "Torch.sum.0.backward.output.0"
+        expect_name_2 = "Torch.sum.output.0"
+        actual_name_2 = compare.rename_api(test_name_2, "backward")
+        self.assertEqual(actual_name_2, expect_name_2)
+        
+        

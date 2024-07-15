@@ -1,5 +1,7 @@
-from ..common import print_warn_log_rank_0, seed_all
-from ...core.utils import Const
+from atat.pytorch.common import seed_all
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import Const
+
 
 class DebuggerConfig:
     def __init__(self, common_config, task_config, task, dump_path, level):
@@ -20,12 +22,9 @@ class DebuggerConfig:
         self.is_forward_acl_dump = True
         self.summary_mode = task_config.summary_mode if task_config.summary_mode else Const.STATISTICS
         self.overflow_num = task_config.overflow_num if task_config.overflow_num else 1
-        self.repair_scope = None
-        self.repair_api_str = None
-        self.on_step_end = None
-        self.repair_type = None
-        
-        if self.task == "free_benchmark":
+        self.framework = Const.PT_FRAMEWORK
+
+        if self.task == Const.FREE_BENCHMARK:
             self.fuzz_device = task_config.fuzz_device if task_config.fuzz_device else 'npu'
             self.handler_type = task_config.handler_type if task_config.handler_type else 'check'
             self.pert_mode = task_config.pert_mode if task_config.pert_mode else 'improve_precision'
@@ -79,11 +78,10 @@ class DebuggerConfig:
                 if not isinstance(rank_id, int) or rank_id < 0:
                     raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
             else:
-                print_warn_log_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
+                logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
 
     def _check_step(self):
         if self.step:
             for s in self.step:
                 if not isinstance(s, int) or s < 0:
                     raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
-    
