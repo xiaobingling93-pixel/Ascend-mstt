@@ -4,6 +4,9 @@ import numpy as np
 from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, ULP_PARAMETERS
 
 
+DEFAULT_THRESHOLD = 1
+
+
 #cos
 def cosine_sim(bench_output, device_output):
     msg = ""
@@ -189,17 +192,23 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
     err_cnt = np.sum(err_mask)
     return 0 if np.sum(normal_value_mask) == 0 else err_cnt / np.sum(normal_value_mask)
 
+
 def get_ulp_err(bench_output, device_output, dtype):
     parameters = ULP_PARAMETERS.get(dtype)
-    min_eb = (parameters.get('min_eb'))[0]
-    exponent_num = (parameters.get('exponent_num'))[0]
+    min_eb = (parameters.get('min_eb'), DEFAULT_THRESHOLD)[0]
+    exponent_num = (parameters.get('exponent_num'), DEFAULT_THRESHOLD)[0]
     abs_bench = np.abs(bench_output)
     eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
     eb = np.maximum(eb, min_eb)
 
     if dtype == torch.float32:
-        ulp_err = (device_output.astype(np.float64) - bench_output).astype(np.float64) * np.exp2(-eb + exponent_num).astype(np.float64)
+        ulp_err = calc_ulp_err(bench_output, device_output, eb, exponent_num, np.float64)
     else:
-        ulp_err = (device_output.astype(np.float32) - bench_output).astype(np.float32) * np.exp2(-eb + exponent_num).astype(np.float32)
+        ulp_err = calc_ulp_err(bench_output, device_output, eb, exponent_num, np.float32)
     ulp_err = np.abs(ulp_err)
     return ulp_err
+
+
+def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
+    return  (device_output.astype(data_type) - bench_output).astype(data_type) * \
+            np.exp2(-eb + exponent_num).astype(data_type)

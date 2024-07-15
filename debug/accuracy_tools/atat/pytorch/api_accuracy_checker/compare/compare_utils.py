@@ -125,6 +125,11 @@ class CompareConst:
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 2 ** -8
     SPACE = " "
+    HUNDRED_RATIO_THRESHOLD = 0.01
+    THOUSAND_RATIO_THRESHOLD = 0.001
+    TEN_THOUSAND_RATIO_THRESHOLD = 0.0001
+    ULP_FLOAT32_THRESHOLD = 32
+    ULP_FLOAT16_THRESHOLD = 1
     
     
 class ApiPrecisionCompareColumn:
@@ -234,4 +239,39 @@ def convert_str_to_float(input_data):
 
 def is_inf_or_nan(x):
     return math.isnan(x) or math.isinf(x)
-        
+
+
+def handle_infinity(x, y, column_name):
+    if math.isinf(x) and math.isinf(y):
+        if x == y:
+            return float("nan"), True, f"{column_name}同为同号inf或nan\n"
+        else:
+            return float("nan"), False, f"{column_name}inf或nan不一致\n"
+    elif math.isinf(x):
+        return handle_single_infinity(x, y, column_name)
+    else:
+        return abs(x / y), False, f"{column_name}inf或nan不一致\n"
+
+
+def handle_single_infinity(inf_value, other_value, column_name):
+    if other_value >= 0:
+        return inf_value, False, f"{column_name}inf或nan不一致\n"
+    else:
+        return -inf_value, False, f"{column_name}inf或nan不一致\n"
+
+
+def handle_nan(x, y, column_name):
+    if math.isnan(x) and math.isnan(y):
+        return float("nan"), True, f"{column_name}同为同号inf或nan\n"
+    else:
+        return float("nan"), False, f"{column_name}inf或nan不一致\n"
+
+
+def check_inf_or_nan(x, y, column_name):
+    if math.isinf(x) or math.isinf(y):
+        return handle_infinity(x, y, column_name)
+    elif math.isnan(x) or math.isnan(y):
+        return handle_nan(x, y, column_name)
+    else:
+        return abs(x / y), False, f"{column_name}inf或nan不一致\n"
+    

@@ -23,6 +23,11 @@ ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'b
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results', 'rank'])
 
 
+INDEX_TEST_RESULT__GROUP = 3
+INDEX_FIRST_GROUP = 0
+INDEX_MESSAGE = -1
+
+
 class Comparator:
     # consts for result csv
     COLUMN_API_NAME = "API name"
@@ -169,9 +174,9 @@ class Comparator:
             test_rows[0].append(self.COLUMN_STACK_INFO)
 
         name = test_result[0]
-        df_row = list(test_result[:3])
+        df_row = list(test_result[:INDEX_TEST_RESULT__GROUP])
         if test_result[1] == "SKIP":
-            df_row.append(test_result[3][0][-1])
+            df_row.append(test_result[INDEX_TEST_RESULT__GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
@@ -334,7 +339,7 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         if api_name in ThousandthStandardApi:
-            thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+            thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
             compare_column.rel_err_thousandth = thousand_res
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
@@ -361,9 +366,9 @@ class Comparator:
                     compare_column.max_ulp_error = np.max(ulp_err)
                     compare_column.mean_ulp_error = np.mean(ulp_err)
                     if dtype == torch.float32:
-                        compare_column.ulp_error_proportion = np.sum(ulp_err > 32) / bench_output.size
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > CompareConst.ULP_FLOAT32_THRESHOLD) / bench_output.size
                     else:
-                        compare_column.ulp_error_proportion = np.sum(ulp_err > 1) / bench_output.size
+                        compare_column.ulp_error_proportion = np.sum(ulp_err > CompareConst.ULP_FLOAT16_THRESHOLD) / bench_output.size
             else:
                 dtype_config = precision_configs.get(dtype)
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
@@ -391,12 +396,12 @@ class Comparator:
             return CompareConst.PASS, compare_column, message
 
         if dtype in [torch.float16, torch.bfloat16]:
-            hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, 0.01)
+            hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, CompareConst.HUNDRED_RATIO_THRESHOLD)
             compare_column.rel_err_hundredth = hundred_res
             if not hundred_status:
                 message += "Relative error is greater than 0.01, consider as error, skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
-        thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, 0.001)
+        thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
         compare_column.rel_err_thousandth = thousand_res
         if dtype in [torch.float16, torch.bfloat16]:
             if thousand_status:
@@ -404,7 +409,7 @@ class Comparator:
                 return CompareConst.PASS, compare_column, message
             message += "Relative error is greater than 0.001, consider as warning, skip other check and set to SPACE.\n"
             return CompareConst.WARNING, compare_column, message
-        ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, 0.0001)
+        ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.TEN_THOUSAND_RATIO_THRESHOLD)
         compare_column.rel_err_ten_thousandth = ten_thousand_res
         if dtype in [torch.float32, torch.float64]:
             if not thousand_status:
