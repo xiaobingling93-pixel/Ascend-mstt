@@ -16,7 +16,6 @@
 """
 
 import os
-import pandas as pd
 
 from atat.pytorch.advisor.advisor_result import AdvisorResult
 from atat.pytorch.advisor.advisor_const import AdvisorConst
@@ -50,9 +49,10 @@ class Advisor:
 
     def analyze_unmatched(self, analyze_data):
         if self.file_type == Const.ALL:
-            accuracy_unmatched = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
+            accuracy_unmatched = analyze_data[
+                analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_UNMATCH]
         else:
-            accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) | 
+            accuracy_unmatched = analyze_data[(analyze_data[CompareConst.NPU_SHAPE] == CompareConst.NAN) |
                                               (analyze_data[CompareConst.BENCH_SHAPE] == CompareConst.NAN)]
         num_unmatch = len(accuracy_unmatched)
         if num_unmatch != 0:

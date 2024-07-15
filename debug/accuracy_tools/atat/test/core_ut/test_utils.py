@@ -4,6 +4,7 @@ from unittest.mock import patch
 from atat.core.common.utils import check_seed_all, Const, CompareException, check_inplace_op
 from atat.core.common.log import logger
 
+
 class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_seed_all(self, mock_print_error_log):
