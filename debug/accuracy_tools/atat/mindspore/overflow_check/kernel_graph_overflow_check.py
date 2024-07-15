@@ -1,9 +1,9 @@
 import os
 import json
-from atat.core.utils import make_dump_path_if_not_exists
+from atat.core.common.utils import make_dump_path_if_not_exists
 from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.core.log import print_warn_log, print_info_log
-from atat.core.file_check_util import FileOpen
+from atat.core.common.log import logger
+from atat.core.common.file_check import FileOpen
 
 
 class KernelGraphOverflowCheck:
@@ -23,7 +23,7 @@ class KernelGraphOverflowCheck:
 
         self.dump_json["common_dump_settings"]["path"] = config.dump_path
         if len(config.step) > 0:
-            print_warn_log("Step would change to all in this task.")
+            logger.warning("Step would change to all in this task.")
         if len(config.rank) > 0:
             self.dump_json["common_dump_settings"]["support_device"] = config.rank
         if config.check_mode == "aicore":
@@ -39,7 +39,7 @@ class KernelGraphOverflowCheck:
         json_path = os.path.join(json_path, "kernel_graph_overflow_check.json")
         with FileOpen(json_path, 'w') as f:
             json.dump(self.dump_json, f)
-        print_info_log(json_path + " has been created.")
+        logger.info(json_path + " has been created.")
         os.environ["MINDSPORE_DUMP_CONFIG"] = json_path
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:
             del os.environ["MS_ACL_DUMP_CFG_PATH"]

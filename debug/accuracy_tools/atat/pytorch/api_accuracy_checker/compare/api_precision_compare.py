@@ -14,9 +14,9 @@ from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst
     convert_str_to_float, CompareMessage
 from atat.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from atat.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
-from atat.pytorch.common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create, create_directory
-from atat.pytorch.common.log import print_info_log, print_warn_log, print_error_log
-from atat.core.utils import CompareException
+from atat.core.common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create, create_directory
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import CompareException
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 unsupported_message = 'This data type does not support benchmark compare.'
@@ -152,18 +152,18 @@ def write_detail_csv(content, save_path):
 
 
 def api_precision_compare(config):
-    print_info_log("Start compare task")
-    print_info_log(f"Compare task result will be saved in {config.result_csv_path}")
-    print_info_log(f"Compare task detail will be saved in {config.details_csv_path}")
+    logger.info("Start compare task")
+    logger.info(f"Compare task result will be saved in {config.result_csv_path}")
+    logger.info(f"Compare task detail will be saved in {config.details_csv_path}")
     try:
         npu_data = pd.read_csv(config.npu_csv_path)
     except Exception as err:
-        print_error_log(f"Open npu csv Error: %s" % str(err))
+        logger.error(f"Open npu csv Error: %s" % str(err))
     check_csv_columns(npu_data.columns, "npu_csv")
     try:
         gpu_data = pd.read_csv(config.gpu_csv_path)
     except Exception as err:
-        print_error_log(f"Open gpu csv Error: %s" % str(err))
+        logger.error(f"Open gpu csv Error: %s" % str(err))
     check_csv_columns(gpu_data.columns, "gpu_csv")
     detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
     result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
@@ -172,7 +172,7 @@ def api_precision_compare(config):
     try:
         analyse_csv(npu_data, gpu_data, config)
     except Exception as err:
-        print_error_log(f"Analyse csv Error: %s" % str(err))
+        logger.error(f"Analyse csv Error: %s" % str(err))
     change_mode(config.result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
     change_mode(config.details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
@@ -187,7 +187,7 @@ def analyse_csv(npu_data, gpu_data, config):
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
         _, api_name, _, direction_status, _, _ = full_api_name_with_direction_status.split(".")
         if row_gpu.empty:
-            print_warn_log(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
+            logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue
         if len(row_gpu) > 1:
             msg = f'This API : {full_api_name_with_direction_status} has multiple records in the GPU data.'
@@ -234,7 +234,7 @@ def analyse_csv(npu_data, gpu_data, config):
         elif direction_status == 'backward':
             backward_status.append(new_status)
         else:
-            print_error_log(f"Invalid direction status: {direction_status}")
+            logger.error(f"Invalid direction status: {direction_status}")
 
     if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
@@ -389,4 +389,4 @@ def _api_precision_compare_parser(parser):
 
 if __name__ == '__main__':
     _api_precision_compare()
-    print_info_log("Compare task completed.")
+    logger.info("Compare task completed.")

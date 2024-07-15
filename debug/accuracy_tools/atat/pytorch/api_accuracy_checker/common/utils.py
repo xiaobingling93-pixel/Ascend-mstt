@@ -28,10 +28,10 @@ except ImportError:
 else:
     IS_GPU = False
 
-from atat.pytorch.common.log import print_warn_log, print_error_log
-from atat.pytorch.common.file_check import FileCheckConst, FileChecker, FileOpen, change_mode, create_directory
+from atat.pytorch.common.log import logger
+from atat.core.common.file_check import FileCheckConst, FileChecker, FileOpen, change_mode, create_directory
 from atat.pytorch.common.utils import Const
-from atat.core.utils import CompareException
+from atat.core.common.utils import CompareException
 
 
 class DumpException(CompareException):
@@ -55,7 +55,7 @@ def check_object_type(check_object, allow_type):
         when invalid data throw exception
     """
     if not isinstance(check_object, allow_type):
-        print_error_log(f"{check_object} not of {allow_type} type")
+        logger.error(f"{check_object} not of {allow_type} type")
         raise CompareException(CompareException.INVALID_DATA_ERROR)
 
 
@@ -71,24 +71,24 @@ def check_file_or_directory_path(path, isdir=False):
     """
     if isdir:
         if not os.path.exists(path):
-            print_error_log('The path {} is not exist.'.format(path))
+            logger.error('The path {} is not exist.'.format(path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
 
         if not os.path.isdir(path):
-            print_error_log('The path {} is not a directory.'.format(path))
+            logger.error('The path {} is not a directory.'.format(path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
 
         if not os.access(path, os.W_OK):
-            print_error_log(
+            logger.error(
                 'The path {} does not have permission to write. Please check the path permission'.format(path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
     else:
         if not os.path.isfile(path):
-            print_error_log('{} is an invalid file or non-exist.'.format(path))
+            logger.error('{} is an invalid file or non-exist.'.format(path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     if not os.access(path, os.R_OK):
-        print_error_log(
+        logger.error(
             'The path {} does not have permission to read. Please check the path permission'.format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
@@ -98,10 +98,10 @@ def get_json_contents(file_path):
     try:
         json_obj = json.loads(ops)
     except ValueError as error:
-        print_error_log('Failed to load "%s". %s' % (file_path, str(error)))
+        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
         raise CompareException(CompareException.INVALID_FILE_ERROR) from error
     if not isinstance(json_obj, dict):
-        print_error_log('Json file %s, content is not a dictionary!' % file_path)
+        logger.error('Json file %s, content is not a dictionary!' % file_path)
         raise CompareException(CompareException.INVALID_FILE_ERROR)
     return json_obj
 
@@ -161,7 +161,7 @@ def cross_entropy_process(api_info_dict):
 def initialize_save_path(save_path, dir_name):
     data_path = os.path.join(save_path, dir_name)
     if os.path.exists(data_path):
-        print_warn_log(f"{data_path} already exists, it will be overwritten")
+        logger.warning(f"{data_path} already exists, it will be overwritten")
     else:
         os.mkdir(data_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
     data_path_checker = FileChecker(data_path, FileCheckConst.DIR)

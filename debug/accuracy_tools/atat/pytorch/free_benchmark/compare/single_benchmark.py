@@ -1,7 +1,7 @@
 import math
 
 import torch
-from atat.pytorch.free_benchmark import print_warn_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.utils import TorchC
 
@@ -61,7 +61,7 @@ class SingleCompare:
             actual.dtype, ThresholdConfig.BENCHMARK_THD_DICT.get(torch.float32)
         )
         if self.filter_overflow(golden) > 0:
-            print_warn_log_rank_0("[atat] Free Benchmark: inf and nan"
+            logger.warning_on_rank_0("[atat] Free Benchmark: inf and nan"
                                   "in golden tensor is not supported.")
             return True
         actual = self.replace_inf_or_nan(actual)

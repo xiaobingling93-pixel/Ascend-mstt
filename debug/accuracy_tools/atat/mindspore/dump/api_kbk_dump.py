@@ -1,9 +1,9 @@
 import os
 import json
-from atat.core.utils import make_dump_path_if_not_exists
+from atat.core.common.utils import make_dump_path_if_not_exists
 from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.core.log import print_info_log
-from atat.core.file_check_util import FileOpen
+from atat.core.common.log import logger
+from atat.core.common.file_check import FileOpen
 
 
 class ApiKbkDump:
@@ -48,7 +48,7 @@ class ApiKbkDump:
         json_path = os.path.join(json_path, "api_kbk_dump.json")
         with FileOpen(json_path, 'w') as f:
             json.dump(self.dump_json, f)
-        print_info_log(json_path + " has been created.")
+        logger.info(json_path + " has been created.")
         os.environ["GRAPH_OP_RUN"] = "1"
         os.environ["MINDSPORE_DUMP_CONFIG"] = json_path
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:

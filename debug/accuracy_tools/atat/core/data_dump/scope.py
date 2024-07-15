@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from ..common.exceptions import ScopeException
-from ..common.utils import Const
+from atat.core.common.exceptions import ScopeException
+from atat.core.common.utils import Const
 
 
 def build_scope(scope_class, scope=None, api_list=None):
@@ -10,7 +10,6 @@ def build_scope(scope_class, scope=None, api_list=None):
         scope = []
     if api_list is None:
         api_list = []
-
     if scope_class:
         return scope_class(scope, api_list)
     return build_range_scope_according_to_scope_name(scope, api_list)
@@ -73,6 +72,7 @@ class BaseScope(ABC):
                 return True
         return False
 
+
 class ListScope(BaseScope):
     @staticmethod
     def rectify_args(scope, api_list):
@@ -93,6 +93,7 @@ class RangeScope(BaseScope, ABC):
         super().__init__(*args)
         self.in_scope = False
         self.is_valid = self.check_scope_is_valid()
+
 
     @staticmethod
     def rectify_args(scope, api_list):

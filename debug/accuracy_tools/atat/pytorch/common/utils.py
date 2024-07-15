@@ -15,14 +15,12 @@
 # limitations under the License.
 """
 import os
-import re
 import random
 import stat
 import torch
 import numpy as np
 from functools import wraps
-
-from .exceptions import DistributedNotInitializedError
+from atat.core.common.exceptions import DistributedNotInitializedError
 
 try:
     import torch_npu

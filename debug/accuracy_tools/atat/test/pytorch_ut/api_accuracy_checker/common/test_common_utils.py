@@ -2,7 +2,6 @@ import unittest
 from unittest.mock import patch
 
 from atat.pytorch.api_accuracy_checker.common.utils import *
-from atat.core.utils import CompareException
 
 
 class TestUtils(unittest.TestCase):

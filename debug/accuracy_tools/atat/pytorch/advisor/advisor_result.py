@@ -17,9 +17,10 @@
 import os
 import time
 
-from .advisor_const import AdvisorConst
-from ...core.utils import Const, print_info_log, print_error_log
-from ...core.file_check_util import FileCheckConst, change_mode
+from atat.pytorch.advisor.advisor_const import AdvisorConst
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import Const
+from atat.core.common.file_check import FileCheckConst, change_mode
 
 
 class AdvisorResult:
@@ -43,15 +44,15 @@ class AdvisorResult:
                 output_file.writelines(message_list)
             change_mode(result_file, FileCheckConst.DATA_FILE_AUTHORITY)
         except IOError as io_error:
-            print_error_log("Failed to save %s, the reason is %s." % (result_file, io_error))
+            logger.error("Failed to save %s, the reason is %s." % (result_file, io_error))
         else:
-            print_info_log("The advisor summary is saved in: %s" % result_file)
+            logger.info("The advisor summary is saved in: %s" % result_file)
 
     def print_advisor_log(self):
-        print_info_log("The summary of the expert advice is as follows: ")
+        logger.info("The summary of the expert advice is as follows: ")
         message_list = [AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
                         AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
                         AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message]
         for message in message_list:
-            print_info_log(message)
+            logger.info(message)
         return message_list

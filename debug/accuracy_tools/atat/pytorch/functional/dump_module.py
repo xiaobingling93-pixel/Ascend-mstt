@@ -1,20 +1,21 @@
 import torch.nn as nn
-from atat.core.utils import print_error_log, DumpException
-from .scope import BaseScope
-from ..common.utils import Const
-from ..hook_module.api_registry import api_register
-from ..debugger.precision_debugger import PrecisionDebugger
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import Const
+from atat.pytorch.hook_module.api_registry import api_register
+from atat.pytorch.debugger.precision_debugger import PrecisionDebugger
+from atat.core.common.exceptions import MsaccException
+from atat.core.data_dump.scope import BaseScope
 
 module_count = {}
 
 
 def module_dump(module, dump_name):
     if not isinstance(module, nn.Module):
-        print_error_log("The parameter:module in module_dump is not a Module subclass.")
-        raise DumpException(DumpException.INVALID_PARAM_ERROR)
+        logger.error("The parameter:module in module_dump is not a Module subclass.")
+        raise MsaccException(MsaccException.INVALID_PARAM_ERROR)
     if not isinstance(dump_name, str):
-        print_error_log("The parameter:dump_name in module_dump is not a str type.")
-        raise DumpException(DumpException.INVALID_PARAM_ERROR)
+        logger.error("The parameter:dump_name in module_dump is not a str type.")
+        raise MsaccException(MsaccException.INVALID_PARAM_ERROR)
     api_register.api_originality()
     if dump_name not in module_count:
         module_count[dump_name] = 0

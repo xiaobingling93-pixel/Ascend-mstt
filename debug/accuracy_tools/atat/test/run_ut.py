@@ -3,25 +3,7 @@ import shutil
 import subprocess
 import sys
 
-from atat.core.log import print_info_log, print_error_log
-
-
-def get_ignore_dirs(cur_dir):
-    ignore_dirs = []
-    try:
-        import torch
-        import torch_npu
-    except ImportError:
-        print_info_log(f"Skipping the {cur_dir}/pytorch_ut directory")
-        ignore_dirs.extend(["--ignore", f"{cur_dir}/pytorch_ut"])
-
-    try:
-        import mindspore
-    except ImportError:
-        print_info_log(f"Skipping the {cur_dir}/mindspore_ut directory")
-        ignore_dirs.extend(["--ignore", f"{cur_dir}/mindspore_ut"])
-
-    return ignore_dirs
+from atat.core.common.log import logger
 
 
 def run_ut():
@@ -54,18 +36,18 @@ def run_ut():
                 text=True,
         ) as proc:
             for line in proc.stdout:
-                print_info_log(line.strip())
+                logger.info(line.strip())
 
             proc.wait()
 
             if proc.returncode == 0:
-                print_info_log("Unit tests executed successfully.")
+                logger.info("Unit tests executed successfully.")
                 return True
             else:
-                print_error_log("Unit tests execution failed.")
+                logger.error("Unit tests execution failed.")
                 return False
     except Exception as e:
-        print_error_log(f"An error occurred during test execution: {e}")
+        logger.error(f"An error occurred during test execution: {e}")
         return False
 
 

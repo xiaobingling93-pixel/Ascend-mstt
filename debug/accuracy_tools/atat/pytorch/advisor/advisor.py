@@ -17,10 +17,11 @@
 
 import os
 
-from atat.core.file_check_util import FileChecker, FileCheckConst
-from atat.core.utils import CompareException, CompareConst, Const, print_info_log, print_warn_log, print_error_log
-from .advisor_const import AdvisorConst
-from .advisor_result import AdvisorResult
+from atat.pytorch.advisor.advisor_result import AdvisorResult
+from atat.pytorch.advisor.advisor_const import AdvisorConst
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import CompareException, CompareConst, Const
+from atat.core.common.file_check import FileChecker, FileCheckConst
 
 
 class Advisor:
@@ -57,15 +58,15 @@ class Advisor:
         if num_unmatch != 0:
             for i in range(len(accuracy_unmatched)):
                 item = accuracy_unmatched.iloc[i]
-                print_warn_log("The tensor name matches but the shape or dtype does not match: {}"
-                               .format(item[CompareConst.NPU_NAME]))
+                logger.warning("The tensor name matches but the shape or dtype does not match: {}"
+                            .format(item[CompareConst.NPU_NAME]))
 
     def gen_advisor_result(self, pd_data):
         first_failing_data = pd_data.iloc[0]
         node_name = first_failing_data[CompareConst.NPU_NAME]
         index = first_failing_data['index']
         message = self.gen_advisor_message(node_name)
-        print_warn_log("Find %s accuracy not reached, the line is %s" % (node_name, index))
+        logger.warning("Find %s accuracy not reached, the line is %s" % (node_name, index))
         result = AdvisorResult(node_name, index, message)
         return result
 
@@ -88,7 +89,7 @@ class Advisor:
     def analysis(self):
         self._check_path_vaild()
         analyze_data = self._parse_input_data()
-        print_info_log("Start analyzing the comparison result: %s" % self.file_type)
+        logger.info("Start analyzing the comparison result: %s" % self.file_type)
         self.analyze_unmatched(analyze_data)
         if self.file_type == Const.ALL:
             failing_data = analyze_data[analyze_data[CompareConst.ACCURACY] == CompareConst.ACCURACY_CHECK_NO]
@@ -97,7 +98,7 @@ class Advisor:
         elif self.file_type == Const.SUMMARY:
             failing_data = analyze_data[analyze_data[CompareConst.RESULT] == CompareConst.WARNING]
         if failing_data.empty:
-            print_info_log("All data from api input/output accuracy reached")
+            logger.info("All data from api input/output accuracy reached")
             result = AdvisorResult(AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERROR_API, AdvisorConst.NO_ERR_SUGGEST)
         else:
             result = self.gen_advisor_result(failing_data)
@@ -113,7 +114,7 @@ class Advisor:
         elif {CompareConst.MAX_DIFF, CompareConst.RESULT}.issubset(data_columns):
             self.file_type = Const.SUMMARY
         else:
-            print_error_log('Compare result does not meet the required conditions.')
+            logger.error('Compare result does not meet the required conditions.')
             raise CompareException(CompareException.INVALID_DATA_ERROR)
         df = self.input_data.reset_index()
         return df

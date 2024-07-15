@@ -5,7 +5,7 @@ from typing import Any, Optional, Tuple
 import torch
 from atat.pytorch.free_benchmark import (
     Const,
-    print_warn_log_rank_0,
+    logger,
 )
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.enums import (
@@ -101,7 +101,7 @@ class FuzzHandler(ABC):
                 origin_output, perturbed_output
             )
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
                 f"when computing ratio,"
                 f" y1 or y2 dtype is not supported {e}"
@@ -130,7 +130,7 @@ class FuzzHandler(ABC):
                 origin_output / perturbed_output,
             )
         elif not isinstance(perturbed_output, torch.Tensor):
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name} "
                 f"The compare for output type {type(perturbed_output)} is not supported"
             )
@@ -182,7 +182,7 @@ class FuzzHandler(ABC):
                             )
                         )
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
                 f"when campare the result exception raise {e}"
             )
