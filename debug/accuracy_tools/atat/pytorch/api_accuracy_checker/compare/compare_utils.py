@@ -3,8 +3,9 @@ import os
 import numpy as np
 import torch
 import yaml
-from ..common.utils import Const, print_warn_log, CompareException
-from ...common.file_check import FileOpen
+from atat.core.common.utils import Const, CompareException
+from atat.pytorch.common.log import logger
+from atat.core.common.file_check import FileOpen
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -170,7 +171,7 @@ def check_dtype_comparable(x, y):
         if y.dtype in Const.INT_TYPE:
             return True 
         return False
-    print_warn_log(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
+    logger.warning(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
     return False
 
 

@@ -20,7 +20,8 @@ import threading
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
-from ..common.utils import Const
+from atat.core.common.utils import Const
+
 
 class HOOKModule(nn.Module):
     module_count = {}

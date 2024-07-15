@@ -1,6 +1,5 @@
 from atat.pytorch.free_benchmark import FreeBenchmarkException
 from atat.pytorch.free_benchmark.common.constant import PreheatConfig
-from atat.pytorch.free_benchmark.common.utils import Tools
 from atat.pytorch.free_benchmark.common.enums import HandlerType
 from atat.pytorch.free_benchmark.common.params import HandlerParams
 from atat.pytorch.free_benchmark.result_handlers.check_handler import CheckerHandler

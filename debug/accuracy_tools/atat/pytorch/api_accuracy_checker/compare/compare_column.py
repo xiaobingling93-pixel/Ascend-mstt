@@ -1,4 +1,4 @@
-from .compare_utils import CompareConst
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst
 
 
 class CompareColumn:

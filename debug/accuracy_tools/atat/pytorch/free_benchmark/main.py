@@ -1,9 +1,7 @@
-import importlib
 from abc import ABC
 
 import torch
-from atat.pytorch.free_benchmark import Const, print_warn_log_rank_0
-
+from atat.pytorch.free_benchmark import Const, logger
 from atat.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
 from atat.pytorch.free_benchmark.common.enums import (
     PerturbationMode,
@@ -80,7 +78,7 @@ class FreeBenchmarkCheck(ABC):
         try:
             grad_saver = getattr(module, "grad_saver")
         except AttributeError:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free benchmark:  get grad saver failed. api_name:{name}"
             )
             return
@@ -96,7 +94,7 @@ class FreeBenchmarkCheck(ABC):
                 _new_grad_output, need_grad_tensors, _inner_args
             )
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free benchmark: grad vjp calculate failed. api_name:{name} error: {e}"
             )
             return

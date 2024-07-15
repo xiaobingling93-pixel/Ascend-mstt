@@ -13,9 +13,9 @@ from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_
     get_validated_details_csv_path, preprocess_forward_content
 from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
 from atat.pytorch.common import parse_json_info_forward_backward
-from atat.pytorch.common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen, \
+from atat.core.common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen, \
     check_path_before_create, create_directory
-from atat.pytorch.common.log import print_error_log, print_warn_log, print_info_log
+from atat.pytorch.common.log import logger
 
 
 def split_json_file(input_file, num_splits, filter_api):
@@ -57,7 +57,7 @@ def split_json_file(input_file, num_splits, filter_api):
 
 
 def signal_handler(signum, frame):
-    print_warn_log(f'Signal handler called with signal {signum}')
+    logger.warning(f'Signal handler called with signal {signum}')
     raise KeyboardInterrupt()
 
 
@@ -74,8 +74,8 @@ def run_parallel_ut(config):
     processes = []
     device_id_cycle = cycle(config.device_id)
     if config.save_error_data_flag:
-        print_info_log("UT task error datas will be saved")
-    print_info_log(f"Starting parallel UT with {config.num_splits} processes")
+        logger.info("UT task error datas will be saved")
+    logger.info(f"Starting parallel UT with {config.num_splits} processes")
     progress_bar = tqdm(total=config.total_items, desc="Total items", unit="items")
 
     def create_cmd(api_info, dev_id):
@@ -105,7 +105,7 @@ def run_parallel_ut(config):
                     print(output, end='')
                     sys.stdout.flush()
         except ValueError as e:
-            print_warn_log(f"An error occurred while reading subprocess output: {e}")
+            logger.warning(f"An error occurred while reading subprocess output: {e}")
 
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
@@ -114,9 +114,9 @@ def run_parallel_ut(config):
                     completed_items = len(result_file.readlines()) - 1
                     progress_bar.update(completed_items - progress_bar.n)
             except FileNotFoundError:
-                print_warn_log(f"Result CSV file not found: {result_csv_path}.")
+                logger.warning(f"Result CSV file not found: {result_csv_path}.")
             except Exception as e:
-                print_error_log(f"An unexpected error occurred while reading result CSV: {e}")
+                logger.error(f"An unexpected error occurred while reading result CSV: {e}")
             time.sleep(1)
 
     for api_info in config.api_files:
@@ -141,27 +141,27 @@ def run_parallel_ut(config):
             try:
                 os.remove(file)
             except FileNotFoundError:
-                print_warn_log(f"File not found and could not be deleted: {file}")
+                logger.warning(f"File not found and could not be deleted: {file}")
 
     try:
         for process in processes:
             process.communicate(timeout=None)
     except KeyboardInterrupt:
-        print_warn_log("Interrupted by user, terminating processes and cleaning up...")
+        logger.warning("Interrupted by user, terminating processes and cleaning up...")
     except Exception as e:
-        print_error_log(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
     finally:
         if progress_bar.n < config.total_items:
-            print_warn_log("The UT task has not been completed. The parameter '-csv_path' along with the path to the result CSV file will be utilized to resume the UT task.")
+            logger.warning("The UT task has not been completed. The parameter '-csv_path' along with the path to the result CSV file will be utilized to resume the UT task.")
         clean_up()
         progress_bar_thread.join()
     try:
         comparator = Comparator(config.result_csv_path, config.result_csv_path, False)
         comparator.print_pretest_result()
     except FileNotFoundError as e:
-        print_error_log(f"Error: {e}")
+        logger.error(f"Error: {e}")
     except Exception as e:
-        print_error_log(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
 
 
 def prepare_config(args):
@@ -182,8 +182,8 @@ def prepare_config(args):
     else:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-    print_info_log(f"UT task result will be saved in {result_csv_path}")
-    print_info_log(f"UT task details will be saved in {details_csv_path}")
+    logger.info(f"UT task result will be saved in {result_csv_path}")
+    logger.info(f"UT task details will be saved in {details_csv_path}")
     return ParallelUTConfig(split_files, out_path, args.num_splits, args.save_error_data,
                             args.jit_compile, args.device_id, result_csv_path,
                             total_items, args.real_data_path)

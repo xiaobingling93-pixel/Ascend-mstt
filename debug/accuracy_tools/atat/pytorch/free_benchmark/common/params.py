@@ -1,9 +1,8 @@
-from abc import ABC
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
-from atat.pytorch.free_benchmark import Const, print_warn_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
@@ -78,7 +77,7 @@ def data_pre_deal(name, func, args, kwargs):
     index = check_args_type(args)
     data_params.valid_input_index = index
     if index == -1:
-        print_warn_log_rank_0(
+        logger.warning_on_rank_0(
             f"[atat] Free benchmark: 无标杆工具不支持当前算子的输入类型 {name}."
         )
     return data_params

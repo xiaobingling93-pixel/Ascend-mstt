@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import Const, print_info_log_rank_0
+from atat.pytorch.free_benchmark import Const, logger
 from atat.pytorch.free_benchmark.common.constant import CommonField
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
@@ -31,7 +31,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
         return tensor_obj
 
     def handle(self, params: DataParams) -> torch.Any:
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.IMPROVE_PRECISION} of {self.api_name}."
         )

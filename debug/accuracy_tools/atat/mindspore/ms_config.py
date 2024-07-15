@@ -1,6 +1,6 @@
 import json
 from atat.core.common_config import CommonConfig, BaseConfig
-from atat.core.file_check_util import FileOpen
+from atat.core.common.file_check import FileOpen
 
 
 class TensorConfig(BaseConfig):
