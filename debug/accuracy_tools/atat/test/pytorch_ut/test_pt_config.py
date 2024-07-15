@@ -2,7 +2,7 @@ from unittest import TestCase
 from unittest.mock import patch, mock_open
 
 from atat.core.common.const import Const
-from atat.pytorch.pt_config import parse_json_config
+from atat.pytorch.pt_config import parse_json_config, parse_task_config
 
 
 class TestPtConfig(TestCase):
@@ -36,3 +36,34 @@ class TestPtConfig(TestCase):
             common_config, task_config = parse_json_config(None, Const.TENSOR)
         self.assertEqual(common_config.task, Const.STATISTICS)
         self.assertEqual(task_config.file_format, "npy")
+
+    def test_parse_task_config(self):
+        overflow_check_config = {
+            "overflow_check": {
+                "overflow_nums": 1,
+                "check_mode": "all"
+            }
+        }
+        result = parse_task_config(Const.OVERFLOW_CHECK, overflow_check_config)
+        self.assertEqual(result.overflow_num, 1)
+        self.assertEqual(result.check_mode, "all")
+
+        free_benchmark_config = {
+            "free_benchmark": {
+                "scope": [],
+                "list": ["conv2d"],
+                "fuzz_device": "npu",
+                "pert_mode": "improve_precision",
+                "handler_type": "check",
+                "fuzz_level": "L1",
+                "fuzz_stage": "forward",
+                "if_preheat": False,
+                "preheat_step": 15,
+                "max_sample": 20
+            }
+        }
+        result = parse_task_config(Const.FREE_BENCHMARK, free_benchmark_config)
+        self.assertEqual(result.pert_mode, "improve_precision")
+        self.assertEqual(result.handler_type, "check")
+        self.assertEqual(result.preheat_step, 15)
+        self.assertEqual(result.max_sample, 20)
