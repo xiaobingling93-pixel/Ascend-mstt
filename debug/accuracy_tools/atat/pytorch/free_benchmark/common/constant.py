@@ -13,6 +13,7 @@ class CommonField:
     REQUIRES_GRAD = "requires_grad"
     HOLD_PLACE = "hold_place"
     DISTRIBUTED_OP = "torch.distributed"
+    GRADSAVER = "grad_saver"
 
 
 class ThresholdConfig:

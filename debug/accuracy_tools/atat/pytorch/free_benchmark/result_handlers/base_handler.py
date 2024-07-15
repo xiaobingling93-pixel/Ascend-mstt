@@ -3,18 +3,19 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
 
 import torch
-from atat.pytorch.free_benchmark import (
-    Const,
-    logger,
-)
+from atat.pytorch.free_benchmark import Const, logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.enums import (
     FuzzThreshold,
     NormType,
     PerturbationMode,
 )
-from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams, make_unequal_row
-from atat.pytorch.free_benchmark.common.utils import TorchC
+from atat.pytorch.free_benchmark.common.params import (
+    DataParams,
+    HandlerParams,
+    make_unequal_row,
+)
+from atat.pytorch.free_benchmark.common.utils import Tools, TorchC
 
 
 class FuzzHandler(ABC):
@@ -135,7 +136,7 @@ class FuzzHandler(ABC):
                 f"The compare for output type {type(perturbed_output)} is not supported"
             )
 
-        threshold = self.get_threshold(origin_output.dtype)
+        threshold = self.get_threshold(Tools.get_first_tensor_dtype(origin_output))
         ratio = self.ratio_calculate(
             origin_output, perturbed_output, norm_type=NormType.ENDLESS_NORM
         )

@@ -5,8 +5,7 @@ from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.counter import preheat_counter
 from atat.pytorch.free_benchmark.common.enums import DeviceType
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.common.params import HandlerParams
+from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
 from atat.pytorch.free_benchmark.common.utils import Tools
 from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
 from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
@@ -79,7 +78,7 @@ class PreheatHandler(FuzzHandler):
                 f"when campare to cpu exception raise {e}"
             )
         try:
-            first_dtype = Tools.get_first_tensor_dtype(data_params.perturbed_result)
+            first_dtype = Tools.get_first_tensor_dtype(data_params.original_result)
         except RuntimeError:
             logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.params.api_name}, "
