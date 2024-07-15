@@ -80,6 +80,9 @@ class GradSaver:
                 f"[atat] Free benchmark: compare two vjp failed: api:{self.handler_params.api_name}."
                 f"{e}"
             )
+        # 在扰动前后输出对比后释放输出的引用
+        self.data_params.perturbed_result = None
+        self.data_params.original_result = None
 
     def check_grad_input(self, origin_grad, new_grad_index):
         if self.perturbed_grad_input is None:
@@ -171,6 +174,10 @@ class GradSaver:
             self.handler_params.pert_mode,
         )
         layer.handle(self.data_params)
-        self.perturbed_grad_input = tuple(
-            [x.cpu() for x in self.data_params.perturbed_result]
-        )
+        # 在计算扰动输出之后，释放输入的引用
+        self.data_params.args = None
+        # 确定扰动成功后，才会暂存
+        if self.data_params.perturbed_result:
+            self.perturbed_grad_input = tuple(
+                [x.cpu() for x in self.data_params.perturbed_result]
+            )

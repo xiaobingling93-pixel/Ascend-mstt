@@ -18,6 +18,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
         ):
             self._set_improve_valus(tensor_obj)
             tensor_obj = self._change_dtype(tensor_obj)
+            self.is_added = True
             return tensor_obj
         if isinstance(tensor_obj, dict):
             return {
@@ -40,6 +41,9 @@ class ImprovePrecisionLayer(NpuBaseLayer):
             new_kwargs = {}
         else:
             new_kwargs = self.improve_tensor_precision(params.kwargs)
+        # 如果输入中全为高精度、应跳过二次执行、减少多余显存引用
+        if not self.is_added:
+            return params.perturbed_result
         if "inplace" in new_kwargs:
             new_kwargs["inplace"] = False
         params.perturbed_result = params.origin_func(*new_args, **new_kwargs)
