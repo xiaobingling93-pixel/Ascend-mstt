@@ -4,8 +4,8 @@ import numpy as np
 import torch
 import yaml
 import math
-from atat.pytorch.api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
-from atat.pytorch.common.file_check import FileOpen
+from atat.pytorch.api_accuracy_checker.common.utils import Const, CompareException
+from atat.core.common.file_check import FileOpen
 from atat.pytorch.common.log import logger
 
 
