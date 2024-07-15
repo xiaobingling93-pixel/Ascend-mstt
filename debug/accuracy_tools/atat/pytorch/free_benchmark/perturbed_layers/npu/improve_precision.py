@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import Const, print_info_log_rank_0
+from atat.pytorch.free_benchmark import Const, logger
 from atat.pytorch.free_benchmark.common.constant import CommonField
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
@@ -18,6 +18,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
         ):
             self._set_improve_valus(tensor_obj)
             tensor_obj = self._change_dtype(tensor_obj)
+            self.is_added = True
             return tensor_obj
         if isinstance(tensor_obj, dict):
             return {
@@ -31,7 +32,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
         return tensor_obj
 
     def handle(self, params: DataParams) -> torch.Any:
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.IMPROVE_PRECISION} of {self.api_name}."
         )
@@ -40,6 +41,9 @@ class ImprovePrecisionLayer(NpuBaseLayer):
             new_kwargs = {}
         else:
             new_kwargs = self.improve_tensor_precision(params.kwargs)
+        # 如果输入中全为高精度、应跳过二次执行、减少多余显存引用
+        if not self.is_added:
+            return params.perturbed_result
         if "inplace" in new_kwargs:
             new_kwargs["inplace"] = False
         params.perturbed_result = params.origin_func(*new_args, **new_kwargs)

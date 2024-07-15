@@ -64,13 +64,17 @@ class RunProfileData(object):
         fwd_bwd_events = []
         if trace_body is not None:
             for data in trace_body:
+                if data.get('ts') is not None:
+                    try:
+                        self.profiler_start_ts = min(self.profiler_start_ts, float(data.get('ts')))
+                    except ValueError:
+                        logger.warning(f'The operator {data.get("name")} has wrong "ts" format, expected a number.')
                 if data.get('cat') == 'forward_backward':
                     fwd_bwd_events.append(data)
                 else:
                     event = trace.create_event(data, self.is_pytorch_lightning)
                     if event is not None:
                         event.ts = float(event.ts)
-                        self.profiler_start_ts = min(self.profiler_start_ts, event.ts)
                         self.events.append(event)
 
         self.events.sort(key=lambda e: e.ts)

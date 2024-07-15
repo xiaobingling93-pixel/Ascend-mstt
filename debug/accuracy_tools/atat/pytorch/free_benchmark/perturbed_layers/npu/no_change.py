@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import print_info_log_rank_0
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
 from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
@@ -20,7 +20,7 @@ class NoChangeLayer(NpuBaseLayer):
         """
         对输入添加扰动并返回
         """
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.NO_CHANGE} of {self.api_name}."
         )

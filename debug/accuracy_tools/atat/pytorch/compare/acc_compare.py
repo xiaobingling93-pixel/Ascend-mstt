@@ -18,11 +18,8 @@
 import json
 import multiprocessing
 import os.path
-import stat
 import sys
-import math
 import torch
-
 import numpy as np
 import pandas as pd
 import openpyxl
@@ -30,14 +27,14 @@ from openpyxl.styles import PatternFill
 from collections import namedtuple
 from dataclasses import dataclass
 
-from .match import graph_mapping
-from .highlight import HighlightRules, get_header_index
-from .npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
-from ..advisor.advisor import Advisor
-from ...core.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
-    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, print_info_log, \
-    print_warn_log, print_error_log, Const
-from ...core.file_check_util import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
+from atat.pytorch.compare.match import graph_mapping
+from atat.pytorch.compare.highlight import HighlightRules, get_header_index
+from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
+from atat.pytorch.advisor.advisor import Advisor
+from atat.pytorch.common.log import logger
+from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
+    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, Const
+from atat.core.common.file_check import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -61,7 +58,7 @@ def check_op(npu_dict, bench_dict, fuzzy_match):
     try:
         is_match = fuzzy_check_op(a_op_name, b_op_name)
     except Exception as err:
-        print_warn_log("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
+        logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
         is_match = False
     return is_match and struct_match
 
@@ -309,7 +306,7 @@ def _do_multi_process(input_parma, result_df):
         result_df = _handle_multi_process(compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
         return result_df
     except ValueError as e:
-        print_error_log('result dataframe is not found.')
+        logger.error('result dataframe is not found.')
         raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
 
@@ -324,10 +321,10 @@ def read_dump_data(result_df):
             op_name_mapping_dict[npu_dump_name] = [npu_dump_tensor, npu_dump_tensor]
         return op_name_mapping_dict
     except ValueError as e:
-        print_error_log('result dataframe is not found.')
+        logger.error('result dataframe is not found.')
         raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     except IndexError as e:
-        print_error_log('result dataframe elements can not be access.')
+        logger.error('result dataframe elements can not be access.')
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
 
@@ -345,11 +342,11 @@ def _handle_multi_process(func, input_parma, result_df, lock):
     pool = multiprocessing.Pool(process_num)
 
     def err_call(args):
-        print_error_log('multiprocess compare failed! Reason: {}'.format(args))
+        logger.error('multiprocess compare failed! Reason: {}'.format(args))
         try:
             pool.terminate()
         except OSError as e:
-            print_error_log("pool terminate failed")
+            logger.error("pool terminate failed")
 
     for process_idx, df_chunk in enumerate(df_chunks):
         idx = df_chunk_size * process_idx
@@ -374,11 +371,11 @@ def compare_ops(idx, dump_path_dict, result_df, lock, input_parma):
     for i in range(len(result_df)):
         op_name = result_df.iloc[i, 0]
         if is_print_compare_log:
-            print_info_log("start compare: {}".format(op_name))
+            logger.info("start compare: {}".format(op_name))
         cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = compare_by_op(
             op_name, dump_path_dict, input_parma)
         if is_print_compare_log:
-            print_info_log(
+            logger.info(
                 "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, "
                 "five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
                                                     one_thousand_err_ratio, five_thousand_err_ratio))
@@ -437,10 +434,10 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
             result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result.five_thousand_err_ratio_result[i]
         return result_df
     except ValueError as e:
-        print_error_log('result dataframe is not found.')
+        logger.error('result dataframe is not found.')
         raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     except IndexError as e:
-        print_error_log('result dataframe elements can not be access.')
+        logger.error('result dataframe elements can not be access.')
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
     finally:
         lock.release()
@@ -456,7 +453,7 @@ def check_accuracy(cos, max_abs_err):
     try:
         cos, max_abs_err = float(cos), float(max_abs_err)
     except ValueError:
-        print_warn_log("Cosine or MaxAbsErr can not get float value.")
+        logger.warning("Cosine or MaxAbsErr can not get float value.")
         return CompareConst.NONE
     if cos < CompareConst.COS_THRESHOLD and max_abs_err > CompareConst.MAX_ABS_ERR_THRESHOLD:
         return CompareConst.ACCURACY_CHECK_NO
@@ -615,7 +612,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
-    print_info_log('Compare result is %s' % file_path)
+    logger.info('Compare result is %s' % file_path)
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -648,7 +645,7 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
         create_directory(output_path)
         check_compare_param(input_parma, output_path, stack_mode, summary_compare, md5_compare)
     except CompareException as error:
-        print_error_log('Compare failed. Please check the arguments and do it again!')
+        logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
     compare_core(input_parma, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
@@ -681,7 +678,7 @@ def compare_core(input_parma, output_path, **kwargs):
     summary_compare = kwargs.get('summary_compare', False)
     md5_compare = kwargs.get('md5_compare', False)
 
-    print_info_log("Please check whether the input data belongs to you. If not, there may be security risks.")
+    logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
     file_name = add_time_with_xlsx("compare_result" + suffix)
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
@@ -704,7 +701,7 @@ def compare_core(input_parma, output_path, **kwargs):
 
 def parse(pkl_file, module_name_prefix):
     if not isinstance(module_name_prefix, str):
-        print_error_log("The parameter:module_name_prefix is not a string.")
+        logger.error("The parameter:module_name_prefix is not a string.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
     with FileOpen(pkl_file, "r") as f:
         done = False
@@ -723,18 +720,18 @@ def parse(pkl_file, module_name_prefix):
                 continue
 
             if info_prefix.find("stack_info") != -1:
-                print_info_log("\nTrace back({}):".format(msg[0]))
+                logger.info("\nTrace back({}):".format(msg[0]))
                 for item in reversed(msg[1]):
-                    print_info_log("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
-                    print_info_log("    {}".format(item[3]))
+                    logger.info("  File \"{}\", line {}, in {}".format(item[0], item[1], item[2]))
+                    logger.info("    {}".format(item[3]))
                 continue
             if len(msg) > 5:
                 summary_info = "  [{}][dtype: {}][shape: {}][max: {}][min: {}][mean: {}]" \
                     .format(msg[0], msg[3], msg[4], msg[5][0], msg[5][1], msg[5][2])
                 if not title_printed:
-                    print_info_log("\nStatistic Info:")
+                    logger.info("\nStatistic Info:")
                     title_printed = True
-                print_info_log(summary_info)
+                logger.info(summary_info)
 
 
 def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
@@ -880,7 +877,7 @@ def compare_process(file_handles, stack_mode, fuzzy_match, summary_compare=False
     stack_json_data = json.load(stack_json_handle)
 
     if fuzzy_match:
-        print_warn_log("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
+        logger.warning("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
 
     npu_ops_queue = []
     bench_ops_queue = []

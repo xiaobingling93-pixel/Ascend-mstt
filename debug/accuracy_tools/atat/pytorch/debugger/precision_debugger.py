@@ -2,9 +2,9 @@ import torch
 from torch.utils.data import dataloader
 from atat.pytorch.debugger.debugger_config import DebuggerConfig
 from atat.pytorch.service import Service
-from atat.pytorch.common import print_warn_log_rank_0
+from atat.pytorch.common.log import logger
 from atat.pytorch.pt_config import parse_json_config
-from atat.pytorch.common.exceptions import MsaccException
+from atat.core.common.exceptions import MsaccException
 
 
 class PrecisionDebugger:
@@ -39,7 +39,7 @@ class PrecisionDebugger:
             self.service = Service(self.config)
             self.enable_dataloader = self.config.enable_dataloader
             if self.enable_dataloader:
-                print_warn_log_rank_0("The enable_dataloader feature will be deprecated in the future.")
+                logger.warning_on_rank_0("The enable_dataloader feature will be deprecated in the future.")
                 dataloader._BaseDataLoaderIter.__next__ = iter_tracer(dataloader._BaseDataLoaderIter.__next__)
 
     @property
@@ -52,7 +52,7 @@ class PrecisionDebugger:
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
         if instance.enable_dataloader:
-            print_warn_log_rank_0("DataLoader is enabled, start() skipped.")
+            logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
             instance.service.start(instance.model)
 
@@ -62,7 +62,7 @@ class PrecisionDebugger:
         if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
         if instance.enable_dataloader:
-            print_warn_log_rank_0("DataLoader is enabled, stop() skipped.")
+            logger.warning_on_rank_0("DataLoader is enabled, stop() skipped.")
         else:
             instance.service.stop()
 

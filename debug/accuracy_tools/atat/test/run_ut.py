@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 
-from atat.core.log import print_info_log, print_error_log
+from atat.core.common.log import logger
 
 
 def get_ignore_dirs(cur_dir):
@@ -12,13 +12,13 @@ def get_ignore_dirs(cur_dir):
         import torch
         import torch_npu
     except ImportError:
-        print_info_log(f"Skipping the {cur_dir}/pytorch_ut directory")
+        logger.info(f"Skipping the {cur_dir}/pytorch_ut directory")
         ignore_dirs.extend(["--ignore", f"{cur_dir}/pytorch_ut"])
 
     try:
         import mindspore
     except ImportError:
-        print_info_log(f"Skipping the {cur_dir}/mindspore_ut directory")
+        logger.info(f"Skipping the {cur_dir}/mindspore_ut directory")
         ignore_dirs.extend(["--ignore", f"{cur_dir}/mindspore_ut"])
 
     return ignore_dirs
@@ -43,14 +43,14 @@ def run_ut():
     while result_ut.poll() is None:
         line = result_ut.stdout.readline().strip()
         if line:
-            print_info_log(str(line))
+            print(line)
 
     ut_flag = False
     if result_ut.returncode == 0:
         ut_flag = True
-        print_info_log("run ut successfully.")
+        logger.info("run ut successfully.")
     else:
-        print_error_log("run ut failed.")
+        logger.error("run ut failed.")
 
     return ut_flag
 

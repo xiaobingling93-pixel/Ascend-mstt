@@ -4,10 +4,11 @@ from typing import List
 import sys
 from torch.utils.tensorboard import SummaryWriter
 from collections import defaultdict
+from kj600.utils import print_info_log
 
 class ScanRule(ABC):
     def apply(self, history, cur):
-        raise NotImplemented("abstract method apply is not implemented")
+        raise NotImplementedError("abstract method apply is not implemented")
 
 class AnomalyTurbulence(ScanRule):
     name = "AnomalyTurbulence"
@@ -66,9 +67,6 @@ class SummaryWriterWithAD(SummaryWriter):
         self.job_id = job_id
         self.anomaly_inform = anomaly_inform
     
-    def _ad(self, scalar_value, history):
-        return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)
-
     def add_scalar(self, tag, scalar_value, global_step=None, walltime=None, new_style=False, double_precision=False):
         new_avg = avg = scalar_value
         if tag in self.tag2scalars:
@@ -78,8 +76,11 @@ class SummaryWriterWithAD(SummaryWriter):
         self.tag2scalars[tag].append((scalar_value, new_avg))    
         detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
-            print(f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}")
+            print_info_log(f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}")
             exception_message = f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}"
             if self.anomaly_inform:
                 self.anomaly_inform.run(exception_message, self.job_id)
         return super().add_scalar(tag, scalar_value, global_step, walltime, new_style, double_precision)
+    
+    def _ad(self, scalar_value, history):
+        return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)

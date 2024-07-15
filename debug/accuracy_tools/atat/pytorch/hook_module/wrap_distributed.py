@@ -20,9 +20,9 @@ from functools import wraps
 import torch.distributed as dist
 import yaml
 
-from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard, Const
-from ..common.file_check import FileOpen
+from atat.pytorch.hook_module.hook_module import HOOKModule
+from atat.pytorch.common.utils import torch_device_guard, Const
+from atat.core.common.file_check import FileOpen
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))

@@ -1,6 +1,6 @@
 import torch
-from atat.pytorch.common.exceptions import FreeBenchmarkException
-from atat.pytorch.free_benchmark import print_warn_log_rank_0
+from atat.core.common.exceptions import FreeBenchmarkException
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import CommonField
 from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
 from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
@@ -40,18 +40,18 @@ class GradSaver:
                         )
                         data_processor.update_unequal_rows(handler.get_unequal_rows())
                     except IndexError:
-                        print_warn_log_rank_0(
+                        logger.warning_on_rank_0(
                             f"[atat] Free benchmark: grad index out of range. api:{self.handler_params.api_name}."
                             f"index:{new_grad_index}, perturbation grad len {len(self.perturbed_grad_input)}"
                         )
                         return grad
                     except FreeBenchmarkException as e:
-                        print_warn_log_rank_0(
+                        logger.warning_on_rank_0(
                             f"[atat] Free benchmark: grad input check error: {e}"
                         )
                         return grad
                     except Exception as e:
-                        print_warn_log_rank_0(
+                        logger.warning_on_rank_0(
                             f"[atat] Free benchmark: grad compare error: {e}"
                         )
                         return grad
@@ -76,10 +76,13 @@ class GradSaver:
                 self.data_params.original_result = self.origin_grad_input
                 handler.handle(self.data_params)
         except Exception as e:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free benchmark: compare two vjp failed: api:{self.handler_params.api_name}."
                 f"{e}"
             )
+        # 在扰动前后输出对比后释放输出的引用
+        self.data_params.perturbed_result = None
+        self.data_params.original_result = None
 
     def check_grad_input(self, origin_grad, new_grad_index):
         if self.perturbed_grad_input is None:
@@ -171,6 +174,10 @@ class GradSaver:
             self.handler_params.pert_mode,
         )
         layer.handle(self.data_params)
-        self.perturbed_grad_input = tuple(
-            [x.cpu() for x in self.data_params.perturbed_result]
-        )
+        # 在计算扰动输出之后，释放输入的引用
+        self.data_params.args = None
+        # 确定扰动成功后，才会暂存
+        if self.data_params.perturbed_result:
+            self.perturbed_grad_input = tuple(
+                [x.cpu() for x in self.data_params.perturbed_result]
+            )

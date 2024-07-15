@@ -1,7 +1,7 @@
 from unittest import TestCase
 from unittest.mock import patch, mock_open
 
-from atat.core.utils import Const
+from atat.core.common.utils import Const
 from atat.mindspore.ms_config import parse_json_config
 
 
@@ -20,8 +20,8 @@ class TestMsConfig(TestCase):
                 "summary_mode": "statistics"
             }
         }
-        with (patch("atat.mindspore.ms_config.FileOpen", mock_open(read_data='')),
-              patch("atat.mindspore.ms_config.json.load", return_value=mock_json_data)):
+        with patch("atat.mindspore.ms_config.FileOpen", mock_open(read_data='')), \
+                patch("atat.mindspore.ms_config.json.load", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json")
         self.assertEqual(common_config.task, Const.STATISTICS)
         self.assertEqual(task_config.data_mode, ["all"])

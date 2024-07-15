@@ -16,7 +16,7 @@
 import argparse
 import sys
 from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
-from ptdbg_ascend.src.python.ptdbg_ascend.parse_tool.cli import parse as cli_parse
+from atat.pytorch.parse_tool.cli import parse as cli_parse
 from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
 from atat.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
     _api_precision_compare_command
