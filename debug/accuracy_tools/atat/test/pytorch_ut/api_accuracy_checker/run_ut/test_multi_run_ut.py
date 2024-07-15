@@ -1,11 +1,12 @@
 import os
 import glob
 import unittest
+import logging
 from unittest.mock import patch, mock_open, MagicMock
 import json
 import signal
 from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import split_json_file, signal_handler, run_parallel_ut, \
-    prepare_config, main, ParallelUTConfig, print_info_log, print_error_log
+    prepare_config, main, ParallelUTConfig
 
 
 class TestMultiRunUT(unittest.TestCase):
@@ -113,7 +114,7 @@ class TestMultiRunUT(unittest.TestCase):
         for file in files:
             try:
                 os.remove(file)
-                print_info_log(f"Deleted file: {file}")
+                logging.info(f"Deleted file: {file}")
             except Exception as e:
-                print_error_log(f"Failed to delete file {file}: {e}")
+                logging.error(f"Failed to delete file {file}: {e}")
 
