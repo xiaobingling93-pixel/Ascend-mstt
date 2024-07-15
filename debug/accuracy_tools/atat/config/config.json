@@ -1,6 +1,6 @@
 {
     "task": "statistics",
-    "dump_path": "", 
+    "dump_path": "./dump_path", 
     "rank": [],  
     "step": [],  
     "level": "L1", 

@@ -394,4 +394,4 @@ train_loader = torch.utils.data.DataLoader(
 
 关闭dropout：
 
-在使用from ptdbg import *后，工具会自动将torch.nn.functional.dropout、torch.nn.functional.dropout2d、torch.nn.functional.dropout3d、torch.nn.Dropout、torch.nn.Dropout2d、torch.nn.Dropout3d的接口参数p置为0。
+在使用from atat.pytorch import PrecisionDebugger后，工具会自动将torch.nn.functional.dropout、torch.nn.functional.dropout2d、torch.nn.functional.dropout3d、torch.nn.Dropout、torch.nn.Dropout2d、torch.nn.Dropout3d的接口参数p置为0。
