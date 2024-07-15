@@ -15,3 +15,11 @@ def print_rank_0(message):
             print(message)
     else:
         print(message)
+
+class GradConst:
+    md5 = "MD5"
+    distribution = "distribution"
+    shape = "shape"
+    max = "max"
+    min = "min"
+    norm = "norm"

@@ -52,16 +52,15 @@ class Metric(object):
     def get_metric_value(tensor, eps):
         pass
 
+    @staticmethod
+    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
+        pass
+
     def get_metrics(self, tag2tensor: dict, eps):
         metrics_dict = {}
         for tag, tensor in tag2tensor.items():
             metrics_dict[tag] = self.get_metric_value(tensor, eps)
         return metrics_dict
-
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        pass
-
 
 @register_config_metric("min")
 class MinMetric(Metric):
@@ -148,7 +147,7 @@ def get_metrics(metric_name, tag2tensor, eps):
         fun_metric = config_metric_registry[metric_name]
         return fun_metric().get_metrics(tag2tensor, eps)
     except KeyError as e:
-        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}")
+        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}") from e
 
 
 def write_metrics_tensorboard(metric_name, summary_writer, metric_value, step):
@@ -156,4 +155,4 @@ def write_metrics_tensorboard(metric_name, summary_writer, metric_value, step):
         fun_metric = config_metric_registry[metric_name]
         return fun_metric.metric_tensorboard(metric_name, summary_writer, metric_value, step)
     except KeyError as e:
-        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}")
+        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}") from e

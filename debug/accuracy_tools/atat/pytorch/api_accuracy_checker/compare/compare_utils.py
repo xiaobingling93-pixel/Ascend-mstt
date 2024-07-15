@@ -6,6 +6,7 @@ import yaml
 import math
 from atat.pytorch.api_accuracy_checker.common.utils import Const, print_warn_log, CompareException
 from atat.pytorch.common.file_check import FileOpen
+from atat.pytorch.common.log import logger
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -216,7 +217,7 @@ def check_dtype_comparable(x, y):
         if y.dtype in Const.INT_TYPE:
             return True 
         return False
-    print_warn_log(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
+    logger.warning(f"Compare: Unexpected dtype {x.dtype}, {y.dtype}")
     return False
 
 

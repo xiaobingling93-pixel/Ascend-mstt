@@ -4,4 +4,4 @@
 
 # Entry point for Pytorch TensorBoard plugin package.
 
-__version__ = '0.4.0.5'
+__version__ = '0.4.0.8'

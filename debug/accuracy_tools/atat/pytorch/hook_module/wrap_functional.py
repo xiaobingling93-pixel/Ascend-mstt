@@ -20,15 +20,15 @@ import os
 import torch
 import yaml
 
-from .hook_module import HOOKModule
-from ..common.utils import torch_device_guard, Const
-from ..common.log import print_info_log_rank_0
-from ..common.file_check import FileOpen
+from atat.pytorch.hook_module.hook_module import HOOKModule
+from atat.pytorch.common.utils import torch_device_guard, Const
+from atat.pytorch.common.log import logger
+from atat.core.common.file_check import FileOpen
 
 
 def remove_dropout():
     if torch.__version__ > "1.8":
-        print_info_log_rank_0("For precision comparison, the probability p in the dropout method is set to 0.")
+        logger.info_on_rank_0("For precision comparison, the probability p in the dropout method is set to 0.")
         import torch.nn.functional as F
         from torch import _VF
         from torch.overrides import has_torch_function_unary, handle_torch_function

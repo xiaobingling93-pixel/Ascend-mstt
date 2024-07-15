@@ -1,8 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark import (
-    print_info_log_rank_0,
-    print_warn_log_rank_0,
-)
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.enums import PerturbationMode
 from atat.pytorch.free_benchmark.common.params import DataParams
@@ -55,7 +52,7 @@ class BitNoiseLayer(NpuBaseLayer):
         """
         对输入添加扰动并返回
         """
-        print_info_log_rank_0(
+        logger.info_on_rank_0(
             f"[atat] Free benchmark: Perturbation is "
             f"{PerturbationMode.BIT_NOISE} of {self.api_name}."
         )
@@ -67,13 +64,13 @@ class BitNoiseLayer(NpuBaseLayer):
         判断是否需要添加扰动,  bit翻转
         """
         if not self.bit_type:
-            print_warn_log_rank_0(
+            logger.info_on_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"dtype unsupported. Cancel perturbation."
             )
             return False
         if tensor_obj.numel() == 0:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free benchmark: For {self.api_name}, tensor shape must > 0"
                 f" Cancel adding noise."
             )
@@ -84,13 +81,13 @@ class BitNoiseLayer(NpuBaseLayer):
         try:
             max_val = TorchC.max(TorchC.abs(tensor_obj)).item()
         except Exception:
-            print_warn_log_rank_0(
+            logger.warning_on_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"when calculate maximun value, tensor is changed to float32."
             )
             max_val = TorchC.max(TorchC.abs(tensor_obj.to(torch.float32))).item()
         if max_val < abs_tol:
-            print_warn_log_rank_0(
+            logger.info_on_rank_0(
                 f"[atat] Free Benchmark: For {self.api_name}, "
                 f"Maximun value is less than the  minimun threshold. Cancel add noise."
             )

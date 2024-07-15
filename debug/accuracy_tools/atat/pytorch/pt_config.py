@@ -1,12 +1,11 @@
 import json
 import os
 
-from ..core.common_config import CommonConfig, BaseConfig
-from ..core.file_check_util import FileOpen
-from ..core.utils import Const
+from atat.core.common_config import CommonConfig, BaseConfig
+from atat.core.common.file_check import FileOpen
+from atat.core.common.utils import Const
 
 
-# 特定任务配置类
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)

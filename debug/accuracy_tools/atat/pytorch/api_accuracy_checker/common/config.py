@@ -1,8 +1,8 @@
 import os
 import yaml
-from ..common.utils import check_file_or_directory_path
-from ...hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
-from ...common.file_check import FileOpen
+from atat.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path
+from atat.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+from atat.core.common.file_check import FileOpen
 
 WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
 
