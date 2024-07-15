@@ -6,28 +6,9 @@ import sys
 from atat.core.common.log import logger
 
 
-def get_ignore_dirs(cur_dir):
-    ignore_dirs = []
-    try:
-        import torch
-        import torch_npu
-    except ImportError:
-        logger.info(f"Skipping the {cur_dir}/pytorch_ut directory")
-        ignore_dirs.extend(["--ignore", f"{cur_dir}/pytorch_ut"])
-
-    try:
-        import mindspore
-    except ImportError:
-        logger.info(f"Skipping the {cur_dir}/mindspore_ut directory")
-        ignore_dirs.extend(["--ignore", f"{cur_dir}/mindspore_ut"])
-
-    return ignore_dirs
-
-
 def run_ut():
     cur_dir = os.path.realpath(os.path.dirname(__file__))
     ut_path = cur_dir
-    ignore_dirs = get_ignore_dirs(cur_dir)
     cov_dir = os.path.dirname(cur_dir)
     report_dir = os.path.join(cur_dir, "report")
     final_xml_path = os.path.join(report_dir, "final.xml")
@@ -37,22 +18,37 @@ def run_ut():
         shutil.rmtree(report_dir)
     os.makedirs(report_dir)
 
-    cmd = ["python3", "-m", "pytest", ut_path, "--junitxml=" + final_xml_path, "--cov=" + cov_dir,
-           "--cov-branch", "--cov-report=xml:" + cov_report_path] + ignore_dirs
-    result_ut = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    while result_ut.poll() is None:
-        line = result_ut.stdout.readline().strip()
-        if line:
-            print(line)
+    pytest_cmd = [
+                     "python3", "-m", "pytest",
+                     ut_path,
+                     f"--junitxml={final_xml_path}",
+                     f"--cov={cov_dir}",
+                     "--cov-branch",
+                     f"--cov-report=xml:{cov_report_path}",
+                 ]
 
-    ut_flag = False
-    if result_ut.returncode == 0:
-        ut_flag = True
-        logger.info("run ut successfully.")
-    else:
-        logger.error("run ut failed.")
+    try:
+        with subprocess.Popen(
+                pytest_cmd,
+                shell=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+        ) as proc:
+            for line in proc.stdout:
+                logger.info(line.strip())
 
-    return ut_flag
+            proc.wait()
+
+            if proc.returncode == 0:
+                logger.info("Unit tests executed successfully.")
+                return True
+            else:
+                logger.error("Unit tests execution failed.")
+                return False
+    except Exception as e:
+        logger.error(f"An error occurred during test execution: {e}")
+        return False
 
 
 if __name__ == "__main__":
