@@ -1,15 +1,17 @@
 import os
 import zlib
-from typing import List
 from dataclasses import asdict
-import torch
+from typing import List
+
 import numpy as np
-from atat.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from atat.core.common.utils import Const
+import torch
+from atat.core.common.exceptions import MsaccException
 from atat.core.common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
 from atat.core.common.log import logger
-from atat.core.common.exceptions import MsaccException
-from atat.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, TensorStatInfo
+from atat.core.common.utils import Const, OverflowConst
+from atat.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
+    ModuleForwardInputsOutputs, TensorStatInfo
+from atat.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 try:
     import torch_npu
@@ -19,7 +21,7 @@ except ImportError:
 
 class PytorchDataProcessor(BaseDataProcessor):
     pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor)
-    
+
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.torch_object_key = {
@@ -74,11 +76,11 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.mean = torch._C._VariableFunctionsClass.mean(data_clone).item()
             tensor_stat.norm = torch._C._VariableFunctionsClass.norm(data_clone).item()
         return tensor_stat
-    
+
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
-    
+
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.torch_object_key:
             return self.torch_object_key[suffix_stack[-1]](element)
@@ -92,10 +94,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         if isinstance(element, (bool, int, float, str, slice)):
             return self._analyze_builtin(element)
         return None
-        
+
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
-    
+
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -141,13 +143,13 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_dump_times = 0
         self.overflow_nums = config.overflow_num
-        self.bits_for_overflow = 8 
-        
+        self.bits_for_overflow = 8
+
     @staticmethod
     def overflow_debug_mode_enable():
-        overflow_mode = os.getenv(Const.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
+        overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
         return overflow_mode == Const.ENV_ENABLE
-    
+
     @staticmethod
     def handle_tensor_extremum_nan_inf(data_clone, operator):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
@@ -189,11 +191,22 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             return
         if self.real_overflow_dump_times >= self.overflow_nums:
             raise MsaccException(MsaccException.OVERFLOW_NUMS_ERROR, str(self.real_overflow_dump_times))
-        
+
+    def check_overflow_npu(self):
+        if self.overflow_debug_mode_enalbe():
+            float_status = torch.zeros(self.bits_for_overflow).npu()
+            result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
+            if result.cpu()[0] != 0:
+                return True
+            else:
+                return False
+        else:
+            return torch_npu._C._check_overflow_npu()
+
     def clear_overflow_npu(self):
         if self.overflow_debug_mode_enable():
             float_status = torch.zeros(self.bits_for_overflow).npu()
-            torch_npu.npu_clear_float_status(float_status, Const.OVERFLOW_DEBUG_MODE)
+            torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
         else:
             torch_npu._C._clear_overflow_npu()
 
@@ -232,7 +245,7 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
         self.checker = FreeBenchmarkCheck(config=config)
         self._return_forward_new_output = None
         self._forward_new_output = None
-    
+
     def update_iter(self, current_iter):
         super().update_iter(current_iter)
         self.checker.update_iter(current_iter)
@@ -267,21 +280,21 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.checker.backward(name, module, module_input_output.grad_output)
-    
-    
+
+
 class KernelDumpDataProcessor(PytorchDataProcessor):
     forward_init_status = False
     multi_output_apis = ["_sort_", "npu_flash_attention"]
-    
+
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
-        
+
     def analyze_forward(self, name, module, module_input_output):
         if self.config.is_forward_acl_dump:
             self.forward_acl_dump(name, module, module_input_output)
         else:
             self.dump_mode_backward_acl_dump(name, module, module_input_output)
-    
+
     def forward_acl_dump(self, name, module, module_input_output):
         if not KernelDumpDataProcessor.forward_init_status:
             KernelDumpDataProcessor.forward_init_status = True
@@ -327,6 +340,6 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
             torch_npu.npu.finalize_dump()
         KernelDumpDataProcessor.forward_init_status = False
         logger.info("Dump %s op file." % name)
-        
+
     def op_need_trigger(self, module_name):
         return 'Tensor.__getitem__.' in module_name
