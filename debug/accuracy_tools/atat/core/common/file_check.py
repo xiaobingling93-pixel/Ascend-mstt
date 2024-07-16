@@ -223,7 +223,7 @@ def check_path_owner_consistent(path):
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        logger.error('The file path {} contains special characters.' %(path))
+        logger.error('The file path %s contains special characters.' %(path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
