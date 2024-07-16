@@ -253,6 +253,7 @@ class TrainerMon:
             if self.print_struct and not all(value == {} for value in self.module_struct.values()) and not self.struct_printed:
                 self._smallest_rank_print("> module struct:")
                 self._smallest_rank_print(json.dumps(self.module_struct, indent=4))
+                self.struct_printed = True
                 if not self.cc_log_only:
                     raise Exception("exit after first step when print model struct")
             if self.cc_log_only and context.step > 0:

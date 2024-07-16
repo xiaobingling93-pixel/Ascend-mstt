@@ -180,12 +180,33 @@ def create_async_callback_func(context, ops, args, prefix):
         catch_data(context, ops, args, prefix)
     return store_data
 
+def get_tensor_dtype(args):
+    dtypes = []
+    for arg in args:
+        if isinstance(arg, torch.Tensor):
+            dtypes.append(arg.dtype)
+        else:
+            dtypes.append(None)
+    return dtypes
+
+def get_group_members(args):
+    group = None
+    for arg in args:
+        if isinstance(arg, dist.ProcessGroup):
+            group = arg
+    if group is None:
+        group = dist.GroupMember.WORLD
+    return dist.get_process_group_ranks(group)
+
 
 def create_hooks(context, monitor):
 
     def cc_log_hook(module, args, kwargs):
+        all_args = args + tuple(kwargs.values())
+        dtypes = '|'.join([str(i) if i else '' for i in get_tensor_dtype(all_args)])
         stack = ';'.join(get_callstack())
-        monitor.cc_logged_stack[module.op_name_].add(stack)
+        group_members = '|'.join([str(i) for i in get_group_members(all_args)])
+        monitor.cc_logged_stack[module.op_name_].add(';'.join([dtypes, group_members, stack]))
         return
         
     def cc_pre_hook(module, args, kwargs): 
@@ -214,8 +235,8 @@ def create_hooks(context, monitor):
     if (dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []):
         return [pre_hooks, hooks]
     
+    pre_hooks.append(cc_log_hook)
     if monitor.cc_log_only:
-        pre_hooks.append(cc_log_hook)
         return [pre_hooks, hooks]
     
     if monitor.cc_pre_hook:
