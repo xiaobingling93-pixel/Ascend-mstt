@@ -1,4 +1,0 @@
-white_list: []
-error_data_path: './'
-jit_compile: True
-precision: 14
