@@ -90,3 +90,16 @@ class TestPerturbedLayer(TestCase):
         self.assertEqual(Perturbed_value[0], 4096.0000000000)
         self.assertEqual(Perturbed_value[1], 16777218)
         self.assertEqual(Perturbed_value[2], 1e-38)
+
+    # 对于输入张量，add_noise扰动因子对大于极小值的部分增加一个小值
+    def test_add_noise_layer(self):
+        api_name = "addnoise.0.forward"
+        inputs = torch.as_tensor(
+            [1e-1, 1e-2], dtype=torch.bfloat16
+        )
+        layer = LayerFactory.create(
+            api_name, DeviceType.NPU, PerturbationMode.ADD_NOISE
+        )
+        Perturbed_value = layer.add_noise(inputs)
+        self.assertEqual(Perturbed_value[0], 1e-1+1e-4)
+        self.assertEqual(Perturbed_value[1], 1e-2)
