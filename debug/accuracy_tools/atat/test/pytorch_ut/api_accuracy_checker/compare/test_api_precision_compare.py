@@ -49,10 +49,10 @@ class TestApiPrecisionCompare(unittest.TestCase):
         column_name = "TEST_COLUMN"
         default_value = 0
         result = BenchmarkStandard._calc_ratio(column_name, '2', '1', default_value)
-        self.assertEqual(result, 2.0)
+        self.assertEqual(result[0], 2.0)
 
         result = BenchmarkStandard._calc_ratio(column_name, '0', '0', default_value)
-        self.assertEqual(result, 1.0)
+        self.assertEqual(result[0], 1.0)
 
     def test_check_csv_columns(self):
         with self.assertRaises(Exception):

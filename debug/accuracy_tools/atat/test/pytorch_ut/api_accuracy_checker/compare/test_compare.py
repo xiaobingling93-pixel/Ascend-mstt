@@ -64,7 +64,7 @@ class TestCompare(unittest.TestCase):
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
                                                   ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
                                                 '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'], 
-                                                ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', 'pass',   
+                                                ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ',   
                                                 ' ', ' ', ' ', ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_output(self):
@@ -72,16 +72,16 @@ class TestCompare(unittest.TestCase):
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
         api_name = 'Functional.conv2d.0'
         data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_out,
-                                                                     data_info.device_out)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_output,
+                                                                     data_info.device_output)
         self.assertFalse(is_fwd_success)
         # is_bwd_success should be checked
 
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
         data_info = UtDataInfo(None, None, bench_out, npu_out, None, None, None)
-        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_out,
-                                                                     data_info.device_out)
+        is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_output,
+                                                                     data_info.device_output)
         self.assertTrue(is_fwd_success)
         self.assertTrue(is_bwd_success)
 
