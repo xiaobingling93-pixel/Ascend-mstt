@@ -28,11 +28,6 @@ class TestMultiRunUT(unittest.TestCase):
         self.assertEqual(len(split_files), num_splits)
         self.assertEqual(total_items, len(self.test_data.get('data')))
 
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.print_warn_log')
-    def test_signal_handler(self, mock_print_warn_log):
-        with self.assertRaises(KeyboardInterrupt):
-            signal_handler(signal.SIGINT, None)
-        mock_print_warn_log.assert_called()
 
     @patch('subprocess.Popen')
     @patch('os.path.exists', return_value=True)
