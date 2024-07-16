@@ -1,9 +1,11 @@
 import time
 import os
+import math
+
 import numpy as np
 import torch
 import yaml
-import math
+
 from atat.pytorch.api_accuracy_checker.common.utils import Const, CompareException
 from atat.core.common.file_check import FileOpen
 from atat.pytorch.common.log import logger
@@ -248,17 +250,8 @@ def handle_infinity(x, y, column_name):
             return float("nan"), True, f"{column_name}同为同号inf或nan\n"
         else:
             return float("nan"), False, f"{column_name}inf或nan不一致\n"
-    elif math.isinf(x):
-        return handle_single_infinity(x, y, column_name)
     else:
-        return abs(x / y), False, f"{column_name}inf或nan不一致\n"
-
-
-def handle_single_infinity(inf_value, other_value, column_name):
-    if other_value >= 0:
-        return inf_value, False, f"{column_name}inf或nan不一致\n"
-    else:
-        return -inf_value, False, f"{column_name}inf或nan不一致\n"
+        return float("nan"), False, f"{column_name}inf或nan不一致\n"
 
 
 def handle_nan(x, y, column_name):
@@ -273,6 +266,4 @@ def check_inf_or_nan(x, y, column_name):
         return handle_infinity(x, y, column_name)
     elif math.isnan(x) or math.isnan(y):
         return handle_nan(x, y, column_name)
-    else:
-        return abs(x / y), False, f"{column_name}inf或nan不一致\n"
     

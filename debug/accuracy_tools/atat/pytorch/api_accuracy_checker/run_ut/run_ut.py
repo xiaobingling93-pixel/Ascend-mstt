@@ -390,13 +390,11 @@ def preprocess_forward_content(forward_content):
         base_key = key.rsplit(Const.SEP, 1)[0]
 
         if key not in arg_cache:
-            new_args = value['args']
-            new_kwargs = value['kwargs']
             filtered_new_args = [
                 {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
-                for arg in new_args if isinstance(arg, dict)
+                for arg in value['args'] if isinstance(arg, dict)
             ]
-            arg_cache[key] = (filtered_new_args, new_kwargs)
+            arg_cache[key] = (filtered_new_args, value['kwargs'])
 
         filtered_new_args, new_kwargs = arg_cache[key]
 

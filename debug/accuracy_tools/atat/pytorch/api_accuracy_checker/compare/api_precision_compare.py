@@ -1,10 +1,10 @@
 import argparse
-import torch
 import math
 import os
 import sys
 from collections import namedtuple
 
+import torch
 import pandas as pd
 
 from atat.pytorch.api_accuracy_checker.common.utils import write_csv
@@ -21,6 +21,11 @@ from atat.pytorch.common.log import logger
 from atat.core.common.utils import CompareException
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
+BenchmarkInf_Nan_Consistency = namedtuple('BenchmarkInf_Nan_Consistency', ['small_value_inf_nan_consistency', 
+                                                                           'rmse_inf_nan_consistency', 
+                                                                           'max_rel_inf_nan_consistency', 
+                                                                           'mean_rel_inf_nan_consistency', 
+                                                                           'eb_inf_nan_consistency'])
 unsupported_message = 'This data type does not support benchmark compare.'
 
 DEFAULT_THRESHOLD = 1
@@ -135,14 +140,23 @@ class BenchmarkStandard(Standard):
         return CompareConst.PASS
 
     def get_result(self):
-        self._compare_ratio()
-        self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value')
+        inf_nan_consistency = self._compare_ratio()
+        small_value_inf_nan_consistency = inf_nan_consistency.small_value_inf_nan_consistency
+        rmse_inf_nan_consistency = inf_nan_consistency.rmse_inf_nan_consistency
+        max_rel_inf_nan_consistency = inf_nan_consistency.max_rel_inf_nan_consistency
+        mean_rel_inf_nan_consistency = inf_nan_consistency.mean_rel_inf_nan_consistency
+        eb_inf_nan_consistency = inf_nan_consistency.eb_inf_nan_consistency
+        self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value') if \
+            small_value_inf_nan_consistency else CompareConst.ERROR
         self.check_result_list.append(self.small_value_err_status)
-        self.rmse_status = self._get_status(self.rmse_ratio, 'rmse')
+        self.rmse_status = self._get_status(self.rmse_ratio, 'rmse') if rmse_inf_nan_consistency \
+            else CompareConst.ERROR
         self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err')
+        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency \
+            else CompareConst.ERROR
         self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err')
+        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency \
+            else CompareConst.ERROR
         self.check_result_list.append(self.mean_rel_err_status)
         self.eb_status = self._get_status(self.eb_ratio, 'eb')
         if CompareConst.ERROR in self.check_result_list:
@@ -156,28 +170,32 @@ class BenchmarkStandard(Standard):
                 self.mean_rel_err_status, self.eb_ratio, self.eb_status]
 
     def _compare_ratio(self):
-        self.small_value_err_ratio, _, small_value_message = self._calc_ratio(
+        
+        self.small_value_err_ratio, small_value_inf_nan_consistency, small_value_message = self._calc_ratio(
                                     ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE,
                                     self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
                                     self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE), 10000.0)
         self.compare_message += small_value_message
-        self.rmse_ratio, _, rmse_message = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
+        self.rmse_ratio, rmse_inf_nan_consistency, rmse_message = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
         self.compare_message += rmse_message
-        self.max_rel_err_ratio, _, max_rel_message = self._calc_ratio(
+        self.max_rel_err_ratio, max_rel_inf_nan_consistency, max_rel_message = self._calc_ratio(
                                         ApiPrecisionCompareColumn.MAX_REL_ERR,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
         self.compare_message += max_rel_message
-        self.mean_rel_err_ratio, _, mean_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
+        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
         self.compare_message += mean_rel_message
-        self.eb_ratio, _, eb_message = self._calc_ratio(ApiPrecisionCompareColumn.EB,
+        self.eb_ratio, eb_inf_nan_consistency, eb_message = self._calc_ratio(ApiPrecisionCompareColumn.EB,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.EB),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
         self.compare_message += eb_message
+        
+        return BenchmarkInf_Nan_Consistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
+                                            max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency, eb_inf_nan_consistency)
 
 
 class ULPStandard(Standard):
