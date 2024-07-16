@@ -29,7 +29,8 @@ setup(
         "pandas >= 1.3.5",
         "pyyaml",
         "rich",
-        "tqdm"
+        "tqdm",
+        "openpyxl"
     ],
     include_package_data=True,
     ext_modules=[],
