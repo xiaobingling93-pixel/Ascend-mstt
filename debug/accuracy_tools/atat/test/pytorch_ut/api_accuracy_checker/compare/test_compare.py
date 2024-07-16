@@ -37,7 +37,6 @@ class TestCompare(unittest.TestCase):
         self.assertTrue(self.compare._compare_dropout(bench_out, npu_out))
 
     def test_compare_core_wrapper(self):
-        # 迁移后，detailed_result_total少了三列数据，待补充
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
         test_final_success, detailed_result_total = self.compare._compare_core_wrapper("api", bench_out, npu_out)
@@ -49,8 +48,8 @@ class TestCompare(unittest.TestCase):
         # 对其他值进行比较，确保它们符合预期
         detailed_result_total[0][3] = 1.0
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-                                                  ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass',
-                                                  '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
+                                                ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
+                                                '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
         self.assertTrue(test_final_success)
 
         bench_out, npu_out = [dummy_input, dummy_input], [dummy_input, dummy_input]
@@ -63,17 +62,16 @@ class TestCompare(unittest.TestCase):
         detailed_result_total[1][3] = 1.0
         self.assertTrue(test_final_success)
         self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-                                                  ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass',
-                                                  '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'],
-                                                 ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ',
-                                                  ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', 'pass',
-                                                  '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
+                                                  ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', ' ', ' ', ' ', ' ', 'pass', 
+                                                '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n'], 
+                                                ['torch.float32', 'torch.float32', (100, 100), 1.0, 0.0, ' ', ' ', ' ', ' ', 0.0, 0.0, 0, 0.0, 0.0, ' ', ' ', 'pass',   
+                                                ' ', ' ', ' ', ' ', 'pass', '\nMax abs error is less than 0.001, consider as pass, skip other check and set to SPACE.\n']])
 
     def test_compare_output(self):
         bench_out, npu_out = torch.randn(100, 100), torch.randn(100, 100)
         bench_grad, npu_grad = [torch.randn(100, 100)], [torch.randn(100, 100)]
         api_name = 'Functional.conv2d.0'
-        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None)
+        data_info = UtDataInfo(bench_grad, npu_grad, bench_out, npu_out, None, None, None)
         is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_out,
                                                                      data_info.device_out)
         self.assertFalse(is_fwd_success)
@@ -81,7 +79,7 @@ class TestCompare(unittest.TestCase):
 
         dummy_input = torch.randn(100, 100)
         bench_out, npu_out = dummy_input, dummy_input
-        data_info = UtDataInfo(None, None, bench_out, npu_out, None, None)
+        data_info = UtDataInfo(None, None, bench_out, npu_out, None, None, None)
         is_fwd_success, is_bwd_success = self.compare.compare_output(api_name, data_info.bench_out,
                                                                      data_info.device_out)
         self.assertTrue(is_fwd_success)
