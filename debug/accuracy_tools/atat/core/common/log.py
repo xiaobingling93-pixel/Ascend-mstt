@@ -1,7 +1,6 @@
 import os
 import time
 import sys
-from atat.core.common.exceptions import DistributedNotInitializedError
 
 class BaseLogger:
     def __init__(self):
@@ -32,10 +31,7 @@ class BaseLogger:
 
     def on_rank_0(self, func):
         def func_rank_0(*args, **kwargs):
-            try:
-                current_rank = self.get_rank()
-            except DistributedNotInitializedError:
-                current_rank = None
+            current_rank = self.get_rank()
             if current_rank is None or current_rank == 0:
                 return func(*args, **kwargs)
             else:
@@ -51,9 +47,9 @@ class BaseLogger:
     def warning_on_rank_0(self, msg):
         return self.on_rank_0(self.warning)(msg)
     
-    def error_log_with_exp(self, exp, msg):
+    def error_log_with_exp(self, msg, exception):
         self.error(msg)
-        raise exp
+        raise exception
 
 
 logger = BaseLogger()
