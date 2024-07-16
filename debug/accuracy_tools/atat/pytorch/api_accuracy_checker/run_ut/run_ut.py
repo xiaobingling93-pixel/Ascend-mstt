@@ -452,9 +452,9 @@ def run_ut_command(args):
     save_error_data = args.save_error_data
     forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
     if args.filter_api:
-        print_info_log("Start filtering the api in the forward_input_file.")
+        logger.info("Start filtering the api in the forward_input_file.")
         forward_content = preprocess_forward_content(forward_content)
-        print_info_log("Finish filtering the api in the forward_input_file.")
+        logger.info("Finish filtering the api in the forward_input_file.")
 
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
