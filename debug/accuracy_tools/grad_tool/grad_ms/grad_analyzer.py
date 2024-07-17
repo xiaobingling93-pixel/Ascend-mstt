@@ -78,6 +78,8 @@ class CSVGenerator(Process):
         self.level = GradConst.LEVEL0
         self.cache_list = ListCache()
         self.current_step = None
+        self.stop_event = None  
+        self.last_finish = False
         self.bounds = [-0.1, 0.0, 0.1],
 
     def init(self, context: GlobalContext):

@@ -12,6 +12,24 @@ from grad_tool.common.utils import write_csv, check_file_or_directory_path, prin
 
 class BaseComparator(ABC):
 
+    @staticmethod
+    def _get_grad_weight_order(path1, path2):
+        for summary_file in os.listdir(path1):
+            if not summary_file.endswith(".csv"):
+                continue
+            if not os.path.exists(os.path.join(path2, summary_file)):
+                continue
+            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
+            return summary_csv["param_name"]
+        raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
+    
+    @staticmethod
+    def _get_name_matched_grad_file(param_name, grad_files):
+        for grad_file in grad_files:
+            if param_name == grad_file[:grad_file.rfind('.')]:
+                return grad_file
+        raise RuntimeError("no matched grad_file for comparison, please dump data in same configuration")
+
     @classmethod
     def compare_distributed(cls, path1: str, path2: str, output_dir: str):
         ranks = cls._get_matched_dirs(path1, path2, "rank")
@@ -71,24 +89,6 @@ class BaseComparator(ABC):
             plt.close()
             head_tuple = tuple(['step'] + [str(step) for step in steps])
             write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
-
-    @staticmethod
-    def _get_grad_weight_order(path1, path2):
-        for summary_file in os.listdir(path1):
-            if not summary_file.endswith(".csv"):
-                continue
-            if not os.path.exists(os.path.join(path2, summary_file)):
-                continue
-            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
-            return summary_csv["param_name"]
-        raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
-    
-    @staticmethod
-    def _get_name_matched_grad_file(param_name, grad_files):
-        for grad_file in grad_files:
-            if param_name == grad_file[:grad_file.rfind('.')]:
-                return grad_file
-        raise RuntimeError("no matched grad_file for comparison, please dump data in same configuration")
 
     @classmethod
     def _calculate_separated_similarities(cls, path1, path2, steps):
