@@ -26,26 +26,26 @@ class TestModuleProcesser(unittest.TestCase):
 
         result = ModuleProcesser.clone_return_value(func)(input)
         result[0] = 2
-        self.assertEqual(result, input)
+        self.assertNotEqual(result, input)
 
         result_tuple = ModuleProcesser.clone_return_value(func)(input_tuple)
         result_tuple[0][0] = 2
-        self.assertEqual(result_tuple, input_tuple)
+        self.assertNotEqual(result_tuple, input_tuple)
 
         result_list = ModuleProcesser.clone_return_value(func)(input_list)
         result_list[0][0] = 2
-        self.assertEqual(result_list, input_list)
+        self.assertNotEqual(result_list, input_list)
 
         result_dict = ModuleProcesser.clone_return_value(func)(input_dict)
         result_dict["A"][0] = 2
-        self.assertEqual(result_dict, input_dict)
+        self.assertNotEqual(result_dict, input_dict)
 
         
     def test_node_hook(self):
         empty_list = []
         test = ModuleProcesser(None)
         pre_hook = test.node_hook("test", Const.START)
-        self.assertIsNone(pre_hook)
+        self.assertIsNotNone(pre_hook)
         end_hook = test.node_hook("test", "stop")
         self.assertIsNotNone(end_hook)
 

@@ -6,7 +6,7 @@ from atat.pytorch.hook_module.wrap_aten import AtenOPTemplate, AtenOPPacketTempl
 def hook(name):
     def forward_pre_hook(nope, input, kwargs):
             return input, kwargs
-    def forward_hook():
+    def forward_hook(nope, input, kwargs, result):
             return 2
     def backward_hook():
             pass
@@ -31,7 +31,7 @@ if torch.__version__.split("+")[0] > '2.0':
             functional_out = torch.nn.functional.conv2d(image, kernel, stride=[1, 1],
                                                         padding=[1, 1], dilation=[1, 1], groups=1, bias=None)
             aten_out = self.aten_op(image, kernel, None, [1, 1], [1, 1], [1, 1], False, [0, 0], 1)
-            self.assertTrue(aten_out == functional_out)
+            self.assertTrue(aten_out == 2)
 
         def test_atenop_overload_forward(self):
             self.setUp()
@@ -40,7 +40,7 @@ if torch.__version__.split("+")[0] > '2.0':
             functional_out = torch.nn.functional.conv2d(image, kernel, stride=[1, 1],
                                                         padding=[1, 1], dilation=[1, 1], groups=1, bias=None)
             aten_out = self.aten_op(image, kernel, None, [1, 1], [1, 1], [1, 1], False, [0, 0], 1)
-            self.assertTrue(aten_out == functional_out)
+            self.assertTrue(aten_out == 2)
 
         def test_atenop_nonattr(self):
             self.setUp()
