@@ -1,11 +1,13 @@
 # coding=utf-8
+import os
 import unittest
 import copy
 
 from atat.pytorch.api_accuracy_checker.run_ut.data_generate import *
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
 
-forward_file = "./forward.json"
+base_dir = os.path.dirname(os.path.realpath(__file__))
+forward_file = os.path.join(base_dir, "forward.json")
 forward_content = get_json_contents(forward_file)
 for key, value in forward_content.items():
     api_full_name = key
