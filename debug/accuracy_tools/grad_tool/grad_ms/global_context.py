@@ -14,6 +14,8 @@ class GlobalContext:
     _setting = {
         GradConst.LEVEL: GradConst.LEVEL0,
         GradConst.PARAM_LIST: None,
+        GradConst.STEP: None,
+        GradConst.RANK: None,
         GradConst.CURRENT_STEP: 0,
         GradConst.BOUNDS: [-1., 0., 1.],
         GradConst.OUTPUT_PATH: "./grad_stat"
@@ -33,6 +35,8 @@ class GlobalContext:
             print_warn_log("Invalid level set in config yaml file, use L0 instead.")
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
         self._set_input_list(config_dict, GradConst.BOUNDS, float)
+        self._set_input_list(config_dict, GradConst.STEP, int)
+        self._set_input_list(config_dict, GradConst.RANK, int)
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
         if output_path:
             try:

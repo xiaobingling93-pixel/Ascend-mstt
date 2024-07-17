@@ -7,15 +7,15 @@ from grad_tool.common.utils import print_warn_log, create_directory, change_mode
 
 level_adp = {
         "L0": {
-            "header": [GradConst.md5, GradConst.max, GradConst.min, GradConst.norm, GradConst.shape],
+            "header": [GradConst.MD5, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
             "have_grad_direction": False
         },
         "L1": {
-            "header": [GradConst.max, GradConst.min, GradConst.norm, GradConst.shape],
+            "header": [GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
             "have_grad_direction": True
         },
         "L2": {
-            "header": [GradConst.distribution, GradConst.max, GradConst.min, GradConst.norm, GradConst.shape],
+            "header": [GradConst.DISTRIBUTION, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
             "have_grad_direction": True
         },
     }
@@ -23,8 +23,7 @@ level_adp = {
 def save_grad_direction(param_name, grad, save_path):
     if not os.path.exists(save_path):
         create_directory(save_path)
-    param_grad = grad.clone().detach()
-    grad_direction_tensor = param_grad > 0
+    grad_direction_tensor = grad > 0
     grad_direction_ndarray = grad_direction_tensor.numpy()
 
     save_filepath = os.path.join(save_path, f"{param_name}.npy")
