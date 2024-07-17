@@ -3,17 +3,21 @@ import os
 import sys
 import csv
 import json
+from collections import namedtuple
 from rich.table import Table
 from rich.console import Console
 from .single_compare import single_benchmark_compare_wrap
 from .utils import DispatchException, CompareConst
 from atat.core.common.file_check import FileOpen
 from atat.pytorch.common.log import logger
+from atat.core.common.utils import CompareException
 
 ELEMENT_NUM_THRESHOLD = 100
 ZERO_NUM_THRESHOLD = 0.1
 FLOAT_PRECISION = 14
 
+ResultInfo = namedtuple('ResultInfo', ['api_name', 'is_fwd_success', 'is_bwd_success',
+                                       'fwd_compare_alg_results', 'bwd_compare_alg_results'])
 
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
@@ -26,10 +30,10 @@ def get_json_contents(file_path):
         json_obj = json.loads(ops)
     except ValueError as error:
         logger.error('Failed to load "%s". %s' % (file_path, str(error)))
-        raise DispatchException(1, "failed to load json.") from error
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
     if not isinstance(json_obj, dict):
         logger.error('Json file %s, content is not a dictionary!' % file_path)
-        raise DispatchException(2, "json is empty.")
+        raise CompareException(CompareException.INVALID_FILE_ERROR)
     return json_obj
 
 
@@ -134,10 +138,10 @@ class Saver:
         if self.stack_info:
             test_rows[0].append(self.COLUMN_STACK_INFO)
 
-        name = test_result[0]
-        df_row = list(test_result[:3])
-        if test_result[1] == "SKIP" or test_result[2] == "SKIP":
-            df_row.append(test_result[3])
+        name = test_result.api_name
+        df_row = [test_result.api_name, test_result.is_fwd_success, test_result.is_bwd_success]
+        if test_result.is_fwd_success == "SKIP" or test_result.is_bwd_success == "SKIP":
+            df_row.append(test_result.fwd_compare_alg_results)
         if self.stack_info:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
@@ -145,27 +149,29 @@ class Saver:
         write_csv(test_rows, self.save_path)
 
     def write_detail_csv(self, test_result):
-        test_rows = []
+        def get_rows_from_list(result, name, sub_prefix):
+            rows = []
+            if isinstance(result, list):
+                for i, test_subject in enumerate(result):
+                    subject = sub_prefix + "." + name + ".output." + str(i)
+                    test_subject = ["{:.{}f}".format(item, FLOAT_PRECISION) if isinstance(item, float) else item for
+                                    item in test_subject]
+                    rows.append([subject] + list(test_subject))
+            return rows
 
-        subject_prefix = test_result[0]
-        fwd_result = test_result[3]
-        bwd_result = test_result[4]
-        if isinstance(fwd_result, list):
-            for i, test_subject in enumerate(fwd_result):
-                subject = subject_prefix + ".forward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, FLOAT_PRECISION) if isinstance(item, float) else item for item in test_subject]
-                test_rows.append([subject] + list(test_subject))
-        if isinstance(bwd_result, list):
-            for i, test_subject in enumerate(bwd_result):
-                subject = subject_prefix + ".backward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, FLOAT_PRECISION) if isinstance(item, float) else item for item in test_subject]
-                test_rows.append([subject] + list(test_subject))
+        test_rows = []
+        subject_prefix = test_result.api_name
+        fwd_result = test_result.fwd_compare_alg_results
+        bwd_result = test_result.bwd_compare_alg_results
+
+        test_rows.extend(get_rows_from_list(fwd_result, "forward", subject_prefix))
+        test_rows.extend(get_rows_from_list(bwd_result, "backward", subject_prefix))
 
         write_csv(test_rows, self.detail_save_path)
 
-    def record_results(self, *args):
-        self.write_summary_csv(args)
-        self.write_detail_csv(args)
+    def record_results(self, result_info):
+        self.write_summary_csv(result_info)
+        self.write_detail_csv(result_info)
 
 
 class Comparator:
@@ -179,9 +185,7 @@ class Comparator:
             self.stack_info = None
         self.saver = Saver(result_csv_path, details_csv_path, self.stack_info)
 
-        is_meet_some_condition = (is_continue_run_ut and not os.path.exists(self.save_path)
-                                  and not os.path.exists(self.detail_save_path))
-        if is_meet_some_condition:
+        if is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
             self.saver.write_csv_title()
 
     @staticmethod
@@ -223,9 +227,9 @@ class Comparator:
         else:
             is_bwd_success, bwd_compare_alg_results = True, None
         if is_bwd_success and bwd_compare_alg_results is None:
-            self.saver.record_results(api_name, is_fwd_success, CompareConst.NA, fwd_compare_alg_results,
-                                      bwd_compare_alg_results)
+            self.saver.record_results(ResultInfo(api_name, is_fwd_success, CompareConst.NA, fwd_compare_alg_results,
+                                      bwd_compare_alg_results))
         else:
-            self.saver.record_results(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,
-                                      bwd_compare_alg_results)
+            self.saver.record_results(ResultInfo(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,
+                                      bwd_compare_alg_results))
         return is_fwd_success, is_bwd_success

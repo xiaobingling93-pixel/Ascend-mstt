@@ -3,15 +3,15 @@ from functools import wraps
 import torch
 from prettytable import PrettyTable
 from collections import namedtuple
-from .utils import logger_user
+from .utils import logger_user, logger_debug
 
 def func_log_wrapper():
     def _out_wrapper(func):
         @wraps(func)
         def _in_wrapper(*kargs, **kwargs):
-            logging.debug(f"start to run: {func.__name__}")
+            logger_debug("start to run: {}".format(func.__name__))
             x = func(*kargs, **kwargs)
-            logging.debug(f"end to run: {func.__name__}")
+            logger_debug("end to run: {}".format(func.__name__))
             return x
         
         return _in_wrapper
@@ -118,22 +118,19 @@ class SingleBenchmarkAccuracyCompare:
 
         if acc_result:
             failed_info = "比对数据的shape不一致"
-            compare_result_info = CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-            return compare_result_info
+            return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
         
         if cls.check_output_invalid_value(bench_out):
             logging.info("The benchmark result contains nan/inf value. ")
             failed_info = "标杆结果存在nan值或inf值, 依照单标杆标准该用例通过"
             acc_result = SingleBenchmarkAccuracyResult(result=True)
-            compare_result_info = CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-            return compare_result_info
+            return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
         
         if cls.check_output_invalid_value(npu_out):
             logging.info("The NPU result contains nan/inf value. ")
             failed_info = "NPU结果存在nan值或inf值, 依照单标杆标准该用例不通过"
             acc_result = SingleBenchmarkAccuracyResult(result=False)
-            compare_result_info = CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-            return compare_result_info
+            return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
         
         data_type = npu_out.dtype
         if data_type not in [torch.float16, torch.float32, torch.float64, torch.bfloat16]:
@@ -160,8 +157,7 @@ class SingleBenchmarkAccuracyCompare:
                     max_rel_idx=max_rel_idx
                 )
                 acc_result.get_result(eb_thd, error_thd)
-            compare_result_info = CompareResultInfo(acc_result, error_thd, eb_thd, None)
-            return compare_result_info
+            return CompareResultInfo(acc_result, error_thd, eb_thd, None)
         return None
 
     @classmethod
@@ -296,7 +292,7 @@ class SingleBenchSummary:
         return result_str
     
     def print_detail_table(self):
-        table =PrettyTable()
+        table = PrettyTable()
         table.title = "Single Benchmark Metrics Info"
         table.field_names = ["Index", "Result", "Threshold"]
         table.add_row(["error_balance", self.error_balance, self.eb_thd])
@@ -333,43 +329,63 @@ def single_benchmark_compare(npu_out: torch.Tensor, bench_out: torch.Tensor, hig
     return result, details
 
 
-def single_benchmark_compare_wrap(npu_out: torch.Tensor, bench_out: torch.Tensor, high_precision=True):
-    result = SingleBenchmarkAccuracyResult(result=True)
-    summary = SingleBenchSummary(result)
-    if isinstance(bench_out, (list, tuple)):
-        status, details = [], []
-        if len(bench_out) != len(npu_out):
-            summary.result = False
-            summary.failed_info = "bench and npu output structure is different."
-            return False, summary.to_column_value()
-        for b_out_i, n_out_i in zip(bench_out, npu_out):
-            status_i, details_i = single_benchmark_compare_wrap(n_out_i, b_out_i, high_precision)
-            status.append(status_i)
-            details.append(details_i)
-    elif isinstance(bench_out, dict):
-        b_keys, n_keys  = set(bench_out.keys()), set(npu_out.keys())
-        if b_keys != n_keys:
-            summary.result = False
-            summary.failed_info = "bench and npu_output dict keys are different."
-            return False, summary.to_column_value()
-        else:
-            status, details = single_benchmark_compare_wrap(list(bench_out.values(), list(npu_out.values())))
-    elif isinstance(bench_out, torch.Tensor) :
-        status, details = single_benchmark_compare(bench_out, npu_out)
-    elif isinstance(bench_out, (bool, int, float, str)):
-        summary.bench_dtype = str(type(bench_out))
-        summary.npu_dtype = str(type(npu_out))
-        status = bench_out == npu_out
-        summary.result = status
-        return status, summary.to_column_value()
-    elif bench_out is None:
-        summary.result = True
-        summary.failed_info = "Output is None."
-        return True, summary.to_column_value()
-    else:
-        summary.result = True
-        summary.failed_info = "Unexpected output type: {}".format(type(bench_out))
-        return True, summary.to_column_value()
+def calc_status_details_list_tuple(npu_out, bench_out, high_precision, summary):
+    status, details = [], []
+    if len(bench_out) != len(npu_out):
+        summary.result = False
+        summary.failed_info = "bench and npu output structure is different."
+        return False, summary.to_column_value()
+    for b_out_i, n_out_i in zip(bench_out, npu_out):
+        status_i, details_i = single_benchmark_compare_wrap(n_out_i, b_out_i, high_precision)
+        status.append(status_i)
+        details.append(details_i)
     return status, details
 
 
+def calc_status_details_dict(npu_out, bench_out, high_precision, summary):
+    b_keys, n_keys = set(bench_out.keys()), set(npu_out.keys())
+    if b_keys != n_keys:
+        summary.result = False
+        summary.failed_info = "bench and npu_output dict keys are different."
+        return False, summary.to_column_value()
+    else:
+        status, details = single_benchmark_compare_wrap(list(bench_out.values(), list(npu_out.values())))
+        return status, details
+
+
+def calc_status_details_tensor(npu_out, bench_out, high_precision, summary):
+    return single_benchmark_compare(bench_out, npu_out)
+
+
+def calc_status_details_builtin(npu_out, bench_out, summary):
+    summary.bench_dtype = str(type(bench_out))
+    summary.npu_dtype = str(type(npu_out))
+    status = bench_out == npu_out
+    summary.result = status
+    return status, summary.to_column_value()
+
+
+def calc_status_details_none(npu_out, bench_out, high_precision, summary):
+    summary.result = True
+    summary.failed_info = "Output is None."
+    return True, summary.to_column_value()
+
+
+def single_benchmark_compare_wrap(npu_output: torch.Tensor, bench_output: torch.Tensor, high_precision=True):
+    type_method_dict = {
+        (list, tuple): calc_status_details_list_tuple,
+        dict: calc_status_details_dict,
+        torch.Tensor: calc_status_details_tensor,
+        (bool, int, float, str): calc_status_details_builtin,
+        None: calc_status_details_none,
+    }
+
+    result = SingleBenchmarkAccuracyResult(result=True)
+    bench_summary = SingleBenchSummary(result)
+    for type1, func in type_method_dict.items():
+        if isinstance(bench_output, type1):
+            return func(npu_output, bench_output, high_precision, bench_summary)
+
+    bench_summary.result = True
+    bench_summary.failed_info = "Unexpected output type: {}".format(type(bench_output))
+    return True, bench_summary.to_column_value()

@@ -10,7 +10,7 @@ from .utils import np_save_data, logger_debug, logger_error, logger_warn, logger
     COLOR_RESET, CSV_COLUMN_NAME
 from atat.core.common.file_check import FileOpen, change_mode, FileCheckConst
 from atat.core.common.utils import CompareConst
-from atat.core.common.log import logger
+from atat.pytorch.common.log import logger
 
 class DispatchRunParam:
     def __init__(self, debug_flag, device_id, root_npu_path, root_cpu_path, process_num, comparator):

@@ -37,7 +37,6 @@ class PtdbgDispatch(TorchDispatchMode):
         if not is_npu:
             logger_error("Please confirm you run environment installed torch_npu!")
             return
-
         if dump_path is None:
             logger_error("Please set dump_path when dump_mode is config!")
         check_file_or_directory_path(dump_path, True)
@@ -55,14 +54,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.process_num = process_num
         self.filter_dump_api()
         self.check_param()
-        # guarantee file uniqueness
-        time.sleep(1)
-        time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
-        if tag is None or not isinstance(tag, str):
-            logger_warn('There is not tag or the type of tag is not string.')
-            dir_name = f'atat_rank{self.device_id}_{time_now}'
-        else:
-            dir_name = f'atat_{tag}_rank{self.device_id}_{time_now}'
+        dir_name = self.get_dir_name(tag)
         self.root_path = os.path.join(os.path.realpath(dump_path), dir_name)
         self.root_cpu_path = os.path.join(self.root_path, f'cpu')
         self.root_npu_path = os.path.join(self.root_path, f'npu')
@@ -83,8 +75,10 @@ class PtdbgDispatch(TorchDispatchMode):
         self.lock = None
         if process_num > 0:
             self.pool = Pool(process_num)
-            self.lock = Manager().Lock()
-        self.log_debug_init(debug, process_num)
+        if debug:
+            logger_debug(f'Main pid:{os.getpid()} device:{self.device_id} dump_list:{self.dump_api_list} '
+                         f'dump_mode:{self.dump_mode} cpu_path[{self.root_cpu_path}], npu_path[{self.root_npu_path}], '
+                         f'process[{process_num}]')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super().__exit__(exc_type, exc_val, exc_tb)
@@ -96,7 +90,7 @@ class PtdbgDispatch(TorchDispatchMode):
         if self.process_num > 0:
             self.pool.close()
             self.pool.join()
-            summery_path = os.path.join(self.root_cpu_path, f'summery.json')
+            summery_path = os.path.join(self.root_cpu_path, f'summary.json')
             if not os.path.exists(summery_path):
                 logger_error("Please check train log, An exception may have occurred!")
                 return
@@ -182,19 +176,17 @@ class PtdbgDispatch(TorchDispatchMode):
 
         if self.process_num == 0:
             self.all_summery.append([])
-            dispatch_data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, func, npu_out_cpu,
-                                                  cpu_out, self.lock)
-            dispatch_workflow(run_param, dispatch_data_info)
+            data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, func, npu_out_cpu, cpu_out, self.lock)
+            dispatch_workflow(run_param, data_info)
         else:
             self.lock.acquire()
             self.all_summery.append([])
             self.lock.release()
             run_param.process_flag = True
             if self.check_fun(func, run_param):
-                dispatch_data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, None, npu_out_cpu,
-                                                      cpu_out, self.lock)
-                self.pool.apply_async(func=dispatch_multiprocess,
-                                      args=(run_param, dispatch_data_info),
+                data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, None, npu_out_cpu, cpu_out,
+                                             self.lock)
+                self.pool.apply_async(func=dispatch_multiprocess, args=(run_param, data_info),
                                       error_callback=error_call)
             else:
                 logger_error("can not get correct function please set process_num=0")
@@ -211,17 +203,22 @@ class PtdbgDispatch(TorchDispatchMode):
                     return True
         return False
 
+    def get_dir_name(self, tag):
+        # guarantee file uniqueness
+        time.sleep(1)
+        time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
+        if tag is None or not isinstance(tag, str):
+            logger_warn('There is not tag or the type of tag is not string.')
+            dir_name = f'atat_rank{self.device_id}_{time_now}'
+        else:
+            dir_name = f'atat_{tag}_rank{self.device_id}_{time_now}'
+        return dir_name
+
     def load_yaml_file(self, file_path):
         with FileOpen(file_path, 'r') as f:
             yaml_file = yaml.safe_load(f)
             self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
             self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
-
-    def log_debug_init(self, debug, process_num):
-        if debug:
-            logger_debug(f'Main pid:{os.getpid()} device:{self.device_id} dump_list:{self.dump_api_list} '
-                         f'dump_mode:{self.dump_mode} cpu_path[{self.root_cpu_path}], npu_path[{self.root_npu_path}], '
-                         f'process[{process_num}]')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:
