@@ -64,8 +64,8 @@ class TestInterface(TestCase):
         config = Config(Const.FORWARD, HandlerType.FIX)
         checker = FreeBenchmarkCheck(config)
         # 执行算子前向
-        x = torch.randn(2, 3).npu().to(torch.float16)
-        y = torch.randn(2, 3).npu().to(torch.float16)
+        x = torch.randn(2, 3).to(torch.float16)
+        y = torch.randn(2, 3).to(torch.float16)
         mul_module = WrapMul(self.api_name)
         out = mul_module(x, y)
         # 模拟forward hook中调用无标杆前向检测接口
@@ -84,9 +84,9 @@ class TestInterface(TestCase):
         checker = FreeBenchmarkCheck(config)
         processor = UnequalDataProcessor()
         # 初始化输入输出
-        x = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True).npu()
-        y = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True).npu()
-        grad_output =  torch.tensor([1,1], dtype=torch.float16).npu()
+        x = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
+        y = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
+        grad_output =  torch.tensor([1,1], dtype=torch.float16)
         backward_name = Const.SEP.join([self.api_name, Const.BACKWARD])
         # 执行前向生成grad saver实例
         mul_module = WrapMul(self.api_name)

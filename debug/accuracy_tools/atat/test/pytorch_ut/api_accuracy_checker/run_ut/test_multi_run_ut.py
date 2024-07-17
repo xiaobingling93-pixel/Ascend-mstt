@@ -12,7 +12,7 @@ from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import split_json_fil
 class TestMultiRunUT(unittest.TestCase):
 
     def setUp(self):
-        self.test_json_file = 'dump.json'
+        self.test_json_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dump.json")
         self.test_data = {'data': {'key1': 'TRUE', 'key2': 'TRUE', 'key3': 'TRUE'}}
         self.test_json_content = json.dumps(self.test_data)
         self.forward_split_files_content = [

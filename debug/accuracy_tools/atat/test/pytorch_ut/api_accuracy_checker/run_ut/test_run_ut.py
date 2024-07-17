@@ -1,4 +1,5 @@
 # coding=utf-8
+import os
 import copy
 import unittest
 import torch
@@ -6,7 +7,8 @@ from unittest.mock import patch, DEFAULT
 from atat.pytorch.api_accuracy_checker.run_ut.run_ut import *
 from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
 
-forward_file = "./forward.json"
+base_dir = os.path.dirname(os.path.realpath(__file__))
+forward_file = os.path.join(base_dir, "forward.json")
 forward_content = get_json_contents(forward_file)
 for api_full_name, api_info_dict in forward_content.items():
     api_full_name = api_full_name

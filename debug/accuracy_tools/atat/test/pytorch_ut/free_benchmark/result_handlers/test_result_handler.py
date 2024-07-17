@@ -34,8 +34,8 @@ class TestFuzzHandler(TestCase):
 
     def setUp(self) -> None:
         origin_inputs = [
-            torch.as_tensor([3.01, 3.02], dtype=torch.float16).npu(),
-            torch.as_tensor([0.02, 0.02], dtype=torch.float16).npu(),
+            torch.as_tensor([3.01, 3.02], dtype=torch.float16),
+            torch.as_tensor([0.02, 0.02], dtype=torch.float16),
         ]
         # 将输入乘以一个大于误差阈值1.002的值，模拟二次执行出现误差
         perturbed_inputs = [
@@ -78,10 +78,10 @@ class TestFuzzHandler(TestCase):
         self.assertEqual(result.dtype, torch.float16)
         self.assertEqual(result.device, self.data_params.original_result.device)
         self.assertAlmostEqual(
-            result[0], self.data_params.perturbed_result.to(torch.float16).npu()[0]
+            result[0], self.data_params.perturbed_result.to(torch.float16)[0]
         )
         self.assertAlmostEqual(
-            result[1], self.data_params.perturbed_result.to(torch.float16).npu()[1]
+            result[1], self.data_params.perturbed_result.to(torch.float16)[1]
         )
 
     def test_result_handler_preheat(self):
