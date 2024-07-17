@@ -39,4 +39,4 @@ class TestHookModule(unittest.TestCase):
 
         test.forward = Mock(return_value=1)
         result = test(input)
-        self.assertEqual(result, input)
+        self.assertEqual(result, (input, ))
