@@ -32,7 +32,11 @@ class TestHookModule(unittest.TestCase):
             return forward_pre_hook, forward_hook, backward_hook
         HOOKModule.prefix_op_name_ = "123"
         input = 2
-        test = HOOKModule(hook, input)
+        test = HOOKModule(hook)
+
+        def temp_forward(*input, **kwargs):
+            return input
+
         test.forward = Mock(return_value=1)
-        result = test()
+        result = test(input)
         self.assertEqual(result, input)
