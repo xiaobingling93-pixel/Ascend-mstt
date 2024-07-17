@@ -64,8 +64,12 @@ class TestDataWriter(unittest.TestCase):
         self.assertEqual(result, load_data)
         is_exist_1 = os.path.exists(test.stack_file_path)
         self.assertTrue(is_exist_1)
+        os.access(test.stack_file_path, os.R_OK)
+        os.access(test.stack_file_path, os.W_OK)
         is_exist_2 = os.path.exists(test.construct_file_path)
         self.assertTrue(is_exist_2)
+        os.access(test.construct_file_path, os.R_OK)
+        os.access(test.construct_file_path, os.W_OK)
 
         os.remove(construct_file_path)
         os.remove(stack_file_path)
