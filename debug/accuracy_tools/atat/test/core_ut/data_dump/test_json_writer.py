@@ -35,7 +35,7 @@ class TestDataWriter(unittest.TestCase):
         with open(file_path, "r") as f:
             reader = csv.DictReader(f)
             column_last = [row for row in reader][-1]
-        self.assertEqual(data, column_first)
+        self.assertEqual(data, column_last)
 
         os.remove(file_path)
 
@@ -116,7 +116,7 @@ class TestDataWriter(unittest.TestCase):
         test.dump_tensor_data_dir = dump_tensor_data_dir
 
         with open(dump_file_path, "w") as f:
-            dump_data = json.dump(data)
+            dump_data = json.dumps(data)
             f.write(dump_data)
 
         test.flush_data_when_buffer_is_full()
@@ -141,7 +141,7 @@ class TestDataWriter(unittest.TestCase):
         data = {"A":"1", "B":"2", "data":{}}
         test = DataWriter()
         test.update_construct(data)
-        self.assertEqual(test.cache_stack, data)
+        self.assertEqual(test.cache_construct, data)
 
     def test_write_stack_info_json(self):
         test = DataWriter()
@@ -164,7 +164,7 @@ class TestDataWriter(unittest.TestCase):
     def test_write_construct_info_json(self):
         test = DataWriter()
         data = {"A":"1", "B":"2", "data":{}}
-        test.cache_stack = data
+        test.cache_construct = data
 
         cur_path = os.path.dirname(os.path.realpath(__file__))
         file_path = os.path.join(cur_path, "dump.json")

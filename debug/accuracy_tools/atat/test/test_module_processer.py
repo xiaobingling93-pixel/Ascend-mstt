@@ -16,7 +16,7 @@ class TestModuleProcesser(unittest.TestCase):
         self.assertEqual(result_2, "test")
 
     def test_clone_return_value_and_test_clone_if_tensor(self):
-        def func(nope, x):
+        def func(x):
             return x
         
         input = torch.tensor([1])
@@ -47,7 +47,7 @@ class TestModuleProcesser(unittest.TestCase):
         pre_hook = test.node_hook("test", Const.START)
         self.assertIsNone(pre_hook)
         end_hook = test.node_hook("test", "stop")
-        self.assertIsNone(end_hook)
+        self.assertIsNotNone(end_hook)
 
         class A():
             pass
