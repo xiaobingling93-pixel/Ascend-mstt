@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
 import numpy as np
 from atat.core.common.log import logger
-from atat.core.common.utils import Const, convert_tuple
+from atat.core.common.utils import convert_tuple
+from atat.core.common.const import Const
 
 
 @dataclass

@@ -7,7 +7,8 @@ from collections import namedtuple
 from rich.table import Table
 from rich.console import Console
 from .single_compare import single_benchmark_compare_wrap
-from .utils import DispatchException, CompareConst
+from .utils import DispatchException
+from atat.core.common.const import CompareConst
 from atat.core.common.file_check import FileOpen
 from atat.pytorch.common.log import logger
 from atat.core.common.utils import CompareException

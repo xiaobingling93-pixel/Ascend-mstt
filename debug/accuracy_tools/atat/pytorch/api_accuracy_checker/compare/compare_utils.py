@@ -3,7 +3,8 @@ import os
 import numpy as np
 import torch
 import yaml
-from atat.core.common.utils import Const, CompareException
+from atat.core.common.utils import CompareException
+from atat.core.common.const import Const
 from atat.pytorch.common.log import logger
 from atat.core.common.file_check import FileOpen
 
@@ -77,21 +78,6 @@ precision_configs = {
     }
 }
 
-
-class CompareConst:
-    NAN = np.nan
-    NA = "N/A"
-    PASS = 'pass'
-    WARNING = 'warning'
-    ERROR = 'error'
-    SKIP = 'SKIP'
-    TRUE = 'TRUE'
-    FALSE = 'FALSE'
-    BFLOAT16_MIN = -3.3895313892515355e+38
-    BFLOAT16_MAX = 3.3895313892515355e+38
-    BFLOAT16_EPS = 2 ** -8
-    SPACE = " "
-    
     
 class ApiPrecisionCompareColumn:
     API_NAME = 'API Name'

@@ -32,9 +32,10 @@ from atat.pytorch.compare.highlight import HighlightRules, get_header_index
 from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
 from atat.pytorch.advisor.advisor import Advisor
 from atat.pytorch.common.log import logger
-from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
-    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, Const
-from atat.core.common.file_check import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
+from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
+    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
+from atat.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
+from atat.core.common.const import Const, CompareConst, FileCheckConst
 
 
 def check_graph_mode(a_op_name, b_op_name):

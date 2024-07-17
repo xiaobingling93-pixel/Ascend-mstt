@@ -1,4 +1,4 @@
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 from atat.core.common.log import logger
 from atat.core.common.exceptions import MsaccException
 

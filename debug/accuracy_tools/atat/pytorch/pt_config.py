@@ -3,7 +3,7 @@ import os
 
 from atat.core.common_config import CommonConfig, BaseConfig
 from atat.core.common.file_check import FileOpen
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 
 
 class TensorConfig(BaseConfig):

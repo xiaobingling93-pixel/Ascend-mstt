@@ -6,8 +6,8 @@ import numpy as np
 from rich.table import Table
 from rich.console import Console
 from atat.pytorch.common.log import logger
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, Const
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, \
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
     apis_threshold
 from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
@@ -17,6 +17,7 @@ from atat.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_er
     check_small_value, check_norm_value, get_abs_bench_with_eps
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from atat.core.common.file_check import FileOpen
+from atat.core.common.const import Const, CompareConst
 
 
 class Comparator:

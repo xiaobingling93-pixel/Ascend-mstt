@@ -19,43 +19,7 @@ import re
 
 from atat.core.common.log import logger
 from atat.core.common.exceptions import FileCheckException
-
-
-class FileCheckConst:
-    """
-    Class for file check const
-    """
-    READ_ABLE = "read"
-    WRITE_ABLE = "write"
-    READ_WRITE_ABLE = "read and write"
-    DIRECTORY_LENGTH = 4096
-    FILE_NAME_LENGTH = 255
-    FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
-    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
-    PKL_SUFFIX = ".pkl"
-    NUMPY_SUFFIX = ".npy"
-    JSON_SUFFIX = ".json"
-    PT_SUFFIX = ".pt"
-    CSV_SUFFIX = ".csv"
-    YAML_SUFFIX = ".yaml"
-    MAX_PKL_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_NUMPY_SIZE = 10 * 1024 * 1024 * 1024
-    MAX_JSON_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_PT_SIZE = 10 * 1024 * 1024 * 1024
-    MAX_CSV_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 10 * 1024 * 1024
-    DIR = "dir"
-    FILE = "file"
-    DATA_DIR_AUTHORITY = 0o750
-    DATA_FILE_AUTHORITY = 0o640
-    FILE_SIZE_DICT = {
-        PKL_SUFFIX: MAX_PKL_SIZE,
-        NUMPY_SUFFIX: MAX_NUMPY_SIZE,
-        JSON_SUFFIX: MAX_JSON_SIZE,
-        PT_SUFFIX: MAX_PT_SIZE,
-        CSV_SUFFIX: MAX_CSV_SIZE,
-        YAML_SUFFIX: MAX_YAML_SIZE
-    }
+from atat.core.common.const import FileCheckConst
 
 
 class FileChecker:

@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import torch
 import torch.nn as nn
-from atat.pytorch.common.utils import Const
+from atat.core.common.const import Const
 from atat.pytorch.free_benchmark import FreeBenchmarkCheck
 from atat.pytorch.free_benchmark.common.constant import CommonField, PreheatConfig
 from atat.pytorch.free_benchmark.common.enums import (

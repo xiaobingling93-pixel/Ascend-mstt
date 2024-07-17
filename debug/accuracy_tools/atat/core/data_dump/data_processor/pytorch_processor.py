@@ -6,9 +6,9 @@ from typing import List
 import numpy as np
 import torch
 from atat.core.common.exceptions import MsaccException
-from atat.core.common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
+from atat.core.common.file_check import path_len_exceeds_limit, change_mode
 from atat.core.common.log import logger
-from atat.core.common.utils import Const, OverflowConst
+from atat.core.common.const import Const, OverflowConst, FileCheckConst
 from atat.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from atat.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow

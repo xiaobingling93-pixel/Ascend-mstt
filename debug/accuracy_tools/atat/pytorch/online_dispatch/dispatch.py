@@ -22,8 +22,8 @@ from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logge
     DispatchException
 from .compare import Comparator
 from atat.core.common.file_check import FileOpen
-from atat.pytorch.common.utils import Const
-from atat.core.common.utils import CompareConst, check_file_or_directory_path, check_path_before_create
+from atat.core.common.utils import check_file_or_directory_path, check_path_before_create
+from atat.core.common.const import Const, CompareConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"

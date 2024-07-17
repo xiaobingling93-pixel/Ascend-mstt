@@ -13,9 +13,10 @@ from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_
     get_validated_details_csv_path, preprocess_forward_content
 from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
 from atat.pytorch.common import parse_json_info_forward_backward
-from atat.core.common.file_check import FileCheckConst, FileChecker, check_file_suffix, check_link, FileOpen, \
+from atat.core.common.file_check import FileChecker, check_file_suffix, check_link, FileOpen, \
     check_path_before_create, create_directory
 from atat.pytorch.common.log import logger
+from atat.core.common.const import FileCheckConst
 
 
 def split_json_file(input_file, num_splits, filter_api):
