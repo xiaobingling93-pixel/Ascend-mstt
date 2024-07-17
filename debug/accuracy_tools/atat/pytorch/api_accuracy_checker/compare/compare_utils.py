@@ -264,6 +264,6 @@ def handle_nan(x, y, column_name):
 def check_inf_or_nan(x, y, column_name):
     if math.isinf(x) or math.isinf(y):
         return handle_infinity(x, y, column_name)
-    elif math.isnan(x) or math.isnan(y):
+    else:
         return handle_nan(x, y, column_name)
     
