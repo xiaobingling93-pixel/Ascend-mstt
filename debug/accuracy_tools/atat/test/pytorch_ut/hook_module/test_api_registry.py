@@ -3,7 +3,7 @@ from atat.pytorch.hook_module.api_registry import ApiRegistry, torch_version_abo
 
 
 class TestApiRegistry(unittest.TestCase):
-    #100
+    
     def test_store_ori_attr(self):
         class A():
             a1 = 1
@@ -18,7 +18,7 @@ class TestApiRegistry(unittest.TestCase):
         ApiRegistry.store_ori_attr(B, api_list, actual_output)
         self.assertEqual(actual_output, expect_output)
 
-    #100
+    
     def test_set_api_attr(self):
         class A():
             a1 = 1
@@ -33,7 +33,7 @@ class TestApiRegistry(unittest.TestCase):
             if '.' in k:
                 sub_module_name, sub_op = k.rsplit('.', 1)
                 sub_module = getattr(B, sub_module_name, None)
-                #print(True)
+                
                 self.assertEqual(getattr(sub_module, sub_op), v)
             else:
                 self.assertEqual(getattr(B, k), v)

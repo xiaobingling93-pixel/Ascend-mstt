@@ -3,7 +3,8 @@ from atat.core.data_dump.json_writer import DataWriter
 
 import os
 import csv
-
+from atat.core.common.file_check import FileOpen
+from atat.core.common import utils
 from pathlib import Path
 import json
 
@@ -11,33 +12,32 @@ class TestDataWriter(unittest.TestCase):
     def test_write_data_to_csv(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         file_path = os.path.join(cur_path, "test.csv")
-        is_exists = os.path.exists(file_path)
-        if is_exists:
-            os.remove(file_path)
+
+        if os.path.exists(file_path):
+            utils.remove_path(file_path)
 
         data = {"A":"1", "B":"2", "C":"3"}
         result = data.values()
         header = data.keys()
         DataWriter.write_data_to_csv(result, header, file_path)
-        with open(file_path, "r") as f:
+        with FileOpen(file_path, "r") as f:
             reader = csv.DictReader(f)
             column_first = [row for row in reader][0]
         self.assertEqual(data, column_first)
 
-        #
-        is_exists = os.path.exists(file_path)
-        self.assertTrue(is_exists)
-
+        
+        
+        
         data = {"A":"4", "B":"5", "C":"6"}
         result = data.values()
         header = data.keys()
         DataWriter.write_data_to_csv(result, header, file_path)
-        with open(file_path, "r") as f:
+        with FileOpen(file_path, "r") as f:
             reader = csv.DictReader(f)
             column_last = [row for row in reader][-1]
         self.assertEqual(data, column_last)
 
-        os.remove(file_path)
+        utils.remove_path(file_path)
 
     def test_initialize_json_file(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -79,11 +79,11 @@ class TestDataWriter(unittest.TestCase):
         test_path = os.path.join(cur_path, "test1.json")
 
         test.update_dump_paths(test_path, test_path, test_path, test_path, test_path)
-        self.assertFalse(test.dump_file_path == None)
-        self.assertFalse(test.stack_file_path == None)
-        self.assertFalse(test.construct_file_path == None)
-        self.assertFalse(test.dump_tensor_data_dir == None)
-        self.assertFalse(test.free_benchmark_file_path == None)
+        self.assertTrue(test.dump_file_path == test_path)
+        self.assertTrue(test.stack_file_path == test_path)
+        self.assertTrue(test.construct_file_path == test_path)
+        self.assertTrue(test.dump_tensor_data_dir == test_path)
+        self.assertTrue(test.free_benchmark_file_path == test_path)
 
     def test_update_data(self):
         data = {"A":"1", "B":"2", "C":{"D":"2"}}

@@ -24,14 +24,15 @@ class TestHookModule(unittest.TestCase):
         def forward_pre_hook(nope, input, kwargs):
             return input, kwargs
         def forward_hook(nope, input, kwargs, result):
-            return 2
+            return input
         def backward_hook():
             pass
 
         def hook(prefix):
             return forward_pre_hook, forward_hook, backward_hook
         HOOKModule.prefix_op_name_ = "123"
-        test = HOOKModule(hook)
+        input = 2
+        test = HOOKModule(hook, input)
         test.forward = Mock(return_value=1)
         result = test()
-        self.assertEqual(result, 2)
+        self.assertEqual(result, input)
