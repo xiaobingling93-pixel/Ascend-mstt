@@ -3,10 +3,10 @@ import torch.distributed as dist
 from atat.pytorch.hook_module.wrap_distributed import *
 
 class TestWrapDistributed(unittest.TestCase):
-    def hook(name):
+    def hook(name, prefix):
         def forward_pre_hook(nope, input, kwargs):
             return input, kwargs
-        def forward_hook():
+        def forward_hook(nope, input, kwargs, result):
             return 2
         def backward_hook():
             pass
