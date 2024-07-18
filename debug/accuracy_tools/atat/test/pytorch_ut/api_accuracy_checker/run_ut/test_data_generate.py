@@ -32,7 +32,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(kwargs_params, {'dim': -1})
 
     def test_gen_args(self):
-        args_result = gen_args(api_info_dict.get('input_args'), real_data_path=None)
+        args_result = gen_args(api_info_dict.get('input_args'), "conv2d")
         max_diff = abs(args_result[0].max() - max_value)
         min_diff = abs(args_result[0].min() - min_value)
         self.assertEqual(len(args_result), 2)
@@ -42,7 +42,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(args_result[0].shape, torch.Size([2048, 2, 1, 256]))
 
     def test_gen_data(self):
-        data = gen_data(api_info_dict.get('input_args')[0], True, None, None)
+        data = gen_data(api_info_dict.get('input_args')[0], "conv2d", True, None, None)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
         self.assertEqual(data.dtype, torch.float16)

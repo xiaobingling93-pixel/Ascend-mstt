@@ -63,7 +63,7 @@ class TestRunUtMethods(unittest.TestCase):
         self.assertEqual(cpu_kwargs, {'dim': -1})
 
     def test_UtDataInfo(self):
-        data_info = UtDataInfo(None, None, None, None, None, None)
+        data_info = UtDataInfo(None, None, None, None, None, None, None)
         self.assertIsNone(data_info.bench_grad_out)
         self.assertIsNone(data_info.device_grad_out)
         self.assertIsNone(data_info.device_out)
