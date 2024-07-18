@@ -141,8 +141,10 @@ class BaseDataProcessor:
                 resutl_dict[k] = cls.recursive_apply_transform(arg, transform)
                 cls._recursive_key_stack.pop()
             return resutl_dict
-        else:
+        elif args is not None:
             logger.warning(f"Data type {type(args)} is not supported.")
+            return None
+        else:
             return None
 
     def if_return_forward_new_output(self):

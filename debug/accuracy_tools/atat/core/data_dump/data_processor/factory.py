@@ -51,11 +51,7 @@ class DataProcessorFactory:
         elif framework == Const.MS_FRAMEWORK:
             from .mindspore_processor import (
                 StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
-                TensorDataProcessor as MindsporeTensorDataProcessor,
-                OverflowCheckDataProcessor as MindsporeOverflowCheckDataProcessor,
-                FreeBenchmarkDataProcessor as MindsporeFreeBenchmarkDataProcessor
+                TensorDataProcessor as MindsporeTensorDataProcessor
             )
             cls.register_processor(Const.MS_FRAMEWORK, Const.STATISTICS, MindsporeStatisticsDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.TENSOR, MindsporeTensorDataProcessor)
-            cls.register_processor(Const.MS_FRAMEWORK, Const.OVERFLOW_CHECK, MindsporeOverflowCheckDataProcessor)
-            cls.register_processor(Const.MS_FRAMEWORK, Const.FREE_BENCHMARK, MindsporeFreeBenchmarkDataProcessor)

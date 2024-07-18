@@ -1,26 +1,25 @@
-import functools
 import os
 from pathlib import Path
+import functools
+import mindspore
 
-from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
-from atat.core.common.utils import Const
-from atat.core.common.exceptions import DistributedNotInitializedError, MsaccException
 from atat.core.data_dump.data_collector import build_data_collector
 from atat.core.data_dump.scope import BaseScope
+from atat.mindspore.common.utils import get_rank_if_initialized
+from atat.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from atat.mindspore.common.log import logger
+from atat.core.common.utils import Const
+from atat.core.common.exceptions import DistributedNotInitializedError
+from atat.mindspore.dump.hook_cell.api_registry import api_register
 from atat.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
-from atat.pytorch.common.utils import get_rank_if_initialized
-from atat.pytorch.module_processer import ModuleProcesser
-from atat.pytorch.hook_module import remove_dropout
-from atat.pytorch.hook_module.api_registry import api_register
 
 
 class Service:
     def __init__(self, config):
         self.model = None
         self.config = config
+        self.config.level = self.config.level_ori
         self.data_collector = build_data_collector(config)
-        self.module_processor = ModuleProcesser(self.data_collector.scope)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
@@ -28,37 +27,19 @@ class Service:
         self.dump_iter_dir = None
 
     def build_hook(self, module_type, name):
-        def pre_hook(api_or_module_name, module, args, kwargs):
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
+        def forward_hook(api_or_module_name, module, input, output):
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
-
             if not self.switch:
-                return args, kwargs
+                return
             if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
-                self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
-            return args, kwargs
-
-        def forward_hook(api_or_module_name, module, args, kwargs, output):
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
-
-            if not self.switch:
-                return None
-            if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=module.input_kwargs, output=output)
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
             return output
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
-
             if not self.switch:
                 return
             if self.data_collector:
@@ -68,10 +49,16 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
-        return pre_forward_hook, forward_hook, backward_hook
+
+        def wrap_forward_hook(*args, **kwargs):
+            return forward_hook(*args, **kwargs)
+        
+        def wrap_backward_hook(*args, **kwargs):
+            return backward_hook(*args, **kwargs)
+        
+        return wrap_forward_hook, wrap_backward_hook
 
     def step(self):
         self.current_iter += 1
@@ -133,35 +120,13 @@ class Service:
         free_benchmark_file_path = os.path.join(self.config.dump_path, "free_benchmark.csv")
         self.data_collector.update_dump_paths(
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, free_benchmark_file_path)
-
+        
+        
+        
     def register_hook_new(self):
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
-        if self.config.level in ["L0", "mix"]:
-            if self.model is None:
-                logger.error_log_with_exp("The model is None.", MsaccException.INVALID_PARAM_ERROR)
-            logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
-            for name, module in self.model.named_modules():
-                if module == self.model:
-                    continue
-                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
-                         module.__class__.__name__ + Const.SEP
-
-                pre_forward_hook, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                module.register_forward_hook(forward_hook, with_kwargs=True)
-                module.register_full_backward_hook(backward_hook)
-
-                module.register_forward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                module.register_forward_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                module.register_full_backward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                module.register_full_backward_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
-
-        if self.config.level in ["mix", "L1", "L2"]:
+        if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_modularity()
 
-        if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
-            remove_dropout()
+

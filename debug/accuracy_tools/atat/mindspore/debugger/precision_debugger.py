@@ -1,7 +1,9 @@
 import os
+import mindspore as ms
 from atat.mindspore.ms_config import parse_json_config
 from atat.mindspore.debugger.debugger_config import DebuggerConfig
 from atat.mindspore.task_handler_factory import TaskHandlerFactory
+from atat.mindspore.service import Service
 
 
 class PrecisionDebugger:
@@ -22,11 +24,28 @@ class PrecisionDebugger:
         common_config, task_config = parse_json_config(config_path)
         self.config = DebuggerConfig(common_config, task_config)
         self.initialized = True
+        self.service = Service(self.config)
 
     @classmethod
     def start(cls, target=None):
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
-        handler = TaskHandlerFactory.create(instance.config)
-        handler.handle()
+        if ms.get_context("mode") == 1 and instance.config.level_ori == "L1":
+            instance.service.start(target)
+        else:
+            handler = TaskHandlerFactory.create(instance.config)
+            handler.handle()
+
+    @classmethod
+    def stop(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        instance.service.stop()
+
+    @classmethod
+    def step(cls):
+        if not cls._instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        cls._instance.service.step()

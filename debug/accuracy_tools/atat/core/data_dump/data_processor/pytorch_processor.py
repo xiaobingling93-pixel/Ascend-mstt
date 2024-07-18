@@ -77,6 +77,10 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.norm = torch._C._VariableFunctionsClass.norm(data_clone).item()
         return tensor_stat
 
+    @staticmethod
+    def _analyze_torch_size(arg):
+        return {"type": "torch.Size", "value": list(arg)}
+
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.pytorch_special_type
@@ -97,9 +101,6 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
-
-    def _analyze_torch_size(arg):
-        return {"type": "torch.Size", "value": list(arg)}
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
