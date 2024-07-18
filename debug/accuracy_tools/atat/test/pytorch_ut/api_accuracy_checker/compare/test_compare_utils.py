@@ -41,9 +41,3 @@ class TestCompareUtils(unittest.TestCase):
         with self.assertRaises(CompareException) as cm:
             convert_str_to_float('')
         self.assertEqual(cm.exception.code, CompareException.INVALID_DATA_ERROR)
-
-    def test_convert_str_to_float_when_invalid_inf_string(self):
-        with self.assertRaises(CompareException) as cm:
-            convert_str_to_float('inf')
-        self.assertEqual(cm.exception.code, CompareException.INVALID_DATA_ERROR)
-

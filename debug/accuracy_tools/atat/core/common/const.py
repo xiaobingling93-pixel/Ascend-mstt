@@ -141,9 +141,13 @@ class CompareConst:
     ]
 
     # compare standard
+    HUNDRED_RATIO_THRESHOLD = 0.01
     THOUSAND_RATIO_THRESHOLD = 0.001
     FIVE_THOUSAND_RATIO_THRESHOLD = 0.005
+    TEN_THOUSAND_RATIO_THRESHOLD = 0.0001
     COSINE_THRESHOLD = 0.9999
+    ULP_FLOAT32_THRESHOLD = 32
+    ULP_FLOAT16_THRESHOLD = 1
 
     # compare result data
     READ_NONE = 'No data'

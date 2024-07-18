@@ -20,6 +20,7 @@ import math
 import torch
 import numpy
 
+from atat.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from atat.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path, check_object_type, get_full_data_path, CompareException
 from atat.pytorch.common.log import logger
 from atat.core.common.const import Const
@@ -33,12 +34,13 @@ NUMPY_TYPE = ["numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.
               "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"]
 
 
-def gen_data(info, need_grad, convert_type, real_data_path=None):
+def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
     """
     Function Description:
         Based on arg basic information, generate arg data
     Parameter:
         info: arg basic information. Dict
+        api_name: API name
         need_grad: set Tensor grad for backward
         convert_type: convert ori_type to dist_type flag.
     """
@@ -51,6 +53,8 @@ def gen_data(info, need_grad, convert_type, real_data_path=None):
             data = gen_real_tensor(data_path, convert_type)
         else:
             data = gen_random_tensor(info, convert_type)
+        if api_name in hf_32_standard_api and data.dtype == torch.float32:
+            data = fp32_to_hf32_to_fp32(data)
         if info.get('requires_grad') and need_grad:
             data.requires_grad_(True)
             temp_data = data * 1
@@ -122,6 +126,17 @@ def gen_random_tensor(info, convert_type):
     else:
         data = gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type)
     return data
+
+
+def fp32_to_hf32_to_fp32(input_tensor):
+    # 将输入的float32 tensor转为hf32 tensor，再转为float32 tensor
+    input_np = input_tensor.detach().numpy()
+    input_int = input_np.view(numpy.int32)
+    input_int = numpy.right_shift(numpy.right_shift(input_int, 11) + 1, 1)
+    input_int = numpy.left_shift(input_int, 12)
+    input_fp32 = input_int.view(numpy.float32)
+    input_hf32 = torch.from_numpy(input_fp32)
+    return input_hf32
 
 
 def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
@@ -212,12 +227,13 @@ def gen_bool_tensor(low, high, shape):
     return data
 
 
-def gen_args(args_info, need_grad=True, convert_type=None, real_data_path=None):
+def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, for API forward running
     Parameter:
         api_info: API basic information. List
+        api_name: API name
         need_grad: set Tensor grad for backward
         convert_type: convert ori_type to dist_type flag.
         real_data_path: the root directory for storing real data.
@@ -226,9 +242,9 @@ def gen_args(args_info, need_grad=True, convert_type=None, real_data_path=None):
     args_result = []
     for arg in args_info:
         if isinstance(arg, (list, tuple)):
-            data = gen_args(arg, need_grad, convert_type, real_data_path)
+            data = gen_args(arg, api_name, need_grad, convert_type, real_data_path)
         elif isinstance(arg, dict):
-            data = gen_data(arg, need_grad, convert_type, real_data_path)
+            data = gen_data(arg, api_name, need_grad, convert_type, real_data_path)
         elif arg is None:
             data = None
         else:
@@ -288,12 +304,13 @@ def gen_list_kwargs(kwargs_item_value, convert_type, real_data_path=None):
     return kwargs_item_result
 
 
-def gen_api_params(api_info, need_grad=True, convert_type=None, real_data_path=None):
+def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, kwargs, for API forward running
     Parameter:
         api_info: API basic information. Dict
+        api_name: API name
         need_grad: set grad for backward
         convert_type: convert ori_type to dist_type flag.
     """
@@ -303,7 +320,7 @@ def gen_api_params(api_info, need_grad=True, convert_type=None, real_data_path=N
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     kwargs_params = gen_kwargs(api_info, convert_type, real_data_path)
     if api_info.get("input_args"):
-        args_params = gen_args(api_info.get("input_args"), need_grad, convert_type, real_data_path)
+        args_params = gen_args(api_info.get("input_args"), api_name, need_grad, convert_type, real_data_path)
     else:
         logger.warning(f'Warning: No args in {api_info} ')
         args_params = []
