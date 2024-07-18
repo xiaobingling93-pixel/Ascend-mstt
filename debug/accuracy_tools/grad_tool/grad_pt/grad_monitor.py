@@ -96,8 +96,8 @@ class PtGradientMonitor(BaseMonitor):
                 output_lines.append(grad_info)
                 if self._level_adp["have_grad_direction"]:
                     PtGradientMonitor.save_grad_direction(param_name, grad,
-                                                    f'{self._output_path}/rank_{self._rank}/step_{self._step}')
-            output_path = os.path.join(self._output_path, f"rank_{getattr(self, '_rank')}",
+                                                    f'{self._output_path}/rank{self._rank}/step{self._step}')
+            output_path = os.path.join(self._output_path, f"rank{getattr(self, '_rank')}",
                                        f"grad_summary_{self._step}.csv")
             write_csv(output_path, output_lines,
                       GradStatCsv.generate_csv_header(self._level_adp, self._bounds))
