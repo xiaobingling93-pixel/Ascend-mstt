@@ -4,7 +4,7 @@ import os
 from atat.core.data_dump.scope import  build_scope, ListScope
 from atat.core.data_dump.json_writer import DataWriter
 from atat.core.common.log import logger
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 from atat.core.data_dump.data_processor.factory import DataProcessorFactory
 
 

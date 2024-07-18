@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import torch
-from atat.pytorch.common.utils import Const
+from atat.core.common.const import Const
 from atat.pytorch.free_benchmark.common.enums import DeviceType, PerturbationMode
 from atat.pytorch.free_benchmark.common.params import data_pre_deal
 from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory

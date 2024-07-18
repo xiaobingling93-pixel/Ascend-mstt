@@ -12,8 +12,8 @@ except ImportError:
 else:
     pta_cpu_device = torch.device("cpu")
 
-from atat.core.common.utils import CompareConst
-from atat.core.common.file_check import change_mode, FileCheckConst
+from atat.core.common.const import CompareConst, FileCheckConst
+from atat.core.common.file_check import change_mode
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -56,17 +56,6 @@ CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
 FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
 BOOL_TYPE = [bool, np.uint8]
 INT_TYPE = [np.int32, np.int64]
-
-
-class CompareConst:
-    NAN = np.nan
-    NA = "N/A"
-    PASS = 'pass'
-    WARNING = 'warning'
-    ERROR = 'error'
-    SKIP = 'SKIP'
-    TRUE = 'TRUE'
-    FALSE = 'FALSE'
 
 
 def get_callstack():

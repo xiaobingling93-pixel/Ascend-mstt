@@ -4,9 +4,9 @@ import fcntl
 import json
 from pathlib import Path
 
-from atat.core.common.file_check import FileCheckConst, change_mode
+from atat.core.common.file_check import change_mode
 from atat.core.common.log import logger
-from atat.core.common.utils import Const
+from atat.core.common.const import Const, FileCheckConst
 
 
 class DataWriter:

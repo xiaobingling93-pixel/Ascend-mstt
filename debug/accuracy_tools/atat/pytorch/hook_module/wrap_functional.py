@@ -21,7 +21,8 @@ import torch
 import yaml
 
 from atat.pytorch.hook_module.hook_module import HOOKModule
-from atat.pytorch.common.utils import torch_device_guard, Const
+from atat.pytorch.common.utils import torch_device_guard
+from atat.core.common.const import Const
 from atat.pytorch.common.log import logger
 from atat.core.common.file_check import FileOpen
 

@@ -2,7 +2,7 @@ from abc import ABC
 from unittest import TestCase
 
 import torch
-from atat.pytorch.common.utils import Const
+from atat.core.common.const import Const
 from atat.pytorch.free_benchmark.common.constant import PreheatConfig, ThresholdConfig
 from atat.pytorch.free_benchmark.common.counter import preheat_counter
 from atat.pytorch.free_benchmark.common.enums import (

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from atat.core.common.exceptions import ScopeException
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 
 
 def build_scope(scope_class, scope=None, api_list=None):

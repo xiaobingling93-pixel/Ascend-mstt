@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
 
 import torch
-from atat.pytorch.free_benchmark import Const, logger
+from atat.core.common.const import Const
+from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
 from atat.pytorch.free_benchmark.common.enums import (
     FuzzThreshold,

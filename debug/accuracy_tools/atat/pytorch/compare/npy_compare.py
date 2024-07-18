@@ -1,6 +1,7 @@
 import abc
 import numpy as np
-from atat.core.common.utils import CompareConst, Const, format_value
+from atat.core.common.utils import format_value
+from atat.core.common.const import Const, CompareConst
 from atat.pytorch.common.log import logger
 
 

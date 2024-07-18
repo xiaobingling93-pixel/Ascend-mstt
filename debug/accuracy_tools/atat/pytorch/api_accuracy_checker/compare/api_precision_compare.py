@@ -8,15 +8,16 @@ import pandas as pd
 
 from atat.pytorch.api_accuracy_checker.common.utils import write_csv
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, API_PRECISION_COMPARE_RESULT_FILE_NAME, \
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, BINARY_COMPARE_UNSUPPORT_LIST, \
     convert_str_to_float, CompareMessage
 from atat.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from atat.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
-from atat.core.common.file_check import FileCheckConst, FileChecker, change_mode, check_path_before_create, create_directory
+from atat.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
 from atat.pytorch.common.log import logger
 from atat.core.common.utils import CompareException
+from atat.core.common.const import CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 unsupported_message = 'This data type does not support benchmark compare.'

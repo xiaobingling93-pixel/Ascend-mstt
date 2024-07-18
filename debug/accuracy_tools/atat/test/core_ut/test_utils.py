@@ -1,7 +1,8 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common.utils import check_seed_all, Const, CompareException, check_inplace_op
+from atat.core.common.utils import check_seed_all, CompareException, check_inplace_op
+from atat.core.common.const import Const
 from atat.core.common.log import logger
 
 

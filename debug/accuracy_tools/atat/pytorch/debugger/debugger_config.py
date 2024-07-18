@@ -1,6 +1,6 @@
 from atat.pytorch.common import seed_all
 from atat.pytorch.common.log import logger
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 
 
 class DebuggerConfig:

@@ -1,7 +1,8 @@
 import math
 import abc
 import numpy as np
-from atat.core.common.utils import CompareConst, get_header_index
+from atat.core.common.utils import get_header_index
+from atat.core.common.const import CompareConst
 
 
 class HighlightCheck(abc.ABC):
