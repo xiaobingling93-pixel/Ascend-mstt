@@ -28,6 +28,14 @@ class SingleCompare:
             tensor[inf_or_nan_mask] = 1
         return tensor
 
+    @staticmethod
+    def compare_float_seq(actual, golden):
+        return math.isclose(actual, golden)
+
+    @staticmethod
+    def compare_other_seq(actual, golden):
+        return actual == golden
+
     def compare_dict_seq(self, actual, golden):
         if len(actual) != len(golden):
             return False
@@ -75,12 +83,6 @@ class SingleCompare:
         if self.eb > self.threshold.err_balance:
             return False
         return True
-
-    def compare_float_seq(self, actual, golden):
-        return math.isclose(actual, golden)
-
-    def compare_other_seq(self, actual, golden):
-        return actual == golden
 
     def _cal_compare_metrics(self, actual, golden):
         diff_value = TorchC.subtract(actual, golden)

@@ -29,7 +29,8 @@ from dataclasses import dataclass
 
 from atat.pytorch.compare.match import graph_mapping
 from atat.pytorch.compare.highlight import HighlightRules, get_header_index
-from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
+from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
+    get_error_message
 from atat.pytorch.advisor.advisor import Advisor
 from atat.pytorch.common.log import logger
 from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
@@ -799,8 +800,10 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
         else:
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
-        for j in range(len(item)):
-            op_item_parse(item[j], full_op_name, j, item_list=item_list, top_bool=False)
+        # for j in range(len(item)):
+        #     op_item_parse(item[j], full_op_name, j, item_list=item_list, top_bool=False)
+        for j, item_spec in enumerate(item):
+            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False)
     return item_list
 
 

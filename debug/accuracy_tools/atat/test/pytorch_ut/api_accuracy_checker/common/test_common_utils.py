@@ -1,7 +1,13 @@
+import os
+import json
+import csv
 import unittest
 from unittest.mock import patch
 
-from atat.pytorch.api_accuracy_checker.common.utils import *
+from atat.core.common.utils import CompareException
+from atat.core.common.file_check import create_directory
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, check_need_convert, \
+    check_object_type, check_file_or_directory_path, get_file_content_bytes, api_info_preprocess
 
 
 class TestUtils(unittest.TestCase):
@@ -18,8 +24,11 @@ class TestUtils(unittest.TestCase):
         file_name = 'test.json'
 
         fd = os.open(file_name, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        with os.fdopen(fd, 'w') as f:
-            json.dump(test_dict, f)
+        try:
+            with os.fdopen(fd, 'w') as f:
+                json.dump(test_dict, f)
+        finally:
+            os.close(fd)
         self.assertEqual(get_json_contents(file_name), test_dict)
         os.remove(file_name)
 
@@ -57,8 +66,11 @@ class TestUtils(unittest.TestCase):
 
     def test_get_file_content_bytes(self):
         fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        with os.fdopen(fd, 'w') as f:
-            f.write("Hello, World!")
+        try:
+            with os.fdopen(fd, 'w') as f:
+                f.write("Hello, World!")
+        finally:
+            os.close(fd)
         self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
         os.remove('test.txt')
 

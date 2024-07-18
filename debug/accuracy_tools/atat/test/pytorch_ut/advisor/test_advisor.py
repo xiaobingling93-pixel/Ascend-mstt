@@ -2,6 +2,7 @@ import difflib
 import os
 import shutil
 import unittest
+import logging
 from unittest.mock import patch
 
 import pandas
@@ -70,11 +71,11 @@ class TestAdvisor(unittest.TestCase):
             output_content = out_file.read().splitlines()
         result = list(difflib.unified_diff(standard_content, output_content, n=0))
         if result:
-            print('\n\n-------------------------------------------------------------------------', flush=True)
-            print(f'[ERROR] {output_file.replace(self.output_path, "")} advisor summary are inconsistent.',
-                  flush=True)
-            print('\n'.join(result), flush=True)
-            print('-------------------------------------------------------------------------', flush=True)
+            logging.basicConfig(level=logging.INFO)
+            logging.info('\n\n-------------------------------------------------------------------------')
+            logging.error(f'[ERROR] {output_file.replace(self.output_path, "")} advisor summary are inconsistent.')
+            logging.error('\n'.join(result))
+            logging.info('\n\n-------------------------------------------------------------------------')
             self.has_error = True
 
 
