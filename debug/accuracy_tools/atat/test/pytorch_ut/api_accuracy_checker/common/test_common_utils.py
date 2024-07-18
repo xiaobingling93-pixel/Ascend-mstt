@@ -24,11 +24,8 @@ class TestUtils(unittest.TestCase):
         file_name = 'test.json'
 
         fd = os.open(file_name, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        try:
-            with os.fdopen(fd, 'w') as f:
-                json.dump(test_dict, f)
-        finally:
-            os.close(fd)
+        with os.fdopen(fd, 'w') as f:
+            json.dump(test_dict, f)
         self.assertEqual(get_json_contents(file_name), test_dict)
         os.remove(file_name)
 
@@ -66,11 +63,8 @@ class TestUtils(unittest.TestCase):
 
     def test_get_file_content_bytes(self):
         fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        try:
-            with os.fdopen(fd, 'w') as f:
-                f.write("Hello, World!")
-        finally:
-            os.close(fd)
+        with os.fdopen(fd, 'w') as f:
+            f.write("Hello, World!")
         self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
         os.remove('test.txt')
 
