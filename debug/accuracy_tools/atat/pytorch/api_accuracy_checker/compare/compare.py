@@ -32,11 +32,6 @@ class Comparator:
         else:
             self.stack_info = None
 
-        self.test_result_cnt = {
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-            "total_num": 0, "forward_or_backward_fail_num": 0
-        }
-
     @staticmethod
     def print_pretest_result():
         logger.info("Successfully completed run_ut/multi_run_ut.")
