@@ -20,18 +20,18 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, model=None, step=None)
 ```
 
-说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于config.json文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
+说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于[config.json](../../config)文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
 
 **参数说明**
 
-| 参数名      | 说明                                                         | 是否必选                            |
-| ----------- | ------------------------------------------------------------ | ----------------------------------- |
-| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用[config.json](../../config)文件的默认配置。<br>使用本参数指定config.json文件时，需要手动配置该文件中的dump_path参数。 | 否                                  |
-| task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否                                  |
-| dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | config_path参数未配置时，本参数必选 |
-| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否                                  |
-| model       | 指定具体的torch.nn.Module，默认未配置，level配置为"L0"或"mix"时必须配置该参数。配置示例参见“**model配置代码示例**”。 | 否                                  |
-| step        | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]。 | 否                                  |
+| 参数名      | 说明                                                         | 是否必选 |
+| ----------- | ------------------------------------------------------------ | -------- |
+| config_path | 指定dump配置文件路径，String类型。参数示例："./config.json"。未配置该路径时，默认使用[config.json](../../config)文件的默认配置。 | 否       |
+| task        | dump的任务类型，String类型。可取值"statistics"（仅dump API统计信息）、"tensor"（dump API统计信息和完全复刻整网的API运行情况的真实数据）、"overflow_check"（溢出检测），默认未配置，取"statistics"，参数示例：task="tensor"。 | 否       |
+| dump_path   | 设置dump数据目录路径，String类型。参数示例：dump_path="./dump_path"。 | 否       |
+| level       | dump级别，根据不同级别dump不同数据，String类型。可取值：<br>        "L0"：dump module模块级精度数据，仅PyTorch场景支持”。<br/>        "L1"：dump API级精度数据，默认值。<br/>        "L2"：dump kernel级精度数据。<br/>        "mix"：dump module模块级和API级精度数据。<br/>配置示例：level="L1"。 | 否       |
+| model       | 指定具体的torch.nn.Module，默认未配置，level配置为"L0"或"mix"时必须配置该参数。配置示例参见“**model配置代码示例**”。 | 否       |
+| step        | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如：step=[0,1,2]。 | 否       |
 
 #### model配置代码示例
 
@@ -48,28 +48,29 @@ from atat.pytorch import PrecisionDebugger
 
 torch.npu.set_device("npu:0")
 #定义一个简单的网络
-class ModuleOP(nn.Module)
-def __init__(self) -> None:
-    super().__init__()
-    self.linear_1 = nn.Linear(in_features=8,out_features=4)
-    self.linear_2 = nn.Linear(in_features=4,out_features=2)
-def forward(self,x):
-    x1 = self.linear_1(x)
-    x2 = self.linear_2(x1)
-    r1 = F.relu(x2)
-    return r1
+class ModuleOP(nn.Module):
+	def __init__(self) -> None:
+    	super().__init__()
+    	self.linear_1 = nn.Linear(in_features=8,out_features=4)
+    	self.linear_2 = nn.Linear(in_features=4,out_features=2)
+
+	def forward(self,x):
+        x1 = self.linear_1(x)
+        x2 = self.linear_2(x1)
+        r1 = F.relu(x2)
+        return r1
 
 if __name__ == "__main__"
-module = ModuleOP()
+	module = ModuleOP()
 
-#注册工具
-debugger = PrecisionDebugger('./config.json',model=module)
-debugger.start()
-x = torch.randn(10,8)
-out = module(x)
-loss = out.sum()
-loss.backward()
-debugger.stop()
+	#注册工具
+	debugger = PrecisionDebugger('./config.json',model=module)
+	debugger.start()
+	x = torch.randn(10,8)
+	out = module(x)
+	loss = out.sum()
+	loss.backward()
+	debugger.stop()
 ```
 
 ### start函数
@@ -174,9 +175,9 @@ dump结果目录结构示例如下：
 │   ├── step2
 ```
 
-dump过程中，pt文件在对应算子或者模块被执行后就会落盘，而json文件则需要在正常执行PrecisionDebugger.stop()或set_dump_switch("OFF")后才会被落盘保存，异常的程序终止会保存终止前被执行算子的相关pt文件，但是不会生成json文件。
+dump过程中，pt文件在对应算子或者模块被执行后就会落盘，而json文件则需要在正常执行PrecisionDebugger.stop()后才会被落盘保存，异常的程序终止会保存终止前被执行算子的相关pt文件，但是不会生成json文件。
 
-其中`dump_{version}`为默认命名，debugger方式dump不支持修改该文件夹名称；rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
+其中rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
 
 pt文件保存的前缀和PyTorch对应关系如下：
 

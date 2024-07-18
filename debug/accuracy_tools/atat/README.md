@@ -95,7 +95,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    溢出解析是在执行精度数据dump时，配置了溢出检测dump，那么对于输入正常但输出存在溢出的API，可以判断是否为正常溢出。
 
-   PyTorch场景：详见[PyTorch_溢出解析工具](./pytorch/doc/run_overflow_check.md)。（暂不支持）
+   PyTorch场景：详见[PyTorch_溢出解析工具](./pytorch/doc/run_overflow_check.md)。
 
    MindSpore场景：暂不支持。
 
