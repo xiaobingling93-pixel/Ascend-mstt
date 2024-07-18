@@ -29,8 +29,8 @@ else:
     IS_GPU = False
 
 from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileCheckConst, FileChecker, FileOpen, change_mode, create_directory
-from atat.pytorch.common.utils import Const
+from atat.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
+from atat.core.common.const import Const, FileCheckConst
 from atat.core.common.utils import CompareException
 
 

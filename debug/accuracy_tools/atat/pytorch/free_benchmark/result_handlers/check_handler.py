@@ -2,14 +2,13 @@ from typing import Any
 
 from atat.pytorch.free_benchmark import logger
 from atat.pytorch.free_benchmark.common.enums import DeviceType
-from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
 from atat.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
 from atat.pytorch.free_benchmark.common.utils import Tools
+from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
 from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
 
 
 class CheckerHandler(FuzzHandler):
-    @staticmethod
     def other_compare(self, data_params: DataParams) -> bool:
         is_consistent = SingleCompare().compare_seq(
                     data_params.original_result, data_params.perturbed_result

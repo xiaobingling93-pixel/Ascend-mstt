@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 
 from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
-from atat.core.common.utils import Const
+from atat.core.common.file_check import FileChecker, check_path_before_create
+from atat.core.common.const import Const, FileCheckConst
 from atat.core.common.exceptions import DistributedNotInitializedError, MsaccException
 from atat.core.data_dump.data_collector import build_data_collector
 from atat.core.data_dump.scope import BaseScope

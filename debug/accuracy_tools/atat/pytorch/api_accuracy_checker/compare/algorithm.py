@@ -1,7 +1,9 @@
 # 定义比对算法及比对标准
 import torch
 import numpy as np
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, ULP_PARAMETERS
+
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
+from atat.core.common.const import CompareConst
 
 
 DEFAULT_THRESHOLD = 1

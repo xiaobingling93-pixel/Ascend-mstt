@@ -30,10 +30,10 @@ from atat.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from atat.pytorch.hook_module.wrap_torch import TorchOPTemplate
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from atat.pytorch.common.parse_json import parse_json_info_forward_backward
-from atat.core.common.file_check import FileOpen, FileCheckConst, FileChecker, \
+from atat.core.common.file_check import FileOpen, FileChecker, \
     change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
 from atat.pytorch.common.log import logger
-from atat.pytorch.common.utils import Const
+from atat.core.common.const import Const, FileCheckConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
@@ -44,6 +44,12 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 not_raise_dtype_set = {'type_as'}
+
+RAISE_PRECISION = {
+    torch.float16: torch.float32,
+    torch.bfloat16: torch.float32,
+    torch.float32: torch.float64
+}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -90,7 +96,7 @@ def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
     '''
     if api_name in hf_32_standard_api and arg.dtype == torch.float32:
         return arg
-    if raise_dtype is None or arg.dtype not in Const.RAISE_PRECISION or raise_dtype == arg.dtype:
+    if raise_dtype is None or arg.dtype not in RAISE_PRECISION or raise_dtype == arg.dtype:
         return arg
     return arg.type(raise_dtype)
 
@@ -136,7 +142,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return arg_in
 
     def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
-        if arg_in.dtype in Const.RAISE_PRECISION:
+        if arg_in.dtype in RAISE_PRECISION:
             return True
         if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
             return True
@@ -155,7 +161,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     need_raise_dtypes = recursive_find_dtypes(input_args)
     need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
     if len(need_raise_dtypes) == 1:
-        raise_dtype = Const.RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
+        raise_dtype = RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 

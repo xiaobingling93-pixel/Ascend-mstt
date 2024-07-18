@@ -1,14 +1,11 @@
 # 进行比对及结果展示
 import os
-import csv
 from collections import namedtuple
 import torch
 import numpy as np
-from rich.table import Table
-from rich.console import Console
 from atat.pytorch.common.log import logger
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, Const
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst, check_dtype_comparable, \
+from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
+from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
     ULPStandardApi, ThousandthStandardApi, apis_threshold
 from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
@@ -17,7 +14,7 @@ from atat.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_er
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
     check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.core.common.file_check import FileOpen
+from atat.core.common.const import Const, CompareConst
 
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
@@ -46,11 +43,10 @@ class Comparator:
         else:
             self.stack_info = None
 
-        self.test_result_cnt = {
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0, "success_num": 0,
-            "total_num": 0, "forward_or_backward_fail_num": 0
-        }
-
+    @staticmethod
+    def print_pretest_result():
+        logger.info("Successfully completed run_ut/multi_run_ut.")
+    
     @staticmethod
     def _compare_dropout(bench_output, device_output):
         tensor_num = bench_output.numel()
@@ -86,80 +82,6 @@ class Comparator:
         small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
         rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
         return small_value_threshold, small_value_atol, rtol
-
-    def print_pretest_result(self):
-        self.get_statistics_from_result_csv()
-        total_tests = self.test_result_cnt.get("total_num", 0)
-        if total_tests != 0:
-            passing_rate = "{:.2%}".format(self.test_result_cnt.get("success_num", 0) / total_tests)
-        else:
-            passing_rate = "0%"
-
-        logger.warning("The follwing tables will be deprecated in the future."
-                       "The following results are for reference only.")
-        console = Console()
-        table_total = Table(
-            show_header=True, title="Overall Statistics", show_lines=True, width=75
-        )
-        table_total.add_column("Result")
-        table_total.add_column("Statistics")
-        table_total.add_row("[green]Pass[/green]", str(self.test_result_cnt.get("success_num", 0)))
-        table_total.add_row("[yellow]Warning[/yellow]", str(self.test_result_cnt.get("warning_num", 0)))
-        table_total.add_row("[red]Error[/red]", str(self.test_result_cnt.get("error_num", 0)))
-        table_total.add_row("Passing Rate", passing_rate)
-        table_total.add_row("Skip Tests", str(self.test_result_cnt.get("total_skip_num", 0)))
-
-        table_detail = Table(
-            show_header=True, title="Detail Statistics", show_lines=True, width=75
-        )
-        table_detail.add_column("Result")
-        table_detail.add_column("Statistics")
-        table_detail.add_row("Forward Error", str(self.test_result_cnt.get("forward_fail_num", 0)))
-        table_detail.add_row("Backward Error", str(self.test_result_cnt.get("backward_fail_num", 0)))
-        table_detail.add_row("Both Forward & Backward Error",
-                             str(self.test_result_cnt.get("forward_and_backward_fail_num", 0)))
-
-        console.print(table_total)
-        console.print(table_detail)
-
-    def get_statistics_from_result_csv(self):
-        checklist = [CompareConst.PASS, CompareConst.ERROR, CompareConst.WARNING, CompareConst.SPACE, CompareConst.SKIP,
-                     "skip"]
-        self.test_result_cnt = {
-            "success_num": 0, "warning_num": 0, "error_num": 0,
-            "forward_fail_num": 0, "backward_fail_num": 0, "forward_and_backward_fail_num": 0,
-            "total_num": 0, "total_skip_num": 0
-        }
-        with FileOpen(self.save_path, 'r') as file:
-            reader = csv.reader(file)
-            result_csv_rows = [row for row in reader]
-        result_csv_name = os.path.basename(self.save_path)
-        for item in result_csv_rows[1:]:
-            if not isinstance(item, list) or len(item) < 3:
-                raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-            if not all(item[i] and item[i] in checklist for i in (1, 2)):
-                raise ValueError(
-                    "The value in the 2nd or 3rd column of %s is wrong, it must be pass, error, warning, skip, or SPACE"
-                    % result_csv_name)
-            column1 = item[1]
-            column2 = item[2]
-            if column1.upper() == CompareConst.SKIP:
-                self.test_result_cnt["total_skip_num"] += 1
-                continue
-            self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.PASS and column2 in [CompareConst.PASS, CompareConst.SPACE, CompareConst.SKIP]:
-                self.test_result_cnt['success_num'] += 1
-            elif column1 == CompareConst.ERROR and column2 == CompareConst.ERROR:
-                self.test_result_cnt['forward_and_backward_fail_num'] += 1
-                self.test_result_cnt['error_num'] += 1
-            elif column1 == CompareConst.ERROR:
-                self.test_result_cnt['forward_fail_num'] += 1
-                self.test_result_cnt['error_num'] += 1
-            elif column2 == CompareConst.ERROR:
-                self.test_result_cnt['backward_fail_num'] += 1
-                self.test_result_cnt['error_num'] += 1
-            elif column1 == CompareConst.WARNING or column2 == CompareConst.WARNING:
-                self.test_result_cnt['warning_num'] += 1
 
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS,

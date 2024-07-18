@@ -1,14 +1,16 @@
 from abc import ABC
 
 import torch
-from atat.pytorch.free_benchmark import Const, logger
-from atat.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
+from atat.core.common.const import Const
+from atat.pytorch.free_benchmark import logger
+from atat.pytorch.free_benchmark.common.constant import CommonField
 from atat.pytorch.free_benchmark.common.enums import (
-    PerturbationMode,
-    FuzzLevel,
     DeviceType,
-    HandlerType
+    FuzzLevel,
+    HandlerType,
+    PerturbationMode,
 )
+from atat.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
 from atat.pytorch.free_benchmark.compare.grad_saver import GradSaver
 from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
 from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
@@ -48,7 +50,7 @@ class FreeBenchmarkCheck(ABC):
         grad_saver.kwargs = kwargs
         grad_saver.register_compare_func_for_inputs(args, data_processor)
         grad_saver.cache_backward_input(args)
-        setattr(module, "grad_saver", grad_saver)
+        setattr(module, CommonField.GRADSAVER, grad_saver)
 
     def forward(self, name, module, args, kwargs, output):
         if not self.config.fuzz_stage == Const.FORWARD:
@@ -69,14 +71,14 @@ class FreeBenchmarkCheck(ABC):
         handler_params = make_handler_params(name, self.config, self.current_iter)
         handler = FuzzHandlerFactory.create(handler_params)
         handler.handle(data_params)
-        return output, handler.get_unequal_rows()
+        return data_params.perturbed_result, handler.get_unequal_rows()
 
     def backward(self, name, module, grad_output):
 
         if not self.config.fuzz_stage == Const.BACKWARD:
             return
         try:
-            grad_saver = getattr(module, "grad_saver")
+            grad_saver = getattr(module, CommonField.GRADSAVER)
         except AttributeError:
             logger.warning_on_rank_0(
                 f"[atat] Free benchmark:  get grad saver failed. api_name:{name}"

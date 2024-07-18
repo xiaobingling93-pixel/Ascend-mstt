@@ -30,7 +30,7 @@ from atat.pytorch.parse_tool.lib.file_desc import DumpDecodeFileDesc, FileDesc
 from atat.pytorch.parse_tool.lib.parse_exception import ParseException
 from atat.core.common.file_check import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
-from atat.core.common.file_check import FileCheckConst
+from atat.core.common.const import FileCheckConst
 from atat.core.common.file_check import FileOpen
 from atat.core.common.utils import check_file_or_directory_path
 from atat.pytorch.common.log import logger

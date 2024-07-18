@@ -5,10 +5,10 @@ import math
 import numpy as np
 import torch
 import yaml
-
-from atat.pytorch.api_accuracy_checker.common.utils import Const, CompareException
-from atat.core.common.file_check import FileOpen
+from atat.core.common.utils import CompareException
+from atat.core.common.const import Const
 from atat.pytorch.common.log import logger
+from atat.core.common.file_check import FileOpen
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -113,27 +113,7 @@ ULP_PARAMETERS = {
         ]
     }
 }
-
-
-class CompareConst:
-    NAN = np.nan
-    NA = "N/A"
-    PASS = 'pass'
-    WARNING = 'warning'
-    ERROR = 'error'
-    SKIP = 'SKIP'
-    TRUE = 'TRUE'
-    FALSE = 'FALSE'
-    BFLOAT16_MIN = -3.3895313892515355e+38
-    BFLOAT16_MAX = 3.3895313892515355e+38
-    BFLOAT16_EPS = 2 ** -8
-    SPACE = " "
-    HUNDRED_RATIO_THRESHOLD = 0.01
-    THOUSAND_RATIO_THRESHOLD = 0.001
-    TEN_THOUSAND_RATIO_THRESHOLD = 0.0001
-    ULP_FLOAT32_THRESHOLD = 32
-    ULP_FLOAT16_THRESHOLD = 1
-    
+  
     
 class ApiPrecisionCompareColumn:
     API_NAME = 'API Name'

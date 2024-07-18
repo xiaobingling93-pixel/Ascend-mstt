@@ -19,8 +19,8 @@ import time
 
 from atat.pytorch.advisor.advisor_const import AdvisorConst
 from atat.pytorch.common.log import logger
-from atat.core.common.utils import Const
-from atat.core.common.file_check import FileCheckConst, change_mode
+from atat.core.common.const import Const, FileCheckConst
+from atat.core.common.file_check import change_mode
 
 
 class AdvisorResult:

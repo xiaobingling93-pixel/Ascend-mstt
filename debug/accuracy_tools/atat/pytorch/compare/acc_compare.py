@@ -32,9 +32,10 @@ from atat.pytorch.compare.highlight import HighlightRules, get_header_index
 from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, get_error_message
 from atat.pytorch.advisor.advisor import Advisor
 from atat.pytorch.common.log import logger
-from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, CompareConst, \
-    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get, Const
-from atat.core.common.file_check import FileChecker, FileCheckConst, change_mode, FileOpen, create_directory
+from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
+    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
+from atat.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
+from atat.core.common.const import Const, CompareConst, FileCheckConst
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -467,7 +468,10 @@ def read_npy_data(dir_path, file_name):
     path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                FileCheckConst.PT_SUFFIX, False)
     data_path = path_checker.common_check()
-    data_value = torch.load(data_path, map_location=torch.device('cpu')).detach().numpy()
+    data_value = torch.load(data_path, map_location=torch.device('cpu')).detach()       # detach for less memory
+    if data_value.dtype == torch.bfloat16:
+        data_value = data_value.to(torch.float32)
+    data_value = data_value.numpy()
     return data_value
 
 

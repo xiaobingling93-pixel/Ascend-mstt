@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 import torch
-from atat.pytorch.common.utils import Const
+from atat.core.common.const import Const
 from atat.pytorch.free_benchmark.common.enums import DeviceType, PerturbationMode
 from atat.pytorch.free_benchmark.common.params import data_pre_deal
 from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
@@ -90,3 +90,16 @@ class TestPerturbedLayer(TestCase):
         self.assertEqual(Perturbed_value[0], 4096.0000000000)
         self.assertEqual(Perturbed_value[1], 16777218)
         self.assertEqual(Perturbed_value[2], 1e-38)
+
+    # 对于输入张量，add_noise扰动因子对大于极小值的部分增加一个小值
+    def test_add_noise_layer(self):
+        api_name = "addnoise.0.forward"
+        inputs = torch.as_tensor(
+            [1e-1, 1e-2], dtype=torch.bfloat16
+        )
+        layer = LayerFactory.create(
+            api_name, DeviceType.NPU, PerturbationMode.ADD_NOISE
+        )
+        Perturbed_value = layer.add_noise(inputs)
+        self.assertEqual(Perturbed_value[0], 1e-1+1e-4)
+        self.assertEqual(Perturbed_value[1], 1e-2)

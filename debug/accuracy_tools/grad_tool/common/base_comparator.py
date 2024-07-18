@@ -12,6 +12,24 @@ from grad_tool.common.utils import write_csv, check_file_or_directory_path, prin
 
 class BaseComparator(ABC):
 
+    @staticmethod
+    def _get_grad_weight_order(path1, path2):
+        for summary_file in os.listdir(path1):
+            if not summary_file.endswith(".csv"):
+                continue
+            if not os.path.exists(os.path.join(path2, summary_file)):
+                continue
+            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
+            return summary_csv["param_name"]
+        raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
+    
+    @staticmethod
+    def _get_name_matched_grad_file(param_name, grad_files):
+        for grad_file in grad_files:
+            if param_name == grad_file[:grad_file.rfind('.')]:
+                return grad_file
+        raise RuntimeError("no matched grad_file for comparison, please dump data in same configuration")
+
     @classmethod
     def compare_distributed(cls, path1: str, path2: str, output_dir: str):
         ranks = cls._get_matched_dirs(path1, path2, "rank")
@@ -22,9 +40,9 @@ class BaseComparator(ABC):
             create_directory(output_dir)
         for rank in tqdm(ranks, desc="rank"):
             print_info_log(f"now comparing rank {rank}:")
-            cls.compare(os.path.join(path1, f"rank_{rank}"),
-                         os.path.join(path2, f"rank_{rank}"),
-                         os.path.join(output_dir, f"rank_{rank}"))
+            cls.compare(os.path.join(path1, f"rank{rank}"),
+                        os.path.join(path2, f"rank{rank}"),
+                        os.path.join(output_dir, f"rank{rank}"))
 
     @classmethod
     def compare(cls, path1: str, path2: str, output_dir: str):
@@ -41,15 +59,15 @@ class BaseComparator(ABC):
         check_file_or_directory_path(path1, file_type=GradConst.DIR)
         check_file_or_directory_path(path2, file_type=GradConst.DIR)
         dirs = []
-        for dirname in os.listdir(path1):
-            splits = dirname.split('_')
-            if not splits or splits[0] != dir_prefix or not splits[1].isdigit():
+        for dir_name in os.listdir(path1):
+            index = dir_name.replace(dir_prefix, "", 1)
+            if not dir_name.startswith(dir_prefix) or not index.isdigit():
                 continue
 
-            folder2 = os.path.join(path2, dirname)
+            folder2 = os.path.join(path2, dir_name)
             if not os.path.isdir(folder2):
                 continue
-            dirs.append(int(splits[1]))
+            dirs.append(int(index))
         dirs = sorted(dirs)
         return dirs
 
@@ -72,24 +90,6 @@ class BaseComparator(ABC):
             head_tuple = tuple(['step'] + [str(step) for step in steps])
             write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
 
-    @staticmethod
-    def _get_grad_weight_order(path1, path2):
-        for summary_file in os.listdir(path1):
-            if not summary_file.endswith(".csv"):
-                continue
-            if not os.path.exists(os.path.join(path2, summary_file)):
-                continue
-            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
-            return summary_csv["param_name"]
-        raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
-    
-    @staticmethod
-    def _get_name_matched_grad_file(param_name, grad_files):
-        for grad_file in grad_files:
-            if param_name == grad_file[:grad_file.rfind('.')]:
-                return grad_file
-        raise RuntimeError("no matched grad_file for comparison, please dump data in same configuration")
-
     @classmethod
     def _calculate_separated_similarities(cls, path1, path2, steps):
         similarities = {}
@@ -101,8 +101,8 @@ class BaseComparator(ABC):
             total_count_summary = 0
             for grad_name in grad_weight_order:
                 grad_file = cls._get_name_matched_grad_file(grad_name, grad_files)
-                grad1 = os.path.join(path1, f"step_{step}", grad_file)
-                grad2 = os.path.join(path2, f"step_{step}", grad_file)
+                grad1 = os.path.join(path1, f"step{step}", grad_file)
+                grad2 = os.path.join(path2, f"step{step}", grad_file)
                 same_count, total_count = cls._calculate_similarity(grad1, grad2)
                 same_count_summary += same_count
                 total_count_summary += total_count
@@ -124,8 +124,8 @@ class BaseComparator(ABC):
 
     @classmethod
     def _get_matched_grad_files(cls, path1: str, path2: str, step: int):
-        path1 = os.path.join(path1, f"step_{step}")
-        path2 = os.path.join(path2, f"step_{step}")
+        path1 = os.path.join(path1, f"step{step}")
+        path2 = os.path.join(path2, f"step{step}")
         check_file_or_directory_path(path1, file_type=GradConst.DIR)
         check_file_or_directory_path(path2, file_type=GradConst.DIR)
         grad_files = []

@@ -9,7 +9,7 @@ from atat.pytorch.api_accuracy_checker.compare.api_precision_compare import (
     check_error_rate,
     get_api_checker_result,
 )
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import CompareConst
+from atat.core.common.const import CompareConst
 
 
 class TestApiPrecisionCompare(unittest.TestCase):

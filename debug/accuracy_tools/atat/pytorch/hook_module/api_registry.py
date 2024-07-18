@@ -25,7 +25,8 @@ from atat.pytorch.hook_module.wrap_functional import get_functional_ops
 from atat.pytorch.hook_module.wrap_tensor import get_tensor_ops
 from atat.pytorch.hook_module.wrap_torch import get_torch_ops
 from atat.pytorch.hook_module.wrap_vf import get_vf_ops
-from atat.pytorch.common.utils import torch_without_guard_version, npu_distributed_api, is_gpu, Const
+from atat.pytorch.common.utils import torch_without_guard_version, npu_distributed_api, is_gpu
+from atat.core.common.const import Const
 
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 

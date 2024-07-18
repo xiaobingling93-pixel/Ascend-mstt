@@ -1,6 +1,6 @@
 import torch.nn as nn
 from atat.pytorch.common.log import logger
-from atat.core.common.utils import Const
+from atat.core.common.const import Const
 from atat.pytorch.hook_module.api_registry import api_register
 from atat.pytorch.debugger.precision_debugger import PrecisionDebugger
 from atat.core.common.exceptions import MsaccException
