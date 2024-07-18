@@ -800,8 +800,6 @@ def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
         else:
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
-        # for j in range(len(item)):
-        #     op_item_parse(item[j], full_op_name, j, item_list=item_list, top_bool=False)
         for j, item_spec in enumerate(item):
             op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False)
     return item_list
