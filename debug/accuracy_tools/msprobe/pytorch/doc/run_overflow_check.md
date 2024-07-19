@@ -13,7 +13,7 @@
 2. 执行溢出API解析操作。
 
    ```bash
-   atat -f pytorch run_overflow_check -api_info ./dump.json
+   msprobe -f pytorch run_overflow_check -api_info ./dump.json
    ```
    
 | 参数名称                   | 说明                                               | 是否必选 |

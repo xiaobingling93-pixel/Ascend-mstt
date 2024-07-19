@@ -1,8 +1,8 @@
 # **精度数据采集**
 
-atat工具主要通过在训练脚本内添加dump接口并启动训练的方式来采集精度数据。
+msprobe工具主要通过在训练脚本内添加dump接口并启动训练的方式来采集精度数据。
 
-执行dump操作需要安装atat工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
+执行dump操作需要安装msprobe工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
 
 ## dump接口介绍
 
@@ -12,7 +12,7 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 
 通过加载dump配置文件的方式来确定dump操作的详细配置。
 
-可以在from atat.mindspore import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
+可以在from msprobe.mindspore import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
 
 **原型**
 
@@ -43,7 +43,7 @@ debugger.start()
 ## 示例代码
 
 ```Python
-from atat.mindspore import PrecisionDebugger
+from msprobe.mindspore import PrecisionDebugger
 debugger = PrecisionDebugger(config_path="./config.json")
 # 请勿将以上初始化流程插入到循环代码中
 # 下面代码也可以用PrecisionDebugger.start()

@@ -108,7 +108,7 @@ class Const:
 
     VERSION_MESSAGE = """The current version of api_precision_checker will be deprecated on September 30, 2024.
     The att/debug/accuracy_tools/api_accuracy_checker directory will be deleted on September 30, 2024.
-    Please use the api_precision_checker in the att/debug/accuracy_tools/atat directory."""
+    Please use the api_precision_checker in the att/debug/accuracy_tools/msprobe directory."""
 
 
 class CompareConst:

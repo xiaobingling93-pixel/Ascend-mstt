@@ -22,15 +22,15 @@
 
 6. 添加预检工具后截取操作报错：`IndexError: too many indices for tensor of dimension x` 或 `TypeError: len() of a 0-d tensor`。
 
-   答：注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- __getitem__`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+   答：注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- __getitem__`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
 7. 添加预检工具后F.gelu触发ValueError报错：`activation_func must be F.gelu`等。
 
-   答：注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中functional:下的的`- gelu`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+   答：注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中functional:下的的`- gelu`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
 8. 添加预检工具后触发AsStrided算子相关的报错，或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 
-   答：注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- t`和`- transpose`。
+   答：注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- t`和`- transpose`。
 
 9. Tensor 魔法函数具体对应什么操作？
 
@@ -75,7 +75,7 @@
 
 ### dump指定融合算子
 
-dump指定操作当前支持dump指定融合算子的输入输出，需要在mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
+dump指定操作当前支持dump指定融合算子的输入输出，需要在mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml中添加，比如以下代码段调用的softmax融合算子
 
 ```
 def npu_forward_fused_softmax(self, input_, mask):
@@ -111,7 +111,7 @@ torch版本和硬件差异属于正常情况。
 
 **故障现象**
 
-使用atat工具时，报错： error code: EI0006。
+使用msprobe工具时，报错： error code: EI0006。
 
 **故障原因**
 
@@ -136,7 +136,7 @@ torch.npu.set_device('npu:0')
 torch.npu.set_device(f'npu:{rank}')
 ```
 
-如果运行精度比对功能遇到这个报错，尝试安装最新版本的atat。
+如果运行精度比对功能遇到这个报错，尝试安装最新版本的msprobe。
 
 ### 4. dump得到的VF_lstm_99_forward_input.1.0.npy、VF_lstm_99_forward_input.1.1.npy类似的数据是否正常？
 
@@ -147,7 +147,7 @@ torch.npu.set_device(f'npu:{rank}')
 在比对脚本中，设置stack_mode=True，例如：
 
 ```
-from atat.pytorch import compare
+from msprobe.pytorch import compare
 dump_result_param={
 "npu_json_path": "./npu_dump/dump.json",
 "bench_json_path": "./gpu_dump/dump.json",
@@ -174,20 +174,20 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 
 ### 9. dump.json文件中的某些api的dtype类型为float16，但是读取此api的npy文件显示的dtype类型为float32
 
-- atat工具在dump数据时需要将原始数据从npu to cpu上再转换为numpy类型，npu to cpu的逻辑和gpu to cpu是保持一致的，都存在dtype可能从float16变为float32类型的情况，如果出现dtype不一致的问题，最终dump数据的dtype以pkl文件为准。
+- msprobe工具在dump数据时需要将原始数据从npu to cpu上再转换为numpy类型，npu to cpu的逻辑和gpu to cpu是保持一致的，都存在dtype可能从float16变为float32类型的情况，如果出现dtype不一致的问题，最终dump数据的dtype以pkl文件为准。
 
-### 10. 使用dataloader后raise异常Exception("atat: exit after iteration {}". format(max(self.config.step))
+### 10. 使用dataloader后raise异常Exception("msprobe: exit after iteration {}". format(max(self.config.step))
 
 - 正常现象，dataloader通过raise结束程序，堆栈信息可忽略。
 
-### 11. 添加atat工具后截取操作报错：`IndexError: too many indices for tensor of dimension x` 或 `TypeError: len() of a 0-d tensor`。
+### 11. 添加msprobe工具后截取操作报错：`IndexError: too many indices for tensor of dimension x` 或 `TypeError: len() of a 0-d tensor`。
 
-- 注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- __getitem__`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+- 注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- __getitem__`，工具会跳过dump该API。如果是需要dump的关键位置API也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-### 12. 添加atat工具后F.gelu触发ValueError报错：`activation_func must be F.gelu`等。
+### 12. 添加msprobe工具后F.gelu触发ValueError报错：`activation_func must be F.gelu`等。
 
-- 注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中functional:下的的`- gelu`，工具会跳过dump该API。如果是需要dump的关键位置api也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+- 注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中functional:下的的`- gelu`，工具会跳过dump该API。如果是需要dump的关键位置api也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-### 13. 添加atat工具后触发AsStrided算子相关的报错，或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
+### 13. 添加msprobe工具后触发AsStrided算子相关的报错，或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 
-- 注释工具目录mstt/debug/accuracy_tools/atat/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- t`和`- transpose`。
+- 注释工具目录mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml文件中Tensor:下的`- t`和`- transpose`。

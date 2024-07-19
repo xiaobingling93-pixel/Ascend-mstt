@@ -6,10 +6,10 @@
 
 ## 进入parse交互式界面
 
-安装atat工具后（详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节），可以通过使用命令 **atat -f pytorch parse** 进入交互式界面，如下所示：
+安装msprobe工具后（详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节），可以通过使用命令 **msprobe -f pytorch parse** 进入交互式界面，如下所示：
 
 ```bash
-atat -f pytorch parse
+msprobe -f pytorch parse
 Parse >>>
 ```
 
@@ -23,7 +23,7 @@ Parse >>>
 Ctrl+C可以退出parse交互式界面。不退出parse交互式界面若需要执行非该界面下的内置Shell命令，且命令与parse交互式界面命令冲突时，非该界面命令需要使用run命令，在相关命令前加上run前缀，如下示例：
 
 ```bash
-atat -f pytorch parse
+msprobe -f pytorch parse
 Parse >>> run vim cli.py
 Parse >>> vim cli.py
 ```

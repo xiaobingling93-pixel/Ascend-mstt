@@ -1,6 +1,6 @@
 # MindStudio精度调试工具
 
-MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，是MindStudio Training Tools工具链下精度调试部分的工具包。主要包括精度预检和精度比对等子工具，当前适配场景包括PyTorch和MindSpore。
+MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStudio Training Tools工具链下精度调试部分的工具包。主要包括精度预检和精度比对等子工具，当前适配场景包括PyTorch和MindSpore。
 
 ## 工具安装
 
@@ -61,7 +61,7 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
 ## 工具使用
 
-安装atat工具后，可以按照如下思路选择合适的子工具进行精度调试：
+安装msprobe工具后，可以按照如下思路选择合适的子工具进行精度调试：
 
 1. 判断框架场景。
 
@@ -107,32 +107,32 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
    MindSpore场景：暂不支持。
 
-上述流程中的工具均为atat工具的子工具，使用相同的命令行，格式如下：
+上述流程中的工具均为msprobe工具的子工具，使用相同的命令行，格式如下：
 
 精度预检工具
 
 ```bash
-atat -f <framework> run_ut [-h]
+msprobe -f <framework> run_ut [-h]
 ```
 
 ```bash
-atat -f <framework> multi_run_ut [-h]
+msprobe -f <framework> multi_run_ut [-h]
 ```
 
 ```bash
-atat -f <framework> api_precision_compare [-h]
+msprobe -f <framework> api_precision_compare [-h]
 ```
 
 溢出解析工具
 
 ```bash
-atat -f <framework> run_overflow_check [-h]
+msprobe -f <framework> run_overflow_check [-h]
 ```
 
 数据解析工具
 
 ```bash
-atat -f <framework> parse [-h]
+msprobe -f <framework> parse [-h]
 ```
 
 | 参数 | 说明                                                   |

@@ -44,7 +44,7 @@ compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs)
 创建比对脚本，例如compare_distributed.py，拷贝如下代码，具体参数请根据实际环境修改。
 
 ```Python
-from atat.pytorch import *
+from msprobe.pytorch import *
 compare_distributed('./npu_dump/step0', './gpu_dump/step0', './output')
 ```
 
@@ -77,7 +77,7 @@ compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_mat
 单机单卡场景下创建比对脚本，例如compare.py，拷贝如下代码，具体参数请根据实际环境修改。
 
 ```Python
-from atat.pytorch import compare
+from msprobe.pytorch import compare
 dump_result_param={
 "npu_json_path": "./npu_dump/dump.json",
 "bench_json_path": "./gpu_dump/dump.json",
@@ -96,7 +96,7 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 以compare.py为例。
 
 ```Python
-from atat.pytorch import compare
+from msprobe.pytorch import compare
 dump_result_param={
 "npu_json_path": "./npu_dump/dump.json",
 "bench_json_path": "./gpu_dump/dump.json",

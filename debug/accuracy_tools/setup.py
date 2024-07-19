@@ -36,5 +36,5 @@ setup(
     ext_modules=[],
     zip_safe=False,
     entry_points={
-        'console_scripts' : ['atat=atat.atat:main'],
+        'console_scripts': ['msprobe=msprobe.msprobe:main'],
     },)

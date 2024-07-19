@@ -1,8 +1,8 @@
 # **精度数据采集**
 
-atat工具主要通过在训练脚本内添加dump接口并启动训练的方式来采集精度数据。
+msprobe工具主要通过在训练脚本内添加dump接口并启动训练的方式来采集精度数据。
 
-执行dump操作需要安装atat工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
+执行dump操作需要安装msprobe工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
 
 ## dump接口介绍
 
@@ -12,7 +12,7 @@ atat工具主要通过在训练脚本内添加dump接口并启动训练的方式
 
 通过加载dump配置文件的方式来确定dump操作的详细配置。
 
-可以在from atat.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
+可以在from msprobe.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
 
 **原型**
 
@@ -44,7 +44,7 @@ import torch
 import torch.nn as nn
 import torch_npu
 import torch.nn.functional as F
-from atat.pytorch import PrecisionDebugger
+from msprobe.pytorch import PrecisionDebugger
 
 torch.npu.set_device("npu:0")
 #定义一个简单的网络
@@ -124,7 +124,7 @@ debugger.step()
 ## 示例代码
 
 ```Python
-from atat.pytorch import PrecisionDebugger
+from msprobe.pytorch import PrecisionDebugger
 debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
 # 请勿将以上初始化流程插入到循环代码中
 
@@ -193,7 +193,7 @@ pt文件保存的前缀和PyTorch对应关系如下：
 
 ## 工具支持的API列表
 
-atat工具维护固定的API支持列表，若需要删除或增加dump的API，可以在atat/pytorch/hook_module/support_wrap_ops.yaml文件内手动修改，如下示例：
+msprobe工具维护固定的API支持列表，若需要删除或增加dump的API，可以在msprobe/pytorch/hook_module/support_wrap_ops.yaml文件内手动修改，如下示例：
 
 ```Python
 functional:  # functional为算子类别，找到对应的类别，在该类别下按照下列格式删除或添加API
