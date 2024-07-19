@@ -46,9 +46,8 @@ class DebuggerConfig:
                 raise ValueError("backward_input must be configured when scope contains 'backward'")
             if Const.BACKWARD in self.scope[0]:
                 self.is_forward_acl_dump = False
-                for index in range(len(self.scope)):
-                    # Do this replace operation to let the acl backward dump can be done in forward hook.
-                    self.scope[index] = self.scope[index].replace(Const.BACKWARD, Const.FORWARD)
+                for index, scope_spec in enumerate(self.scope):
+                    self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
         seed_all(self.seed, self.is_deterministic)
 

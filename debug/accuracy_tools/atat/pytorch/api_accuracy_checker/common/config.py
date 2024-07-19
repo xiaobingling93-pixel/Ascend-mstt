@@ -14,7 +14,14 @@ class Config:
             config = yaml.safe_load(file)
         self.config = {key: self.validate(key, value) for key, value in config.items()}
 
-    def validate(self, key, value):
+    def __getattr__(self, item):
+        return self.config[item]
+
+    def __str__(self):
+        return '\n'.join(f"{key}={value}" for key, value in self.config.items())
+
+    @staticmethod
+    def validate(key, value):
         validators = {
             'white_list': list,
             'error_data_path': str,
@@ -36,12 +43,6 @@ class Config:
                 raise ValueError(
                     f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
         return value
-
-    def __getattr__(self, item):
-        return self.config[item]
-
-    def __str__(self):
-        return '\n'.join(f"{key}={value}" for key, value in self.config.items())
 
 
 cur_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
