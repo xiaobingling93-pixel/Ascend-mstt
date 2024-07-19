@@ -4,10 +4,10 @@ from unittest import TestCase
 
 import torch
 import torch.nn as nn
-from atat.core.common.const import Const
-from atat.pytorch.free_benchmark import FreeBenchmarkCheck
-from atat.pytorch.free_benchmark.common.constant import CommonField, PreheatConfig
-from atat.pytorch.free_benchmark.common.enums import (
+from msprobe.core.common.const import Const
+from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck
+from msprobe.pytorch.free_benchmark.common.constant import CommonField, PreheatConfig
+from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
     HandlerType,

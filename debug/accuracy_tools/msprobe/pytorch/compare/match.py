@@ -1,7 +1,7 @@
 import os
 import yaml
-from atat.core.common.file_check import FileOpen
-from atat.core.common.utils import CompareException
+from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import CompareException
 
 
 class AtenIrMapping():

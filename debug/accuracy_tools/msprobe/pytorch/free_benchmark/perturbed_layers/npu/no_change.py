@@ -1,8 +1,8 @@
 import torch
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
@@ -21,7 +21,7 @@ class NoChangeLayer(NpuBaseLayer):
         对输入添加扰动并返回
         """
         logger.info_on_rank_0(
-            f"[atat] Free benchmark: Perturbation is "
+            f"[msprobe] Free benchmark: Perturbation is "
             f"{PerturbationMode.NO_CHANGE} of {self.api_name}."
         )
         params.perturbed_value = self.no_change(params.args[params.valid_input_index])

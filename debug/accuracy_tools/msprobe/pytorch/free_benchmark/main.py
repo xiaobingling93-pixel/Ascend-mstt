@@ -1,19 +1,19 @@
 from abc import ABC
 
 import torch
-from atat.core.common.const import Const
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import CommonField
-from atat.pytorch.free_benchmark.common.enums import (
+from msprobe.core.common.const import Const
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import CommonField
+from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
     HandlerType,
     PerturbationMode,
 )
-from atat.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
-from atat.pytorch.free_benchmark.compare.grad_saver import GradSaver
-from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
-from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
+from msprobe.pytorch.free_benchmark.common.params import data_pre_deal, make_handler_params
+from msprobe.pytorch.free_benchmark.compare.grad_saver import GradSaver
+from msprobe.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
+from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
 )
 
@@ -81,7 +81,7 @@ class FreeBenchmarkCheck(ABC):
             grad_saver = getattr(module, CommonField.GRADSAVER)
         except AttributeError:
             logger.warning_on_rank_0(
-                f"[atat] Free benchmark:  get grad saver failed. api_name:{name}"
+                f"[msprobe] Free benchmark:  get grad saver failed. api_name:{name}"
             )
             return
 
@@ -97,6 +97,6 @@ class FreeBenchmarkCheck(ABC):
             )
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free benchmark: grad vjp calculate failed. api_name:{name} error: {e}"
+                f"[msprobe] Free benchmark: grad vjp calculate failed. api_name:{name} error: {e}"
             )
             return

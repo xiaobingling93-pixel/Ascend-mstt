@@ -1,6 +1,6 @@
 import unittest
-from atat.pytorch.module_processer import ModuleProcesser
-from atat.pytorch.common.utils import Const
+from msprobe.pytorch.module_processer import ModuleProcesser
+from msprobe.pytorch.common.utils import Const
 
 import torch
 

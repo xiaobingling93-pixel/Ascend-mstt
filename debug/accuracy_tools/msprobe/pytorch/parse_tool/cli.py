@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-from atat.pytorch.parse_tool.lib.interactive_cli import InteractiveCli
-from atat.pytorch.common.log import logger
+from msprobe.pytorch.parse_tool.lib.interactive_cli import InteractiveCli
+from msprobe.pytorch.common.log import logger
 
 
 def _run_interactive_cli(cli=None):

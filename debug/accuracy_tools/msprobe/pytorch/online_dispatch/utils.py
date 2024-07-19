@@ -12,8 +12,8 @@ except ImportError:
 else:
     pta_cpu_device = torch.device("cpu")
 
-from atat.core.common.const import CompareConst, FileCheckConst
-from atat.core.common.file_check import change_mode
+from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.file_check import change_mode
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'

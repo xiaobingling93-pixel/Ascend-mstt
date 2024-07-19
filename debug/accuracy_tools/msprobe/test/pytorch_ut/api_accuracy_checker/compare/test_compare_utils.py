@@ -2,8 +2,8 @@ import unittest
 
 import numpy as np
 
-from atat.pytorch.api_accuracy_checker.common.utils import CompareException
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, convert_str_to_float
+from msprobe.pytorch.api_accuracy_checker.common.utils import CompareException
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, convert_str_to_float
 
 
 class TestCompareUtils(unittest.TestCase):

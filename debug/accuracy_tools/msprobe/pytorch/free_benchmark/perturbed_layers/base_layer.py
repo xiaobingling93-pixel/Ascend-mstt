@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from atat.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.common.params import DataParams
 
 
 class BaseLayer(ABC):

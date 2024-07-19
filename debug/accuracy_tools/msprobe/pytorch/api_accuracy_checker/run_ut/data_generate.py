@@ -20,10 +20,11 @@ import math
 import torch
 import numpy
 
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
-from atat.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path, check_object_type, get_full_data_path, CompareException
-from atat.pytorch.common.log import logger
-from atat.core.common.const import Const
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
+from msprobe.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path, check_object_type, \
+    get_full_data_path, CompareException
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import Const
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]

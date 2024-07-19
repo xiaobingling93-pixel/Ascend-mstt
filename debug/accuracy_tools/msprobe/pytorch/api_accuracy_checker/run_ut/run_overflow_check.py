@@ -10,10 +10,10 @@ else:
     is_gpu = False
 import torch
 from tqdm import tqdm
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents
-from atat.core.common.file_check import check_link
-from atat.pytorch.common.log import logger
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
+from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents
+from msprobe.core.common.file_check import check_link
+from msprobe.pytorch.common.log import logger
 
 def check_tensor_overflow(x):
     if isinstance(x, torch.Tensor) and x.numel() != 0 and x.dtype != torch.bool:

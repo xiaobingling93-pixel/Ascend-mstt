@@ -1,7 +1,7 @@
 import unittest
 import torch
 import yaml
-from atat.pytorch.hook_module.wrap_tensor import get_tensor_ops, HOOKTensor, TensorOPTemplate, wrap_tensor_op, wrap_tensor_ops_and_bind
+from msprobe.pytorch.hook_module.wrap_tensor import get_tensor_ops, HOOKTensor, TensorOPTemplate, wrap_tensor_op, wrap_tensor_ops_and_bind
 
 class TestWrapTensor(unittest.TestCase):
 

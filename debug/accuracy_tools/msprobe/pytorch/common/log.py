@@ -1,9 +1,9 @@
 import os
 import time
 import sys
-from atat.pytorch.common.utils import get_rank_if_initialized
-from atat.core.common.log import BaseLogger
-from atat.core.common.exceptions import DistributedNotInitializedError
+from msprobe.pytorch.common.utils import get_rank_if_initialized
+from msprobe.core.common.log import BaseLogger
+from msprobe.core.common.exceptions import DistributedNotInitializedError
 
 
 class PyTorchLogger(BaseLogger):

@@ -1,6 +1,6 @@
 import unittest
 
-from atat.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 
 
 class TestCompareColumns(unittest.TestCase):

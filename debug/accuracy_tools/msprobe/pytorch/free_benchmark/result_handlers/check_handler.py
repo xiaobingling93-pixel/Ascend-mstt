@@ -1,11 +1,11 @@
 from typing import Any
 
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.enums import DeviceType
-from atat.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
-from atat.pytorch.free_benchmark.common.utils import Tools
-from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
-from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType
+from msprobe.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
+from msprobe.pytorch.free_benchmark.common.utils import Tools
+from msprobe.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
+from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
 
 
 class CheckerHandler(FuzzHandler):
@@ -33,7 +33,7 @@ class CheckerHandler(FuzzHandler):
                 self.other_compare(data_params)
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
                 f"when campare the result exception raise {e}"
             )
         return data_params.original_result

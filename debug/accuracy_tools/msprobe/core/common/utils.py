@@ -26,9 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
 
-from atat.core.common.file_check import FileOpen, FileChecker
-from atat.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
-from atat.core.common.log import logger
+from msprobe.core.common.file_check import FileOpen, FileChecker
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
+from msprobe.core.common.log import logger
 
 
 device = collections.namedtuple('device', ['type', 'index'])

@@ -1,8 +1,8 @@
 import unittest
 
 import torch.nn as nn
-from atat.pytorch import PrecisionDebugger
-from atat.pytorch.functional.dump_module import module_dump, module_count
+from msprobe.pytorch import PrecisionDebugger
+from msprobe.pytorch.functional.dump_module import module_dump, module_count
 
 
 class TestDumpModule(unittest.TestCase):

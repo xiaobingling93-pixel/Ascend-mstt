@@ -1,9 +1,9 @@
 import math
 
 import torch
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
-from atat.pytorch.free_benchmark.common.utils import TorchC
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.utils import TorchC
 
 
 class SingleCompare:
@@ -69,7 +69,7 @@ class SingleCompare:
             actual.dtype, ThresholdConfig.BENCHMARK_THD_DICT.get(torch.float32)
         )
         if self.filter_overflow(golden) > 0:
-            logger.warning_on_rank_0("[atat] Free Benchmark: inf and nan"
+            logger.warning_on_rank_0("[msprobe] Free Benchmark: inf and nan"
                                   "in golden tensor is not supported.")
             return True
         actual = self.replace_inf_or_nan(actual)

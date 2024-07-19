@@ -18,11 +18,11 @@ import argparse
 import os
 from collections import namedtuple
 
-from atat.pytorch.parse_tool.lib.config import Const
-from atat.pytorch.parse_tool.lib.utils import Util
-from atat.pytorch.parse_tool.lib.compare import Compare
-from atat.pytorch.parse_tool.lib.visualization import Visualization
-from atat.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
+from msprobe.pytorch.parse_tool.lib.config import Const
+from msprobe.pytorch.parse_tool.lib.utils import Util
+from msprobe.pytorch.parse_tool.lib.compare import Compare
+from msprobe.pytorch.parse_tool.lib.visualization import Visualization
+from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
 
 
 class ParseTool:

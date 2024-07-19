@@ -15,19 +15,19 @@
 
 import argparse
 import sys
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
-from atat.pytorch.parse_tool.cli import parse as cli_parse
-from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
-from atat.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
+from msprobe.pytorch.parse_tool.cli import parse as cli_parse
+from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
     _api_precision_compare_command
-from atat.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
     _run_overflow_check_command
 
 
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="atat(ascend training accuracy tools), [Powered by MindStudio].\n"
+        description="msprobe(ascend training accuracy tools), [Powered by MindStudio].\n"
                     "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
                     f"For any issue, refer README.md first",
     )

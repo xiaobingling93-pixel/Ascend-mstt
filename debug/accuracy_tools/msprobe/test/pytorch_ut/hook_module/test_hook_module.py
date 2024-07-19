@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, Mock
 
-from atat.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
 class TestHookModule(unittest.TestCase):
     def test_call_1(self):

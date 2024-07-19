@@ -2,17 +2,17 @@ import functools
 import os
 from pathlib import Path
 
-from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileChecker, check_path_before_create
-from atat.core.common.const import Const, FileCheckConst
-from atat.core.common.exceptions import DistributedNotInitializedError, MsaccException
-from atat.core.data_dump.data_collector import build_data_collector
-from atat.core.data_dump.scope import BaseScope
-from atat.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
-from atat.pytorch.common.utils import get_rank_if_initialized
-from atat.pytorch.module_processer import ModuleProcesser
-from atat.pytorch.hook_module import remove_dropout
-from atat.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_check import FileChecker, check_path_before_create
+from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.exceptions import DistributedNotInitializedError, MsaccException
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.data_dump.scope import BaseScope
+from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.pytorch.common.utils import get_rank_if_initialized
+from msprobe.pytorch.module_processer import ModuleProcesser
+from msprobe.pytorch.hook_module import remove_dropout
+from msprobe.pytorch.hook_module.api_registry import api_register
 
 
 class Service:
@@ -81,7 +81,7 @@ class Service:
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
-            raise Exception("atat: exit after iteration {}".format(max(self.config.step)))
+            raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.first_start:

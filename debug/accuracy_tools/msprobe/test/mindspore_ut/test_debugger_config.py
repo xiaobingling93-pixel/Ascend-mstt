@@ -16,9 +16,9 @@
 """
 from unittest import TestCase
 
-from atat.core.common.const import Const
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.core.common.const import Const
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 
 
 class TestDebuggerConfig(TestCase):

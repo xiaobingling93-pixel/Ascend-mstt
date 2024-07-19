@@ -1,9 +1,9 @@
 from typing import Any
 
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.common.utils import Tools
-from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
-from atat.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.common.utils import Tools
+from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
+from msprobe.pytorch.free_benchmark import logger
 
 
 class FixHandler(FuzzHandler):
@@ -18,7 +18,7 @@ class FixHandler(FuzzHandler):
             )
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name} "
+                f"[msprobe] Free Benchmark: For {self.params.api_name} "
                 f"Fix output failed. "
             )
         return data_params.original_result

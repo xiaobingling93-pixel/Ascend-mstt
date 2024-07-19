@@ -3,20 +3,20 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
 
 import torch
-from atat.core.common.const import Const
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
-from atat.pytorch.free_benchmark.common.enums import (
+from msprobe.core.common.const import Const
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.enums import (
     FuzzThreshold,
     NormType,
     PerturbationMode,
 )
-from atat.pytorch.free_benchmark.common.params import (
+from msprobe.pytorch.free_benchmark.common.params import (
     DataParams,
     HandlerParams,
     make_unequal_row,
 )
-from atat.pytorch.free_benchmark.common.utils import Tools, TorchC
+from msprobe.pytorch.free_benchmark.common.utils import Tools, TorchC
 
 
 class FuzzHandler(ABC):
@@ -104,7 +104,7 @@ class FuzzHandler(ABC):
             )
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
                 f"when computing ratio,"
                 f" y1 or y2 dtype is not supported {e}"
             )
@@ -133,7 +133,7 @@ class FuzzHandler(ABC):
             )
         elif not isinstance(perturbed_output, torch.Tensor):
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name} "
+                f"[msprobe] Free Benchmark: For {self.params.api_name} "
                 f"The compare for output type {type(perturbed_output)} is not supported"
             )
 
@@ -185,7 +185,7 @@ class FuzzHandler(ABC):
                         )
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
                 f"when campare the result exception raise {e}"
             )
         return npu_consistent, max_fuzz_ratio

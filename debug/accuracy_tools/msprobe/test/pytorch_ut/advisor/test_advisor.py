@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pandas
 
-from atat.pytorch.advisor.advisor import Advisor
-from atat.pytorch.advisor.advisor_const import AdvisorConst
+from msprobe.pytorch.advisor.advisor import Advisor
+from msprobe.pytorch.advisor.advisor_const import AdvisorConst
 
 
 class TestAdvisor(unittest.TestCase):

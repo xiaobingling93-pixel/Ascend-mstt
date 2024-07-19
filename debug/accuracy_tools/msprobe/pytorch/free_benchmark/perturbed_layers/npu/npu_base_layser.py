@@ -2,8 +2,8 @@ from abc import abstractmethod
 from typing import Any
 
 import torch
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.perturbed_layers.base_layer import BaseLayer
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.perturbed_layers.base_layer import BaseLayer
 
 
 class NpuBaseLayer(BaseLayer):

@@ -1,15 +1,15 @@
-from atat.pytorch.free_benchmark import FreeBenchmarkException
-from atat.pytorch.free_benchmark.common.enums import DeviceType, PerturbationMode
-from atat.pytorch.free_benchmark.perturbed_layers.npu.improve_precision import (
+from msprobe.pytorch.free_benchmark import FreeBenchmarkException
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType, PerturbationMode
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.improve_precision import (
     ImprovePrecisionLayer,
 )
-from atat.pytorch.free_benchmark.perturbed_layers.npu.add_noise import AddNoiseLayer
-from atat.pytorch.free_benchmark.perturbed_layers.npu.bit_noise import BitNoiseLayer
-from atat.pytorch.free_benchmark.perturbed_layers.npu.no_change import NoChangeLayer
-from atat.pytorch.free_benchmark.perturbed_layers.npu.change_value import (
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.add_noise import AddNoiseLayer
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.bit_noise import BitNoiseLayer
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.no_change import NoChangeLayer
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.change_value import (
     ChangeValueLayer,
 )
-from atat.pytorch.free_benchmark.perturbed_layers.run_cpu import CpuLayer
+from msprobe.pytorch.free_benchmark.perturbed_layers.run_cpu import CpuLayer
 
 
 class LayerFactory:

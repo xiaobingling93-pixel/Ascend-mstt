@@ -2,8 +2,8 @@ from typing import Dict
 
 import numpy as np
 import torch
-from atat.pytorch.free_benchmark.common.enums import FuzzThreshold
-from atat.pytorch.free_benchmark.common.params import BenchmarkThd
+from msprobe.pytorch.free_benchmark.common.enums import FuzzThreshold
+from msprobe.pytorch.free_benchmark.common.params import BenchmarkThd
 
 
 class CommonField:

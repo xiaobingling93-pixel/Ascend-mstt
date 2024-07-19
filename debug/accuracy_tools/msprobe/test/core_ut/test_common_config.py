@@ -17,10 +17,10 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common.log import logger
-from atat.core.common.const import Const
-from atat.core.common.exceptions import MsaccException
-from atat.core.common_config import CommonConfig, BaseConfig
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common_config import CommonConfig, BaseConfig
 
 
 class TestCommonConfig(TestCase):

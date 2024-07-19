@@ -20,9 +20,9 @@ import uuid
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
 
-from atat.core.common.log import logger
-from atat.core.common.const import Const
-from atat.core.common.utils import (CompareException,
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import (CompareException,
                                     check_seed_all,
                                     check_inplace_op,
                                     make_dump_path_if_not_exists,
@@ -41,7 +41,7 @@ from atat.core.common.utils import (CompareException,
                                     check_regex_prefix_format_valid,
                                     get_dump_data_path,
                                     task_dumppath_get)
-from atat.core.common.file_check import FileCheckConst
+from msprobe.core.common.file_check import FileCheckConst
 
 
 class TestUtils(TestCase):
@@ -88,7 +88,7 @@ class TestUtils(TestCase):
             raise OSError
 
         if not os.path.exists(dirname):
-            with patch("atat.core.common.utils.Path.mkdir", new=test_mkdir):
+            with patch("msprobe.core.common.utils.Path.mkdir", new=test_mkdir):
                 with self.assertRaises(CompareException) as context:
                     make_dump_path_if_not_exists(dirname)
                 self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
@@ -171,7 +171,7 @@ class TestUtils(TestCase):
         file_path = os.path.realpath(__file__)
         dirname = os.path.dirname(file_path)
 
-        with patch("atat.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(file_path, isdir=False)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, file_path)
@@ -179,7 +179,7 @@ class TestUtils(TestCase):
         self.assertEqual(TestFileChecker.ability, FileCheckConst.READ_ABLE)
 
         TestFileChecker.checked = False
-        with patch("atat.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(dirname, isdir=True)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, dirname)
@@ -216,9 +216,9 @@ class TestUtils(TestCase):
 
         mock_check_file_or_directory_path = MagicMock()
         mock_check_json_file = MagicMock()
-        with patch("atat.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("atat.core.common.utils.check_json_file", new=mock_check_json_file), \
-             patch("atat.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
+        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
+             patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
+             patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
             check_compare_param(params, "output_path")
             check_compare_param(params, "output_path", summary_compare=False, md5_compare=True)
         for i in range(len(call_args)):
@@ -261,7 +261,7 @@ class TestUtils(TestCase):
         _check_json(handler, "test.json")
         self.assertEqual(handler.string, "0_0")
 
-    @patch("atat.core.common.utils._check_json")
+    @patch("msprobe.core.common.utils._check_json")
     def test_check_json_file(self, _mock_check_json):
         input_param = {
             "npu_json_path": "npu_json_path",
@@ -275,7 +275,7 @@ class TestUtils(TestCase):
 
     @patch.object(logger, "error")
     def test_check_file_size(self, mock_error):
-        with patch("atat.core.common.utils.os.path.getsize", return_value=120):
+        with patch("msprobe.core.common.utils.os.path.getsize", return_value=120):
             with self.assertRaises(CompareException) as context:
                 check_file_size("input_file", 100)
         self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
@@ -294,7 +294,7 @@ class TestUtils(TestCase):
         self.assertEqual(str(context.exception), f"prefix contains invalid characters, "
                          f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
-    @patch("atat.core.common.utils.check_file_or_directory_path")
+    @patch("msprobe.core.common.utils.check_file_or_directory_path")
     def test_get_dump_data_path(self, mock_check_file_or_directory_path):
         file_path = os.path.realpath(__file__)
         dirname = os.path.dirname(file_path)
@@ -322,23 +322,23 @@ class TestUtils(TestCase):
         mock_error.assert_called_with("Please check the json path is valid.")
 
         input_param["npu_json_path"] = "npu_json_path"
-        with patch("atat.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("atat.core.common.utils.json.load", return_value=npu_json):
+        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
+             patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)
         self.assertFalse(summary_compare)
         self.assertFalse(md5_compare)
 
         npu_json["task"] = Const.STATISTICS
-        with patch("atat.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("atat.core.common.utils.json.load", return_value=npu_json), \
-             patch("atat.core.common.utils.md5_find", return_value=True):
+        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
+             patch("msprobe.core.common.utils.json.load", return_value=npu_json), \
+             patch("msprobe.core.common.utils.md5_find", return_value=True):
             summary_compare, md5_compare = task_dumppath_get(input_param)
         self.assertFalse(summary_compare)
         self.assertTrue(md5_compare)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
-        with patch("atat.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("atat.core.common.utils.json.load", return_value=npu_json):
+        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
+             patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             with self.assertRaises(CompareException) as context:
                 task_dumppath_get(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)

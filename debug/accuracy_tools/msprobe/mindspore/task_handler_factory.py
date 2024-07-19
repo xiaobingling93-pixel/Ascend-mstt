@@ -1,6 +1,6 @@
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.dump.dump_tool_factory import DumpToolFactory
-from atat.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
+from msprobe.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory
 
 
 class TaskHandlerFactory:

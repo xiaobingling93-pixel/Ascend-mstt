@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
 
-from atat.pytorch.api_accuracy_checker.common.utils import *
+from msprobe.pytorch.api_accuracy_checker.common.utils import *
 
 
 class TestUtils(unittest.TestCase):
 
-    @patch('atat.pytorch.api_accuracy_checker.common.utils.get_file_content_bytes')
+    @patch('msprobe.pytorch.api_accuracy_checker.common.utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
         with self.assertRaises(CompareException) as ce:

@@ -1,6 +1,6 @@
-from atat.pytorch.common import seed_all
-from atat.pytorch.common.log import logger
-from atat.core.common.const import Const
+from msprobe.pytorch.common import seed_all
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import Const
 
 
 class DebuggerConfig:

@@ -2,7 +2,7 @@ import unittest
 import os
 from unittest.mock import patch
 
-from atat.pytorch.api_accuracy_checker.common.config import Config
+from msprobe.pytorch.api_accuracy_checker.common.config import Config
 
 
 class TestConfig(unittest.TestCase):

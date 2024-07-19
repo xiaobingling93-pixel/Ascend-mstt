@@ -1,11 +1,11 @@
 
 import os
 
-from atat.core.data_dump.scope import  build_scope, ListScope
-from atat.core.data_dump.json_writer import DataWriter
-from atat.core.common.log import logger
-from atat.core.common.const import Const
-from atat.core.data_dump.data_processor.factory import DataProcessorFactory
+from msprobe.core.data_dump.scope import  build_scope, ListScope
+from msprobe.core.data_dump.json_writer import DataWriter
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
 
 
 def build_data_collector(config):

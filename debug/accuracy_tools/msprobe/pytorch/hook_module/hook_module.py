@@ -20,7 +20,7 @@ import threading
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
-from atat.core.common.const import Const
+from msprobe.core.common.const import Const
 
 
 class HOOKModule(nn.Module):

@@ -1,7 +1,7 @@
 import unittest
 import torch
 import yaml
-from atat.pytorch.hook_module.wrap_torch import *
+from msprobe.pytorch.hook_module.wrap_torch import *
 
 class TestWrapTorch(unittest.TestCase):
 

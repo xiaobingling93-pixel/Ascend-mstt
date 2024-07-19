@@ -1,9 +1,9 @@
 import torch
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.common.utils import TorchC
-from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.common.utils import TorchC
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
@@ -44,7 +44,7 @@ class ChangeValueLayer(NpuBaseLayer):
         对输入添加扰动并返回
         """
         logger.info_on_rank_0(
-            f"[atat] Free benchmark: Perturbation is "
+            f"[msprobe] Free benchmark: Perturbation is "
             f"{PerturbationMode.CHANGE_VALUE} of {self.api_name}."
         )
         params.perturbed_value = self.change_value(params.args[params.valid_input_index])
@@ -56,7 +56,7 @@ class ChangeValueLayer(NpuBaseLayer):
         """
         if tensor_obj.size(0) < 2:
             logger.info_on_rank_0(
-                f"[atat] Free Benchmark: For {self.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.api_name}, "
                 f"size 0 must greater than 1. Cancel change value."
             )
             return False

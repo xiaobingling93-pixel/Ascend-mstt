@@ -16,9 +16,9 @@
 """
 from unittest import TestCase
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory
 
 
 class TestOverflowCheckToolFactory(TestCase):

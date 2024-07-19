@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
-from atat.core.common.exceptions import ScopeException
-from atat.core.data_dump.scope import (
+from msprobe.core.common.exceptions import ScopeException
+from msprobe.core.data_dump.scope import (
     build_scope,
     build_range_scope_according_to_scope_name,
     BaseScope,

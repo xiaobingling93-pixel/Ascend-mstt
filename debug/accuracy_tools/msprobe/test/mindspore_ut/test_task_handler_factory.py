@@ -17,10 +17,10 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.dump.kernel_graph_dump import KernelGraphDump
-from atat.mindspore.task_handler_factory import TaskHandlerFactory
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 
 class TestTaskHandlerFactory(TestCase):
@@ -47,7 +47,7 @@ class TestTaskHandlerFactory(TestCase):
         handler = TaskHandlerFactory.create(config)
         self.assertTrue(isinstance(handler, KernelGraphDump))
 
-        with patch("atat.mindspore.task_handler_factory.TaskHandlerFactory.tasks", new=tasks):
+        with patch("msprobe.mindspore.task_handler_factory.TaskHandlerFactory.tasks", new=tasks):
             with self.assertRaises(Exception) as context:
                 TaskHandlerFactory.create(config)
             self.assertEqual(str(context.exception), "Can not find task handler")

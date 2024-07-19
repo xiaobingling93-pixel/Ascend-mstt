@@ -19,9 +19,9 @@ import os
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
 
 
 class TestKernelGraphOverflowCheck(TestCase):
@@ -43,10 +43,10 @@ class TestKernelGraphOverflowCheck(TestCase):
         self.assertEqual(checker.dump_json["common_dump_settings"]["op_debug_mode"], 2)
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
-        with patch("atat.mindspore.overflow_check.kernel_graph_overflow_check.make_dump_path_if_not_exists"), \
-             patch("atat.mindspore.overflow_check.kernel_graph_overflow_check.FileOpen"), \
-             patch("atat.mindspore.overflow_check.kernel_graph_overflow_check.json.dump"), \
-             patch("atat.mindspore.overflow_check.kernel_graph_overflow_check.logger.info"):
+        with patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.make_dump_path_if_not_exists"), \
+             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.FileOpen"), \
+             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.json.dump"), \
+             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.logger.info"):
 
             os.environ["GRAPH_OP_RUN"] = "1"
             with self.assertRaises(Exception) as context:

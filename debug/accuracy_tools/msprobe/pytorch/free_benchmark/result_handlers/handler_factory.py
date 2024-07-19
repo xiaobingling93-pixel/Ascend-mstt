@@ -1,10 +1,10 @@
-from atat.pytorch.free_benchmark import FreeBenchmarkException
-from atat.pytorch.free_benchmark.common.constant import PreheatConfig
-from atat.pytorch.free_benchmark.common.enums import HandlerType
-from atat.pytorch.free_benchmark.common.params import HandlerParams
-from atat.pytorch.free_benchmark.result_handlers.check_handler import CheckerHandler
-from atat.pytorch.free_benchmark.result_handlers.preheat_handler import PreheatHandler
-from atat.pytorch.free_benchmark.result_handlers.fix_handler import FixHandler
+from msprobe.pytorch.free_benchmark import FreeBenchmarkException
+from msprobe.pytorch.free_benchmark.common.constant import PreheatConfig
+from msprobe.pytorch.free_benchmark.common.enums import HandlerType
+from msprobe.pytorch.free_benchmark.common.params import HandlerParams
+from msprobe.pytorch.free_benchmark.result_handlers.check_handler import CheckerHandler
+from msprobe.pytorch.free_benchmark.result_handlers.preheat_handler import PreheatHandler
+from msprobe.pytorch.free_benchmark.result_handlers.fix_handler import FixHandler
 
 
 class FuzzHandlerFactory:

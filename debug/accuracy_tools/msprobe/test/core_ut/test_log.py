@@ -17,11 +17,11 @@
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 
-from atat.core.common.log import BaseLogger, logger
+from msprobe.core.common.log import BaseLogger, logger
 
 
 class TestLog(TestCase):
-    @patch("atat.core.common.log.print")
+    @patch("msprobe.core.common.log.print")
     def test__print_log(self, mock_print):
         logger._print_log("level", "msg")
         self.assertIn("[level] msg", mock_print.call_args[0][0])
@@ -75,7 +75,7 @@ class TestLog(TestCase):
     @patch.object(BaseLogger, "get_rank")
     def test_info_on_rank_0(self, mock_get_rank):
         mock_print = MagicMock()
-        with patch("atat.core.common.log.print", new=mock_print):
+        with patch("msprobe.core.common.log.print", new=mock_print):
             mock_get_rank.return_value = 0
             logger.info_on_rank_0("msg")
             self.assertIn("[INFO] msg", mock_print.call_args[0][0])
@@ -87,7 +87,7 @@ class TestLog(TestCase):
     @patch.object(BaseLogger, "get_rank")
     def test_error_on_rank_0(self, mock_get_rank):
         mock_print = MagicMock()
-        with patch("atat.core.common.log.print", new=mock_print):
+        with patch("msprobe.core.common.log.print", new=mock_print):
             mock_get_rank.return_value = 0
             logger.error_on_rank_0("msg")
             self.assertIn("[ERROR] msg", mock_print.call_args[0][0])
@@ -99,7 +99,7 @@ class TestLog(TestCase):
     @patch.object(BaseLogger, "get_rank")
     def test_warning_on_rank_0(self, mock_get_rank):
         mock_print = MagicMock()
-        with patch("atat.core.common.log.print", new=mock_print):
+        with patch("msprobe.core.common.log.print", new=mock_print):
             mock_get_rank.return_value = 0
             logger.warning_on_rank_0("msg")
             self.assertIn("[WARNING] msg", mock_print.call_args[0][0])

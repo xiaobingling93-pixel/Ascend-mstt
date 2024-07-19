@@ -1,5 +1,5 @@
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelGraphOverflowCheck
 
 
 class OverflowCheckToolFactory:

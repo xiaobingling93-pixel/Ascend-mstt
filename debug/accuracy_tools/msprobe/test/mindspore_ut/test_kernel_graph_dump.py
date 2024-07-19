@@ -19,9 +19,9 @@ import os
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class TestKernelGraphDump(TestCase):
@@ -45,10 +45,10 @@ class TestKernelGraphDump(TestCase):
         self.assertEqual(dumper.dump_json["common_dump_settings"]["file_format"], "bin")
         self.assertEqual(dumper.dump_json["common_dump_settings"]["input_output"], 2)
 
-        with patch("atat.mindspore.dump.kernel_graph_dump.make_dump_path_if_not_exists"), \
-             patch("atat.mindspore.dump.kernel_graph_dump.FileOpen"), \
-             patch("atat.mindspore.dump.kernel_graph_dump.json.dump"), \
-             patch("atat.mindspore.dump.kernel_graph_dump.logger.info"):
+        with patch("msprobe.mindspore.dump.kernel_graph_dump.make_dump_path_if_not_exists"), \
+             patch("msprobe.mindspore.dump.kernel_graph_dump.FileOpen"), \
+             patch("msprobe.mindspore.dump.kernel_graph_dump.json.dump"), \
+             patch("msprobe.mindspore.dump.kernel_graph_dump.logger.info"):
 
             os.environ["GRAPH_OP_RUN"] = "1"
             with self.assertRaises(Exception) as context:

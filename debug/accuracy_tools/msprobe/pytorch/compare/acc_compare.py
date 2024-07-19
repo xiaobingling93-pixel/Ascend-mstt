@@ -27,16 +27,16 @@ from openpyxl.styles import PatternFill
 from collections import namedtuple
 from dataclasses import dataclass
 
-from atat.pytorch.compare.match import graph_mapping
-from atat.pytorch.compare.highlight import HighlightRules, get_header_index
-from atat.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
+from msprobe.pytorch.compare.match import graph_mapping
+from msprobe.pytorch.compare.highlight import HighlightRules, get_header_index
+from msprobe.pytorch.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
-from atat.pytorch.advisor.advisor import Advisor
-from atat.pytorch.common.log import logger
-from atat.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
+from msprobe.pytorch.advisor.advisor import Advisor
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
-from atat.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
-from atat.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 
 def check_graph_mode(a_op_name, b_op_name):

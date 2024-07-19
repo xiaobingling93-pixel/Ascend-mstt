@@ -2,17 +2,17 @@ from abc import ABC
 from unittest import TestCase
 
 import torch
-from atat.core.common.const import Const
-from atat.pytorch.free_benchmark.common.constant import PreheatConfig, ThresholdConfig
-from atat.pytorch.free_benchmark.common.counter import preheat_counter
-from atat.pytorch.free_benchmark.common.enums import (
+from msprobe.core.common.const import Const
+from msprobe.pytorch.free_benchmark.common.constant import PreheatConfig, ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.counter import preheat_counter
+from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
     HandlerType,
     PerturbationMode,
 )
-from atat.pytorch.free_benchmark.common.params import DataParams, make_handler_params
-from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
+from msprobe.pytorch.free_benchmark.common.params import DataParams, make_handler_params
+from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
 )
 

@@ -1,4 +1,4 @@
-from atat.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst
 
 
 class CompareColumn:

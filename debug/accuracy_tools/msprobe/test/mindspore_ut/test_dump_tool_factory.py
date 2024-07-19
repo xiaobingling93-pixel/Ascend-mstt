@@ -16,9 +16,9 @@
 """
 from unittest import TestCase
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.dump.dump_tool_factory import DumpToolFactory
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
 
 
 class TestDumpToolFactory(TestCase):

@@ -28,10 +28,10 @@ except ImportError:
 else:
     IS_GPU = False
 
-from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
-from atat.core.common.const import Const, FileCheckConst
-from atat.core.common.utils import CompareException
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
+from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.utils import CompareException
 
 
 class DumpException(CompareException):

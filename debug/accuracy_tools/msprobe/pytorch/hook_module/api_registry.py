@@ -18,15 +18,15 @@
 import torch
 import torch.distributed as dist
 
-from atat.pytorch.hook_module import wrap_torch, wrap_functional, wrap_tensor, wrap_vf, wrap_distributed, wrap_aten
-from atat.pytorch.hook_module.wrap_aten import get_aten_ops
-from atat.pytorch.hook_module.wrap_distributed import get_distributed_ops
-from atat.pytorch.hook_module.wrap_functional import get_functional_ops
-from atat.pytorch.hook_module.wrap_tensor import get_tensor_ops
-from atat.pytorch.hook_module.wrap_torch import get_torch_ops
-from atat.pytorch.hook_module.wrap_vf import get_vf_ops
-from atat.pytorch.common.utils import torch_without_guard_version, npu_distributed_api, is_gpu
-from atat.core.common.const import Const
+from msprobe.pytorch.hook_module import wrap_torch, wrap_functional, wrap_tensor, wrap_vf, wrap_distributed, wrap_aten
+from msprobe.pytorch.hook_module.wrap_aten import get_aten_ops
+from msprobe.pytorch.hook_module.wrap_distributed import get_distributed_ops
+from msprobe.pytorch.hook_module.wrap_functional import get_functional_ops
+from msprobe.pytorch.hook_module.wrap_tensor import get_tensor_ops
+from msprobe.pytorch.hook_module.wrap_torch import get_torch_ops
+from msprobe.pytorch.hook_module.wrap_vf import get_vf_ops
+from msprobe.pytorch.common.utils import torch_without_guard_version, npu_distributed_api, is_gpu
+from msprobe.core.common.const import Const
 
 torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 

@@ -1,10 +1,10 @@
 import torch
-from atat.core.common.exceptions import FreeBenchmarkException
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import CommonField
-from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
-from atat.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
-from atat.pytorch.free_benchmark.result_handlers.handler_factory import (
+from msprobe.core.common.exceptions import FreeBenchmarkException
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import CommonField
+from msprobe.pytorch.free_benchmark.common.params import DataParams, HandlerParams
+from msprobe.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
+from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
 )
 
@@ -41,18 +41,18 @@ class GradSaver:
                         data_processor.update_unequal_rows(handler.get_unequal_rows())
                     except IndexError:
                         logger.warning_on_rank_0(
-                            f"[atat] Free benchmark: grad index out of range. api:{self.handler_params.api_name}."
+                            f"[msprobe] Free benchmark: grad index out of range. api:{self.handler_params.api_name}."
                             f"index:{new_grad_index}, perturbation grad len {len(self.perturbed_grad_input)}"
                         )
                         return grad
                     except FreeBenchmarkException as e:
                         logger.warning_on_rank_0(
-                            f"[atat] Free benchmark: grad input check error: {e}"
+                            f"[msprobe] Free benchmark: grad input check error: {e}"
                         )
                         return grad
                     except Exception as e:
                         logger.warning_on_rank_0(
-                            f"[atat] Free benchmark: grad compare error: {e}"
+                            f"[msprobe] Free benchmark: grad compare error: {e}"
                         )
                         return grad
                     return grad
@@ -77,7 +77,7 @@ class GradSaver:
                 handler.handle(self.data_params)
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free benchmark: compare two vjp failed: api:{self.handler_params.api_name}."
+                f"[msprobe] Free benchmark: compare two vjp failed: api:{self.handler_params.api_name}."
                 f"{e}"
             )
         # 在扰动前后输出对比后释放输出的引用

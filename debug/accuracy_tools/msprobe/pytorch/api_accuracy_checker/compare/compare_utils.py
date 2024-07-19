@@ -5,10 +5,10 @@ import math
 import numpy as np
 import torch
 import yaml
-from atat.core.common.utils import CompareException
-from atat.core.common.const import Const
-from atat.pytorch.common.log import logger
-from atat.core.common.file_check import FileOpen
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import Const
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_check import FileOpen
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")

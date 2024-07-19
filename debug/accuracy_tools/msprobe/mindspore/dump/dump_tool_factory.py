@@ -1,6 +1,6 @@
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.dump.api_kbk_dump import ApiKbkDump
-from atat.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.api_kbk_dump import ApiKbkDump
+from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class DumpToolFactory:

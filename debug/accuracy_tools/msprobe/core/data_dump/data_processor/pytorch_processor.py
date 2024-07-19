@@ -5,13 +5,13 @@ from typing import List
 
 import numpy as np
 import torch
-from atat.core.common.exceptions import MsaccException
-from atat.core.common.file_check import path_len_exceeds_limit, change_mode
-from atat.core.common.log import logger
-from atat.core.common.const import Const, OverflowConst, FileCheckConst
-from atat.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
+from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
+from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
+from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from atat.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
+from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 try:
     import torch_npu

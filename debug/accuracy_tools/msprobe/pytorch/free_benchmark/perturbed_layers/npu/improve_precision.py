@@ -1,10 +1,10 @@
 import torch
-from atat.core.common.const import Const
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import CommonField
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
+from msprobe.core.common.const import Const
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import CommonField
+from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
@@ -34,7 +34,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
 
     def handle(self, params: DataParams) -> torch.Any:
         logger.info_on_rank_0(
-            f"[atat] Free benchmark: Perturbation is "
+            f"[msprobe] Free benchmark: Perturbation is "
             f"{PerturbationMode.IMPROVE_PRECISION} of {self.api_name}."
         )
         new_args = self.improve_tensor_precision(params.args)

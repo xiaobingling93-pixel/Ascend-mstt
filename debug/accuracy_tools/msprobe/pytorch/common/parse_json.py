@@ -1,5 +1,5 @@
 import json
-from atat.core.common.exceptions import ParseJsonException
+from msprobe.core.common.exceptions import ParseJsonException
 
 
 def parse_json_info_forward_backward(json_path):

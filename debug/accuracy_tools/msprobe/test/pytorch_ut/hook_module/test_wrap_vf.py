@@ -1,6 +1,6 @@
 import unittest
 import torch
-from atat.pytorch.hook_module import wrap_vf
+from msprobe.pytorch.hook_module import wrap_vf
 
 class TestWrapVF(unittest.TestCase):
     def setUp(self):

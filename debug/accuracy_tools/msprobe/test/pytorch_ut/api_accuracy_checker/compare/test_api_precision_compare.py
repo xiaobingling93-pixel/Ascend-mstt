@@ -2,14 +2,14 @@ import unittest
 
 import pandas as pd
 
-from atat.pytorch.api_accuracy_checker.compare.api_precision_compare import (
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
     CompareConfig,
     BenchmarkStandard,
     check_csv_columns,
     check_error_rate,
     get_api_checker_result,
 )
-from atat.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst
 
 
 class TestApiPrecisionCompare(unittest.TestCase):

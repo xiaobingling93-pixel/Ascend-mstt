@@ -5,7 +5,7 @@ import logging
 from unittest.mock import patch, mock_open, MagicMock
 import json
 import signal
-from atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut import split_json_file, signal_handler, run_parallel_ut, \
+from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import split_json_file, signal_handler, run_parallel_ut, \
     prepare_config, main, ParallelUTConfig
 
 
@@ -20,7 +20,7 @@ class TestMultiRunUT(unittest.TestCase):
             {'key3': 'TRUE', 'key4': 'TRUE'}
         ]
 
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.FileOpen')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.FileOpen')
     def test_split_json_file(self, mock_FileOpen):
         mock_FileOpen.return_value.__enter__.return_value = mock_open(read_data=self.test_json_content).return_value
         num_splits = 2
@@ -63,10 +63,10 @@ class TestMultiRunUT(unittest.TestCase):
 
     @patch('os.remove')
     @patch('os.path.realpath', side_effect=lambda x: x)
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.check_link')
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.check_file_suffix')
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.FileChecker')
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.split_json_file',
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.check_link')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.check_file_suffix')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.FileChecker')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.split_json_file',
            return_value=(['forward_split1.json', 'forward_split2.json'], 2))
     def test_prepare_config(self, mock_split_json_file, mock_FileChecker, mock_check_file_suffix, mock_check_link,
                             mock_realpath, mock_remove):
@@ -93,8 +93,8 @@ class TestMultiRunUT(unittest.TestCase):
 
 
     @patch('argparse.ArgumentParser.parse_args')
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.prepare_config')
-    @patch('atat.pytorch.api_accuracy_checker.run_ut.multi_run_ut.run_parallel_ut')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.prepare_config')
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.run_parallel_ut')
     def test_main(self, mock_run_parallel_ut, mock_prepare_config, mock_parse_args):
         main()
         mock_parse_args.assert_called()

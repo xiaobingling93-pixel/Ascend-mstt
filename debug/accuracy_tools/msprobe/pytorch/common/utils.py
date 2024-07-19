@@ -20,7 +20,7 @@ import stat
 import torch
 import numpy as np
 from functools import wraps
-from atat.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.exceptions import DistributedNotInitializedError
 
 try:
     import torch_npu

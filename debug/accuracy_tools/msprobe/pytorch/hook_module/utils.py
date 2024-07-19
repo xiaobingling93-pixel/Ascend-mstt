@@ -18,7 +18,7 @@
 import os
 import yaml
 
-from atat.core.common.file_check import FileOpen
+from msprobe.core.common.file_check import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")

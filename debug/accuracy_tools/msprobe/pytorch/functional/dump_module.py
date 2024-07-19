@@ -1,10 +1,10 @@
 import torch.nn as nn
-from atat.pytorch.common.log import logger
-from atat.core.common.const import Const
-from atat.pytorch.hook_module.api_registry import api_register
-from atat.pytorch.debugger.precision_debugger import PrecisionDebugger
-from atat.core.common.exceptions import MsaccException
-from atat.core.data_dump.scope import BaseScope
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.debugger.precision_debugger import PrecisionDebugger
+from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.data_dump.scope import BaseScope
 
 module_count = {}
 

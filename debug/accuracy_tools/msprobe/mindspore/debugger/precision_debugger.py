@@ -1,7 +1,7 @@
 import os
-from atat.mindspore.ms_config import parse_json_config
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.task_handler_factory import TaskHandlerFactory
+from msprobe.mindspore.ms_config import parse_json_config
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 
 class PrecisionDebugger:

@@ -1,6 +1,6 @@
 # coding=utf-8
 import unittest
-from atat.pytorch.compare.acc_compare import rename_api
+from msprobe.pytorch.compare.acc_compare import rename_api
 
 class TestUtilsMethods(unittest.TestCase):
 

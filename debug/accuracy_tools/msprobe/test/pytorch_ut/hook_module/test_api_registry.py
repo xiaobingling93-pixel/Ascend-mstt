@@ -1,5 +1,5 @@
 import unittest
-from atat.pytorch.hook_module.api_registry import ApiRegistry, torch_version_above_2, is_gpu
+from msprobe.pytorch.hook_module.api_registry import ApiRegistry, torch_version_above_2, is_gpu
 
 
 class TestApiRegistry(unittest.TestCase):
@@ -43,7 +43,7 @@ class TestApiRegistry(unittest.TestCase):
         import torch
         import torch.distributed as dist
         #import torch_npu   #门禁没有安装torch_npu
-        from atat.pytorch.hook_module.api_registry import torch_without_guard_version, npu_distributed_api, is_gpu, torch_version_above_2
+        from msprobe.pytorch.hook_module.api_registry import torch_without_guard_version, npu_distributed_api, is_gpu, torch_version_above_2
 
         
 
@@ -79,7 +79,7 @@ class TestApiRegistry(unittest.TestCase):
         import torch
         import torch.distributed as dist
         #import torch_npu      #门禁没有安装torch_npu
-        from atat.pytorch.hook_module.api_registry import torch_without_guard_version, npu_distributed_api, is_gpu, torch_version_above_2
+        from msprobe.pytorch.hook_module.api_registry import torch_without_guard_version, npu_distributed_api, is_gpu, torch_version_above_2
 
         
 

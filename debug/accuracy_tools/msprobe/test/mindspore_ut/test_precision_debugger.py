@@ -17,9 +17,9 @@
 from unittest import TestCase
 from unittest.mock import patch
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.mindspore.debugger.precision_debugger import PrecisionDebugger
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 
 
 class TestPrecisionDebugger(TestCase):
@@ -42,9 +42,9 @@ class TestPrecisionDebugger(TestCase):
         task_config = BaseConfig(json_config)
         handler = Handler()
 
-        with patch("atat.mindspore.debugger.precision_debugger.parse_json_config",
+        with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config",
                    return_value=[common_config, task_config]), \
-             patch("atat.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler):
+             patch("msprobe.mindspore.debugger.precision_debugger.TaskHandlerFactory.create", return_value=handler):
             debugger = PrecisionDebugger()
             debugger.start()
         self.assertTrue(isinstance(debugger.config, DebuggerConfig))

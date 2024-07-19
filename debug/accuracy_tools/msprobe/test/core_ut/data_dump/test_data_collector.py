@@ -1,10 +1,10 @@
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 
-from atat.core.common.utils import Const
-from atat.core.data_dump.data_collector import DataCollector
-from atat.pytorch.debugger.debugger_config import DebuggerConfig
-from atat.pytorch.pt_config import parse_json_config
+from msprobe.core.common.utils import Const
+from msprobe.core.data_dump.data_collector import DataCollector
+from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
+from msprobe.pytorch.pt_config import parse_json_config
 
 
 class TestDataCollector(unittest.TestCase):
@@ -12,8 +12,8 @@ class TestDataCollector(unittest.TestCase):
         mock_json_data = {
             "dump_path": "./ut_dump",
         }
-        with patch("atat.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
-                patch("atat.pytorch.pt_config.json.load", return_value=mock_json_data):
+        with patch("msprobe.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
+                patch("msprobe.pytorch.pt_config.json.load", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json", Const.STATISTICS)
         config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
         self.data_collector = DataCollector(config)
@@ -21,7 +21,7 @@ class TestDataCollector(unittest.TestCase):
     def test_update_data(self):
         self.data_collector.config.task = Const.OVERFLOW_CHECK
         self.data_collector.data_processor.has_overflow = True
-        with patch("atat.core.data_dump.json_writer.DataWriter.update_data", return_value=None):
+        with patch("msprobe.core.data_dump.json_writer.DataWriter.update_data", return_value=None):
             result1 = self.data_collector.update_data("test message", "test1:")
         self.assertEqual(result1, "test1:Overflow detected.")
 
@@ -31,7 +31,7 @@ class TestDataCollector(unittest.TestCase):
 
         self.data_collector.config.task = Const.STATISTICS
         self.data_collector.data_processor.has_overflow = True
-        with patch("atat.core.data_dump.json_writer.DataWriter.update_data", return_value=None):
+        with patch("msprobe.core.data_dump.json_writer.DataWriter.update_data", return_value=None):
             result3 = self.data_collector.update_data("test message", "test3")
         self.assertEqual(result3, "test3")
 

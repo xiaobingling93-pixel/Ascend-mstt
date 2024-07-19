@@ -1,5 +1,5 @@
 from collections import defaultdict
-from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 
 
 class PreheatCounter:

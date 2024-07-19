@@ -1,1 +1,1 @@
-from atat.mindspore.debugger.precision_debugger import PrecisionDebugger
+from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger

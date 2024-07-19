@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import sys
 
-from atat.core.common.log import logger
+from msprobe.core.common.log import logger
 
 
 def run_ut():

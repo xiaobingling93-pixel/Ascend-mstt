@@ -17,10 +17,10 @@
 import os
 import time
 
-from atat.pytorch.advisor.advisor_const import AdvisorConst
-from atat.pytorch.common.log import logger
-from atat.core.common.const import Const, FileCheckConst
-from atat.core.common.file_check import change_mode
+from msprobe.pytorch.advisor.advisor_const import AdvisorConst
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.file_check import change_mode
 
 
 class AdvisorResult:

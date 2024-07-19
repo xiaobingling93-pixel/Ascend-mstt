@@ -17,11 +17,11 @@
 import os
 import sys
 import re
-from atat.core.common.utils import CompareException, check_compare_param, \
+from msprobe.core.common.utils import CompareException, check_compare_param, \
     check_configuration_param, task_dumppath_get, check_file_or_directory_path, check_regex_prefix_format_valid
-from atat.pytorch.compare.acc_compare import compare_core
-from atat.core.common.file_check import create_directory
-from atat.pytorch.common.log import logger
+from msprobe.pytorch.compare.acc_compare import compare_core
+from msprobe.core.common.file_check import create_directory
+from msprobe.pytorch.common.log import logger
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):

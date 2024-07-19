@@ -1,8 +1,8 @@
 from functools import wraps
 import torch
 from torch.utils.hooks import BackwardHook
-from atat.core.common.const import Const
-from atat.core.data_dump.scope import ModuleRangeScope
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.scope import ModuleRangeScope
 
 
 class ModuleProcesser:

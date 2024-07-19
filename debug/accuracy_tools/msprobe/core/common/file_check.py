@@ -17,9 +17,9 @@
 import os
 import re
 
-from atat.core.common.log import logger
-from atat.core.common.exceptions import FileCheckException
-from atat.core.common.const import FileCheckConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.const import FileCheckConst
 
 
 class FileChecker:

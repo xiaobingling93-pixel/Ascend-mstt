@@ -3,9 +3,9 @@ import inspect
 from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
 import numpy as np
-from atat.core.common.log import logger
-from atat.core.common.utils import convert_tuple
-from atat.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple
+from msprobe.core.common.const import Const
 
 
 @dataclass

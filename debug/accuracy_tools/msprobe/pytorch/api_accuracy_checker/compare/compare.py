@@ -3,18 +3,18 @@ import os
 from collections import namedtuple
 import torch
 import numpy as np
-from atat.pytorch.common.log import logger
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
     ULPStandardApi, ThousandthStandardApi, apis_threshold
-from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from atat.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
     check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
-from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.core.common.const import Const, CompareConst
+from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from msprobe.core.common.const import Const, CompareConst
 
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',

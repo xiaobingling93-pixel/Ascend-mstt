@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.enums import (
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
     FuzzLevel,
     PerturbationMode,
 )
-from atat.pytorch.free_benchmark.common.utils import Tools
+from msprobe.pytorch.free_benchmark.common.utils import Tools
 
 
 @dataclass
@@ -78,7 +78,7 @@ def data_pre_deal(name, func, args, kwargs):
     data_params.valid_input_index = index
     if index == -1:
         logger.warning_on_rank_0(
-            f"[atat] Free benchmark: 无标杆工具不支持当前算子的输入类型 {name}."
+            f"[msprobe] Free benchmark: 无标杆工具不支持当前算子的输入类型 {name}."
         )
     return data_params
 

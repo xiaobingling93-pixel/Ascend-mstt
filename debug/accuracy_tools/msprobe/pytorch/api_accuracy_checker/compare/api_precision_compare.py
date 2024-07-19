@@ -7,19 +7,19 @@ from collections import namedtuple
 import torch
 import pandas as pd
 
-from atat.pytorch.api_accuracy_checker.common.utils import write_csv
-from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
+from msprobe.pytorch.api_accuracy_checker.common.utils import write_csv
+from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, AbsoluteStandardApi, BinaryStandardApi, ULPStandardApi, ThousandthStandardApi, \
     BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage, is_inf_or_nan, \
     check_inf_or_nan
-from atat.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
-from atat.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
-from atat.pytorch.common.log import logger
-from atat.core.common.utils import CompareException
-from atat.core.common.const import CompareConst, FileCheckConst
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
+from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 BenchmarkInf_Nan_Consistency = namedtuple('BenchmarkInf_Nan_Consistency', ['small_value_inf_nan_consistency', 

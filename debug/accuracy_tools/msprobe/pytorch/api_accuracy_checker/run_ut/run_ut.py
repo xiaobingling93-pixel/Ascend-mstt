@@ -18,21 +18,21 @@ else:
 import torch
 from tqdm import tqdm
 
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
-from atat.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
+from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
     initialize_save_path, UtDataProcessor
-from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
-from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from atat.pytorch.hook_module.wrap_tensor import TensorOPTemplate
-from atat.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
-from atat.pytorch.hook_module.wrap_torch import TorchOPTemplate
-from atat.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from atat.pytorch.common.parse_json import parse_json_info_forward_backward
-from atat.core.common.file_check import FileOpen, FileChecker, \
+from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
+from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
+from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
+from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
+from msprobe.core.common.file_check import FileOpen, FileChecker, \
     change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
-from atat.pytorch.common.log import logger
-from atat.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time

@@ -15,7 +15,7 @@
 # limitations under the License.
 """
 import logging
-from atat.core.common.exceptions import FileCheckException
+from msprobe.core.common.exceptions import FileCheckException
 
 
 class ParseException(Exception):

@@ -1,10 +1,10 @@
 import torch
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
-from atat.pytorch.free_benchmark.common.enums import PerturbationMode
-from atat.pytorch.free_benchmark.common.params import DataParams
-from atat.pytorch.free_benchmark.common.utils import TorchC
-from atat.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
+from msprobe.pytorch.free_benchmark.common.params import DataParams
+from msprobe.pytorch.free_benchmark.common.utils import TorchC
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import (
     NpuBaseLayer,
 )
 
@@ -37,7 +37,7 @@ class AddNoiseLayer(NpuBaseLayer):
         对输入添加扰动并返回
         """
         logger.info_on_rank_0(
-            f"[atat] Free benchmark: Perturbation is "
+            f"[msprobe] Free benchmark: Perturbation is "
             f"{PerturbationMode.ADD_NOISE} of {self.api_name}."
         )
         params.perturbed_value = self.add_noise(params.args[params.valid_input_index])
@@ -60,13 +60,13 @@ class AddNoiseLayer(NpuBaseLayer):
         """
         if not self.perturbed_value:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.api_name}, "
                 f"dtype unsupported. Cancel perturbation."
             )
             return False
         if tensor_obj.numel() == 0:
             logger.warning_on_rank_0(
-                f"[atat] Free benchmark: For {self.api_name}, tensor shape must > 0."
+                f"[msprobe] Free benchmark: For {self.api_name}, tensor shape must > 0."
                 f" Cancel adding noise."
             )
             return False
@@ -77,13 +77,13 @@ class AddNoiseLayer(NpuBaseLayer):
             max_val = TorchC.max(TorchC.abs(tensor_obj)).item()
         except Exception:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.api_name}, "
                 f"when calculate maximun value, tensor is changed to float32."
             )
             max_val = TorchC.max(TorchC.abs(tensor_obj.to(torch.float32))).item()
         if max_val < abs_tol:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.api_name}, "
                 f"Maximun value is less than the  minimun threshold. Cancel add noise."
             )
             return False

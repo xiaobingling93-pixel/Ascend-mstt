@@ -1,4 +1,4 @@
-from atat.core.common.const import Const
+from msprobe.core.common.const import Const
 
 
 class DataProcessorFactory:

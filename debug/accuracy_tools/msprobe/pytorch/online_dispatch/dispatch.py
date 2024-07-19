@@ -21,9 +21,9 @@ from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, 
 from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
     DispatchException
 from .compare import Comparator
-from atat.core.common.file_check import FileOpen
-from atat.core.common.utils import check_file_or_directory_path, check_path_before_create
-from atat.core.common.const import Const, CompareConst
+from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
+from msprobe.core.common.const import Const, CompareConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -209,9 +209,9 @@ class PtdbgDispatch(TorchDispatchMode):
         time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
         if tag is None or not isinstance(tag, str):
             logger_warn('There is not tag or the type of tag is not string.')
-            dir_name = f'atat_rank{self.device_id}_{time_now}'
+            dir_name = f'msprobe_rank{self.device_id}_{time_now}'
         else:
-            dir_name = f'atat_{tag}_rank{self.device_id}_{time_now}'
+            dir_name = f'msprobe_{tag}_rank{self.device_id}_{time_now}'
         return dir_name
 
     def load_yaml_file(self, file_path):

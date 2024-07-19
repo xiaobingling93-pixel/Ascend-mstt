@@ -1,9 +1,9 @@
 import json
 import os
 
-from atat.core.common_config import CommonConfig, BaseConfig
-from atat.core.common.file_check import FileOpen
-from atat.core.common.const import Const
+from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.const import Const
 
 
 class TensorConfig(BaseConfig):

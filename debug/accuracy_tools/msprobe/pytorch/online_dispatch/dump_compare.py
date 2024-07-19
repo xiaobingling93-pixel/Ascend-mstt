@@ -7,9 +7,9 @@ import pandas as pd
 import torch
 from .utils import np_save_data, logger_debug, logger_error, logger_warn, logger_user, COLOR_RED, COLOR_GREEN, \
     COLOR_RESET, CSV_COLUMN_NAME
-from atat.core.common.file_check import FileOpen, change_mode
-from atat.core.common.const import CompareConst, FileCheckConst, Const
-from atat.pytorch.common.log import logger
+from msprobe.core.common.file_check import FileOpen, change_mode
+from msprobe.core.common.const import CompareConst, FileCheckConst, Const
+from msprobe.pytorch.common.log import logger
 
 class DispatchRunParam:
     def __init__(self, debug_flag, device_id, root_npu_path, root_cpu_path, process_num, comparator):

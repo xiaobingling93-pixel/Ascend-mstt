@@ -1,6 +1,6 @@
 import unittest
 import torch.distributed as dist
-from atat.pytorch.hook_module.wrap_distributed import *
+from msprobe.pytorch.hook_module.wrap_distributed import *
 
 class TestWrapDistributed(unittest.TestCase):
     def hook(name, prefix):

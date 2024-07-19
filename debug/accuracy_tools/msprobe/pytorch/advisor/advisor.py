@@ -17,12 +17,12 @@
 
 import os
 
-from atat.pytorch.advisor.advisor_result import AdvisorResult
-from atat.pytorch.advisor.advisor_const import AdvisorConst
-from atat.pytorch.common.log import logger
-from atat.core.common.utils import CompareException
-from atat.core.common.file_check import FileChecker
-from atat.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.pytorch.advisor.advisor_result import AdvisorResult
+from msprobe.pytorch.advisor.advisor_const import AdvisorConst
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 class Advisor:
     """

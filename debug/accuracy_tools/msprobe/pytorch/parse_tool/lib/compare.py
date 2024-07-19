@@ -19,9 +19,9 @@ import os
 import time
 import numpy as np
 from collections import namedtuple
-from atat.pytorch.parse_tool.lib.utils import Util
-from atat.pytorch.parse_tool.lib.config import Const
-from atat.pytorch.parse_tool.lib.parse_exception import ParseException
+from msprobe.pytorch.parse_tool.lib.utils import Util
+from msprobe.pytorch.parse_tool.lib.config import Const
+from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 
 
 class Compare:

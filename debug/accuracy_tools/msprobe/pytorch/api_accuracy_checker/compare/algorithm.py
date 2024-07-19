@@ -2,8 +2,8 @@
 import torch
 import numpy as np
 
-from atat.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
-from atat.core.common.const import CompareConst
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
+from msprobe.core.common.const import CompareConst
 
 
 DEFAULT_THRESHOLD = 1

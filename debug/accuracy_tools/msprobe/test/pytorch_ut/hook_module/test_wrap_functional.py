@@ -1,6 +1,6 @@
 import unittest
 import torch
-from atat.pytorch.hook_module import wrap_functional as wf
+from msprobe.pytorch.hook_module import wrap_functional as wf
 
 class TestWrapFunctional(unittest.TestCase):
 

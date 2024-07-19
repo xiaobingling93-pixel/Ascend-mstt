@@ -1,10 +1,10 @@
 import unittest
-from atat.core.data_dump.json_writer import DataWriter
+from msprobe.core.data_dump.json_writer import DataWriter
 
 import os
 import csv
-from atat.core.common.file_check import FileOpen
-from atat.core.common import utils
+from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common import utils
 from pathlib import Path
 import json
 

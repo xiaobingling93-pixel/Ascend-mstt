@@ -1,14 +1,14 @@
 import math
 from typing import Any
 
-from atat.pytorch.free_benchmark import logger
-from atat.pytorch.free_benchmark.common.constant import ThresholdConfig
-from atat.pytorch.free_benchmark.common.counter import preheat_counter
-from atat.pytorch.free_benchmark.common.enums import DeviceType
-from atat.pytorch.free_benchmark.common.params import DataParams, HandlerParams
-from atat.pytorch.free_benchmark.common.utils import Tools
-from atat.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
-from atat.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
+from msprobe.pytorch.free_benchmark.common.counter import preheat_counter
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType
+from msprobe.pytorch.free_benchmark.common.params import DataParams, HandlerParams
+from msprobe.pytorch.free_benchmark.common.utils import Tools
+from msprobe.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
+from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
 
 
 class PreheatHandler(FuzzHandler):
@@ -74,14 +74,14 @@ class PreheatHandler(FuzzHandler):
             cpu_consistent = self.compare_npu_and_cpu(data_params)
         except Exception as e:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
                 f"when campare to cpu exception raise {e}"
             )
         try:
             first_dtype = Tools.get_first_tensor_dtype(data_params.original_result)
         except RuntimeError:
             logger.warning_on_rank_0(
-                f"[atat] Free Benchmark: For {self.params.api_name}, "
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
                 f"the output sequence does not contain tensors."
             )
         if preheat_counter.get_api_preheat(self.pure_name, str(first_dtype)):
@@ -96,7 +96,7 @@ class PreheatHandler(FuzzHandler):
         if res:
             total_count = preheat_counter.get_one_step_used_api(self.pure_name)
             logger.info_on_rank_0(
-                f"[atat] Free benchmark: preheat sample in step{self.params.step}"
+                f"[msprobe] Free benchmark: preheat sample in step{self.params.step}"
                 f"api_name {self.params.api_name}, "
                 f"curr_called_seq: {curr_called_seq}/{total_count}"
             )

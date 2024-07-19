@@ -7,9 +7,9 @@ import unittest
 import numpy as np
 import torch.nn.functional
 
-from atat.pytorch.api_accuracy_checker.compare.compare import Comparator
-from atat.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from atat.pytorch.api_accuracy_checker.run_ut.run_ut import UtDataInfo
+from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import UtDataInfo
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"

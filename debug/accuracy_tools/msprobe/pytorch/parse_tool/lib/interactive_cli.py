@@ -16,10 +16,10 @@
 """
 import cmd
 import argparse
-from atat.pytorch.parse_tool.lib.parse_tool import ParseTool
-from atat.pytorch.parse_tool.lib.utils import Util
-from atat.pytorch.parse_tool.lib.config import Const
-from atat.pytorch.parse_tool.lib.parse_exception import catch_exception
+from msprobe.pytorch.parse_tool.lib.parse_tool import ParseTool
+from msprobe.pytorch.parse_tool.lib.utils import Util
+from msprobe.pytorch.parse_tool.lib.config import Const
+from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception
 
 
 class InteractiveCli(cmd.Cmd):

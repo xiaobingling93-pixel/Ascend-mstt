@@ -8,10 +8,10 @@ from rich.table import Table
 from rich.console import Console
 from .single_compare import single_benchmark_compare_wrap
 from .utils import DispatchException
-from atat.core.common.const import CompareConst
-from atat.core.common.file_check import FileOpen
-from atat.pytorch.common.log import logger
-from atat.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst
+from msprobe.core.common.file_check import FileOpen
+from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import CompareException
 
 ELEMENT_NUM_THRESHOLD = 100
 ZERO_NUM_THRESHOLD = 0.1

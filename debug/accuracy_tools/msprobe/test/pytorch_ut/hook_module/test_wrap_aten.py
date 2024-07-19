@@ -1,6 +1,6 @@
 import unittest
 import torch
-from atat.pytorch.hook_module.wrap_aten import AtenOPTemplate, AtenOPPacketTemplate
+from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate, AtenOPPacketTemplate
 
 
 def hook(name):

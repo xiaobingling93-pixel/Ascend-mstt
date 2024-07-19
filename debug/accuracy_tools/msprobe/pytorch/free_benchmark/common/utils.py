@@ -1,5 +1,5 @@
 import torch
-from atat.pytorch.free_benchmark.common.enums import DeviceType
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 
 class Tools:

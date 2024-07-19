@@ -1,9 +1,9 @@
 import os
 import json
-from atat.core.common.utils import make_dump_path_if_not_exists
-from atat.mindspore.debugger.debugger_config import DebuggerConfig
-from atat.core.common.log import logger
-from atat.core.common.file_check import FileOpen
+from msprobe.core.common.utils import make_dump_path_if_not_exists
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.core.common.log import logger
+from msprobe.core.common.file_check import FileOpen
 
 
 class KernelGraphOverflowCheck:
