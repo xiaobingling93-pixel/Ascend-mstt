@@ -82,9 +82,9 @@ class CsvDistribution(CsvItem):
             grad = grad.to(mindspore.float32)
         element_num = grad.numel()
         grad_equal_0_num = (grad == 0).sum().item()
-        bound = Tensor(bounds)
-        bucketsize_result = ops.bucketize(grad, bound)
-        interval_nums = [(bucketsize_result == i).sum().item() for i in range(len(bound) + 1)]
+        bucketsize_result = ops.bucketize(grad.float(), bounds)
+        bucketsize_result = bucketsize_result.astype(mindspore.int8)
+        interval_nums = [(bucketsize_result == i).sum().item() for i in range(len(bounds) + 1)]
         interval_nums.append(grad_equal_0_num)
         return_list = [x / element_num if element_num != 0 else 0 for x in interval_nums]
         return return_list

@@ -54,8 +54,9 @@ def hook_graph_mode_optimizer(opt, hook_input):
 def hook_pynative_optimizer(opt, hook_input):
     level_adapted = get_adapted_level(hook_input.level)
 
-    def new_construct(self, gradients):
-        cur_step = self.dump_step.value()[0]
+    def hook_fn(cell, input):
+        gradients, = input
+        cur_step = grad_context.get_context(GradConst.CURRENT_STEP)
         if grad_context.step_need_dump(cur_step) and grad_context.rank_need_dump(hook_input.rank_id):
             output_lines = []
             for index, grad_value in enumerate(gradients):
@@ -71,13 +72,9 @@ def hook_pynative_optimizer(opt, hook_input):
             dummy_csv_input = CsvInput(None, None, hook_input.bounds)
             write_csv(output_csv_path, output_lines,
                     GradStatCsv.generate_csv_header(level_adapted, dummy_csv_input))
+        grad_context.update_step()
 
-        self.assignadd(self.dump_step, self.global_step_increase_tensor)
-        out = hook_input.func(gradients)
-        return out
-
-    opt.dump_step = Parameter(initializer(0, [1], ms.int32), name="dump_step")
-    opt.construct = new_construct.__get__(opt, type(opt))
+    opt.register_forward_pre_hook(hook_fn)
 
 
 def hook_optimizer(opt: Optimizer):
