@@ -34,5 +34,5 @@ def get_adapted_level(level: str):
     if level == GradConst.LEVEL3:
         print_warn_log(f"In mindpsore pynative mode, only 'L0', 'L1' and 'L2' are supported, use L0 instead")
         level = GradConst.LEVEL0
-    level_adapted = level_adp[level]
+    level_adapted = level_adp.get(level)
     return level_adapted

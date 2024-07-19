@@ -59,6 +59,14 @@ class GlobalContext:
     def update_step(self):
         self._setting[GradConst.CURRENT_STEP] += 1
 
+    def step_need_dump(self, step):
+        dump_step_list = self.get_context(GradConst.STEP)
+        return (not dump_step_list) or (step in dump_step_list)
+
+    def rank_need_dump(self, rank):
+        dump_rank_list = self.get_context(GradConst.RANK)
+        return (not dump_rank_list) or (rank in dump_rank_list)
+
     def _set_input_list(self, config_dict: Dict, name: str, dtype: Union[int, str, float]):
         value = config_dict.get(name)
         if dtype == int:
@@ -75,14 +83,5 @@ class GlobalContext:
             self._setting[name] = value
         else:
             print_warn_log(f"{name} is None or not a list with valid items, use default value.")
-
-    def step_need_dump(self, step):
-        dump_step_list = self.get_context(GradConst.STEP)
-        return (not dump_step_list) or (step in dump_step_list)
-
-    def rank_need_dump(self, rank):
-        dump_rank_list = self.get_context(GradConst.RANK)
-        return (not dump_rank_list) or (rank in dump_rank_list)
-
 
 grad_context = GlobalContext()
