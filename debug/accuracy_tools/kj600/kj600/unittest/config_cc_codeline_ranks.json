@@ -1,0 +1,8 @@
+{
+    "targets": {
+        "foo": {}
+    },
+    "cc_distribution": {"enable": true, "cc_codeline":["kj600/unittest/test_cc_codeline_ranks.py\\[19\\]"]},
+    "module_ranks": [1],
+    "ops":["max","min","norm","zeros"]
+}

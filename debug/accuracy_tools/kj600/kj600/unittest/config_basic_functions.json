@@ -1,0 +1,17 @@
+{
+    "targets": {
+        "fc": {"input": "tuple[1]:0", "output": "tensor", "input_grad": "tuple[1]:0", "output_grad": "tuple[1]:0"}
+    },
+    "module_ranks": [],
+    "ur_distribution": true,
+    "xy_distribution": true,
+    "mv_distribution": true,
+    "wg_distribution": true,
+    "mg_direction": true,
+    "cc_distribution": {"enable":true, "cc_codeline":[]},
+    "alert": {
+        "rules": [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
+    },
+    "eps": 1e-8,
+    "ops": ["min", "max", "norm", "zeros", "id"]
+}
