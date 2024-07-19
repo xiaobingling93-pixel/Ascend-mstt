@@ -4,10 +4,7 @@ import csv
 import unittest
 from unittest.mock import patch
 
-from atat.core.common.utils import CompareException
-from atat.core.common.file_check import create_directory
-from atat.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv, check_need_convert, \
-    check_object_type, check_file_or_directory_path, get_file_content_bytes, api_info_preprocess
+from atat.pytorch.api_accuracy_checker.common.utils import *
 
 
 class TestUtils(unittest.TestCase):
