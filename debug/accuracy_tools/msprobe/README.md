@@ -4,7 +4,7 @@ MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStud
 
 ## 工具安装
 
-精度工具合一软件包名称：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
+精度工具合一软件包名称：`mindstudio_probe-{version}-py3-none-any.whl`
 
 1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、torch、tqdm依赖。
 
@@ -43,19 +43,19 @@ MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStud
 4. 执行如下命令进行安装。
 
    ```bash
-   pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl
+   pip3 install ./mindstudio_probe-{version}-py3-none-any.whl
    ```
 
    若为覆盖安装，请在命令行末尾增加“--force-reinstall”参数强制安装，例如：
 
    ```bash
-   pip3 install ./ascend_training_accuracy_tools-{version}-py3-none-any.whl --force-reinstall
+   pip3 install ./mindstudio_probe-{version}-py3-none-any.whl --force-reinstall
    ```
 
    提示如下信息则表示安装成功。
 
    ```bash
-   Successfully installed ascend_training_accuracy_tools-{version}
+   Successfully installed mindstudio_probe-{version}
    ```
 
 
