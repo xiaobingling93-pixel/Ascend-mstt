@@ -739,7 +739,7 @@ def parse(pkl_file, module_name_prefix):
                 logger.info(summary_info)
 
 
-def op_item_parse(item, op_name, index, item_list=[], top_bool=True):
+def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
     if item_list is None:
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
