@@ -14,7 +14,7 @@
 import setuptools
 
 
-__version__ = '1.0.4'
+__version__ = '1.0.0'
 
 INSTALL_REQUIRED = [
     "wheel",
@@ -34,11 +34,11 @@ EXCLUDE_PKGS = [
 ]
 
 setuptools.setup(
-    name="msprobe-test",
+    name="mindstudio-probe",
     version=__version__,
     description="Pytorch Ascend Probe Utils",
-    long_description="Msprobe is a set of tools for diagnosing and improve model accuracy on Ascend NPU, including API "
-                     "acc checker, ptdbg, grad tool.",
+    long_description="MindStudio-Probe is a set of tools for diagnosing and improve model accuracy on Ascend NPU, "
+                     "including API acc checker, ptdbg, grad tool.",
     url="https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
