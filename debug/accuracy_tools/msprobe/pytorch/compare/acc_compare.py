@@ -526,8 +526,10 @@ def handle_inf_nan(n_value, b_value):
     return n_value, b_value
 
 
-def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False):
+def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False, md5_compare=False):
     """找到单个API中需要高亮的行"""
+    if md5_compare:
+        return
     npu_max_index = get_header_index('NPU max', summary_compare)
     bench_max_index = get_header_index('Bench max', summary_compare)
     max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
@@ -583,7 +585,7 @@ def get_name_and_state(name):
     return api_name, state
 
 
-def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
+def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare):
     """将dataframe根据API分组，并找到有误差的算子用于高亮"""
     result = result_df.values
     start, input_num, output_num, end = 0, 0, 0, len(result_df)
@@ -601,7 +603,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
             else:
                 output_num = num
                 find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                                summary_compare)
+                                summary_compare, md5_compare)
                 num, last_api_name, last_state = 1, api_name, state
                 start += input_num + output_num
                 input_num, output_num = 1, 0
@@ -612,7 +614,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare):
             input_num = num
         else:
             output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare)
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare, md5_compare)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
@@ -697,7 +699,7 @@ def compare_core(input_parma, output_path, **kwargs):
 
     if not md5_compare and not summary_compare:
         result_df = _do_multi_process(input_parma, result_df)
-    find_compare_result_error_rows(result_df, highlight_dict, summary_compare)
+    find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
     highlight_rows_xlsx(result_df, highlight_dict, file_path)
     if auto_analyze:
         advisor = Advisor(result_df, output_path)
