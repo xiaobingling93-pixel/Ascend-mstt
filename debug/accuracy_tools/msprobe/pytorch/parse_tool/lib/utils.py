@@ -74,16 +74,6 @@ class Util:
         return path.strip("'").strip('"')
 
     @staticmethod
-    def _gen_npu_dump_convert_file_info(name, match, dir_path):
-        return DumpDecodeFileDesc(name, dir_path, int(match.groups()[-4]), op_name=match.group(2),
-                                  op_type=match.group(1), task_id=int(match.group(3)), anchor_type=match.groups()[-3],
-                                  anchor_idx=int(match.groups()[-2]))
-
-    @staticmethod
-    def _gen_numpy_file_info(name, math, dir_path):
-        return FileDesc(name, dir_path)
-
-    @staticmethod
     def check_executable_file(path):
         check_path_owner_consistent(path)
         check_other_user_writable(path)
@@ -183,6 +173,16 @@ class Util:
     @staticmethod
     def change_filemode_safe(self, path):
         change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+    @staticmethod
+    def _gen_npu_dump_convert_file_info(name, match, dir_path):
+        return DumpDecodeFileDesc(name, dir_path, int(match.groups()[-4]), op_name=match.group(2),
+                                  op_type=match.group(1), task_id=int(match.group(3)), anchor_type=match.groups()[-3],
+                                  anchor_idx=int(match.groups()[-2]))
+
+    @staticmethod
+    def _gen_numpy_file_info(name, math, dir_path):
+        return FileDesc(name, dir_path)
 
     def execute_command(self, cmd):
         if not cmd:

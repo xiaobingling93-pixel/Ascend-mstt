@@ -80,12 +80,12 @@ class AtenOPPacketTemplate():
         else:
             return attr
 
-    def overloads(self):
-        return self.opPacket.overloads()
-
     @torch_device_guard
     def __call__(self, *args, **kwargs):
         return AtenOPTemplate(self.opPacket, self.hook)(*args, **kwargs)
+
+    def overloads(self):
+        return self.opPacket.overloads()
 
 
 def wrap_aten_op(op, hook):
