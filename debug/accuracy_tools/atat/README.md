@@ -4,8 +4,35 @@ MindStudio精度调试工具（ascend_training_accuracy_tools），简称atat，
 
 ## 工具安装
 
-精度工具合一软件包名称：`ascend_training_accuracy_tools-{version}-py3-none-any.whl`
+# TODO
+精度工具合一软件包名称：`msprobe-{version}-py3-none-any.whl`
 
+### pip安装
+```shell
+pip install msprobe
+```
+
+### 从源码安装
+1. 克隆或者下载项目源代码
+
+```shell
+git clone xxx
+cd xxx
+```
+
+2. 安装setuptools和wheel
+
+```shell
+pip install setuptools wheel
+```
+
+3. 安装msprobe
+
+```shell
+python setup.py install
+```
+
+### 下载whl包安装
 1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、torch、tqdm依赖。
 
    若环境中已安装部分依赖，不需要重复安装。

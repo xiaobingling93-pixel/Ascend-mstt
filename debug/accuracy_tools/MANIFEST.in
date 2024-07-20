@@ -1,2 +1,3 @@
-recursive-include atat/ *
-recursive-exclude atat/test *
+include README.md
+include LICENSE
+recursive-include atat *
