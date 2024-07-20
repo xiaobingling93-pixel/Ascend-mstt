@@ -27,7 +27,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description="msprobe(ascend training accuracy tools), [Powered by MindStudio].\n"
+        description="msprobe(mindstudio probe), [Powered by MindStudio].\n"
                     "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
                     f"For any issue, refer README.md first",
     )
