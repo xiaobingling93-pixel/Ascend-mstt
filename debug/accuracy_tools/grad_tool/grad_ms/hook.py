@@ -18,15 +18,20 @@ from grad_tool.grad_ms.grad_stat_csv import GradStatCsv, CsvInput
 from grad_tool.grad_ms.utils import save_grad_direction, get_adapted_level
 
 class HookInput:
+
+    '''
+    HookInput is a class wrapping all the variables used for hooking optimizer
+    '''
+
     def __init__(self, opt) -> None:
         self.func = opt.construct
         self.g_names = [param.name for param in opt._parameters]
         self.param_list = grad_context.get_context(GradConst.PARAM_LIST)
         self.rank_id = get_rank_id()
         output_path = grad_context.get_context(GradConst.OUTPUT_PATH)
-        self.dump_dir = f"{output_path}/rank_{self.rank_id}/Dump/"
-        self.save_dir = f"{output_path}/rank_{self.rank_id}/"
-        self.step_finish_flag = f"{output_path}/rank_{self.rank_id}/Dump/{GradConst.STEP_FINISH}"
+        self.dump_dir = os.path.join(output_path, f"rank_{self.rank_id}", "Dump")
+        self.save_dir = os.path.join(output_path, f"rank_{self.rank_id}")
+        self.step_finish_flag = os.path.join(self.dump_dir, GradConst.STEP_FINISH)
         if os.path.exists(self.save_dir):
             print_warn_log(f"Delete existing path {self.save_dir}.")
             shutil.rmtree(self.save_dir)
@@ -64,14 +69,14 @@ def hook_pynative_optimizer(opt, hook_input):
                 if hook_input.param_list and param_name not in hook_input.param_list:
                     continue
                 csv_input = CsvInput(param_name, grad_value, hook_input.bounds)
-                grad_info = GradStatCsv.generate_csv_line(level_adapted, csv_input)
+                grad_info = GradStatCsv.get_csv_line(level_adapted, csv_input)
                 output_lines.append(grad_info)
                 if level_adapted["have_grad_direction"]:
                     save_grad_direction(param_name, grad_value, os.path.join(hook_input.save_dir, f'step_{cur_step}'))
             output_csv_path = os.path.join(hook_input.save_dir, f"grad_summary_{cur_step}.csv")
             dummy_csv_input = CsvInput(None, None, hook_input.bounds)
             write_csv(output_csv_path, output_lines,
-                    GradStatCsv.generate_csv_header(level_adapted, dummy_csv_input))
+                    GradStatCsv.get_csv_header(level_adapted, dummy_csv_input))
         grad_context.update_step()
 
     opt.register_forward_pre_hook(hook_fn)

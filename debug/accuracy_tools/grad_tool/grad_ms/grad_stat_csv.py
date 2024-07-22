@@ -16,14 +16,14 @@ class GradStatCsv:
     csv = {}
 
     @staticmethod
-    def generate_csv_header(level, csv_input):
+    def get_csv_header(level, csv_input):
         header = ["param_name"]
         for key in level["header"]:
             header.extend(GradStatCsv.csv[key].generate_csv_header(csv_input))
         return header
 
     @staticmethod
-    def generate_csv_line(level, csv_input):
+    def get_csv_line(level, csv_input):
         line = [csv_input.param_name]
         for key in level["header"]:
             line.extend(GradStatCsv.csv[key].generate_csv_content(csv_input))
@@ -67,7 +67,7 @@ class CsvDistribution(CsvItem):
     def generate_csv_header(csv_input):
         bounds = csv_input.bounds
         intervals = []
-        for i, _ in enumerate(bounds):
+        for i in range(len(bounds)):
             if i == 0:
                 intervals.append(f"(-inf, {bounds[i]}]")
             else:
