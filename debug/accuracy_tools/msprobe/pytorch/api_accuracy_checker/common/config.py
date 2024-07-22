@@ -2,7 +2,7 @@ import os
 import yaml
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path
 from msprobe.core.common.file_check import FileOpen
-from msprobe.pytorch.common.utils import check_filter_list_config, check_error_data_path_config
+from msprobe.pytorch.pt_config import RunUTConfig
 
 
 class Config:
@@ -33,11 +33,11 @@ class Config:
         if key == 'precision' and value < 0:
             raise ValueError("precision must be greater than 0")
         if key == 'white_list':
-            check_filter_list_config(key, value)
+            RunUTConfig.check_filter_list_config(key, value)
         if key == 'black_list':
-            check_filter_list_config(key, value)
+            RunUTConfig.check_filter_list_config(key, value)
         if key == 'error_data_path':
-            check_error_data_path_config(value)
+            RunUTConfig.check_error_data_path_config(value)
         return value
 
 

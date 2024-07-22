@@ -5,6 +5,10 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.utils import check_filter_list_config, check_error_data_path_config
+from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+
+
+WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
 
 
 class TensorConfig(BaseConfig):
@@ -72,9 +76,25 @@ class RunUTConfig(BaseConfig):
         self.check_run_ut_config()
     
     def check_run_ut_config(self):
-        check_filter_list_config(Const.WHITE_LIST, self.white_list)
-        check_filter_list_config(Const.BLACK_LIST, self.black_list)
-        check_error_data_path_config(self.error_data_path)
+        # As instance methods are called, you need to pass instance attributes
+        RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
+        RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
+        RunUTConfig.check_error_data_path_config(self.error_data_path)
+
+    @classmethod
+    def check_filter_list_config(cls, key, filter_list):
+        if not isinstance(filter_list, list):
+            raise Exception("%s must be a list type" % key)
+        if not all(isinstance(item, str) for item in filter_list):
+            raise Exception("All elements in %s must be string type" % key)
+        invalid_api = [item for item in filter_list if item not in WrapApi]
+        if invalid_api:
+            raise Exception("Invalid api in %s: %s" % (key, invalid_api))
+
+    @classmethod
+    def check_error_data_path_config(cls, error_data_path):
+        if not os.path.exists(error_data_path):
+            raise Exception("error_data_path: %s does not exist" % error_data_path)
 
 
 def parse_task_config(task, json_config):

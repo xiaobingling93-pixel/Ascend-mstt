@@ -21,7 +21,6 @@ import torch
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 
 try:
     import torch_npu
@@ -29,10 +28,6 @@ except ImportError:
     is_gpu = True
 else:
     is_gpu = False
-    
-    
-WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
-
 
 torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
@@ -226,18 +221,3 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
-
-
-def check_filter_list_config(key, filter_list):
-    if not isinstance(filter_list, list):
-        raise Exception("%s must be a list type" % key)
-    if not all(isinstance(item, str) for item in filter_list):
-        raise Exception("All elements in white_list must be string type")
-    invalid_api = [item for item in filter_list if item not in WrapApi]
-    if invalid_api:
-        raise Exception("Invalid api in white_list: {}".format(invalid_api))
-    
-
-def check_error_data_path_config(error_data_path):
-    if not os.path.exists(error_data_path):
-        raise Exception("error_data_path: %s is not exist", error_data_path)
