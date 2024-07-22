@@ -24,5 +24,10 @@
     "overflow_check": {
         "overflow_nums": 1, 
         "check_mode":"all" 
+    },
+    "run_ut": {
+        "white_list": [],
+        "black_list": [],
+        "error_data_path": "./"
     }
 }

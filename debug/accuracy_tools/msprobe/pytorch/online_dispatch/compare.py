@@ -228,7 +228,7 @@ class Comparator:
         else:
             is_bwd_success, bwd_compare_alg_results = True, None
         if is_bwd_success and bwd_compare_alg_results is None:
-            self.saver.record_results(ResultInfo(api_name, is_fwd_success, CompareConst.NA, fwd_compare_alg_results,
+            self.saver.record_results(ResultInfo(api_name, is_fwd_success, CompareConst.NAN, fwd_compare_alg_results,
                                       bwd_compare_alg_results))
         else:
             self.saver.record_results(ResultInfo(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,

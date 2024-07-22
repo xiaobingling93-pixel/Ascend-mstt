@@ -5,7 +5,7 @@ from pathlib import Path
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.exceptions import DistributedNotInitializedError, MsaccException
+from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
@@ -138,7 +138,7 @@ class Service:
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level in ["L0", "mix"]:
             if self.model is None:
-                logger.error_log_with_exp("The model is None.", MsaccException.INVALID_PARAM_ERROR)
+                logger.error_log_with_exp("The model is None.", MsprobeException.INVALID_PARAM_ERROR)
             logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             for name, module in self.model.named_modules():
                 if module == self.model:

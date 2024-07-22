@@ -14,6 +14,9 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generat
 from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents
 from msprobe.core.common.file_check import check_link
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
+from msprobe.core.common.const import Const
+
 
 def check_tensor_overflow(x):
     if isinstance(x, torch.Tensor) and x.numel() != 0 and x.dtype != torch.bool:
@@ -52,12 +55,12 @@ def check_data_overflow(x):
 
 def run_overflow_check(forward_file):
     logger.info("start UT test")
-    forward_content = get_json_contents(forward_file)
+    forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
         try:
-            run_torch_api(api_full_name, api_info_dict)
+            run_torch_api(api_full_name, api_info_dict, real_data_path)
         except Exception as err:
-            api_name = api_full_name.split("_", 1)[1].rsplit("_", 2)[0]
+            _, api_name, _ = api_full_name.split(Const.SEP)
             if "not implemented for 'Half'" in str(err):
                 logger.warning(f"API {api_name} not support half tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'fp16_to_fp32' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -68,11 +71,10 @@ def run_overflow_check(forward_file):
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
 
 
-def run_torch_api(api_full_name, api_info_dict):
+def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
-    api_type = api_full_name.split(".")[0]
-    api_name = api_full_name.split(".", 1)[1].rsplit(".", 2)[0]
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path='')
+    api_type, api_name, _ = api_full_name.split(Const.SEP)
+    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)

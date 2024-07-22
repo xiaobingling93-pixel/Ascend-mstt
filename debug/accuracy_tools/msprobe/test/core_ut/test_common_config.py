@@ -19,7 +19,7 @@ from unittest.mock import patch
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
-from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common_config import CommonConfig, BaseConfig
 
 
@@ -44,7 +44,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "task is invalid, it should be one of {}".format(Const.TASK_LIST))
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": 0})
@@ -52,7 +52,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "rank is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -61,7 +61,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "step is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -71,7 +71,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "level is invalid, it should be one of {}".format(Const.LEVEL_LIST))
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -82,7 +82,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "seed is invalid, it should be an integer")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -94,7 +94,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "is_deterministic is invalid, it should be a boolean")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -107,7 +107,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "enable_dataloader is invalid, it should be a boolean")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
     @patch.object(logger, "error_log_with_exp")
     def test_base_config(self, mock_error_log_with_exp):
@@ -130,7 +130,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "scope is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"scope": ["Tensor_Add"]})
         json_config.update({"list": "Tensor_Add"})
@@ -139,7 +139,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "list is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
         json_config.update({"scope": ["Tensor_Add"]})
         json_config.update({"list": ["Tensor_Add"]})
@@ -149,4 +149,4 @@ class TestCommonConfig(TestCase):
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
                          "data_mode is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsaccException.err_strs.get(MsaccException.INVALID_PARAM_ERROR))
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))

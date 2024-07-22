@@ -2,6 +2,7 @@ import os
 import stat
 import numpy as np
 
+
 class Const:
     """
     Class for const
@@ -15,6 +16,10 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    DEFAULT_LIST = []
+    DEFAULT_PATH = './'
+    WHITE_LIST = 'white_list'
+    BLACK_LIST = 'black_list'
 
     # dump mode
     ALL = "all"
@@ -25,6 +30,8 @@ class Const:
     API_LIST = "api_list"
     API_STACK = "api_stack"
     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+    AUTO = "auto"
+    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
@@ -35,6 +42,7 @@ class Const:
 
     PKL_SUFFIX = ".pkl"
     NUMPY_SUFFIX = ".npy"
+    PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
@@ -52,13 +60,15 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
     MAX_SEED_VALUE = 4294967295  # 2**32 - 1
-    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
+    RUN_UT = "run_ut"
     ATTR_NAME_PREFIX = "wrap_"
+    ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
@@ -83,6 +93,7 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
 
 class CompareConst:
     """
@@ -196,6 +207,7 @@ class CompareConst:
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
 
+
 class FileCheckConst:
     """
     Class for file check const
@@ -231,6 +243,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+
 
 class OverflowConst:
     """

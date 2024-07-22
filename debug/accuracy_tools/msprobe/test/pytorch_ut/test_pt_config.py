@@ -67,3 +67,18 @@ class TestPtConfig(TestCase):
         self.assertEqual(result.handler_type, "check")
         self.assertEqual(result.preheat_step, 15)
         self.assertEqual(result.max_sample, 20)
+        
+        run_ut_config = {
+            "run_ut": {
+                "white_list": ["conv2d"],
+                "black_list": ["matmul"],
+                "error_data_path": '/home/dump_path'
+                
+            }
+        }
+        with patch('os.path.exists', return_value=True) as mocked_exists:
+            result = parse_task_config(Const.RUN_UT, run_ut_config)
+            self.assertEqual(result.white_list, ["conv2d"])
+            self.assertEqual(result.black_list, ["matmul"])
+            self.assertEqual(result.error_data_path, '/home/dump_path')
+            mocked_exists.assert_called_once_with('/home/dump_path')
