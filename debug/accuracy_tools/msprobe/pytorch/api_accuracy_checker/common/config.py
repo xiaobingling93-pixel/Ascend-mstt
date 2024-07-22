@@ -1,10 +1,8 @@
 import os
 import yaml
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path
-from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 from msprobe.core.common.file_check import FileOpen
-
-WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
+from msprobe.pytorch.common.utils import check_filter_list_config, check_error_data_path_config
 
 
 class Config:
@@ -35,23 +33,11 @@ class Config:
         if key == 'precision' and value < 0:
             raise ValueError("precision must be greater than 0")
         if key == 'white_list':
-            if not isinstance(value, list):
-                raise ValueError("white_list must be a list type")
-            if not all(isinstance(i, str) for i in value):
-                raise ValueError("All elements in white_list must be of str type")
-            invalid_api = [i for i in value if i not in WrapApi]
-            if invalid_api:
-                raise ValueError(
-                    f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
+            check_filter_list_config(key, value)
         if key == 'black_list':
-            if not isinstance(value, list):
-                raise ValueError("black_list must be a list type")
-            if not all(isinstance(i, str) for i in value):
-                raise ValueError("All elements in black_list must be of str type")
-            invalid_api = [i for i in value if i not in WrapApi]
-            if invalid_api:
-                raise ValueError(
-                    f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the black_list")
+            check_filter_list_config(key, value)
+        if key == 'error_data_path':
+            check_error_data_path_config(value)
         return value
 
 

@@ -4,10 +4,7 @@ import os
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
-from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
-
-
-WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
+from msprobe.pytorch.common.utils import check_filter_list_config, check_error_data_path_config
 
 
 class TensorConfig(BaseConfig):
@@ -75,31 +72,9 @@ class RunUTConfig(BaseConfig):
         self.check_run_ut_config()
     
     def check_run_ut_config(self):
-        self.check_white_list_config()
-        self.check_black_list_config()
-        self.check_error_data_path_config()
-        
-    def check_white_list_config(self):
-        if not isinstance(self.white_list, list):
-            raise Exception("white_list must be a list type")
-        if not all(isinstance(item, str) for item in self.white_list):
-            raise Exception("All elements in white_list must be string type")
-        invalid_api = [item for item in self.white_list if item not in WrapApi]
-        if invalid_api:
-            raise Exception("Invalid api in white_list: {}".format(invalid_api))
-        
-    def check_black_list_config(self):
-        if not isinstance(self.black_list, list):
-            raise Exception("black_list must be a list type")
-        if not all(isinstance(item, str) for item in self.black_list):
-            raise Exception("All elements in black_list must be string type")
-        invalid_api = [item for item in self.black_list if item not in WrapApi]
-        if invalid_api:
-            raise Exception("Invalid api in black_list: {}".format(invalid_api))
-        
-    def check_error_data_path_config(self):
-        if not os.path.exists(self.error_data_path):
-            raise Exception("error_data_path: %s is not exist", self.error_data_path)
+        check_filter_list_config(Const.WHITE_LIST, self.white_list)
+        check_filter_list_config(Const.BLACK_LIST, self.black_list)
+        check_error_data_path_config(self.error_data_path)
 
 
 def parse_task_config(task, json_config):

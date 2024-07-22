@@ -17,6 +17,8 @@ class Const:
     FORWARD = 'forward'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
+    WHITE_LIST = 'white_list'
+    BLACK_LIST = 'black_list'
 
     # dump mode
     ALL = "all"
