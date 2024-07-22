@@ -1,0 +1,244 @@
+import abc
+import numpy as np
+from msprobe.core.common.utils import format_value
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.pytorch.common.log import logger
+
+
+def  handle_inf_nan(n_value, b_value):
+    """处理inf和nan的数据"""
+    n_inf = np.isinf(n_value)
+    b_inf = np.isinf(b_value)
+    n_nan = np.isnan(n_value)
+    b_nan = np.isnan(b_value)
+    n_invalid = np.any(n_inf) or np.any(n_nan)
+    b_invalid = np.any(b_inf) or np.any(b_nan)
+    if n_invalid or b_invalid:
+        if np.array_equal(n_inf, b_inf) and np.array_equal(n_nan, b_nan):
+            n_value[n_inf] = 0
+            b_value[b_inf] = 0
+            n_value[n_nan] = 0
+            b_value[b_nan] = 0
+        else:
+            return CompareConst.NAN, CompareConst.NAN
+    return n_value, b_value
+
+
+def get_error_type(n_value, b_value, error_flag):
+    """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag"""
+    if error_flag:
+        return CompareConst.READ_NONE, CompareConst.READ_NONE, True
+    if n_value.size == 0:  # 判断读取到的数据是否为空
+        return CompareConst.NONE, CompareConst.NONE, True
+    if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
+        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, True
+    if not n_value.shape:  # 判断数据是否为标量
+        return n_value, b_value, False
+
+    n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
+    if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
+        return CompareConst.NAN, CompareConst.NAN, True
+    return n_value, b_value, False
+
+
+def reshape_value(n_value, b_value):
+    """返回reshape后的数据"""
+    if not n_value.shape:  # 判断数据是否为标量
+        if n_value.dtype == bool:
+            n_value = n_value.astype(float)
+            b_value = b_value.astype(float)
+        return n_value, b_value
+
+    n_value = n_value.reshape(-1).astype(float)
+    b_value = b_value.reshape(-1).astype(float)
+    return n_value, b_value
+
+
+def get_error_message(n_value, b_value, op_name, error_flag, error_file=None):
+    """获取异常情况的错误信息"""
+    if error_flag:
+        if n_value == CompareConst.READ_NONE:
+            if error_file:
+                return "Dump file: {} not found.".format(error_file)
+            return CompareConst.NO_BENCH
+        if n_value == CompareConst.NONE:
+            return "This is empty data, can not compare."
+        if n_value == CompareConst.SHAPE_UNMATCH:
+            return "Shape of NPU and bench Tensor do not match. Skipped."
+        if n_value == CompareConst.NAN:
+            return "The position of inf or nan in NPU and bench Tensor do not match."
+    else:
+        if not n_value.shape:
+            return "This is type of scalar data, can not compare."
+        if n_value.dtype != b_value.dtype:
+            logger.warning("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
+            return "Dtype of NPU and bench Tensor do not match."
+    return ""
+
+
+class TensorComparisonBasic(abc.ABC):
+    """NPU和bench中npy数据的比较模板"""
+    @abc.abstractmethod
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        raise NotImplementedError
+
+
+class GetCosineSimilarity(TensorComparisonBasic):
+    """计算cosine相似度"""
+    @staticmethod
+    def correct_data(result):
+        if result == CompareConst.NAN:
+            return result
+        if float(result) > CompareConst.COSINE_THRESHOLD:
+            return 1.0
+        return result
+
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        if error_flag:
+            if n_value == CompareConst.READ_NONE:
+                return CompareConst.NONE, ''
+            if n_value == CompareConst.NONE:
+                return CompareConst.UNSUPPORTED, ''
+            if n_value == CompareConst.SHAPE_UNMATCH:
+                return CompareConst.SHAPE_UNMATCH, ''
+            if n_value == CompareConst.NAN:
+                return "N/A", ''
+
+        if not n_value.shape:
+            return CompareConst.UNSUPPORTED, ''
+
+        with np.errstate(divide='ignore', invalid='ignore'):
+            if len(n_value) == 1:
+                return CompareConst.UNSUPPORTED, "This tensor is scalar."
+            num = n_value.dot(b_value)
+            a_norm = np.linalg.norm(n_value)
+            b_norm = np.linalg.norm(b_value)
+
+            if a_norm <= Const.FLOAT_EPSILON and b_norm <= Const.FLOAT_EPSILON:
+                return 1.0, ''
+            if a_norm <= Const.FLOAT_EPSILON:
+                return CompareConst.NAN, 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.'
+            if b_norm <= Const.FLOAT_EPSILON:
+                return CompareConst.NAN, 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.'
+
+            cos = num / (a_norm * b_norm)
+            if np.isnan(cos):
+                return CompareConst.NAN, 'Cannot compare by Cosine Similarity, the dump data has NaN.'
+            result = format_value(cos)
+            result = self.correct_data(result)
+        return 1.0 if float(result) > 0.99999 else result, ''
+
+
+class GetMaxAbsErr(TensorComparisonBasic):
+    """计算最大绝对误差"""
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        if error_flag:
+            if n_value == CompareConst.READ_NONE:
+                return CompareConst.NONE, ""
+            if n_value == CompareConst.NONE:
+                return 0, ""
+            if n_value == CompareConst.SHAPE_UNMATCH:
+                return CompareConst.SHAPE_UNMATCH, ""
+            if n_value == CompareConst.NAN:
+                return "N/A", ""
+
+        temp_res = n_value - b_value
+        max_value = np.max(np.abs(temp_res))
+        return format_value(max_value), ""
+
+
+def get_relative_err(n_value, b_value):
+    """计算相对误差"""
+    with np.errstate(divide='ignore', invalid='ignore'):
+        if b_value.dtype not in CompareConst.FLOAT_TYPE:
+            n_value, b_value = n_value.astype(float), b_value.astype(float)
+        zero_mask = (b_value == 0)
+        b_value[zero_mask] += np.finfo(b_value.dtype).eps
+        n_value[zero_mask] += np.finfo(b_value.dtype).eps
+        relative_err = np.divide((n_value - b_value), b_value)
+    return np.abs(relative_err)
+
+
+class GetMaxRelativeErr(TensorComparisonBasic):
+    """计算最大相对误差"""
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        if error_flag:
+            if n_value == CompareConst.READ_NONE:
+                return CompareConst.NONE, ''
+            if n_value == CompareConst.NONE:
+                return 0, ''
+            if n_value == CompareConst.SHAPE_UNMATCH:
+                return CompareConst.SHAPE_UNMATCH, ''
+            if n_value == CompareConst.NAN:
+                return "N/A", ''
+
+        if relative_err is None:
+            relative_err = get_relative_err(n_value, b_value)
+        max_relative_err = np.max(np.abs(relative_err))
+        if np.isnan(max_relative_err):
+            message = 'Cannot compare by MaxRelativeError, the data contains nan in dump data.'
+            return CompareConst.NAN, message
+        return format_value(max_relative_err), ''
+
+
+class GetThousandErrRatio(TensorComparisonBasic):
+    """计算相对误差小于千分之一的比例"""
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        if error_flag:
+            if n_value == CompareConst.READ_NONE:
+                return CompareConst.NONE, ""
+            if n_value == CompareConst.NONE:
+                return 0, ""
+            if n_value == CompareConst.SHAPE_UNMATCH:
+                return CompareConst.SHAPE_UNMATCH, ""
+            if n_value == CompareConst.NAN:
+                return "N/A", ""
+
+        if not n_value.shape:
+            return CompareConst.NAN, ""
+        if relative_err is None:
+            relative_err = get_relative_err(n_value, b_value)
+        if not np.size(relative_err):
+            return CompareConst.NAN, ""
+        return format_value(np.sum(relative_err < CompareConst.THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
+
+
+class GetFiveThousandErrRatio(TensorComparisonBasic):
+    """计算相对误差小于千分之五的比例"""
+    def apply(self, n_value, b_value, error_flag, relative_err=None):
+        if error_flag:
+            if n_value == CompareConst.READ_NONE:
+                return CompareConst.NONE, ""
+            if n_value == CompareConst.NONE:
+                return 0, ""
+            if n_value == CompareConst.SHAPE_UNMATCH:
+                return CompareConst.SHAPE_UNMATCH, ""
+            if n_value == CompareConst.NAN:
+                return "N/A", ""
+
+        if not n_value.shape:
+            return CompareConst.NAN, ""
+        if relative_err is None:
+            relative_err = get_relative_err(n_value, b_value)
+        if not np.size(relative_err):
+            return CompareConst.NAN, ""
+        return format_value(np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
+
+
+class CompareOps:
+    compare_ops = {
+        "cosine_similarity": GetCosineSimilarity(),
+        "max_abs_error": GetMaxAbsErr(),
+        "max_relative_error": GetMaxRelativeErr(),
+        "one_thousand_err_ratio": GetThousandErrRatio(),
+        "five_thousand_err_ratio": GetFiveThousandErrRatio()
+    }
+
+
+def compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=None):
+    result_list = []
+    for op in CompareOps.compare_ops.values():
+        result, msg = op.apply(n_value, b_value, error_flag, relative_err=relative_err)
+        err_msg += msg
+        result_list.append(result)
+    return result_list, err_msg

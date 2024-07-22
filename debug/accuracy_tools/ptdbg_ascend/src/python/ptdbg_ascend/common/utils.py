@@ -126,7 +126,7 @@ class Const:
     # version message tips
     VERSION_MESSAGE = """The current version of ptdbg will be deprecated on September 30, 2024.
     The att/debug/accuracy_tools/ptdbg_ascend directory will be deleted on September 30, 2024.
-    Please use the ptdbg in the att/debug/accuracy_tools/atat directory."""
+    Please use the ptdbg in the att/debug/accuracy_tools/msprobe directory."""
 
 class CompareConst:
     """

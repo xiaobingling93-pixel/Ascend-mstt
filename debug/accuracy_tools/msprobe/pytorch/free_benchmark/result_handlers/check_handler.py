@@ -1,0 +1,39 @@
+from typing import Any
+
+from msprobe.pytorch.free_benchmark import logger
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType
+from msprobe.pytorch.free_benchmark.common.params import DataParams, make_unequal_row
+from msprobe.pytorch.free_benchmark.common.utils import Tools
+from msprobe.pytorch.free_benchmark.compare.single_benchmark import SingleCompare
+from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
+
+
+class CheckerHandler(FuzzHandler):
+    def other_compare(self, data_params: DataParams) -> bool:
+        is_consistent = SingleCompare().compare_seq(
+                    data_params.original_result, data_params.perturbed_result
+                )
+        if not is_consistent:
+            self.unequal_rows.append(
+                make_unequal_row(data_params, self.params)
+            )
+
+    def get_threshold(self, dtype):
+        return self._get_default_threshold(dtype)
+
+    def handle(self, data_params: DataParams) -> Any:
+        if isinstance(data_params.perturbed_result, bool) or not Tools.is_float_tensor(
+            data_params.perturbed_result
+        ):
+            return data_params.original_result
+        try:
+            if self.params.fuzz_device == DeviceType.NPU:
+                self.cmp_output_npu(data_params)
+            else:
+                self.other_compare(data_params)
+        except Exception as e:
+            logger.warning_on_rank_0(
+                f"[msprobe] Free Benchmark: For {self.params.api_name}, "
+                f"when campare the result exception raise {e}"
+            )
+        return data_params.original_result
