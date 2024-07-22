@@ -1,9 +1,9 @@
 import os
 
 import numpy as np
-
+import mindspore
 from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import print_warn_log, create_directory, change_mode
+from grad_tool.common.utils import print_warn_log, create_directory, change_mode, check_file_or_directory_path
 
 level_adp = {
         "L0": {
@@ -23,10 +23,14 @@ level_adp = {
 def save_grad_direction(param_name, grad, save_path):
     if not os.path.exists(save_path):
         create_directory(save_path)
+    save_filepath = os.path.join(save_path, f"{param_name}.npy")
+    check_file_or_directory_path(save_filepath)
+
+    if grad.dtype == mindspore.bfloat16:
+        grad = grad.to(mindspore.float32)
     grad_direction_tensor = grad > 0
     grad_direction_ndarray = grad_direction_tensor.numpy()
 
-    save_filepath = os.path.join(save_path, f"{param_name}.npy")
     np.save(save_filepath, grad_direction_ndarray)
     change_mode(save_filepath, 0o640)
 
