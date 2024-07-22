@@ -116,6 +116,9 @@ def parse_task_config(task, json_config):
     elif task == Const.FREE_BENCHMARK:
         config_dic = json_config.get(Const.FREE_BENCHMARK) if json_config.get(Const.FREE_BENCHMARK) else default_dic
         return FreeBenchmarkCheckConfig(config_dic)
+    elif task == Const.RUN_UT:
+        config_dic = json_config.get(Const.RUN_UT) if json_config.get(Const.RUN_UT) else default_dic
+        return RunUTConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
 
