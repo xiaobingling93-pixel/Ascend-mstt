@@ -4,7 +4,6 @@ import os
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
-from msprobe.pytorch.common.utils import check_filter_list_config, check_error_data_path_config
 from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 
 
