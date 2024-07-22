@@ -191,9 +191,9 @@ def run_ut(config):
             continue
         [_, api_name, _] = api_full_name.split(Const.SEP)
         try:
-            if msCheckerConfig.black_list and api_name in config.black_list:
+            if config.black_list and api_name in config.black_list:
                 continue
-            if msCheckerConfig.white_list and api_name not in config.white_list:
+            if config.white_list and api_name not in config.white_list:
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
