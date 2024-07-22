@@ -24,6 +24,7 @@ class Config:
     def validate(key, value):
         validators = {
             'white_list': list,
+            'black_list': list,
             'error_data_path': str,
             'precision': int
         }
@@ -42,6 +43,15 @@ class Config:
             if invalid_api:
                 raise ValueError(
                     f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the white_list")
+        if key == 'black_list':
+            if not isinstance(value, list):
+                raise ValueError("black_list must be a list type")
+            if not all(isinstance(i, str) for i in value):
+                raise ValueError("All elements in black_list must be of str type")
+            invalid_api = [i for i in value if i not in WrapApi]
+            if invalid_api:
+                raise ValueError(
+                    f"{', '.join(invalid_api)} is not in support_wrap_ops.yaml, please check the black_list")
         return value
 
 

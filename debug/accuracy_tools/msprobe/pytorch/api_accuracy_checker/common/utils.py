@@ -166,6 +166,7 @@ def initialize_save_path(save_path, dir_name):
         os.mkdir(data_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
     data_path_checker = FileChecker(data_path, FileCheckConst.DIR)
     data_path_checker.common_check()
+    return data_path
 
 
 def write_pt(file_path, tensor):

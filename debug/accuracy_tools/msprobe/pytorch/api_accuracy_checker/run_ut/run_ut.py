@@ -32,6 +32,7 @@ from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
     change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -39,7 +40,8 @@ UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path'])
+                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list', 
+                                         'black_list', 'error_data_path'])
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 not_raise_dtype_set = {'type_as'}
@@ -176,8 +178,7 @@ def run_ut(config):
     logger.info(f"UT task result will be saved in {config.result_csv_path}")
     logger.info(f"UT task details will be saved in {config.details_csv_path}")
     if config.save_error_data:
-        error_data_path = os.path.abspath(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
-        logger.info(f"UT task error_datas will be saved in {error_data_path}")
+        logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
     with FileOpen(config.result_csv_path, 'r') as file:
         csv_reader = csv.reader(file)
@@ -188,17 +189,17 @@ def run_ut(config):
             continue
         if is_unsupported_api(api_full_name):  # TODO run_ut does not support to the npu fusion api and distributed api
             continue
+        [_, api_name, _] = api_full_name.split(Const.SEP)
         try:
-            if msCheckerConfig.white_list:
-                [_, api_name, _] = api_full_name.split(Const.SEP)
-                if api_name not in set(msCheckerConfig.white_list):
-                    continue
+            if msCheckerConfig.black_list and api_name in config.black_list:
+                continue
+            if msCheckerConfig.white_list and api_name not in config.white_list:
+                continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
             if config.save_error_data:
-                do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success)
+                do_save_error_data(api_full_name, data_info, config.error_data_path, is_fwd_success, is_bwd_success)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split(Const.SEP)
             if "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -227,16 +228,16 @@ def is_unsupported_api(api_name):
     return flag
 
 
-def do_save_error_data(api_full_name, data_info, is_fwd_success, is_bwd_success):
+def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
-        processor = UtDataProcessor(os.path.join(msCheckerConfig.error_data_path, UT_ERROR_DATA_DIR))
+        processor = UtDataProcessor(error_data_path)
         for element in data_info.in_fwd_data_list:
             processor.save_tensors_in_element(api_full_name + '.forward.input', element)
-        processor.save_tensors_in_element(api_full_name + '.forward.output.bench', data_info.bench_out)
-        processor.save_tensors_in_element(api_full_name + '.forward.output.device', data_info.device_out)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.bench', data_info.bench_output)
+        processor.save_tensors_in_element(api_full_name + '.forward.output.device', data_info.device_output)
         processor.save_tensors_in_element(api_full_name + '.backward.input', data_info.grad_in)
-        processor.save_tensors_in_element(api_full_name + '.backward.output.bench', data_info.bench_grad_out)
-        processor.save_tensors_in_element(api_full_name + '.backward.output.device', data_info.device_grad_out)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.bench', data_info.bench_grad)
+        processor.save_tensors_in_element(api_full_name + '.backward.output.device', data_info.device_grad)
 
 
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
@@ -314,14 +315,14 @@ def run_backward(args, grad, grad_index, out):
     return grad_out
 
 
-def initialize_save_error_data():
-    error_data_path = msCheckerConfig.error_data_path
+def initialize_save_error_data(error_data_path):
     check_path_before_create(error_data_path)
     create_directory(error_data_path)
-    error_data_path_checker = FileChecker(msCheckerConfig.error_data_path, FileCheckConst.DIR,
+    error_data_path_checker = FileChecker(error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
     error_data_path = error_data_path_checker.common_check()
-    initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
+    error_data_path =initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
+    return error_data_path
 
 
 def get_validated_result_csv_path(result_csv_path, mode):
@@ -384,6 +385,8 @@ def _run_ut_parser(parser):
                         required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
                         help="<optional> Whether to filter the api in the api_info_file.", required=False)
+    parser.add_argument("-config", "--config_path", dest="config_path", default="", type=str,
+                        help="<optional> The path of config.json", required=False)
 
 
 def preprocess_forward_content(forward_content):
@@ -464,14 +467,22 @@ def run_ut_command(args):
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
+    white_list = msCheckerConfig.white_list
+    black_list = msCheckerConfig.black_list
+    error_data_path = msCheckerConfig.error_data_path
+    if args.config_path:
+        _, task_config = parse_json_config(args.config_path, Const.RUN_UT)
+        white_list = task_config.white_list
+        black_list = task_config.black_list
+        error_data_path = task_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
-        initialize_save_error_data()
+        error_data_path = initialize_save_error_data(error_data_path)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path)
+                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path)
     run_ut(run_ut_config)
 
 
