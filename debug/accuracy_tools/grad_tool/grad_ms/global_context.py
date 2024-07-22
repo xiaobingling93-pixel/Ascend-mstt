@@ -14,6 +14,8 @@ class GlobalContext:
     _setting = {
         GradConst.LEVEL: GradConst.LEVEL0,
         GradConst.PARAM_LIST: None,
+        GradConst.STEP: None,
+        GradConst.RANK: None,
         GradConst.CURRENT_STEP: 0,
         GradConst.BOUNDS: [-1., 0., 1.],
         GradConst.OUTPUT_PATH: "./grad_stat"
@@ -33,6 +35,8 @@ class GlobalContext:
             print_warn_log("Invalid level set in config yaml file, use L0 instead.")
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
         self._set_input_list(config_dict, GradConst.BOUNDS, float)
+        self._set_input_list(config_dict, GradConst.STEP, int)
+        self._set_input_list(config_dict, GradConst.RANK, int)
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
         if output_path:
             try:
@@ -55,6 +59,14 @@ class GlobalContext:
     def update_step(self):
         self._setting[GradConst.CURRENT_STEP] += 1
 
+    def step_need_dump(self, step):
+        dump_step_list = self.get_context(GradConst.STEP)
+        return (not dump_step_list) or (step in dump_step_list)
+
+    def rank_need_dump(self, rank):
+        dump_rank_list = self.get_context(GradConst.RANK)
+        return (not dump_rank_list) or (rank in dump_rank_list)
+
     def _set_input_list(self, config_dict: Dict, name: str, dtype: Union[int, str, float]):
         value = config_dict.get(name)
         if dtype == int:
@@ -71,6 +83,5 @@ class GlobalContext:
             self._setting[name] = value
         else:
             print_warn_log(f"{name} is None or not a list with valid items, use default value.")
-
 
 grad_context = GlobalContext()
