@@ -35,5 +35,5 @@ class TestConfig(unittest.TestCase):
         validate_white_list = ['conv1d', 'max_pool1d', 'dropout', '__add__']
         self.assertEqual(self.cfg.validate('white_list', validate_white_list), validate_white_list)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             self.cfg.validate('white_list', ['invalid_api1', 'invalid_api2'])

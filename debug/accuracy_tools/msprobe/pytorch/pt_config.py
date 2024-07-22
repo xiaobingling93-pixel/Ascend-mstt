@@ -73,12 +73,6 @@ class RunUTConfig(BaseConfig):
         self.black_list = json_config.get("black_list", Const.DEFAULT_LIST)
         self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
         self.check_run_ut_config()
-    
-    def check_run_ut_config(self):
-        # As instance methods are called, you need to pass instance attributes
-        RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
-        RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
-        RunUTConfig.check_error_data_path_config(self.error_data_path)
 
     @classmethod
     def check_filter_list_config(cls, key, filter_list):
@@ -94,6 +88,11 @@ class RunUTConfig(BaseConfig):
     def check_error_data_path_config(cls, error_data_path):
         if not os.path.exists(error_data_path):
             raise Exception("error_data_path: %s does not exist" % error_data_path)
+        
+    def check_run_ut_config(self):
+        RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
+        RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
+        RunUTConfig.check_error_data_path_config(self.error_data_path)
 
 
 def parse_task_config(task, json_config):
