@@ -30,19 +30,20 @@ EXCLUDE_PKGS = [
     "api_accuracy_checker*",
     "grad_tool*",
     "kj600*",
-    "ptdbg_ascend*"
+    "ptdbg_ascend*",
+    "msprobe.test*",
 ]
 
 setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
     description="Pytorch Ascend Probe Utils",
-    long_description="MindStudio-Probe is a set of tools for diagnosing and improve model accuracy on Ascend NPU, "
-                     "including API acc checker, ptdbg, grad tool.",
+    long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU, "
+                     "including API acc checker, ptdbg, grad tool etc.",
     url="https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
     author="Ascend Team",
     author_email="pmail_mindstudio@huawei.com",
-    packages=setuptools.find_namespace_packages(exclude=EXCLUDE_PKGS, include=["atat", "atat*"]),
+    packages=setuptools.find_namespace_packages(exclude=EXCLUDE_PKGS, include=["msprobe", "msprobe*"]),
     include_package_data=True,
     python_requires=">=3.6.2",
     install_requires=INSTALL_REQUIRED,
@@ -63,6 +64,5 @@ setuptools.setup(
     ext_modules=[],
     zip_safe=False,
     entry_points={
-        'console_scripts': ['atat=atat.atat:main'],
-    }
-)
+        'console_scripts': ['msprobe=msprobe.msprobe:main'],
+    },)

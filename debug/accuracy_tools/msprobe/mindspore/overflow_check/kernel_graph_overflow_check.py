@@ -1,0 +1,45 @@
+import os
+import json
+from msprobe.core.common.utils import make_dump_path_if_not_exists
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.core.common.log import logger
+from msprobe.core.common.file_check import FileOpen
+
+
+class KernelGraphOverflowCheck:
+    def __init__(self, config: DebuggerConfig):
+        self.dump_json = dict()
+        self.dump_json["common_dump_settings"] = dict()
+        self.dump_json["common_dump_settings"]["dump_mode"] = 0
+        self.dump_json["common_dump_settings"]["path"] = ""
+        self.dump_json["common_dump_settings"]["net_name"] = "Net"
+        self.dump_json["common_dump_settings"]["iteration"] = "all"
+        self.dump_json["common_dump_settings"]["saved_data"] = "full"
+        self.dump_json["common_dump_settings"]["input_output"] = 0
+        self.dump_json["common_dump_settings"]["kernels"] = []
+        self.dump_json["common_dump_settings"]["support_device"] = [0,1,2,3,4,5,6,7]
+        self.dump_json["common_dump_settings"]["op_debug_mode"] = 3
+        self.dump_json["common_dump_settings"]["file_format"] = "npy"
+
+        self.dump_json["common_dump_settings"]["path"] = config.dump_path
+        if len(config.step) > 0:
+            logger.warning("Step would change to all in this task.")
+        if len(config.rank) > 0:
+            self.dump_json["common_dump_settings"]["support_device"] = config.rank
+        if config.check_mode == "aicore":
+            self.dump_json["common_dump_settings"]["op_debug_mode"] = 1
+        elif config.check_mode == "atomic":
+            self.dump_json["common_dump_settings"]["op_debug_mode"] = 2
+
+    def handle(self):
+        if os.getenv("GRAPH_OP_RUN") == "1":
+            raise Exception("Must run in graph mode, not kbk mode")
+        json_path = self.dump_json["common_dump_settings"]["path"]
+        make_dump_path_if_not_exists(json_path)
+        json_path = os.path.join(json_path, "kernel_graph_overflow_check.json")
+        with FileOpen(json_path, 'w') as f:
+            json.dump(self.dump_json, f)
+        logger.info(json_path + " has been created.")
+        os.environ["MINDSPORE_DUMP_CONFIG"] = json_path
+        if "MS_ACL_DUMP_CFG_PATH" in os.environ:
+            del os.environ["MS_ACL_DUMP_CFG_PATH"]

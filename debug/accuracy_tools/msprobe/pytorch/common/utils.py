@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
+import os
+import random
+import stat
+import torch
+import numpy as np
+from functools import wraps
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+else:
+    is_gpu = False
+
+
+torch_without_guard_version_list = ['2.1', '2.2']
+for version in torch_without_guard_version_list:
+    if torch.__version__.startswith(version):
+        torch_without_guard_version = True
+        break
+    else:
+        torch_without_guard_version = False
+
+if not is_gpu and not torch_without_guard_version:
+    from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
+
+npu_distributed_api = ['isend', 'irecv']
+
+
+def parameter_adapter(func):
+
+    def handle_masked_select(input_tensor, indices):
+        masked_select_func = getattr(torch._C._VariableFunctionsClass, "masked_select")
+        if input_tensor.dtype == torch.bfloat16:
+            # masked_select在NPU上输入数据dtype类型为bfloat16会报错，提示不支持此类型
+            return masked_select_func(input_tensor.to(torch.float32), indices).to(torch.bfloat16)
+        else:
+            return masked_select_func(input_tensor, indices)
+
+    @wraps(func)
+    def inner(self, *args, **kwargs):
+        if self.op_name_ == "__getitem__" and len(args) > 1 and isinstance(args[1], torch.Tensor):
+            input_tensor = args[0]
+            indices = args[1]
+            if indices.dtype == torch.uint8:
+                indices = indices.bool()
+            if indices.dtype == torch.bool:
+                if indices.shape == input_tensor.shape:
+                    return handle_masked_select(input_tensor, indices)
+                else:
+                    indices = getattr(torch._C._VariableFunctionsClass, "nonzero")(indices, as_tuple=True)
+                    return getattr(torch._C._TensorBase, "__getitem__")(input_tensor, indices)
+            elif indices.dtype != torch.bool:
+                if not indices.shape or len(indices.shape) == 1:
+                    return func(self, input_tensor, indices.tolist())
+                elif len(indices.shape) == 2:
+                    result = [func(self, input_tensor, index) for index in indices.tolist()]
+                    return getattr(torch._C._VariableFunctionsClass, "stack")(result, 0)
+                else:
+                    res = [input_tensor[tensor_index] for tensor_index in indices]
+                    return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
+        if self.op_name_ == "__eq__" and args[1] is None:
+            return False
+        return func(self, *args, **kwargs)
+    return inner
+
+
+def torch_device_guard(func):
+    if is_gpu or torch_without_guard_version:
+        return func
+    # Parse args/kwargs matched torch.device objects
+
+    @torch_npu_device_guard
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def get_rank_if_initialized():
+    """
+        return rank id if it is initialized or raise Exception: DistributedNotInitializedError
+    """
+    if torch.distributed.is_initialized():
+        return torch.distributed.get_rank()
+    else:
+        raise DistributedNotInitializedError("torch distributed environment is not initialized")
+
+
+def seed_all(seed=1234, mode=False):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(mode)
+    if is_gpu:
+        torch.cuda.manual_seed_all(seed)
+        torch.cuda.manual_seed(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.enable = False
+        torch.backends.cudnn.benchmark = False
+    else:
+        torch_npu.npu.manual_seed_all(seed)
+        torch_npu.npu.manual_seed(seed)
+
+
+class Const:
+    """
+    Class for const
+    """
+    SEP = "."
+    MODEL_TYPE = ['.onnx', '.pb', '.om']
+    DIM_PATTERN = r"^(-?[0-9]+)(,-?[0-9]+)*"
+    SEMICOLON = ";"
+    COLON = ":"
+    EQUAL = "="
+    COMMA = ","
+    DOT = "."
+    DUMP_RATIO_MAX = 100
+    SUMMERY_DATA_NUMS = 256
+    FLOAT_EPSILON = np.finfo(float).eps
+    SUPPORT_DUMP_MODE = ['api', 'acl']
+    ON = 'ON'
+    OFF = 'OFF'
+    KWARGS = 'kwargs'
+    INPUT = 'input'
+    OUTPUT = 'output'
+    BACKWARD = 'backward'
+    FORWARD = 'forward'
+    PRE_FORWARD = "pre_forward"
+    INPUT_ARGS = 'input_args'
+    INPUT_KWARGS = 'input_kwargs'
+    GRAD_INPUT = 'grad_input'
+    GRAD_OUTPUT = 'grad_output'
+    START = "start"
+    STOP = "stop"
+    MAX = 'Max'
+    MIN = 'Min'
+
+    # dump mode
+    ALL = "all"
+    LIST = "list"
+    RANGE = "range"
+    STACK = "stack"
+    ACL = "acl"
+    API_LIST = "api_list"
+    API_STACK = "api_stack"
+    DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+    AUTO = "auto"
+    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
+    SUMMARY = "summary"
+    MD5 = "md5"
+    SUMMARY_MODE = [ALL, SUMMARY, MD5]
+
+    WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
+    OVERWRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR
+
+    PKL_SUFFIX = ".pkl"
+    NUMPY_SUFFIX = ".npy"
+    ONE_GB = 1 * 1024 * 1024 * 1024
+    TEN_GB = 10 * 1024 * 1024 * 1024
+    FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    FILE_NAME_LENGTH = 255
+    DIRECTORY_LENGTH = 4096
+    DISTRIBUTED_PREFIX_LENGTH = 60
+    SUMMARY_COLUMN_NUM = 6
+    STACK_COLUMN_NUM = 2
+    # env dump path
+    ASCEND_WORK_PATH = "ASCEND_WORK_PATH"
+    DUMP_DIR = "dump_data"
+    DATA = "data"
+
+    ENV_ENABLE = "1"
+    ENV_DISABLE = "0"
+
+    MAX_SEED_VALUE = 2**32 - 1
+
+    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
+                    "_reduce_scatter_base", "_all_gather_base", "all_to_all_single"]
+
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
+    LEVEL_LIST = ["L0", "L1", "L2", "mix"]
+    STATISTICS = "statistics"
+    TENSOR = "tensor"
+    OVERFLOW_CHECK = "overflow_check"
+    FREE_BENCHMARK = "free_benchmark"
+
+    ATTR_NAME_PREFIX = "wrap_"
+
+    FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
+    BOOL_TYPE = [bool, np.uint8]
+    INT_TYPE = [np.int32, np.int64]
+    NPU = 'NPU'
+    DISTRIBUTED = 'Distributed'
+
+    RAISE_PRECISION = {
+        torch.float16: torch.float32,
+        torch.bfloat16: torch.float32,
+        torch.float32: torch.float64
+    }
+    CONVERT = {
+        "int32_to_int64": ["torch.int32", "torch.int64"],
+    }
+
+    CONVERT_API = {
+        "int32_to_int64": ["cross_entropy"]
+    }

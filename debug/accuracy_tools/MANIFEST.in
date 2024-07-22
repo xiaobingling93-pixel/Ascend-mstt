@@ -1,3 +1,5 @@
 include README.md
 include LICENSE
-recursive-include atat *
+recursive-include msprobe *
+recursive-exclude msprobe/test *
+
