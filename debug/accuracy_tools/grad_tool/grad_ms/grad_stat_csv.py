@@ -67,7 +67,7 @@ class CsvDistribution(CsvItem):
     def generate_csv_header(csv_input):
         bounds = csv_input.bounds
         intervals = []
-        for i in range(len(bounds)):
+        for i, _ in enumerate(bounds):
             if i == 0:
                 intervals.append(f"(-inf, {bounds[i]}]")
             else:
