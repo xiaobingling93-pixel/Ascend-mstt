@@ -8,13 +8,13 @@ class CodedException(Exception):
         return self.error_info
 
 
-class MsaccException(CodedException):
+class MsprobeException(CodedException):
     INVALID_PARAM_ERROR = 0
     OVERFLOW_NUMS_ERROR = 1
 
     err_strs = {
-        INVALID_PARAM_ERROR: "[msacc] 无效参数： ",
-        OVERFLOW_NUMS_ERROR: "[msacc] 超过预设溢出次数 当前溢出次数:"
+        INVALID_PARAM_ERROR: "[msprobe] 无效参数： ",
+        OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数:"
     }
 
 
@@ -27,12 +27,12 @@ class FileCheckException(CodedException):
     FILE_TOO_LARGE_ERROR = 5
 
     err_strs = {
-        SOFT_LINK_ERROR: "[msacc] 检测到软链接： ",
-        FILE_PERMISSION_ERROR: "[msacc] 文件权限错误： ",
-        INVALID_FILE_ERROR: "[msacc] 无效文件： ",
-        ILLEGAL_PATH_ERROR: "[msacc] 非法文件路径： ",
-        ILLEGAL_PARAM_ERROR: "[msacc] 非法打开方式： ",
-        FILE_TOO_LARGE_ERROR: "[msacc] 文件过大： "
+        SOFT_LINK_ERROR: "[msprobe] 检测到软链接： ",
+        FILE_PERMISSION_ERROR: "[msprobe] 文件权限错误： ",
+        INVALID_FILE_ERROR: "[msprobe] 无效文件： ",
+        ILLEGAL_PATH_ERROR: "[msprobe] 非法文件路径： ",
+        ILLEGAL_PARAM_ERROR: "[msprobe] 非法打开方式： ",
+        FILE_TOO_LARGE_ERROR: "[msprobe] 文件过大： "
     }
 
 
@@ -40,8 +40,8 @@ class ParseJsonException(CodedException):
     UnexpectedNameStruct = 0
     InvalidDumpJson = 1
     err_strs = {
-        UnexpectedNameStruct: "[msacc] Unexpected name in json: ",
-        InvalidDumpJson: "[msacc] json格式不正确: ",
+        UnexpectedNameStruct: "[msprobe] Unexpected name in json: ",
+        InvalidDumpJson: "[msprobe] json格式不正确: ",
     }
 
 
@@ -50,23 +50,23 @@ class ScopeException(CodedException):
     InvalidScope = 1
     ArgConflict = 2
     err_strs = {
-        InvalidApiStr: "[msacc] Invalid api_list: ",
-        InvalidScope: "[msacc] Invalid scope: ",
-        ArgConflict: "[msacc] Scope and api_list conflict: ",
+        InvalidApiStr: "[msprobe] Invalid api_list: ",
+        InvalidScope: "[msprobe] Invalid scope: ",
+        ArgConflict: "[msprobe] Scope and api_list conflict: ",
     }
 
 
 class RepairException(CodedException):
     InvalidRepairType = 0
     err_strs = {
-        InvalidRepairType: "[msacc] Invalid repair_type: "
+        InvalidRepairType: "[msprobe] Invalid repair_type: "
     }
 
 
 class StepException(CodedException):
     InvalidPostProcess = 0
     err_strs = {
-        InvalidPostProcess: "[msacc] 错误的step后处理配置: ",
+        InvalidPostProcess: "[msprobe] 错误的step后处理配置: ",
     }
 
 
@@ -74,8 +74,8 @@ class FreeBenchmarkException(CodedException):
     UnsupportedType = 0
     InvalidGrad = 1
     err_strs = {
-        UnsupportedType: "[msacc] Free benchmark get unsupported type: ",
-        InvalidGrad: "[msacc] Free benchmark gradient invalid: ",
+        UnsupportedType: "[msprobe] Free benchmark get unsupported type: ",
+        InvalidGrad: "[msprobe] Free benchmark gradient invalid: ",
     }
 
 
