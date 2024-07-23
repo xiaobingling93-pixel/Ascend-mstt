@@ -1,7 +1,7 @@
 # coding=utf-8
 import unittest
-from msprobe.pytorch.compare import acc_compare as compare
 import pandas as pd
+from msprobe.pytorch.compare import acc_compare as compare
 
 npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
                         'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
