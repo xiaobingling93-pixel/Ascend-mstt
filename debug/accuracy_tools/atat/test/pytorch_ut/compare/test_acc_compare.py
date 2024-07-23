@@ -18,7 +18,7 @@ bench_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_con
               'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                                ('torch.float32', [16])],
               'output_struct': [('torch.float32', [1, 16, 28, 28])],
-              'summery': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
+              'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
                           [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
                           [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
                           [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
@@ -119,10 +119,10 @@ aten_result = [
      'Need double check api accuracy.', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_input.3', 'Functional_batch_norm_0_forward_input.3',
      'torch.float32', 'torch.float32', [256], [256], 1.763145923614502, -4.398397922515869, -1.0521326325833797, ' ',
-     '176.3145923614502%', '439.8297922515869%', '105.21326325933797%', ' ', 2.763145923614502, -3.398397922515869,
+     '176.3145923614502%', '439.8397922515869%', '105.21326325833797%', ' ', 2.763145923614502, -3.398397922515869,
      -0.052132632583379745, 1.0, 1.0, 1.0, 'Warning', 'Need double check api accuracy.', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_input.4', 'Functional_batch_norm_0_forward_input.4',
-     'torch.float32', 'torch.float32', [256], [256], 2.673110008239746, -3.149275064468384, 0.01613386906693445, ' ',
+     'torch.float32', 'torch.float32', [256], [256], 2.673110008239746, -3.149275064468384, 0.01613386906683445, ' ',
      'N/A', 'N/A', 'N/A', ' ', 2.673110008239746, -3.149275064468384, 0.01613386906683445, 0.0, 0.0, 0.0, 'Warning',
      'Need double check api accuracy.', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.0', 'Functional_batch_norm_0_forward_output',
@@ -132,16 +132,16 @@ aten_result = [
      'Need double check api accuracy.', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.1', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
      ' ', ' ', ' ', ' ', ' ', 0.30550330877304077, -0.24485322833061218, -0.010361209511756897, 'Nan', 'Nan', 'Nan',
-     'Yes', '', None],
+     'Yes', '', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.2', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
      ' ', ' ', ' ', ' ', ' ', 623.9192504882812, 432.96826171875, 520.2276611328125, 'Nan', 'Nan', 'Nan',
-     'Yes', '', None],
+     'Yes', '', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.3', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
      ' ', ' ', ' ', ' ', ' ', 2.4797861576080322, -3.055997371673584, -0.04795549064874649, 'Nan', 'Nan', 'Nan',
-     'Yes', '', None],
+     'Yes', '', 'None'],
     ['Aten__native_batch_norm_legit_functional.default_0_forward_output.4', 'Nan', 'torch.float32', 'Nan', [256], 'Nan',
      ' ', ' ', ' ', ' ', ' ', 61.7945556640625, 42.59713363647461, 52.03831481933594, 'Nan', 'Nan', 'Nan',
-     'Yes', '', None]]
+     'Yes', '', 'None']]
 
 highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
@@ -191,16 +191,16 @@ op_name = "Tensor.add_0.0.forward"
 
 op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.33033010363578796, 'Min': -0.331031858921051,'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward_input.0'},
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward_input.0'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.003992878366261721, 'Min': -0.008102823048830032,'Mean': -0.0002002553956117481,
-     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward_input.1'},
-    {'full_op_name': 'Tensor.add_.0.forward_input.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
+     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.forward_input.1'},
+    {'full_op_name': 'Tensor.add_0.0.forward_input.alpha.0', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': None,
      'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.33033010363578796, 'Min': -0.331031858921051,'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward_output.0'}]
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward_output.0'}]
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -252,7 +252,7 @@ class TestUtilsMethods(unittest.TestCase):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        compare.find_compare_result_error_rows(result_df, highlight_dict, False)
+        compare.find_compare_result_error_rows(result_df, highlight_dict, False, False)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
 
     def test_rename_api(self):
