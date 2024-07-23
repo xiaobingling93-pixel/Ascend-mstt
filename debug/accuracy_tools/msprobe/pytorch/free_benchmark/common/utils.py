@@ -1,0 +1,98 @@
+import torch
+from msprobe.pytorch.free_benchmark.common.enums import DeviceType
+
+
+class Tools:
+
+    @staticmethod
+    def is_float_tensor(tensor) -> bool:
+        if isinstance(tensor, torch.Tensor) and torch.is_floating_point(tensor):
+            return True
+        if isinstance(tensor, (list, tuple)):
+            for value in tensor:
+                if isinstance(value, torch.Tensor) and torch.is_floating_point(value):
+                    return True
+        return False
+
+    @staticmethod
+    def get_dist_rank():
+        try:
+            return torch.distributed.get_rank()
+        except RuntimeError:
+            return 0
+
+    @staticmethod
+    def get_first_tensor_dtype(tensor_seq):
+        if isinstance(tensor_seq, torch.Tensor):
+            return tensor_seq.dtype
+        if isinstance(tensor_seq, (list, tuple)):
+            for object_ in tensor_seq:
+                if isinstance(object_, torch.Tensor):
+                    return object_.dtype
+        raise RuntimeError("The sequence does not contain tensors.")
+
+    @staticmethod
+    def get_pure_api_name(api_name: str):
+        return api_name.rsplit(".", 2)[0]
+
+    @staticmethod
+    def convert_device_and_dtype(
+        tensor_seq, device: str = DeviceType.CPU, change_dtype: bool = False
+    ):
+        if isinstance(tensor_seq, torch.Tensor):
+            if change_dtype and tensor_seq.dtype in [torch.float16, torch.bfloat16]:
+                return tensor_seq.detach().to(device).to(torch.float32)
+            return tensor_seq.detach().to(device)
+        if isinstance(tensor_seq, dict):
+            return {
+                key: Tools.convert_device_and_dtype(value, device, change_dtype)
+                for key, value in tensor_seq.items()
+            }
+        if isinstance(tensor_seq, (tuple, list)):
+            return type(tensor_seq)(
+                [
+                    Tools.convert_device_and_dtype(value, device, change_dtype)
+                    for value in tensor_seq
+                ]
+            )
+        return tensor_seq
+
+    @staticmethod
+    def convert_fuzz_output_to_origin(origin, perturbed):
+        if isinstance(origin, torch.Tensor):
+            origin.data = perturbed.to(origin.dtype).to(origin.device)
+            return origin
+        if isinstance(origin, dict):
+            output = dict()
+            for key, value in origin.items():
+                output[key] = Tools.convert_fuzz_output_to_origin(value, perturbed[key])
+            return output
+        if isinstance(origin, (tuple, list)):
+            result = list()
+            for index_, value in enumerate(origin):
+                result.append(
+                    Tools.convert_fuzz_output_to_origin(value, perturbed[index_])
+                )
+            return type(origin)(result)
+        return origin
+    
+class TorchC:
+    sum = torch._C._VariableFunctionsClass.sum
+    isinf = torch._C._VariableFunctionsClass.isinf
+    isfinite = torch._C._VariableFunctionsClass.isfinite
+    isnan = torch._C._VariableFunctionsClass.isnan
+    logical_not = torch._C._VariableFunctionsClass.logical_not
+    subtract = torch._C._VariableFunctionsClass.subtract
+    abs = torch._C._VariableFunctionsClass.abs
+    where = torch._C._VariableFunctionsClass.where
+    div = torch._C._VariableFunctionsClass.div
+    max = torch._C._VariableFunctionsClass.max
+    min = torch._C._VariableFunctionsClass.min
+    gt = torch._C._VariableFunctionsClass.gt
+    ge = torch._C._VariableFunctionsClass.ge
+    lt = torch._C._VariableFunctionsClass.lt
+    mean = torch._C._VariableFunctionsClass.mean
+    full = torch._C._VariableFunctionsClass.full
+    add = torch._C._VariableFunctionsClass.add
+    bitwise_xor = torch._C._VariableFunctionsClass.bitwise_xor
+    clone = torch._C._VariableFunctionsClass.clone

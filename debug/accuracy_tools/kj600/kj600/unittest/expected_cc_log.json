@@ -1,0 +1,20 @@
+{
+    "all_gather": [
+        [
+            "|torch.float32||",
+            "0|1",
+            "/home/jovyan/workspace/kj_dev/kj600/unittest/test_cc_log_only.py[18]   test_all_gather",
+            "/home/jovyan/workspace/kj_dev/kj600/unittest/test_cc_log_only.py[40]   main",
+            "<string>[1]   <module>"
+        ]
+    ],
+    "all_reduce": [
+        [
+            "torch.float32|||",
+            "0|1",
+            "/home/jovyan/workspace/kj_dev/kj600/unittest/test_cc_log_only.py[23]   test_all_reduce",
+            "/home/jovyan/workspace/kj_dev/kj600/unittest/test_cc_log_only.py[41]   main",
+            "<string>[1]   <module>"
+        ]
+    ]
+}

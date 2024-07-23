@@ -18,7 +18,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='ascend_training_accuracy_tools',
+    name='mindstudio_probe',
     version='1.0',
     description='This is a pytorch precision comparison tools',
     long_description='This is a pytorch precision comparison tools, include ptdbg and api accuracy checker',
@@ -36,5 +36,5 @@ setup(
     ext_modules=[],
     zip_safe=False,
     entry_points={
-        'console_scripts' : ['atat=atat.atat:main'],
+        'console_scripts': ['msprobe=msprobe.msprobe:main'],
     },)

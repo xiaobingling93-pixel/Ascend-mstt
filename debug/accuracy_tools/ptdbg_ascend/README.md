@@ -2,7 +2,7 @@
 
 ## 版本过渡提示
 
-当前版本ptdbg维护到2024/09/30，准备于2024/09/30下线，相关目录mstt/debug/accuracy_tools/ptdbg_ascend将于2024/09/30删除。新版本ptdbg已经合到mstt/debug/accuracy_tools/atat目录下。
+当前版本ptdbg维护到2024/09/30，准备于2024/09/30下线，相关目录mstt/debug/accuracy_tools/ptdbg_ascend将于2024/09/30删除。新版本ptdbg已经合到mstt/debug/accuracy_tools/msprobe目录下。
 
 ## 快速安装
 

@@ -1,0 +1,7 @@
+{
+    "targets": {
+        "foo": {}
+    },
+    "cc_distribution": {"enable": true, "cc_pre_hook":true},
+    "ops":["max","min","norm","zeros"]
+}

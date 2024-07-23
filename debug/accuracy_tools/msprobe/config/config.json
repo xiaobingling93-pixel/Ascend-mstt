@@ -1,0 +1,28 @@
+{
+    "task": "statistics",
+    "dump_path": "./dump_path", 
+    "rank": [],  
+    "step": [],  
+    "level": "L1", 
+    "seed": 1234,
+    "is_deterministic": false, 
+    "enable_dataloader": false,
+    "acl_config": "",
+    "tensor": {
+        "scope": [], 
+        "list":[], 
+        "data_mode": ["all"], 
+        "backward_input": [],
+        "file_format": "npy" 
+    },
+    "statistics": {
+        "scope": [], 
+        "list":[], 
+        "data_mode": ["all"],
+        "summary_mode": "statistics"
+    },
+    "overflow_check": {
+        "overflow_nums": 1, 
+        "check_mode":"all" 
+    }
+}

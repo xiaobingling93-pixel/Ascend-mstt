@@ -2,7 +2,7 @@
 
 ## 版本过渡提示
 
-当前版本预检维护到2024/09/30，准备于2024/09/30下线，相关目录mstt/debug/accuracy_tools/api_accuracy_checker将于2024/09/30删除。新版本的预检已经合到mstt/debug/accuracy_tools/atat目录下。
+当前版本预检维护到2024/09/30，准备于2024/09/30下线，相关目录mstt/debug/accuracy_tools/api_accuracy_checker将于2024/09/30删除。新版本的预检已经合到mstt/debug/accuracy_tools/msprobe目录下。
 
 Ascend模型精度预检工具能在昇腾NPU上扫描用户训练模型中所有API，输出精度情况的诊断和分析。工具通过dump模型中所有的API前反向信息；构造相应的API单元测试，将NPU输出与标杆（CPU高精度）比对，从而计算对应的精度指标，该过程称为run_ut；将NPU环境下dump的预检数据拷贝至GPU环境，同样执行run_ut；最后通过新精度标准比对法将NPU和GPU的预检结果进行比对，从而找出NPU中存在精度问题的API。
 
