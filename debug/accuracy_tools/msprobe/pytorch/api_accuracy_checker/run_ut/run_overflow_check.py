@@ -60,7 +60,7 @@ def run_overflow_check(forward_file):
         try:
             run_torch_api(api_full_name, api_info_dict, real_data_path)
         except Exception as err:
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name, _ = api_full_name.split(Const.SEP)
             if "not implemented for 'Half'" in str(err):
                 logger.warning(f"API {api_name} not support half tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'fp16_to_fp32' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
@@ -73,7 +73,7 @@ def run_overflow_check(forward_file):
 
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name, _ = api_full_name.split(Const.SEP)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path=real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
