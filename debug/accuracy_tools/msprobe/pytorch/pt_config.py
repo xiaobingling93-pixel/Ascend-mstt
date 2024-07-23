@@ -7,9 +7,6 @@ from msprobe.core.common.const import Const
 from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 
 
-WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
-
-
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
@@ -67,6 +64,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
 
 
 class RunUTConfig(BaseConfig):
+    WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
     def __init__(self, json_config):
         super().__init__(json_config)
         self.white_list = json_config.get("white_list", Const.DEFAULT_LIST)
