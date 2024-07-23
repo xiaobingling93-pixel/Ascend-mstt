@@ -1,16 +1,35 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+
 import zlib
 import mindspore as ms
+from mindspore import ops
 import numpy as np
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, TensorStatInfo
-from msprobe.core.common.log import logger
 from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
-from msprobe.mindspore.dump.hook_cell.wrap_functional import ops_func, mint_ops_func
+from msprobe.mindspore.dump.hook_cell.wrap_functional import load_ops_functions
+from msprobe.mindspore.common.utils import convert_bf16_to_fp32
+from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
     mindspore_special_type = tuple([ms.Tensor])
+    ops_func, mint_ops_func, _ = load_ops_functions()
     
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -20,8 +39,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
 
     @staticmethod
     def get_md5_for_tensor(x):
-        if x.dtype == ms.bfloat16:
-            x = x.to(ms.float32)
+        x = convert_bf16_to_fp32(x)
         tensor_bytes = x.asnumpy().tobytes()
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
@@ -29,15 +47,18 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def analyze_dtype_in_kwargs(element):
         return {"type": "mindspore.dtype", "value": str(element)}
-
-    @staticmethod
-    def get_stat_info(data):
+    
+    @classmethod
+    def get_special_types(cls):
+        return super().get_special_types() + cls.mindspore_special_type
+    
+    def get_stat_info(self, data):
         tensor_stat = TensorStatInfo()
         if data.numel() == 0:
             return tensor_stat
         elif data.dtype == ms.bool_:
-            tensor_stat.max = mint_ops_func["max"](data).item()
-            tensor_stat.min = mint_ops_func["min"](data).item()
+            tensor_stat.max = self.mint_ops_func["max"](data).item()
+            tensor_stat.min = self.mint_ops_func["min"](data).item()
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
@@ -47,30 +68,15 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.mean = np.mean(data_abs)
             tensor_stat.norm = np.linalg.norm(data_abs)
         else:
-            tensor_stat.max = mint_ops_func["max"](data).item()
-            tensor_stat.min = mint_ops_func["min"](data).item()
-            tensor_stat.mean = mint_ops_func["mean"](data).item()
-            tensor_stat.norm = ops_func["norm"](data).item()
+            if data.dtype == ms.bfloat16 or not ops.is_floating_point(data):
+                data = data.to(ms.float32)
+            api_register.norm_inner_op_set_ori_func()
+            tensor_stat.max = self.mint_ops_func["max"](data).item()
+            tensor_stat.min = self.mint_ops_func["min"](data).item()
+            tensor_stat.mean = self.mint_ops_func["mean"](data).item()
+            tensor_stat.norm = self.ops_func["norm"](data).item()
+            api_register.norm_inner_op_set_hook_func()
         return tensor_stat
-    
-    @classmethod
-    def get_special_types(cls):
-        return super().get_special_types() + cls.mindspore_special_type
-
-    def _analyze_tensor(self, tensor, suffix):
-        tensor_stat = self.get_stat_info(tensor)
-        tensor_json = {}
-        tensor_json.update({'type': 'mindspore.Tensor'})
-        tensor_json.update({'dtype': str(tensor.dtype)})
-        tensor_json.update({"shape": tensor.shape})
-        tensor_json.update({"Max": tensor_stat.max})
-        tensor_json.update({"Min": tensor_stat.min})
-        tensor_json.update({"Mean": tensor_stat.mean})
-        tensor_json.update({"Norm": tensor_stat.norm})
-        if self.config.summary_mode == Const.MD5:
-            tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({Const.MD5: tensor_md5})
-        return tensor_json
 
     def analyze_single_element(self, element, suffix_stack):
         if suffix_stack and suffix_stack[-1] in self.mindspore_object_key:
@@ -89,6 +95,22 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
 
+    def _analyze_tensor(self, tensor, suffix):
+        tensor_stat = self.get_stat_info(tensor)
+        tensor_json = {
+            'type': 'mindspore.Tensor',
+            'dtype': str(tensor.dtype),
+            'shape': tensor.shape,
+            'Max': tensor_stat.max,
+            'Min': tensor_stat.min,
+            'Mean': tensor_stat.mean,
+            'Norm': tensor_stat.norm
+        }
+        if self.config.summary_mode == Const.MD5:
+            tensor_md5 = self.get_md5_for_tensor(tensor)
+            tensor_json.update({Const.MD5: tensor_md5})
+        return tensor_json
+
 
 class StatisticsDataProcessor(MindsporeDataProcessor):
     pass
@@ -100,8 +122,7 @@ class TensorDataProcessor(MindsporeDataProcessor):
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         if not path_len_exceeds_limit(file_path):
-            if tensor.dtype == ms.bfloat16:
-                tensor = tensor.to(ms.float32)
+            tensor = convert_bf16_to_fp32(tensor)
             saved_tensor = tensor.asnumpy()
             np.save(file_path, saved_tensor)
             change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)

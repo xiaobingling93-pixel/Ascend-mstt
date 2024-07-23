@@ -4,7 +4,6 @@ from msprobe.mindspore.service import Service
 from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.mindspore.service import Service
 
 
 class PrecisionDebugger:
@@ -28,12 +27,12 @@ class PrecisionDebugger:
         self.service = Service(self.config)
 
     @classmethod
-    def start(cls, target=None):
+    def start(cls):
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
         if ms.get_context("mode") == 1 and instance.config.level_ori == "L1":
-            instance.service.start(target)
+            instance.service.start()
         else:
             handler = TaskHandlerFactory.create(instance.config)
             handler.handle()

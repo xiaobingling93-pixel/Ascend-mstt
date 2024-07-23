@@ -1,4 +1,4 @@
-# Copyright 2023 Huawei Technologies Co., Ltd
+# Copyright 2024 Huawei Technologies Co., Ltd
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,13 +24,16 @@ from msprobe.core.common.file_check import FileOpen
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 
-ops_func = {f: getattr(ms.ops, f) for f in dir(ms.ops)}
-mint_ops_func = {f: getattr(ms.mint, f) for f in dir(ms.mint)}
-mint_func_ops_func = {f: getattr(ms.mint.nn.functional, f) for f in dir(ms.mint.nn.functional)}
+
+def load_ops_functions():
+    ops_func = {f: getattr(ms.ops, f) for f in dir(ms.ops)}
+    mint_ops_func = {f: getattr(ms.mint, f) for f in dir(ms.mint)}
+    mint_func_ops_func = {f: getattr(ms.mint.nn.functional, f) for f in dir(ms.mint.nn.functional)}
+    return ops_func, mint_ops_func, mint_func_ops_func
 
 
 def get_functional_ops():
-    global ops_func, mint_ops_func, mint_func_ops_func
+    ops_func, mint_ops_func, mint_func_ops_func = load_ops_functions()
     with FileOpen(yaml_path, 'r') as f:
         config = yaml.safe_load(f)
         WrapFunctionalOps = config.get("ops")
@@ -67,6 +70,7 @@ class FunctionalOPTemplate(HOOKCell):
             return args[0] if args else kwargs.get('input')
         return self.op_func(*args, **kwargs)
 
+
 def wrap_functional_op(op_name, op_dict, prefix, hook):
     def op_template(*args, **kwargs):
         return FunctionalOPTemplate(op_name, op_dict, prefix, hook)(*args, **kwargs)
@@ -76,7 +80,7 @@ def wrap_functional_op(op_name, op_dict, prefix, hook):
 def wrap_functional_ops_and_bind(ops, op_dict, prefix, hook, hook_class):
     for op_name in ops:
         if callable(op_dict[op_name]):
-            setattr(hook_class, "wrap_" + op_name, wrap_functional_op(op_name, op_dict, prefix, hook))
+            setattr(hook_class, Const.ATTR_NAME_PREFIX + op_name, wrap_functional_op(op_name, op_dict, prefix, hook))
 
 
 def setup_hooks(hook):
@@ -86,5 +90,5 @@ def setup_hooks(hook):
     wrap_functional_ops_and_bind(
         mint_ops, {f: getattr(ms.mint, f) for f in dir(ms.mint)}, "Mint.", hook, HOOKMintOP)
     wrap_functional_ops_and_bind(
-        mint_func_ops, {f: getattr(ms.mint.nn.functional, f) for f in dir(ms.mint.nn.functional)}, "MintNNFunctional.", hook, HOOKMintNNFunctionalOP)
+        mint_func_ops, {f: getattr(ms.mint.nn.functional, f) for f in dir(ms.mint.nn.functional)}, "MintFunctional.", hook, HOOKMintNNFunctionalOP)
 

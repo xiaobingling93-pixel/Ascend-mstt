@@ -26,6 +26,8 @@ class Const:
     API_LIST = "api_list"
     API_STACK = "api_stack"
     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+    AUTO = "auto"
+    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
@@ -61,6 +63,7 @@ class Const:
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
     ATTR_NAME_PREFIX = "wrap_"
+    ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
     PT_FRAMEWORK = "pytorch"

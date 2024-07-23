@@ -1,3 +1,18 @@
+# Copyright 2024 Huawei Technologies Co., Ltd
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ============================================================================
+
 import os
 from pathlib import Path
 import functools
@@ -29,7 +44,7 @@ class Service:
         def forward_hook(api_or_module_name, module, input, output):
             self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
             if not self.switch:
-                return
+                return None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=module.input_kwargs, output=output)
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -63,11 +78,11 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
 
-    def start(self, model):
+    def start(self, model=None):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
-            raise Exception("atat: exit after iteration {}".format(max(self.config.step)))
+            raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.first_start:
@@ -82,13 +97,10 @@ class Service:
             self.first_start = False
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self.config.level != "L2":
-            self.create_dirs()
-            logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
+        self.create_dirs()
+        logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
-        if self.config.level == "L2":
-            return
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
@@ -123,6 +135,4 @@ class Service:
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
-            api_register.api_modularity()
-
-
+            api_register.api_set_hook_func()

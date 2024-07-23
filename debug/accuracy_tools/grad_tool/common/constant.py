@@ -46,3 +46,11 @@ class GradConst:
     STEP_FINISH = "step_finish"
 
     SUMMARY = "summary"
+
+    # csv header entry
+    MD5 = "MD5"
+    DISTRIBUTION = "distribution"
+    SHAPE = "shape"
+    MAX = "max"
+    MIN = "min"
+    NORM = "norm"

@@ -240,6 +240,6 @@ class BaseDataProcessor:
     def get_save_file_path(self, suffix):
         file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX      
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
-                          suffix + Const.SEP + file_format)
+                          suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path

@@ -19,10 +19,11 @@ import mindspore as ms
 
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.core.common.utils import Const
+from msprobe.core.common.file_check import FileOpen
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with open(yaml_path, 'r') as f:
+with FileOpen(yaml_path, 'r') as f:
     WrapTensorOps = yaml.safe_load(f).get('tensor')
 
 TensorFunc = {}
@@ -62,4 +63,4 @@ def wrap_tensor_ops_and_bind(hook):
     _tensor_ops = get_tensor_ops()
     for op_name in _tensor_ops:
         if callable(TensorFunc[op_name]):
-            setattr(HOOKTensor, "wrap_" + str(op_name), wrap_tensor_op(op_name, hook))
+            setattr(HOOKTensor, Const.ATTR_NAME_PREFIX + str(op_name), wrap_tensor_op(op_name, hook))
