@@ -74,7 +74,7 @@ def run_overflow_check(forward_file):
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
     api_type, api_name, _ = api_full_name.split(Const.SEP)
-    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path=real_data_path)
+    args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
