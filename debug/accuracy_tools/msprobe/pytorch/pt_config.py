@@ -96,16 +96,16 @@ class RunUTConfig(BaseConfig):
 def parse_task_config(task, json_config):
     default_dic = {}
     if task == Const.TENSOR:
-        config_dic = json_config.get(Const.TENSOR) if json_config.get(Const.TENSOR) else default_dic
+        config_dic = json_config.get(Const.TENSOR, default_dic)
         return TensorConfig(config_dic)
     elif task == Const.STATISTICS:
-        config_dic = json_config.get(Const.STATISTICS) if json_config.get(Const.STATISTICS) else default_dic
+        config_dic = json_config.get(Const.STATISTICS, default_dic)
         return StatisticsConfig(config_dic)
     elif task == Const.OVERFLOW_CHECK:
-        config_dic = json_config.get(Const.OVERFLOW_CHECK) if json_config.get(Const.OVERFLOW_CHECK) else default_dic
+        config_dic = json_config.get(Const.OVERFLOW_CHECK, default_dic)
         return OverflowCheckConfig(config_dic)
     elif task == Const.FREE_BENCHMARK:
-        config_dic = json_config.get(Const.FREE_BENCHMARK) if json_config.get(Const.FREE_BENCHMARK) else default_dic
+        config_dic = json_config.get(Const.FREE_BENCHMARK, default_dic)
         return FreeBenchmarkCheckConfig(config_dic)
     elif task == Const.RUN_UT:
         config_dic = json_config.get(Const.RUN_UT, default_dic)
