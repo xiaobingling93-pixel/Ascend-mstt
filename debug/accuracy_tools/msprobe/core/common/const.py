@@ -25,6 +25,8 @@ class Const:
     API_LIST = "api_list"
     API_STACK = "api_stack"
     DUMP_MODE = [ALL, LIST, RANGE, STACK, ACL, API_LIST, API_STACK]
+    AUTO = "auto"
+    ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
