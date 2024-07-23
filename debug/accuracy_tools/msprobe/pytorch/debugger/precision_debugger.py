@@ -4,7 +4,7 @@ from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.service import Service
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
-from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class PrecisionDebugger:
@@ -50,8 +50,8 @@ class PrecisionDebugger:
     def check_model_valid(model):
         if not model or isinstance(model, torch.nn.Module):
             return model
-        raise MsaccException(
-            MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
         )
 
     @classmethod
