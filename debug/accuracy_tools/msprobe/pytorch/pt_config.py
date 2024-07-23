@@ -78,7 +78,7 @@ class RunUTConfig(BaseConfig):
             raise Exception("%s must be a list type" % key)
         if not all(isinstance(item, str) for item in filter_list):
             raise Exception("All elements in %s must be string type" % key)
-        invalid_api = [item for item in filter_list if item not in WrapApi]
+        invalid_api = [item for item in filter_list if item not in cls.WrapApi]
         if invalid_api:
             raise Exception("Invalid api in %s: %s" % (key, invalid_api))
 
@@ -108,7 +108,7 @@ def parse_task_config(task, json_config):
         config_dic = json_config.get(Const.FREE_BENCHMARK) if json_config.get(Const.FREE_BENCHMARK) else default_dic
         return FreeBenchmarkCheckConfig(config_dic)
     elif task == Const.RUN_UT:
-        config_dic = json_config.get(Const.RUN_UT) if json_config.get(Const.RUN_UT) else default_dic
+        config_dic = json_config.get(Const.RUN_UT, default_dic)
         return RunUTConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
