@@ -20,7 +20,7 @@ msprobe工具主要通过在训练脚本内添加dump接口并启动训练的方
 PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, model=None, step=None)
 ```
 
-说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于[config.json](../../config)文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
+说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于[config.json](../../config)文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。config.json文件的配置可参考《[配置文件说明](https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/config/README.md)》。
 
 **参数说明**
 

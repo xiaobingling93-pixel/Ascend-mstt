@@ -10,10 +10,15 @@ MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStud
    ```shell
    pip install mindstudio-probe
    ```
-   说明
-   1. 使用`pip install mindstudio-probe==版本号`可安装指定版本的包
-   2. pip命令会自动安装包及其依赖
-   3. 安装成功后，日志会显示`Successfully installed mindstudio-probe-版本号`
+使用`pip install mindstudio-probe==版本号`可安装指定版本的包。
+
+pip命令会自动安装最新的包及其配套依赖。
+
+提示如下信息则表示安装成功。
+
+```bash
+Successfully installed mindstudio_probe-{version}
+```
 
 ### 下载whl包安装
 1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、torch、tqdm依赖。
@@ -91,6 +96,37 @@ MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStud
    ```shell
    Finished processing dependencies for mindstudio-probe=={version}
    ```
+
+### 查看msprobe工具信息
+
+执行如下命令查看msprobe工具信息。
+
+```bash
+pip show mindstudio-probe
+```
+
+输出结果如下示例：
+
+```bash
+Name: mindstudio-probe
+Version: 1.0
+Summary: This is a pytorch precision comparison tools
+Home-page:
+Author:
+Author-email:
+License:
+Location: /home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages
+Requires: numpy, openpyxl, pandas, pyyaml, rich, tqdm, wheel
+Required-by:
+```
+
+关键字段含义：
+
+- Name：工具名称。
+- Version：工具版本号。
+- Summary：工具概述。
+- Location：工具安装路径。
+- Requires：工具依赖。
 
 ## 工具使用
 
