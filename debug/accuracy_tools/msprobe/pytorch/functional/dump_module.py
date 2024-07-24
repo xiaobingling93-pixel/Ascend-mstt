@@ -3,7 +3,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.debugger.precision_debugger import PrecisionDebugger
-from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.data_dump.scope import BaseScope
 
 module_count = {}
@@ -12,10 +12,10 @@ module_count = {}
 def module_dump(module, dump_name):
     if not isinstance(module, nn.Module):
         logger.error("The parameter:module in module_dump is not a Module subclass.")
-        raise MsaccException(MsaccException.INVALID_PARAM_ERROR)
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if not isinstance(dump_name, str):
         logger.error("The parameter:dump_name in module_dump is not a str type.")
-        raise MsaccException(MsaccException.INVALID_PARAM_ERROR)
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     api_register.api_originality()
     if dump_name not in module_count:
         module_count[dump_name] = 0

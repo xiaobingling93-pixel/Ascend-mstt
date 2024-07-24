@@ -5,7 +5,7 @@ from pathlib import Path
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.exceptions import DistributedNotInitializedError, MsaccException
+from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
@@ -26,6 +26,11 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
+
+    @staticmethod
+    def forward_backward_dump_end():
+        logger.info_on_rank_0("Data needed ends here.")
+        api_register.api_originality()
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -77,7 +82,7 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
 
-    def start(self, model):
+    def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
@@ -94,15 +99,13 @@ class Service:
                 return
             self.register_hook_new()
             self.first_start = False
+        if api_origin:
+            api_register.api_modularity()
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2":
             self.create_dirs()
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
-
-    def forward_backward_dump_end(self):
-        logger.info_on_rank_0("Data needed ends here.")
-        api_register.api_originality()
 
     def stop(self):
         if self.config.level == "L2":
@@ -142,7 +145,7 @@ class Service:
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level in ["L0", "mix"]:
             if self.model is None:
-                logger.error_log_with_exp("The model is None.", MsaccException.INVALID_PARAM_ERROR)
+                logger.error_log_with_exp("The model is None.", MsprobeException.INVALID_PARAM_ERROR)
             logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
             for name, module in self.model.named_modules():
                 if module == self.model:

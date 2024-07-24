@@ -4,6 +4,7 @@ import os
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
+from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
 
 
 class TensorConfig(BaseConfig):
@@ -61,20 +62,54 @@ class FreeBenchmarkCheckConfig(BaseConfig):
         if self.preheat_step and self.preheat_step == 0:
             raise Exception("preheat_step cannot be 0")
 
+
+class RunUTConfig(BaseConfig):
+    WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.white_list = json_config.get("white_list", Const.DEFAULT_LIST)
+        self.black_list = json_config.get("black_list", Const.DEFAULT_LIST)
+        self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
+        self.check_run_ut_config()
+
+    @classmethod
+    def check_filter_list_config(cls, key, filter_list):
+        if not isinstance(filter_list, list):
+            raise Exception("%s must be a list type" % key)
+        if not all(isinstance(item, str) for item in filter_list):
+            raise Exception("All elements in %s must be string type" % key)
+        invalid_api = [item for item in filter_list if item not in cls.WrapApi]
+        if invalid_api:
+            raise Exception("Invalid api in %s: %s" % (key, invalid_api))
+
+    @classmethod
+    def check_error_data_path_config(cls, error_data_path):
+        if not os.path.exists(error_data_path):
+            raise Exception("error_data_path: %s does not exist" % error_data_path)
+        
+    def check_run_ut_config(self):
+        RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
+        RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
+        RunUTConfig.check_error_data_path_config(self.error_data_path)
+
+
 def parse_task_config(task, json_config):
     default_dic = {}
     if task == Const.TENSOR:
-        config_dic = json_config.get(Const.TENSOR) if json_config.get(Const.TENSOR) else default_dic
+        config_dic = json_config.get(Const.TENSOR, default_dic)
         return TensorConfig(config_dic)
     elif task == Const.STATISTICS:
-        config_dic = json_config.get(Const.STATISTICS) if json_config.get(Const.STATISTICS) else default_dic
+        config_dic = json_config.get(Const.STATISTICS, default_dic)
         return StatisticsConfig(config_dic)
     elif task == Const.OVERFLOW_CHECK:
-        config_dic = json_config.get(Const.OVERFLOW_CHECK) if json_config.get(Const.OVERFLOW_CHECK) else default_dic
+        config_dic = json_config.get(Const.OVERFLOW_CHECK, default_dic)
         return OverflowCheckConfig(config_dic)
     elif task == Const.FREE_BENCHMARK:
-        config_dic = json_config.get(Const.FREE_BENCHMARK) if json_config.get(Const.FREE_BENCHMARK) else default_dic
+        config_dic = json_config.get(Const.FREE_BENCHMARK, default_dic)
         return FreeBenchmarkCheckConfig(config_dic)
+    elif task == Const.RUN_UT:
+        config_dic = json_config.get(Const.RUN_UT, default_dic)
+        return RunUTConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
 

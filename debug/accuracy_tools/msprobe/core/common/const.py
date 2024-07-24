@@ -15,6 +15,10 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    DEFAULT_LIST = []
+    DEFAULT_PATH = './'
+    WHITE_LIST = 'white_list'
+    BLACK_LIST = 'black_list'
 
     # dump mode
     ALL = "all"
@@ -54,12 +58,13 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
     MAX_SEED_VALUE = 4294967295  # 2**32 - 1
-    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
+    RUN_UT = "run_ut"
     ATTR_NAME_PREFIX = "wrap_"
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
