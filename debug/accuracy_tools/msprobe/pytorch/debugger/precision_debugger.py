@@ -64,6 +64,12 @@ class PrecisionDebugger:
         else:
             instance.service.start(instance.model)
 
+    # 指定代码段dump前反向结束符，之后的计算过程数据将被忽略，无法被dump
+    @classmethod
+    def forward_backward_dump_end(cls):
+        instance = cls._instance
+        instance.service.forward_backward_dump_end()
+
     @classmethod
     def stop(cls):
         instance = cls._instance

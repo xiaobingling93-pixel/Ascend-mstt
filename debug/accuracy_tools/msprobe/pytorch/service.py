@@ -100,6 +100,10 @@ class Service:
             self.create_dirs()
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
+    def forward_backward_dump_end(self):
+        logger.info_on_rank_0("Data needed ends here.")
+        api_register.api_originality()
+
     def stop(self):
         if self.config.level == "L2":
             return
