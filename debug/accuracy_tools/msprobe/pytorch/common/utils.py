@@ -29,7 +29,6 @@ except ImportError:
 else:
     is_gpu = False
 
-
 torch_without_guard_version_list = ['2.1', '2.2']
 for version in torch_without_guard_version_list:
     if torch.__version__.startswith(version):
