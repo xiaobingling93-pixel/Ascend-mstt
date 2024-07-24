@@ -4,7 +4,7 @@ from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.service import Service
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
-from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class PrecisionDebugger:
@@ -27,6 +27,7 @@ class PrecisionDebugger:
         step=None,
     ):
         if not hasattr(self, "initialized"):
+            self.api_origin = False
             self.initialized = True
             self.model = self.check_model_valid(model)
             common_config, task_config = parse_json_config(config_path, task)
@@ -50,8 +51,8 @@ class PrecisionDebugger:
     def check_model_valid(model):
         if not model or isinstance(model, torch.nn.Module):
             return model
-        raise MsaccException(
-            MsaccException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
         )
 
     @classmethod
@@ -62,13 +63,15 @@ class PrecisionDebugger:
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
-            instance.service.start(instance.model)
+            instance.service.start(instance.model, instance.api_origin)
+            instance.api_origin = False
 
     # 指定代码段dump前反向结束符，之后的计算过程数据将被忽略，无法被dump
     @classmethod
     def forward_backward_dump_end(cls):
         instance = cls._instance
         instance.service.forward_backward_dump_end()
+        instance.api_origin = True
 
     @classmethod
     def stop(cls):

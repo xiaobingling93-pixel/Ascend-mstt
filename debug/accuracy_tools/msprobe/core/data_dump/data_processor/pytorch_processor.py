@@ -5,7 +5,7 @@ from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.exceptions import MsaccException
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
@@ -191,7 +191,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if self.overflow_nums == -1:
             return
         if self.real_overflow_dump_times >= self.overflow_nums:
-            raise MsaccException(MsaccException.OVERFLOW_NUMS_ERROR, str(self.real_overflow_dump_times))
+            raise MsprobeException(MsprobeException.OVERFLOW_NUMS_ERROR, str(self.real_overflow_dump_times))
 
     def check_overflow_npu(self):
         if self.overflow_debug_mode_enalbe():
