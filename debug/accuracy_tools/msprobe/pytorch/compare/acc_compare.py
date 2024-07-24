@@ -37,6 +37,7 @@ from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, C
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.exceptions import FileCheckException
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -489,6 +490,10 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
             b_value = read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
         except IOError as error:
             error_file = error.filename
+            n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
+            error_flag = True
+        except FileCheckerException:
+            error_file = data_name
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
 
