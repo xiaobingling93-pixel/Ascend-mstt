@@ -31,7 +31,7 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
-        if ms.get_context("mode") == 1 and instance.config.level_ori == "L1":
+        if ms.get_context("mode") == ms.PYNATIVE_MODE and instance.config.level_ori == "L1":
             instance.service.start()
         else:
             handler = TaskHandlerFactory.create(instance.config)

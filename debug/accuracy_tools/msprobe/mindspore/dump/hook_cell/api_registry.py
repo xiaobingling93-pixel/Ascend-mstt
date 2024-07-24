@@ -83,7 +83,7 @@ class ApiRegistry:
                 self.tensor_hook_attr[attr_name[Const.ATTR_NAME_PREFIX_LEN:]] = getattr(HOOKTensor, attr_name)
 
         functional_ops, mint_ops, mint_func_ops = get_functional_ops()
-        self.store_ori_attr(ms.ops, self.norm_inner_ops, self.functional_ori_attr)
+        self.store_ori_attr(ms.ops, self.norm_inner_ops, self.norm_inner_ops_ori_attr)
         self.store_ori_attr(ms.ops, functional_ops, self.functional_ori_attr)
         self.store_ori_attr(ms.mint, mint_ops, self.mint_ops_ori_attr)
         self.store_ori_attr(ms.mint.nn.functional, mint_func_ops, self.mint_func_ops_ori_attr)
