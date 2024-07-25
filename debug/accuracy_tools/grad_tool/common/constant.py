@@ -40,6 +40,7 @@ class GradConst:
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+    PARAM_VALID_PATTERN = r"^[a-zA-Z0-9.]+$"
     DIR = "dir"
     FILE = "file"
 
