@@ -12,7 +12,7 @@ msprobe工具主要通过在训练脚本内添加dump接口并启动训练的方
 
 通过加载dump配置文件的方式来确定dump操作的详细配置。
 
-可以在from msprobe.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
+PrecisionDebugger接口可以在from msprobe.pytorch import PrecisionDebugger之后的位置添加。详细使用可参考“**示例代码**”或“**model配置代码示例**”。
 
 **原型**
 
@@ -125,22 +125,25 @@ debugger.step()
 
 ```Python
 from msprobe.pytorch import PrecisionDebugger
+
+# 请勿将PrecisionDebugger的初始化流程插入到循环代码中
 debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
-# 请勿将以上初始化流程插入到循环代码中
 
-# 模型初始化
-# 下面代码也可以用PrecisionDebugger.start()和PrecisionDebugger.stop()
-debugger.start()
 
-# 需要dump的代码片段1
+# 模型、损失函数的定义及初始化等操作
+# ...
 
-debugger.stop()
-debugger.start()
+# 数据集迭代的位置一般为模型训练开始的位置
+for data, label in data_loader:
+	debugger.start() # 开启数据dump
 
-# 需要dump的代码片段2
+	# 如下是模型每个step执行的逻辑
+    output = model(data)
+    #...
+    loss.backward()
 
-debugger.stop()
-debugger.step()
+	debugger.stop() # 关闭数据dump
+	debugger.step() # 结束一个step的dump
 ```
 
 ## dump结果文件介绍
