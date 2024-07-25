@@ -27,6 +27,11 @@ class Service:
         self.current_rank = None
         self.dump_iter_dir = None
 
+    @staticmethod
+    def forward_backward_dump_end():
+        logger.info_on_rank_0("Data needed ends here.")
+        api_register.api_originality()
+
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
             if module_type == BaseScope.Module_Type_Module:
@@ -77,7 +82,7 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
 
-    def start(self, model):
+    def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
@@ -94,6 +99,8 @@ class Service:
                 return
             self.register_hook_new()
             self.first_start = False
+        if api_origin:
+            api_register.api_modularity()
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2":
