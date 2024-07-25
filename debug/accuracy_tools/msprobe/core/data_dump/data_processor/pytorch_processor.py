@@ -15,8 +15,9 @@ from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
 try:
     import torch_npu
+    is_gpu = False
 except ImportError:
-    pass
+    is_gpu = True
 
 
 class PytorchDataProcessor(BaseDataProcessor):
@@ -213,7 +214,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
 
     def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
         data_clone = tensor.detach()
-        if hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan():
+        if is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan()):
             if tensor_json['Max'] is None:
                 return
             if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):

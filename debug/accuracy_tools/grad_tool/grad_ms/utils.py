@@ -3,7 +3,8 @@ import os
 import numpy as np
 import mindspore
 from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import print_warn_log, create_directory, change_mode, check_file_or_directory_path
+from grad_tool.common.utils import (print_warn_log, create_directory, change_mode, check_file_or_directory_path,
+                                    path_valid_check, check_param)
 
 level_adp = {
         "L0": {
@@ -23,8 +24,10 @@ level_adp = {
 def save_grad_direction(param_name, grad, save_path):
     if not os.path.exists(save_path):
         create_directory(save_path)
+    check_file_or_directory_path(save_path, file_type=GradConst.DIR)
+    check_param(param_name)
     save_filepath = os.path.join(save_path, f"{param_name}.npy")
-    check_file_or_directory_path(save_filepath)
+    path_valid_check(save_filepath)
 
     if grad.dtype == mindspore.bfloat16:
         grad = grad.to(mindspore.float32)
