@@ -39,6 +39,7 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
+        self.start_call = False
 
     def build_hook(self, module_type, name):
         def forward_hook(api_or_module_name, module, input, output):
@@ -80,6 +81,8 @@ class Service:
 
     def start(self, model=None):
         self.model = model
+        self.start_call = True
+        logger.info_on_rank_0("msprobe: debugger.start() is set successfully")
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
             raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
@@ -101,11 +104,16 @@ class Service:
         logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        if not self.start_call:
+            logger.error_on_rank_0("msprobe: debugger.start() is not set in the current scope.")
+            raise Exception("debugger.start() is not set in the current scope.")
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        self.start_call = False
+        logger.info_on_rank_0(f"msprobe: debugger.stop() is set successfully. Please set debugger.start() to turn on the dump switch again. ")
         self.data_collector.write_json()
 
     def create_dirs(self):
