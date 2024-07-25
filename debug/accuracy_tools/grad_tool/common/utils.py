@@ -220,3 +220,7 @@ def change_mode(path, mode):
     except PermissionError as ex:
         print_error_log(f'Failed to change {path} authority. {str(ex)}')
         raise ex
+
+def check_param(param_name):
+    if not re.match(GradConst.PARAM_VALID_PATTERN, param_name):
+        raise RuntimeError("The parameter name contains special characters.")
