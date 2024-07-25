@@ -12,7 +12,7 @@ msprobe工具主要通过在训练脚本内添加dump接口并启动训练的方
 
 通过加载dump配置文件的方式来确定dump操作的详细配置。
 
-可以在from msprobe.pytorch import PrecisionDebugger和模型初始化之间的任意位置添加该接口。
+PrecisionDebugger接口可以在from msprobe.pytorch import PrecisionDebugger之后的位置添加。详细使用可参考“**示例代码**”或“**model配置代码示例**”。
 
 **原型**
 

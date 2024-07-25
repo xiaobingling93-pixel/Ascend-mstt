@@ -2,6 +2,7 @@ import os
 import stat
 import numpy as np
 
+
 class Const:
     """
     Class for const
@@ -41,6 +42,7 @@ class Const:
 
     PKL_SUFFIX = ".pkl"
     NUMPY_SUFFIX = ".npy"
+    PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
@@ -66,6 +68,7 @@ class Const:
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
     ATTR_NAME_PREFIX = "wrap_"
+    ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
@@ -90,6 +93,7 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
 
 class CompareConst:
     """
@@ -203,6 +207,7 @@ class CompareConst:
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
 
+
 class FileCheckConst:
     """
     Class for file check const
@@ -238,6 +243,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+
 
 class OverflowConst:
     """

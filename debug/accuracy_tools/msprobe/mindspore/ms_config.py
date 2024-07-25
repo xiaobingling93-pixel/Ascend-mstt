@@ -1,6 +1,7 @@
 import json
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.const import Const
 
 
 class TensorConfig(BaseConfig):
@@ -31,6 +32,8 @@ class StatisticsConfig(BaseConfig):
         if self.data_mode is not None and len(self.data_mode) > 0:
             if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
                 raise Exception("data_mode must be all, input or output")
+        if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
+            raise Exception("summary_mode is invalid")
 
 
 class OverflowCheck(BaseConfig):
@@ -56,11 +59,11 @@ def parse_task_config(task, json_config):
     task_map = json_config[task]
     if not task_map:
         task_map = dict()
-    if task == "tensor":
+    if task == Const.TENSOR:
         return TensorConfig(task_map)
-    elif task == "statistics":
+    elif task == Const.STATISTICS:
         return StatisticsConfig(task_map)
-    elif task == "overflow_check":
+    elif task == Const.OVERFLOW_CHECK:
         return OverflowCheck(task_map)
     else:
         raise Exception("task is invalid.")
@@ -73,6 +76,6 @@ def parse_json_config(json_file_path):
         json_config = json.load(file)
     common_config = parse_common_config(json_config)
     if not common_config.task:
-        common_config.task = "statistics"
+        common_config.task = Const.STATISTICS
     task_config = parse_task_config(common_config.task, json_config)
     return common_config, task_config
