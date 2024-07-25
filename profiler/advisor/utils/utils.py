@@ -44,7 +44,7 @@ class ContextObject(object):
 
 
 def debug_option(f):
-    return click.option('--debug', '-D',
+    return click.option('--debug',
                         is_flag=True,
                         expose_value=False,
                         is_eager=True,

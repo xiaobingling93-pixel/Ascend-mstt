@@ -73,14 +73,6 @@ class BaseAnalyzer(VersionControl, metaclass=ABCMeta):
     def optimize(self, **kwargs):
         pass
 
-    @abstractmethod
-    def make_record(self):
-        pass
-
-    @abstractmethod
-    def make_render(self):
-        pass
-
     def init_dataset_list(self)->None:
         dataset_cls_list = self.dataset_cls_list
         if len(dataset_cls_list) == 0:

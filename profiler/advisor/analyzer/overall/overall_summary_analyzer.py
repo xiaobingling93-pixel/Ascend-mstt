@@ -24,6 +24,22 @@ from profiler.compare_tools.compare_interface.comparison_interface import Compar
 
 class OverallSummaryAnalyzer(BaseAnalyzer):
     OVERALL_SUMMARY_ANALYZER = "overall_summary_analysis"
+    advice_map = {
+        "Computing Time": "if you want more detailed advice please go to mstt_advisor_*.html",
+        "Uncovered Communication Time": "if you want more detailed advice please go to mstt_advisor_*.html",
+        "Free Time": "if you want more detailed advice please go to mstt_advisor_*.html"
+    }
+    time_name_map = {
+        "Computing Time": "computing",
+        "Uncovered Communication Time": "communication",
+        "Free Time": "free",
+        'Cube Time(Num)': 'Cube Time',
+        'Vector Time(Num)': 'Vector Time',
+        'Flash Attention Time(Forward)(Num)': 'Flash Attention Time(Forward)',
+        'Flash Attention Time(Backward)(Num)': 'Flash Attention Time(Backward)',
+        'Other Time': "Other Computing Time",
+        'SDMA Time(Num)': 'SDMA Time'
+    }
     performance_time_dict = {
         "Computing Time": "computing_time_ms",
         "    -- Flash Attention": "fa_time_ms",
