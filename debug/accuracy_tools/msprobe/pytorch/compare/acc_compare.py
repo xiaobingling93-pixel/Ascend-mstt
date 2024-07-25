@@ -764,9 +764,14 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
         else:
             full_op_name = op_name
     else:
-        full_op_name = op_name + '.' + str(index)
+        full_op_name = op_name + Const.SEP + str(index)
     if isinstance(item, dict):
-        if 'dtype' in item:
+        if 'type' not in item:
+            for kwarg in item:
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None)
+                item_list += kwarg_parsed_list
+                kwarg_parsed_list.clear()
+        elif 'dtype' in item:
             parsed_item = item
             parsed_item['full_op_name'] = full_op_name
             item_list.append(parsed_item)
