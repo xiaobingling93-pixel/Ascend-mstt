@@ -35,7 +35,7 @@ class TestPrecisionDebugger(TestCase):
             "dump_path": "/absolute_path",
             "rank": [],
             "step": [],
-            "level": "L1"
+            "level": "L0"
         }
 
         common_config = CommonConfig(json_config)
