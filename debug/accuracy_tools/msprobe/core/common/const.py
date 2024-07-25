@@ -45,6 +45,7 @@ class Const:
     PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
+    ONE_MB = 1048576  # 1 * 1024 * 1024
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     DISTRIBUTED_PREFIX_LENGTH = 60
     # env dump path

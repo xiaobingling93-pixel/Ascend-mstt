@@ -1,6 +1,7 @@
 import math
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
+import numpy as np
 
 import torch
 from msprobe.core.common.const import Const
@@ -34,14 +35,35 @@ class FuzzHandler(ABC):
             origin_ouput = origin_ouput.values
             perturbed_output = perturbed_output.values
         if hasattr(perturbed_output, "dtype"):
-            abs_tol = ThresholdConfig.ABS_TOL_VALUE_DICT.get(perturbed_output.dtype)
+            abs_tol = ThresholdConfig.ABS_TOL_VALUE_DICT.get(perturbed_output.dtype, FuzzThreshold.F32_THD)
         else:
-            abs_tol = FuzzThreshold.F32_THD.value
+            abs_tol = FuzzThreshold.F32_THD
         return (
             origin_ouput.to(perturbed_output.dtype).to(perturbed_output.device),
             perturbed_output,
             abs_tol,
         )
+
+    @staticmethod
+    def tensor_split_for_error_calculate(origin_output, perturbed_output):
+        """
+        对将投入误差值计算的扰动前后输出张量进行分块
+        :param origin_output: 原始输出
+        :param perturbed_output: 扰动后输出
+        :return origin_output_chunks: 切块后原始输出列表
+        :return perturbed_output_chunks: 切块后扰动后输出列表
+        """
+        single_output_mem = origin_output.element_size() * origin_output.nelement() / Const.ONE_MB
+        if single_output_mem == 0 or origin_output.ndim == 0:
+            return [origin_output], [perturbed_output]
+        # 张量大小和批数之间的关系：chunks_exp=math.log(M,2)-4, chunks=2**chunks_exp (M为对比张量数据大小[Mb])
+        chunks_exp = int(math.log(single_output_mem, 2)) - 4
+        chunks = 2 ** chunks_exp
+        chunks = max(chunks, 1)
+        chunks = min(chunks, ThresholdConfig.TENSOR_SPLIT_MAX_CHUNK)
+        origin_output_chunks = TorchC.tensor_split(TorchC.reshape(origin_output, (-1,)), chunks)
+        perturbed_output_chunks = TorchC.tensor_split(TorchC.reshape(perturbed_output, (-1,)), chunks)
+        return origin_output_chunks, perturbed_output_chunks
 
     @staticmethod
     def convert_overflow_ratio_to_consistent(ratio):
@@ -61,36 +83,28 @@ class FuzzHandler(ABC):
             self, origin_output, perturbed_output, norm_type, abs_tol
     ):
         if norm_type == NormType.ENDLESS_NORM:
-            return self.get_endless_norm(origin_output, perturbed_output, abs_tol)
+            return self.calculate_error(origin_output, perturbed_output, abs_tol)
         return ThresholdConfig.COMP_CONSISTENT
 
-    def get_endless_norm(self, origin_output, perturbed_output, abs_tol):
-        ratio_tensor1 = TorchC.where(
-            TorchC.gt(TorchC.abs(perturbed_output), abs_tol),
-            TorchC.div(
-                TorchC.abs(origin_output),
-                TorchC.add(TorchC.abs(perturbed_output), abs_tol),
-            ),
-            1,
-        )
-        ratio_tensor2 = TorchC.where(
-            TorchC.gt(TorchC.abs(origin_output), abs_tol),
-            TorchC.div(
-                TorchC.abs(perturbed_output),
-                TorchC.add(TorchC.abs(origin_output), abs_tol),
-            ),
-            1,
-        )
+    def calculate_error(self, origin_output, perturbed_output, abs_tol):
+        origin_output_chunks, perturbed_output_chunks = self.tensor_split_for_error_calculate(origin_output, perturbed_output)
+        norm1 = -np.inf
+        norm2 = -np.inf
+        norm3 = np.inf
+        for i, chunk_origin in enumerate(origin_output_chunks):
+            if chunk_origin.nelement() == 0:
+                break
+            chunk_perturbed = perturbed_output_chunks[i]
+            ratio_tensor1 = TorchC.where(TorchC.abs(chunk_perturbed) > abs_tol,
+                                         TorchC.div(TorchC.clamp(chunk_origin, min=abs_tol), TorchC.clamp(chunk_perturbed, min=abs_tol)), 1)
+            ratio_tensor2 = TorchC.where(TorchC.abs(chunk_origin) > abs_tol,
+                                         TorchC.div(TorchC.clamp(chunk_perturbed, min=abs_tol), TorchC.clamp(chunk_origin, min=abs_tol)), 1)
+            norm_values = TorchC.tensor([TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)])
+            max_ratio1, max_ratio2 = norm_values.tolist()
+            norm1 = max(norm1, self.convert_overflow_ratio_to_consistent(max_ratio1))
+            norm2 = max(norm2, self.convert_overflow_ratio_to_consistent(max_ratio2))
+            norm3 = min(norm3, self.convert_overflow_ratio_to_consistent(max_ratio1))
 
-        norm1 = self.convert_overflow_ratio_to_consistent(
-            TorchC.max(ratio_tensor1).item()
-        )
-        norm2 = self.convert_overflow_ratio_to_consistent(
-            TorchC.max(ratio_tensor2).item()
-        )
-        norm3 = self.convert_overflow_ratio_to_consistent(
-            TorchC.min(ratio_tensor1).item()
-        )
         if norm3 < 0:
             ratio = ThresholdConfig.SYMBOL_FLIPPING
         else:

@@ -96,3 +96,7 @@ class TorchC:
     add = torch._C._VariableFunctionsClass.add
     bitwise_xor = torch._C._VariableFunctionsClass.bitwise_xor
     clone = torch._C._VariableFunctionsClass.clone
+    clamp = torch._C._VariableFunctionsClass.clamp
+    tensor_split = torch._C._VariableFunctionsClass.tensor_split
+    tensor = torch._C._VariableFunctionsClass.tensor
+    reshape = torch._C._VariableFunctionsClass.reshape
