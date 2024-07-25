@@ -27,6 +27,7 @@ class PrecisionDebugger:
         step=None,
     ):
         if not hasattr(self, "initialized"):
+            self.api_origin = False
             self.initialized = True
             self.model = self.check_model_valid(model)
             common_config, task_config = parse_json_config(config_path, task)
