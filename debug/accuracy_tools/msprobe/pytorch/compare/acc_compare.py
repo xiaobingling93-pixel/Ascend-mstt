@@ -37,6 +37,7 @@ from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, C
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.exceptions import FileCheckException
 
 
 def check_graph_mode(a_op_name, b_op_name):
@@ -491,6 +492,10 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
             error_file = error.filename
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
+        except FileCheckerException:
+            error_file = data_name
+            n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
+            error_flag = True
 
     n_value, b_value, error_flag = get_error_type(n_value, b_value, error_flag)
     if not error_flag:
@@ -759,9 +764,14 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
         else:
             full_op_name = op_name
     else:
-        full_op_name = op_name + '.' + str(index)
+        full_op_name = op_name + Const.SEP + str(index)
     if isinstance(item, dict):
-        if 'dtype' in item:
+        if 'type' not in item:
+            for kwarg in item:
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None)
+                item_list += kwarg_parsed_list
+                kwarg_parsed_list.clear()
+        elif 'dtype' in item:
             parsed_item = item
             parsed_item['full_op_name'] = full_op_name
             item_list.append(parsed_item)
