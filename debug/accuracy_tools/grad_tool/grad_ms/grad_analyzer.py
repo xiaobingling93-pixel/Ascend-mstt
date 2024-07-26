@@ -35,7 +35,7 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
         level2: [step, max, min, norm, shape_dim, shape] + grad_bool_data
         level3: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
     '''
-    dump_path = dump_dir + g_name
+    dump_path = os.path.join(dump_dir, g_name)
     dump_dir_path = dump_path + "_dir"
     save_op = ms.ops.TensorDump()
 
