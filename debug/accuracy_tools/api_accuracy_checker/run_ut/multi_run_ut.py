@@ -89,7 +89,7 @@ def run_parallel_ut(config):
     def update_progress_bar(progress_bar, result_csv_path):
         while any(process.poll() is None for process in processes):
             try:
-                with open(result_csv_path, 'r') as result_file:
+                with FileOpen(result_csv_path, 'r') as result_file:
                     completed_items = len(result_file.readlines()) - 1
                     progress_bar.update(completed_items - progress_bar.n)
             except FileNotFoundError:

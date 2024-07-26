@@ -12,7 +12,7 @@ import torch
 
 from api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from api_accuracy_checker.tensor_transport_layer.server import TCPServer
-from api_accuracy_checker.common.utils import logger
+from api_accuracy_checker.common.utils import logger, check_file_or_directory_path
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import remove_path
 
 
@@ -138,8 +138,10 @@ class ATTL:
             file_path = os.path.join(self.session_config.nfs_path, buffer.name + ".pt")
         else:
             file_path = os.path.join(self.session_config.nfs_path, buffer + f"_{int(time.time())}")
-
-        torch.save(buffer, file_path)
+        try:
+            torch.save(buffer, file_path)
+        except Exception as e:
+            self.logger.error("there is something error. please check it. %s", e)
 
     def download(self):
         for file_type in ("start*", "*.pt", "end*"):
@@ -150,6 +152,7 @@ class ATTL:
         if cur_file is None:
             return None
         else:
+            check_file_or_directory_path(cur_file)
             buffer = torch.load(cur_file)
             remove_path(cur_file)
             return buffer
