@@ -12,7 +12,7 @@ import torch
 
 from api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from api_accuracy_checker.tensor_transport_layer.server import TCPServer
-from api_accuracy_checker.common.utils import logger, check_file_or_directory_path
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import remove_path
 
 
@@ -152,7 +152,8 @@ class ATTL:
         if cur_file is None:
             return None
         else:
-            check_file_or_directory_path(cur_file)
+            cur_file_checker = FileChecker(cur_file, FileCheckConst.FILE, ability=FileCheckConst.READ_ABLE)
+            cur_file = cur_file_checker.common_check()
             buffer = torch.load(cur_file)
             remove_path(cur_file)
             return buffer
