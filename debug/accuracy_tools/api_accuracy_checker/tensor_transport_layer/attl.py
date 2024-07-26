@@ -12,6 +12,7 @@ import torch
 
 from api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from api_accuracy_checker.tensor_transport_layer.server import TCPServer
+from api_accuracy_checker.common.utils import logger
 from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker
 from ptdbg_ascend.src.python.ptdbg_ascend.common.utils import remove_path
 
