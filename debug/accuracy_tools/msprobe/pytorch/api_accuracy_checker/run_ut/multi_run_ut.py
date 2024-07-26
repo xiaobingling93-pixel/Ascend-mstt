@@ -68,7 +68,7 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 ParallelUTConfig = namedtuple('ParallelUTConfig', ['api_files', 'out_path', 'num_splits',
                                                    'save_error_data_flag', 'jit_compile_flag', 'device_id',
-                                                   'result_csv_path', 'total_items', 'real_data_path'])
+                                                   'result_csv_path', 'total_items', 'config_path'])
 
 
 def run_parallel_ut(config):
@@ -90,7 +90,7 @@ def run_parallel_ut(config):
             *(['-j'] if config.jit_compile_flag else []),
             *(['-save_error_data'] if config.save_error_data_flag else []),
             '-csv_path', config.result_csv_path,
-            *(['-real_data_path', config.real_data_path] if config.real_data_path else [])
+            *(['-config', config.config_path] if config.config_path else [])
         ]
         return cmd
 
@@ -175,7 +175,7 @@ def prepare_config(args):
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
-
+    config_path = os.path.realpath(args.config_path) if args.config_path else None
     result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
@@ -187,7 +187,7 @@ def prepare_config(args):
     logger.info(f"UT task details will be saved in {details_csv_path}")
     return ParallelUTConfig(split_files, out_path, args.num_splits, args.save_error_data,
                             args.jit_compile, args.device_id, result_csv_path,
-                            total_items, args.real_data_path)
+                            total_items, config_path)
 
 
 def main():
