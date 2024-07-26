@@ -98,5 +98,5 @@ class TorchC:
     clone = torch._C._VariableFunctionsClass.clone
     clamp = torch._C._VariableFunctionsClass.clamp
     tensor_split = torch._C._VariableFunctionsClass.tensor_split
-    tensor = torch._C._VariableFunctionsClass.tensor
+    stack = torch._C._VariableFunctionsClass.stack
     reshape = torch._C._VariableFunctionsClass.reshape

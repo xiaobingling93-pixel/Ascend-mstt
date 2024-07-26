@@ -99,7 +99,7 @@ class FuzzHandler(ABC):
                                          TorchC.div(TorchC.clamp(chunk_origin, min=abs_tol), TorchC.clamp(chunk_perturbed, min=abs_tol)), 1)
             ratio_tensor2 = TorchC.where(TorchC.abs(chunk_origin) > abs_tol,
                                          TorchC.div(TorchC.clamp(chunk_perturbed, min=abs_tol), TorchC.clamp(chunk_origin, min=abs_tol)), 1)
-            norm_values = TorchC.tensor([TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)])
+            norm_values = TorchC.stack([TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)])
             max_ratio1, max_ratio2 = norm_values.tolist()
             norm1 = max(norm1, self.convert_overflow_ratio_to_consistent(max_ratio1))
             norm2 = max(norm2, self.convert_overflow_ratio_to_consistent(max_ratio2))
