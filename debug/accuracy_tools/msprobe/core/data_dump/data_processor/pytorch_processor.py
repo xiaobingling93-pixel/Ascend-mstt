@@ -79,6 +79,22 @@ class PytorchDataProcessor(BaseDataProcessor):
         return tensor_stat
     
     @staticmethod
+    def handle_tensor_extremum_nan_inf(tensor, operator):
+        data_clone = tensor.detach()
+        data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
+        if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
+            return float('nan')
+        finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
+        if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
+            finite_values = data_clone[finite_mask]
+            return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
+                torch._C._VariableFunctionsClass.min(finite_values).item()
+        else:
+            data_no_nan = data_clone[~data_nan]
+            return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
+                torch._C._VariableFunctionsClass.min(data_no_nan).item()
+    
+    @staticmethod
     def _analyze_builtin(arg):
         single_arg = {}
         if isinstance(arg, slice):
@@ -130,9 +146,15 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_json.update({"Mean": tensor_stat.mean})
         tensor_json.update({"Norm": tensor_stat.norm})
         tensor_json.update({"requires_grad": tensor.requires_grad})
-        if self.config.summary_mode == "md5":
+
+        if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
+            tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
+        if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
+            tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
+
+        if self.config.summary_mode == Const.MD5:
             tensor_md5 = self.get_md5_for_tensor(tensor)
-            tensor_json.update({"md5": tensor_md5})
+            tensor_json.update({Const.MD5: tensor_md5})
         return tensor_json
 
 
@@ -167,21 +189,6 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
     def overflow_debug_mode_enable():
         overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
         return overflow_mode == Const.ENV_ENABLE
-
-    @staticmethod
-    def handle_tensor_extremum_nan_inf(data_clone, operator):
-        data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
-        if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
-            return float('nan')
-        finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
-        if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
-            return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
-                torch._C._VariableFunctionsClass.min(finite_values).item()
-        else:
-            data_no_nan = data_clone[~data_nan]
-            return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
-                torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -228,16 +235,13 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         else:
             torch_npu._C._clear_overflow_npu()
 
-    def _analyze_maybe_overflow_tensor(self, tensor_json, tensor):
-        data_clone = tensor.detach()
+    def _analyze_maybe_overflow_tensor(self, tensor_json):
         if is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan()):
             if tensor_json['Max'] is None:
                 return
             if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "max")
                 self.has_overflow = True
             if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(data_clone, "min")
                 self.has_overflow = True
         else:
             self.has_overflow = self.check_overflow_npu()
