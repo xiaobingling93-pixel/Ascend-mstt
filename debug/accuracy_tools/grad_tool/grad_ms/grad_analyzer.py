@@ -31,9 +31,8 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
     '''
     Dump gradient statistic data.
         level0: [step, max, min, norm, shape_dim, shape]
-        level1: [step, max, min, norm, shape_dim, shape, dist_dim, dist]
-        level2: [step, max, min, norm, shape_dim, shape] + grad_bool_data
-        level3: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
+        level1: [step, max, min, norm, shape_dim, shape] + grad_bool_data
+        level2: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
     '''
     dump_path = os.path.join(dump_dir, g_name)
     dump_dir_path = dump_path + "_dir"
@@ -51,7 +50,7 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
     level0_stat = ms.ops.concat((extrem_stat, shape_stat), axis=0)
     level_stat = level0_stat
 
-    if level == "L1" or level == "L3":
+    if level == GradConst.LEVEL2:
         zero_grad = (grad == 0).sum()
         dist_dim = ms.Tensor([len(bounds) + 2]).float()
         bucket_result = ms.ops.bucketize(grad.float(), bounds)
@@ -60,11 +59,11 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
         dist_stat.append(zero_grad)
         dist_stat.append(ms.Tensor(1, dtype=ms.int64))  # make sure dist_stat is not empty
         dist_stat = ms.ops.stack(dist_stat, axis=0).float()
-        level1_stat = ms.ops.concat((level0_stat, dist_dim, dist_stat), axis=0)
-        level_stat = level1_stat
+        level2_stat = ms.ops.concat((level0_stat, dist_dim, dist_stat), axis=0)
+        level_stat = level2_stat
 
     save_op(dump_path, level_stat)
-    if level == "L2" or level == "L3":
+    if level == GradConst.LEVEL1 or level == GradConst.LEVEL2:
         grad_direction = grad > 0
         save_op(dump_dir_path, grad_direction)
 
