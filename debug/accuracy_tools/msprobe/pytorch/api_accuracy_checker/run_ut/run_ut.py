@@ -379,10 +379,6 @@ def _run_ut_parser(parser):
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
                         required=False)
-    parser.add_argument("-real_data_path", dest="real_data_path", nargs="?", const="", default="", type=str,
-                        help="<optional> In real data mode, the root directory for storing real data "
-                             "must be configured.",
-                        required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
                         help="<optional> Whether to filter the api in the api_info_file.", required=False)
     parser.add_argument("-config", "--config_path", dest="config_path", default="", type=str,
@@ -400,9 +396,9 @@ def preprocess_forward_content(forward_content):
         if key not in arg_cache:
             filtered_new_args = [
                 {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
-                for arg in value['args'] if isinstance(arg, dict)
+                for arg in value['input_args'] if isinstance(arg, dict)
             ]
-            arg_cache[key] = (filtered_new_args, value['kwargs'])
+            arg_cache[key] = (filtered_new_args, value['input_kwargs'])
 
         filtered_new_args, new_kwargs = arg_cache[key]
 
