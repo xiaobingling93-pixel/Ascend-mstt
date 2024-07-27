@@ -79,6 +79,22 @@ class PytorchDataProcessor(BaseDataProcessor):
         return tensor_stat
     
     @staticmethod
+    def _analyze_builtin(arg):
+        single_arg = {}
+        if isinstance(arg, slice):
+            single_arg.update({"type": "slice"})
+            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
+            values = [
+                value if not isinstance(value, torch.Tensor) else value.item()
+                for value in [arg.start, arg.stop, arg.step]
+            ]
+            single_arg.update({"value": values})
+        else:
+            single_arg.update({"type": type(arg).__name__})
+            single_arg.update({"value": arg})
+        return single_arg
+    
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -98,7 +114,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
         if isinstance(element, (bool, int, float, str, slice)):
             return self._analyze_builtin(element)
-        return None
+        return {}
 
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
