@@ -88,7 +88,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     for nr, br in zip(npu_ranks, bench_ranks):
         n_dir = os.path.join(npu_dump_dir, nr)
         b_dir = os.path.join(bench_dump_dir, br)
-        s_dir = b_dir
+        s_dir = n_dir
         npu_json_path = extract_json(n_dir, stack_json=False)
         bench_json_path = extract_json(b_dir, stack_json=False)
         stack_json_path = extract_json(s_dir, stack_json=True)
@@ -103,7 +103,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             summary_compare, md5_compare = task_dumppath_get(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare)
+            check_compare_param(dump_result_param, output_path, stack_mode=stack_mode, summary_compare=summary_compare, md5_compare=md5_compare)
         except CompareException as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
