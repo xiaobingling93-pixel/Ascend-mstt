@@ -8,7 +8,6 @@ from api_accuracy_checker.common.utils import logger
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 softmax_build_mode = "QKV"  # "MAX_SUM"
 
-
 """
 # 前向函数声明对比
 标杆实现:fusion_attention_forward: q, k, v, drop_mask, atten_mask, pse, scale, keep_prob
@@ -45,6 +44,9 @@ def softmax_grad(dp, softmax_res):
 
 
 def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
+    if num_kv_heads == 0 or num_kv_heads < num_heads:
+        raise ValueError(f"num_kv_heads must be non-zero and less than num_heads.")
+
     factor = num_heads // num_kv_heads
     kv_shape = kv_tensor.shape
     B = kv_shape[0]
@@ -102,28 +104,34 @@ def parse_bsnd_args(query, key, head_num, input_layout):
     if not isinstance(input_layout, str) or input_layout not in supported_input_layout:
         raise ValueError(f"Invalid input_layout arg which must be one of {supported_input_layout}.")
 
-    if input_layout == "BSH":
-        B, S1, H1 = query.shape
-        _, S2, H2 = key.shape
-        D = H1 // N1
-        N2 = H2 // D
-    elif input_layout == "SBH":
-        S1, B, H1 = query.shape
-        S2, _, H2 = key.shape
-        D = H1 // N1
-        N2 = H2 // D
-    elif input_layout == "BSND":
-        B, S1, N1, D = query.shape
-        _, S2, N2, _ = key.shape
-        H1 = N1 * D
-        H2 = N2 * D
-    elif input_layout == "BNSD":
-        B, N1, S1, D = query.shape
-        _, N2, S2, _ = key.shape
-        H1 = N1 * D
-        H2 = N2 * D
-    elif input_layout == "TND":
+    if input_layout == "TND":
         raise ValueError(f"input_layout {input_layout} does not supported for now.")
+    try:
+        if input_layout == "BSH":
+            B, S1, H1 = query.shape
+            _, S2, H2 = key.shape
+            D = H1 // N1
+            N2 = H2 // D
+        elif input_layout == "SBH":
+            S1, B, H1 = query.shape
+            S2, _, H2 = key.shape
+            D = H1 // N1
+            N2 = H2 // D
+        elif input_layout == "BSND":
+            B, S1, N1, D = query.shape
+            _, S2, N2, _ = key.shape
+            H1 = N1 * D
+            H2 = N2 * D
+        elif input_layout == "BNSD":
+            B, N1, S1, D = query.shape
+            _, N2, S2, _ = key.shape
+            H1 = N1 * D
+            H2 = N2 * D
+    except Exception as e:
+        raise ValueError(f"query.shape: {query.shape}, key.shape: {key.shape}, parse_bsnd_args error: {e}") from e
+
+    if D == 0:
+        raise ValueError(f"Value D must be non-zero.")
     DTYPE = query.dtype
     return B, S1, S2, N1, N2, D, H1, H2, DTYPE
 
@@ -251,6 +259,8 @@ def rebuild_softmax_by_max_sum(q, k, atten_mask, pse, scale, softmax_max, softma
     """
     print(f"Using softmax_max and softmax_sum to rebuild original softmax")
     qk = calculate_qk(q, k, atten_mask, pse, scale)
+    if softmax_max.shape[-1] == 0:
+        raise ValueError(f"softmax_max.shape[-1] must be non-zero, softmax_max.shape: {softmax_max.shape}")
     repeat_dim = qk.shape[-1] // softmax_max.shape[-1]
     softmax_res = torch.exp(qk.sub(softmax_max.repeat(1, 1, 1, repeat_dim))).div(
         softmax_sum.repeat(1, 1, 1, repeat_dim))
@@ -394,6 +404,8 @@ def npu_fusion_attention_grad(*args, **kwargs):
 
     # N不等长适配by cdy
     if not (N1 == N2):
+        if N2 == 0:
+            raise ValueError("dims_kwargs.N2 must be non-zero.")
         G = int(N1 / N2)
         dk = torch.sum(dk.reshape(B, N2, G, S2, D), dim=2, keepdim=True).reshape(B, N2, S2, D)
         dv = torch.sum(dv.reshape(B, N2, G, S2, D), dim=2, keepdim=True).reshape(B, N2, S2, D)
