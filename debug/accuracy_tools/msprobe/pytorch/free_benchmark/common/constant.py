@@ -60,6 +60,8 @@ class ThresholdConfig:
         torch.bfloat16: BenchmarkThd(2**-8, 1.0, 2**-8, 1e-4),
     }
 
+    TENSOR_SPLIT_MAX_CHUNK = 128
+
 
 class PreheatConfig:
     IF_PREHEAT = "if_preheat"
