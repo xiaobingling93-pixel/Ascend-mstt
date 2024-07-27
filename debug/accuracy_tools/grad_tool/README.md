@@ -28,7 +28,7 @@
 
 ### 梯度数据导出
 
-1. 创建配置文件config.yaml，PyTorch框架样例代码如下：
+1. 创建配置文件config.yaml，样例如下：
 
    ```python
    level: L1
@@ -38,40 +38,30 @@
    bounds: 
    output_path: your_output_dir
    ```
-   > 在MindSpore框架下，当前不支持rank和step配置，默认所有rank和所有step都进行采集，
-   > MindSpore中step指的是优化器被调用的次数（并非模型跑的step，某些step，例如loss为nan时，不会调用优化器）
+   > step指的是优化器被调用的次数（并非模型跑的step，某些step，例如loss为nan时，不会调用优化器）
 
    **参数说明**
 
-   | 参数                       | 说明                                               | 是否必选 |
-   |--------------------------------|----------------------------------------------------|----------|
-   | level                  | Level级别，PyTorch可取值：L0、L1、L2，MindSpore可取值：L0, L1, L2, L3。决定导出数据的详细程度，级别越大导出数据越详细。数据类型：str。 | PyTorch是（MindSpore否，默认为L0）       |
-   | param_list             | 填写需要监控的权重名称。不指定或列表为空就表示监控所有权重。数据类型：List[str]。 | 否       |
-   | rank                   | 在多卡场景下，填写需要导出梯度数据的卡的Rank ID，不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。数据类型：List[int]。（MindSpore当前不支持指定rank） | 否       |
-   | step                   | 指定需要导出数据的step。对于PyTorch不指定或列表为空就表示导出所有step的数据，对于MindSpore不指定表示导出所有step，指定时要求传入range列表，例如[1, 2]，否则无效。数据类型：List[int]。（MindSpore当前不支持指定step） | 否 |
-   | bounds                 | 用来划分区间以统计值分布。需要保证由数据小到大排列。不传则使用默认值[-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10]（mindspore为[-0.1, 0., 1.0]），数据类型：List。 | 否  |
-   | output_path            | 输出目录。如果不存在就会创建一个新目录。数据类型：str。 | PyTorch是（MindSpore否，默认为./grad_stat |
+   | 参数                       | 说明                          | 输入类型                     | 是否必选 |
+   |--------------------------------|-----------------------------------|-----------------|----------|
+   | level                  | 输出级别。决定导出数据的详细程度，级别越大导出数据越详细。可取值：L0, L1, L2|str  | 是     |
+   | param_list             | 权重名称列表，表示需要监控的权重。不指定或列表为空就表示监控所有权重。 | List[str] | 否       |
+   | rank                   | rank id列表，在多卡场景下，表示需要导出梯度数据的进程的rank id。不指定或列表为空就表示导出所有rank的数据。单卡场景无需关注该参数。 （MindSpore静态图模式下，当前暂不支持指定rank功能） | List[int] | 否       |
+   | step                   | step列表，表示需要导出数据的step列表。不指定或列表为空就表示导出所有step的数据。（MindSpore静态图模式下，当前暂不支持指定step功能） | List[int] | 否 |
+   | bounds                 | 区间列表，用来划分区间以统计数值的分布。需要保证由数据小到大排列。不指定则使用默认值[-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10] | List[float] | 否  |
+   | output_path            | 输出目录。如果不存在就会创建一个新目录。 |  str | 是 |
 
    **不同级别的level的导出数据**
 
-- PyTorch/MindSpore动态图不同level数据
 
    | 级别 | 特征数据表头                                                 | 是否有方向数据 |
    | ---- | ------------------------------------------------------------ | -------------- |
    | L0   | ("param_name", "MD5", "max", "min", "norm", "shape")         | 否             |
    | L1   | ("param_name", "max", "min", "norm", "shape")         | 是             |
    | L2   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
-
-- MindSpore静态图不同level数据
-
-   | 级别 | 特征数据表头                                                 | 是否有方向数据 |
-   | ---- | ------------------------------------------------------------ | -------------- |
-   | L0   | ("param_name", "max", "min", "norm", "shape")         | 否             |
-   | L1   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape")         | 否             |
-   | L2   | ("param_name", "max", "min", "norm", "shape") | 是             |
-   | L3   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
    intervals就是根据值分布bounds划分出的区间。
+   MindSpore静态图模式下，L0级别中暂不支持"MD5"
    
    **方向数据解释**
    
@@ -98,7 +88,7 @@ gm = GradientMonitor("config_path", framework="MindSpore")
 gm.monitor(optimizer)
 ```
 
-3. 结束监控（MindSpore需要）
+3. 结束监控（MindSpore静态图模式下需要）
 
    在训练结束之后，调用stop接口
 

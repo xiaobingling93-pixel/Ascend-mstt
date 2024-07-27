@@ -23,8 +23,7 @@ class GradConst:
     LEVEL0 = "L0"
     LEVEL1 = "L1"
     LEVEL2 = "L2"
-    LEVEL3 = "L3"
-    SUPPORTED_LEVEL = {"L0", "L1", "L2", "L3"}
+    SUPPORTED_LEVEL = {"L0", "L1", "L2"}
 
     # numpy coding
     STEP_IDX = 0

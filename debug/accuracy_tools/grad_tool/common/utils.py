@@ -224,3 +224,7 @@ def change_mode(path, mode):
 def check_param(param_name):
     if not re.match(GradConst.PARAM_VALID_PATTERN, param_name):
         raise RuntimeError("The parameter name contains special characters.")
+    
+def check_str(string, variable_name):
+    if not isinstance(string, str):
+        raise ValueError(f'The variable: "{variable_name}" is not a string.')

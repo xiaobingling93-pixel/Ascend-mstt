@@ -38,8 +38,5 @@ def save_grad_direction(param_name, grad, save_path):
     change_mode(save_filepath, 0o640)
 
 def get_adapted_level(level: str):
-    if level == GradConst.LEVEL3:
-        print_warn_log(f"In mindpsore pynative mode, only 'L0', 'L1' and 'L2' are supported, use L0 instead")
-        level = GradConst.LEVEL0
     level_adapted = level_adp.get(level)
     return level_adapted
