@@ -492,7 +492,7 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
             error_file = error.filename
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
-        except FileCheckerException:
+        except FileCheckException:
             error_file = data_name
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
