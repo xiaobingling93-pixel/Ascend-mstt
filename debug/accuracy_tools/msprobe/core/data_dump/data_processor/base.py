@@ -108,17 +108,6 @@ class BaseDataProcessor:
     def _analyze_numpy(value, numpy_type):
         return {"type": numpy_type, "value": value}
     
-    @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            single_arg.update({"value": [arg.start, arg.stop, arg.step]})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-    
     @classmethod
     def get_special_types(cls):
         return cls.special_type
