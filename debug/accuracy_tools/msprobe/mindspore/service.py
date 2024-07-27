@@ -16,6 +16,7 @@
 import os
 from pathlib import Path
 import functools
+from collections import defaultdict
 
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
@@ -26,6 +27,7 @@ from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
 
 class Service:
@@ -51,6 +53,7 @@ class Service:
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
+                del module.input_kwargs
             return output
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
@@ -78,6 +81,7 @@ class Service:
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
+        HOOKCell.cell_count = defaultdict(int)
 
     def start(self, model=None):
         self.model = model
