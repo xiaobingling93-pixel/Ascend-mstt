@@ -154,7 +154,7 @@ class CSVGenerator(Process):
         level = grad_context.get_context(GradConst.LEVEL)
         try:
             shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
-            if level in [GradConst.LEVEL1, GradConst.LEVEL3]:
+            if level == GradConst.LEVEL2:
                 dist_dim = int(stat_data[shape_dim + GradConst.SHAPE_DIM_IDX + 1])
                 length = shape_dim + dist_dim + 7
             else:
@@ -186,7 +186,7 @@ class CSVGenerator(Process):
         if not param_name:
             raise RuntimeError("Invalid gradient statistic file name.")
         csv_line = [param_name]
-        if self.level == GradConst.LEVEL1 or self.level == GradConst.LEVEL3:
+        if self.level == GradConst.LEVEL2:
             csv_line.extend(self.get_dist_data(shape_dim, stat_data))
         csv_line.extend(self.get_extrem_data(shape_dim, stat_data))
         self.cache_list.append(csv_line)
@@ -207,7 +207,7 @@ class CSVGenerator(Process):
 
     def create_csv_file(self):
         headers = ["Param_name"]
-        if self.level == GradConst.LEVEL1 or self.level == GradConst.LEVEL3:
+        if self.level == GradConst.LEVEL2:
             headers.extend(self.get_dist_header())
         headers.extend(self.get_extrem_headers())
         output_path = f"{self.save_dir}/grad_summary_{self.current_step}.csv"

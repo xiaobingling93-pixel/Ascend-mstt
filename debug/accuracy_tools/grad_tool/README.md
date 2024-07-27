@@ -46,8 +46,8 @@
    |--------------------------------|-----------------------------------|-----------------|----------|
    | level                  | 输出级别。决定导出数据的详细程度，级别越大导出数据越详细。可取值：L0, L1, L2|str  | 是     |
    | param_list             | 权重名称列表，表示需要监控的权重。不指定或列表为空就表示监控所有权重。 | List[str] | 否       |
-   | rank                   | rank id列表，在多卡场景下，表示需要导出梯度数据的进程的rank id。不指定或列表为空就表示导出所有rank的数据。单卡场景无需关注该参数。 （MindSpore Pynative模式下，当前暂不支持指定rank功能） | List[int] | 否       |
-   | step                   | step列表，表示需要导出数据的step列表。不指定或列表为空就表示导出所有step的数据。（MindSpore Pynative模式下，当前暂不支持指定step功能） | List[int] | 否 |
+   | rank                   | rank id列表，在多卡场景下，表示需要导出梯度数据的进程的rank id。不指定或列表为空就表示导出所有rank的数据。单卡场景无需关注该参数。 （MindSpore静态图模式下，当前暂不支持指定rank功能） | List[int] | 否       |
+   | step                   | step列表，表示需要导出数据的step列表。不指定或列表为空就表示导出所有step的数据。（MindSpore静态图模式下，当前暂不支持指定step功能） | List[int] | 否 |
    | bounds                 | 区间列表，用来划分区间以统计数值的分布。需要保证由数据小到大排列。不指定则使用默认值[-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10] | List[float] | 否  |
    | output_path            | 输出目录。如果不存在就会创建一个新目录。 |  str | 是 |
 
@@ -61,7 +61,7 @@
    | L2   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
    intervals就是根据值分布bounds划分出的区间。
-   MindSpore Pynative模式下，L0级别中暂不支持"MD5"
+   MindSpore静态图模式下，L0级别中暂不支持"MD5"
    
    **方向数据解释**
    
@@ -88,7 +88,7 @@ gm = GradientMonitor("config_path", framework="MindSpore")
 gm.monitor(optimizer)
 ```
 
-3. 结束监控（MindSpore Pynative模式下需要）
+3. 结束监控（MindSpore静态图模式下需要）
 
    在训练结束之后，调用stop接口
 
