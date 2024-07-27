@@ -46,7 +46,7 @@ class GlobalContext:
         try:
             path_valid_check(output_path)
         except RuntimeError as err:
-            raise ValueError(f"Invalid output_path: {output_path}. The error message is {err}.")
+            raise ValueError(f"Invalid output_path: {output_path}. The error message is {err}.") from err
         self._setting[GradConst.OUTPUT_PATH] = output_path
         if not os.path.isdir(self._setting.get(GradConst.OUTPUT_PATH)):
             create_directory(self._setting.get(GradConst.OUTPUT_PATH))
