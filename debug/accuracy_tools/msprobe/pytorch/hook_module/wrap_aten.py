@@ -66,14 +66,16 @@ class AtenOPTemplate(HOOKModule):
 
     @torch_device_guard
     def forward(self, *args, **kwargs):
-        if self.op in npu_custom_grad_functions:
-            return npu_custom_grad_functions[self.op](*args, **kwargs)
-        if self.op in WhiteAtenOps:
-            return eval(f"torch.ops.aten.{self.op}")(*args, **kwargs)
-        if self.op not in aten_func:
-            raise Exception(f"Skip op[{self.op}] accuracy check, because the op is not "
-                            f"in dir(torch.ops.aten) and support yaml.")
-        return aten_func[self.op](*args, **kwargs)
+        if isinstance(self.op, str):
+            if self.op in npu_custom_grad_functions:
+                return npu_custom_grad_functions[self.op](*args, **kwargs)
+            if self.op in WhiteAtenOps:
+                return eval(f"torch.ops.aten.{self.op}")(*args, **kwargs)
+            if self.op not in aten_func:
+                raise Exception(f"Skip op[{self.op}] accuracy check, because the op is not "
+                                f"in dir(torch.ops.aten) and support yaml.")
+            return aten_func[self.op](*args, **kwargs)
+        return self.op(*args, **kwargs)
 
 
 class AtenOPPacketTemplate():

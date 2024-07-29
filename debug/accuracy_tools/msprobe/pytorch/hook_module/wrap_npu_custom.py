@@ -17,11 +17,9 @@
 
 import os
 import torch
-import torch_npu
 import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
-from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_check import FileOpen
@@ -32,6 +30,13 @@ yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 with FileOpen(yaml_path, 'r') as f:
     WrapNpuOps = yaml.safe_load(f).get('torch_npu')
 
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+else:
+    is_gpu = False
+
 
 def get_npu_ops():
     global WrapNpuOps
@@ -39,10 +44,7 @@ def get_npu_ops():
         _npu_ops = dir(torch.ops.npu)
     else:
         _npu_ops = dir(torch_npu._C._VariableFunctionsClass)
-    if msCheckerConfig.white_list:
-        return set(WrapNpuOps) & set(_npu_ops) & set(msCheckerConfig.white_list)
-    else:
-        return set(WrapNpuOps) & set(_npu_ops)
+    return set(WrapNpuOps) & set(_npu_ops)
 
 
 class HOOKNpuOP(object):

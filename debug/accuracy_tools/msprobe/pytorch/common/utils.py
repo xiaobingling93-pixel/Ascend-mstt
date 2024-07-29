@@ -233,22 +233,16 @@ def get_tensor_rank(in_feat, out_feat):
         if isinstance(x, (list, tuple)):
             if len(x) > 0:
                 return get_tensor_rank_single(x[0])
-            return None
         elif isinstance(x, torch.Tensor):
             device = x.device
-            if device.type == 'cpu':
-                return None
-            else:
+            if device.type != 'cpu':
                 return device.index
         return None
 
     in_rank = get_tensor_rank_single(in_feat)
-    if in_rank is not None:
-        return in_rank
     out_rank = get_tensor_rank_single(out_feat)
-    if out_rank is not None:
-        return out_rank
-    return None
+    tensor_rank = in_rank if in_rank else out_rank
+    return tensor_rank
 
 
 def _create_logger(level=logging.INFO):
