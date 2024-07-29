@@ -27,6 +27,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
 from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
+from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
+from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
@@ -77,6 +79,12 @@ def exec_api(api_type, api_name, args, kwargs):
         out = tensor_api.forward(*args, **kwargs)
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "Aten":
+        torch_api = AtenOPTemplate(api_name, None, False)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "NPU":
+        torch_api = NpuOPTemplate(api_name, None, False)
         out = torch_api.forward(*args, **kwargs)
     return out
 
