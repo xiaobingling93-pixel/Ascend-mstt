@@ -26,7 +26,6 @@ def matmul_backward(grad, self, other, mask):
         if mask[0]:
             grad_self = unfolded_grad.mm(other.unsqueeze(0) if dim_other == 1 else other.transpose(-1, -2)) \
                 .view(size_self)
-            print(f'size_self: {size_self}')
         if mask[1]:
             unfolded_self = self.contiguous().view([-1, size_self[-1]])
             grad_other = unfolded_self.transpose(-1, -2).mm(unfolded_grad).view(size_other)

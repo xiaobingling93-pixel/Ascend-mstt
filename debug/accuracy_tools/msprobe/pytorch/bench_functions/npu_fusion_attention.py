@@ -183,7 +183,7 @@ def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next
     if atten_mask is not None:
         # 当FA的输入已经包含atten_mask时，可以认为已经是转换之后的mask矩阵了，有三种特殊场景，即稀疏矩阵场景，需要进行逆向还原
         if sparse_mode == 2 or sparse_mode == 3 or sparse_mode == 4:
-            print(S1, S2, atten_mask.shape, atten_mask.dtype)
+            logger.info(f"S1: {S1}, S2:{S2}, atten_mask.shape:{atten_mask.shape}, atten_mask.dtype:{atten_mask.dtype}")
 
             if atten_mask.dim() == 2 and atten_mask.shape[0] == 2048 and atten_mask.shape[1] == 2048:
                 if atten_mask.equal(torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(atten_mask.dtype)):
@@ -246,7 +246,7 @@ def rebuid_softmax_by_qkv(q, k, atten_mask, pse, scale):
     attention = softmax(QK^T/sqrt(d))V
     softmax(x_i) = e^(x_i - x_max) / sum(e^(x_i - x_max))
     """
-    print(f"Using QKV to rebuild original softmax")
+    logger.info("Using QKV to rebuild original softmax")
     qk = calculate_qk(q, k, atten_mask, pse, scale)
     softmax_res, x_max, x_sum = softmax_forward(qk)
     return softmax_res
@@ -257,7 +257,7 @@ def rebuild_softmax_by_max_sum(q, k, atten_mask, pse, scale, softmax_max, softma
     attention = softmax(QK^T/sqrt(d))V
     softmax(x_i) = e^(x_i - x_max_i) / x_sum_i)
     """
-    print(f"Using softmax_max and softmax_sum to rebuild original softmax")
+    logger.info("Using softmax_max and softmax_sum to rebuild original softmax")
     qk = calculate_qk(q, k, atten_mask, pse, scale)
     if softmax_max.shape[-1] == 0:
         raise ValueError(f"softmax_max.shape[-1] must be non-zero, softmax_max.shape: {softmax_max.shape}")
@@ -302,9 +302,9 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
 
     B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], args[4], args[5])
     if N1 == N2 and S1 == S2:
-        print(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+        logger.info(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
-        print(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+        logger.info(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
     if not (N1 % N2 == 0 and N1 >= N2):
         raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
 

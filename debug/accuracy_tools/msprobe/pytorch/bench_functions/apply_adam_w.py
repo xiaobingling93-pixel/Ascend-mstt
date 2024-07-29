@@ -9,12 +9,13 @@ def npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay,
     var, m, v = out
     if amsgrad:
         max_grad_norm = (torch.rand(var.shape) * 10.0 - 5.0).to(var.dtype)
+    beta1_power_out = beta1_power * beta1
+    beta2_power_out = beta2_power * beta2
+    var_t = var * (1 + (-lr * weight_decay))
     gt = -grad if maximize else grad
     m_out = m * beta1 - (beta1 + (-1)) * gt
     v_out = v * beta2 - (beta2 + (-1)) * gt * gt
-    var_t = var * (1 + (-lr * weight_decay))
-    beta1_power_out = beta1_power * beta1
-    beta2_power_out = beta2_power * beta2
+
     if amsgrad:
         max_grad_norm_out = torch.max(max_grad_norm, v_out)
         if (1 - beta2_power_out) == 0:

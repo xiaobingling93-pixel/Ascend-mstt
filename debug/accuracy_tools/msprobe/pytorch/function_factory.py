@@ -1,20 +1,10 @@
+from msprobe.pytorch.common.utils import logger
+
+
 class Register(dict):
     def __init__(self, *args, **kwargs):
         super(Register, self).__init__(*args, **kwargs)
         self._dict = {}
-
-    def register(self, target):
-
-        def add_register_item(key, value):
-            if key in self._dict:
-                print(f"warning: {value.__name__} has been registered before, so we will overriden it.")
-            self[key] = value
-            return value
-
-        if callable(target):
-            return add_register_item(target.__name__, target)
-        else:
-            raise Exception(f"The func {target} is not callable.")
 
     def __call__(self, target):
         return self.register(target)
@@ -39,6 +29,19 @@ class Register(dict):
 
     def items(self):
         return self._dict.items()
+
+    def register(self, target):
+
+        def add_register_item(key, value):
+            if key in self._dict:
+                logger.warning(f"{value.__name__} has been registered before, so we will overriden it.")
+            self[key] = value
+            return value
+
+        if callable(target):
+            return add_register_item(target.__name__, target)
+        else:
+            raise Exception(f"The func {target} is not callable.")
 
 
 npu_custom_functions = Register()
