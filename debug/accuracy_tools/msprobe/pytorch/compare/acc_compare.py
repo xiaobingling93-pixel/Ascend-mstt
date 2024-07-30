@@ -645,8 +645,11 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             elif (i - 2) in highlight_dict['yellow_rows']:
                 ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
                                                             end_color=CompareConst.YELLOW, fill_type="solid")
-    wb.save(file_path)
-    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+    try:
+        wb.save(file_path)
+        change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+    except Exception:
+        logger.error('Save result file failed')
 
 
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
