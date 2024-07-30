@@ -148,7 +148,7 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False, md5_compare=False):
+def check_compare_param(input_parma, output_path, summary_compare=False, md5_compare=False):
     if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
