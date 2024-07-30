@@ -255,7 +255,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         else:
             logger.warning(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
-        self._analyze_maybe_overflow_tensor(single_arg, tensor)
+        self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
 
