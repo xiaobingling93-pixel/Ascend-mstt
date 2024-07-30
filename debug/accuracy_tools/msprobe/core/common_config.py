@@ -44,8 +44,8 @@ class BaseConfig:
         self.data_mode = json_config.get('data_mode')
         self.backward_input = json_config.get("backward_input")
         self.file_format = json_config.get("file_format")
-        self.summary_mode =  json_config.get("summary_mode")
-        self.overflow_num = json_config.get("overflow_num")
+        self.summary_mode = json_config.get("summary_mode")
+        self.overflow_nums = json_config.get("overflow_nums")
         self.check_mode = json_config.get("check_mode")
 
     def check_config(self):
