@@ -1,8 +1,3 @@
-import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
-
-
-@npu_custom_functions
 def npu_confusion_transpose(data, perm, shape, transpose_first):
     if transpose_first:
         output = data.permute(*perm).contiguous().view(shape)
@@ -11,7 +6,6 @@ def npu_confusion_transpose(data, perm, shape, transpose_first):
     return output.cpu()
 
 
-@npu_custom_grad_functions
 def npu_confusion_transpose_backward(grad, perm, shape, transpose_first):
     shape_cal = shape if transpose_first else [shape[perm_dim] for perm_dim in perm]
     perm_cal = [0] * len(perm)

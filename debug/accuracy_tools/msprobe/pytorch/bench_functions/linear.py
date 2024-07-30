@@ -1,14 +1,11 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 
 
-@npu_custom_functions
 def npu_linear(x, weight, bias):
     output = torch.nn.functional.linear(x, weight, bias)
     return output.cpu()
 
 
-@npu_custom_grad_functions
 def npu_linear_backward(grad, input_data, weight):
     input_grad = torch.matmul(grad, weight)
     weight_grad = torch.matmul(grad.t(), input_data)

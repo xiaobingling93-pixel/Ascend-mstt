@@ -1,9 +1,6 @@
 import torch
 
-from msprobe.pytorch.function_factory import npu_custom_functions
 
-
-@npu_custom_functions
 def npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay,
                      beta1, beta2, eps, grad, max_grad_norm, amsgrad, maximize, out):
     var, m, v = out

@@ -1,8 +1,6 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 
 
-@npu_custom_functions
 def npu_swiglu(x, dim=-1):
     tensor_dtype = x.dtype
 
@@ -19,7 +17,6 @@ def npu_swiglu(x, dim=-1):
     return output_data.cpu()
 
 
-@npu_custom_grad_functions
 def npu_swiglu_backward(grad, x, dim=-1):
     tensor_dtype = grad.dtype
     in_tensors = torch.chunk(x, 2, dim=dim)

@@ -1,8 +1,6 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_grad_functions
 
 
-@npu_custom_grad_functions
 def matmul_backward(grad, self, other, mask):
     grad_self, grad_other = None, None
     dim_self = self.dim()

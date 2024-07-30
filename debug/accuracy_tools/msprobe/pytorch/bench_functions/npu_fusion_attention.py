@@ -2,7 +2,6 @@ import torch
 import numpy as np
 from einops import rearrange
 
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 from api_accuracy_checker.common.utils import logger
 
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
@@ -331,7 +330,6 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
     return args, dims_kwargs, new_kwargs
 
 
-@npu_custom_functions
 def npu_fusion_attention(*args, **kwargs):
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_forward_patch(*args, **kwargs)
     query, key, value, input_layout = new_args[0], new_args[1], new_args[2], new_args[4]
@@ -366,7 +364,6 @@ def npu_fusion_attention(*args, **kwargs):
     return out_golden.cpu(), softmax_max.repeat(1, 1, 1, 8).cpu(), softmax_sum.repeat(1, 1, 1, 8).cpu()
 
 
-@npu_custom_grad_functions
 def npu_fusion_attention_grad(*args, **kwargs):
     # dx, q, k, v, softmax_res, drop_mask, pse, scale, keep_prob
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_backward_patch(*args, **kwargs)

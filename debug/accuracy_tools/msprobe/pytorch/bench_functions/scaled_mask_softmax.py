@@ -1,8 +1,6 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 
 
-@npu_custom_functions
 def npu_scaled_masked_softmax(x, mask, scale, fixed_triu_mask):
     if fixed_triu_mask:
         mask = (torch.triu(torch.ones(mask.shape), k=1)).bool().to(mask.device)
@@ -14,7 +12,6 @@ def npu_scaled_masked_softmax(x, mask, scale, fixed_triu_mask):
     return y.to(dtype).cpu()
 
 
-@npu_custom_grad_functions
 def npu_scaled_masked_softmax_backward(y_grad, y, mask, scale, fixed_triu_mask):
     if fixed_triu_mask:
         mask = (torch.triu(torch.ones(mask.shape), k=1)).bool().to(mask.device)

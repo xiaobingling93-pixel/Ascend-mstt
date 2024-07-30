@@ -1,8 +1,6 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 
 
-@npu_custom_functions
 def npu_rotary_mul(x, r1, r2):
     x1, x2 = torch.chunk(x, 2, -1)
     x_new = torch.cat((-x2, x1), dim=-1)
@@ -10,7 +8,6 @@ def npu_rotary_mul(x, r1, r2):
     return output.cpu()
 
 
-@npu_custom_grad_functions
 def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
     x.requires_grad = True
     r1.requires_grad = True

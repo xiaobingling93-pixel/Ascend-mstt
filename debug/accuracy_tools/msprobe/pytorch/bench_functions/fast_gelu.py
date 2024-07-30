@@ -1,8 +1,6 @@
 import torch
-from msprobe.pytorch.function_factory import npu_custom_functions, npu_custom_grad_functions
 
 
-@npu_custom_functions
 def fast_gelu(input0):
     attr = 1.702
     const_0 = 0 - attr
@@ -24,7 +22,6 @@ def fast_gelu(input0):
     return result.cpu()
 
 
-@npu_custom_grad_functions
 def npu_fast_gelu_backward(grad, input_x):
     const_2 = 1.702
     const_3 = 1.0
