@@ -22,6 +22,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _
     _api_precision_compare_command
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
     _run_overflow_check_command
+from msprobe.pytorch.compare.acc_compare import _compare_parser, compare
 
 
 def main():
@@ -36,10 +37,12 @@ def main():
                         help='Deep learning framework.')
     subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
+    compare_cmd_parser = subparsers.add_parser('run_ut')
     run_ut_cmd_parser = subparsers.add_parser('run_ut')
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
+    _compare_parser(compare_cmd_parser)
     _run_ut_parser(run_ut_cmd_parser)
     _run_ut_parser(multi_run_ut_cmd_parser)
     multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
@@ -61,6 +64,8 @@ def main():
         _api_precision_compare_command(args)
     elif sys.argv[3] == "run_overflow_check":
         _run_overflow_check_command(args)
+    elif sys.argv[3] == "compare":
+        compare(args)
 
 
 if __name__ == "__main__":

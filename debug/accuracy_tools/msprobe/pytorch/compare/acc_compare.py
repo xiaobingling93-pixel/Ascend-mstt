@@ -653,9 +653,10 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 #             fuzzy_match=False):
 def compare(args):
     #### 需要增加文件路径路径校验
-    input_param = json.load(args.input_path)
+    with FileOpen(args.input_path, "r") as file:
+        input_param = json.load(file)
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_parma)
+        summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
         create_directory(args.output_path)
         check_compare_param(input_param, args.output_path, args.stack_mode, summary_compare, md5_compare)
@@ -1040,7 +1041,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.",  required=True)
-    parser.add_argument("-o", "--out_path", dest="out_path", type=str,
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
