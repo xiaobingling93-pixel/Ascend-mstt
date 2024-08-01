@@ -94,7 +94,7 @@ def gen_real_tensor(data_path, convert_type):
         error_info = f"The file: {data_path} is not a pt or numpy file."
         raise CompareException(CompareException.INVALID_FILE_ERROR, error_info)
     if data_path.endswith('.pt'):
-        data = torch.load(data_path).cpu()
+        data = torch.load(data_path, map_location=torch.device('cpu'))
     else:
         data_np = numpy.load(data_path)
         data = torch.from_numpy(data_np)
