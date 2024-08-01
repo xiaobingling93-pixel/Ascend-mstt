@@ -18,26 +18,23 @@ from mindspore import nn
 from msprobe.core.common.const import Const
 
 
-cell_count = defaultdict(int)
-g_stop_hook = False
-
-
 class HOOKCell(nn.Cell):
+    cell_count = defaultdict(int)
+    g_stop_hook = False
 
     def __init__(self, build_hook) -> None:
         super(HOOKCell, self).__init__()
         self.changed_status = False
         self.input_kwargs = {}
         self.prefix = ""
-        global g_stop_hook
-        if not g_stop_hook:
-            g_stop_hook = True
+        if not HOOKCell.g_stop_hook:
+            HOOKCell.g_stop_hook = True
             self.changed_status = True
             if hasattr(self, "prefix_op_name_"):
                 self.prefix = self.prefix_op_name_
 
-            cell_count[self.prefix] += 1
-            self.prefix = self.prefix + str(cell_count[self.prefix] - 1) + Const.SEP
+            HOOKCell.cell_count[self.prefix] += 1
+            self.prefix = self.prefix + str(HOOKCell.cell_count[self.prefix] - 1) + Const.SEP
             forward_hook, backward_hook = build_hook(self.prefix)
             self.register_forward_hook(forward_hook)
             self.register_backward_hook(backward_hook)
@@ -52,6 +49,5 @@ class HOOKCell(nn.Cell):
         finally:
             if self.changed_status:
                 self.changed_status = False
-                global g_stop_hook
-                g_stop_hook = False
+                HOOKCell.g_stop_hook = False
         return out
