@@ -650,10 +650,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-# def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-#             fuzzy_match=False):
 def compare(args):
-    #### 需要增加文件路径路径校验
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
     try:
