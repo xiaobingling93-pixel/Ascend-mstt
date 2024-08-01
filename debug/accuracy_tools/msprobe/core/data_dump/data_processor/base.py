@@ -212,17 +212,17 @@ class BaseDataProcessor:
     
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         api_info_struct = {}
-        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
-            api_info_struct[name] = {}
-            self.api_data_category = Const.OUTPUT
-            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
-            api_info_struct[name][Const.GRAD_INPUT] = input_info_list
-
         if self.is_dump_for_data_mode(Const.BACKWARD, Const.INPUT):
-            api_info_struct[name] = api_info_struct.get(name, {})
+            api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
+            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            api_info_struct[name][Const.INPUT] = input_info_list
+
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
+            api_info_struct[name] = api_info_struct.get(name, {})
+            self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
-            api_info_struct[name][Const.GRAD_OUTPUT] = output_info_list
+            api_info_struct[name][Const.OUTPUT] = output_info_list
 
         return api_info_struct
 
