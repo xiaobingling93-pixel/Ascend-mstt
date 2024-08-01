@@ -37,7 +37,7 @@ def main():
                         help='Deep learning framework.')
     subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
-    compare_cmd_parser = subparsers.add_parser('run_ut')
+    compare_cmd_parser = subparsers.add_parser('compare')
     run_ut_cmd_parser = subparsers.add_parser('run_ut')
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
