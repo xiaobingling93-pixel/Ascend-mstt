@@ -2,17 +2,18 @@ import functools
 import os
 from pathlib import Path
 
-from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
+from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.scope import BaseScope
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.core.data_dump.scope import BaseScope
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
-from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.module_processer import ModuleProcesser
 
 
 class Service:
@@ -81,6 +82,9 @@ class Service:
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
+
+        ModuleProcesser.reset_module_stats()
+        HOOKModule.reset_module_stats()
 
     def start(self, model, api_origin=False):
         self.model = model

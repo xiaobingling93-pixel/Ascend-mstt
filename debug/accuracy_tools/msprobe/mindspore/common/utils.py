@@ -29,3 +29,16 @@ def convert_bf16_to_fp32(tensor):
         tensor = tensor.to(ms.float32)
     return tensor
 
+
+class MsprobeStep(ms.train.Callback):
+
+    def __init__(self, debugger):
+        super(MsprobeStep, self).__init__()
+        self.debugger = debugger
+
+    def on_train_step_begin(self, run_context):
+        self.debugger.start()
+
+    def on_train_step_end(self, run_context):
+        self.debugger.stop()
+        self.debugger.step()
