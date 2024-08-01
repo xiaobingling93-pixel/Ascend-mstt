@@ -31,7 +31,9 @@ class ModuleProcesser:
             if not isinstance(args[1], (torch.Tensor, tuple)):
                 for item_str in dir(args[1]):
                     item = getattr(args[1], item_str)
-                    if isinstance(item, (torch.Tensor, tuple)):
+                    # 处理tensor或者只包含tensor的元组
+                    if isinstance(item, torch.Tensor) or \
+                            (isinstance(item, tuple) and all(isinstance(x, torch.Tensor) for x in item)):
                         args_new = (args[0], item)
                         result = func(*args_new, **kwargs)
                         setattr(args[1], item_str, result)
