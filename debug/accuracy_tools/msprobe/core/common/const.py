@@ -20,6 +20,9 @@ class Const:
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
+    IS_ONLINE = False
+    NFS_PATH = ""
+    IS_BENCHMARK_DEVICE = True
 
     # dump mode
     ALL = "all"
