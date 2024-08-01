@@ -647,9 +647,9 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
                                                             end_color=CompareConst.YELLOW, fill_type="solid")
     try:
         wb.save(file_path)
-    except Exception:
+    except Exception as e:
         logger.error('Save result file failed')
-        raise CompareException(CompareException.WRITE_FILE_ERROR)
+        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
