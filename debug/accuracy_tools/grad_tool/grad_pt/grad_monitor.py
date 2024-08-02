@@ -61,7 +61,10 @@ class PtGradientMonitor(BaseMonitor):
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         save_filepath = os.path.join(save_path, f"{param_name}.pt")
-        torch.save(is_positive, save_filepath)
+        try:
+            torch.save(is_positive, save_filepath)
+        except Exception as e:
+            raise RuntimeError("An unexpected error occurred: %s when saving tensor to %s" % (str(e), save_filepath))
         change_mode(save_filepath, 0o640)
 
     def monitor(self, model):
@@ -96,7 +99,7 @@ class PtGradientMonitor(BaseMonitor):
                 output_lines.append(grad_info)
                 if self._level_adp["have_grad_direction"]:
                     PtGradientMonitor.save_grad_direction(param_name, grad,
-                                                    f'{self._output_path}/rank{self._rank}/step{self._step}')
+                                                          f'{self._output_path}/rank{self._rank}/step{self._step}')
             output_path = os.path.join(self._output_path, f"rank{getattr(self, '_rank')}",
                                        f"grad_summary_{self._step}.csv")
             write_csv(output_path, output_lines,
