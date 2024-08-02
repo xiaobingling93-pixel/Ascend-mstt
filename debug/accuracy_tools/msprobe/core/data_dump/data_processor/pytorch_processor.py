@@ -147,10 +147,12 @@ class PytorchDataProcessor(BaseDataProcessor):
         tensor_json.update({"Norm": tensor_stat.norm})
         tensor_json.update({"requires_grad": tensor.requires_grad})
 
-        if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
-            tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
-        if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
-            tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
+        if tensor_stat.max is not None:
+            if np.isinf(tensor_stat.max) or np.isnan(tensor_stat.max):
+                tensor_json['Max_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "max")
+        if tensor_stat.min is not None:
+            if np.isinf(tensor_stat.min) or np.isnan(tensor_stat.min):
+                tensor_json['Min_except_inf_nan'] = self.handle_tensor_extremum_nan_inf(tensor, "min")
 
         if self.config.summary_mode == Const.MD5:
             tensor_md5 = self.get_md5_for_tensor(tensor)
