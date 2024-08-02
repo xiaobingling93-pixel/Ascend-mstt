@@ -168,7 +168,8 @@ class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         if not path_len_exceeds_limit(file_path):
-            torch.save(tensor, file_path)
+            saved_tensor = tensor.contiguous().detach().cpu()
+            torch.save(saved_tensor, file_path)
             change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
         else:
             logger.warning(f'The file path {file_path} length exceeds limit.')
