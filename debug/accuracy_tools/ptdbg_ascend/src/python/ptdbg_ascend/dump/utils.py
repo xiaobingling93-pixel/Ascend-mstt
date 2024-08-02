@@ -21,9 +21,9 @@ range_begin_flag, range_end_flag = False, False
 def check_list_or_acl_mode(name_prefix):
     global dump_count
     for item in DumpUtil.dump_switch_scope:
-        if "pre_forward" in name_prefix:
-            parts = item.split(".")
-            rename = ".".join(parts[:-1])
+        if PRE_FORWARD in name_prefix:
+            parts = item.split(Const.DOT)
+            rename = Const.DOT.join(parts[:-1])
             if name_prefix.startswith(rename):
                 return True
         if name_prefix.startswith(item):
@@ -36,8 +36,8 @@ def check_range_mode(name_prefix):
     global range_begin_flag
     global range_end_flag
     if "Distributed" in DumpUtil.dump_switch_scope[0]:
-        parts = DumpUtil.dump_switch_scope[0].split(".")
-        rename = ".".join(parts[:-1])
+        parts = DumpUtil.dump_switch_scope[0].split(Const.DOT)
+        rename = Const.DOT.join(parts[:-1])
         if name_prefix.startswith(rename):
             range_begin_flag = True
             return True
