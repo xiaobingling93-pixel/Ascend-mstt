@@ -245,7 +245,10 @@ class Util:
         elif data.size % align != 0:
             pad_array = np.zeros((align - data.size % align,))
             data = np.append(data, pad_array)
-        np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+        try:
+            np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+        except Exception as e:
+            self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
         change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def list_convert_files(self, path, external_pattern=""):

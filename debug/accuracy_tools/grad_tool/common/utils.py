@@ -7,6 +7,7 @@ import yaml
 import pandas as pd
 
 from grad_tool.common.constant import GradConst
+from msprobe.core.common.file_check import FileOpen
 
 
 def _print_log(level, msg, end='\n'):
@@ -114,7 +115,7 @@ class ListCache(list):
 
 
 def get_config(filepath):
-    with open(filepath, 'r') as file:
+    with FileOpen(filepath, 'r') as file:
         config = yaml.safe_load(file)
     return config
 

@@ -83,16 +83,17 @@ class Compare:
         (left, right, save_txt, rl, al, diff_count) = args
         if left is None or right is None:
             raise ParseException("invalid input or output")
-        try:
-            left_data = np.load(left)
-            right_data = np.load(right)
-        except UnicodeError as e:
-            self.log.error("%s %s" % ("UnicodeError", str(e)))
-            self.log.warning("Please check the npy file")
-            raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
-        except IOError:
-            self.log.error("Failed to load npy %s or %s." % (left, right))
-            raise ParseException(ParseException.PARSE_LOAD_NPY_ERROR) from e
+        if self.util.check_path_valid(left) and self.util.check_path_valid(right):
+            try:
+                left_data = np.load(left)
+                right_data = np.load(right)
+            except UnicodeError as e:
+                self.log.error("%s %s" % ("UnicodeError", str(e)))
+                self.log.warning("Please check the npy file")
+                raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
+            except IOError:
+                self.log.error("Failed to load npy %s or %s." % (left, right))
+                raise ParseException(ParseException.PARSE_LOAD_NPY_ERROR) from e
 
         # save to txt
         if save_txt:
@@ -157,8 +158,10 @@ class Compare:
         return res
 
     def compare_npy(self, file, bench_file, output_path):
-        data = np.load(file)
-        bench_data = np.load(bench_file)
+        if self.util.check_path_valid(file):
+            data = np.load(file)
+        if self.util.check_path_valid(bench_file):
+            bench_data = np.load(bench_file)
         shape, dtype = data.shape, data.dtype
         bench_shape, bench_dtype = bench_data.shape, bench_data.dtype
         filename = os.path.basename(file)

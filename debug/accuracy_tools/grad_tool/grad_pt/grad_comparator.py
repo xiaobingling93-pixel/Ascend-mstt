@@ -1,13 +1,16 @@
 import torch
 
 from grad_tool.common.base_comparator import BaseComparator
+from grad_tool.common.utils import check_file_or_directory_path
 
 
 class PtGradComparator(BaseComparator):
 
     @classmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
+        check_file_or_directory_path(grad_file1)
         tensor1 = torch.load(grad_file1, map_location=torch.device("cpu"))
+        check_file_or_directory_path(grad_file2)
         tensor2 = torch.load(grad_file2, map_location=torch.device("cpu"))
         if tensor1.shape != tensor2.shape:
             raise RuntimeError(f"tensor shape is not equal: {grad_file1}, {grad_file2}")

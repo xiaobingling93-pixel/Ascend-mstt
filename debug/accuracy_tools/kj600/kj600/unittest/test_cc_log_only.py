@@ -7,9 +7,10 @@ from torch import distributed as dist
 import torch.multiprocessing as mp
 from kj600.module_hook import TrainerMon
 from kj600.unittest.cc_utils import *
+from msprobe.core.common.file_check import FileOpen
 
 
-with open(os.path.join(os.path.dirname(__file__), 'expected_cc_log.json')) as f:
+with FileOpen(os.path.join(os.path.dirname(__file__), 'expected_cc_log.json'), 'r') as f:
     EXPECTED = json.load(f)
 
 def test_all_gather(context, rank, world_size, async_op):

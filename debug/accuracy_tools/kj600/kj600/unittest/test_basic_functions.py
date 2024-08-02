@@ -11,6 +11,7 @@ except ModuleNotFoundError:
 from kj600.module_hook import TrainerMon
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+from msprobe.core.common.file_check import FileOpen
 
 class Model(torch.nn.Module):
     def __init__(self):
@@ -37,7 +38,7 @@ def get_file_path():
 
 def get_config():
     os.environ["KJ600_OUTPUT_DIR"] = "./test_kj600_output"
-    with open("config_basic_functions.json", 'r') as file:
+    with FileOpen("config_basic_functions.json", 'r') as file:
         config_test = json.load(file)
     return config_test
 def get_tensorbaord(event_file_path):

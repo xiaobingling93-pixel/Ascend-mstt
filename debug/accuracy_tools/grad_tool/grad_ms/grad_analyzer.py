@@ -169,6 +169,7 @@ class CSVGenerator(Process):
         stat_data = None
         max_try = 10
         while max_try:
+            check_file_or_directory_path(file_path)
             try:
                 stat_data = np.load(file_path)
                 return stat_data
