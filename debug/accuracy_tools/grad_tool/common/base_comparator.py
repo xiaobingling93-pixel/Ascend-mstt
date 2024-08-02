@@ -7,7 +7,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import write_csv, check_file_or_directory_path, print_info_log, create_directory
+from grad_tool.common.utils import write_csv, check_file_or_directory_path, print_info_log, create_directory, print_error_log
+
+from ptdbg_ascend.src.python.ptdbg_ascend.common import file_check_util
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, check_path_pattern_valid, check_path_length
 
 
 class BaseComparator(ABC):
@@ -85,8 +88,19 @@ class BaseComparator(ABC):
             picture_dir = os.path.join(output_dir, "similarities_picture")
             if not os.path.isdir(picture_dir):
                 create_directory(picture_dir)
-            plt.savefig(os.path.join(picture_dir, f"{key}_similarities.png"))
-            plt.close()
+            file_path= os.path.join(picture_dir, f"{key}_similarities.png")
+            if os.path.exists(file_path):
+                raise ValueError(f"File {file_path} already exists")
+            check_path_length(file_path)
+            check_path_pattern_valid(file_path)
+            try:
+                plt.savefig(file_path)
+                plt.close()
+            except Exception as e:
+                error_message = "An unexpected error occurred: %s when savfig to %s" % (str(e), file_path)
+                print_error_log(error_message)
+            full_path = os.path.realpath(file_path)
+            file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
             head_tuple = tuple(['step'] + [str(step) for step in steps])
             write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
 

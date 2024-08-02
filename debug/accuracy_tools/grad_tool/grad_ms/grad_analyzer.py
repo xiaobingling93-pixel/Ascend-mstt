@@ -16,6 +16,7 @@ from grad_tool.common.utils import ListCache, print_warn_log
 from grad_tool.common.utils import create_directory, check_file_or_directory_path, write_csv
 from grad_tool.grad_ms.global_context import grad_context
 from grad_tool.grad_ms.global_context import GlobalContext
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker
 
 
 def get_rank_id():
@@ -169,6 +170,8 @@ class CSVGenerator(Process):
         stat_data = None
         max_try = 10
         while max_try:
+            file_path_checker = FileChecker(file_path, FileCheckConst.DIR,FileCheckConst.READ_ABLE)
+            file_path = file_path_checker.common_check()
             try:
                 stat_data = np.load(file_path)
                 return stat_data
@@ -177,7 +180,7 @@ class CSVGenerator(Process):
                 max_try -= 1
                 time.sleep(0.1)
         return stat_data
-
+    
     def gen_csv_line(self, file_path: str, stat_data) -> None:
         shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
         file_name = os.path.basename(file_path)
