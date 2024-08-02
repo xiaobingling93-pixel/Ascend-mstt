@@ -318,15 +318,6 @@ def execute_command(cmd):
         raise CompareException(CompareException.INVALID_DATA_ERROR)
 
 
-def save_numpy_data(file_path, data):
-    """
-    save_numpy_data
-    """
-    if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
-    np.save(file_path, data)
-
-
 def parse_value_by_comma(value):
     """
     parse value by comma, like '1,2,4,8'
