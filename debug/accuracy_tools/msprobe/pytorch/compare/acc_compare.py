@@ -662,7 +662,7 @@ def compare(args):
         check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
         create_directory(args.output_path)
         check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
-    except CompareException as error:
+    except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
     compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
