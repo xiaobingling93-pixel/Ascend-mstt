@@ -16,6 +16,7 @@
 import os
 from pathlib import Path
 import functools
+from collections import defaultdict
 
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
@@ -26,6 +27,7 @@ from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
 
 class Service:
@@ -51,6 +53,7 @@ class Service:
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
+                del module.input_kwargs
             return output
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
@@ -69,20 +72,21 @@ class Service:
 
         def wrap_forward_hook(*args, **kwargs):
             return forward_hook(*args, **kwargs)
-        
+
         def wrap_backward_hook(*args, **kwargs):
             return backward_hook(*args, **kwargs)
-        
+
         return wrap_forward_hook, wrap_backward_hook
 
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
+        HOOKCell.cell_count = defaultdict(int)
 
     def start(self, model=None):
         self.model = model
         self.start_call = True
-        logger.info_on_rank_0("msprobe: debugger.start() is set successfully")
+        logger.info("msprobe: debugger.start() is set successfully")
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
             raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
@@ -99,13 +103,15 @@ class Service:
             self.register_hook_new()
             self.first_start = False
         self.switch = True
-        logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
+        logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
-        logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
+        logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        logger.info("msprobe: debugger.stop() is set successfully. "
+                    "Please set debugger.start() to turn on the dump switch again. ")
         if not self.start_call:
-            logger.error_on_rank_0("msprobe: debugger.start() is not set in the current scope.")
+            logger.error("msprobe: debugger.start() is not set in the current scope.")
             raise Exception("debugger.start() is not set in the current scope.")
         if self.config.step and self.current_iter not in self.config.step:
             return
@@ -113,7 +119,6 @@ class Service:
             return
         self.switch = False
         self.start_call = False
-        logger.info_on_rank_0(f"msprobe: debugger.stop() is set successfully. Please set debugger.start() to turn on the dump switch again. ")
         self.data_collector.write_json()
 
     def create_dirs(self):
@@ -138,9 +143,9 @@ class Service:
         construct_file_path = os.path.join(dump_dir, "construct.json")
         self.data_collector.update_dump_paths(
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None)
-        
+
     def register_hook_new(self):
-        logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
+        logger.info("The {} hook function is successfully mounted to the model.".format(self.config.task))
         if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()

@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from einops import rearrange
 
-from api_accuracy_checker.common.utils import logger
+from msprobe.pytorch.common.utils import logger
 
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 softmax_build_mode = "QKV"  # "MAX_SUM"

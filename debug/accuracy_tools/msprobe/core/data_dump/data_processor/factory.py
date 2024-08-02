@@ -4,7 +4,7 @@ from msprobe.core.common.const import Const
 class DataProcessorFactory:
     _data_processor = {}
     _module_processor = {}
-    
+
     @classmethod
     def register_processor(cls, framework, task, processor_class):
         key = (framework, task)
@@ -13,7 +13,7 @@ class DataProcessorFactory:
     @classmethod
     def register_module_processor(cls, framework, processor_class):
         cls._module_processor[framework] = processor_class
-        
+
     @classmethod
     def get_module_processor(cls, framework):
         processor_class = cls._module_processor.get(framework)
@@ -39,7 +39,7 @@ class DataProcessorFactory:
                 TensorDataProcessor as PytorchTensorDataProcessor,
                 OverflowCheckDataProcessor as PytorchOverflowCheckDataProcessor,
                 FreeBenchmarkDataProcessor as PytorchFreeBenchmarkDataProcessor,
-                KernelDumpDataProcessor as PytorchKernelDumpDataProcessor 
+                KernelDumpDataProcessor as PytorchKernelDumpDataProcessor
             )
             from ....pytorch.module_processer import ModuleProcesser
             cls.register_processor(Const.PT_FRAMEWORK, Const.STATISTICS, PytorchStatisticsDataProcessor)
@@ -47,11 +47,13 @@ class DataProcessorFactory:
             cls.register_processor(Const.PT_FRAMEWORK, Const.OVERFLOW_CHECK, PytorchOverflowCheckDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.FREE_BENCHMARK, PytorchFreeBenchmarkDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.KERNEL_DUMP, PytorchKernelDumpDataProcessor)
-            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)                                              
+            cls.register_module_processor(Const.PT_FRAMEWORK, ModuleProcesser)
         elif framework == Const.MS_FRAMEWORK:
             from .mindspore_processor import (
                 StatisticsDataProcessor as MindsporeStatisticsDataProcessor,
-                TensorDataProcessor as MindsporeTensorDataProcessor
+                TensorDataProcessor as MindsporeTensorDataProcessor,
+                OverflowCheckDataProcessor as MindsporeOverflowCheckDataProcessor
             )
             cls.register_processor(Const.MS_FRAMEWORK, Const.STATISTICS, MindsporeStatisticsDataProcessor)
             cls.register_processor(Const.MS_FRAMEWORK, Const.TENSOR, MindsporeTensorDataProcessor)
+            cls.register_processor(Const.MS_FRAMEWORK, Const.OVERFLOW_CHECK, MindsporeOverflowCheckDataProcessor)
