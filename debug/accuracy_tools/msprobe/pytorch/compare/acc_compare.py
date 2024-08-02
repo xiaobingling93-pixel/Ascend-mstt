@@ -698,9 +698,9 @@ def compare_core(input_parma, output_path, **kwargs):
     check_file_not_exists(file_path)
     highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
-    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-            FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
+    with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
+            FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
+            FileOpen(input_parma.get("stack_path"), "r") as stack_json:
         result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                     summary_compare, md5_compare)
 
