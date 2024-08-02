@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 
+import argparse
 import json
 import multiprocessing
 import os.path
@@ -653,18 +654,19 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-            fuzzy_match=False):
+def compare(args):
+    with FileOpen(args.input_path, "r") as file:
+        input_param = json.load(file)
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_parma)
-        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
-        create_directory(output_path)
-        check_compare_param(input_parma, output_path, summary_compare, md5_compare)
+        summary_compare, md5_compare = task_dumppath_get(input_param)
+        check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
+        create_directory(args.output_path)
+        check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
-    compare_core(input_parma, output_path, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
+    compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
+                 auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)
 
 
@@ -673,8 +675,8 @@ def compare_core(input_parma, output_path, **kwargs):
     Compares data from multiple JSON files and generates a comparison report.
 
     Args:
-        input_parma (dict): A dictionary containing paths to JSON files ("npu_json_path", "bench_json_path",
-                            "stack_json_path").
+        input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
+                            "stack_path").
         output_path (str): The path where the output Excel report will be saved.
         **kwargs: Additional keyword arguments including:
         - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
@@ -700,9 +702,9 @@ def compare_core(input_parma, output_path, **kwargs):
     check_file_not_exists(file_path)
     highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
-    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-            FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
+    with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
+            FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
+            FileOpen(input_parma.get("stack_path"), "r") as stack_json:
         result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                     summary_compare, md5_compare)
 
@@ -1036,3 +1038,28 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             else:
                 result_item.extend([CompareConst.NONE, "-1"])
         result.append(result_item)
+
+
+def _compare_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.",  required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
+                        help="<optional> Whether to save stack info.", required=False)
+    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+                        help="<optional> Whether to give advisor.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+
+
+def _compare(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    _compare_parser(parser)
+    args = parser.parse_args(sys.argv[1:])
+    compare(args)
+
+
+if __name__ == '__main__':
+    _compare()
