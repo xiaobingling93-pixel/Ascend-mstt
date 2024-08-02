@@ -38,7 +38,7 @@ def save_grad_direction(param_name, grad, save_path):
     try:
         np.save(save_filepath, grad_direction_ndarray)
     except Exception as e:
-        raise RuntimeError("An unexpected error occurred: %s when saving numpy to %s" % (str(e), save_filepath))
+        raise RuntimeError(f"An unexpected error occurred: {e} when saving numpy to {save_filepath}") from e
     change_mode(save_filepath, 0o640)
 
 

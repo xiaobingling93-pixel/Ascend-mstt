@@ -64,7 +64,7 @@ class PtGradientMonitor(BaseMonitor):
         try:
             torch.save(is_positive, save_filepath)
         except Exception as e:
-            raise RuntimeError("An unexpected error occurred: %s when saving tensor to %s" % (str(e), save_filepath))
+            raise RuntimeError(f"An unexpected error occurred: {e} when saving tensor to {save_filepath}") from e
         change_mode(save_filepath, 0o640)
 
     def monitor(self, model):

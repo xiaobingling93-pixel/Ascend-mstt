@@ -18,7 +18,7 @@ class PtGradComparator(BaseComparator):
             tensor1 = torch.load(grad_file1, map_location=torch.device("cpu"))
             tensor2 = torch.load(grad_file2, map_location=torch.device("cpu"))
         except Exception as e:
-            raise RuntimeError("An unexpected error occurred: %s when loading tensor." % str(e))
+            raise RuntimeError(f"An unexpected error occurred: {e} when loading tensor.") from e
 
         if tensor1.shape != tensor2.shape:
             raise RuntimeError(f"tensor shape is not equal: {grad_file1}, {grad_file2}")

@@ -21,7 +21,7 @@ class MsGradComparator(BaseComparator):
             grad1 = torch.load(grad_file1).numpy() if grad1_suffix == "pt" else np.load(grad_file1)
             grad2 = torch.load(grad_file2).numpy() if grad2_suffix == "pt" else np.load(grad_file2)
         except Exception as e:
-            raise RuntimeError("An unexpected error occurred: %s when loading grad_file." % str(e))
+            raise RuntimeError(f"An unexpected error occurred: {e} when loading grad_file.") from e
 
         if grad1.shape != grad2.shape:
             raise RuntimeError(f"numpy shape is not equal: {grad_file1}, {grad_file2}")
