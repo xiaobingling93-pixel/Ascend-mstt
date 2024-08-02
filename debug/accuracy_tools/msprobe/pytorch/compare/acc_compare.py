@@ -671,8 +671,8 @@ def compare_core(input_parma, output_path, **kwargs):
     Compares data from multiple JSON files and generates a comparison report.
 
     Args:
-        input_parma (dict): A dictionary containing paths to JSON files ("npu_json_path", "bench_json_path",
-                            "stack_json_path").
+        input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
+                            "stack_path").
         output_path (str): The path where the output Excel report will be saved.
         **kwargs: Additional keyword arguments including:
         - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
