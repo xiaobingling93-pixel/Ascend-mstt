@@ -33,7 +33,7 @@ def main():
                     f"For any issue, refer README.md first",
     )
     parser.set_defaults(print_help=parser.print_help)
-    parser.add_argument('-f', '--framework', required=True, choices=['pytorch'],
+    parser.add_argument('-f', '--framework', required=True, choices=['pytorch', 'mindspore'],
                         help='Deep learning framework.')
     subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
@@ -53,19 +53,23 @@ def main():
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
-    if sys.argv[3] == "run_ut":
-        run_ut_command(args)
-    elif sys.argv[3] == "parse":
-        cli_parse()
-    elif sys.argv[3] == "multi_run_ut":
-        config = prepare_config(args)
-        run_parallel_ut(config)
-    elif sys.argv[3] == "api_precision_compare":
-        _api_precision_compare_command(args)
-    elif sys.argv[3] == "run_overflow_check":
-        _run_overflow_check_command(args)
-    elif sys.argv[3] == "compare":
-        compare(args)
+    if sys.argv[2] == "pytorch":
+        if sys.argv[3] == "run_ut":
+            run_ut_command(args)
+        elif sys.argv[3] == "parse":
+            cli_parse()
+        elif sys.argv[3] == "multi_run_ut":
+            config = prepare_config(args)
+            run_parallel_ut(config)
+        elif sys.argv[3] == "api_precision_compare":
+            _api_precision_compare_command(args)
+        elif sys.argv[3] == "run_overflow_check":
+            _run_overflow_check_command(args)
+        elif sys.argv[3] == "compare":
+            compare(args)
+    else:
+        if sys.argv[3] == "compare":
+            pass
 
 
 if __name__ == "__main__":
