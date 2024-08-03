@@ -22,6 +22,7 @@ import stat
 import subprocess
 import time
 import json
+import csv
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
@@ -514,3 +515,19 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
+
+
+def write_csv(data, filepath):
+    with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+
+
+def load_npy(filepath):
+    filepath = os.path.realpath(filepath)
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath)
+    except Exception as e:
+        raise RuntimeError(f"load npy file {filepath} failed") from e
+    return npy
