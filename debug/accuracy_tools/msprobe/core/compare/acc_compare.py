@@ -21,7 +21,7 @@ class Comparator:
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
-    def compare_by_op(op_name, op_name_mapping_dict, input_parma):
+    def compare_by_op(self,op_name, op_name_mapping_dict, input_parma):
         npu_bench_name_list = op_name_mapping_dict[op_name]
         data_name = npu_bench_name_list[1]
         error_file, relative_err, error_flag = None, None, False

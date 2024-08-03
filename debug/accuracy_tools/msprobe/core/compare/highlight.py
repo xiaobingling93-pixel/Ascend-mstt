@@ -1,8 +1,16 @@
 import math
 import abc
 import numpy as np
+from collections import namedtuple
+import openpyxl
+from openpyxl.styles import PatternFill
+from collections import namedtuple
 from msprobe.core.common.utils import get_header_index
 from msprobe.core.common.const import CompareConst
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_check import  change_mode
+from msprobe.core.common.const import  CompareConst, FileCheckConst
 
 
 class HighlightCheck(abc.ABC):
@@ -98,3 +106,124 @@ class HighlightRules:
         "check_order_magnitude": CheckOrderMagnitude(),
         "check_max_relative_diff": CheckMaxRelativeDiff(),
     }
+    
+
+def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False, md5_compare=False):
+    """找到单个API中需要高亮的行"""
+    if md5_compare:
+        return
+    npu_max_index = get_header_index('NPU max', summary_compare)
+    bench_max_index = get_header_index('Bench max', summary_compare)
+    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+
+    red_lines, yellow_lines = [], []
+    LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
+    ApiInfo = namedtuple('ApiInfo', ['api_input', 'api_output', 'num_pointer'])
+    ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+    color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
+
+    # 对单行API的输入或输出进行误差判断
+    for i, line in enumerate(result):
+        num = last_len + i
+        line_info = LineInfo(line_data=line, num_pointer=num)
+        for rule in HighlightRules.basic_rules.values():
+            rule.apply(line_info, color_columns, summary_compare)
+
+    # 对API的输出与输入比较，进行误差判断
+    for n, api_out in enumerate(result[n_num_input:len(result)]):
+        num = last_len + n_num_input + n
+        if num in red_lines:
+            continue
+        if not isinstance(api_out[npu_max_index], (float, int)) \
+                or not isinstance(api_out[bench_max_index], (float, int)) \
+                or not isinstance(api_out[max_diff_index], (float, int)):
+            continue
+        for _, api_in in enumerate(result[0:n_num_input]):
+            if not isinstance(api_in[npu_max_index], (float, int)) \
+                    or not isinstance(api_in[bench_max_index], (float, int)) \
+                    or not isinstance(api_in[max_diff_index], (float, int)):
+                continue
+
+            api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
+            if summary_compare:
+                for rule in HighlightRules.summary_compare_rules.values():
+                    rule.apply(api_info, color_columns, summary_compare)
+            else:
+                for rule in HighlightRules.compare_rules.values():
+                    rule.apply(api_info, color_columns, summary_compare)
+
+    highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
+    highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+
+
+def get_name_and_state(name):
+    """Get api/module name and state"""
+    if "input" in name:
+        api_name = name.split("input")[0]
+        state = "input"
+    else:
+        api_name = name.split("output")[0]
+        state = "output"
+    return api_name, state
+
+def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare):
+    """将dataframe根据API分组，并找到有误差的算子用于高亮"""
+    result = result_df.values
+    start, input_num, output_num, end = 0, 0, 0, len(result_df)
+    last_api_name, last_state = None, None
+    num, last_len = 0, 0
+    for res_i in result:
+        api_name, state = get_name_and_state(res_i[0])
+        if last_api_name:
+            if api_name == last_api_name:
+                if state == last_state:
+                    num += 1
+                else:
+                    input_num = num
+                    num, last_state = 1, state
+            else:
+                output_num = num
+                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
+                                summary_compare, md5_compare)
+                num, last_api_name, last_state = 1, api_name, state
+                start += input_num + output_num
+                input_num, output_num = 1, 0
+        else:
+            num, last_api_name, last_state = 1, api_name, state
+    if state:
+        if state == "input":
+            input_num = num
+        else:
+            output_num = num
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare, md5_compare)
+
+
+def highlight_rows_xlsx(result_df, highlight_dict, file_path):
+    """Write and highlight results in Excel"""
+    logger.info('Compare result is %s' % file_path)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+
+    # write header
+    for j, col_name in enumerate(result_df.columns, start=1):
+        ws.cell(row=1, column=j, value=col_name)
+
+    for i, row in enumerate(result_df.iterrows(), start=2):
+        for j, value in enumerate(row[1], start=1):
+            if not isinstance(value, (float, int)):
+                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
+            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+
+            if (i - 2) in highlight_dict['red_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.RED,
+                                                            end_color=CompareConst.RED, fill_type="solid")
+            elif (i - 2) in highlight_dict['yellow_rows']:
+                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
+                                                            end_color=CompareConst.YELLOW, fill_type="solid")
+    try:
+        wb.save(file_path)
+    except Exception as e:
+        logger.error('Save result file failed')
+        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
