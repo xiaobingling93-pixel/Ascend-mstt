@@ -36,7 +36,7 @@ from msprobe.pytorch.advisor.advisor import Advisor
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
-from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
+from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory, check_file_type
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.exceptions import FileCheckException
 
@@ -657,17 +657,20 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 def compare(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
-    try:
-        summary_compare, md5_compare = task_dumppath_get(input_param)
-        check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
-        create_directory(args.output_path)
-        check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
-    except (CompareException, FileCheckException) as error:
-        logger.error('Compare failed. Please check the arguments and do it again!')
-        sys.exit(error.code)
-    compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
-                 auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
-                 md5_compare=md5_compare)
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
+    if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
+        try:
+            summary_compare, md5_compare = task_dumppath_get(input_param)
+            check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
+            create_directory(args.output_path)
+            check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
+        except (CompareException, FileCheckException) as error:
+            logger.error('Compare failed. Please check the arguments and do it again!')
+            sys.exit(error.code)
+        compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
+                     auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
+                     md5_compare=md5_compare)
 
 
 def compare_core(input_parma, output_path, **kwargs):
@@ -1051,15 +1054,3 @@ def _compare_parser(parser):
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
-
-
-def _compare(parser=None):
-    if not parser:
-        parser = argparse.ArgumentParser()
-    _compare_parser(parser)
-    args = parser.parse_args(sys.argv[1:])
-    compare(args)
-
-
-if __name__ == '__main__':
-    _compare()
