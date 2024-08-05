@@ -496,8 +496,8 @@ def task_dumppath_get(input_param):
     else:
         logger.error(f"Compare is not required for overflow_check or free_benchmark.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path) + Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path) + Const.DUMP_TENSOR_DATA)
+    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
     return summary_compare, md5_compare
 
 
