@@ -191,7 +191,7 @@ class PTComparator (Comparator):
     
 
 
-def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
+def pt_compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
             fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_parma)
