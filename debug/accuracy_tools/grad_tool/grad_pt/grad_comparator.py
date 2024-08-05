@@ -1,3 +1,5 @@
+import os
+
 import torch
 
 from grad_tool.common.base_comparator import BaseComparator
@@ -7,8 +9,17 @@ class PtGradComparator(BaseComparator):
 
     @classmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
-        tensor1 = torch.load(grad_file1, map_location=torch.device("cpu"))
-        tensor2 = torch.load(grad_file2, map_location=torch.device("cpu"))
+        if not os.path.exists(grad_file1):
+            raise ValueError(f"file {grad_file1} not exists, please check the file path.")
+        if not os.path.exists(grad_file2):
+            raise ValueError(f"file {grad_file2} not exists, please check the file path.")
+
+        try:
+            tensor1 = torch.load(grad_file1, map_location=torch.device("cpu"))
+            tensor2 = torch.load(grad_file2, map_location=torch.device("cpu"))
+        except Exception as e:
+            raise RuntimeError(f"An unexpected error occurred: {e} when loading tensor.") from e
+
         if tensor1.shape != tensor2.shape:
             raise RuntimeError(f"tensor shape is not equal: {grad_file1}, {grad_file2}")
         if tensor1.dtype != torch.bool:

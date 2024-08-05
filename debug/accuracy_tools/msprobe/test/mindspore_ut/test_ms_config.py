@@ -19,7 +19,7 @@ from unittest.mock import patch, mock_open
 
 from msprobe.core.common.const import Const
 from msprobe.mindspore.ms_config import (parse_json_config, parse_task_config,
-                                      TensorConfig, StatisticsConfig, OverflowCheck)
+                                         TensorConfig, StatisticsConfig, OverflowCheckConfig)
 
 
 class TestMsConfig(TestCase):
@@ -62,7 +62,7 @@ class TestMsConfig(TestCase):
         self.assertTrue(isinstance(task_config, StatisticsConfig))
 
         task_config = parse_task_config("overflow_check", mock_json_config)
-        self.assertTrue(isinstance(task_config, OverflowCheck))
+        self.assertTrue(isinstance(task_config, OverflowCheckConfig))
 
         with self.assertRaises(Exception) as context:
             parse_task_config("free_benchmark", mock_json_config)

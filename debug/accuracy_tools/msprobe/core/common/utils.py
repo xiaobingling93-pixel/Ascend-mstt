@@ -148,7 +148,7 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, stack_mode=False, summary_compare=False, md5_compare=False):
+def check_compare_param(input_parma, output_path, summary_compare=False, md5_compare=False):
     if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -316,15 +316,6 @@ def execute_command(cmd):
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
         raise CompareException(CompareException.INVALID_DATA_ERROR)
-
-
-def save_numpy_data(file_path, data):
-    """
-    save_numpy_data
-    """
-    if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
-    np.save(file_path, data)
 
 
 def parse_value_by_comma(value):

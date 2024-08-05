@@ -17,18 +17,25 @@
 
 import os
 import torch
-import torch_npu
 import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_check import FileOpen
+from msprobe.pytorch.function_factory import npu_custom_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 with FileOpen(yaml_path, 'r') as f:
     WrapNpuOps = yaml.safe_load(f).get('torch_npu')
+
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+else:
+    is_gpu = False
 
 
 def get_npu_ops():
@@ -46,13 +53,19 @@ class HOOKNpuOP(object):
 
 class NpuOPTemplate(HOOKModule):
 
-    def __init__(self, op_name, hook):
+    def __init__(self, op_name, hook, need_hook=True):
         self.op_name_ = op_name
         self.prefix_op_name_ = "NPU" + Const.SEP + str(op_name) + Const.SEP
-        super().__init__(hook)
+        self.need_hook = need_hook
+        if need_hook:
+            super().__init__(hook)
 
     @torch_device_guard
     def forward(self, *args, **kwargs):
+        if not self.need_hook:
+            if self.op_name_ not in npu_custom_functions:
+                raise Exception(f'There is not bench function {self.op_name_}')
+            return npu_custom_functions[self.op_name_](*args, **kwargs)
         if torch_without_guard_version:
             return getattr(torch.ops.npu, str(self.op_name_))(*args, **kwargs)
         else:
@@ -60,7 +73,6 @@ class NpuOPTemplate(HOOKModule):
 
 
 def wrap_npu_op(op_name, hook):
-
     def npu_op_template(*args, **kwargs):
         return NpuOPTemplate(op_name, hook)(*args, **kwargs)
 

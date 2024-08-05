@@ -20,7 +20,7 @@ PrecisionDebugger接口可以在from msprobe.pytorch import PrecisionDebugger之
 PrecisionDebugger(config_path=None, task=None, dump_path=None, level=None, model=None, step=None)
 ```
 
-说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于[config.json](../../config)文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。
+说明：上述参数除config_path和model外，其他参数均在[config.json](../../config)文件中可配，此处的参数优先级高于[config.json](../../config)文件中的配置，而config.json文件可以配置更多参数，若需要进行更多场景的精度数据dump，建议配置[config.json](../../config)文件。config.json文件的配置可参考《[配置文件说明](https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/config/README.md)》。
 
 **参数说明**
 
@@ -77,9 +77,9 @@ if __name__ == "__main__"
 
 **功能说明**
 
-启动函数。
+dump启动函数。
 
-在模型初始化之后的任意位置添加。
+在模型初始化之后的位置添加。需要与stop函数一起添加在for循环内。
 
 **原型**
 
@@ -93,9 +93,9 @@ debugger.start()
 
 **功能说明**
 
-停止函数。
+dump停止函数。
 
-在**start**函数之后的任意位置添加。
+在**start**函数之后的任意位置添加。若需要dump反向数据，则需要添加在反向计算代码（如loss.backward）之后。
 
 **原型**
 
@@ -105,13 +105,33 @@ debugger.stop()
 
 该函数为类函数，可以使用debugger.stop()也可以使用PrecisionDebugger.stop()。
 
+### forward_backward_dump_end函数
+
+**功能说明**
+
+dump停止函数。用于dump指定代码的前反向数据。
+
+在**start**函数之后，反向计算代码（如loss.backward）之前的任意位置添加，可以dump **start**函数和该函数之间的前反向数据，可以通过调整**start**函数与该函数的位置，来指定需要dump的代码块。
+
+要求**stop**函数添加在反向计算代码（如loss.backward）之后，此时该函数与**stop**函数之间的代码不会被dump。
+
+使用示例参见“**示例代码 > 扩展示例**”。
+
+**原型**
+
+```Python
+forward_backward_dump_end()
+```
+
+该函数为类函数，可以使用debugger.forward_backward_dump_end()也可以使用PrecisionDebugger.forward_backward_dump_end()。
+
 ### step函数
 
 **功能说明**
 
 结束标识。
 
-在最后一个**stop**函数后或一个step结束的位置添加。
+在最后一个**stop**函数后或一个step结束的位置添加。需要与start函数一起添加在for循环内。
 
 **原型**
 
@@ -123,12 +143,15 @@ debugger.step()
 
 ## 示例代码
 
+### 基础操作
+
+如下示例可dump完整代码的前反向数据。
+
 ```Python
 from msprobe.pytorch import PrecisionDebugger
 
 # 请勿将PrecisionDebugger的初始化流程插入到循环代码中
 debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
-
 
 # 模型、损失函数的定义及初始化等操作
 # ...
@@ -139,6 +162,33 @@ for data, label in data_loader:
 
 	# 如下是模型每个step执行的逻辑
     output = model(data)
+    #...
+    loss.backward()
+
+	debugger.stop() # 关闭数据dump
+	debugger.step() # 结束一个step的dump
+```
+
+### 扩展示例
+
+如下示例dump指定代码块前反向数据。
+
+```Python
+from msprobe.pytorch import PrecisionDebugger
+
+# 请勿将PrecisionDebugger的初始化流程插入到循环代码中
+debugger = PrecisionDebugger(config_path="./config.json", dump_path="./dump_path")
+
+# 模型、损失函数的定义及初始化等操作
+# ...
+
+# 数据集迭代的位置一般为模型训练开始的位置
+for data, label in data_loader:
+	debugger.start() # 开启数据dump
+
+	# 如下是模型每个step执行的逻辑
+    output = model(data)
+    debugger.forward_backward_dump_end() # 插入该函数到start函数之后，只dump start函数到该函数之间代码的前反向数据，本函数到stop函数之间的数据则不dump
     #...
     loss.backward()
 
