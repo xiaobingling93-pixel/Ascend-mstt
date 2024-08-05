@@ -654,22 +654,26 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def compare(args):
+def compare_cli(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
+    compare(input_param, output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match)
+
+
+def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
         try:
             summary_compare, md5_compare = task_dumppath_get(input_param)
-            check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
-            create_directory(args.output_path)
-            check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+            create_directory(output_path)
+            check_compare_param(input_param, output_path, summary_compare, md5_compare)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
-        compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
-                     auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
+        compare_core(input_param, output_path, stack_mode=stack_mode,
+                     auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                      md5_compare=md5_compare)
 
 

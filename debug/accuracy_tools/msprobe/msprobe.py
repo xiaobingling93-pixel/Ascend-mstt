@@ -65,7 +65,7 @@ def main():
     elif sys.argv[3] == "run_overflow_check":
         _run_overflow_check_command(args)
     elif sys.argv[3] == "compare":
-        compare(args)
+        compare_cli(args)
 
 
 if __name__ == "__main__":
