@@ -7,7 +7,7 @@ import yaml
 import pandas as pd
 
 from grad_tool.common.constant import GradConst
-from msprobe.core.common.file_check import FileOpen
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
 def _print_log(level, msg, end='\n'):

@@ -5,7 +5,6 @@ import inspect
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-from msprobe.core.common.file_check import FileOpen
 
 from ..module_metric import get_metrics
 
@@ -17,11 +16,11 @@ except ImportError:
 PREFIX_POST = "post"
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
-with FileOpen(OpsPath, 'r') as f:
+with open(OpsPath) as f:
     WrapDistributedOps = yaml.safe_load(f).get('distributed')
 
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
-with FileOpen(StackBlackListPath, 'r') as f:
+with open(StackBlackListPath) as f:
     StackBlackList = yaml.safe_load(f).get('stack')
 
 distributed_func = {}

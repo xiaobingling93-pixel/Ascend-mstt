@@ -68,7 +68,8 @@ class Service:
             if not self.switch:
                 return
             if self.data_collector:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
+                # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
+                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
                 self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
 
         pid = os.getpid()

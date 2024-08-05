@@ -1,9 +1,12 @@
 import os
+
 import mindspore as ms
+
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
+from msprobe.core.common.const import MsConst
 
 
 class PrecisionDebugger:
@@ -14,6 +17,8 @@ class PrecisionDebugger:
             cls._instance = super().__new__(cls)
             cls._instance.initialized = False
             cls._instance.config = None
+            cls.service = None
+            cls.first_start = False
         return cls._instance
 
     def __init__(self, config_path=None):
@@ -24,28 +29,47 @@ class PrecisionDebugger:
         common_config, task_config = parse_json_config(config_path)
         self.config = DebuggerConfig(common_config, task_config)
         self.initialized = True
-        self.service = Service(self.config)
+
+    @staticmethod
+    def _get_execution_mode():
+        if ms.get_context("mode") == ms.GRAPH_MODE:
+            if ms.context.get_jit_config().get("jit_level") == "O2" or ms.get_context("jit_level") == "O2":
+                return MsConst.GRAPH_GE_MODE
+            else:
+                return MsConst.GRAPH_KBYK_MODE
+        else:
+            return MsConst.PYNATIVE_MODE
 
     @classmethod
     def start(cls):
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
-        if ms.get_context("mode") == ms.PYNATIVE_MODE and instance.config.level_ori == "L1":
+
+        instance.config.execution_mode = instance._get_execution_mode()
+        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API:
+            if not instance.service:
+                instance.service = Service(instance.config)
             instance.service.start()
         else:
-            handler = TaskHandlerFactory.create(instance.config)
-            handler.handle()
+            if not instance.first_start:
+                handler = TaskHandlerFactory.create(instance.config)
+                handler.handle()
+
+        instance.first_start = True
 
     @classmethod
     def stop(cls):
         instance = cls._instance
         if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
-        instance.service.stop()
+        if instance.service:
+            instance.service.stop()
 
     @classmethod
     def step(cls):
-        if not cls._instance:
+        instance = cls._instance
+        if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
-        cls._instance.service.step()
+        if instance.service:
+            instance.service.step()
