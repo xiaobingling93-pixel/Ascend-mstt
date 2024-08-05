@@ -13,9 +13,9 @@ from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, C
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
-from msprobe.core.compare.utils import ComparisonResult,_save_cmp_result,merge_tensor, get_un_match_accuracy,get_accuracy,read_op
-from msprobe.core.compare.highlight import find_compare_result_error_rows,highlight_rows_xlsx
-from msprobe.core.compare.Multiprocessing_compute import _handle_multi_process
+from msprobe.core.compare.utils import merge_tensor, get_un_match_accuracy, get_accuracy, read_op
+from msprobe.core.compare.Multiprocessing_compute import ComparisonResult, _save_cmp_result, _handle_multi_process
+from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.acc_compare import Comparator 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -267,6 +267,20 @@ def pt_compare(args):
     ptComparator.compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
                  auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)   
+
+
+def _compare_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.",  required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
+                        help="<optional> Whether to save stack info.", required=False)
+    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+                        help="<optional> Whether to give advisor.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+
 
     
 

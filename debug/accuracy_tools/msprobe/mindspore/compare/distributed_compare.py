@@ -19,9 +19,9 @@ import sys
 import re
 from msprobe.core.common.utils import CompareException, check_compare_param, \
     check_configuration_param, task_dumppath_get, check_file_or_directory_path, check_regex_prefix_format_valid
-from msprobe.mindspore.compare.acc_compare import compare_core
 from msprobe.core.common.file_check import create_directory
-from msprobe.mindspore.common.log import logger
+from msprobe.core.common.log import logger
+from msprobe.mindspore.compare.ms_compare import MSComparator
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
@@ -108,5 +108,6 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         except CompareException as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             sys.exit(error.code)
-        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+        msComparator=MSComparator()
+        msComparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
                      md5_compare=md5_compare, **kwargs)

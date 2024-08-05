@@ -17,9 +17,9 @@
 
 import os
 
-from msprobe.mindspore.advisor.advisor_result import AdvisorResult
-from msprobe.mindspore.advisor.advisor_const import AdvisorConst
-from msprobe.mindspore.common.log import logger
+from msprobe.core.advisor.advisor_result import AdvisorResult
+from msprobe.core.advisor.advisor_const import AdvisorConst
+from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_check import FileChecker
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
