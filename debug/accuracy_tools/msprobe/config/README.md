@@ -2,7 +2,30 @@
 
 当前配置文件主要为PrecisionDebugger接口执行dump或无标杆比对操作时调用的配置，当PrecisionDebugger接口未指定该配置文件时，使用该文件的默认配置。配置文件详见[config.json](./config.json)。
 
-本文针对msprobe工具支持的PyTorch、MindSpore静态图和MindSpore静态图场景进行描述。
+当在环境上安装msprobe工具后，config.json文件位置可通过如下方式查找：
+
+查找msprobe工具安装路径。
+
+```
+pip show mindstudio-probe
+```
+
+输出结果如下示例：
+
+```
+Name: mindstudio-probe
+Version: 1.0
+Summary: This is a pytorch precision comparison tools
+Home-page:
+Author:
+Author-email:
+License:
+Location: /home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages
+Requires: numpy, openpyxl, pandas, pyyaml, rich, tqdm, wheel
+Required-by:
+```
+
+Location字段为msprobe工具的安装路径，那么config.json文件位置为/home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages/msprobe/config
 
 ## 参数说明
 
@@ -10,7 +33,7 @@
 
 | 参数名            | 说明                                                         | 是否必选 |
 | ----------------- | ------------------------------------------------------------ | -------- |
-| task              | dump的任务类型，str类型。可取值：<br/>"free_benchmark"（无标杆比对）。<br/>"statistics"（仅dump张量的统计信息，默认值）。<br/>"tensor"（dump张量的统计信息和完整张量数据，MindSpore静态图场景仅dump完整张量数据）。<br/>"overflow_check"（溢出检测）。<br/>"run_ut"（精度预检配置）。<br/>配置示例："task": "tensor"。<br/>根据task参数取值的不同，可以配置不同场景参数，详见：“**task配置为free_benchmark**”，“**task配置为statistics**”，“**task配置为tensor**”，“**task配置为overflow_check**”，“**task配置为run_ut**”。 | 否       |
+| task              | dump的任务类型，str类型。可取值：<br/>        "free_benchmark"（无标杆比对）。<br/>        "statistics"（仅dump张量的统计信息，默认值）。<br/>        "tensor"（dump张量的统计信息和完整张量数据，MindSpore静态图场景仅dump完整张量数据）。<br/>        "overflow_check"（溢出检测）。<br/>        "run_ut"（精度预检配置）。<br/>配置示例："task": "tensor"。<br/>根据task参数取值的不同，可以配置不同场景参数，详见：“**task配置为free_benchmark**”，“**task配置为statistics**”，“**task配置为tensor**”，“**task配置为overflow_check**”，“**task配置为run_ut**”。 | 否       |
 | dump_path         | 设置dump数据目录路径，str类型。配置示例："dump_path": "./dump_path"。MindSpore静态图场景仅支持绝对路径。 | 是       |
 | rank              | 指定对某张卡上的数据进行dump，list[int]类型，默认未配置（表示dump所有卡的数据），应配置为大于等于0的整数，且须配置实际可用的Rank ID。配置示例："rank": [1]。<br>        对于PyTorch场景，Rank ID从0开始计数，最大取值为所有节点可用卡总数-1，若所配置的值大于实际训练所运行的卡的Rank ID，则dump数据为空，比如当前环境Rank ID为0到7，实际训练运行0到3卡，此时若配置Rank ID为4或不存在的10等其他值，此时dump数据为空。<br/>        对于MindSpore场景，所有节点的Rank ID均从0开始计数，最大取值为每个节点可用卡总数-1，config.json配置一次rank参数对所有节点同时生效。 | 否       |
 | step              | 指定dump某个step的数据，list[int]类型。默认未配置，表示dump所有step数据。dump特定step时，须指定为训练脚本中存在的step。step为list格式，可配置逐个step，例如："step": [0,1,2]。 | 否       |
@@ -76,11 +99,17 @@ MindSpore静态图场景仅dump完整张量数据。
 
 | 参数名         | 说明                                                         | 是否必选 |
 | -------------- | ------------------------------------------------------------ | -------- |
-| scope          | PyTorch和MindSpore动态图场景dump范围，list[str]类型，默认未配置（list也未配置时表示dump所有API的数据）。需要在[]内配置两个模块名或API名，用于锁定区间，dump该范围内的数据。配置示例："scope": ["MyModuleOP1", "MyModuleOP2"]。与level参数取值相关，level为L0和mix级别时，可配置模块名；level为L1级别时，可配置API名。MindSpore动态图场景当前仅支持配置为API名。 | 否       |
+| scope          | PyTorch和MindSpore动态图场景dump范围，list[str]类型，默认未配置（list也未配置时表示dump所有API的数据）。需要在[]内配置两个模块名或API名，用于锁定区间，dump该范围内的数据。配置示例："scope": ["MyModuleOP1", "MyModuleOP2"]。与level参数取值相关，level为L0和mix级别时，可配置模块名；level为L1级别时，可配置API名。 | 否       |
 | list           | 自定义dump范围，list[str]类型，默认未配置（scope也未配置时表示dump所有API的数据）。包含如下配置方法：<br>        PyTorch和MindSpore动态图场景配置具体的API全称，dump该API数据。配置示例："list": ["Tensor.permute.1.forward", "Tensor.transpose.2.forward", "Torch.relu.3.backward"]。<br/>        PyTorch和MindSpore动态图场景指定某一类API，dump某一类的API级别输入输出数据。配置示例："list": ["relu"]。<br/>        PyTorch和MindSpore动态图场景配置kernel_api，dump前向和反向API的kernel_api级别数据，其中dump反向API时需要配置**backward_input**参数。前向API配置示例："list": ["Tensor.permute.1.forward"]；反API配置示例："list": ["Tensor.permute.1.forward"], "backward.input": "./npu_dump/step0/rank0/Functional.conv2d.1.backward.input.0.pt"]。<br/>        MindSpore静态图场景配置kernel_name，可以是算子的名称列表，也可以指定算子类型（"level": "L2"时不支持），还可以配置算子名称的正则表达式（当字符串符合”name-regex(xxx)”格式时，后台则会将其作为正则表达式。例如，”name-regex(Default/.+)”可匹配算子名称以”Default/”开头的所有算子）。 | 否       |
 | backward_input | 该输入文件为首次运行训练dump得到反向API输入的dump文件，str类型，仅PyTorch场景支持，默认未配置。例如若需要dump Functional.conv2d.1 API的反向过程的输入输出，则需要在dump目录下查找命名包含Functional.conv2d.1、backward和input字段的dump文件。配置示例："backward_input": "./npu_dump/step0/rank0/Functional.conv2d.1.backward.input.0.pt"] | 否       |
 | data_mode      | dump数据过滤，str类型。可取值"all"、"forward"、"backward"、"input"和"output"，表示仅保存dump的数据中文件名包含"forward"、"backward"、"input"和"output"的前向、反向、输入或输出的dump文件。配置示例"data_mode": ["backward"]或"data_mode": ["forward", "backward"]。默认为["all"]，即保存所有dump的数据。除了all参数只能单独配置外，其他参数可以自由组合。<br/>MindSpore静态图场景仅支持"all"、"input"和"output"参数，且各参数只能单独配置，不支持自由组合。 | 否       |
 | file_format    | MindSpore静态图场景真实tensor数据的保存格式，str类型，可取值"bin"（dump的tensor文件为二进制格式，"level": "L1"时不支持）、"npy"（dump的tensor文件后缀为.npy，默认值）。 | 否       |
+| online_run_ut  | 在线预检模式开关，bool类型，可取值true（开启）、false（关闭），默认未配置，表示关闭。配置为true表示开启在线预检。 | 否       |
+| nfs_path       | 在线预检模式共享存储目录路径，str类型，用于GPU设备和NPU设备间进行通信。仅在online_run_ut字段配置为true时生效，未配置该参数后host和port不生效。 | 否       |
+| host           | 在线预检模式局域网场景信息接收端IP，str类型，用于GPU设备和NPU设备间进行通信，NPU侧须配置为GPU侧的局域网IP地址。仅在online_run_ut字段配置为true时生效，局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。 | 否       |
+| port           | 在线预检模式局域网场景信息接收端端口号，int类型，用于GPU设备和NPU设备间进行通信，NPU侧须配置为GPU侧的端口号。仅在online_run_ut字段配置为true时生效，局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。 | 否       |
+
+说明： online_run_ut、nfs_path、host、port参数仅在线预检场景NPU环境生效，详细说明请参见[《在线精度预检》](../pytorch/doc/api_accuracy_checker_online.md)。
 
 ### task配置为overflow_check
 
@@ -90,6 +119,18 @@ MindSpore静态图场景的jit_level为O0/O1时，不支持该功能，须配置
 | ------------- | ------------------------------------------------------------ | -------- |
 | overflow_nums | 控制溢出次数，int类型，仅MindSpore动态图和PyTorch场景支持，表示第N次溢出时，停止训练，过程中检测到溢出API对应kernel数据均dump。配置示例："overflow_nums": 3。默认为1，即检测到1次溢出，训练停止，配置为-1时，表示持续检测溢出直到训练结束。 | 否       |
 | check_mode    | MindSpore静态图场景kernel级别的溢出检测，str类型，可取值"aicore"（开启AI Core的溢出检测）、"atomic"（开启Atomic的溢出检测）、"all"（开启AI Core和Atomic的溢出检测，默认值）。配置示例"check_mode": "aicore"。 | 否       |
+
+### task配置为run_ut
+
+仅PyTorch场景支持。
+
+| 参数名称        | 说明                                                         | 是否必选 |
+| --------------- | ------------------------------------------------------------ | -------- |
+| white_list      | API dump白名单，仅对指定的API进行dump。配置示例："white_list": ["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。 | 否       |
+| black_list      | API dump黑名单，被指定的API不进行dump。配置示例："black_list": ["conv1d", "conv2d"]。默认未配置黑名单，即dump全量API数据。 | 否       |
+| error_data_path | 配置保存精度未达标的API输入输出数据路径，默认为当前路径。配置示例"error_data_path": "./"。 | 否       |
+
+说明：white_list和black_list同时配置时，二者配置的API名单若无交集，则白名单生效，若API名单存在交集，则白名单排除的部分以及交集的API不进行dump。
 
 ## 配置示例
 
@@ -182,6 +223,27 @@ MindSpore静态图场景的jit_level为O0/O1时，不支持该功能，须配置
 
     "overflow_check": {
         "overflow_nums": 1
+    }
+}
+```
+
+###  PyTorch场景task配置为run_ut
+
+```json
+{
+    "task": "run_ut",
+    "dump_path": "/home/data_dump",
+    "rank": [],
+    "step": [],
+    "level": "L1",
+    "seed": 1234,
+    "is_deterministic": false,
+    "enable_dataloader": false,
+
+    "run_ut": {
+        "white_list": [],
+        "black_list": [],
+        "error_data_path": "./"
     }
 }
 ```

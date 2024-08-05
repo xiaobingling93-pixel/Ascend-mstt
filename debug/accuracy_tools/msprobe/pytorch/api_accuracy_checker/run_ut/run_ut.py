@@ -27,6 +27,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
 from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
+from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
+from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
@@ -77,6 +79,12 @@ def exec_api(api_type, api_name, args, kwargs):
         out = tensor_api.forward(*args, **kwargs)
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "Aten":
+        torch_api = AtenOPTemplate(api_name, None, False)
+        out = torch_api.forward(*args, **kwargs)
+    if api_type == "NPU":
+        torch_api = NpuOPTemplate(api_name, None, False)
         out = torch_api.forward(*args, **kwargs)
     return out
 
@@ -274,7 +282,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
     if need_backward:
         if need_to_backward(grad_index, out):
-            backward_args = backward_content[api_full_name].get("grad_output")
+            backward_args = backward_content[api_full_name].get("input")
             grad = gen_args(backward_args, api_name, real_data_path=real_data_path)[0]
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
@@ -379,10 +387,6 @@ def _run_ut_parser(parser):
                         help="<optional> The path of accuracy_checking_result_{timestamp}.csv, "
                              "when run ut is interrupted, enter the file path to continue run ut.",
                         required=False)
-    parser.add_argument("-real_data_path", dest="real_data_path", nargs="?", const="", default="", type=str,
-                        help="<optional> In real data mode, the root directory for storing real data "
-                             "must be configured.",
-                        required=False)
     parser.add_argument("-f", "--filter_api", dest="filter_api", action="store_true",
                         help="<optional> Whether to filter the api in the api_info_file.", required=False)
     parser.add_argument("-config", "--config_path", dest="config_path", default="", type=str,
@@ -400,9 +404,9 @@ def preprocess_forward_content(forward_content):
         if key not in arg_cache:
             filtered_new_args = [
                 {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
-                for arg in value['args'] if isinstance(arg, dict)
+                for arg in value['input_args'] if isinstance(arg, dict)
             ]
-            arg_cache[key] = (filtered_new_args, value['kwargs'])
+            arg_cache[key] = (filtered_new_args, value['input_kwargs'])
 
         filtered_new_args, new_kwargs = arg_cache[key]
 

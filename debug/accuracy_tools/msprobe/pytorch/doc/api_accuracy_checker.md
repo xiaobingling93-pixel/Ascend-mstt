@@ -21,7 +21,7 @@
 精度预检操作流程如下：
 
 1. 在NPU和GPU环境下分别安装msprobe工具。详见《[MindStudio精度调试工具](../../README.md)》的“工具安装”章节。
-2. 在NPU训练脚本内添加msprobe工具dump接口PrecisionDebugger采集待预检数据。详见《[精度数据采集](./dump.md)》。
+2. 在NPU训练脚本内添加msprobe工具dump接口PrecisionDebugger，采集待预检数据。详见《[精度数据采集](./dump.md)》，注意需要配置level="L1"。
 3. 将NPU环境下dump的预检数据拷贝至GPU环境。
 4. 在NPU和GPU环境下分别执行run_ut，生成结果用于最终api_precision_compare操作的输入。详见“**run_ut预检操作**”。
 5. 将NPU和GPU执行run_ut生成的`accuracy_checking_details_{timestamp}.csv`结果文件拷贝至同一环境下。
@@ -51,10 +51,12 @@ run_ut预检操作包括如下场景：
    | -api_info或--api_info_file   | 指定API信息文件dump.json。                                   | 是                                 |
    | -save_error_data             | 保存精度未达标的API输入输出数据。                            | 否                                 |
    | -o或--out_path               | 指定run_ut执行结果存盘路径，默认“./”（相对于run_ut的路径）。 | 否                                 |
+   |                              |                                                              |                                    |
    | -j或--jit_compile            | 开启jit编译。                                                | 否                                 |
    | -d或--device                 | 指定Device ID，选择UT代码运行所在的卡，默认值为0。           | 否                                 |
    | -csv_path或--result_csv_path | 指定本次运行中断时生成的`accuracy_checking_result_{timestamp}.csv`文件路径，执行run_ut中断时，若想从中断处继续执行，配置此参数即可。需要指定为上次中断的`accuracy_checking_result_{timestamp}.csv`文件。详见“**断点续检**”。 | run_ut操作中断后继续执行场景下必选 |
    | -f或--filter_api             | 过滤模型中除最大值和最小值以外其他参数和结构相同的API。适用于模型较大且重复API较多的场景。 | 否                                 |
+   | -config或--config_path       | 指定预检操作过程中的额外配置（包括黑名单、白名单等）的[config.json](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe/config)文件，默认未配置。config.json文件的配置可参考《[配置文件说明](https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/config/README.md#pytorch场景task配置为run_ut)》。 | 否                                 |
    
    run_ut执行结果包括`accuracy_checking_result_{timestamp}.csv`和`accuracy_checking_details_{timestamp}.csv`两个文件。`accuracy_checking_result_{timestamp}.csv`是API粒度的，标明每个API是否通过测试。建议用户先查看`accuracy_checking_result_{timestamp}.csv`文件，对于其中没有通过测试的或者特定感兴趣的API，根据其API name字段在`accuracy_checking_details_{timestamp}.csv`中查询其各个输出的达标情况以及比较指标。详细介绍请参见“**预检结果**”。
    
@@ -64,7 +66,7 @@ run_ut预检操作包括如下场景：
    msprobe -f pytorch run_ut -api_info ./dump.json -save_error_data
    ```
 
-   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过修改mstt/debug/accuracy_tools/api_accuracy_checker目录下，config.yaml文件的error_data_path参数来配置保存路径，详见“config.yaml文件说明”。
+   数据默认会存盘到'./ut_error_data{timestamp}'路径下（相对于启动run_ut的路径），有需要的话，用户可以通过error_data_path参数来配置保存路径，error_data_path参数在[config.json](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe/config)文件或config.yaml文件配置，config.json文件需要在run_ut操作时通过-config参数指定，config.yaml文件详见“**config.yaml文件说明**”。
 
 #### 使用multi_run_ut.py执行多线程预检
 
@@ -99,23 +101,65 @@ msprobe -f pytorch multi_run_ut -api_info ./dump.json -n 32 -d 0 1 2 3
 msprobe -f pytorch run_ut -api_info ./dump.json -csv_path /home/xxx/ut/accuracy_checking_result_{timestamp}.csv
 ```
 
-#### API预检白名单
+#### API预检黑名单和白名单
 
-run_ut过程支持API预检白名单，操作方式如下：
+run_ut过程支持API预检黑名单和白名单，通过如下文件配置black_list（黑名单）或white_list（白名单）参数来指定不需要或需要预检的API名称：
 
-修改mstt/debug/accuracy_tools/api_accuracy_checker目录下config.yaml文件的white_list参数，配置需要预检的API名称，详见“config.yaml文件说明”。
+- 配置[config.json](https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe/config)文件，config.json文件需要在run_ut操作时通过-config参数指定。
+- 配置config.yaml文件，详见“**config.yaml文件说明**”。
+
+config.json文件的优先级高于config.yaml文件，即执行config.json文件时，config.yaml文件的配置不生效。
 
 ### config.yaml文件说明
 
-config.yaml文件可以通过配置参数来控制dump和run_ut操作的白名单等功能。
+config.yaml文件可以通过配置参数来控制dump和run_ut操作的白名单、黑名单等功能。操作步骤如下：
 
-文件路径为：mstt/debug/accuracy_tools/msprobe/pytorch/api_accuracy_checker/config.yaml 
+1. 查找msprobe工具安装路径。
 
-| 参数名称        | 说明                                                         | 是否必选 |
-| --------------- | ------------------------------------------------------------ | -------- |
-| white_list      | API dump白名单，指定dump具体API数据，也可以直接配置预检的API白名单，详细请参见“**API预检白名单**”。参数示例：white_list=["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。 | 否       |
-| error_data_path | 配置保存精度未达标的API输入输出数据路径。                    | 否       |
-| precision       | 浮点数表示位数，默认取小数点后14位。                         | 否       |
+   ```bash
+   pip show mindstudio-probe
+   ```
+
+   输出结果如下示例：
+
+   ```bash
+   Name: mindstudio-probe
+   Version: 1.0
+   Summary: This is a pytorch precision comparison tools
+   Home-page:
+   Author:
+   Author-email:
+   License:
+   Location: /home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages
+   Requires: numpy, openpyxl, pandas, pyyaml, rich, tqdm, wheel
+   Required-by:
+   ```
+
+   Location字段为msprobe工具的安装路径，那么config.yaml文件位置为/home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages/msprobe/pytorch/api_accuracy_checker/config.yaml
+
+2. 进入config.yaml文件
+
+   ```bash
+   vi /home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages/msprobe/pytorch/api_accuracy_checker/config.yaml
+   ```
+
+3. 修改config.yaml文件参数。
+
+   ```yaml
+   white_list: []
+   black_list: []
+   error_data_path: './'
+   precision: 14
+   ```
+
+   | 参数名称        | 说明                                                         | 是否必选 |
+   | --------------- | ------------------------------------------------------------ | -------- |
+   | white_list      | API dump白名单，仅对指定的API进行dump。参数示例：white_list=["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。 | 否       |
+   | black_list      | API dump黑名单，被指定的API不进行dump。参数示例：black_list=["conv1d", "conv2d"]。默认未配置黑名单，即dump全量API数据。 | 否       |
+   | error_data_path | 配置保存精度未达标的API输入输出数据路径。参数示例"error_data_path": "./"。默认为当前路径。 | 否       |
+   | precision       | 浮点数表示位数，默认取小数点后14位。                         | 否       |
+
+   说明：white_list和black_list同时配置时，二者配置的API名单若无交集，则白名单生效，若API名单存在交集，则白名单排除的部分以及交集的API不进行dump。
 
 ## 预检结果
 

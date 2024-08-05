@@ -14,10 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+import logging
 import os
 import random
 import stat
 import torch
+import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
@@ -221,3 +223,36 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
+
+def get_tensor_rank(in_feat, out_feat):
+    if dist.is_initialized():
+        return dist.get_rank()
+
+    def get_tensor_rank_single(x):
+        if isinstance(x, (list, tuple)):
+            if len(x) > 0:
+                return get_tensor_rank_single(x[0])
+        elif isinstance(x, torch.Tensor):
+            device = x.device
+            if device.type != 'cpu':
+                return device.index
+        return None
+
+    in_rank = get_tensor_rank_single(in_feat)
+    out_rank = get_tensor_rank_single(out_feat)
+    tensor_rank = in_rank if in_rank else out_rank
+    return tensor_rank
+
+
+def _create_logger(level=logging.INFO):
+    logger_ = logging.getLogger()
+    logger_.setLevel(level)
+    ch = logging.StreamHandler()
+    ch.setLevel(level)
+    logger_.addHandler(ch)
+    return logger_
+
+
+log_level = logging.DEBUG if os.environ.get("API_ACCURACY_CHECK_LOG_LEVEL") == "1" else logging.INFO
+logger = _create_logger(log_level)

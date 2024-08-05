@@ -2,17 +2,18 @@ import functools
 import os
 from pathlib import Path
 
-from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
+from msprobe.core.common.file_check import FileChecker, check_path_before_create
 from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.scope import BaseScope
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.core.data_dump.scope import BaseScope
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
-from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.module_processer import ModuleProcesser
 
 
 class Service:
@@ -26,6 +27,11 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
+
+    @staticmethod
+    def forward_backward_dump_end():
+        logger.info_on_rank_0("Data needed ends here.")
+        api_register.api_originality()
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -62,7 +68,8 @@ class Service:
             if not self.switch:
                 return
             if self.data_collector:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
+                # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
+                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
                 self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
 
         pid = os.getpid()
@@ -77,7 +84,10 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
 
-    def start(self, model):
+        ModuleProcesser.reset_module_stats()
+        HOOKModule.reset_module_stats()
+
+    def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
             self.stop()
@@ -94,6 +104,8 @@ class Service:
                 return
             self.register_hook_new()
             self.first_start = False
+        if api_origin:
+            api_register.api_modularity()
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2":

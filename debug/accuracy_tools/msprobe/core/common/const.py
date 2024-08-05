@@ -45,6 +45,7 @@ class Const:
     PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
+    ONE_MB = 1048576  # 1 * 1024 * 1024
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     DISTRIBUTED_PREFIX_LENGTH = 60
     # env dump path
@@ -80,12 +81,12 @@ class Const:
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
     DISTRIBUTED = 'Distributed'
-    
+
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
     ]
-    
+
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
     }
@@ -252,3 +253,17 @@ class OverflowConst:
     OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
+
+class MsConst:
+    CELL = "cell"
+    API = "api"
+    KERNEL = "kernel"
+    TOOL_LEVEL_DICT = {
+        "L0": CELL,
+        "L1": API,
+        "L2": KERNEL
+    }
+    PYNATIVE_MODE = "pynative"
+    GRAPH_GE_MODE = "graph_ge"
+    GRAPH_KBYK_MODE = "graph_kbyk"

@@ -1,15 +1,17 @@
 from functools import wraps
+
 import torch
 from torch.utils.hooks import BackwardHook
+
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import ModuleRangeScope
 
 
 class ModuleProcesser:
+    module_count = {}
     module_stack = []
     api_parent_node = ""
     module_node = {}
-    current_module_name = ""
 
     def __init__(self, scope):
         if isinstance(scope, ModuleRangeScope):
@@ -19,7 +21,6 @@ class ModuleProcesser:
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)
-        self.module_count = {}
 
     @staticmethod
     def filter_tensor_and_tuple(func):
@@ -55,11 +56,26 @@ class ModuleProcesser:
         else:
             return result
 
+    @staticmethod
+    def module_count_func(module_name):
+        if module_name not in ModuleProcesser.module_count:
+            ModuleProcesser.module_count[module_name] = 0
+        else:
+            ModuleProcesser.module_count[module_name] += 1
+        return ModuleProcesser.module_count[module_name]
+
+    @classmethod
+    def reset_module_stats(cls):
+        cls.module_count = {}
+        cls.module_stack = []
+        cls.api_parent_node = ""
+        cls.module_node = {}
+
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
 
         def pre_hook(module, input, output=None):
             try:
-                index = self.module_count_func(name_prefix)
+                index = ModuleProcesser.module_count_func(name_prefix)
             except IndexError as e:
                 index = None
                 pass
@@ -89,10 +105,3 @@ class ModuleProcesser:
             return pre_hook
         else:
             return end_hook
-
-    def module_count_func(self, module_name):
-        if module_name not in self.module_count:
-            self.module_count[module_name] = 0
-        else:
-            self.module_count[module_name] += 1
-        return self.module_count[module_name]

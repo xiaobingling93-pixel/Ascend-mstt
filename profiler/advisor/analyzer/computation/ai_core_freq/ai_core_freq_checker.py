@@ -89,7 +89,7 @@ class AICoreFreqChecker:
 
     def make_render(self, html_render, add_render_list=True):
         if self.SHOW_TOPK_OPS:
-            self.desc += f" Only show {self.SHOW_TOPK_OPS} operators here, see latest att_advisor.xlsx for details."
+            self.desc += f" Only show {self.SHOW_TOPK_OPS} operators here, see latest mstt_advisor.xlsx for details."
         return html_render.render_template(key="computation",
                                            template_dir="templates",
                                            template_name="ai_core_frequency.html",

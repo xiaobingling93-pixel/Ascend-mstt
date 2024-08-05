@@ -16,6 +16,7 @@ from grad_tool.common.utils import ListCache, print_warn_log
 from grad_tool.common.utils import create_directory, check_file_or_directory_path, write_csv
 from grad_tool.grad_ms.global_context import grad_context
 from grad_tool.grad_ms.global_context import GlobalContext
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, FileChecker
 
 
 def get_rank_id():
@@ -31,11 +32,10 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
     '''
     Dump gradient statistic data.
         level0: [step, max, min, norm, shape_dim, shape]
-        level1: [step, max, min, norm, shape_dim, shape, dist_dim, dist]
-        level2: [step, max, min, norm, shape_dim, shape] + grad_bool_data
-        level3: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
+        level1: [step, max, min, norm, shape_dim, shape] + grad_bool_data
+        level2: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
     '''
-    dump_path = dump_dir + g_name
+    dump_path = os.path.join(dump_dir, g_name)
     dump_dir_path = dump_path + "_dir"
     save_op = ms.ops.TensorDump()
 
@@ -51,7 +51,7 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
     level0_stat = ms.ops.concat((extrem_stat, shape_stat), axis=0)
     level_stat = level0_stat
 
-    if level == "L1" or level == "L3":
+    if level == GradConst.LEVEL2:
         zero_grad = (grad == 0).sum()
         dist_dim = ms.Tensor([len(bounds) + 2]).float()
         bucket_result = ms.ops.bucketize(grad.float(), bounds)
@@ -60,11 +60,11 @@ def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor,
         dist_stat.append(zero_grad)
         dist_stat.append(ms.Tensor(1, dtype=ms.int64))  # make sure dist_stat is not empty
         dist_stat = ms.ops.stack(dist_stat, axis=0).float()
-        level1_stat = ms.ops.concat((level0_stat, dist_dim, dist_stat), axis=0)
-        level_stat = level1_stat
+        level2_stat = ms.ops.concat((level0_stat, dist_dim, dist_stat), axis=0)
+        level_stat = level2_stat
 
     save_op(dump_path, level_stat)
-    if level == "L2" or level == "L3":
+    if level == GradConst.LEVEL1 or level == GradConst.LEVEL2:
         grad_direction = grad > 0
         save_op(dump_dir_path, grad_direction)
 
@@ -155,7 +155,7 @@ class CSVGenerator(Process):
         level = grad_context.get_context(GradConst.LEVEL)
         try:
             shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
-            if level in [GradConst.LEVEL1, GradConst.LEVEL3]:
+            if level == GradConst.LEVEL2:
                 dist_dim = int(stat_data[shape_dim + GradConst.SHAPE_DIM_IDX + 1])
                 length = shape_dim + dist_dim + 7
             else:
@@ -170,6 +170,8 @@ class CSVGenerator(Process):
         stat_data = None
         max_try = 10
         while max_try:
+            file_path_checker = FileChecker(file_path, FileCheckConst.DIR,FileCheckConst.READ_ABLE)
+            file_path = file_path_checker.common_check()
             try:
                 stat_data = np.load(file_path)
                 return stat_data
@@ -178,7 +180,7 @@ class CSVGenerator(Process):
                 max_try -= 1
                 time.sleep(0.1)
         return stat_data
-
+    
     def gen_csv_line(self, file_path: str, stat_data) -> None:
         shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
         file_name = os.path.basename(file_path)
@@ -187,7 +189,7 @@ class CSVGenerator(Process):
         if not param_name:
             raise RuntimeError("Invalid gradient statistic file name.")
         csv_line = [param_name]
-        if self.level == GradConst.LEVEL1 or self.level == GradConst.LEVEL3:
+        if self.level == GradConst.LEVEL2:
             csv_line.extend(self.get_dist_data(shape_dim, stat_data))
         csv_line.extend(self.get_extrem_data(shape_dim, stat_data))
         self.cache_list.append(csv_line)
@@ -208,7 +210,7 @@ class CSVGenerator(Process):
 
     def create_csv_file(self):
         headers = ["Param_name"]
-        if self.level == GradConst.LEVEL1 or self.level == GradConst.LEVEL3:
+        if self.level == GradConst.LEVEL2:
             headers.extend(self.get_dist_header())
         headers.extend(self.get_extrem_headers())
         output_path = f"{self.save_dir}/grad_summary_{self.current_step}.csv"

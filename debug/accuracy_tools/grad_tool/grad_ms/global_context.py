@@ -4,7 +4,7 @@ from typing import Dict, List, Union
 
 from grad_tool.common.utils import print_warn_log
 from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import path_valid_check, create_directory
+from grad_tool.common.utils import path_valid_check, create_directory, check_str
 
 
 class GlobalContext:
@@ -12,13 +12,13 @@ class GlobalContext:
     _instance = None
     _instance_lock = threading.Lock()
     _setting = {
-        GradConst.LEVEL: GradConst.LEVEL0,
+        GradConst.LEVEL: None,
         GradConst.PARAM_LIST: None,
         GradConst.STEP: None,
         GradConst.RANK: None,
         GradConst.CURRENT_STEP: 0,
-        GradConst.BOUNDS: [-1., 0., 1.],
-        GradConst.OUTPUT_PATH: "./grad_stat"
+        GradConst.BOUNDS: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10],
+        GradConst.OUTPUT_PATH: None
     }
 
     def __new__(cls, *args, **kwargs):
@@ -29,23 +29,25 @@ class GlobalContext:
         return cls._instance
 
     def init_context(self, config_dict: Dict):
-        if config_dict.get(GradConst.LEVEL, None) in GradConst.SUPPORTED_LEVEL:
+        level = config_dict.get(GradConst.LEVEL)
+        check_str(level, variable_name = "level in yaml")
+        if level in GradConst.SUPPORTED_LEVEL:
             self._setting[GradConst.LEVEL] = config_dict.get(GradConst.LEVEL)
         else:
-            print_warn_log("Invalid level set in config yaml file, use L0 instead.")
+            raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
+
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
         self._set_input_list(config_dict, GradConst.BOUNDS, float)
         self._set_input_list(config_dict, GradConst.STEP, int)
         self._set_input_list(config_dict, GradConst.RANK, int)
+
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
-        if output_path:
-            try:
-                path_valid_check(output_path)
-            except RuntimeError as err:
-                print_warn_log(f"Invalid output_path, use default output_path. The error message is {err}.")
-                output_path = None
-        if output_path:
-            self._setting[GradConst.OUTPUT_PATH] = output_path
+        check_str(output_path, variable_name = "output_path in yaml")
+        try:
+            path_valid_check(output_path)
+        except RuntimeError as err:
+            raise ValueError(f"Invalid output_path: {output_path}. The error message is {err}.") from err
+        self._setting[GradConst.OUTPUT_PATH] = output_path
         if not os.path.isdir(self._setting.get(GradConst.OUTPUT_PATH)):
             create_directory(self._setting.get(GradConst.OUTPUT_PATH))
         else:

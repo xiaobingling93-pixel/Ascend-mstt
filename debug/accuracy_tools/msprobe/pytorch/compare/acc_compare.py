@@ -492,7 +492,7 @@ def compare_by_op(op_name, op_name_mapping_dict, input_parma):
             error_file = error.filename
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
-        except FileCheckerException:
+        except FileCheckException:
             error_file = data_name
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
@@ -645,7 +645,11 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             elif (i - 2) in highlight_dict['yellow_rows']:
                 ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
                                                             end_color=CompareConst.YELLOW, fill_type="solid")
-    wb.save(file_path)
+    try:
+        wb.save(file_path)
+    except Exception as e:
+        logger.error('Save result file failed')
+        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
@@ -655,8 +659,8 @@ def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
         summary_compare, md5_compare = task_dumppath_get(input_parma)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
-        check_compare_param(input_parma, output_path, stack_mode, summary_compare, md5_compare)
-    except CompareException as error:
+        check_compare_param(input_parma, output_path, summary_compare, md5_compare)
+    except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
     compare_core(input_parma, output_path, stack_mode=stack_mode,
@@ -764,9 +768,14 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
         else:
             full_op_name = op_name
     else:
-        full_op_name = op_name + '.' + str(index)
+        full_op_name = op_name + Const.SEP + str(index)
     if isinstance(item, dict):
-        if 'dtype' in item:
+        if 'type' not in item:
+            for kwarg in item:
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None)
+                item_list += kwarg_parsed_list
+                kwarg_parsed_list.clear()
+        elif 'dtype' in item:
             parsed_item = item
             parsed_item['full_op_name'] = full_op_name
             item_list.append(parsed_item)
@@ -869,13 +878,13 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if 'backward' in op_name:
-        if 'grad_input' in op_data:
-            input_item = op_data['grad_input']
+        if 'input' in op_data:
+            input_item = op_data['input']
             input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
-        if 'grad_output' in op_data:
-            output_item = op_data['grad_output']
+        if 'output' in op_data:
+            output_item = op_data['output']
             output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()

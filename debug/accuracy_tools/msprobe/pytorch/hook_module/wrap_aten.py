@@ -24,12 +24,14 @@ from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_check import FileOpen
-
+from msprobe.pytorch.function_factory import npu_custom_grad_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 with FileOpen(yaml_path, 'r') as f:
-    WrapAtenOps = yaml.safe_load(f).get('aten')
+    Ops = yaml.safe_load(f)
+    WrapAtenOps = Ops.get('aten')
+    WhiteAtenOps = Ops.get('white_aten_ops', [])
 
 
 aten_func = {}
@@ -48,7 +50,7 @@ class HOOKAtenOP(object):
 
 
 class AtenOPTemplate(HOOKModule):
-    def __init__(self, op, hook):
+    def __init__(self, op, hook, need_hook=True):
         if isinstance(op, torch._ops.OpOverloadPacket):
             op_name_ = op._qualified_op_name.split("::")[-1]
         else:
@@ -58,10 +60,21 @@ class AtenOPTemplate(HOOKModule):
                 op_name_ = op_name_ + '.' + overload_name
         self.op = op
         self.prefix_op_name_ = "Aten" + Const.SEP + str(op_name_) + Const.SEP
-        super().__init__(hook)
+        self.need_hook = need_hook
+        if self.need_hook:
+            super().__init__(hook)
 
     @torch_device_guard
     def forward(self, *args, **kwargs):
+        if isinstance(self.op, str):
+            if self.op in npu_custom_grad_functions:
+                return npu_custom_grad_functions[self.op](*args, **kwargs)
+            if self.op in WhiteAtenOps:
+                return eval(f"torch.ops.aten.{self.op}")(*args, **kwargs)
+            if self.op not in aten_func:
+                raise Exception(f"Skip op[{self.op}] accuracy check, because the op is not "
+                                f"in dir(torch.ops.aten) and support yaml.")
+            return aten_func[self.op](*args, **kwargs)
         return self.op(*args, **kwargs)
 
 

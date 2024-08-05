@@ -179,9 +179,9 @@ class TerminalResult:
     def __init__(self):
         self.width, _ = self.get_terminal_size()
         if self.width is None:
-            self.table = PrettyTable(["No.", "Problem", "Description", "Suggestion"])
+            self.table = PrettyTable(["No.", "Category", "Description", "Suggestion"])
         else:
-            self.table = PrettyTable(["No.", "Problem", "Description", "Suggestion"],
+            self.table = PrettyTable(["No.", "Category", "Description", "Suggestion"],
                                      max_table_width=max(self.width - 20, 180))
         self.table.hrules = ALL
         self.result_list = []

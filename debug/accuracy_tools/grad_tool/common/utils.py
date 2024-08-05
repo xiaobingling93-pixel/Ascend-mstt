@@ -7,6 +7,7 @@ import yaml
 import pandas as pd
 
 from grad_tool.common.constant import GradConst
+from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
 def _print_log(level, msg, end='\n'):
@@ -114,7 +115,7 @@ class ListCache(list):
 
 
 def get_config(filepath):
-    with open(filepath, 'r') as file:
+    with FileOpen(filepath, 'r') as file:
         config = yaml.safe_load(file)
     return config
 
@@ -220,3 +221,11 @@ def change_mode(path, mode):
     except PermissionError as ex:
         print_error_log(f'Failed to change {path} authority. {str(ex)}')
         raise ex
+
+def check_param(param_name):
+    if not re.match(GradConst.PARAM_VALID_PATTERN, param_name):
+        raise RuntimeError("The parameter name contains special characters.")
+    
+def check_str(string, variable_name):
+    if not isinstance(string, str):
+        raise ValueError(f'The variable: "{variable_name}" is not a string.')
