@@ -17,7 +17,7 @@ from msprobe.core.compare.highlight import find_compare_result_error_rows,highli
 from msprobe.core.compare.Multiprocessing_compute import _handle_multi_process
 from msprobe.core.compare.acc_compare import Comparator 
 from msprobe.core.common.log import logger
-
+from msprobe.core.common.exceptions import FileCheckException
 
 class MSComparator (Comparator):
     def __init__(self):
@@ -186,82 +186,84 @@ class MSComparator (Comparator):
             data_value=data_value.astype(np.float32)
 
         return data_value
+    
+    def compare_core(self,input_parma, output_path, **kwargs):
+        """
+        Compares data from multiple JSON files and generates a comparison report.
+
+        Args:
+            input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
+                                "stack_path").
+            output_path (str): The path where the output Excel report will be saved.
+            **kwargs: Additional keyword arguments including:
+            - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
+            - auto_analyze (bool, optional): If True, triggers automatic analysis after comparison. Defaults to True.
+            - suffix (str, optional): Suffix to append to the output file name. Defaults to ''.
+            - fuzzy_match (bool, optional): Enables fuzzy matching during comparison. Defaults to False.
+            - summary_compare (bool, optional): Enables summary comparison mode. Defaults to False.
+            - md5_compare (bool, optional): Enables MD5 comparison. Defaults to False.
+
+        Returns:
+        """
+        # get kwargs or set default value
+        stack_mode = kwargs.get('stack_mode', False)
+        auto_analyze = kwargs.get('auto_analyze', True)
+        suffix = kwargs.get('suffix', '')
+        fuzzy_match = kwargs.get('fuzzy_match', False)
+        summary_compare = kwargs.get('summary_compare', False)
+        md5_compare = kwargs.get('md5_compare', False)
+
+        logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
+        file_name = add_time_with_xlsx("compare_result" + suffix)
+        file_path = os.path.join(os.path.realpath(output_path), file_name)
+        check_file_not_exists(file_path)
+        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
+                FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
+                FileOpen(input_parma.get("stack_path"), "r") as stack_json:
+            result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
+                                        summary_compare, md5_compare)
+
+        if not md5_compare and not summary_compare:
+            result_df = self._do_multi_process(input_parma, result_df)
+        find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
+        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        if auto_analyze:
+            advisor = Advisor(result_df, output_path)
+            advisor.analysis()
 
 
-def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-            fuzzy_match=False):
-    try:
-        summary_compare, md5_compare = task_dumppath_get(input_parma)
-        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
-        create_directory(output_path)
-        check_compare_param(input_parma, output_path, summary_compare, md5_compare)
-    except CompareException as error:
-        logger.error('Compare failed. Please check the arguments and do it again!')
-        sys.exit(error.code)
-    compare_core(input_parma, output_path, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
-                 md5_compare=md5_compare)
-
-# def compare(args):
-#     with FileOpen(args.input_path, "r") as file:
-#         input_param = json.load(file)
+# def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
+#             fuzzy_match=False):
 #     try:
-#         summary_compare, md5_compare = task_dumppath_get(input_param)
-#         check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
-#         create_directory(args.output_path)
-#         check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
-#     except (CompareException, FileCheckException) as error:
+#         summary_compare, md5_compare = task_dumppath_get(input_parma)
+#         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+#         create_directory(output_path)
+#         check_compare_param(input_parma, output_path, summary_compare, md5_compare)
+#     except CompareException as error:
 #         logger.error('Compare failed. Please check the arguments and do it again!')
 #         sys.exit(error.code)
-#     msComparator.compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
-#                  auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
-#                  md5_compare=md5_compare)   
+#     compare_core(input_parma, output_path, stack_mode=stack_mode,
+#                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
+#                  md5_compare=md5_compare)
 
-def compare_core(input_parma, output_path, **kwargs):
-    """
-    Compares data from multiple JSON files and generates a comparison report.
-
-    Args:
-        input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
-                            "stack_path").
-        output_path (str): The path where the output Excel report will be saved.
-        **kwargs: Additional keyword arguments including:
-        - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
-        - auto_analyze (bool, optional): If True, triggers automatic analysis after comparison. Defaults to True.
-        - suffix (str, optional): Suffix to append to the output file name. Defaults to ''.
-        - fuzzy_match (bool, optional): Enables fuzzy matching during comparison. Defaults to False.
-        - summary_compare (bool, optional): Enables summary comparison mode. Defaults to False.
-        - md5_compare (bool, optional): Enables MD5 comparison. Defaults to False.
-
-    Returns:
-    """
-    # get kwargs or set default value
-    stack_mode = kwargs.get('stack_mode', False)
-    auto_analyze = kwargs.get('auto_analyze', True)
-    suffix = kwargs.get('suffix', '')
-    fuzzy_match = kwargs.get('fuzzy_match', False)
-    summary_compare = kwargs.get('summary_compare', False)
-    md5_compare = kwargs.get('md5_compare', False)
-
-    logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
-    file_name = add_time_with_xlsx("compare_result" + suffix)
-    file_path = os.path.join(os.path.realpath(output_path), file_name)
-    check_file_not_exists(file_path)
-    highlight_dict = {'red_rows': [], 'yellow_rows': []}
+def ms_compare(args):
+    with FileOpen(args.input_path, "r") as file:
+        input_param = json.load(file)
+    try:
+        summary_compare, md5_compare = task_dumppath_get(input_param)
+        check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
+        create_directory(args.output_path)
+        check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
+    except (CompareException, FileCheckException) as error:
+        logger.error('Compare failed. Please check the arguments and do it again!')
+        sys.exit(error.code)
     msComparator= MSComparator() 
-    with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
-            FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
-            FileOpen(input_parma.get("stack_path"), "r") as stack_json:
-        result_df = msComparator.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
-                                    summary_compare, md5_compare)
+    msComparator.compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
+                 auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
+                 md5_compare=md5_compare)   
 
-    if not md5_compare and not summary_compare:
-        result_df = msComparator._do_multi_process(input_parma, result_df)
-    find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
-    highlight_rows_xlsx(result_df, highlight_dict, file_path)
-    if auto_analyze:
-        advisor = Advisor(result_df, output_path)
-        advisor.analysis()
+
     
 
 

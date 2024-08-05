@@ -23,7 +23,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
     _run_overflow_check_command
 from msprobe.pytorch.compare.acc_compare import _compare_parser, compare
-from msprobe.pytorch.compare.pt_comparator import pt_compare
+from debug.accuracy_tools.msprobe.pytorch.compare.pt_compare import pt_compare
 
 def main():
     parser = argparse.ArgumentParser(
