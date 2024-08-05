@@ -5,6 +5,7 @@ import inspect
 import torch
 import torch.nn as nn
 import torch.distributed as dist
+from kj600.utils import print_error_log
 
 from ..module_metric import get_metrics
 
@@ -20,14 +21,16 @@ try:
     with open(OpsPath) as f:
         WrapDistributedOps = yaml.safe_load(f).get('distributed')
 except Exception as e:
-    raise RuntimeError(f"load file {OpsPath} failed") from e
+    print_error_log(f"load file {OpsPath} failed.")
+    raise RuntimeError(f"load file {OpsPath} failed.") from e
  
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
 try:
     with open(StackBlackListPath) as f:
         StackBlackList = yaml.safe_load(f).get('stack')
 except Exception as e:
-    raise RuntimeError(f"load file {StackBlackListPath} failed") from e
+    print_error_log(f"load file {StackBlackListPath} failed.")
+    raise RuntimeError(f"load file {StackBlackListPath} failed.") from e
 
 distributed_func = {}
 for f in dir(dist):
