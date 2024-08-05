@@ -1,6 +1,5 @@
 from msprobe.core.compare.match import graph_mapping
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.compare.utils import rename_api 
 
 
@@ -87,20 +86,3 @@ def fuzzy_check_name(npu_name, bench_name):
 
 
 
-def check_accuracy(cos, max_abs_err):
-    if cos == CompareConst.SHAPE_UNMATCH:
-        return CompareConst.ACCURACY_CHECK_UNMATCH
-    if cos == CompareConst.NONE or max_abs_err == CompareConst.NONE:
-        return CompareConst.NONE
-    if cos == "N/A" or max_abs_err == "N/A":
-        return CompareConst.ACCURACY_CHECK_NO
-    try:
-        cos, max_abs_err = float(cos), float(max_abs_err)
-    except ValueError:
-        logger.warning("Cosine or MaxAbsErr can not get float value.")
-        return CompareConst.NONE
-    if cos < CompareConst.COS_THRESHOLD and max_abs_err > CompareConst.MAX_ABS_ERR_THRESHOLD:
-        return CompareConst.ACCURACY_CHECK_NO
-    if cos < CompareConst.COS_MAX_THRESHOLD or max_abs_err > CompareConst.MAX_ABS_ERR_MAX_THRESHOLD:
-        return CompareConst.ACCURACY_CHECK_NO
-    return CompareConst.ACCURACY_CHECK_YES

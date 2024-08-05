@@ -1,8 +1,9 @@
+import argparse
 import json
 import multiprocessing
 import os.path
 import sys
-
+import torch
 import numpy as np
 import pandas as pd
 
@@ -19,7 +20,7 @@ from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.log import logger
 
 
-class MSComparator (Comparator):
+class PTComparator (Comparator):
     def __init__(self):
         super().__init__()
     
@@ -166,6 +167,18 @@ class MSComparator (Comparator):
 
         result_df = pd.DataFrame(result, columns=header)
         return result_df
+    
+    
+    def read_npy_data(self,dir_path, file_name):
+        data_path = os.path.join(dir_path, file_name)
+        path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
+                                FileCheckConst.PT_SUFFIX, False)
+        data_path = path_checker.common_check()
+        data_value = torch.load(data_path, map_location=torch.device('cpu')).detach()       # detach for less memory
+        if data_value.dtype == torch.bfloat16:
+            data_value = data_value.to(torch.float32)
+        data_value = data_value.numpy()
+        return data_value
 
 
     def _do_multi_process(self,input_parma, result_df):
@@ -176,16 +189,6 @@ class MSComparator (Comparator):
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     
-    def read_npy_data(self,dir_path, file_name):
-        data_path = os.path.join(dir_path, file_name)
-        path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                FileCheckConst.NUMPY_SUFFIX, False)
-        data_path = path_checker.common_check()
-        data_value = np.load(data_path)      # detach for less memory
-        if data_value.dtype == np.float16:
-            data_value=data_value.astype(np.float32)
-
-        return data_value
 
 
 def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
@@ -248,15 +251,15 @@ def compare_core(input_parma, output_path, **kwargs):
     file_path = os.path.join(os.path.realpath(output_path), file_name)
     check_file_not_exists(file_path)
     highlight_dict = {'red_rows': [], 'yellow_rows': []}
-    msComparator= MSComparator() 
+    ptComparator= PTComparator() 
     with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
             FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
             FileOpen(input_parma.get("stack_path"), "r") as stack_json:
-        result_df = msComparator.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
+        result_df = ptComparator.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                     summary_compare, md5_compare)
 
     if not md5_compare and not summary_compare:
-        result_df = msComparator._do_multi_process(input_parma, result_df)
+        result_df = ptComparator._do_multi_process(input_parma, result_df)
     find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
     highlight_rows_xlsx(result_df, highlight_dict, file_path)
     if auto_analyze:
@@ -266,5 +269,5 @@ def compare_core(input_parma, output_path, **kwargs):
 
 
     
-        
+       
     

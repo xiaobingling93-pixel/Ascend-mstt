@@ -1,10 +1,9 @@
 
+import os
 import numpy as np
-from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
-    format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
-from msprobe.core.compare.check import check_accuracy
+
+
 
 
 def rename_api(npu_name, process):
@@ -151,15 +150,6 @@ def resolve_api_special_parameters(data_dict, full_op_name, item_list):
             full_op_name_new = ".".join(parts)
             parsed_item['full_op_name'] = full_op_name_new
             item_list.append(parsed_item)
-
-@dataclass
-class ComparisonResult:
-    cos_result: list
-    max_err_result:  list
-    max_relative_err_result: list
-    err_msgs: list
-    one_thousand_err_ratio_result: list
-    five_thousand_err_ratio_result: list
 
 
 def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=False):
@@ -363,39 +353,6 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
 
 
-def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
-    """
-        Save comparison results into the result DataFrame with thread safety.
-    Args:
-        offset: offset for index
-        result: data struct of ComparisonResult
-        result_df: result of DataFrame
-        lock: thread lock
-
-    Returns:
-        comparison results in DataFrame
-    """
-
-    lock.acquire()
-    try:
-        for i, _ in enumerate(result.cos_result):
-            process_index = i + offset
-            result_df.loc[process_index, CompareConst.COSINE] = result.cos_result[i]
-            result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
-            result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
-            result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
-            result_df.loc[process_index, CompareConst.ACCURACY] = check_accuracy(result.cos_result[i], result.max_err_result[i])
-            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = result.one_thousand_err_ratio_result[i]
-            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result.five_thousand_err_ratio_result[i]
-        return result_df
-    except ValueError as e:
-        logger.error('result dataframe is not found.')
-        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
-    except IndexError as e:
-        logger.error('result dataframe elements can not be access.')
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    finally:
-        lock.release()
 
 
     

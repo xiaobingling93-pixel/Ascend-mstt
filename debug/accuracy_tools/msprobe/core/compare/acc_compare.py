@@ -1,6 +1,5 @@
 from msprobe.core.compare.check import check_op
-from msprobe.mindspore.compare.ms_compare import MSComparator
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.const import  CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
 from msprobe.core.common.exceptions import FileCheckException
@@ -30,9 +29,9 @@ class Comparator:
             error_flag = True
         else:
             try:
-                msComparator= MSComparator()
-                n_value = msComparator.read_npy_data(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
-                b_value = msComparator.read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
+                read_npy_data=getattr(self,"read_npy_data")
+                n_value = read_npy_data(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
+                b_value = read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
             except IOError as error:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
