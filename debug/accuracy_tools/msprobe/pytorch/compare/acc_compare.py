@@ -657,7 +657,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 def compare_cli(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
-    compare(input_param, output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match)
+    compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match)
 
 
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
