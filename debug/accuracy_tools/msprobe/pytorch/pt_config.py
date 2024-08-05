@@ -32,12 +32,12 @@ class StatisticsConfig(BaseConfig):
 class OverflowCheckConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.overflow_num = json_config.get("overflow_nums")
+        self.overflow_nums = json_config.get("overflow_nums")
         self.check_mode = json_config.get("check_mode")
         self.check_overflow_config()
 
     def check_overflow_config(self):
-        if self.overflow_num is not None and not isinstance(self.overflow_num, int):
+        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")

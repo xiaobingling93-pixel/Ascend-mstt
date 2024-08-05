@@ -182,7 +182,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_dump_times = 0
-        self.overflow_nums = config.overflow_num
+        self.overflow_nums = config.overflow_nums
         self.bits_for_overflow = 8
 
     @staticmethod
