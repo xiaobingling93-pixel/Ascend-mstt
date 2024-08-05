@@ -14,7 +14,9 @@ from kj600.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
 from kj600.anomaly_inform import AnomalyInformFactory
 from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
 from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from kj600.utils import print_warn_log, print_info_log, get_param_struct
+from kj600.utils import print_warn_log, print_info_log, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst
+
+
 
 
 class ModuleHookContext:
@@ -131,10 +133,20 @@ class TrainerMon:
         unique_id = str(uuid.uuid4())[:8]
         if dist.is_initialized():
             if (dist.get_rank() in self.module_rank_list) or len(self.module_rank_list) == 0:
+                cur_path = os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}")
+                check_path_length(cur_path)
+                check_path_pattern_valid(cur_path)
                 self.summary_writer = SummaryWriterWithAD(
-                    os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}"), self.alert_rules, unique_id, anomaly_inform)
+                    cur_path, self.alert_rules, unique_id, anomaly_inform)
         else:
-            self.summary_writer = SummaryWriterWithAD(os.path.join(output_base_dir, f"{cur_time}-{unique_id}"), self.alert_rules, unique_id, anomaly_inform)
+            cur_path = os.path.join(output_base_dir, f"{cur_time}-{unique_id}")
+            check_path_length(cur_path)
+            check_path_pattern_valid(cur_path)
+            self.summary_writer = SummaryWriterWithAD(cur_path, self.alert_rules, unique_id, anomaly_inform)
+
+        full_path = os.path.realpath(cur_path)
+        change_mode(full_path,FileCheckConst.DATA_FILE_AUTHORITY)
+
         # A HeatmapVisualizer instance is associated with an image
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
         self.ratio_heatmap_visualizer = defaultdict(HeatmapVisualizer)
