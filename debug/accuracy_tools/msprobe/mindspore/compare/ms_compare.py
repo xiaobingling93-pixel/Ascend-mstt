@@ -2,7 +2,6 @@ import json
 import multiprocessing
 import os.path
 import sys
-
 import numpy as np
 import pandas as pd
 
@@ -12,9 +11,9 @@ from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, C
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
-from msprobe.core.compare.utils import ComparisonResult,_save_cmp_result,merge_tensor, get_un_match_accuracy,get_accuracy,read_op
-from msprobe.core.compare.highlight import find_compare_result_error_rows,highlight_rows_xlsx
-from msprobe.core.compare.Multiprocessing_compute import _handle_multi_process
+from msprobe.core.compare.utils import merge_tensor, get_un_match_accuracy, get_accuracy, read_op
+from msprobe.core.compare.Multiprocessing_compute import ComparisonResult, _save_cmp_result, _handle_multi_process
+from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.acc_compare import Comparator 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException

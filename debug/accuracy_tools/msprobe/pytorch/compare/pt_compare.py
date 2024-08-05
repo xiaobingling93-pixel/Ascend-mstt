@@ -1,10 +1,8 @@
-import argparse
 import json
 import multiprocessing
 import os.path
 import sys
 import torch
-import numpy as np
 import pandas as pd
 
 from msprobe.core.advisor.advisor import Advisor
