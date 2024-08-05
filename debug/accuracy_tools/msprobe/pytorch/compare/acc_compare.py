@@ -878,13 +878,13 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if 'backward' in op_name:
-        if 'grad_input' in op_data:
-            input_item = op_data['grad_input']
+        if 'input' in op_data:
+            input_item = op_data['input']
             input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
-        if 'grad_output' in op_data:
-            output_item = op_data['grad_output']
+        if 'output' in op_data:
+            output_item = op_data['output']
             output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()

@@ -14,6 +14,7 @@
 # ============================================================================
 
 import os
+import copy
 from pathlib import Path
 import functools
 from collections import defaultdict
@@ -33,9 +34,9 @@ from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 class Service:
     def __init__(self, config):
         self.model = None
-        self.config = config
+        self.config = copy.deepcopy(config)
         self.config.level = self.config.level_ori
-        self.data_collector = build_data_collector(config)
+        self.data_collector = build_data_collector(self.config)
         self.switch = False
         self.current_iter = 0
         self.first_start = True

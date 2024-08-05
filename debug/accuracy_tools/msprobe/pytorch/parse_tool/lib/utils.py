@@ -32,7 +32,7 @@ from msprobe.core.common.file_check import change_mode, check_other_user_writabl
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
 from msprobe.pytorch.common.log import logger
 
 
@@ -245,6 +245,7 @@ class Util:
         elif data.size % align != 0:
             pad_array = np.zeros((align - data.size % align,))
             data = np.append(data, pad_array)
+        check_path_before_create(dst_file)
         try:
             np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
         except Exception as e:

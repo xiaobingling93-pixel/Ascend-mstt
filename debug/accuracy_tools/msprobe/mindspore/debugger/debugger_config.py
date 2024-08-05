@@ -1,14 +1,10 @@
 import os
+
 from msprobe.core.common.utils import Const
+from msprobe.core.common.const import MsConst
 
 
 class DebuggerConfig:
-    convert_map = {
-        "L0": "cell",
-        "L1": "api",
-        "L2": 'kernel'
-    }
-
     def __init__(self, common_config, task_config):
         self.dump_path = common_config.dump_path
         self.task = common_config.task
@@ -16,7 +12,7 @@ class DebuggerConfig:
         self.step = [] if not common_config.step else common_config.step
         if not common_config.level:
             common_config.level = "L1"
-        self.level = DebuggerConfig.convert_map[common_config.level]
+        self.level = MsConst.TOOL_LEVEL_DICT.get(common_config.level, MsConst.API)
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list
         self.scope = [] if not task_config.scope else task_config.scope
