@@ -6,7 +6,8 @@ from msprobe.mindspore.service import Service
 from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.core.common.const import MsConst
+from msprobe.core.common.const import Const, MsConst
+from msprobe.mindspore.runtime import Runtime
 
 
 class PrecisionDebugger:
@@ -29,6 +30,8 @@ class PrecisionDebugger:
         common_config, task_config = parse_json_config(config_path)
         self.config = DebuggerConfig(common_config, task_config)
         self.initialized = True
+        Runtime.step_count = 0
+        Runtime.is_running = False
 
     @staticmethod
     def _get_execution_mode():
@@ -47,7 +50,8 @@ class PrecisionDebugger:
             raise Exception("No instance of PrecisionDebugger found.")
 
         instance.config.execution_mode = instance._get_execution_mode()
-        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API:
+        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API and \
+           instance.config.task != Const.FREE_BENCHMARK:
             if not instance.service:
                 instance.service = Service(instance.config)
             instance.service.start()
@@ -57,6 +61,7 @@ class PrecisionDebugger:
                 handler.handle()
 
         instance.first_start = True
+        Runtime.is_running = True
 
     @classmethod
     def stop(cls):
@@ -65,6 +70,7 @@ class PrecisionDebugger:
             raise Exception("PrecisionDebugger instance is not created.")
         if instance.service:
             instance.service.stop()
+        Runtime.is_running = False
 
     @classmethod
     def step(cls):
@@ -73,3 +79,4 @@ class PrecisionDebugger:
             raise Exception("PrecisionDebugger instance is not created.")
         if instance.service:
             instance.service.step()
+        Runtime.step_count += 1
