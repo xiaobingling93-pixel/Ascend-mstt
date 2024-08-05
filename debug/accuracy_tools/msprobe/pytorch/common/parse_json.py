@@ -1,5 +1,7 @@
 import json
+
 from msprobe.core.common.exceptions import ParseJsonException
+from msprobe.core.common.file_check import FileOpen
 
 
 def parse_json_info_forward_backward(json_path):
@@ -11,7 +13,7 @@ def parse_json_info_forward_backward(json_path):
         api_name = '.'.join(name_struct[:-1])
         return api_name
 
-    with open(json_path, 'r') as f:
+    with FileOpen(json_path, 'r') as f:
         dump_json = json.load(f)
 
     real_data_path = dump_json.get("dump_data_dir")
