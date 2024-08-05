@@ -69,6 +69,12 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.min = False not in data_clone
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
+        elif torch.is_complex(data_clone):
+            data_np = data_clone.cpu().numpy()
+            data_abs = np.abs(data_np)
+            tensor_stat.max = np.max(data_abs).item()
+            tensor_stat.min = np.min(data_abs).item()
+            tensor_stat.mean = np.mean(data_abs).item()
         else:
             if not data_clone.is_floating_point() or data_clone.dtype == torch.float64:
                 data_clone = data_clone.float()
