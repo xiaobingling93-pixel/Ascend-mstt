@@ -32,12 +32,12 @@ class StatisticsConfig(BaseConfig):
 class OverflowCheckConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.overflow_num = json_config.get("overflow_nums")
+        self.overflow_nums = json_config.get("overflow_nums")
         self.check_mode = json_config.get("check_mode")
         self.check_overflow_config()
 
     def check_overflow_config(self):
-        if self.overflow_num is not None and not isinstance(self.overflow_num, int):
+        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
@@ -106,6 +106,12 @@ class RunUTConfig(BaseConfig):
         RunUTConfig.check_nfs_path_config(self.nfs_path)
 
 
+class GradToolConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self._config = json_config
+
+
 def parse_task_config(task, json_config):
     default_dic = {}
     if task == Const.TENSOR:
@@ -123,6 +129,9 @@ def parse_task_config(task, json_config):
     elif task == Const.RUN_UT:
         config_dic = json_config.get(Const.RUN_UT, default_dic)
         return RunUTConfig(config_dic)
+    elif task == Const.GRAD_PROBE:
+        config_dic = json_config.get(Const.GRAD_PROBE, default_dic)
+        return GradToolConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
 

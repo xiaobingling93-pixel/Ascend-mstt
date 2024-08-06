@@ -48,7 +48,7 @@ class TestMultiRunUT(unittest.TestCase):
             device_id=[0, 1],
             result_csv_path='result.csv',
             total_items=2,
-            real_data_path=None
+            config_path=None
         )
 
         mock_file.side_effect = [
@@ -81,7 +81,7 @@ class TestMultiRunUT(unittest.TestCase):
         args.jit_compile = False
         args.device_id = [0, 1]
         args.result_csv_path = None
-        args.real_data_path = None
+        args.config_path = None
 
         config = prepare_config(args)
 

@@ -21,6 +21,7 @@ level_adp = {
         },
     }
 
+
 def save_grad_direction(param_name, grad, save_path):
     if not os.path.exists(save_path):
         create_directory(save_path)
@@ -34,12 +35,13 @@ def save_grad_direction(param_name, grad, save_path):
     grad_direction_tensor = grad > 0
     grad_direction_ndarray = grad_direction_tensor.numpy()
 
-    np.save(save_filepath, grad_direction_ndarray)
+    try:
+        np.save(save_filepath, grad_direction_ndarray)
+    except Exception as e:
+        raise RuntimeError(f"An unexpected error occurred: {e} when saving numpy to {save_filepath}") from e
     change_mode(save_filepath, 0o640)
 
+
 def get_adapted_level(level: str):
-    if level == GradConst.LEVEL3:
-        print_warn_log(f"In mindpsore pynative mode, only 'L0', 'L1' and 'L2' are supported, use L0 instead")
-        level = GradConst.LEVEL0
     level_adapted = level_adp.get(level)
     return level_adapted

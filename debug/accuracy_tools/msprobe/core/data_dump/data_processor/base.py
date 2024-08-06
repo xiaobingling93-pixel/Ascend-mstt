@@ -35,11 +35,11 @@ class ModuleBackwardInputsOutputs:
     @property
     def grad_input_tuple(self):
         return convert_tuple(self.grad_input)
-        
+
     @property
     def grad_output_tuple(self):
-        return convert_tuple(self.grad_output)    
-        
+        return convert_tuple(self.grad_output)
+
 
 class TensorStatInfo:
     def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None):
@@ -53,7 +53,7 @@ class BaseDataProcessor:
     _recursive_key_stack = []
     special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
                     bool, int, float, str, slice)
-    
+
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
         self.config = config
@@ -65,11 +65,11 @@ class BaseDataProcessor:
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
-        
+
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
-        
+
     @staticmethod
     def analyze_api_call_stack(name):
         stack_str = []
@@ -87,7 +87,7 @@ class BaseDataProcessor:
             stack_str.append(stack_line)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
-    
+
     @staticmethod
     def _convert_numpy_to_builtin(arg):
         type_mapping = {
@@ -103,26 +103,15 @@ class BaseDataProcessor:
             if isinstance(arg, numpy_type):
                 return builtin_type(arg), type(arg).__name__
         return arg, ''
-    
+
     @staticmethod
     def _analyze_numpy(value, numpy_type):
         return {"type": numpy_type, "value": value}
-    
-    @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            single_arg.update({"value": [arg.start, arg.stop, arg.step]})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-    
+
     @classmethod
     def get_special_types(cls):
         return cls.special_type
-    
+
     @classmethod
     def recursive_apply_transform(cls, args, transform):
         if isinstance(args, cls.get_special_types()):
@@ -177,13 +166,14 @@ class BaseDataProcessor:
         return (Const.ALL in self.config.data_mode or
                 forward_backward in self.config.data_mode or
                 input_output in self.config.data_mode)
-    
-    def analyze_pre_forward(self, name, module,module_input_output: ModuleForwardInputsOutputs):
+
+    def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
-    
+
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         api_info_struct = {}
-        if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT): # check whether data_mode contains forward or input
+        # check whether data_mode contains forward or input
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT):
             api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
             args_info_list = self.analyze_element(module_input_output.args_tuple)
@@ -192,13 +182,14 @@ class BaseDataProcessor:
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
 
-        if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT): # check whether data_mode contains forward or output
+        # check whether data_mode contains forward or output
+        if self.is_dump_for_data_mode(Const.FORWARD, Const.OUTPUT):
             api_info_struct[name] = api_info_struct.get(name, {})
             self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(module_input_output.output_tuple)
             api_info_struct[name][Const.OUTPUT] = output_info_list
         return api_info_struct
-    
+
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
         api_info_struct = {}
         if self.is_dump_for_data_mode(Const.FORWARD, Const.INPUT):
@@ -210,7 +201,7 @@ class BaseDataProcessor:
             kwargs_info_list = self.analyze_element(module_input_output.kwargs)
             api_info_struct[name][Const.INPUT_KWARGS] = kwargs_info_list
         return api_info_struct
-    
+
     def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
         concat_args = module_input_output.concat_args_and_kwargs()
         api_info_struct = {}
@@ -220,26 +211,29 @@ class BaseDataProcessor:
             output_info_list = self.analyze_element(concat_args)
             api_info_struct[name][Const.OUTPUT] = output_info_list
         return api_info_struct
-    
+
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         api_info_struct = {}
-        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
-            api_info_struct[name] = {}
-            self.api_data_category = Const.OUTPUT
-            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
-            api_info_struct[name][Const.GRAD_INPUT] = input_info_list
-
         if self.is_dump_for_data_mode(Const.BACKWARD, Const.INPUT):
-            api_info_struct[name] = api_info_struct.get(name, {})
+            api_info_struct[name] = {}
             self.api_data_category = Const.INPUT
+            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            api_info_struct[name][Const.INPUT] = input_info_list
+
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
+            api_info_struct[name] = api_info_struct.get(name, {})
+            self.api_data_category = Const.OUTPUT
             output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
-            api_info_struct[name][Const.GRAD_OUTPUT] = output_info_list
+            api_info_struct[name][Const.OUTPUT] = output_info_list
 
         return api_info_struct
 
     def get_save_file_path(self, suffix):
-        file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX      
+        file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
+
+    def stop_run(self):
+        return False

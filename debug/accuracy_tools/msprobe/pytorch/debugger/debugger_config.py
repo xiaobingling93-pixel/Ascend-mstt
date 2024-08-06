@@ -21,7 +21,7 @@ class DebuggerConfig:
         self.acl_config = common_config.acl_config if common_config.acl_config else ""
         self.is_forward_acl_dump = True
         self.summary_mode = task_config.summary_mode if task_config.summary_mode else Const.STATISTICS
-        self.overflow_num = task_config.overflow_num if task_config.overflow_num else 1
+        self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
 
         if self.task == Const.FREE_BENCHMARK:
