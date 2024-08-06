@@ -28,7 +28,7 @@ class AddNoisePerturbation(BasePerturbation):
         """
         if isinstance(inputs, Tensor):
             noise = self._get_noise(inputs)
-            if noise:
+            if noise is not False:
                 result = ops.where(ops.abs(inputs) > self.perturbation_value ** 0.5,
                                    ops.add(noise, inputs), inputs)
                 result = result.type(dtype=inputs.dtype)

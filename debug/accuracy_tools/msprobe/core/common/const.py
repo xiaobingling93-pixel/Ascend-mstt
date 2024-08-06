@@ -283,7 +283,7 @@ class MsFreeBenchmarkConst:
     FIX_HANDLER_MODE = "fix"
     ADD_NOISE = "add_noise"
     BIT_NOISE = "bit_noise"
-    NO_CHANGE = "no_change",
+    NO_CHANGE = "no_change"
     IMPROVE_PRECISION = "improve_precision"
     CHECK = "check"
     FIX = "fix"

@@ -14,7 +14,7 @@ class BitNoisePerturbation(BasePerturbation):
     def add_bit_noise(self, inputs) -> Any:
         if isinstance(inputs, Tensor):
             bit_len_type = self._get_bit_len_type(inputs)
-            if bit_len_type:
+            if bit_len_type is not False:
                 sub_normal_np = np.finfo(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype)).smallest_normal
                 sub_normal = Tensor(sub_normal_np)
                 noise_type = list(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.keys())[
