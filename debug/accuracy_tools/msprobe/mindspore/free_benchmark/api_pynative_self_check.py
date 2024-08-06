@@ -6,7 +6,7 @@ import yaml
 import mindspore as ms
 from mindspore.communication import comm_func
 
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.core.common.const import Const, MsFreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.core.common.file_check import check_path_length, FileOpen
 from msprobe.mindspore.common.log import logger
@@ -41,7 +41,7 @@ class ApiPyNativeSelFCheck:
 def get_supported_ops():
     supported_ops = []
     cur_path = os.path.dirname(os.path.realpath(__file__))
-    yaml_path = os.path.join(cur_path, "./data/support_wrap_ops.yaml")
+    yaml_path = os.path.join(cur_path, "data", "support_wrap_ops.yaml")
 
     for k, v in MsFreeBenchmarkConst.API_PREFIX_DICT.items():
         with FileOpen(yaml_path, 'r') as f:
@@ -55,7 +55,6 @@ def get_supported_ops():
     ms_ops = [MsFreeBenchmarkConst.OPS_PREFIX + i for i in ms_ops]
     _all_functional_ops += ms_ops
 
-    _all_functional_ops = []
     ms_tensor = dir(ms.Tensor)
     ms_tensor = [MsFreeBenchmarkConst.Tensor_PREFIX + i for i in ms_tensor]
     _all_functional_ops += ms_tensor
@@ -92,12 +91,12 @@ def get_wrapper_obj(orig_func, api_name):
 
 
 def get_module(api_name):
-    func_name_list = api_name.split('.')
+    func_name_list = api_name.split(Const.SEP)
     func_name = func_name_list[-1]
     module_obj = importlib.import_module(func_name_list[0])
     for i, module_name in enumerate(func_name_list[1:-1]):
         if not hasattr(module_obj, module_name):
-            importlib.import_module(f"{'.'.join(func_name_list[:i+2])}")
+            importlib.import_module(f"{Const.SEP.join(func_name_list[:i+2])}")
         module_obj = getattr(module_obj, module_name)
     orig_func = getattr(module_obj, func_name)
 
@@ -105,10 +104,10 @@ def get_module(api_name):
 
 
 def hijack(api_name):
-    if len(api_name.strip()) == 0:
+    if not api_name.strip() == 0:
         return
     try:
-        func_name = api_name.split('.')[-1]
+        func_name = api_name.split(Const.SEP)[-1]
         module_obj, origin_func = get_module(api_name)
         wrapped_obj = get_wrapper_obj(origin_func, api_name)
         setattr(module_obj, func_name, wrapped_obj)
