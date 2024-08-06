@@ -37,5 +37,17 @@
         "step": [],
         "bounds": [-1, 0, 1],
         "output_path": "./grad_output"
+    },
+    "free_benchmark": {
+        "scope": [], 
+        "list": [],
+        "fuzz_device": "npu",
+        "pert_mode": "improve_precision",
+        "handler_type": "check",
+        "fuzz_level": "L1",
+        "fuzz_stage": "forward",
+        "if_preheat": false,
+        "preheat_step": 15,
+        "max_sample": 20
     }
 }
