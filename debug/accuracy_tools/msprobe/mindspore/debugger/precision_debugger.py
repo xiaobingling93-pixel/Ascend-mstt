@@ -41,16 +41,16 @@ class PrecisionDebugger:
             return MsConst.PYNATIVE_MODE
 
     @classmethod
-    def start(cls):
+    def start(cls, model):
         instance = cls._instance
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
 
         instance.config.execution_mode = instance._get_execution_mode()
-        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API:
+        if instance.config.execution_mode == MsConst.PYNATIVE_MODE:
             if not instance.service:
                 instance.service = Service(instance.config)
-            instance.service.start()
+            instance.service.start(model)
         else:
             if not instance.first_start:
                 handler = TaskHandlerFactory.create(instance.config)

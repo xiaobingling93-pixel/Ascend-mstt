@@ -29,6 +29,7 @@ from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.mindspore.dump.hook_cell.cell_processor import CellProcessor
 
 
 class Service:
@@ -37,6 +38,7 @@ class Service:
         self.config = copy.deepcopy(config)
         self.config.level = self.config.level_ori
         self.data_collector = build_data_collector(self.config)
+        self.cell_processor = CellProcessor(self.data_collector.scope)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
@@ -150,3 +152,22 @@ class Service:
         if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
+
+        if self.config.level == "L2":
+            for name, cell in self.model.cells_and_names():
+                if cell == self.model:
+                    continue
+                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
+                         module.__class__.__name__ + Const.SEP
+                forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                cell.register_forward_hook(forward_hook)
+                cell.register_full_backward_hook(backward_hook)
+
+                cell.register_forward_pre_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                cell.register_forward_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
+                cell.register_full_backward_pre_hook(
+                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                cell.register_full_backward_hook(
+                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
