@@ -61,13 +61,14 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
     MAX_SEED_VALUE = 4294967295  # 2**32 - 1
-    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut"]
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut", "grad_probe"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
+    GRAD_PROBE = "grad_probe"
     ATTR_NAME_PREFIX = "wrap_"
     ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
