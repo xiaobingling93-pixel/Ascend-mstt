@@ -156,6 +156,15 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_dump_times = 0
         self.overflow_nums = config.overflow_nums
+    
+    @property
+    def is_terminated(self):
+        if self.overflow_nums == -1:
+            return False
+        if self.real_overflow_dump_times >= self.overflow_nums:
+            logger.warning(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
+            return True
+        return False
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -177,14 +186,6 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
                 change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
             self.real_overflow_dump_times += 1
         self.cached_tensors_and_file_paths = {}
-
-    def stop_run(self):
-        if self.overflow_nums == -1:
-            return False
-        if self.real_overflow_dump_times >= self.overflow_nums:
-            logger.warning(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
-            return True
-        return False
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
         if tensor_json['Max'] is None:

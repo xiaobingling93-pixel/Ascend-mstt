@@ -234,6 +234,3 @@ class BaseDataProcessor:
                           suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
-
-    def stop_run(self):
-        return False
