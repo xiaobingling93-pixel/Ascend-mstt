@@ -22,6 +22,7 @@ import stat
 import subprocess
 import time
 import json
+import csv
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
@@ -318,15 +319,6 @@ def execute_command(cmd):
         raise CompareException(CompareException.INVALID_DATA_ERROR)
 
 
-def save_numpy_data(file_path, data):
-    """
-    save_numpy_data
-    """
-    if not os.path.exists(os.path.dirname(file_path)):
-        os.makedirs(os.path.dirname(file_path))
-    np.save(file_path, data)
-
-
 def parse_value_by_comma(value):
     """
     parse value by comma, like '1,2,4,8'
@@ -496,8 +488,8 @@ def task_dumppath_get(input_param):
     else:
         logger.error(f"Compare is not required for overflow_check or free_benchmark.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.dirname(npu_path) + Const.DUMP_TENSOR_DATA
-    input_param['bench_dump_data_dir'] = os.path.dirname(bench_path) + Const.DUMP_TENSOR_DATA
+    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
     return summary_compare, md5_compare
 
 
@@ -514,3 +506,19 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
+
+
+def write_csv(data, filepath):
+    with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+
+
+def load_npy(filepath):
+    filepath = os.path.realpath(filepath)
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath)
+    except Exception as e:
+        raise RuntimeError(f"load npy file {filepath} failed") from e
+    return npy

@@ -20,7 +20,7 @@ class Const:
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
-    DUMP_TENSOR_DATA = '/dump_tensor_data'
+    DUMP_TENSOR_DATA = 'dump_tensor_data'
 
     # dump mode
     ALL = "all"
@@ -62,13 +62,14 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
     MAX_SEED_VALUE = 4294967295  # 2**32 - 1
-    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut"]
+    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut", "grad_probe"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
+    GRAD_PROBE = "grad_probe"
     ATTR_NAME_PREFIX = "wrap_"
     ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
@@ -82,12 +83,12 @@ class Const:
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
     DISTRIBUTED = 'Distributed'
-    
+
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
     ]
-    
+
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
     }
@@ -254,3 +255,17 @@ class OverflowConst:
     OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
+
+class MsConst:
+    CELL = "cell"
+    API = "api"
+    KERNEL = "kernel"
+    TOOL_LEVEL_DICT = {
+        "L0": CELL,
+        "L1": API,
+        "L2": KERNEL
+    }
+    PYNATIVE_MODE = "pynative"
+    GRAPH_GE_MODE = "graph_ge"
+    GRAPH_KBYK_MODE = "graph_kbyk"

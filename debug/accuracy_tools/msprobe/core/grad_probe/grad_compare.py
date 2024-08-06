@@ -1,19 +1,19 @@
 import os
 from typing import List
-from abc import ABC, abstractmethod
 
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import write_csv, check_file_or_directory_path, print_info_log, create_directory, print_error_log
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
+from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import remove_path, write_csv, load_npy
+from msprobe.core.grad_probe.constant import GradConst
+from msprobe.pytorch.common.utils import load_pt
 
-from ptdbg_ascend.src.python.ptdbg_ascend.common import file_check_util
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, check_path_pattern_valid, check_path_length
 
-
-class BaseComparator(ABC):
+class GradComparator:
 
     @staticmethod
     def _get_grad_weight_order(path1, path2):
@@ -36,13 +36,13 @@ class BaseComparator(ABC):
     @classmethod
     def compare_distributed(cls, path1: str, path2: str, output_dir: str):
         ranks = cls._get_matched_dirs(path1, path2, "rank")
-        print_info_log(f"the following ranks will be compared: {ranks}")
+        logger.info(f"the following ranks will be compared: {ranks}")
         if not ranks:
             raise RuntimeError("no matched ranks for comparison, please dump data in same configuration")
         if not os.path.isdir(output_dir):
             create_directory(output_dir)
         for rank in tqdm(ranks, desc="rank"):
-            print_info_log(f"now comparing rank {rank}:")
+            logger.info(f"now comparing rank {rank}:")
             cls.compare(os.path.join(path1, f"rank{rank}"),
                         os.path.join(path2, f"rank{rank}"),
                         os.path.join(output_dir, f"rank{rank}"))
@@ -59,8 +59,8 @@ class BaseComparator(ABC):
 
     @classmethod
     def _get_matched_dirs(cls, path1: str, path2: str, dir_prefix):
-        check_file_or_directory_path(path1, file_type=GradConst.DIR)
-        check_file_or_directory_path(path2, file_type=GradConst.DIR)
+        check_file_or_directory_path(path1, isdir=True)
+        check_file_or_directory_path(path2, isdir=True)
         dirs = []
         for dir_name in os.listdir(path1):
             index = dir_name.replace(dir_prefix, "", 1)
@@ -78,6 +78,7 @@ class BaseComparator(ABC):
     def _save_similarities(cls, similarities: List[float], steps: List[int], output_dir: str):
         if not similarities:
             raise ValueError(f"length of similarities is 0")
+        result = [['step'] + [str(step) for step in steps]]
         for key, value in tqdm(similarities.items(), desc="save similarities (by param)"):
             if len(value) != len(steps):
                 raise RuntimeError(f"similarities length of {key}:{len(value)} not equal steps:{len(steps)}")
@@ -88,26 +89,26 @@ class BaseComparator(ABC):
             picture_dir = os.path.join(output_dir, "similarities_picture")
             if not os.path.isdir(picture_dir):
                 create_directory(picture_dir)
-            file_path= os.path.join(picture_dir, f"{key}_similarities.png")
-            if os.path.exists(file_path):
-                raise ValueError(f"File {file_path} already exists")
-            check_path_length(file_path)
-            check_path_pattern_valid(file_path)
+            fig_save_path = os.path.join(picture_dir, f"{key}_similarities.png")
+
+            check_path_before_create(fig_save_path)
             try:
-                plt.savefig(file_path)
-                plt.close()
+                plt.savefig(fig_save_path)
             except Exception as e:
-                error_message = "An unexpected error occurred: %s when savfig to %s" % (str(e), file_path)
-                print_error_log(error_message)
-            full_path = os.path.realpath(file_path)
-            file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            head_tuple = tuple(['step'] + [str(step) for step in steps])
-            write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
+                raise RuntimeError(f"save plt figure {fig_save_path} failed") from e
+            plt.close()
+
+            result.append([key] + value)
+        result_csv_path = os.path.join(output_dir, "similarities.csv")
+        if os.path.exists(result_csv_path):
+            logger.warning(f"{result_csv_path} will be recoverd")
+            remove_path(result_csv_path)
+        write_csv(result, result_csv_path)
 
     @classmethod
     def _calculate_separated_similarities(cls, path1, path2, steps):
         similarities = {}
-        print_info_log(f"{len(steps)} steps will be compared")
+        logger.info(f"{len(steps)} steps will be compared")
         grad_weight_order = cls._get_grad_weight_order(path1, path2)
         for step in tqdm(steps, desc="culculate similarities (by step)"):
             grad_files = cls._get_matched_grad_files(path1, path2, step)
@@ -140,8 +141,8 @@ class BaseComparator(ABC):
     def _get_matched_grad_files(cls, path1: str, path2: str, step: int):
         path1 = os.path.join(path1, f"step{step}")
         path2 = os.path.join(path2, f"step{step}")
-        check_file_or_directory_path(path1, file_type=GradConst.DIR)
-        check_file_or_directory_path(path2, file_type=GradConst.DIR)
+        check_file_or_directory_path(path1, isdir=True)
+        check_file_or_directory_path(path2, isdir=True)
         grad_files = []
         for grad_file in os.listdir(path1):
             splits = grad_file.split('.')
@@ -161,6 +162,19 @@ class BaseComparator(ABC):
         return same_count, total_count
 
     @classmethod
-    @abstractmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
-        raise NotImplementedError("_load_grad_files is not implemented.")
+        if grad_file1.endswith('pt'):
+            grad1 = load_pt(grad_file1).numpy()
+            grad2 = load_pt(grad_file2).numpy()
+        else:
+            grad1 = load_npy(grad_file1)
+            grad2 = load_npy(grad_file2)
+        if grad1.shape != grad2.shape:
+            raise RuntimeError(f"tensor shape is not equal: {grad_file1}, {grad_file2}")
+        if grad1.dtype != bool:
+            raise TypeError(f"tensor type is not bool: {grad_file1}")
+        if grad2.dtype != bool:
+            raise TypeError(f"tensor type is not bool: {grad_file2}")
+        return grad1, grad2
+
+
