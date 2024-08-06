@@ -2,6 +2,7 @@ import functools
 import os
 from pathlib import Path
 
+import service
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
@@ -14,6 +15,7 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
+torch_vsrsion_above_2 = torch.__version__.split('+')[0] > '2.0'
 
 
 class Service:
@@ -60,6 +62,20 @@ class Service:
                     return self.data_collector.get_forward_new_output()
             return output
 
+        def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
+            if module_type == BaseScope.Module_Type_Module:
+                api_or_module_name = module.mindstudio_reserved_name
+            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+
+            if not self.switch:
+                return None
+            if self.data_collector:
+                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs={}, output=output)
+                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
+                if self.data_collector.if_return_forward_new_output():
+                    return self.data_collector.get_forward_new_output()
+            return output
+
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
@@ -78,7 +94,8 @@ class Service:
         pre_forward_hook = functools.partial(pre_hook, forward_name_template)
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
-        return pre_forward_hook, forward_hook, backward_hook
+        forward_hook_torch_version_below_2 = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
+        return pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
 
     def step(self):
         self.current_iter += 1
@@ -158,18 +175,20 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                pre_forward_hook, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                module.register_forward_hook(forward_hook, with_kwargs=True)
-                module.register_full_backward_hook(backward_hook)
-
                 module.register_forward_pre_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 module.register_forward_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                module.register_full_backward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
                 module.register_full_backward_hook(
                     self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+
+                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
+                    = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                if torch_vsrsion_above_2:
+                    module.register_forward_hook(forward_hook, with_kwargs=True)
+                else:
+                    module.register_forward_hook(forward_hook_torch_version_below_2)
+                module.register_full_backward_hook(backward_hook)
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))

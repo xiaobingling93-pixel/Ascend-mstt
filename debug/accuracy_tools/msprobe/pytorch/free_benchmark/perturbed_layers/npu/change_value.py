@@ -39,7 +39,7 @@ class ChangeValueLayer(NpuBaseLayer):
             return type(tensor_obj)([self.change_value(value) for value in tensor_obj])
         return tensor_obj
 
-    def handle(self, params: DataParams) -> torch.Any:
+    def handle(self, params: DataParams):
         """
         对输入添加扰动并返回
         """

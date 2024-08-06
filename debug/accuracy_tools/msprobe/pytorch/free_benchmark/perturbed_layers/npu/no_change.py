@@ -16,7 +16,7 @@ class NoChangeLayer(NpuBaseLayer):
         self.is_added = True
         return tensor_obj
 
-    def handle(self, params: DataParams) -> torch.Any:
+    def handle(self, params: DataParams):
         """
         对输入添加扰动并返回
         """

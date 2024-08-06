@@ -109,7 +109,21 @@ class ModuleProcesser:
             if self.scope:
                 self.scope.end_module(module.mindstudio_reserved_name)
 
-        if Const.START in start_or_stop:
+        def backward_hook(module, input, output=None):
+            try:
+                index = ModuleProcesser.module_count_func(name_prefix)
+            except IndexError as e:
+                index = None
+                pass
+            module.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
+            ModuleProcesser.module_node[full_name] = None
+            ModuleProcesser.api_parent_node = None
+            if self.scope:
+                self.scope.begin_module(full_name)
+
+        if 'forward' in name_prefix and Const.START in start_or_stop:
             return pre_hook
+        elif 'backward' in name_prefix:
+            return backward_hook
         else:
             return end_hook
