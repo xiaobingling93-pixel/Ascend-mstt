@@ -9,7 +9,7 @@ from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
-from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.const import CompareConst, FileCheckConst
 
 from msprobe.core.compare.utils import merge_tensor, get_un_match_accuracy, get_accuracy, read_op
 from msprobe.core.compare.Multiprocessing_compute import ComparisonResult, _save_cmp_result, _handle_multi_process
@@ -133,31 +133,6 @@ class MSComparator (Comparator):
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
-
-        header = []
-        if md5_compare:
-            header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
-        elif summary_compare:
-            header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
-        else:
-            header = CompareConst.COMPARE_RESULT_HEADER[:]
-
-        all_mode_bool = not (summary_compare or md5_compare)
-        if stack_mode:
-            if all_mode_bool:
-                header.append(CompareConst.STACK)
-                header.append(CompareConst.DATA_NAME)
-            else:
-                header.append(CompareConst.STACK)
-        else:
-            if all_mode_bool:
-                for row in result:
-                    del row[-2]
-                header.append(CompareConst.DATA_NAME)
-            else:
-                for row in result:
-                    del row[-1]
-
         result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
         return result_df
     
@@ -253,52 +228,23 @@ class MSComparator (Comparator):
             advisor.analysis()
 
 
-# def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-#             fuzzy_match=False):
-#     try:
-#         summary_compare, md5_compare = task_dumppath_get(input_parma)
-#         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
-#         create_directory(output_path)
-#         check_compare_param(input_parma, output_path, summary_compare, md5_compare)
-#     except CompareException as error:
-#         logger.error('Compare failed. Please check the arguments and do it again!')
-#         sys.exit(error.code)
-#     compare_core(input_parma, output_path, stack_mode=stack_mode,
-#                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
-#                  md5_compare=md5_compare)
-
-def ms_compare(args):
-    with FileOpen(args.input_path, "r") as file:
-        input_param = json.load(file)
+def ms_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_param)
-        check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
-        create_directory(args.output_path)
-        check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
+        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+        create_directory(output_path)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
-    msComparator= MSComparator() 
-    msComparator.compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
-                 auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
-                 md5_compare=md5_compare)   
+    msComparator=MSComparator()
+    msComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
+                 md5_compare=md5_compare) 
 
 
     
 
-
-
-def _compare_parser(parser):
-    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.",  required=True)
-    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path.", required=True)
-    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
-                        help="<optional> Whether to save stack info.", required=False)
-    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
-                        help="<optional> Whether to give advisor.", required=False)
-    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
-                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
 
 
         

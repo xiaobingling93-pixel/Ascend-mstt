@@ -9,7 +9,7 @@ from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
-from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+from msprobe.core.common.const import CompareConst, FileCheckConst
 
 from msprobe.core.compare.utils import merge_tensor, get_un_match_accuracy, get_accuracy, read_op
 from msprobe.core.compare.Multiprocessing_compute import ComparisonResult, _save_cmp_result, _handle_multi_process
@@ -232,21 +232,19 @@ class PTComparator (Comparator):
             advisor.analysis()
 
 
-def pt_compare(args):
-    with FileOpen(args.input_path, "r") as file:
-        input_param = json.load(file)
+def pt_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_param)
-        check_configuration_param(args.stack_mode, args.auto_analyze, args.fuzzy_match)
-        create_directory(args.output_path)
-        check_compare_param(input_param, args.output_path, summary_compare, md5_compare)
+        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+        create_directory(output_path)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
-    ptComparator= PTComparator() 
-    ptComparator.compare_core(input_param, args.output_path, stack_mode=args.stack_mode,
-                 auto_analyze=args.auto_analyze, fuzzy_match=args.fuzzy_match, summary_compare=summary_compare,
-                 md5_compare=md5_compare)   
+    ptComparator=PTComparator()
+    ptComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
+                 md5_compare=md5_compare)
 
 
 def _compare_parser(parser):

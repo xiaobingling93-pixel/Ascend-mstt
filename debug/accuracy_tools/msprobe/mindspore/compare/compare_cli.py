@@ -3,18 +3,18 @@ from msprobe.core.common.file_check import FileOpen, check_file_type
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
-from msprobe.pytorch.compare.pt_compare import pt_compare
-from msprobe.pytorch.compare.distributed_compare import compare_distributed
+from msprobe.mindspore.compare.ms_compare import ms_compare
+from msprobe.mindspore.compare.distributed_compare import compare_distributed
 
 
-def compare_cli(args):
+def compare_cli_ms(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
-        pt_compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze,
+        ms_compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze,
                 fuzzy_match=args.fuzzy_match)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {"stack_mode": args.stack_mode, "auto_analyze": args.auto_analyze, "fuzzy_match": args.fuzzy_match}

@@ -22,9 +22,9 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _
     _api_precision_compare_command
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
     _run_overflow_check_command
-from msprobe.pytorch.compare.acc_compare import _compare_parser
+from msprobe.pytorch.compare.pt_compare import _compare_parser
 from msprobe.pytorch.compare.compare_cli import compare_cli
-
+from msprobe.mindspore.compare.compare_cli import compare_cli_ms
 
 def main():
     parser = argparse.ArgumentParser(
@@ -68,7 +68,8 @@ def main():
             _run_overflow_check_command(args)
         elif sys.argv[3] == "compare":
             compare_cli(args)
-
+    else:
+        compare_cli_ms(args)
 
 if __name__ == "__main__":
     main()

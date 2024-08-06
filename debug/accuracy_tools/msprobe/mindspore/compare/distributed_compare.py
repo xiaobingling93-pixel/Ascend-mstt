@@ -57,8 +57,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     def extract_json(dirname, stack_json=False):
         json_path = ''
         for fname in os.listdir(dirname):
-            full_path = os.path.join(dirname, fname)
             if fname=="construct.json": continue
+            full_path = os.path.join(dirname, fname)
             if full_path.endswith('.json'):
                 json_path = full_path
                 if not stack_json and 'stack' not in json_path:
