@@ -36,11 +36,10 @@ class BaseHandler(ABC):
 
     @staticmethod
     def get_endless_norm(first_tensor, second_tensor, abs_tol):
-        try:
+        if first_tensor.dtype != ms.bfloat16 and second_tensor.dtype != ms.bfloat16:
             ratio_tensor1 = ops.where(ops.abs(second_tensor) > abs_tol, ops.div(first_tensor, second_tensor), 1)
             ratio_tensor2 = ops.where(ops.abs(first_tensor) > abs_tol, ops.div(second_tensor, first_tensor), 1)
-        except Exception as e:
-            logger.error(str(e))
+        else:
             ratio_tensor1 = ops.where(ops.abs(second_tensor).to(ms.float32) > abs_tol,
                                       ops.div(first_tensor.to(ms.float32), second_tensor.to(ms.float32)), 1)
             ratio_tensor2 = ops.where(ops.abs(first_tensor).to(ms.float32) > abs_tol,
