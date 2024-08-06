@@ -2,7 +2,7 @@ import functools
 import os
 from pathlib import Path
 
-import service
+import torch
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
