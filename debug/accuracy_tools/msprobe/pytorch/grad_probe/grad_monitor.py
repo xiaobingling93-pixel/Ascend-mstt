@@ -2,7 +2,8 @@ import os
 from collections import defaultdict
 
 import torch
-from torch.optim.optimizer import register_optimizer_step_pre_hook
+if int(torch.__version__.split('.')[0]) >= 2:
+    from torch.optim.optimizer import register_optimizer_step_pre_hook
 from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
 from msprobe.core.grad_probe.constant import GradConst
@@ -102,5 +103,5 @@ class GradientMonitor:
             header_result = GradStatCsv.generate_csv_header(self._level_adp, self._bounds)
             output_lines.insert(0, header_result)
             write_csv(output_lines, output_path)
-
-        register_optimizer_step_pre_hook(optimizer_pre_step_hook)
+        if int(torch.__version__.split('.')[0]) >= 2:
+            register_optimizer_step_pre_hook(optimizer_pre_step_hook)
