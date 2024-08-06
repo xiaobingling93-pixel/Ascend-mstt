@@ -282,7 +282,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
     if need_backward:
         if need_to_backward(grad_index, out):
-            backward_args = backward_content[api_full_name].get("input")
+            backward_args = backward_content[api_full_name].get("grad_input")
             grad = gen_args(backward_args, api_name, real_data_path=real_data_path)[0]
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
