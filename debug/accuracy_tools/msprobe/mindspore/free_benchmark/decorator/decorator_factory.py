@@ -28,7 +28,7 @@ def decorate(original_func, decorate_func, api_name=None):
         try:
             if Runtime.rank_id == -1:
                 Runtime.rank_id = os.environ.get("RANK_ID", -1)
-            if need_wrapper_func(api_name):
+            if need_wrapper_func():
                 logger.info(f"[{api_name}] is checking.")
                 return __exec_decorate_func()
         except Exception as e:
@@ -56,7 +56,7 @@ def decorate_forward_function(func, api_name=None):
     return decorate(func, forward_func, api_name)
 
 
-def stack_depth_check(api_name) -> bool:
+def stack_depth_check() -> bool:
     nested_depth = 1
     frame = sys._getframe(1)
     while frame:
@@ -95,10 +95,10 @@ def data_pre_deal(api_name, func, *args, **kwargs):
     return params
 
 
-def need_wrapper_func(api_name):
+def need_wrapper_func():
     if not (Runtime.is_running and Config.is_enable):
         return False
-    if not stack_depth_check(api_name):
+    if not stack_depth_check():
         return False
     if Config.steps and Runtime.step_count not in Config.steps:
         return False

@@ -104,7 +104,7 @@ def get_module(api_name):
 
 
 def hijack(api_name):
-    if not api_name.strip() == 0:
+    if not api_name.strip():
         return
     try:
         func_name = api_name.split(Const.SEP)[-1]
