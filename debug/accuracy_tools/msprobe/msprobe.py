@@ -22,6 +22,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _
     _api_precision_compare_command
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
     _run_overflow_check_command
+from msprobe.pytorch.compare.acc_compare import _compare_parser
+from msprobe.pytorch.compare.compare_cli import compare_cli
 
 
 def main():
@@ -32,14 +34,16 @@ def main():
                     f"For any issue, refer README.md first",
     )
     parser.set_defaults(print_help=parser.print_help)
-    parser.add_argument('-f', '--framework', required=True, choices=['pytorch'],
+    parser.add_argument('-f', '--framework', required=True, choices=['pytorch', 'mindspore'],
                         help='Deep learning framework.')
     subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
+    compare_cmd_parser = subparsers.add_parser('compare')
     run_ut_cmd_parser = subparsers.add_parser('run_ut')
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
+    _compare_parser(compare_cmd_parser)
     _run_ut_parser(run_ut_cmd_parser)
     _run_ut_parser(multi_run_ut_cmd_parser)
     multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
@@ -50,17 +54,20 @@ def main():
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
-    if sys.argv[3] == "run_ut":
-        run_ut_command(args)
-    elif sys.argv[3] == "parse":
-        cli_parse()
-    elif sys.argv[3] == "multi_run_ut":
-        config = prepare_config(args)
-        run_parallel_ut(config)
-    elif sys.argv[3] == "api_precision_compare":
-        _api_precision_compare_command(args)
-    elif sys.argv[3] == "run_overflow_check":
-        _run_overflow_check_command(args)
+    if sys.argv[2] == "pytorch":
+        if sys.argv[3] == "run_ut":
+            run_ut_command(args)
+        elif sys.argv[3] == "parse":
+            cli_parse()
+        elif sys.argv[3] == "multi_run_ut":
+            config = prepare_config(args)
+            run_parallel_ut(config)
+        elif sys.argv[3] == "api_precision_compare":
+            _api_precision_compare_command(args)
+        elif sys.argv[3] == "run_overflow_check":
+            _run_overflow_check_command(args)
+        elif sys.argv[3] == "compare":
+            compare_cli(args)
 
 
 if __name__ == "__main__":
