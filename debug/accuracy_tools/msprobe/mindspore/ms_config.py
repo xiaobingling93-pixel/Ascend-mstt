@@ -64,7 +64,7 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.pert_mode and self.pert_mode not in MsFreeBenchmarkConst.PERT_TYPE_LIST:
             raise Exception("pert_mode must be improve_precision, add_noise, bit_noise , no_change or empty")
         if self.handler_type and self.handler_type not in MsFreeBenchmarkConst.HANDLER_TYPE_LIST:
-            raise Exception("handler_type must be check or empty")
+            raise Exception("handler_type must be check, fix or empty")
         if self.fuzz_level and self.fuzz_level not in MsFreeBenchmarkConst.DUMP_LEVEL_LIST:
             raise Exception("fuzz_level must be L1 or empty")
         if self.fuzz_stage and self.fuzz_stage not in MsFreeBenchmarkConst.STAGE_LIST:

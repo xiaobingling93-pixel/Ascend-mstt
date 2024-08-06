@@ -63,7 +63,6 @@ def stack_depth_check(api_name) -> bool:
         if frame.f_code.co_name == "fuzz_wrapper":
             nested_depth -= 1
             if nested_depth < 0:
-                logger.warning(f"[{api_name}] Stack full. Exit staking.")
                 return False
         frame = frame.f_back
     return True
