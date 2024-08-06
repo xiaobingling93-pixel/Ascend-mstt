@@ -69,6 +69,10 @@ class BaseDataProcessor:
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
+    
+    @property
+    def is_terminated(self):
+        return False
 
     @staticmethod
     def analyze_api_call_stack(name):
