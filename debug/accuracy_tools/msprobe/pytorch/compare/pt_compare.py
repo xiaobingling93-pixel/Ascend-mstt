@@ -59,6 +59,19 @@ class PTComparator (Comparator):
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)
+
+
+    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
+        op_data = json_data['data'][op_name]
+        op_parsed_list = read_op(op_data, op_name)
+        if op_name in stack_json_data:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': stack_json_data[op_name]})
+        else:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
+            
+        merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
+        return merge_list
+               
     
     def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
@@ -87,15 +100,7 @@ class PTComparator (Comparator):
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
                 read_err_npu = True
-
-                npu_op_data = npu_json_data['data'][op_name_npu]
-                npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
-                if op_name_npu in stack_json_data:
-                    npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
-                else:
-                    npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
-
-                npu_merge_list = merge_tensor(npu_op_parsed_list, summary_compare, md5_compare)
+                npu_merge_list = self.gen_merge_list(npu_json_data,op_name_npu,stack_json_data,summary_compare,md5_compare)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
             except StopIteration:
@@ -103,16 +108,7 @@ class PTComparator (Comparator):
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
-
-                bench_op_data = bench_json_data['data'][op_name_bench]
-                bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
-                if op_name_bench in stack_json_data:
-                    bench_op_parsed_list.append(
-                        {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
-                else:
-                    bench_op_parsed_list.append({'full_op_name': op_name_bench, 'full_info': None})
-
-                bench_merge_list = merge_tensor(bench_op_parsed_list, summary_compare, md5_compare)
+                bench_merge_list =self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare,md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -138,7 +134,11 @@ class PTComparator (Comparator):
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
-
+                
+        result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
+        return result_df
+    
+    def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
         header = []
         if md5_compare:
             header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
@@ -162,10 +162,8 @@ class PTComparator (Comparator):
             else:
                 for row in result:
                     del row[-1]
-
         result_df = pd.DataFrame(result, columns=header)
         return result_df
-    
     
     def read_npy_data(self,dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
@@ -232,22 +230,6 @@ class PTComparator (Comparator):
         if auto_analyze:
             advisor = Advisor(result_df, output_path)
             advisor.analysis()
-
-
-# def pt_compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-#             fuzzy_match=False):
-#     try:
-#         summary_compare, md5_compare = task_dumppath_get(input_parma)
-#         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
-#         create_directory(output_path)
-#         check_compare_param(input_parma, output_path, summary_compare, md5_compare)
-#     except CompareException as error:
-#         logger.error('Compare failed. Please check the arguments and do it again!')
-#         sys.exit(error.code)
-#     ptComparator= PTComparator() 
-#     ptComparator.compare_core(input_parma, output_path, stack_mode=stack_mode,
-#                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
-#                  md5_compare=md5_compare)
 
 
 def pt_compare(args):

@@ -60,6 +60,18 @@ class MSComparator (Comparator):
 
         return _save_cmp_result(idx, cr, result_df, lock)
     
+    
+    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
+        op_data = json_data['data'][op_name]
+        op_parsed_list = read_op(op_data, op_name)
+        if op_name in stack_json_data:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': stack_json_data[op_name]})
+        else:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
+            
+        merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
+        return merge_list
+    
     def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
         npu_json_data = json.load(npu_json_handle)
@@ -87,15 +99,7 @@ class MSComparator (Comparator):
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
                 read_err_npu = True
-
-                npu_op_data = npu_json_data['data'][op_name_npu]
-                npu_op_parsed_list = read_op(npu_op_data, op_name_npu)
-                if op_name_npu in stack_json_data:
-                    npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': stack_json_data[op_name_npu]})
-                else:
-                    npu_op_parsed_list.append({'full_op_name': op_name_npu, 'full_info': None})
-
-                npu_merge_list = merge_tensor(npu_op_parsed_list, summary_compare, md5_compare)
+                npu_merge_list = self.gen_merge_list(npu_json_data,op_name_npu,stack_json_data,summary_compare, md5_compare)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
             except StopIteration:
@@ -103,16 +107,7 @@ class MSComparator (Comparator):
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
-
-                bench_op_data = bench_json_data['data'][op_name_bench]
-                bench_op_parsed_list = read_op(bench_op_data, op_name_bench)
-                if op_name_bench in stack_json_data:
-                    bench_op_parsed_list.append(
-                        {'full_op_name': op_name_bench, 'full_info': stack_json_data[op_name_bench]})
-                else:
-                    bench_op_parsed_list.append({'full_op_name': op_name_bench, 'full_info': None})
-
-                bench_merge_list = merge_tensor(bench_op_parsed_list, summary_compare, md5_compare)
+                bench_merge_list = self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare, md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -163,10 +158,36 @@ class MSComparator (Comparator):
                 for row in result:
                     del row[-1]
 
+        result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
+        return result_df
+    
+    def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
+        header = []
+        if md5_compare:
+            header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
+        elif summary_compare:
+            header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+        else:
+            header = CompareConst.COMPARE_RESULT_HEADER[:]
+
+        all_mode_bool = not (summary_compare or md5_compare)
+        if stack_mode:
+            if all_mode_bool:
+                header.append(CompareConst.STACK)
+                header.append(CompareConst.DATA_NAME)
+            else:
+                header.append(CompareConst.STACK)
+        else:
+            if all_mode_bool:
+                for row in result:
+                    del row[-2]
+                header.append(CompareConst.DATA_NAME)
+            else:
+                for row in result:
+                    del row[-1]
         result_df = pd.DataFrame(result, columns=header)
         return result_df
-
-
+    
     def _do_multi_process(self,input_parma, result_df):
         try:
             result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
