@@ -235,7 +235,7 @@ def ms_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fu
         check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
-        sys.exit(error.code)
+        raise Exception(error.code)
     msComparator=MSComparator()
     msComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,

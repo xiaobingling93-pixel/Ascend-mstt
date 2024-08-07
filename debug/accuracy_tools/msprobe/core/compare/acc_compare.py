@@ -10,6 +10,7 @@ class Comparator:
     def __init__(self):
         pass    
     
+    @classmethod
     def match_op(self,npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
             if check_op(npu_queue[-1], b_op, fuzzy_match):

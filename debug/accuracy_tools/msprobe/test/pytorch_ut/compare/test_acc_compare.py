@@ -1,7 +1,10 @@
 # coding=utf-8
 import unittest
 import pandas as pd
-from msprobe.pytorch.compare import acc_compare as compare
+from msprobe.core.compare.check import check_graph_mode, check_op
+from msprobe.core.compare.utils import merge_tensor, read_op, get_accuracy, rename_api
+from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.highlight import find_error_rows,find_compare_result_error_rows
 
 npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
                         'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
@@ -208,60 +211,60 @@ class TestUtilsMethods(unittest.TestCase):
     def test_check_graph_mode(self):
         op1 = "Aten"
         op2 = "torch"
-        self.assertTrue(compare.check_graph_mode(op1, op2))
-        self.assertTrue(compare.check_graph_mode(op2, op1))
-        self.assertFalse(compare.check_graph_mode(op1, op1))
-        self.assertFalse(compare.check_graph_mode(op2, op2))
+        self.assertTrue(check_graph_mode(op1, op2))
+        self.assertTrue(check_graph_mode(op2, op1))
+        self.assertFalse(check_graph_mode(op1, op1))
+        self.assertFalse(check_graph_mode(op2, op2))
 
     def test_check_op(self):
         fuzzy_match = False
-        result = compare.check_op(npu_dict, bench_dict, fuzzy_match)
+        result = check_op(npu_dict, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
     def test_merge_tensor(self):
-        op_dict = compare.merge_tensor(tensor_list, True, False)
+        op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
 
     def test_read_op(self):
-        result = compare.read_op(op_data, op_name)
+        result = read_op(op_data, op_name)
         self.assertEqual(result, op_result)
 
     def test_match_op(self):
         fuzzy_match = False
-        a, b = compare.match_op([npu_dict], [bench_dict], fuzzy_match)
+        a, b = Comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
     def test_get_accuracy(self):
         result = []
-        compare.get_accuracy(result, npu_dict, bench_dict, highlight_dict)
+        get_accuracy(result, npu_dict, bench_dict, highlight_dict)
         self.assertEqual(result, o_result)
 
     def test_get_accuracy_graph_mode(self):
         result = []
-        compare.get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
+        get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
         self.assertEqual(result, aten_result)
 
     def test_find_error_rows(self):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        compare.find_error_rows(summary_result, 0, 1, highlight_dict, summary_compare=True)
+        find_error_rows(summary_result, 0, 1, highlight_dict, summary_compare=True)
         self.assertEqual(highlight_dict, {'red_rows': [], 'yellow_rows': []})
 
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        compare.find_compare_result_error_rows(result_df, highlight_dict, False, False)
+        find_compare_result_error_rows(result_df, highlight_dict, False, False)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
 
     def test_rename_api(self):
         test_name_1 = "Distributed.broadcast.0.forward.input.0"
         expect_name_1 = "Distributed.broadcast.input.0"
-        actual_name_1 = compare.rename_api(test_name_1, "forward")
+        actual_name_1 = rename_api(test_name_1, "forward")
         self.assertEqual(actual_name_1, expect_name_1)
 
         test_name_2 = "Torch.sum.0.backward.output.0"
         expect_name_2 = "Torch.sum.output.0"
-        actual_name_2 = compare.rename_api(test_name_2, "backward")
+        actual_name_2 = rename_api(test_name_2, "backward")
         self.assertEqual(actual_name_2, expect_name_2)
