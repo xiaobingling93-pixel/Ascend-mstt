@@ -23,7 +23,7 @@ import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
 from msprobe.core.common.const import Const
-torch_vsrsion_above_2 = torch.__version__.split('+')[0] > '2.0'
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 class HOOKModule(nn.Module):
@@ -50,7 +50,7 @@ class HOOKModule(nn.Module):
                 HOOKModule.module_count[self.prefix] += 1
                 self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
             forward_pre_hook, forward_hook, backward_hook, _ = build_hook(self.prefix)
-            if torch_vsrsion_above_2:
+            if torch_version_above_or_equal_2:
                 self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
                 self.register_forward_hook(forward_hook, with_kwargs=True)
             else:

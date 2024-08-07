@@ -15,7 +15,7 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
-torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 class Service:
@@ -177,7 +177,7 @@ class Service:
 
                 pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
                     = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                if torch_version_above_2:
+                if torch_version_above_or_equal_2:
                     module.register_forward_hook(forward_hook, with_kwargs=True)
                 else:
                     module.register_full_backward_hook(
@@ -189,7 +189,7 @@ class Service:
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 module.register_forward_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                if torch_version_above_2:
+                if torch_version_above_or_equal_2:
                     module.register_full_backward_pre_hook(
                         self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
                     module.register_full_backward_hook(
