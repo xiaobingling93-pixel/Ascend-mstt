@@ -16,6 +16,7 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'

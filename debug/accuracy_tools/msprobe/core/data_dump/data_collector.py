@@ -106,6 +106,22 @@ class DataCollector:
             raise Exception("[msprobe] exit")
         self.handle_data(name, data_info)
 
+    def backward_input_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        self.handle_data(name, data_info)
+
+    def backward_output_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
+        self.handle_data(name, data_info)
+
     def update_construct(self, name):
         if self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
