@@ -175,10 +175,6 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                module.register_forward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                module.register_forward_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
                 module.register_full_backward_hook(
                     self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
@@ -189,6 +185,11 @@ class Service:
                 else:
                     module.register_forward_hook(forward_hook_torch_version_below_2)
                 module.register_full_backward_hook(backward_hook)
+
+                module.register_forward_pre_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                module.register_forward_hook(
+                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
