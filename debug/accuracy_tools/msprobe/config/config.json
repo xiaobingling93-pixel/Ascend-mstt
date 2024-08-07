@@ -31,12 +31,9 @@
         "error_data_path": "./"
     },
     "grad_probe": {
-        "level": "L1",
+        "grad_level": "L1",
         "param_list": [],
-        "rank": [],
-        "step": [],
-        "bounds": [-1, 0, 1],
-        "output_path": "./grad_output"
+        "bounds": [-1, 0, 1]
     },
     "free_benchmark": {
         "scope": [], 

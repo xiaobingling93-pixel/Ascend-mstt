@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
 
-from msprobe.core.common.file_check import FileOpen, FileChecker
+from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
 from msprobe.core.common.log import logger
 
@@ -256,6 +256,17 @@ def remove_path(path):
     except PermissionError as err:
         logger.error("Failed to delete {}. Please check the permission.".format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR) from err
+
+
+def move_file(src_path, dst_path):
+    check_file_or_directory_path(src_path)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move file {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move file {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def get_dump_data_path(dump_dir):
@@ -515,10 +526,19 @@ def write_csv(data, filepath):
 
 
 def load_npy(filepath):
-    filepath = os.path.realpath(filepath)
     check_file_or_directory_path(filepath)
     try:
         npy = np.load(filepath)
     except Exception as e:
         raise RuntimeError(f"load npy file {filepath} failed") from e
     return npy
+
+
+def save_npy(data, filepath):
+    filepath = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        npy = np.save(filepath, data)
+    except Exception as e:
+        raise RuntimeError(f"save npy file {filepath} failed") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
