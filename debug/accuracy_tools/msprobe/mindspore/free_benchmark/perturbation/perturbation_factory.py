@@ -1,4 +1,4 @@
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 from .add_noise import AddNoisePerturbation
 from .bit_noise import BitNoisePerturbation
@@ -12,10 +12,10 @@ class PerturbationFactory:
 
     """
     perturbations = {
-        MsFreeBenchmarkConst.IMPROVE_PRECISION: ImprovePrecisionPerturbation,
-        MsFreeBenchmarkConst.ADD_NOISE: AddNoisePerturbation,
-        MsFreeBenchmarkConst.BIT_NOISE: BitNoisePerturbation,
-        MsFreeBenchmarkConst.NO_CHANGE: NoChangePerturbation,
+        FreeBenchmarkConst.IMPROVE_PRECISION: ImprovePrecisionPerturbation,
+        FreeBenchmarkConst.ADD_NOISE: AddNoisePerturbation,
+        FreeBenchmarkConst.BIT_NOISE: BitNoisePerturbation,
+        FreeBenchmarkConst.NO_CHANGE: NoChangePerturbation,
     }
 
     @staticmethod

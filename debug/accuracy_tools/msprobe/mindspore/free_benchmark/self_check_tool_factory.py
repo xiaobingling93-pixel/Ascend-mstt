@@ -1,24 +1,24 @@
-from msprobe.core.common.const import MsConst
+from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelFCheck
 
 
 class SelfCheckToolFactory:
     tools = {
-        MsConst.CELL: {
-            MsConst.GRAPH_KBYK_MODE: None,
-            MsConst.GRAPH_GE_MODE: None,
-            MsConst.PYNATIVE_MODE: None
+        Const.CELL: {
+            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_GE_MODE: None,
+            Const.PYNATIVE_MODE: None
         },
-        MsConst.API: {
-            MsConst.GRAPH_KBYK_MODE: None,
-            MsConst.GRAPH_GE_MODE: None,
-            MsConst.PYNATIVE_MODE: ApiPyNativeSelFCheck
+        Const.API: {
+            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_GE_MODE: None,
+            Const.PYNATIVE_MODE: ApiPyNativeSelFCheck
         },
-        MsConst.KERNEL: {
-            MsConst.GRAPH_KBYK_MODE: None,
-            MsConst.GRAPH_GE_MODE: None,
-            MsConst.PYNATIVE_MODE: None
+        Const.KERNEL: {
+            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_GE_MODE: None,
+            Const.PYNATIVE_MODE: None
         }
     }
 

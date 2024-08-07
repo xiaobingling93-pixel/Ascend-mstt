@@ -4,7 +4,7 @@ import numpy as np
 from mindspore import Tensor, ops
 
 from msprobe.mindspore.common.log import logger
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.perturbation.base_perturbation import BasePerturbation
 
@@ -15,10 +15,10 @@ class BitNoisePerturbation(BasePerturbation):
         if isinstance(inputs, Tensor):
             bit_len_type = self._get_bit_len_type(inputs)
             if bit_len_type is not False:
-                sub_normal_np = np.finfo(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype)).smallest_normal
+                sub_normal_np = np.finfo(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype)).smallest_normal
                 sub_normal = Tensor(sub_normal_np)
-                noise_type = list(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.keys())[
-                             list(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.values()).index(bit_len_type)]
+                noise_type = list(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.keys())[
+                             list(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.values()).index(bit_len_type)]
                 noise = ops.full(inputs.shape, 1, dtype=noise_type)
                 input_np = inputs.asnumpy()
                 input_np_int = input_np.view(bit_len_type)
@@ -26,7 +26,7 @@ class BitNoisePerturbation(BasePerturbation):
                 result = ops.where(ops.abs(inputs) > sub_normal,
                                    ops.bitwise_xor(result, noise), result)
                 result_np = result.asnumpy()
-                result_np_float = result_np.view(MsFreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype))
+                result_np_float = result_np.view(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype))
                 self.is_fuzzed = True
                 return Tensor(result_np_float)
 
@@ -51,10 +51,10 @@ class BitNoisePerturbation(BasePerturbation):
         if not isinstance(input, Tensor) or not ops.is_floating_point(input) or \
            input.numel() == 0:
             return False
-        bit_len_type = MsFreeBenchmarkConst.PERT_BIT_DICT.get(input.dtype)
+        bit_len_type = FreeBenchmarkConst.PERT_BIT_DICT.get(input.dtype)
         if not bit_len_type:
             return False
-        pert_value = MsFreeBenchmarkConst.PERT_VALUE_DICT.get(input.dtype)
+        pert_value = FreeBenchmarkConst.PERT_VALUE_DICT.get(input.dtype)
         if not pert_value:
             return False
         max_val = ops.max(ops.abs(input))[0].item()

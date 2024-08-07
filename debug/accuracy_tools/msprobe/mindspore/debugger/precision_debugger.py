@@ -6,7 +6,8 @@ from msprobe.mindspore.service import Service
 from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.core.common.const import Const, MsConst
+from msprobe.core.common.const import Const
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.runtime import Runtime
 
 

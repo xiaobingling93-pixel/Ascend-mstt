@@ -1,12 +1,12 @@
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 
 
 class Config:
     is_enable: bool = False
-    handler_type = MsFreeBenchmarkConst.DEFAULT_HANDLER_TYPE
-    pert_type = MsFreeBenchmarkConst.DEFAULT_PERT_TYPE
-    stage = MsFreeBenchmarkConst.DEFAULT_STAGE
-    dump_level = MsFreeBenchmarkConst.DEFAULT_DUMP_LEVEL
+    handler_type = FreeBenchmarkConst.DEFAULT_HANDLER_TYPE
+    pert_type = FreeBenchmarkConst.DEFAULT_PERT_TYPE
+    stage = FreeBenchmarkConst.DEFAULT_STAGE
+    dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
     steps: list = []
     ranks: list = []
     dump_path: str = ""

@@ -6,7 +6,7 @@ import mindspore as ms
 from mindspore import Tensor
 
 from msprobe.mindspore.runtime import Runtime
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from .config import Config
 from .handler_params import HandlerParams
 
@@ -25,9 +25,9 @@ class Tools:
 
     @staticmethod
     def get_default_error_threshold(dtype):
-        if Config.pert_type == MsFreeBenchmarkConst.NO_CHANGE:
-            return MsFreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
-        return MsFreeBenchmarkConst.ERROR_THRESHOLD.get(dtype, MsFreeBenchmarkConst.ERROR_THRESHOLD.get(ms.float32))
+        if Config.pert_type == FreeBenchmarkConst.NO_CHANGE:
+            return FreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
+        return FreeBenchmarkConst.ERROR_THRESHOLD.get(dtype, FreeBenchmarkConst.ERROR_THRESHOLD.get(ms.float32))
 
 
 @dataclass

@@ -1,14 +1,14 @@
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.config import Config
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from .check_handler import CheckHandler
 from .fix_handler import FixHandler
 
 
 class HandlerFactory:
     result_handlers = {
-        MsFreeBenchmarkConst.CHECK: CheckHandler,
-        MsFreeBenchmarkConst.FIX: FixHandler,
+        FreeBenchmarkConst.CHECK: CheckHandler,
+        FreeBenchmarkConst.FIX: FixHandler,
     }
 
     @staticmethod

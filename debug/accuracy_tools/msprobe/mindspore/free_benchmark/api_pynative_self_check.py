@@ -6,7 +6,8 @@ import yaml
 import mindspore as ms
 from mindspore.communication import comm_func
 
-from msprobe.core.common.const import Const, MsFreeBenchmarkConst
+from msprobe.core.common.const import Const
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.core.common.file_check import check_path_length, FileOpen
 from msprobe.mindspore.common.log import logger
@@ -43,7 +44,7 @@ def get_supported_ops():
     cur_path = os.path.dirname(os.path.realpath(__file__))
     yaml_path = os.path.join(cur_path, "data", "support_wrap_ops.yaml")
 
-    for k, v in MsFreeBenchmarkConst.API_PREFIX_DICT.items():
+    for k, v in FreeBenchmarkConst.API_PREFIX_DICT.items():
         with FileOpen(yaml_path, 'r') as f:
             ops = yaml.safe_load(f).get(k)
         if ops:
@@ -52,23 +53,23 @@ def get_supported_ops():
 
     _all_functional_ops = []
     ms_ops = dir(ms.ops)
-    ms_ops = [MsFreeBenchmarkConst.OPS_PREFIX + i for i in ms_ops]
+    ms_ops = [FreeBenchmarkConst.OPS_PREFIX + i for i in ms_ops]
     _all_functional_ops += ms_ops
 
     ms_tensor = dir(ms.Tensor)
-    ms_tensor = [MsFreeBenchmarkConst.Tensor_PREFIX + i for i in ms_tensor]
+    ms_tensor = [FreeBenchmarkConst.Tensor_PREFIX + i for i in ms_tensor]
     _all_functional_ops += ms_tensor
 
     ms_mint = dir(ms.mint)
-    ms_mint = [MsFreeBenchmarkConst.MINT_PREFIX + i for i in ms_mint]
+    ms_mint = [FreeBenchmarkConst.MINT_PREFIX + i for i in ms_mint]
     _all_functional_ops += ms_mint
 
     ms_mint_nn_func = dir(ms.mint.nn.functional)
-    ms_mint_nn_func = [MsFreeBenchmarkConst.MINT_NN_FUNC_PREFIX + i for i in ms_mint_nn_func]
+    ms_mint_nn_func = [FreeBenchmarkConst.MINT_NN_FUNC_PREFIX + i for i in ms_mint_nn_func]
     _all_functional_ops += ms_mint_nn_func
 
     ms_communication = dir(comm_func)
-    ms_communication = [MsFreeBenchmarkConst.COMM_PREFIX + i for i in ms_communication]
+    ms_communication = [FreeBenchmarkConst.COMM_PREFIX + i for i in ms_communication]
     _all_functional_ops += ms_communication
 
     return set(supported_ops) & set(_all_functional_ops)

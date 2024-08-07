@@ -1,4 +1,5 @@
-from msprobe.core.common.const import Const, MsConst
+from msprobe.core.common.const import Const
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
 from msprobe.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory

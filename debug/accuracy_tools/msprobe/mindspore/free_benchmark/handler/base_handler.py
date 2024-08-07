@@ -7,7 +7,7 @@ from mindspore import Tensor, ops
 
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.utils import Tools
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 
 
@@ -18,8 +18,8 @@ class BaseHandler(ABC):
 
     @staticmethod
     def pre_calculate(original_output, fuzzed_output):
-        abs_tol = MsFreeBenchmarkConst.PERT_VALUE_DICT.get(fuzzed_output.dtype,
-                                                           MsFreeBenchmarkConst.PERT_VALUE_DICT.get(ms.float32))
+        abs_tol = FreeBenchmarkConst.PERT_VALUE_DICT.get(fuzzed_output.dtype,
+                                                         FreeBenchmarkConst.PERT_VALUE_DICT.get(ms.float32))
 
         return original_output.to(fuzzed_output.dtype), fuzzed_output, abs_tol
 
@@ -31,7 +31,7 @@ class BaseHandler(ABC):
     @staticmethod
     def convert_overflow_ratio_to_consistent(ratio):
         if math.isnan(ratio) or math.isinf(ratio):
-            return MsFreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
+            return FreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
         return ratio
 
     @staticmethod
@@ -47,7 +47,7 @@ class BaseHandler(ABC):
         norm1 = BaseHandler.convert_overflow_ratio_to_consistent(ops.max(ratio_tensor1)[0].to(ms.float32).item())
         norm2 = BaseHandler.convert_overflow_ratio_to_consistent(ops.max(ratio_tensor2)[0].to(ms.float32).item())
         norm3 = BaseHandler.convert_overflow_ratio_to_consistent(ops.min(ratio_tensor1)[0].to(ms.float32).item())
-        ratio = MsFreeBenchmarkConst.SYMBOL_FLIPPING_RATIO if norm3 < 0 else max(norm1, norm2)
+        ratio = FreeBenchmarkConst.SYMBOL_FLIPPING_RATIO if norm3 < 0 else max(norm1, norm2)
 
         return ratio
 
@@ -57,7 +57,7 @@ class BaseHandler(ABC):
             original_output, fuzzed_output, abs_tol = BaseHandler.pre_calculate(original_output, fuzzed_output)
         except Exception as e:
             logger.error(f"When computing ratio, y1 or y2 dtype is not supported {str(e)}")
-            return MsFreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
+            return FreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
 
         abs_tol = abs_tol ** 0.5
 

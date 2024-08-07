@@ -21,7 +21,7 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
-from msprobe.core.common.const import MsConst
+from msprobe.mindspore.common.const import Const
 
 
 class TestTaskHandlerFactory(TestCase):
@@ -44,7 +44,7 @@ class TestTaskHandlerFactory(TestCase):
         common_config = CommonConfig(json_config)
         task_config = BaseConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
-        config.execution_mode = MsConst.GRAPH_GE_MODE
+        config.execution_mode = Const.GRAPH_GE_MODE
 
         handler = TaskHandlerFactory.create(config)
         self.assertTrue(isinstance(handler, KernelGraphDump))

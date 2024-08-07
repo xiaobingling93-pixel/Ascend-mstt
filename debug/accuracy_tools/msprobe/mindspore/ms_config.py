@@ -2,7 +2,8 @@ import json
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.const import Const, MsFreeBenchmarkConst
+from msprobe.core.common.const import Const
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
 
 
@@ -59,15 +60,15 @@ class FreeBenchmarkConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.fuzz_device and self.fuzz_device not in MsFreeBenchmarkConst.DEVICE_LIST:
+        if self.fuzz_device and self.fuzz_device not in FreeBenchmarkConst.DEVICE_LIST:
             raise Exception("fuzz_device must be npu or empty")
-        if self.pert_mode and self.pert_mode not in MsFreeBenchmarkConst.PERT_TYPE_LIST:
+        if self.pert_mode and self.pert_mode not in FreeBenchmarkConst.PERT_TYPE_LIST:
             raise Exception("pert_mode must be improve_precision, add_noise, bit_noise , no_change or empty")
-        if self.handler_type and self.handler_type not in MsFreeBenchmarkConst.HANDLER_TYPE_LIST:
+        if self.handler_type and self.handler_type not in FreeBenchmarkConst.HANDLER_TYPE_LIST:
             raise Exception("handler_type must be check, fix or empty")
-        if self.fuzz_level and self.fuzz_level not in MsFreeBenchmarkConst.DUMP_LEVEL_LIST:
+        if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
             raise Exception("fuzz_level must be L1 or empty")
-        if self.fuzz_stage and self.fuzz_stage not in MsFreeBenchmarkConst.STAGE_LIST:
+        if self.fuzz_stage and self.fuzz_stage not in FreeBenchmarkConst.STAGE_LIST:
             raise Exception("fuzz_stage must be forward or empty")
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "

@@ -5,7 +5,7 @@ from mindspore import Tensor, ops
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.perturbation.base_perturbation import BasePerturbation
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 
 
 class AddNoisePerturbation(BasePerturbation):
@@ -53,7 +53,7 @@ class AddNoisePerturbation(BasePerturbation):
         if not ops.is_floating_point(input) or ops.numel(input) == 0:
             return False
 
-        pert_value = MsFreeBenchmarkConst.PERT_VALUE_DICT.get(input.dtype)
+        pert_value = FreeBenchmarkConst.PERT_VALUE_DICT.get(input.dtype)
         if not pert_value:
             return False
         else:

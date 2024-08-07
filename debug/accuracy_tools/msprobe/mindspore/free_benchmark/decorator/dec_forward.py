@@ -1,5 +1,5 @@
 from msprobe.mindspore.free_benchmark.common.config import Config
-from msprobe.core.common.const import MsFreeBenchmarkConst
+from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.handler.handler_factory import HandlerFactory
 from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import PerturbationFactory
@@ -23,11 +23,11 @@ class ForwardSelfChecker:
         return params.original_result
 
     def get_compare_data(self, params: HandlerParams):
-        if self.api_name not in MsFreeBenchmarkConst.COMMUNICATION_API_LIST:
+        if self.api_name not in FreeBenchmarkConst.COMMUNICATION_API_LIST:
             return
         # 以下为通讯类api处理逻辑
         params.fuzzed_result = params.fuzzed_value
-        if Config.pert_type == MsFreeBenchmarkConst.IMPROVE_PRECISION:
+        if Config.pert_type == FreeBenchmarkConst.IMPROVE_PRECISION:
             params.original_result = params.args
         else:
             params.original_result = params.args[params.index]
@@ -37,6 +37,6 @@ class ForwardSelfChecker:
         self.get_compare_data(params)
         handler = HandlerFactory.create(self.api_name)
         result = handler.handle(params)
-        if self.api_name in MsFreeBenchmarkConst.COMMUNICATION_API_LIST:
+        if self.api_name in FreeBenchmarkConst.COMMUNICATION_API_LIST:
             result = original_result
         return result
