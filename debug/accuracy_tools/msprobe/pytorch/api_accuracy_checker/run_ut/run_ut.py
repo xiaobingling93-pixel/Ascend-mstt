@@ -288,7 +288,7 @@ def run_api_online(config, compare):
             if isinstance(api_data, ApiData):
                 dispatcher.update_consume_queue(api_data)
 
-    if config.nfs_path:
+    if config.online_config.nfs_path:
         shared_storage_communication_flow()
     else:
         tcp_communication_flow()
