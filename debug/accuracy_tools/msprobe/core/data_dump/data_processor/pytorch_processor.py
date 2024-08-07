@@ -207,7 +207,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 torch.save(tensor, file_path)
                 change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            self.real_overflow_dump_nums += 1
+            self.real_overflow_nums += 1
         self.cached_tensors_and_file_paths = {}
 
     def check_overflow_npu(self):
