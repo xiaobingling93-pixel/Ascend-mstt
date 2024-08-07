@@ -303,7 +303,7 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
             self._forward_new_output = new_output
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
-        self.checker.backward(name, module, module_input_output.grad_output)
+        self.checker.backward(name, module, module_input_output.grad_input)
 
 
 class KernelDumpDataProcessor(PytorchDataProcessor):

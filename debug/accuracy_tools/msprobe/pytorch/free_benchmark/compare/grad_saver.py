@@ -16,7 +16,6 @@ class GradSaver:
         self.handler_params = handler_params
         self.api_name = handler_params.api_name
         self.origin_func = origin_func
-        self.data_params = DataParams()
         self.is_compare = True
         self.kwargs = dict()
         self.perturbed_grad_input = tuple()
@@ -62,27 +61,25 @@ class GradSaver:
 
     def compare_grad_results(self, handler, origin_grad, perturbed_grad, index):
         # TODO get dtype?
-        self.data_params.original_result = origin_grad
-        self.data_params.perturbed_result = perturbed_grad
-        self.data_params.grad_unequal_flag = False
-        self.data_params.valid_input_index = index
+        data_params = DataParams()
+        data_params.original_result = origin_grad
+        data_params.perturbed_result = perturbed_grad
+        data_params.grad_unequal_flag = False
+        data_params.valid_input_index = index
         try:
-            handler.handle(self.data_params)
-            if not self.data_params.is_consistent:
+            handler.handle(data_params)
+            if not data_params.is_consistent:
                 self.is_compare = False
-                self.data_params.grad_unequal_flag = True
-                self.data_params.is_consistent = True
-                self.data_params.perturbed_result = self.perturbed_grad_input
-                self.data_params.original_result = self.origin_grad_input
-                handler.handle(self.data_params)
+                data_params.grad_unequal_flag = True
+                data_params.is_consistent = True
+                data_params.perturbed_result = self.perturbed_grad_input
+                data_params.original_result = self.origin_grad_input
+                handler.handle(data_params)
         except Exception as e:
             logger.warning_on_rank_0(
                 f"[msprobe] Free benchmark: compare two vjp failed: api:{self.handler_params.api_name}."
                 f"{e}"
             )
-        # 在扰动前后输出对比后释放输出的引用
-        self.data_params.perturbed_result = None
-        self.data_params.original_result = None
 
     def check_grad_input(self, origin_grad, new_grad_index):
         if self.perturbed_grad_input is None:
@@ -164,20 +161,19 @@ class GradSaver:
         return grad_input
 
     def calculate_perturbed_grad_input(self, grad_output, need_grad_tensors, inner_args):
-        self.data_params.args = [need_grad_tensors, grad_output, inner_args]
-        self.data_params.kwargs = {}
-        self.data_params.valid_input_index = 0
-        self.data_params.origin_func = self.get_grad_input_from_vjp
+        data_params = DataParams()
+        data_params.args = [need_grad_tensors, grad_output, inner_args]
+        data_params.kwargs = {}
+        data_params.valid_input_index = 0
+        data_params.origin_func = self.get_grad_input_from_vjp
         layer = LayerFactory.create(
             self.handler_params.api_name,
             self.handler_params.fuzz_device,
             self.handler_params.pert_mode,
         )
-        layer.handle(self.data_params)
-        # 在计算扰动输出之后，释放输入的引用
-        self.data_params.args = None
+        layer.handle(data_params)
         # 确定扰动成功后，才会暂存
-        if self.data_params.perturbed_result:
+        if data_params.perturbed_result:
             self.perturbed_grad_input = tuple(
-                [x.cpu() for x in self.data_params.perturbed_result]
+                [x.cpu() for x in data_params.perturbed_result]
             )
