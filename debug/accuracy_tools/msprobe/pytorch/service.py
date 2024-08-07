@@ -36,7 +36,7 @@ class Service:
                                      connect_ip=self.config.host,
                                      connect_port=self.config.port,
                                      nfs_path=self.config.nfs_path)
-            need_dump = self.current_rank in self.config.rank
+            need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
             self.attl = ATTL('npu', attl_config, need_dump=need_dump)
             if self.config.nfs_path:
                 self.attl.upload("start")
@@ -68,7 +68,9 @@ class Service:
                 return None
 
             if self.config.online_run_ut:
-                api_data = ApiData(api_or_module_name, args, kwargs, output, self.current_iter, self.current_rank)
+                if not self.data_collector.scope or self.data_collector.scope.check(api_or_module_name):
+                    return None
+                api_data = ApiData(name[:-1], args, kwargs, output, self.current_iter, self.current_rank)
                 self.attl_send(api_data)
                 return None
 
@@ -88,8 +90,9 @@ class Service:
                 return
 
             if self.config.online_run_ut:
-                api_data = ApiData(api_or_module_name, grad_input, None, grad_output, self.current_iter,
-                                   self.current_rank)
+                if not self.data_collector.scope or self.data_collector.scope.check(api_or_module_name):
+                    return None
+                api_data = ApiData(name[:-1], grad_input, None, grad_output, self.current_iter, self.current_rank)
                 self.attl_send(api_data)
                 return None
 
@@ -208,6 +211,7 @@ class Service:
 
     def attl_send(self, api_data):
         logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
+        api_data.rank = api_data.rank if api_data.rank else 0
         if self.config.nfs_path:
             self.attl.upload(api_data)
         else:
