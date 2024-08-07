@@ -173,7 +173,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
                 tensor = convert_bf16_to_fp32(tensor)
                 np.save(file_path, tensor.asnumpy())
                 change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            self.real_overflow_dump_times += 1
+            self.real_overflow_dump_nums += 1
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
