@@ -74,8 +74,9 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if data.numel() == 0:
             return tensor_stat
         elif data.dtype == ms.bool_:
-            tensor_stat.max = self.mint_ops_func["max"](data).item()
-            tensor_stat.min = self.mint_ops_func["min"](data).item()
+            data_np = data.asnumpy()
+            tensor_stat.max = np.max(data_np)
+            tensor_stat.min = np.min(data_np)
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
