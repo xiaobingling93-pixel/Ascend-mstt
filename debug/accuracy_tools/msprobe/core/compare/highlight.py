@@ -1,10 +1,9 @@
 import math
 import abc
-import numpy as np
 from collections import namedtuple
+import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from collections import namedtuple
 from msprobe.core.common.utils import get_header_index
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.log import logger

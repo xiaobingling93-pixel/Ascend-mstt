@@ -10,7 +10,6 @@ class AtenIrMapping():
         yaml_path = os.path.join(cur_path, "mapping.yaml")
         with FileOpen(yaml_path, 'r') as f:
             self.aten_mapping = yaml.safe_load(f)
-
     
     def match(self, op1, op2):
         if "Aten" in op1 and "Aten" not in op2:
@@ -18,7 +17,6 @@ class AtenIrMapping():
         else:
             return self.match_op(op2, op1)
 
-    
     def match_op(self, aten_op, torch_op):
         try:
             aten_op_raw_name_overload = '_'.join(aten_op.split("_")[1:-3])

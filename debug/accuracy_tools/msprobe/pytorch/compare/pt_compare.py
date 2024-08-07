@@ -23,7 +23,6 @@ class PTComparator (Comparator):
     def __init__(self):
         super().__init__()
     
-    
     def compare_ops(self,idx, dump_path_dict, result_df, lock, input_parma):
         cos_result = []
         max_err_result = []
@@ -61,7 +60,6 @@ class PTComparator (Comparator):
 
         return _save_cmp_result(idx, cr, result_df, lock)
 
-
     def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
         op_data = json_data['data'][op_name]
         op_parsed_list = read_op(op_data, op_name)
@@ -71,8 +69,7 @@ class PTComparator (Comparator):
             op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
             
         merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
-        return merge_list
-               
+        return merge_list            
     
     def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
@@ -139,7 +136,6 @@ class PTComparator (Comparator):
         result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
         return result_df
     
-    
     def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
         header = []
         if md5_compare:
@@ -167,7 +163,6 @@ class PTComparator (Comparator):
         result_df = pd.DataFrame(result, columns=header)
         return result_df
     
-    
     def read_npy_data(self,dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
@@ -177,17 +172,7 @@ class PTComparator (Comparator):
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
-        return data_value
-
-
-    def _do_multi_process(self,input_parma, result_df):
-        try:
-            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
-            return result_df
-        except ValueError as e:
-            logger.error('result dataframe is not found.')
-            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
-    
+        return data_value  
     
     def compare_core(self,input_parma, output_path, **kwargs):
         """
@@ -235,8 +220,16 @@ class PTComparator (Comparator):
             advisor = Advisor(result_df, output_path)
             advisor.analysis()
 
-
-def pt_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
+    def _do_multi_process(self,input_parma, result_df):
+        try:
+            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
+            return result_df
+        except ValueError as e:
+            logger.error('result dataframe is not found.')
+            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+        
+        
+def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)

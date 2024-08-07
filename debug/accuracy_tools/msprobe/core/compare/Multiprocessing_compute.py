@@ -1,7 +1,7 @@
 
 import multiprocessing
-import pandas as pd
 from dataclasses import dataclass
+import pandas as pd
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
