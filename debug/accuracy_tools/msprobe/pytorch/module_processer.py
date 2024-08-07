@@ -121,9 +121,9 @@ class ModuleProcesser:
             if self.scope:
                 self.scope.begin_module(full_name)
 
-        if 'forward' in name_prefix and Const.START in start_or_stop:
+        if Const.FORWARD in name_prefix and Const.START in start_or_stop:
             return pre_hook
-        elif 'backward' in name_prefix:
+        elif Const.BACKWARD in name_prefix:
             return backward_hook
         else:
             return end_hook
