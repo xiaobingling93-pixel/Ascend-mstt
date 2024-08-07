@@ -1,5 +1,5 @@
 from msprobe.core.compare.check import check_op
-from msprobe.core.common.const import  CompareConst
+from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
 from msprobe.core.common.exceptions import FileCheckException
