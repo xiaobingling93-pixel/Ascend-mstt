@@ -38,13 +38,13 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if 'backward' in op_name:
-        if 'grad_input' in op_data:
-            input_item = op_data['grad_input']
+        if 'input' in op_data:
+            input_item = op_data['input']
             input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
-        if 'grad_output' in op_data:
-            output_item = op_data['grad_output']
+        if 'output' in op_data:
+            output_item = op_data['output']
             output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
@@ -352,7 +352,17 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
     return op_dict if op_dict["op_name"] else {}
 
 
-
+def _compare_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.",  required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
+                        help="<optional> Whether to save stack info.", required=False)
+    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+                        help="<optional> Whether to give advisor.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
 
 
     
