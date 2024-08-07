@@ -18,7 +18,7 @@ class TestWrapTorch(unittest.TestCase):
         def forward_hook_torch_version_below_2():
             pass
 
-        return forward_pre_hook, forward_hook, backward_hook
+        return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
     
     def setUp(self):
 
