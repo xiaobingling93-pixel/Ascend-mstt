@@ -544,20 +544,24 @@ def run_ut_command(args):
     except Exception as error:
         logger.error(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
-    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+
+    forward_content, backward_content, real_data_path = None, None, None
+    if args.api_info_file:
+        check_link(args.api_info_file)
+        api_info = os.path.realpath(args.api_info_file)
+        check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+        forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
+        if args.filter_api:
+            logger.info("Start filtering the api in the forward_input_file.")
+            forward_content = preprocess_forward_content(forward_content)
+            logger.info("Finish filtering the api in the forward_input_file.")
+
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
-    if args.filter_api:
-        logger.info("Start filtering the api in the forward_input_file.")
-        forward_content = preprocess_forward_content(forward_content)
-        logger.info("Finish filtering the api in the forward_input_file.")
 
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
