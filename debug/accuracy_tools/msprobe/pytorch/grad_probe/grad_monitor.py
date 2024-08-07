@@ -5,51 +5,34 @@ import torch
 from torch.optim.optimizer import register_optimizer_step_pre_hook
 from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
-from msprobe.core.grad_probe.constant import GradConst
+from msprobe.core.grad_probe.constant import GradConst, level_adp
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import remove_path, write_csv
+from msprobe.core.common.utils import remove_path, write_csv, save_npy
 from msprobe.pytorch.common.utils import  get_rank_id, print_rank_0, save_pt
 
 
 class GradientMonitor:
-    level_adp = {
-        "L0": {
-            "header": [GradConst.MD5, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
-            "have_grad_direction": False
-        },
-        "L1": {
-            "header": [GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
-            "have_grad_direction": True
-        },
-        "L2": {
-            "header": [GradConst.DISTRIBUTION, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
-            "have_grad_direction": True
-        },
-    }
 
-    def __init__(self, config, model):
-        self._config = config._config
-        self._model = model
-        level = self._config.get("level")
-        if level not in GradientMonitor.level_adp:
-            raise Exception(f"level is valid, not in {GradientMonitor.level_adp.keys()}")
-        self._level_adp = GradientMonitor.level_adp[level]
-        self._param_list = self._config.get('param_list')
-        self._target_ranks = self._config.get("rank")
+    def __init__(self, common_config, task_config):
+        level = task_config.grad_level
+        if level not in level_adp:
+            raise Exception(f"level is valid, not in {level_adp.keys()}")
+        self._level_adp = level_adp[level]
+        self._param_list = task_config.param_list
+        self._target_ranks = common_config.rank
         logger.info(f"target rank {self._target_ranks}")
-        self._target_step = self._config.get("step")
+        self._target_step = common_config.step
         logger.info(f"target step {self._target_step}")
-        self._bounds = self._config.get("bounds")
+        self._bounds = task_config.bounds
         check_numeral_list_ascend(self._bounds)
-        self._output_path = self._config.get("output_path")
+        self._output_path = common_config.dump_path
         if not os.path.exists(self._output_path):
             create_directory(self._output_path)
         else:
             logger.warning(f"the file in {self._output_path} will be recoverd")
         self._step = -1
         self._param2name = defaultdict(str)
-        self._monitor()
 
     @property
     def output_path(self):
@@ -61,12 +44,12 @@ class GradientMonitor:
             create_directory(save_path)
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
-        save_filepath = os.path.join(save_path, f"{param_name}.pt")
-        save_pt(is_positive, save_filepath)
+        save_filepath = os.path.join(save_path, f"{param_name}.npy")
+        save_npy(is_positive.numpy(), save_filepath)
 
-    def _monitor(self):
+    def monitor(self, model):
         print_rank_0("> parameter names:")
-        for name, param in self._model.named_parameters():
+        for name, param in model.named_parameters():
             self._param2name[param] = name
             print_rank_0(f"\t{name}")
         setattr(self, "_rank", get_rank_id())

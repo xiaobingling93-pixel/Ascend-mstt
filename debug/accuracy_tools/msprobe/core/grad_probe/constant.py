@@ -39,7 +39,7 @@ class GradConst:
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
-    PARAM_VALID_PATTERN = r"^[a-zA-Z0-9.]+$"
+    PARAM_VALID_PATTERN = r"^[a-zA-Z0-9_.]+$"
     DIR = "dir"
     FILE = "file"
 
@@ -54,3 +54,18 @@ class GradConst:
     MAX = "max"
     MIN = "min"
     NORM = "norm"
+
+level_adp = {
+        "L0": {
+            "header": [GradConst.MD5, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
+            "have_grad_direction": False
+        },
+        "L1": {
+            "header": [GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
+            "have_grad_direction": True
+        },
+        "L2": {
+            "header": [GradConst.DISTRIBUTION, GradConst.MAX, GradConst.MIN, GradConst.NORM, GradConst.SHAPE],
+            "have_grad_direction": True
+        },
+    }

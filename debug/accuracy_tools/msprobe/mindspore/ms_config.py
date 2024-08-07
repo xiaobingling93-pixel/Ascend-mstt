@@ -73,13 +73,20 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "
                            "are not supported for mindspore free benchmark task.")
+class GradProbeConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.grad_level = json_config.get("grad_level")
+        self.param_list = json_config.get("param_list")
+        self.bounds = json_config.get("bounds")
 
 
 TaskDict = {
     Const.TENSOR: TensorConfig,
     Const.STATISTICS: StatisticsConfig,
     Const.OVERFLOW_CHECK: OverflowCheckConfig,
-    Const.FREE_BENCHMARK: FreeBenchmarkConfig
+    Const.FREE_BENCHMARK: FreeBenchmarkConfig,
+    Const.GRAD_PROBE: GradProbeConfig,
 }
 
 
