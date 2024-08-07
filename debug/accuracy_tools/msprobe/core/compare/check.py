@@ -3,7 +3,6 @@ from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api 
 
 
-
 def check_struct_match(npu_dict, bench_dict):
     npu_struct_in = npu_dict.get("input_struct")
     bench_struct_in = bench_dict.get("input_struct")
@@ -17,6 +16,7 @@ def check_struct_match(npu_dict, bench_dict):
         struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
         is_match = struct_in_is_match and struct_out_is_match
     return is_match
+
 
 def check_type_shape_match(npu_struct, bench_struct):
     shape_type_match = False
@@ -37,6 +37,7 @@ def check_type_shape_match(npu_struct, bench_struct):
         if not shape_type_match:
             return False
     return shape_type_match
+
 
 def check_graph_mode(a_op_name, b_op_name):
     if "Aten" in a_op_name and "Aten" not in b_op_name:
@@ -74,6 +75,7 @@ def fuzzy_check_op(npu_name_list, bench_name_list):
         if not is_match:
             break
     return is_match
+
 
 def fuzzy_check_name(npu_name, bench_name):
     if "forward" in npu_name and "forward" in bench_name:

@@ -24,6 +24,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.compare.ms_compare import MSComparator
 
+
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     def check_and_return_dir_contents(dump_dir, prefix):
         """

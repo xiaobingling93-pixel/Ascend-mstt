@@ -72,6 +72,7 @@ class MSComparator (Comparator):
         merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
         return merge_list
     
+    
     def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
         npu_json_data = json.load(npu_json_handle)
@@ -136,6 +137,7 @@ class MSComparator (Comparator):
         result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
         return result_df
     
+    
     def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
         header = []
         if md5_compare:
@@ -163,6 +165,7 @@ class MSComparator (Comparator):
         result_df = pd.DataFrame(result, columns=header)
         return result_df
     
+    
     def _do_multi_process(self,input_parma, result_df):
         try:
             result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
@@ -170,6 +173,7 @@ class MSComparator (Comparator):
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    
     
     def read_npy_data(self,dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
@@ -181,6 +185,7 @@ class MSComparator (Comparator):
             data_value=data_value.astype(np.float32)
 
         return data_value
+    
     
     def compare_core(self,input_parma, output_path, **kwargs):
         """

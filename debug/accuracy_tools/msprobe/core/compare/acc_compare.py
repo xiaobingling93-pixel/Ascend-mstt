@@ -9,6 +9,7 @@ class Comparator:
     def __init__(self):
         pass    
     
+    
     def match_op(self,npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
             if check_op(npu_queue[-1], b_op, fuzzy_match):
@@ -19,6 +20,7 @@ class Comparator:
             if check_op(n_op, bench_queue[-1], fuzzy_match):
                 return n_index, len(bench_queue) - 1
         return -1, -1
+    
     
     def compare_by_op(self,op_name, op_name_mapping_dict, input_parma):
         npu_bench_name_list = op_name_mapping_dict[op_name]

@@ -18,6 +18,7 @@ from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 
+
 class PTComparator (Comparator):
     def __init__(self):
         super().__init__()
@@ -138,6 +139,7 @@ class PTComparator (Comparator):
         result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
         return result_df
     
+    
     def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
         header = []
         if md5_compare:
@@ -165,6 +167,7 @@ class PTComparator (Comparator):
         result_df = pd.DataFrame(result, columns=header)
         return result_df
     
+    
     def read_npy_data(self,dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
@@ -184,6 +187,7 @@ class PTComparator (Comparator):
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    
     
     def compare_core(self,input_parma, output_path, **kwargs):
         """

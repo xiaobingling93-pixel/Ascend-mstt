@@ -4,14 +4,13 @@ import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 
 
-
-
 def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
     torch_func_index, in_out = npu_split[0], npu_split[1]
     torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
+
 
 def read_op(op_data, op_name):
     op_parsed_list = []
@@ -49,6 +48,7 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     return op_parsed_list
+
 
 def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
     if item_list is None:
@@ -120,6 +120,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
         for j, item_spec in enumerate(item):
             op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False)
     return item_list
+
 
 def resolve_api_special_parameters(data_dict, full_op_name, item_list):
     """
@@ -268,6 +269,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
     get_accuracy_core(n_num_input, n_num_kwarg, b_num_input, b_num_kwarg, "kwargs_struct")
     get_accuracy_core(n_num_input + n_num_kwarg, n_num_output, b_num_input + b_num_kwarg, b_num_output, 'output_struct')
+
 
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
