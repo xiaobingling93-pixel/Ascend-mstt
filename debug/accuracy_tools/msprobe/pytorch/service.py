@@ -175,9 +175,6 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                module.register_full_backward_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
-
                 pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
                     = self.build_hook(BaseScope.Module_Type_Module, prefix)
                 if torch_version_above_2:
