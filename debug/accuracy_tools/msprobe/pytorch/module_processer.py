@@ -116,7 +116,9 @@ class ModuleProcesser:
                 index = None
                 pass
             module.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
-            ModuleProcesser.module_node[full_name] = None
+            forward_full_name = full_name.replace(Const.BACKWARD, Const.FORWARD)
+            ModuleProcesser.module_node[full_name] = ModuleProcesser.module_node[forward_full_name].replace(
+                Const.FORWARD, Const.BACKWARD) if ModuleProcesser.module_node[forward_full_name] else None
             ModuleProcesser.api_parent_node = None
             if self.scope:
                 self.scope.begin_module(full_name)
