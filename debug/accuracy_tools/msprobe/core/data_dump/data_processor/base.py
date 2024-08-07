@@ -65,6 +65,8 @@ class BaseDataProcessor:
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
+        self.real_overflow_dump_times = 0
+        self.overflow_nums = config.overflow_nums
 
     @property
     def data_path(self):
@@ -72,6 +74,11 @@ class BaseDataProcessor:
     
     @property
     def is_terminated(self):
+        if self.overflow_nums == -1:
+            return False
+        if self.real_overflow_dump_times >= self.overflow_nums:
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
+            return True
         return False
 
     @staticmethod

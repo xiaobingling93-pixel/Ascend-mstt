@@ -183,18 +183,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
-        self.real_overflow_dump_times = 0
-        self.overflow_nums = config.overflow_nums
         self.bits_for_overflow = 8
-
-    @property
-    def is_terminated(self):
-        if self.overflow_nums == -1:
-            return False
-        if self.real_overflow_dump_times >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
-            return True
-        return False
 
     @staticmethod
     def overflow_debug_mode_enable():
