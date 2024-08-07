@@ -93,6 +93,14 @@ class RunUTConfig(BaseConfig):
         RunUTConfig.check_error_data_path_config(self.error_data_path)
 
 
+class GradToolConfig(BaseConfig):
+    def __init__(self, json_config):
+        super().__init__(json_config)
+        self.grad_level = json_config.get("grad_level")
+        self.param_list = json_config.get("param_list")
+        self.bounds = json_config.get("bounds")
+
+
 def parse_task_config(task, json_config):
     default_dic = {}
     if task == Const.TENSOR:
@@ -110,6 +118,9 @@ def parse_task_config(task, json_config):
     elif task == Const.RUN_UT:
         config_dic = json_config.get(Const.RUN_UT, default_dic)
         return RunUTConfig(config_dic)
+    elif task == Const.GRAD_PROBE:
+        config_dic = json_config.get(Const.GRAD_PROBE, default_dic)
+        return GradToolConfig(config_dic)
     else:
         return StatisticsConfig(default_dic)
 
