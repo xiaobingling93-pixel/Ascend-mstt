@@ -1,5 +1,6 @@
 import functools
 import os
+import time
 from pathlib import Path
 
 from msprobe.pytorch.common.log import logger
@@ -13,6 +14,7 @@ from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL, ApiData
 
 
 class Service:
@@ -24,8 +26,20 @@ class Service:
         self.switch = False
         self.current_iter = 0
         self.first_start = True
-        self.current_rank = None
+        try:
+            self.current_rank = get_rank_if_initialized()
+        except DistributedNotInitializedError:
+            self.current_rank = None
         self.dump_iter_dir = None
+        if self.config.online_run_ut:
+            attl_config = ATTLConfig(is_benchmark_device=False,
+                                     connect_ip=self.config.host,
+                                     connect_port=self.config.port,
+                                     nfs_path=self.config.nfs_path)
+            need_dump = self.current_rank in self.config.rank
+            self.attl = ATTL('npu', attl_config, need_dump=need_dump)
+            if self.config.nfs_path:
+                self.attl.upload("start")
 
     @staticmethod
     def forward_backward_dump_end():
@@ -52,6 +66,12 @@ class Service:
 
             if not self.switch:
                 return None
+
+            if self.config.online_run_ut:
+                api_data = ApiData(api_or_module_name, args, kwargs, output, self.current_iter, self.current_rank)
+                self.attl_send(api_data)
+                return None
+
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -66,6 +86,13 @@ class Service:
 
             if not self.switch:
                 return
+
+            if self.config.online_run_ut:
+                api_data = ApiData(api_or_module_name, grad_input, None, grad_output, self.current_iter,
+                                   self.current_rank)
+                self.attl_send(api_data)
+                return None
+
             if self.data_collector:
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
                 self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -85,16 +112,22 @@ class Service:
     def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
+            # send end or step signal
+            if self.config.online_run_ut:
+                if self.config.nfs_path:
+                    self.attl.upload("end")
+                elif self.attl.socket_manager is not None:
+                    logger.debug(f"进程{os.getpid()} 已完成,准备发送STOP信号")
+                    self.attl.socket_manager.send_stop_signal()
+                else:
+                    # current rank not need dump, wait
+                    while True:
+                        time.sleep(2)
             self.stop()
             raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.first_start:
-            try:
-                self.current_rank = get_rank_if_initialized()
-            except DistributedNotInitializedError:
-                self.current_rank = None
-
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
@@ -172,3 +205,10 @@ class Service:
 
         if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
             remove_dropout()
+
+    def attl_send(self, api_data):
+        logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
+        if self.config.nfs_path:
+            self.attl.upload(api_data)
+        else:
+            self.attl.send(api_data)
