@@ -5,6 +5,7 @@ from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import ModuleRangeScope
+torch_version_above_2 = torch.__version__.split('+')[0] > '2.0'
 
 
 class ModuleProcesser:
@@ -123,9 +124,15 @@ class ModuleProcesser:
             if self.scope:
                 self.scope.begin_module(full_name)
 
-        if Const.FORWARD in name_prefix and Const.START in start_or_stop:
-            return pre_hook
-        elif Const.BACKWARD in name_prefix:
-            return backward_hook
+        if torch_version_above_2:
+            if Const.START in start_or_stop:
+                return pre_hook
+            else:
+                return end_hook
         else:
-            return end_hook
+            if Const.FORWARD in name_prefix and Const.START in start_or_stop:
+                return pre_hook
+            elif Const.BACKWARD in name_prefix:
+                return backward_hook
+            else:
+                return end_hook
