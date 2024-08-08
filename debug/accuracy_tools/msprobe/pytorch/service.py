@@ -92,7 +92,7 @@ class Service:
             if self.config.online_run_ut:
                 if not self.data_collector.scope or self.data_collector.scope.check(api_or_module_name):
                     return None
-                api_data = ApiData(name[:-1], grad_input, None, grad_output, self.current_iter, self.current_rank)
+                api_data = ApiData(name[:-1], grad_input, {}, grad_output, self.current_iter, self.current_rank)
                 self.attl_send(api_data)
                 return None
 
