@@ -13,6 +13,9 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.module_processer import ModuleProcesser
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL, ApiData
 
 
 class Service:
