@@ -1,10 +1,11 @@
 # coding=utf-8
 import unittest
 import pandas as pd
-from msprobe.core.compare.check import check_graph_mode, check_op
+from msprobe.core.compare.check import check_graph_mode
 from msprobe.core.compare.utils import merge_tensor, read_op, get_accuracy, rename_api
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.highlight import find_error_rows,find_compare_result_error_rows
+from msprobe.core.compare.acc_compare import Comparator
 
 npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
                         'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
@@ -218,7 +219,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_op(self):
         fuzzy_match = False
-        result = check_op(npu_dict, bench_dict, fuzzy_match)
+        Comparator=Comparator()
+        result = Comparator.check_op(npu_dict, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
     def test_merge_tensor(self):
