@@ -32,7 +32,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
             )
         return tensor_obj
 
-    def handle(self, params: DataParams) -> torch.Any:
+    def handle(self, params: DataParams):
         logger.info_on_rank_0(
             f"[msprobe] Free benchmark: Perturbation is "
             f"{PerturbationMode.IMPROVE_PRECISION} of {self.api_name}."

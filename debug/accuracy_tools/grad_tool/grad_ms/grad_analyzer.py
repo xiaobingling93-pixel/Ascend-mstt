@@ -177,7 +177,7 @@ class CSVGenerator(Process):
                 max_try -= 1
                 time.sleep(0.1)
         return stat_data
-
+    
     def gen_csv_line(self, file_path: str, stat_data) -> None:
         shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
         file_name = os.path.basename(file_path)
