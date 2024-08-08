@@ -5,6 +5,7 @@ from torch.utils.hooks import BackwardHook
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import ModuleRangeScope
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 class ModuleProcesser:
@@ -109,7 +110,29 @@ class ModuleProcesser:
             if self.scope:
                 self.scope.end_module(module.mindstudio_reserved_name)
 
-        if Const.START in start_or_stop:
-            return pre_hook
+        def backward_hook(module, input, output=None):
+            try:
+                index = ModuleProcesser.module_count_func(name_prefix)
+            except IndexError as e:
+                index = None
+                pass
+            module.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
+            forward_full_name = full_name.replace(Const.BACKWARD, Const.FORWARD)
+            ModuleProcesser.module_node[full_name] = ModuleProcesser.module_node[forward_full_name].replace(
+                Const.FORWARD, Const.BACKWARD) if ModuleProcesser.module_node[forward_full_name] else None
+            ModuleProcesser.api_parent_node = None
+            if self.scope:
+                self.scope.begin_module(full_name)
+
+        if torch_version_above_or_equal_2:
+            if Const.START in start_or_stop:
+                return pre_hook
+            else:
+                return end_hook
         else:
-            return end_hook
+            if Const.FORWARD in name_prefix and Const.START in start_or_stop:
+                return pre_hook
+            elif Const.BACKWARD in name_prefix:
+                return backward_hook
+            else:
+                return end_hook

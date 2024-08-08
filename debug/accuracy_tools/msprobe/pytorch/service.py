@@ -2,6 +2,8 @@ import functools
 import os
 from pathlib import Path
 
+from collections import namedtuple
+import torch
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
@@ -14,6 +16,9 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+
+HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
 
 class Service:
@@ -60,6 +65,9 @@ class Service:
                     return self.data_collector.get_forward_new_output()
             return output
 
+        def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
+            return forward_hook(api_or_module_name, module, args, {}, output)
+
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
@@ -75,10 +83,11 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
-        forward_hook = functools.partial(forward_hook, forward_name_template)
-        backward_hook = functools.partial(backward_hook, backward_name_template)
-        return pre_forward_hook, forward_hook, backward_hook
+        pre_forward_hook_fn = functools.partial(pre_hook, forward_name_template)
+        forward_hook_fn = functools.partial(forward_hook, forward_name_template)
+        backward_hook_fn = functools.partial(backward_hook, backward_name_template)
+        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
+        return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
     def step(self):
         self.current_iter += 1
@@ -158,18 +167,25 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                pre_forward_hook, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                module.register_forward_hook(forward_hook, with_kwargs=True)
+                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
+                    = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                if torch_version_above_or_equal_2:
+                    module.register_forward_hook(forward_hook, with_kwargs=True)
+                else:
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    module.register_forward_hook(forward_hook_torch_version_below_2)
                 module.register_full_backward_hook(backward_hook)
 
                 module.register_forward_pre_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 module.register_forward_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                module.register_full_backward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                module.register_full_backward_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                if torch_version_above_or_equal_2:
+                    module.register_full_backward_pre_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))

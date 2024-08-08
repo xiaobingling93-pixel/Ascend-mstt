@@ -8,11 +8,17 @@ class TestWrapTensor(unittest.TestCase):
     def hook(name, prefix):
         def forward_pre_hook(nope, input, kwargs):
             return input, kwargs
+
         def forward_hook(nope, input, kwargs, result):
             return 2
+
         def backward_hook():
             pass
-        return forward_pre_hook, forward_hook, backward_hook
+
+        def forward_hook_torch_version_below_2():
+            pass
+
+        return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
     
     def test_get_tensor_ops(self):
         result = get_tensor_ops()
