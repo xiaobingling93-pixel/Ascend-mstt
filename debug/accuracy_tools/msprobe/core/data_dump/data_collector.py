@@ -1,7 +1,6 @@
-
 import os
 
-from msprobe.core.data_dump.scope import  build_scope, ListScope
+from msprobe.core.data_dump.scope import build_scope, ListScope
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
@@ -21,7 +20,8 @@ class DataCollector:
         self.config = config
         self.data_writer = DataWriter()
         self.data_processor = DataProcessorFactory.create_processor(self.config, self.data_writer)
-        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework) if self.config.framework == Const.PT_FRAMEWORK else None
+        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework) \
+            if self.config.framework == Const.PT_FRAMEWORK else None
         self.module_count = {}
         if self.config.task == Const.FREE_BENCHMARK:
             self.scope = build_scope(ListScope, self.config.scope, self.config.list)
@@ -35,7 +35,7 @@ class DataCollector:
     @property
     def dump_file_path(self):
         return self.data_writer.dump_file_path
-    
+
     @staticmethod
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
@@ -43,10 +43,10 @@ class DataCollector:
     @staticmethod
     def is_inplace(module):
         return getattr(module, "op_is_inplace", False)
-    
+
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()
-    
+
     def get_forward_new_output(self):
         return self.data_processor.get_forward_new_output()
 
@@ -88,8 +88,11 @@ class DataCollector:
         else:
             data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
         if self.config.level == "L2":
-            return 
+            return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
+        if self.data_processor.stop_run():
+            self.handle_data(name, data_info, use_buffer=False)
+            raise Exception("[msprobe] exit")
         self.handle_data(name, data_info)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
@@ -98,6 +101,25 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        if self.data_processor.stop_run():
+            self.handle_data(name, data_info, use_buffer=False)
+            raise Exception("[msprobe] exit")
+        self.handle_data(name, data_info)
+
+    def backward_input_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        self.handle_data(name, data_info)
+
+    def backward_output_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
@@ -105,12 +127,15 @@ class DataCollector:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
-    def handle_data(self, name, data_info):
+    def handle_data(self, name, data_info, use_buffer=True):
         msg = f"msProbe is collecting data on {name}. "
         if data_info:
             msg = self.update_data(data_info, msg)
             logger.info(msg)
-        self.data_writer.flush_data_when_buffer_is_full()
+        if use_buffer:
+            self.data_writer.flush_data_when_buffer_is_full()
+        else:
+            self.write_json()
 
     def module_count_func(self, name, name_template):
         module_name = name.split(Const.SEP)[-3]
@@ -135,6 +160,6 @@ class DataCollector:
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
-    
+
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)

@@ -121,7 +121,7 @@ class TestCommonConfig(TestCase):
         self.assertIsNone(base_config.backward_input)
         self.assertIsNone(base_config.file_format)
         self.assertIsNone(base_config.summary_mode)
-        self.assertIsNone(base_config.overflow_num)
+        self.assertIsNone(base_config.overflow_nums)
         self.assertIsNone(base_config.check_mode)
 
         json_config.update({"scope": "Tensor_Add"})

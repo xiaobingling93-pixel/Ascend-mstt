@@ -45,7 +45,7 @@ class TestPtConfig(TestCase):
             }
         }
         result = parse_task_config(Const.OVERFLOW_CHECK, overflow_check_config)
-        self.assertEqual(result.overflow_num, 1)
+        self.assertEqual(result.overflow_nums, 1)
         self.assertEqual(result.check_mode, "all")
 
         free_benchmark_config = {

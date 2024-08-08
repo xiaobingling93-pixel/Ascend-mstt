@@ -23,8 +23,7 @@ class GradConst:
     LEVEL0 = "L0"
     LEVEL1 = "L1"
     LEVEL2 = "L2"
-    LEVEL3 = "L3"
-    SUPPORTED_LEVEL = {"L0", "L1", "L2", "L3"}
+    SUPPORTED_LEVEL = {"L0", "L1", "L2"}
 
     # numpy coding
     STEP_IDX = 0
@@ -40,7 +39,7 @@ class GradConst:
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
-    PARAM_VALID_PATTERN = r"^[a-zA-Z0-9.]+$"
+    PARAM_VALID_PATTERN = r"^[a-zA-Z0-9_.:-]+$"
     DIR = "dir"
     FILE = "file"
 

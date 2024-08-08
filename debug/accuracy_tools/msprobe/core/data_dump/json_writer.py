@@ -4,7 +4,7 @@ import fcntl
 import json
 from pathlib import Path
 
-from msprobe.core.common.file_check import change_mode
+from msprobe.core.common.file_check import change_mode, FileOpen
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
 
@@ -30,20 +30,20 @@ class DataWriter:
             return
         is_exists = os.path.exists(file_path)
         append = "a+" if is_exists else "w+"
-        with os.fdopen(
-            os.open(file_path, Const.WRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), append, newline=""
-        ) as csv_file:
+        with FileOpen(file_path, append) as csv_file:
             spawn_writer = csv.writer(csv_file)
             if not is_exists:
                 spawn_writer.writerow(result_header)
             spawn_writer.writerows([result,])
+        is_new_file = not is_exists
+        if is_new_file:
+            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def initialize_json_file(self, **kwargs):
         kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
-        with os.fdopen(
-            os.open(self.dump_file_path, Const.OVERWRITE_FLAGS, FileCheckConst.DATA_FILE_AUTHORITY), 'w'
-        ) as f:
+        with FileOpen(self.dump_file_path, 'w') as f:
             json.dump(kwargs, f)
+        change_mode(self.dump_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
         if os.path.exists(self.stack_file_path):
             os.remove(self.stack_file_path)
@@ -83,7 +83,7 @@ class DataWriter:
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
         if Path(file_path).exists() and os.path.getsize(file_path) > 0:
-            with open(file_path, "r+") as f:
+            with FileOpen(file_path, "r+") as f:
                 fcntl.flock(f, fcntl.LOCK_EX)
                 data_to_write = json.load(f)
                 fcntl.flock(f, fcntl.LOCK_UN)
@@ -91,7 +91,7 @@ class DataWriter:
             self.init_json['data_path'] = self.dump_tensor_data_dir
             data_to_write = self.init_json
         data_to_write[Const.DATA].update(self.cache_data[Const.DATA])
-        with open(file_path, 'w+') as f:
+        with FileOpen(file_path, 'w+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(data_to_write, f, indent=1)
             fcntl.flock(f, fcntl.LOCK_UN)
@@ -99,13 +99,13 @@ class DataWriter:
         self.cache_data[Const.DATA].clear()
 
     def write_stack_info_json(self, file_path):
-        with open(file_path, 'w+') as f:
+        with FileOpen(file_path, 'w+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(self.cache_stack, f, indent=1)
             fcntl.flock(f, fcntl.LOCK_UN)
 
     def write_construct_info_json(self, file_path):
-        with open(file_path, 'w+') as f:
+        with FileOpen(file_path, 'w+') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(self.cache_construct, f, indent=1)
             fcntl.flock(f, fcntl.LOCK_UN)

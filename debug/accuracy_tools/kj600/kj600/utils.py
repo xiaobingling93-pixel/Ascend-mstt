@@ -8,6 +8,59 @@ FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
 FILE_NAME_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
 
+class FileCheckConst:
+    """
+    Class for file check const
+    """
+    READ_ABLE = "read"
+    WRITE_ABLE = "write"
+    READ_WRITE_ABLE = "read and write"
+    DIRECTORY_LENGTH = 4096
+    FILE_NAME_LENGTH = 255
+    FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+    PKL_SUFFIX = ".pkl"
+    NUMPY_SUFFIX = ".npy"
+    JSON_SUFFIX = ".json"
+    PT_SUFFIX = ".pt"
+    CSV_SUFFIX = ".csv"
+    YAML_SUFFIX = ".yaml"
+    MAX_PKL_SIZE = 1 * 1024 * 1024 * 1024
+    MAX_NUMPY_SIZE = 10 * 1024 * 1024 * 1024
+    MAX_JSON_SIZE = 1 * 1024 * 1024 * 1024
+    MAX_PT_SIZE = 10 * 1024 * 1024 * 1024
+    MAX_CSV_SIZE = 1 * 1024 * 1024 * 1024
+    MAX_YAML_SIZE = 10 * 1024 * 1024
+    DIR = "dir"
+    FILE = "file"
+    DATA_DIR_AUTHORITY = 0o750
+    DATA_FILE_AUTHORITY = 0o640
+    FILE_SIZE_DICT = {
+        PKL_SUFFIX: MAX_PKL_SIZE,
+        NUMPY_SUFFIX: MAX_NUMPY_SIZE,
+        JSON_SUFFIX: MAX_JSON_SIZE,
+        PT_SUFFIX: MAX_PT_SIZE,
+        CSV_SUFFIX: MAX_CSV_SIZE,
+        YAML_SUFFIX: MAX_YAML_SIZE
+    }
+
+class FileCheckException(Exception):
+    """
+    Class for File Check Exception
+    """
+    NONE_ERROR = 0
+    INVALID_PATH_ERROR = 1
+    INVALID_FILE_TYPE_ERROR = 2
+    INVALID_PARAM_ERROR = 3
+    INVALID_PERMISSION_ERROR = 3
+
+    def __init__(self, code, error_info: str = ""):
+        super(FileCheckException, self).__init__()
+        self.code = code
+        self.error_info = error_info
+
+    def __str__(self):
+        return self.error_info
+
 def _print_log(level, msg, end='\n'):
     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
     pid = os.getgid()
@@ -64,7 +117,7 @@ def check_path_length(path, name_length_limit=None):
         raise RuntimeError("The file path length exceeds limit.")
 
 
-def check_path_pattern_vaild(path):
+def check_path_pattern_valid(path):
     if not re.match(FILE_NAME_VALID_PATTERN, path):
         raise RuntimeError("The file path contains special characters.")
 
@@ -95,7 +148,7 @@ def check_file_valid(path):
     check_link(path)
     real_path = os.path.realpath(path)
     check_path_length(real_path)
-    check_path_pattern_vaild(real_path)
+    check_path_pattern_valid(real_path)
     check_file_size(real_path)
 
 
@@ -107,4 +160,14 @@ def check_file_valid_readable(path):
 def check_file_valid_writable(path):
     check_file_valid(path)
     check_path_writability(path)
+
+
+def change_mode(path, mode):
+    if not os.path.exists(path) or os.path.islink(path):
+        return
+    try:
+        os.chmod(path, mode)
+    except PermissionError as ex:
+        print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
+        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
     

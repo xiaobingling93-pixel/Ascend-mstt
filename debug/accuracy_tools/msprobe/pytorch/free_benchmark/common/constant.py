@@ -52,6 +52,7 @@ class ThresholdConfig:
 
     DTYPE_PER_THD = {
         torch.float16: 1.002,
+        torch.bfloat16: 1.004,
         torch.float32: 1.0002,
     }
     BENCHMARK_THD_DICT = {
@@ -59,6 +60,8 @@ class ThresholdConfig:
         torch.float16: BenchmarkThd(2**-11, 1.0, 2**-11, 1e-4),
         torch.bfloat16: BenchmarkThd(2**-8, 1.0, 2**-8, 1e-4),
     }
+
+    TENSOR_SPLIT_MAX_CHUNK = 128
 
 
 class PreheatConfig:

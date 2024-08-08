@@ -17,9 +17,11 @@
 
 import functools
 import threading
+
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
+
 from msprobe.core.common.const import Const
 
 
@@ -60,6 +62,10 @@ class HOOKModule(nn.Module):
         if changed:
             HOOKModule.inner_stop_hook[self.current_thread] = False
         return result
+
+    @classmethod
+    def reset_module_stats(cls):
+        cls.module_count = {}
 
     def _call_func(self, *input, **kwargs):
         full_backward_hooks, non_full_backward_hooks = [], []

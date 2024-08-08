@@ -634,7 +634,11 @@ def initialize_save_path(save_path, dir_name):
 def write_pt(file_path, tensor):
     if os.path.exists(file_path):
         raise ValueError(f"File {file_path} already exists")
-    torch.save(tensor, file_path)
+    try:
+        torch.save(tensor, file_path)
+    except Exception as e:
+        error_message = "An unexpected error occurred: %s when saving tensor to %s" % (str(e), file_path)
+        print_error_log(error_message)
     full_path = os.path.realpath(file_path)
     file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
     return full_path

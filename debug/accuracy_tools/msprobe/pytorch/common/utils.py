@@ -23,6 +23,9 @@ import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
+from msprobe.core.common.file_check import FileCheckConst, change_mode
+
 
 try:
     import torch_npu
@@ -243,6 +246,43 @@ def get_tensor_rank(in_feat, out_feat):
     out_rank = get_tensor_rank_single(out_feat)
     tensor_rank = in_rank if in_rank else out_rank
     return tensor_rank
+
+
+def get_rank_id():
+    if torch.distributed.is_initialized():
+        return torch.distributed.get_rank()
+    return 0
+
+
+def print_rank_0(message):
+    if dist.is_initialized():
+        if dist.get_rank() == 0:
+            logger.info(message)
+    else:
+        logger.info(message)
+        
+
+def load_pt(pt_path, to_cpu=False):
+    pt_path = os.path.realpath(pt_path)
+    check_file_or_directory_path(pt_path)
+    try:
+        if to_cpu:
+            pt = torch.load(pt_path, map_location=torch.device("cpu"))
+        else:
+            pt = torch.load(pt_path)
+    except Exception as e:
+        raise RuntimeError(f"load pt file {pt_path} failed") from e
+    return pt
+
+
+def save_pt(tensor, filepath):
+    filepath = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        torch.save(tensor, filepath)
+    except Exception as e:
+        raise RuntimeError(f"save pt file {filepath} failed") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def _create_logger(level=logging.INFO):

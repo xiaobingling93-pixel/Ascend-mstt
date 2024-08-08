@@ -26,7 +26,7 @@ with torch_npu.profiler.profile(
     profile_memory=True,
     with_stack=True,
     experimental_config=experimental_config,
-    schedule=torch.profiler.schedule(wait=10, warmup=0, active=1, repeat=1),
+    schedule=torch_npu.profiler.schedule(wait=10, warmup=0, active=1, repeat=1),
     on_trace_ready=torch_npu.profiler.tensorboard_trace_handler("./profiling_data")
 ) as prof:
   # 模型训练代码
@@ -91,6 +91,7 @@ ascend pytorch profiler数据目录结构如下：
 
    | profiler版本 | 发布日期   | 下载链接                                                     | 校验码                                                       |
    | ------------ | ---------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 1.2.0        | 2024-07-25 | [msprof_analyze-1.2.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/profiler/package/1.2.0/msprof_analyze-1.2.0-py3-none-any.whl) | 6a4366e3beca40b4a8305080e6e441d6ecafb5c05489e5905ac0265787555f37 |
    | 1.1.2        | 2024-07-12 | [msprof_analyze-1.1.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/profiler/package/1.1.2/msprof_analyze-1.1.2-py3-none-any.whl) | af62125b1f9348bf491364e03af712fc6d0282ccee3fb07458bc9bbef82dacc6 |
    | 1.1.1        | 2024-06-20 | [msprof_analyze-1.1.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/profiler/package/1.1.1/msprof_analyze-1.1.1-py3-none-any.whl) | 76aad967a3823151421153d368d4d2f8e5cfbcb356033575e0b8ec5acea8e5e4 |
    | 1.1.0        | 2024-05-28 | [msprof_analyze-1.1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/profiler/package/1.1.0/msprof_analyze-1.1.0-py3-none-any.whl) | b339f70e7d1e45e81f289332ca64990a744d0e7ce6fdd84a8d82e814fa400698 |
