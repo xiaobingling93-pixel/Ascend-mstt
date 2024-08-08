@@ -4,10 +4,8 @@ from collections import namedtuple
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from msprobe.core.common.utils import get_header_index
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_check import change_mode
 from msprobe.core.common.const import CompareConst, FileCheckConst
 

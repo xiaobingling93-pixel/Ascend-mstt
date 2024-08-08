@@ -1,14 +1,29 @@
+import multiprocessing
+import pandas as pd
 from msprobe.core.compare.check import check_op
 from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
 from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.compare.utils import read_op, merge_tensor,CompareException
+from msprobe.core.compare.multiprocessing_compute import _handle_multi_process
+from msprobe.core.common.log import logger
 
 
 class Comparator:
     
     def __init__(self):
         pass    
+    
+    def _do_multi_process(self,input_parma, result_df):
+        try:
+            compare_ops=getattr(self,"compare_ops")
+            result_df = _handle_multi_process(compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
+            return result_df
+        except ValueError as e:
+            logger.error('result dataframe is not found.')
+            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    
     
     @classmethod
     def match_op(cls,npu_queue, bench_queue, fuzzy_match):
@@ -56,3 +71,40 @@ class Comparator:
         result_list.append(err_msg)
         return result_list
     
+    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
+        op_data = json_data['data'][op_name]
+        op_parsed_list = read_op(op_data, op_name)
+        if op_name in stack_json_data:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': stack_json_data[op_name]})
+        else:
+            op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
+            
+        merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
+        return merge_list
+    
+    def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
+        header = []
+        if md5_compare:
+            header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
+        elif summary_compare:
+            header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
+        else:
+            header = CompareConst.COMPARE_RESULT_HEADER[:]
+
+        all_mode_bool = not (summary_compare or md5_compare)
+        if stack_mode:
+            if all_mode_bool:
+                header.append(CompareConst.STACK)
+                header.append(CompareConst.DATA_NAME)
+            else:
+                header.append(CompareConst.STACK)
+        else:
+            if all_mode_bool:
+                for row in result:
+                    del row[-2]
+                header.append(CompareConst.DATA_NAME)
+            else:
+                for row in result:
+                    del row[-1]
+        result_df = pd.DataFrame(result, columns=header)
+        return result_df   

@@ -1,6 +1,6 @@
 # coding=utf-8
 import unittest
-from msprobe.core.compare import match
+from debug.accuracy_tools.msprobe.pytorch.compare import match
 
 
 class TestMatch(unittest.TestCase):
