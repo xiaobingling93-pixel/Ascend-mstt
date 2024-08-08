@@ -219,8 +219,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_op(self):
         fuzzy_match = False
-        Comparator=Comparator()
-        result = Comparator.check_op(npu_dict, bench_dict, fuzzy_match)
+        comparator=Comparator()
+        result = comparator.check_op(npu_dict, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
     def test_merge_tensor(self):
@@ -233,7 +233,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_match_op(self):
         fuzzy_match = False
-        a, b = Comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
+        comparator=Comparator()
+        a, b = comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
