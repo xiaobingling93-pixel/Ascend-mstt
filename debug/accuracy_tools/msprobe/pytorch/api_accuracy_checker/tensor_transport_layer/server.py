@@ -35,7 +35,7 @@ class TCPServer:
             server_context_ = server_context_factory.getContext()
             server_context_.set_cipher_list(cipher_list)
             server_context_.set_options(SSL.OP_NO_RENEGOTIATION)
-            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port)
+            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, server_context_factory)
         else:
             endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
         endpoint.listen(self.factory)

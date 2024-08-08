@@ -206,8 +206,8 @@ def run_ut(config):
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
         change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        logger.info()(f"UT task result csv is saved in {result_csv_path}")
-        logger.info()(f"UT task details csv is saved in {details_csv_path}")
+        logger.info(f"UT task result csv is saved in {result_csv_path}")
+        logger.info(f"UT task details csv is saved in {details_csv_path}")
     compare.print_pretest_result()
 
 

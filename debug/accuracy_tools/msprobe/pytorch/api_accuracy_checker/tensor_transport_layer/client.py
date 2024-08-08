@@ -96,7 +96,7 @@ class TCPClient:
             client_context_ = client_context_factory.getContext()
             client_context_.set_cipher_list(cipher_list)
             client_context_.set_options(SSL.OP_NO_RENEGOTIATION)
-            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port)
+            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
         else:
             endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)

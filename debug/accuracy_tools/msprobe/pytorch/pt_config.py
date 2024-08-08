@@ -90,6 +90,7 @@ class RunUTConfig(BaseConfig):
         self.nfs_path = json_config.get("nfs_path", "")
         self.host = json_config.get("host", "")
         self.port = json_config.get("port", -1)
+        self.rank_list = json_config.get("rank_list", Const.DEFAULT_LIST)
         self.tls_path = json_config.get("tls_path", "")
         self.check_run_ut_config()
 
