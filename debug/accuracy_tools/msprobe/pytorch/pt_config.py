@@ -65,11 +65,18 @@ class FreeBenchmarkCheckConfig(BaseConfig):
 
 class RunUTConfig(BaseConfig):
     WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
+
     def __init__(self, json_config):
         super().__init__(json_config)
         self.white_list = json_config.get("white_list", Const.DEFAULT_LIST)
         self.black_list = json_config.get("black_list", Const.DEFAULT_LIST)
         self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
+        self.is_online = json_config.get("is_online", False)
+        self.nfs_path = json_config.get("nfs_path", "")
+        self.is_benchmark_device = json_config.get("is_benchmark_device", True)
+        self.host = json_config.get("host", "")
+        self.port = json_config.get("port", -1)
+        self.rank_list = json_config.get("rank_list", Const.DEFAULT_LIST)
         self.check_run_ut_config()
 
     @classmethod
@@ -86,11 +93,17 @@ class RunUTConfig(BaseConfig):
     def check_error_data_path_config(cls, error_data_path):
         if not os.path.exists(error_data_path):
             raise Exception("error_data_path: %s does not exist" % error_data_path)
-        
+
+    @classmethod
+    def check_nfs_path_config(cls, nfs_path):
+        if nfs_path and not os.path.exists(nfs_path):
+            raise Exception("nfs_path: %s does not exist" % nfs_path)
+
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
         RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
         RunUTConfig.check_error_data_path_config(self.error_data_path)
+        RunUTConfig.check_nfs_path_config(self.nfs_path)
 
 
 class GradToolConfig(BaseConfig):

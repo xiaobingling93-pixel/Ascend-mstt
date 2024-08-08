@@ -24,7 +24,13 @@ class Config:
             'white_list': list,
             'black_list': list,
             'error_data_path': str,
-            'precision': int
+            'precision': int,
+            'is_online': bool,
+            'nfs_path': str,
+            'is_benchmark_device': bool,
+            'host': str,
+            'port': int,
+            'rank_list': list
         }
         if key not in validators:
             raise ValueError(f"{key} must be one of {validators.keys()}")
@@ -38,6 +44,8 @@ class Config:
             RunUTConfig.check_filter_list_config(key, value)
         if key == 'error_data_path':
             RunUTConfig.check_error_data_path_config(value)
+        if key == 'nfs_path':
+            RunUTConfig.check_nfs_path_config(value)
         return value
 
 
