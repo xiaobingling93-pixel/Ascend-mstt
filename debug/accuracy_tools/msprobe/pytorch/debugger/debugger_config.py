@@ -36,12 +36,14 @@ class DebuggerConfig:
                 "max_sample": task_config.max_sample if task_config.max_sample else 20, 
             }
 
-        # dump api tensor and collaborate with online run_ut
-        self.online_run_ut = task_config.online_run_ut if task_config.online_run_ut else False
-        self.nfs_path = task_config.nfs_path if task_config.nfs_path else ""
-        self.tls_path = task_config.tls_path if task_config.tls_path else ""
-        self.host = task_config.host if task_config.host else ""
-        self.port = task_config.port if task_config.port else -1
+        self.online_run_ut = False
+        if self.task == Const.TENSOR:
+            # dump api tensor and collaborate with online run_ut
+            self.online_run_ut = task_config.online_run_ut if task_config.online_run_ut else False
+            self.nfs_path = task_config.nfs_path if task_config.nfs_path else ""
+            self.tls_path = task_config.tls_path if task_config.tls_path else ""
+            self.host = task_config.host if task_config.host else ""
+            self.port = task_config.port if task_config.port else -1
 
         self.check()
         if self.step:
