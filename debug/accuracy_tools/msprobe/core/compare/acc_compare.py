@@ -11,7 +11,7 @@ class Comparator:
         pass    
     
     @classmethod
-    def match_op(self,npu_queue, bench_queue, fuzzy_match):
+    def match_op(cls,npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
             if check_op(npu_queue[-1], b_op, fuzzy_match):
                 return len(npu_queue) - 1, b_index
@@ -55,6 +55,4 @@ class Comparator:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
-     
-testComparator= Comparator()
     
