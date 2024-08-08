@@ -10,7 +10,6 @@ from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import remove_path, write_csv, load_npy
 from msprobe.core.grad_probe.constant import GradConst
-from msprobe.pytorch.common.utils import load_pt
 
 
 class GradComparator:
@@ -163,12 +162,8 @@ class GradComparator:
 
     @classmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
-        if grad_file1.endswith('pt'):
-            grad1 = load_pt(grad_file1).numpy()
-            grad2 = load_pt(grad_file2).numpy()
-        else:
-            grad1 = load_npy(grad_file1)
-            grad2 = load_npy(grad_file2)
+        grad1 = load_npy(grad_file1)
+        grad2 = load_npy(grad_file2)
         if grad1.shape != grad2.shape:
             raise RuntimeError(f"tensor shape is not equal: {grad_file1}, {grad_file2}")
         if grad1.dtype != bool:

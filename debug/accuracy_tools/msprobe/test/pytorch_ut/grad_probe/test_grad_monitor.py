@@ -10,15 +10,24 @@ from msprobe.core.grad_probe.grad_compare import GradComparator
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 from msprobe.pytorch.pt_config import GradToolConfig
 
+class config:
+    def __init__(self, config_dict):
+        for key, value in config_dict.items():
+            setattr(self, key, value)
 
-config_dict = {
-    "level": "L1",
-    "param_list": "",
+common_config_dict = {
     "rank": [],
     "step": [],
-    "bounds": [-1,0,1],
-    "output_path": "./grad_output"
+    "dump_path": "./grad_output"
 }
+common_config = config(common_config_dict)
+
+task_config_dict = {
+    "grad_level": "L1",
+    "param_list": "",
+    "bounds": [-1,0,1]
+}
+task_config = config(task_config_dict)
 
 def seed_all(seed=1234, mode=False):
     random.seed(seed)
@@ -53,7 +62,8 @@ def get_grad_monitor():
     nn.init.constant_(test_module.linear.bias, 1.0)
     optimizer = torch.optim.SGD(test_module.parameters(), lr=1e-2)
 
-    gm = GradientMonitor(GradToolConfig(config_dict), test_module)
+    gm = GradientMonitor(common_config, task_config)
+    gm.monitor(test_module)
 
     for input_data, label in zip(inputs, labels):
         output = test_module(input_data)
