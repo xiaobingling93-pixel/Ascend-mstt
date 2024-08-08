@@ -41,7 +41,8 @@ class Service:
             attl_config = ATTLConfig(is_benchmark_device=False,
                                      connect_ip=self.config.host,
                                      connect_port=self.config.port,
-                                     nfs_path=self.config.nfs_path)
+                                     nfs_path=self.config.nfs_path,
+                                     tls_path=self.config.tls_path)
             need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
             self.attl = ATTL('npu', attl_config, need_dump=need_dump)
             if self.config.nfs_path:

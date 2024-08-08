@@ -48,7 +48,7 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
                                          'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
                                          'black_list', 'error_data_path', 'online_config'])
 
-OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list'])
+OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
 
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
@@ -442,7 +442,8 @@ def init_attl(config):
     attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
                                   connect_ip=config.host,
                                   connect_port=config.port,
-                                  nfs_path=config.nfs_path))
+                                  nfs_path=config.nfs_path,
+                                  tls_path=config.tls_path))
     return attl
 
 
@@ -572,6 +573,7 @@ def run_ut_command(args):
     host = msCheckerConfig.host
     port = msCheckerConfig.port
     rank_list = msCheckerConfig.rank_list
+    tls_path = msCheckerConfig.tls_path
     if args.config_path:
         _, task_config = parse_json_config(args.config_path, Const.RUN_UT)
         white_list = task_config.white_list
@@ -582,6 +584,7 @@ def run_ut_command(args):
         host = task_config.host
         port = task_config.port
         rank_list = task_config.rank_list
+        tls_path = task_config.tls_path
 
     if save_error_data:
         if args.result_csv_path:
@@ -589,7 +592,7 @@ def run_ut_command(args):
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
-    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list)
+    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
                                 args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
                                 online_config)

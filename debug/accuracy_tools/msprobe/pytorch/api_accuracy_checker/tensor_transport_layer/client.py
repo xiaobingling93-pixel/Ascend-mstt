@@ -9,10 +9,12 @@ from queue import Queue
 from threading import Thread
 from typing import Union
 
-from twisted.internet import reactor, protocol, endpoints
+from OpenSSL import SSL
+from twisted.internet import ssl, reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
 
 
 class TCPDataItem:
@@ -43,11 +45,12 @@ class TCPClient:
     RESEND_TIMER_TIME = 5  # 接收ACK超时定时器
     RESEND_PENDING_TIME = 60  # 连续pending时间超过1分钟则放弃该数据
 
-    def __init__(self, host="localhost", port=8000, check_sum=False):
+    def __init__(self, host="localhost", port=8000, check_sum=False, tls_path=None):
         self.send_queue = Queue(self.MAX_SENDING_QUEUE_SIZE)
         self.resend_dict = dict()
         self.host = host
         self.port = port
+        self.tls_path = tls_path
         self.factory = None
         self.sequence_number = 0
         self.signal_exit = False
@@ -86,8 +89,16 @@ class TCPClient:
 
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
-
-        endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
+        if self.tls_path:
+            client_key = os.path.join(self.tls_path, "client.key")
+            client_crt = os.path.join(self.tls_path, "client.crt")
+            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt, SSL.TLSv1_2_METHOD)
+            client_context_ = client_context_factory.getContext()
+            client_context_.set_cipher_list(cipher_list)
+            client_context_.set_options(SSL.OP_NO_RENEGOTIATION)
+            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port)
+        else:
+            endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)
         d.addCallback(conn_callback)
         d.addErrback(conn_err_callback)

@@ -13,6 +13,7 @@ import torch
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.common.utils import save_pt
 from msprobe.core.common.utils import remove_path
 
 
@@ -28,6 +29,7 @@ class ATTLConfig:
     connect_port: int
     # storage_config
     nfs_path: str = None
+    tls_path: str = None
     check_sum: bool = True
     queue_size: int = 50
 
@@ -49,12 +51,14 @@ class ATTL:
 
             self.socket_manager = TCPServer(self.session_config.connect_port,
                                             self.data_queue,
-                                            self.session_config.check_sum)
+                                            self.session_config.check_sum,
+                                            self.session_config.tls_path)
             self.socket_manager.start()
         elif need_dump:
             self.socket_manager = TCPClient(self.session_config.connect_ip,
                                             self.session_config.connect_port,
-                                            self.session_config.check_sum)
+                                            self.session_config.check_sum,
+                                            self.session_config.tls_path)
             self.socket_manager.start()
 
     def check_attl_config(self):
@@ -140,7 +144,10 @@ class ATTL:
         else:
             file_path = os.path.join(self.session_config.nfs_path, buffer + f"_{int(time.time())}")
 
-        torch.save(buffer, file_path)
+        try:
+            save_pt(buffer, file_path)
+        except Exception as e:
+            self.logger.warning("there is something error in save_pt. please check it. %s", e)
 
     def download(self):
         for file_type in ("start*", "*.pt", "end*"):
