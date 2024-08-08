@@ -60,6 +60,8 @@ class Service:
 
             if not self.switch:
                 return args, kwargs
+            if self.config.online_run_ut:
+                return None, None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -100,10 +102,10 @@ class Service:
 
             if self.config.online_run_ut:
                 if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
-                    return None
+                    return
                 api_data = ApiData(name[:-1], grad_input, {}, grad_output, self.current_iter, self.current_rank)
                 self.attl_send(api_data)
-                return None
+                return
 
             if self.data_collector:
                 # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
@@ -134,7 +136,7 @@ class Service:
                 if self.config.nfs_path:
                     self.attl.upload("end")
                 elif self.attl.socket_manager is not None:
-                    logger.debug(f"进程{os.getpid()} 已完成,准备发送STOP信号")
+                    logger.info(f"进程{os.getpid()} 已完成,准备发送STOP信号")
                     self.attl.socket_manager.send_stop_signal()
                 else:
                     # current rank not need dump, wait
@@ -153,7 +155,7 @@ class Service:
             api_register.api_modularity()
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self.config.level != "L2":
+        if self.config.level != "L2" and not self.config.online_run_ut:
             self.create_dirs()
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
@@ -165,6 +167,8 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        if self.config.online_run_ut:
+            return
         self.data_collector.write_json()
 
     def create_dirs(self):
