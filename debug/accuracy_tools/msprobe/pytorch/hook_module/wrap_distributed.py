@@ -57,7 +57,12 @@ class DistributedOPTemplate(HOOKModule):
 
     @torch_device_guard
     def forward(self, *args, **kwargs):
-        return distributed_func.get(self.op_name_)(*args, **kwargs)
+        if kwargs.get("async_op") or self.op_name_ in ["isend", "irecv"]:
+            handle = distributed_func.get(self.op_name_)(*args, **kwargs)
+            handle.wait()
+            return handle
+        else:
+            return distributed_func.get(self.op_name_)(*args, **kwargs)
 
 
 def wrap_distributed_op(op_name, hook):
