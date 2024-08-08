@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 
 import torch
+from collections import namedtuple
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
@@ -16,6 +17,8 @@ from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+
+HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
 
 class Service:
@@ -84,7 +87,7 @@ class Service:
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
         forward_hook_torch_version_below_2 = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
-        return pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
+        return HookFn(pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2)
 
     def step(self):
         self.current_iter += 1
