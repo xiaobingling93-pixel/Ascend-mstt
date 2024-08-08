@@ -20,9 +20,7 @@ class Const:
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
-    IS_ONLINE = False
-    NFS_PATH = ""
-    IS_BENCHMARK_DEVICE = True
+    DUMP_TENSOR_DATA = 'dump_tensor_data'
 
     # dump mode
     ALL = "all"
