@@ -12,6 +12,8 @@ from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
+from msprobe.pytorch.common.utils import save_pt
+
 
 try:
     import torch_npu
@@ -167,12 +169,9 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        if not path_len_exceeds_limit(file_path):
-            saved_tensor = tensor.contiguous().detach()
-            torch.save(saved_tensor, file_path)
-            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        else:
-            logger.warning(f'The file path {file_path} length exceeds limit.')
+        saved_tensor = tensor.contiguous().detach()
+        torch.save(saved_tensor, file_path)
+        change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
         return single_arg
