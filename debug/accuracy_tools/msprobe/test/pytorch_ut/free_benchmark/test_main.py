@@ -61,6 +61,7 @@ class TestInterface(TestCase):
 
     def testForwardFix(self):
         # 对于前向接口，在forward钩子中开启FIX，返回结果给hook的输出
+        # 为了与下一层的输入对齐、应该转换为扰动前输出的dtype，否则可能报错
         config = Config(Const.FORWARD, HandlerType.FIX)
         checker = FreeBenchmarkCheck(config)
         # 执行算子前向
@@ -76,7 +77,7 @@ class TestInterface(TestCase):
             kwargs={},
             output=out,
         )
-        self.assertEqual(result.dtype, torch.float32)
+        self.assertEqual(result.dtype, torch.float16)
 
     def testBackwardCheck(self):
         # 对于反向接口，在pre forward时暂存input, 然后在backwrad后进行对比

@@ -17,7 +17,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
             and torch.is_floating_point(tensor_obj)
             and tensor_obj.dtype not in [torch.float32, torch.float64]
         ):
-            self._set_improve_valus(tensor_obj)
+            self._set_improve_values(tensor_obj)
             tensor_obj = self._change_dtype(tensor_obj)
             self.is_added = True
             return tensor_obj
@@ -50,7 +50,7 @@ class ImprovePrecisionLayer(NpuBaseLayer):
         params.perturbed_result = params.origin_func(*new_args, **new_kwargs)
         return params.perturbed_result
 
-    def _set_improve_valus(self, inputs):
+    def _set_improve_values(self, inputs):
         if inputs.dtype in [torch.float16, torch.bfloat16]:
             self.perturbed_value = torch.float32
 
