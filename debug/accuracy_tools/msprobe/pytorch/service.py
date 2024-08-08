@@ -32,21 +32,9 @@ class Service:
         self.switch = False
         self.current_iter = 0
         self.first_start = True
-        try:
-            self.current_rank = get_rank_if_initialized()
-        except DistributedNotInitializedError:
-            self.current_rank = None
+        self.current_rank = None
         self.dump_iter_dir = None
-        if self.config.online_run_ut:
-            attl_config = ATTLConfig(is_benchmark_device=False,
-                                     connect_ip=self.config.host,
-                                     connect_port=self.config.port,
-                                     nfs_path=self.config.nfs_path,
-                                     tls_path=self.config.tls_path)
-            need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
-            self.attl = ATTL('npu', attl_config, need_dump=need_dump)
-            if self.config.nfs_path:
-                self.attl.upload("start")
+        self.attl = None
 
     @staticmethod
     def forward_backward_dump_end():
@@ -148,6 +136,12 @@ class Service:
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.first_start:
+            try:
+                self.current_rank = get_rank_if_initialized()
+            except DistributedNotInitializedError:
+                self.current_rank = None
+            self.attl_init()
+
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
@@ -234,6 +228,18 @@ class Service:
 
         if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
             remove_dropout()
+
+    def attl_init(self):
+        if self.config.online_run_ut:
+            attl_config = ATTLConfig(is_benchmark_device=False,
+                                     connect_ip=self.config.host,
+                                     connect_port=self.config.port,
+                                     nfs_path=self.config.nfs_path,
+                                     tls_path=self.config.tls_path)
+            need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
+            self.attl = ATTL('npu', attl_config, need_dump=need_dump)
+            if self.config.nfs_path:
+                self.attl.upload("start")
 
     def attl_send(self, api_data):
         logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
