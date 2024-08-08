@@ -23,7 +23,7 @@ class Comparator:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     
-    def check_op(npu_dict, bench_dict, fuzzy_match):
+    def check_op(self, npu_dict, bench_dict, fuzzy_match):
         a_op_name = npu_dict["op_name"]
         b_op_name = bench_dict["op_name"]
         graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
@@ -45,14 +45,14 @@ class Comparator:
         return is_match and struct_match
     
     
-    def match_op(cls,npu_queue, bench_queue, fuzzy_match):
+    def match_op(self, npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
-            if check_op(npu_queue[-1], b_op, fuzzy_match):
+            if self.check_op(npu_queue[-1], b_op, fuzzy_match):
                 return len(npu_queue) - 1, b_index
-        if check_op(npu_queue[-1], bench_queue[-1], fuzzy_match):
+        if self.check_op(npu_queue[-1], bench_queue[-1], fuzzy_match):
             return len(npu_queue) - 1, len(bench_queue) - 1
         for n_index, n_op in enumerate(npu_queue[0: -1]):
-            if check_op(n_op, bench_queue[-1], fuzzy_match):
+            if self.check_op(n_op, bench_queue[-1], fuzzy_match):
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
