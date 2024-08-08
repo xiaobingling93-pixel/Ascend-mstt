@@ -154,6 +154,17 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
+        self.real_overflow_nums = 0
+        self.overflow_nums = config.overflow_nums
+        
+    @property
+    def is_terminated(self):
+        if self.overflow_nums == -1:
+            return False
+        if self.real_overflow_nums >= self.overflow_nums:
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
+            return True
+        return False
     
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
