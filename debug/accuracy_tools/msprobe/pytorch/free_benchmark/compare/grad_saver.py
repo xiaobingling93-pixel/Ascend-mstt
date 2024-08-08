@@ -2,7 +2,7 @@ import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import CommonField
-from msprobe.pytorch.free_benchmark.common.params import DataParams, HandlerParams
+from msprobe.pytorch.free_benchmark.common.params import DataParams, HandlerParams, data_pre_deal
 from msprobe.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
 from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
@@ -161,11 +161,12 @@ class GradSaver:
         return grad_input
 
     def calculate_perturbed_grad_input(self, grad_output, need_grad_tensors, inner_args):
-        data_params = DataParams()
-        data_params.args = [need_grad_tensors, grad_output, inner_args]
-        data_params.kwargs = {}
-        data_params.valid_input_index = 0
-        data_params.origin_func = self.get_grad_input_from_vjp
+        data_params = data_pre_deal(
+            self.handler_params.api_name,
+            self.get_grad_input_from_vjp,
+            [need_grad_tensors, grad_output, inner_args],
+            {}
+        )
         layer = LayerFactory.create(
             self.handler_params.api_name,
             self.handler_params.fuzz_device,
