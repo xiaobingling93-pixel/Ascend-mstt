@@ -3,9 +3,9 @@ import struct
 import hashlib
 import time
 import io
+from threading import Thread
 
 from OpenSSL import SSL
-from threading import Thread
 from twisted.internet import ssl, reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
