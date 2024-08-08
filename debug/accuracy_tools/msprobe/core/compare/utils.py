@@ -9,7 +9,8 @@ from msprobe.core.common.utils import CompareException, check_file_or_directory_
 def extract_json(dirname, stack_json=False):
     json_path = ''
     for fname in os.listdir(dirname):
-        if fname=="construct.json": continue
+        if fname == "construct.json":
+            continue
         full_path = os.path.join(dirname, fname)
         if full_path.endswith('.json'):
             json_path = full_path
