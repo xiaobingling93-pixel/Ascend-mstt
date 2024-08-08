@@ -83,11 +83,11 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
-        forward_hook = functools.partial(forward_hook, forward_name_template)
-        backward_hook = functools.partial(backward_hook, backward_name_template)
-        forward_hook_torch_version_below_2 = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
-        return HookFn(pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2)
+        pre_forward_hook_fn = functools.partial(pre_hook, forward_name_template)
+        forward_hook_fn = functools.partial(forward_hook, forward_name_template)
+        backward_hook_fn = functools.partial(backward_hook, backward_name_template)
+        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
+        return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
     def step(self):
         self.current_iter += 1
