@@ -63,18 +63,7 @@ class Service:
             return output
 
         def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
-            if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
-
-            if not self.switch:
-                return None
-            if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs={}, output=output)
-                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
-                if self.data_collector.if_return_forward_new_output():
-                    return self.data_collector.get_forward_new_output()
-            return output
+            return forward_hook(api_or_module_name, module, args, {}, output)
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
