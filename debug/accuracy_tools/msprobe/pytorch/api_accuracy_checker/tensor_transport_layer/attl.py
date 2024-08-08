@@ -83,10 +83,14 @@ class ATTL:
 
         if 'device' in buffer.kwargs:
             buffer.kwargs.pop('device')
-        rank = buffer.rank if hasattr(buffer, "rank") else 0
+        rank = buffer.rank if hasattr(buffer, "rank") and buffer.rank is not None else 0
         step = buffer.step if hasattr(buffer, "step") else 0
         io_buff = io.BytesIO()
-        torch.save(buffer, io_buff)
+        try:
+            torch.save(buffer, io_buff)
+        except Exception as e:
+            logger.warning(f"buffer save failed: {e}")
+            return
         data = io_buff.getvalue()
         self.socket_manager.add_to_sending_queue(data, rank=rank, step=step)
 

@@ -10,6 +10,10 @@ from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, 
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
+        self.online_run_ut = json_config.get("online_run_ut", False)
+        self.nfs_path = json_config.get("nfs_path", "")
+        self.host = json_config.get("host", "")
+        self.port = json_config.get("port", -1)
         self.check_config()
         self._check_file_format()
 
