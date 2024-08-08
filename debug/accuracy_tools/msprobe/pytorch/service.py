@@ -211,7 +211,6 @@ class Service:
 
     def attl_send(self, api_data):
         logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
-        api_data.rank = api_data.rank if api_data.rank else 0
         if self.config.nfs_path:
             self.attl.upload(api_data)
         else:

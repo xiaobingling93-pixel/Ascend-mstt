@@ -83,7 +83,7 @@ class ATTL:
 
         if 'device' in buffer.kwargs:
             buffer.kwargs.pop('device')
-        rank = buffer.rank if hasattr(buffer, "rank") else 0
+        rank = buffer.rank if hasattr(buffer, "rank") and buffer.rank is not None else 0
         step = buffer.step if hasattr(buffer, "step") else 0
         io_buff = io.BytesIO()
         try:
