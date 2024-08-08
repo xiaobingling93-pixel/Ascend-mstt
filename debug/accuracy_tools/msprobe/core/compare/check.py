@@ -1,4 +1,4 @@
-from debug.accuracy_tools.msprobe.pytorch.compare.match import graph_mapping
+from msprobe.pytorch.compare.match import graph_mapping
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api 
 
