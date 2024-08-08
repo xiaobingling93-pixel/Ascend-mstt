@@ -121,7 +121,7 @@ class ATTL:
             try:
                 buffer = torch.load(buffer, map_location="cpu")
             except Exception as e:
-                self.logger.error("there is something error. please check it. %s", e)
+                self.logger.warning("there is something error. please check it. %s", e)
             if isinstance(buffer, bytes):
                 return None
             if isinstance(buffer, str):
@@ -147,7 +147,11 @@ class ATTL:
         if cur_file is None:
             return None
         else:
-            buffer = torch.load(cur_file)
+            buffer = None
+            try:
+                buffer = torch.load(cur_file)
+            except Exception as e:
+                self.logger.warning("there is something error. please check it. %s", e)
             remove_path(cur_file)
             return buffer
 
