@@ -3,9 +3,8 @@ import unittest
 import pandas as pd
 from msprobe.core.compare.check import check_graph_mode
 from msprobe.core.compare.utils import merge_tensor, read_op, get_accuracy, rename_api
-from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.highlight import find_error_rows,find_compare_result_error_rows
-from msprobe.core.compare.acc_compare import Comparator
+from msprobe.pytorch.compare.pt_compare import PTComparator
 
 npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
                         'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
@@ -219,8 +218,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_check_op(self):
         fuzzy_match = False
-        comparator=Comparator()
-        result = comparator.check_op(npu_dict, bench_dict, fuzzy_match)
+        ptComparator=PTComparator()
+        result = ptComparator.check_op(npu_dict, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
     def test_merge_tensor(self):
@@ -233,8 +232,8 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_match_op(self):
         fuzzy_match = False
-        comparator=Comparator()
-        a, b = comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
+        ptComparator=PTComparator()
+        a, b = ptComparator.match_op([npu_dict], [bench_dict], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
