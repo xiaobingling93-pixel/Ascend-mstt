@@ -2,4 +2,9 @@ white_list: []
 black_list: []
 error_data_path: './'
 precision: 14
- 
+is_online: False
+nfs_path: ""
+is_benchmark_device: True
+host: ""
+port: -1
+rank_list: [0]

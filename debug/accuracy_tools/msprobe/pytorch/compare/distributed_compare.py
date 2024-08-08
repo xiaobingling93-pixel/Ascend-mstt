@@ -89,14 +89,14 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     for nr, br in zip(npu_ranks, bench_ranks):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
         bench_data_dir = os.path.join(bench_dump_dir, br)
-        npu_json_path = extract_json(npu_data_dir, stack_json=False)
-        bench_json_path = extract_json(bench_data_dir, stack_json=False)
-        stack_json_path = extract_json(npu_data_dir, stack_json=True)
+        npu_path = extract_json(npu_data_dir, stack_json=False)
+        bench_path = extract_json(bench_data_dir, stack_json=False)
+        stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
-            'npu_json_path': npu_json_path,
-            'bench_json_path': bench_json_path,
-            'stack_json_path': stack_json_path,
+            'npu_path': npu_path,
+            'bench_path': bench_path,
+            'stack_path': stack_path,
             'is_print_compare_log': True
         }
         try:

@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 
+import argparse
 import json
 import multiprocessing
 import os.path
@@ -35,7 +36,7 @@ from msprobe.pytorch.advisor.advisor import Advisor
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
     format_value, check_file_not_exists, check_configuration_param, task_dumppath_get
-from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory
+from msprobe.core.common.file_check import FileChecker, change_mode, FileOpen, create_directory, check_file_type
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.exceptions import FileCheckException
 
@@ -653,17 +654,16 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def compare(input_parma, output_path, stack_mode=False, auto_analyze=True,
-            fuzzy_match=False):
+def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_parma)
+        summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
-        check_compare_param(input_parma, output_path, summary_compare, md5_compare)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         sys.exit(error.code)
-    compare_core(input_parma, output_path, stack_mode=stack_mode,
+    compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)
 
@@ -673,8 +673,8 @@ def compare_core(input_parma, output_path, **kwargs):
     Compares data from multiple JSON files and generates a comparison report.
 
     Args:
-        input_parma (dict): A dictionary containing paths to JSON files ("npu_json_path", "bench_json_path",
-                            "stack_json_path").
+        input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
+                            "stack_path").
         output_path (str): The path where the output Excel report will be saved.
         **kwargs: Additional keyword arguments including:
         - stack_mode (bool, optional): Enables stack mode comparison. Defaults to False.
@@ -700,9 +700,9 @@ def compare_core(input_parma, output_path, **kwargs):
     check_file_not_exists(file_path)
     highlight_dict = {'red_rows': [], 'yellow_rows': []}
 
-    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-            FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-            FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
+    with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
+            FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
+            FileOpen(input_parma.get("stack_path"), "r") as stack_json:
         result_df = compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                     summary_compare, md5_compare)
 
@@ -878,13 +878,13 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if 'backward' in op_name:
-        if 'grad_input' in op_data:
-            input_item = op_data['grad_input']
+        if 'input' in op_data:
+            input_item = op_data['input']
             input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
-        if 'grad_output' in op_data:
-            output_item = op_data['grad_output']
+        if 'output' in op_data:
+            output_item = op_data['output']
             output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
@@ -1036,3 +1036,16 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             else:
                 result_item.extend([CompareConst.NONE, "-1"])
         result.append(result_item)
+
+
+def _compare_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.",  required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
+                        help="<optional> Whether to save stack info.", required=False)
+    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+                        help="<optional> Whether to give advisor.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
