@@ -1,6 +1,5 @@
 import multiprocessing
 import pandas as pd
-from msprobe.core.compare.check import check_op
 from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
@@ -8,7 +7,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.utils import read_op, merge_tensor,CompareException
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process
 from msprobe.core.common.log import logger
-
+from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op
 
 class Comparator:
     
@@ -24,8 +23,28 @@ class Comparator:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     
+    def check_op(npu_dict, bench_dict, fuzzy_match):
+        a_op_name = npu_dict["op_name"]
+        b_op_name = bench_dict["op_name"]
+        graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
+        
+        frame_name=getattr(self,"frame_name")
+        if frame_name == "PTComparator":
+            from msprobe.pytorch.compare.match import graph_mapping
+            if graph_mode:
+                return graph_mapping.match(a_op_name[0], b_op_name[0])
+        struct_match = check_struct_match(npu_dict, bench_dict)
+        if not fuzzy_match:
+            return a_op_name == b_op_name and struct_match
+        is_match = True
+        try:
+            is_match = fuzzy_check_op(a_op_name, b_op_name)
+        except Exception as err:
+            logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
+            is_match = False
+        return is_match and struct_match
     
-    @classmethod
+    
     def match_op(cls,npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
             if check_op(npu_queue[-1], b_op, fuzzy_match):

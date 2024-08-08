@@ -18,7 +18,7 @@ from msprobe.core.common.exceptions import FileCheckException
 
 class PTComparator (Comparator):
     def __init__(self):
-        super().__init__()
+        self.frame_name=PTComparator.__name__
     
     def compare_ops(self,idx, dump_path_dict, result_df, lock, input_parma):
         cos_result = []
