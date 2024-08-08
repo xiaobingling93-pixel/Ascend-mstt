@@ -1,9 +1,59 @@
 
 import os
+import re
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.utils import CompareException, check_file_or_directory_path, check_regex_prefix_format_valid, logger
 
 
+def extract_json(dirname, stack_json=False):
+    json_path = ''
+    for fname in os.listdir(dirname):
+        if fname == "construct.json":
+            continue
+        full_path = os.path.join(dirname, fname)
+        if full_path.endswith('.json'):
+            json_path = full_path
+            if not stack_json and 'stack' not in json_path:
+                break
+            if stack_json and 'stack' in json_path:
+                break
+
+    # Provide robustness on invalid directory inputs
+    if not json_path:
+        logger.error(f'No file is found in dump dir {dirname}. ')
+        raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
+    return json_path
+
+
+def check_and_return_dir_contents(dump_dir, prefix):
+    """
+    check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
+    pattern: ^{prefix}(?:0|[0-9][1-9]*)?$
+
+    Args:
+        dump_dir (str): dump dir
+        prefix (str): prefix for the patterns, prefix should be less than 20 characters and alphanumeric/-/_ only
+
+    Returns:
+        content [list]: dir contents
+    Raises:
+        CompareException: invalid path
+        ValueError: prefix not match the patterns
+
+    """
+    check_regex_prefix_format_valid(prefix)
+    check_file_or_directory_path(dump_dir, True)
+    contents = os.listdir(dump_dir)
+    pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
+    for name in contents:
+        if not pattern.match(name):
+            logger.error(
+                f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
+                f"output. Please check and delete irrelevant files in {dump_dir} and try again."
+            )
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+    return contents
 
 
 def rename_api(npu_name, process):
@@ -12,6 +62,7 @@ def rename_api(npu_name, process):
     torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
+
 
 def read_op(op_data, op_name):
     op_parsed_list = []
@@ -38,17 +89,18 @@ def read_op(op_data, op_name):
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if 'backward' in op_name:
-        if 'grad_input' in op_data:
-            input_item = op_data['grad_input']
+        if 'input' in op_data:
+            input_item = op_data['input']
             input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
-        if 'grad_output' in op_data:
-            output_item = op_data['grad_output']
+        if 'output' in op_data:
+            output_item = op_data['output']
             output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     return op_parsed_list
+
 
 def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
     if item_list is None:
@@ -120,6 +172,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
         for j, item_spec in enumerate(item):
             op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False)
     return item_list
+
 
 def resolve_api_special_parameters(data_dict, full_op_name, item_list):
     """
@@ -269,6 +322,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
     get_accuracy_core(n_num_input, n_num_kwarg, b_num_input, b_num_kwarg, "kwargs_struct")
     get_accuracy_core(n_num_input + n_num_kwarg, n_num_output, b_num_input + b_num_kwarg, b_num_output, 'output_struct')
 
+
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
@@ -352,7 +406,17 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
     return op_dict if op_dict["op_name"] else {}
 
 
-
+def _compare_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.",  required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
+                        help="<optional> Whether to save stack info.", required=False)
+    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+                        help="<optional> Whether to give advisor.", required=False)
+    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
+                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
 
 
     

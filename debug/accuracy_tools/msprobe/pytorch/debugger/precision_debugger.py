@@ -36,7 +36,7 @@ class PrecisionDebugger:
             common_config, task_config = parse_json_config(config_path, task)
             self.task = common_config.task
             if self.task == Const.GRAD_PROBE:
-                GradientMonitor(task_config, model)
+                self.gm = GradientMonitor(common_config, task_config)
                 return
             if step:
                 common_config.step = step
@@ -101,6 +101,14 @@ class PrecisionDebugger:
         if not cls._instance:
             raise Exception("PrecisionDebugger instance is not created.")
         cls._instance.service.step()
+
+    @classmethod
+    def monitor(cls, model):
+        if not cls._instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if cls._instance.task != Const.GRAD_PROBE:
+            return
+        cls._instance.gm.monitor(model)
 
 
 def iter_tracer(func):

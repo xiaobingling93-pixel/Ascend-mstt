@@ -1,10 +1,10 @@
 
 import multiprocessing
-import pandas as pd
 from dataclasses import dataclass
+import pandas as pd
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import  CompareException
-from msprobe.core.common.const import  CompareConst
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import CompareConst
 
 
 def _handle_multi_process(func, input_parma, result_df, lock):
@@ -38,6 +38,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
     pool.join()
     return pd.concat(final_results, ignore_index=True)
 
+
 def read_dump_data(result_df):
     try:
         npu_dump_name_list = result_df.iloc[0:, 0].tolist()
@@ -55,7 +56,6 @@ def read_dump_data(result_df):
         logger.error('result dataframe elements can not be access.')
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
     
-
 @dataclass
 class ComparisonResult:
     cos_result: list
@@ -64,6 +64,7 @@ class ComparisonResult:
     err_msgs: list
     one_thousand_err_ratio_result: list
     five_thousand_err_ratio_result: list
+
 
 def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
     """
@@ -98,6 +99,7 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
     finally:
         lock.release()
+        
         
 def check_accuracy(cos, max_abs_err):
     if cos == CompareConst.SHAPE_UNMATCH:

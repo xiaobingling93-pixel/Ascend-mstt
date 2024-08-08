@@ -1,5 +1,6 @@
 import os
 import stat
+
 import numpy as np
 
 
@@ -16,6 +17,7 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
@@ -255,17 +257,3 @@ class OverflowConst:
     OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
-
-
-class MsConst:
-    CELL = "cell"
-    API = "api"
-    KERNEL = "kernel"
-    TOOL_LEVEL_DICT = {
-        "L0": CELL,
-        "L1": API,
-        "L2": KERNEL
-    }
-    PYNATIVE_MODE = "pynative"
-    GRAPH_GE_MODE = "graph_ge"
-    GRAPH_KBYK_MODE = "graph_kbyk"

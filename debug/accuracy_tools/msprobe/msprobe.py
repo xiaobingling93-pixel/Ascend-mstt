@@ -15,16 +15,15 @@
 
 import argparse
 import sys
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
-from msprobe.pytorch.parse_tool.cli import parse as cli_parse
-from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
-from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
-    _api_precision_compare_command
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
-    _run_overflow_check_command
-from msprobe.pytorch.compare.pt_compare import _compare_parser
-from msprobe.pytorch.compare.compare_cli import compare_cli
-from msprobe.mindspore.compare.compare_cli import compare_cli_ms
+import importlib.util
+from msprobe.core.compare.utils import _compare_parser
+from msprobe.core.common.log import logger
+
+
+def is_module_available(module_name):
+    spec =importlib.util.find_spec(module_name)
+    return spec is not None
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -33,6 +32,7 @@ def main():
                     "Providing one-site accuracy difference debugging toolkit for training on Ascend Devices.\n"
                     f"For any issue, refer README.md first",
     )
+    
     parser.set_defaults(print_help=parser.print_help)
     parser.add_argument('-f', '--framework', required=True, choices=['pytorch', 'mindspore'],
                         help='Deep learning framework.')
@@ -43,18 +43,32 @@ def main():
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
-    _compare_parser(compare_cmd_parser)
-    _run_ut_parser(run_ut_cmd_parser)
-    _run_ut_parser(multi_run_ut_cmd_parser)
     multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
                                          help='Number of splits for parallel processing. Range: 1-64')
-    _api_precision_compare_parser(api_precision_compare_cmd_parser)
-    _run_overflow_check_parser(run_overflow_check_cmd_parser)
+
+    _compare_parser(compare_cmd_parser)
+    
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == "pytorch":
+        if is_module_available("torch"):
+            from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
+            from msprobe.pytorch.parse_tool.cli import parse as cli_parse
+            from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
+            from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
+                _api_precision_compare_command
+            from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
+                _run_overflow_check_command
+            from msprobe.pytorch.compare.compare_cli import compare_cli
+            _run_ut_parser(run_ut_cmd_parser)
+            _run_ut_parser(multi_run_ut_cmd_parser)
+            _api_precision_compare_parser(api_precision_compare_cmd_parser)
+            _run_overflow_check_parser(run_overflow_check_cmd_parser)
+        else:
+            logger.error("Pytorch does not exit, please install pytorch library")
+            raise Exception()
         if sys.argv[3] == "run_ut":
             run_ut_command(args)
         elif sys.argv[3] == "parse":
@@ -69,7 +83,13 @@ def main():
         elif sys.argv[3] == "compare":
             compare_cli(args)
     else:
-        compare_cli_ms(args)
+        if is_module_available("mindspore"):
+            from msprobe.mindspore.compare.compare_cli import compare_cli_ms
+        else:
+            logger.error("Mindspore does not exit, please install mindspore library")
+            raise Exception()
+        if sys.argv[3] == "compare":
+            compare_cli_ms(args)
 
 if __name__ == "__main__":
     main()

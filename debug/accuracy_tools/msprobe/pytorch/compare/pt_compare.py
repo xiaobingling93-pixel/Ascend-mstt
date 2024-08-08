@@ -1,27 +1,24 @@
 import json
-import multiprocessing
 import os.path
-import sys
 import torch
-import pandas as pd
 
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
-from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.const import FileCheckConst
 
-from msprobe.core.compare.utils import merge_tensor, get_un_match_accuracy, get_accuracy, read_op
-from msprobe.core.compare.Multiprocessing_compute import ComparisonResult, _save_cmp_result, _handle_multi_process
+from msprobe.core.compare.utils import get_un_match_accuracy, get_accuracy
+from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _save_cmp_result
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.acc_compare import Comparator 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 
+
 class PTComparator (Comparator):
     def __init__(self):
-        super().__init__()
-    
+        self.frame_name=PTComparator.__name__
     
     def compare_ops(self,idx, dump_path_dict, result_df, lock, input_parma):
         cos_result = []
@@ -58,20 +55,7 @@ class PTComparator (Comparator):
             five_thousand_err_ratio_result=five_thousand_err_ratio_result
         )
 
-        return _save_cmp_result(idx, cr, result_df, lock)
-
-
-    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
-        op_data = json_data['data'][op_name]
-        op_parsed_list = read_op(op_data, op_name)
-        if op_name in stack_json_data:
-            op_parsed_list.append({'full_op_name': op_name, 'full_info': stack_json_data[op_name]})
-        else:
-            op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
-            
-        merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
-        return merge_list
-               
+        return _save_cmp_result(idx, cr, result_df, lock)           
     
     def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
@@ -138,33 +122,6 @@ class PTComparator (Comparator):
         result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
         return result_df
     
-    def make_result_table(self,result,md5_compare,summary_compare,stack_mode):
-        header = []
-        if md5_compare:
-            header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
-        elif summary_compare:
-            header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
-        else:
-            header = CompareConst.COMPARE_RESULT_HEADER[:]
-
-        all_mode_bool = not (summary_compare or md5_compare)
-        if stack_mode:
-            if all_mode_bool:
-                header.append(CompareConst.STACK)
-                header.append(CompareConst.DATA_NAME)
-            else:
-                header.append(CompareConst.STACK)
-        else:
-            if all_mode_bool:
-                for row in result:
-                    del row[-2]
-                header.append(CompareConst.DATA_NAME)
-            else:
-                for row in result:
-                    del row[-1]
-        result_df = pd.DataFrame(result, columns=header)
-        return result_df
-    
     def read_npy_data(self,dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
@@ -174,16 +131,7 @@ class PTComparator (Comparator):
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
-        return data_value
-
-
-    def _do_multi_process(self,input_parma, result_df):
-        try:
-            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
-            return result_df
-        except ValueError as e:
-            logger.error('result dataframe is not found.')
-            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+        return data_value  
     
     def compare_core(self,input_parma, output_path, **kwargs):
         """
@@ -231,8 +179,9 @@ class PTComparator (Comparator):
             advisor = Advisor(result_df, output_path)
             advisor.analysis()
 
-
-def pt_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
+        
+        
+def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
@@ -240,24 +189,13 @@ def pt_compare(input_param, output_path, stack_mode=False, auto_analyze=True, fu
         check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
-        sys.exit(error.code)
+        raise CompareException(error.code) from error
     ptComparator=PTComparator()
     ptComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)
 
 
-def _compare_parser(parser):
-    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.",  required=True)
-    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path.", required=True)
-    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
-                        help="<optional> Whether to save stack info.", required=False)
-    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
-                        help="<optional> Whether to give advisor.", required=False)
-    parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
-                        help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
 
 
     

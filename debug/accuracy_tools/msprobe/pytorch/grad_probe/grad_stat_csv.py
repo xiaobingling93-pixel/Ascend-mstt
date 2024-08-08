@@ -63,13 +63,15 @@ class CSV_distribution(CsvItem):
     def generate_csv_header(csv_header_input):
         bounds = csv_header_input.bounds
         intervals = []
-        for i, _ in enumerate(bounds):
-            if i == 0:
-                intervals.append(f"(-inf, {bounds[i]}]")
-            else:
+        if bounds:
+            intervals.append(f"(-inf, {bounds[0]}]")
+            for i in range(1, len(bounds)):
                 intervals.append(f"({bounds[i-1]}, {bounds[i]}]")
-        intervals.extend([f"({bounds[-1]}, inf)", "=0"])
-        return intervals 
+        if intervals:
+            intervals.append(f"({bounds[-1]}, inf)")
+        intervals.append("=0")
+    
+        return intervals
 
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad

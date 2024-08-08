@@ -1,16 +1,13 @@
 import math
 import abc
-import numpy as np
 from collections import namedtuple
+import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from collections import namedtuple
-from msprobe.core.common.utils import get_header_index
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException
-from msprobe.core.common.file_check import  change_mode
-from msprobe.core.common.const import  CompareConst, FileCheckConst
+from msprobe.core.common.file_check import change_mode
+from msprobe.core.common.const import CompareConst, FileCheckConst
 
 
 class HighlightCheck(abc.ABC):
@@ -165,6 +162,7 @@ def get_name_and_state(name):
         api_name = name.split("output")[0]
         state = "output"
     return api_name, state
+
 
 def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare):
     """将dataframe根据API分组，并找到有误差的算子用于高亮"""

@@ -15,6 +15,7 @@ from msprobe.pytorch.free_benchmark.common.params import DataParams, make_handle
 from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
 )
+from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
 
 
 class Config(ABC):
@@ -119,3 +120,21 @@ class TestFuzzHandler(TestCase):
                 api_threshld,
                 ThresholdConfig.DTYPE_PER_THD[torch.float16]
             )
+
+    def test_tensor_split_for_error_calculate(self):
+        # 设置模拟的张量的大小
+        tensor_size = 256 * 1024 * 1024
+        origin_output = torch.randn(tensor_size, dtype=torch.float32)
+        perturbed_output = torch.randn(tensor_size, dtype=torch.float32)
+
+        # 调用tensor_split_for_error_calculate方法
+        origin_output_chunks, perturbed_output_chunks = FuzzHandler.tensor_split_for_error_calculate(
+            origin_output, perturbed_output)
+
+        # 验证返回的chunks数量和形状是否正确
+        self.assertEqual(len(origin_output_chunks), 64)
+        self.assertEqual(len(perturbed_output_chunks), 64)
+        for chunk in origin_output_chunks:
+            self.assertEqual(chunk.shape, (4 * 1024 * 1024,))
+        for chunk in perturbed_output_chunks:
+            self.assertEqual(chunk.shape, (4 * 1024 * 1024,))

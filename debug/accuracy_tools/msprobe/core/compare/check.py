@@ -1,7 +1,5 @@
-from msprobe.core.compare.match import graph_mapping
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api 
-
 
 
 def check_struct_match(npu_dict, bench_dict):
@@ -18,6 +16,7 @@ def check_struct_match(npu_dict, bench_dict):
         is_match = struct_in_is_match and struct_out_is_match
     return is_match
 
+
 def check_type_shape_match(npu_struct, bench_struct):
     shape_type_match = False
     for npu_type_shape, bench_type_shape in zip(npu_struct, bench_struct):
@@ -28,8 +27,10 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            if ([npu_type, bench_type] in [["Float16", "Float32"], ["Float32", "Float16"]] )or  ([npu_type, bench_type] in [["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
-                                ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]):                    
+            ms_type=[["Float16", "Float32"], ["Float32", "Float16"],["Float16", "BFloat16"],["BFloat16", "Float16"]] 
+            torch_type=[["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
+                                ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
+            if ([npu_type, bench_type] in ms_type)or  ([npu_type, bench_type] in torch_type):                    
                 type_match = True
             else:
                 type_match = False
@@ -38,31 +39,13 @@ def check_type_shape_match(npu_struct, bench_struct):
             return False
     return shape_type_match
 
+
 def check_graph_mode(a_op_name, b_op_name):
     if "Aten" in a_op_name and "Aten" not in b_op_name:
         return True
     if "Aten" not in a_op_name and "Aten" in b_op_name:
         return True
     return False
-
-
-def check_op(npu_dict, bench_dict, fuzzy_match):
-    a_op_name = npu_dict["op_name"]
-    b_op_name = bench_dict["op_name"]
-    graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
-    if graph_mode:
-        return graph_mapping.match(a_op_name[0], b_op_name[0])
-    struct_match = check_struct_match(npu_dict, bench_dict)
-    if not fuzzy_match:
-        return a_op_name == b_op_name and struct_match
-    is_match = True
-    try:
-        is_match = fuzzy_check_op(a_op_name, b_op_name)
-    except Exception as err:
-        logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
-        is_match = False
-    return is_match and struct_match
-
 
 
 def fuzzy_check_op(npu_name_list, bench_name_list):
@@ -74,6 +57,7 @@ def fuzzy_check_op(npu_name_list, bench_name_list):
         if not is_match:
             break
     return is_match
+
 
 def fuzzy_check_name(npu_name, bench_name):
     if "forward" in npu_name and "forward" in bench_name:

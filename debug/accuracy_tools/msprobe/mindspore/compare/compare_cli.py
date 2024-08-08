@@ -4,8 +4,7 @@ from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.compare.ms_compare import ms_compare
-from msprobe.mindspore.compare.distributed_compare import compare_distributed
-
+from msprobe.mindspore.compare.distributed_compare import compare_distributed 
 
 def compare_cli_ms(args):
     with FileOpen(args.input_path, "r") as file:

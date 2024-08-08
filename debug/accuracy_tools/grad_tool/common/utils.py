@@ -7,7 +7,6 @@ import yaml
 import pandas as pd
 
 from grad_tool.common.constant import GradConst
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileOpen
 
 
 def _print_log(level, msg, end='\n'):
@@ -115,7 +114,7 @@ class ListCache(list):
 
 
 def get_config(filepath):
-    with FileOpen(filepath, 'r') as file:
+    with open(filepath, 'r') as file:
         config = yaml.safe_load(file)
     return config
 

@@ -96,7 +96,9 @@ class RunUTConfig(BaseConfig):
 class GradToolConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self._config = json_config
+        self.grad_level = json_config.get("grad_level")
+        self.param_list = json_config.get("param_list")
+        self.bounds = json_config.get("bounds")
 
 
 def parse_task_config(task, json_config):

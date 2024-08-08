@@ -1,2 +1,1 @@
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
-from .compare.distributed_compare import compare_distributed
