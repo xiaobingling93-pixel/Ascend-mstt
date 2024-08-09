@@ -120,17 +120,9 @@ class Service:
     def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
-            # send end or step signal
             if self.config.online_run_ut:
-                if self.config.nfs_path:
-                    self.attl.upload("end")
-                elif self.attl.socket_manager is not None:
-                    logger.info(f"进程{os.getpid()} 已完成,准备发送STOP信号")
-                    self.attl.socket_manager.send_stop_signal()
-                else:
-                    # current rank not need dump, wait
-                    while True:
-                        time.sleep(2)
+                # send stop signal if online_run_ut
+                self.attl_stop()
             self.stop()
             raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
@@ -247,3 +239,10 @@ class Service:
             self.attl.upload(api_data)
         else:
             self.attl.send(api_data)
+
+    def attl_stop(self):
+        if self.config.nfs_path:
+            self.attl.upload("end")
+        elif self.attl.socket_manager is not None:
+            logger.info(f"pid: {os.getpid()} finished, start send STOP signal.")
+            self.attl.socket_manager.send_stop_signal()
