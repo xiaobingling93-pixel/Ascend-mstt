@@ -153,16 +153,16 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
     if not (isinstance(input_param, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    check_file_or_directory_path(input_param.get("npu_path"), False)
-    check_file_or_directory_path(input_param.get("bench_path"), False)
-    check_file_or_directory_path(input_param.get("stack_path"), False)
+    check_file_or_directory_path(input_param.get("npu_json_path"), False)
+    check_file_or_directory_path(input_param.get("bench_json_path"), False)
+    check_file_or_directory_path(input_param.get("stack_json_path"), False)
     if not summary_compare and not md5_compare:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
-         FileOpen(input_param.get("bench_path"), "r") as bench_json, \
-         FileOpen(input_param.get("stack_path"), "r") as stack_json:
+    with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
+         FileOpen(input_param.get("bench_json_path"), "r") as bench_json, \
+         FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
         check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
@@ -474,9 +474,13 @@ def md5_find(data):
     return False
 
 
-def task_dumppath_get(input_param):
-    npu_path = input_param.get("npu_path", None)
-    bench_path = input_param.get("bench_path", None)
+def task_dumppath_get(input_param, framework="mindspore"):
+    if framework == "mindspore":
+        npu_path = input_param.get("npu_path", None)
+        bench_path = input_param.get("bench_path", None)
+    else:
+        npu_path = input_param.get("npu_json_path", None)
+        bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)

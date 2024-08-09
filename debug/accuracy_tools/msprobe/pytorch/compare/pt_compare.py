@@ -165,9 +165,9 @@ class PTComparator (Comparator):
         check_file_not_exists(file_path)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         
-        with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
-                FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
-                FileOpen(input_parma.get("stack_path"), "r") as stack_json:
+        with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
+                FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
+                FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
             result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                         summary_compare, md5_compare)
 
@@ -179,11 +179,11 @@ class PTComparator (Comparator):
             advisor = Advisor(result_df, output_path)
             advisor.analysis()
 
-        
-        
+
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_param)
+        framework = "pytorch"
+        summary_compare, md5_compare = task_dumppath_get(input_param, framework)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
         check_compare_param(input_param, output_path, summary_compare, md5_compare)
@@ -198,9 +198,8 @@ def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy
 
 
 
-    
 
 
-    
-       
-    
+
+
+

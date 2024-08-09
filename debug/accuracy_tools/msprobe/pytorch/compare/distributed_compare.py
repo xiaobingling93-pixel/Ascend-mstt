@@ -47,13 +47,14 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
-            'npu_path': npu_path,
-            'bench_path': bench_path,
-            'stack_path': stack_path,
+            'npu_json_path': npu_path,
+            'bench_json_path': bench_path,
+            'stack_json_path': stack_path,
             'is_print_compare_log': True
         }
         try:
-            summary_compare, md5_compare = task_dumppath_get(dump_result_param)
+            framework = "pytorch"
+            summary_compare, md5_compare = task_dumppath_get(dump_result_param, framework)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, md5_compare=md5_compare)
