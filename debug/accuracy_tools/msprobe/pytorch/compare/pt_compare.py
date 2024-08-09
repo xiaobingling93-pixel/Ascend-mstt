@@ -186,7 +186,7 @@ def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy
         summary_compare, md5_compare = task_dumppath_get(input_param, framework)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
-        check_compare_param(input_param, output_path, summary_compare, md5_compare)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare, framework=framework)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
