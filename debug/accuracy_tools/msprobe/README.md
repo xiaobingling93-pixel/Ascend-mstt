@@ -159,7 +159,7 @@ Required-by:
 
    PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_overview.md)。
 
-   MindSpore场景：暂不支持。
+   MindSpore场景：详见[MindSpore_精度比对工具](./mindspore/doc/compare.md)。
 
 5. 执行溢出解析。
 
