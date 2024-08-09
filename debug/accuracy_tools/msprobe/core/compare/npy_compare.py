@@ -2,7 +2,7 @@ import abc
 import numpy as np
 from msprobe.core.common.utils import format_value
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.log import logger
 
 
 def  handle_inf_nan(n_value, b_value):
