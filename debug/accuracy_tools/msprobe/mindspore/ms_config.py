@@ -63,7 +63,7 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.fuzz_device and self.fuzz_device not in FreeBenchmarkConst.DEVICE_LIST:
             raise Exception("fuzz_device must be npu or empty")
         if self.pert_mode and self.pert_mode not in FreeBenchmarkConst.PERT_TYPE_LIST:
-            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise , no_change or empty")
+            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise, no_change or empty")
         if self.handler_type and self.handler_type not in FreeBenchmarkConst.HANDLER_TYPE_LIST:
             raise Exception("handler_type must be check, fix or empty")
         if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
@@ -73,6 +73,8 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "
                            "are not supported for mindspore free benchmark task.")
+
+
 class GradProbeConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)

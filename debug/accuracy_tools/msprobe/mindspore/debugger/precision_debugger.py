@@ -38,7 +38,7 @@ class PrecisionDebugger:
             self.gm = GradientMonitor(common_config, task_config)
             return
         self.config = DebuggerConfig(common_config, task_config)
-        
+
         Runtime.step_count = 0
         Runtime.is_running = False
 
@@ -97,7 +97,7 @@ class PrecisionDebugger:
         if instance.service:
             instance.service.step()
         Runtime.step_count += 1
-    
+
     @classmethod
     def monitor(cls, opt):
         instance = cls._instance
