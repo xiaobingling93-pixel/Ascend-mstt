@@ -20,24 +20,25 @@ class PTComparator (Comparator):
     def __init__(self):
         self.frame_name=PTComparator.__name__
     
-    def compare_ops(self,idx, dump_path_dict, result_df, lock, input_parma):
+    def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
         cos_result = []
         max_err_result = []
         max_relative_err_result = []
         err_mess = []
         one_thousand_err_ratio_result = []
         five_thousand_err_ratio_result = []
-        is_print_compare_log = input_parma.get("is_print_compare_log")
+        is_print_compare_log = input_param.get("is_print_compare_log")
         for i in range(len(result_df)):
-            op_name = result_df.iloc[i, 0]
+            npu_op_name = result_df.iloc[i, 0]
+            bench_op_name = result_df.iloc[i, 1]
             if is_print_compare_log:
-                logger.info("start compare: {}".format(op_name))
+                logger.info("start compare: {}".format(npu_op_name))
             cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = self.compare_by_op(
-                op_name, dump_path_dict, input_parma)
+                npu_op_name, bench_op_name, dump_path_dict, input_param)
             if is_print_compare_log:
                 logger.info(
                     "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, "
-                    "five_thousand_err_ratio {}".format(op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
+                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
                                                         one_thousand_err_ratio, five_thousand_err_ratio))
             cos_result.append(cos_sim)
             max_err_result.append(max_abs_err)
@@ -104,7 +105,7 @@ class PTComparator (Comparator):
             if both_empty or no_change:
                 continue
 
-            n_match_point, b_match_point =  super().match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
+            n_match_point, b_match_point = super().match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
             if n_match_point == -1 and b_match_point == -1:
                 continue
             n_match_data = npu_ops_queue[n_match_point]
@@ -179,8 +180,7 @@ class PTComparator (Comparator):
             advisor = Advisor(result_df, output_path)
             advisor.analysis()
 
-        
-        
+
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
         summary_compare, md5_compare = task_dumppath_get(input_param)
@@ -190,17 +190,7 @@ def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    ptComparator=PTComparator()
+    ptComparator = PTComparator()
     ptComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)
-
-
-
-
-    
-
-
-    
-       
-    
