@@ -215,7 +215,7 @@ def run_api_offline(config, compare, api_name_set):
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
-        if is_unsupported_api(api_full_name):  # TODO run_ut does not support to the npu fusion api and distributed api
+        if is_unsupported_api(api_full_name):
             continue
         [_, api_name, _] = api_full_name.split(Const.SEP)
         try:
