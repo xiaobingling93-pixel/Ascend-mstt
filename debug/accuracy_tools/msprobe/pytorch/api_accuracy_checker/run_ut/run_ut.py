@@ -556,6 +556,8 @@ def run_ut_command(args):
         logger.error(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
 
+    # 在线预检场景下，不需要外出输出api信息，forward_content, backward_content, real_data_path设置为None
+    # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
     forward_content, backward_content, real_data_path = None, None, None
     if args.api_info_file:
         check_link(args.api_info_file)
