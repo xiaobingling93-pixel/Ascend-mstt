@@ -23,7 +23,9 @@ INSTALL_REQUIRED = [
     "pyyaml",
     "rich",
     "tqdm",
-    "openpyxl"
+    "openpyxl",
+    "pyOpenSSL",
+    "matplotlib"
 ]
 
 EXCLUDE_PKGS = [
