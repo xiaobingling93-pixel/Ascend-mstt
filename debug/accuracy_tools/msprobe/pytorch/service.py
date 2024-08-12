@@ -235,6 +235,10 @@ class Service:
 
     def attl_send(self, api_data):
         logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
+        api_type, _, _ = api_data.name.split(Const.SEP)
+        if api_type in [Const.DISTRIBUTED]:
+            logger.info(f"api {api_data.name} is not supported, skip")
+            return
         if self.config.nfs_path:
             self.attl.upload(api_data)
         else:

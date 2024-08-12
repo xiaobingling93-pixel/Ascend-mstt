@@ -93,7 +93,7 @@ class ATTL:
         try:
             torch.save(buffer, io_buff)
         except Exception as e:
-            logger.info(f"{buffer.name} can not be saved, skip: {e}")
+            self.logger.info(f"{buffer.name} can not be saved, skip: {e}")
             return
         data = io_buff.getvalue()
         self.socket_manager.add_to_sending_queue(data, rank=rank, step=step)
