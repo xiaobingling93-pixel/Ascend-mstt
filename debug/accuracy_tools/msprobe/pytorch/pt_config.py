@@ -10,12 +10,27 @@ from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, 
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
+        self.online_run_ut = json_config.get("online_run_ut", False)
+        self.nfs_path = json_config.get("nfs_path", "")
+        self.host = json_config.get("host", "")
+        self.port = json_config.get("port", -1)
+        self.tls_path = json_config.get("tls_path", "")
         self.check_config()
         self._check_file_format()
+        self._check_tls_path_config()
 
     def _check_file_format(self):
         if self.file_format is not None and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
+
+    def _check_tls_path_config(self):
+        if self.tls_path:
+            if not os.path.exists(self.tls_path):
+                raise Exception("tls_path: %s does not exist" % self.tls_path)
+            if not os.path.exists(os.path.join(self.tls_path, "client.key")):
+                raise Exception("tls_path does not contain client.key")
+            if not os.path.exists(os.path.join(self.tls_path, "client.crt")):
+                raise Exception("tls_path does not contain client.crt")
 
 
 class StatisticsConfig(BaseConfig):
@@ -73,10 +88,10 @@ class RunUTConfig(BaseConfig):
         self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
         self.is_online = json_config.get("is_online", False)
         self.nfs_path = json_config.get("nfs_path", "")
-        self.is_benchmark_device = json_config.get("is_benchmark_device", True)
         self.host = json_config.get("host", "")
         self.port = json_config.get("port", -1)
         self.rank_list = json_config.get("rank_list", Const.DEFAULT_LIST)
+        self.tls_path = json_config.get("tls_path", "")
         self.check_run_ut_config()
 
     @classmethod
@@ -99,11 +114,22 @@ class RunUTConfig(BaseConfig):
         if nfs_path and not os.path.exists(nfs_path):
             raise Exception("nfs_path: %s does not exist" % nfs_path)
 
+    @classmethod
+    def check_tls_path_config(cls, tls_path):
+        if tls_path:
+            if not os.path.exists(tls_path):
+                raise Exception("tls_path: %s does not exist" % tls_path)
+            if not os.path.exists(os.path.join(tls_path, "server.key")):
+                raise Exception("tls_path does not contain server.key")
+            if not os.path.exists(os.path.join(tls_path, "server.crt")):
+                raise Exception("tls_path does not contain server.crt")
+
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
         RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
         RunUTConfig.check_error_data_path_config(self.error_data_path)
         RunUTConfig.check_nfs_path_config(self.nfs_path)
+        RunUTConfig.check_tls_path_config(self.tls_path)
 
 
 class GradToolConfig(BaseConfig):
