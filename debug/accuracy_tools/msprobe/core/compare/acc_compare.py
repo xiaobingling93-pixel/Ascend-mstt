@@ -116,7 +116,7 @@ class Comparator:
         err_msg = get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=error_file)
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
-        if npu_bench_name_list[0] != npu_bench_name_list[1]:
+        if npu_op_name != bench_op_name:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
