@@ -6,7 +6,7 @@ from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
 
 from msprobe.core.compare.utils import get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _save_cmp_result
@@ -182,7 +182,7 @@ class PTComparator (Comparator):
 
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
-        framework = "pytorch"
+        framework = Const.PT_FRAMEWORK
         summary_compare, md5_compare = task_dumppath_get(input_param, framework)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)

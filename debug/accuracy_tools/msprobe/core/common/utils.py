@@ -149,11 +149,11 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False, framework="mindspore"):
+def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False, framework=Const.MS_FRAMEWORK):
     if not (isinstance(input_param, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    if framework == "mindspore":
+    if framework == Const.MS_FRAMEWORK:
         check_file_or_directory_path(input_param.get("npu_path"), False)
         check_file_or_directory_path(input_param.get("bench_path"), False)
         check_file_or_directory_path(input_param.get("stack_path"), False)
@@ -165,7 +165,7 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    if framework == "mindspore":
+    if framework == Const.MS_FRAMEWORK:
         with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
              FileOpen(input_param.get("bench_path"), "r") as bench_json, \
              FileOpen(input_param.get("stack_path"), "r") as stack_json:
@@ -485,8 +485,8 @@ def md5_find(data):
     return False
 
 
-def task_dumppath_get(input_param, framework="mindspore"):
-    if framework == "mindspore":
+def task_dumppath_get(input_param, framework=Const.MS_FRAMEWORK):
+    if framework == Const.MS_FRAMEWORK:
         npu_path = input_param.get("npu_path", None)
         bench_path = input_param.get("bench_path", None)
     else:

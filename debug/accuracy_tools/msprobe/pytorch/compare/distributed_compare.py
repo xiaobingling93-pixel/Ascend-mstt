@@ -20,6 +20,7 @@ from msprobe.core.common.utils import CompareException, check_compare_param, \
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
 from msprobe.pytorch.compare.pt_compare import PTComparator
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
@@ -53,7 +54,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'is_print_compare_log': True
         }
         try:
-            framework = "pytorch"
+            framework = Const.PT_FRAMEWORK
             summary_compare, md5_compare = task_dumppath_get(dump_result_param, framework)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             create_directory(output_path)
