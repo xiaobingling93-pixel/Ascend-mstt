@@ -219,9 +219,7 @@ def run_api_offline(config, compare, api_name_set):
             continue
         [_, api_name, _] = api_full_name.split(Const.SEP)
         try:
-            if config.black_list and api_name in config.black_list:
-                continue
-            if config.white_list and api_name not in config.white_list:
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -265,11 +263,9 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-
-            if config.white_list:
-                [_, api_name, _] = api_full_name.split(Const.SEP)
-                if api_name not in set(config.white_list):
-                    continue
+            [_, api_name, _] = api_full_name.split(Const.SEP)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
             dispatcher.update_consume_queue(api_data)
 
     def shared_storage_communication_flow():
@@ -285,13 +281,31 @@ def run_api_online(config, compare):
             if flag_num == 0:
                 dispatcher.stop()
                 break
-            if isinstance(api_data, ApiData):
-                dispatcher.update_consume_queue(api_data)
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+            [_, api_name, _] = api_full_name.split(Const.SEP)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
+            dispatcher.update_consume_queue(api_data)
 
     if config.online_config.nfs_path:
         shared_storage_communication_flow()
     else:
         tcp_communication_flow()
+
+
+def blacklist_and_whitelist_filter(api_name, black_list, white_list):
+    """
+    run api(api_name) if api_name not in black_list and in white_list.
+    If api is both in black_list and black_list, black_list first.
+    return: False for exec api, True for not exec
+    """
+    if black_list and api_name in black_list:
+        return True
+    if white_list and api_name not in white_list:
+        return True
+    return False
 
 
 def is_unsupported_api(api_name):
