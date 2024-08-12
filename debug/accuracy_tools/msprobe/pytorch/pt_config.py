@@ -5,6 +5,8 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
 from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+from msprobe.core.grad_probe.constant import level_adp
+from msprobe.core.grad_probe.utils import check_numeral_list_ascend
 
 
 class TensorConfig(BaseConfig):
@@ -109,9 +111,16 @@ class RunUTConfig(BaseConfig):
 class GradToolConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.grad_level = json_config.get("grad_level")
-        self.param_list = json_config.get("param_list")
-        self.bounds = json_config.get("bounds")
+        self.grad_level = json_config.get("grad_level", "L1")
+        self.param_list = json_config.get("param_list", [])
+        self.bounds = json_config.get("bounds", [])
+    
+    def _check_config(self):
+        if self.grad_level not in level_adp.keys():
+            raise Exception(f"grad_level must be one of {level_adp.keys()}")
+        if not isinstance(self.param_list, list):
+            raise Exception(f"param_list must be a list")
+        check_numeral_list_ascend(self.bounds)
 
 
 def parse_task_config(task, json_config):
