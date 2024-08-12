@@ -22,6 +22,7 @@ from collections import defaultdict
 from mindspore.common.tensor import Tensor
 from mindspore import ops
 from mindspore import nn
+
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.common.utils import get_rank_if_initialized
@@ -30,7 +31,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs,\
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
@@ -93,7 +94,6 @@ class Service:
 
         return wrap_forward_hook, wrap_backward_hook
 
-
     def wrap_primitive(self, origin_func, primitive_name):
         service_instance = self
 
@@ -118,12 +118,8 @@ class Service:
                         captured_grads.clear()
 
                 except Exception as exception:
-                    raise Exception(
-                        "This is a primitive op {hook_type}_backward dump error: {exception},"
-                        " updated_primitive_name: {updated_primitive_name}".format(
-                            hook_type=hook_type, exception=exception, backward_primitive_name=backward_primitive_name
-                        )
-                    ) from exception
+                    raise Exception(f"This is a primitive op {hook_type}_backward dump error: {exception},"
+                                    f" updated_primitive_name: {updated_primitive_name}") from exception
 
             return backward_hook
 
@@ -222,7 +218,6 @@ class Service:
             NewPrimitive = type('NewPrimitive', (primitive.__class__,),
                                 {'__call__': self.wrap_primitive(primitive.__call__, pname)})
             primitive.__class__ = NewPrimitive
-
 
     def step(self):
         self.current_iter += 1
