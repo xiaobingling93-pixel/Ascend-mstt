@@ -27,10 +27,10 @@ class Config:
             'precision': int,
             'is_online': bool,
             'nfs_path': str,
-            'is_benchmark_device': bool,
             'host': str,
             'port': int,
-            'rank_list': list
+            'rank_list': list,
+            'tls_path': str
         }
         if key not in validators:
             raise ValueError(f"{key} must be one of {validators.keys()}")
@@ -46,6 +46,8 @@ class Config:
             RunUTConfig.check_error_data_path_config(value)
         if key == 'nfs_path':
             RunUTConfig.check_nfs_path_config(value)
+        if key == 'tls_path':
+            RunUTConfig.check_tls_path_config(value)
         return value
 
 
