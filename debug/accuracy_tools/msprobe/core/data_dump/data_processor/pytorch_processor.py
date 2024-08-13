@@ -1,3 +1,4 @@
+import copy
 import os
 import zlib
 from dataclasses import asdict
@@ -5,7 +6,6 @@ from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
@@ -85,7 +85,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             tensor_stat.mean = torch._C._VariableFunctionsClass.mean(data_clone).item()
             tensor_stat.norm = torch._C._VariableFunctionsClass.norm(data_clone).item()
         return tensor_stat
-    
+
     @staticmethod
     def handle_tensor_extremum_nan_inf(tensor, operator):
         data_clone = tensor.detach()
@@ -101,7 +101,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             data_no_nan = data_clone[~data_nan]
             return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
-    
+
     @staticmethod
     def _analyze_builtin(arg):
         single_arg = {}
@@ -117,7 +117,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             single_arg.update({"type": type(arg).__name__})
             single_arg.update({"value": arg})
         return single_arg
-    
+
     @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
@@ -188,7 +188,8 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         self.bits_for_overflow = 8
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
-    
+        self.forward_inplace_inputs = None
+
     @property
     def is_terminated(self):
         if self.overflow_nums == -1:
@@ -197,11 +198,23 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
-    
+
     @staticmethod
     def overflow_debug_mode_enable():
         overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
         return overflow_mode == Const.ENV_ENABLE
+
+    def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+        self.forward_inplace_inputs = copy.deepcopy(module_input_output)
+        return None
+
+    def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+        module_input_output.output = module_input_output.concat_args_and_kwargs()
+        module_input_output.args = self.forward_inplace_inputs.args
+        module_input_output.kwargs = self.forward_inplace_inputs.kwargs
+        # release memory used by forward inputs
+        self.forward_inplace_inputs = None
+        return self.analyze_forward(name, None, module_input_output)
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -218,8 +231,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
     def maybe_save_overflow_data_and_check_overflow_times(self):
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                torch.save(tensor, file_path)
-                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+                save_pt(tensor, file_path)
             self.real_overflow_nums += 1
         self.cached_tensors_and_file_paths = {}
 
