@@ -60,6 +60,6 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
-        msComparator = MSComparator()
-        msComparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+        ms_comparator = MSComparator()
+        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
                      md5_compare=md5_compare, **kwargs)
