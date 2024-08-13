@@ -1,19 +1,17 @@
 import json
 import os.path
 import torch
-
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
-from msprobe.core.common.const import FileCheckConst
-
+from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.utils import get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _save_cmp_result
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.acc_compare import Comparator 
-from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import FileCheckException
 
 
 class PTComparator (Comparator):
@@ -48,12 +46,12 @@ class PTComparator (Comparator):
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
 
         cr = ComparisonResult(
-            cos_result=cos_result,
-            max_err_result=max_err_result,
+            cos_result = cos_result,
+            max_err_result = max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs=err_mess,
-            one_thousand_err_ratio_result=one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result=five_thousand_err_ratio_result
+            err_msgs = err_mess,
+            one_thousand_err_ratio_result = one_thousand_err_ratio_result,
+            five_thousand_err_ratio_result = five_thousand_err_ratio_result
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)           
@@ -93,7 +91,7 @@ class PTComparator (Comparator):
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
-                bench_merge_list =self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare,md5_compare)
+                bench_merge_list = self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare,md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -166,9 +164,9 @@ class PTComparator (Comparator):
         check_file_not_exists(file_path)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         
-        with FileOpen(input_parma.get("npu_path"), "r") as npu_json, \
-                FileOpen(input_parma.get("bench_path"), "r") as bench_json, \
-                FileOpen(input_parma.get("stack_path"), "r") as stack_json:
+        with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
+                FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
+                FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
             result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
                                         summary_compare, md5_compare)
 
@@ -183,14 +181,14 @@ class PTComparator (Comparator):
 
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_param)
+        summary_compare, md5_compare = task_dumppath_get(input_param, framework=Const.PT_FRAMEWORK)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
-        check_compare_param(input_param, output_path, summary_compare, md5_compare)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare, framework=Const.PT_FRAMEWORK)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    ptComparator = PTComparator()
-    ptComparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+    pt_comparator = PTComparator()
+    pt_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)

@@ -142,7 +142,7 @@ def op_aggregate(op, tensorlist):
         return max(tensorlist)
     if op == 'norm':
         return sum(tensorlist)
-    if op == 'zeros': # TODO wrong
+    if op == 'zeros':
         return sum(tensorlist) / len(tensorlist) if len(tensorlist) != 0 else 0
     return torch.nan
 

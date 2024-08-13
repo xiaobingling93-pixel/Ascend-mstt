@@ -20,6 +20,7 @@ from msprobe.core.common.utils import CompareException, check_compare_param, \
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
 from msprobe.pytorch.compare.pt_compare import PTComparator
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
@@ -47,19 +48,19 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
-            'npu_path': npu_path,
-            'bench_path': bench_path,
-            'stack_path': stack_path,
+            'npu_json_path': npu_path,
+            'bench_json_path': bench_path,
+            'stack_json_path': stack_path,
             'is_print_compare_log': True
         }
         try:
-            summary_compare, md5_compare = task_dumppath_get(dump_result_param)
+            summary_compare, md5_compare = task_dumppath_get(dump_result_param, framework=Const.PT_FRAMEWORK)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
             create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, md5_compare=md5_compare)
+            check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, md5_compare=md5_compare, framework=Const.PT_FRAMEWORK)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
-        ptComparator=PTComparator()
-        ptComparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+        pt_comparator = PTComparator()
+        pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
                      md5_compare=md5_compare, **kwargs)

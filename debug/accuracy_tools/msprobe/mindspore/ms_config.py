@@ -5,6 +5,8 @@ from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
+from msprobe.core.grad_probe.constant import level_adp
+from msprobe.core.grad_probe.utils import check_numeral_list_ascend
 
 
 class TensorConfig(BaseConfig):
@@ -63,7 +65,7 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.fuzz_device and self.fuzz_device not in FreeBenchmarkConst.DEVICE_LIST:
             raise Exception("fuzz_device must be npu or empty")
         if self.pert_mode and self.pert_mode not in FreeBenchmarkConst.PERT_TYPE_LIST:
-            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise , no_change or empty")
+            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise, no_change or empty")
         if self.handler_type and self.handler_type not in FreeBenchmarkConst.HANDLER_TYPE_LIST:
             raise Exception("handler_type must be check, fix or empty")
         if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
@@ -73,12 +75,21 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "
                            "are not supported for mindspore free benchmark task.")
+
+
 class GradProbeConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self.grad_level = json_config.get("grad_level")
-        self.param_list = json_config.get("param_list")
-        self.bounds = json_config.get("bounds")
+        self.grad_level = json_config.get("grad_level", "L1")
+        self.param_list = json_config.get("param_list", [])
+        self.bounds = json_config.get("bounds", [])
+    
+    def _check_config(self):
+        if self.grad_level not in level_adp.keys():
+            raise Exception(f"grad_level must be one of {level_adp.keys()}")
+        if not isinstance(self.param_list, list):
+            raise Exception(f"param_list must be a list")
+        check_numeral_list_ascend(self.bounds)
 
 
 TaskDict = {
