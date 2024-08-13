@@ -43,32 +43,32 @@ def main():
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
-    multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
-                                         help='Number of splits for parallel processing. Range: 1-64')
-
     _compare_parser(compare_cmd_parser)
+    is_torch_available=is_module_available("torch")
+    if is_torch_available:
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
+        from msprobe.pytorch.parse_tool.cli import parse as cli_parse
+        from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
+        from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
+            _api_precision_compare_command
+        from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
+            _run_overflow_check_command
+        from msprobe.pytorch.compare.compare_cli import compare_cli
+        _run_ut_parser(run_ut_cmd_parser)
+        _run_ut_parser(multi_run_ut_cmd_parser)
+        multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
+                                        help='Number of splits for parallel processing. Range: 1-64')
+        _api_precision_compare_parser(api_precision_compare_cmd_parser)
+        _run_overflow_check_parser(run_overflow_check_cmd_parser)
     
     if len(sys.argv) == 1:
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == "pytorch":
-        if is_module_available("torch"):
-            from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
-            from msprobe.pytorch.parse_tool.cli import parse as cli_parse
-            from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
-            from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_parser, \
-                _api_precision_compare_command
-            from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
-                _run_overflow_check_command
-            from msprobe.pytorch.compare.compare_cli import compare_cli
-            _run_ut_parser(run_ut_cmd_parser)
-            _run_ut_parser(multi_run_ut_cmd_parser)
-            _api_precision_compare_parser(api_precision_compare_cmd_parser)
-            _run_overflow_check_parser(run_overflow_check_cmd_parser)
-        else:
-            logger.error("Pytorch does not exit, please install pytorch library")
-            raise Exception()
+        if not is_torch_available:
+            logger.error("PyTorch does not exit, please install PyTorch library")
+            raise Exception("PyTorch does not exit, please install PyTorch library")
         if sys.argv[3] == "run_ut":
             run_ut_command(args)
         elif sys.argv[3] == "parse":
@@ -86,8 +86,8 @@ def main():
         if is_module_available("mindspore"):
             from msprobe.mindspore.compare.compare_cli import compare_cli_ms
         else:
-            logger.error("Mindspore does not exit, please install mindspore library")
-            raise Exception()
+            logger.error("MindSpore does not exit, please install MindSpore library")
+            raise Exception("MindSpore does not exit, please install MindSpore library")
         if sys.argv[3] == "compare":
             compare_cli_ms(args)
 

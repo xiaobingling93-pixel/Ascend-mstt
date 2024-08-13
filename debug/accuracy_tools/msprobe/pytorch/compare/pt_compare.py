@@ -1,19 +1,17 @@
 import json
 import os.path
 import torch
-
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.utils import check_compare_param, add_time_with_xlsx, CompareException, \
      check_file_not_exists, check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import FileChecker, FileOpen, create_directory
 from msprobe.core.common.const import FileCheckConst, Const
-
+from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.utils import get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _save_cmp_result
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.acc_compare import Comparator 
-from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import FileCheckException
 
 
 class PTComparator (Comparator):
@@ -47,12 +45,12 @@ class PTComparator (Comparator):
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
 
         cr = ComparisonResult(
-            cos_result=cos_result,
-            max_err_result=max_err_result,
+            cos_result = cos_result,
+            max_err_result = max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs=err_mess,
-            one_thousand_err_ratio_result=one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result=five_thousand_err_ratio_result
+            err_msgs = err_mess,
+            one_thousand_err_ratio_result = one_thousand_err_ratio_result,
+            five_thousand_err_ratio_result = five_thousand_err_ratio_result
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)           
@@ -92,7 +90,7 @@ class PTComparator (Comparator):
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
-                bench_merge_list =self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare,md5_compare)
+                bench_merge_list = self.gen_merge_list(bench_json_data,op_name_bench,stack_json_data,summary_compare,md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:

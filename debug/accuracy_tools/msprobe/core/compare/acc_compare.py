@@ -4,7 +4,7 @@ from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.compare.utils import read_op, merge_tensor,CompareException
+from msprobe.core.compare.utils import read_op, merge_tensor, CompareException
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process
 from msprobe.core.common.log import logger
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op
@@ -59,7 +59,7 @@ class Comparator:
         b_op_name = bench_dict["op_name"]
         graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
         
-        frame_name=getattr(self,"frame_name")
+        frame_name = getattr(self,"frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
             if graph_mode:
@@ -74,7 +74,6 @@ class Comparator:
             logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
             is_match = False
         return is_match and struct_match
-    
     
     def match_op(self, npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
@@ -96,7 +95,7 @@ class Comparator:
             error_flag = True
         else:
             try:
-                read_npy_data=getattr(self,"read_npy_data")
+                read_npy_data = getattr(self,"read_npy_data")
                 n_value = read_npy_data(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
                 b_value = read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
             except IOError as error:
@@ -123,7 +122,7 @@ class Comparator:
     
     def _do_multi_process(self,input_parma, result_df):
         try:
-            compare_ops=getattr(self,"compare_ops")
+            compare_ops = getattr(self,"compare_ops")
             result_df = _handle_multi_process(compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
             return result_df
         except ValueError as e:

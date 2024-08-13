@@ -36,14 +36,20 @@ from msprobe.core.common.file_check import FileOpen, FileChecker, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list', 
-                                         'black_list', 'error_data_path'])
+                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
+                                         'black_list', 'error_data_path', 'online_config'])
+
+OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
+
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 not_raise_dtype_set = {'type_as'}
@@ -140,7 +146,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
                 arg_in = deal_detach(raise_bench_data_dtype(
-                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()     
+                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()
                 temp_arg_in = arg_in * 1
                 arg_in = temp_arg_in.type_as(arg_in)
                 arg_in.retain_grad()
@@ -187,21 +193,33 @@ def run_ut(config):
     logger.info(f"UT task details will be saved in {config.details_csv_path}")
     if config.save_error_data:
         logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
-    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
-    with FileOpen(config.result_csv_path, 'r') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)
-        api_name_set = {row[0] for row in csv_reader}
+    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
+
+    if config.online_config.is_online:
+        run_api_online(config, compare)
+    else:
+        with FileOpen(config.result_csv_path, 'r') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader)
+            api_name_set = {row[0] for row in csv_reader}
+        run_api_offline(config, compare, api_name_set)
+    for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
+        change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        logger.info(f"UT task result csv is saved in {result_csv_path}")
+        logger.info(f"UT task details csv is saved in {details_csv_path}")
+    compare.print_pretest_result()
+
+
+def run_api_offline(config, compare, api_name_set):
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
-        if is_unsupported_api(api_full_name):  # TODO run_ut does not support to the npu fusion api and distributed api
+        if is_unsupported_api(api_full_name):
             continue
         [_, api_name, _] = api_full_name.split(Const.SEP)
         try:
-            if config.black_list and api_name in config.black_list:
-                continue
-            if config.white_list and api_name not in config.white_list:
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -223,9 +241,71 @@ def run_ut(config):
             else:
                 torch.npu.empty_cache()
             gc.collect()
-    change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    compare.print_pretest_result()
+
+
+def run_api_online(config, compare):
+    attl = init_attl(config.online_config)
+    dispatcher = ConsumerDispatcher(compare=compare)
+    dispatcher.start(handle_func=run_torch_api_online, config=config)
+
+    def tcp_communication_flow():
+        while True:
+            api_data = attl.recv()
+            if api_data == 'STOP_':
+                continue
+            if api_data == 'KILL_':
+                time.sleep(1)
+                logger.info("==========接收到STOP信号==========")
+                dispatcher.stop()
+                attl.stop_serve()
+                time.sleep(1)
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+            [_, api_name, _] = api_full_name.split(Const.SEP)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
+            dispatcher.update_consume_queue(api_data)
+
+    def shared_storage_communication_flow():
+        flag_num = -1
+        while True:
+            api_data = attl.download()
+            if api_data == "start":
+                if flag_num == -1:
+                    flag_num += 1
+                flag_num += 1
+            if api_data == "end":
+                flag_num -= 1
+            if flag_num == 0:
+                dispatcher.stop()
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+            [_, api_name, _] = api_full_name.split(Const.SEP)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
+            dispatcher.update_consume_queue(api_data)
+
+    if config.online_config.nfs_path:
+        shared_storage_communication_flow()
+    else:
+        tcp_communication_flow()
+
+
+def blacklist_and_whitelist_filter(api_name, black_list, white_list):
+    """
+    run api(api_name) if api_name not in black_list and in white_list.
+    If api is both in black_list and black_list, black_list first.
+    return: False for exec api, True for not exec
+    """
+    if black_list and api_name in black_list:
+        return True
+    if white_list and api_name not in white_list:
+        return True
+    return False
 
 
 def is_unsupported_api(api_name):
@@ -294,6 +374,20 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
+def run_torch_api_online(api_full_name, api_data, backward_content):
+    in_fwd_data_list = []
+    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
+    in_fwd_data_list.append(args)
+    in_fwd_data_list.append(kwargs)
+    if kwargs.get("device"):
+        del kwargs["device"]
+
+    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = move2device_exec(device_out, "cpu")
+    return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
+
+
 def get_api_info(api_info_dict, api_name, real_data_path):
     convert_type, api_info_dict = api_info_preprocess(api_name, api_info_dict)
     need_grad = True
@@ -357,11 +451,21 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
+def init_attl(config):
+    """config: OnlineConfig"""
+    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
+                                  connect_ip=config.host,
+                                  connect_port=config.port,
+                                  nfs_path=config.nfs_path,
+                                  tls_path=config.tls_path))
+    return attl
+
+
 def _run_ut_parser(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", default="", type=str,
-                        help="<Required> The api param tool result file: generate from api param tool, "
+                        help="<Optional> The api param tool result file: generate from api param tool, "
                              "a json file.",
-                        required=True)
+                        required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The ut task result out path.",
                         required=False)
@@ -451,20 +555,26 @@ def run_ut_command(args):
     except Exception as error:
         logger.error(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
-    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+
+    # 在线预检场景下，不需要外出输出api信息，forward_content, backward_content, real_data_path设置为None
+    # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
+    forward_content, backward_content, real_data_path = None, None, None
+    if args.api_info_file:
+        check_link(args.api_info_file)
+        api_info = os.path.realpath(args.api_info_file)
+        check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+        forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
+        if args.filter_api:
+            logger.info("Start filtering the api in the forward_input_file.")
+            forward_content = preprocess_forward_content(forward_content)
+            logger.info("Finish filtering the api in the forward_input_file.")
+
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
-    if args.filter_api:
-        logger.info("Start filtering the api in the forward_input_file.")
-        forward_content = preprocess_forward_content(forward_content)
-        logger.info("Finish filtering the api in the forward_input_file.")
 
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
@@ -474,24 +584,39 @@ def run_ut_command(args):
     white_list = msCheckerConfig.white_list
     black_list = msCheckerConfig.black_list
     error_data_path = msCheckerConfig.error_data_path
+    is_online = msCheckerConfig.is_online
+    nfs_path = msCheckerConfig.nfs_path
+    host = msCheckerConfig.host
+    port = msCheckerConfig.port
+    rank_list = msCheckerConfig.rank_list
+    tls_path = msCheckerConfig.tls_path
     if args.config_path:
         _, task_config = parse_json_config(args.config_path, Const.RUN_UT)
         white_list = task_config.white_list
         black_list = task_config.black_list
         error_data_path = task_config.error_data_path
+        is_online = task_config.is_online
+        nfs_path = task_config.nfs_path
+        host = task_config.host
+        port = task_config.port
+        rank_list = task_config.rank_list
+        tls_path = task_config.tls_path
+
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
+    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path)
+                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
+                                online_config)
     run_ut(run_ut_config)
 
 
 class UtDataInfo:
-    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, 
+    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list,
                  backward_message, rank=0):
         self.bench_grad = bench_grad
         self.device_grad = device_grad

@@ -33,15 +33,29 @@ class Comparator:
     COLUMN_BACKWARD_SUCCESS = "Backward Test Success"
     COLUMN_STACK_INFO = "Traceback callstack info"
 
-    def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, stack_info_json_path=None):
-        self.save_path = result_csv_path
-        self.detail_save_path = details_csv_path
-        if not is_continue_run_ut and not os.path.exists(self.save_path) and not os.path.exists(self.detail_save_path):
+    def __init__(self, result_csv_path, details_csv_path, is_continue_run_ut, stack_info_json_path=None, config=None):
+        self.save_path_str = result_csv_path
+        self.detail_save_path_str = details_csv_path
+        self.save_path_list = [result_csv_path]
+        self.detail_save_path_list = [details_csv_path]
+
+        if config and config.online_config.is_online:
+            self.save_path_str = result_csv_path.replace(".csv", "_rank{}.csv")
+            self.detail_save_path_str = details_csv_path.replace(".csv", "_rank{}.csv")
+            self.save_path_list = [self.save_path_str.format(rank) for rank in config.online_config.rank_list]
+            self.detail_save_path_list = \
+                [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
+
+        if not is_continue_run_ut:
             self.write_csv_title()
         if stack_info_json_path:
             self.stack_info = get_json_contents(stack_info_json_path)
         else:
             self.stack_info = None
+
+    @staticmethod
+    def get_path_from_rank(rank, path_list, path_pattern):
+        return path_list[-1] if len(path_list) == 1 else path_pattern.format(rank)
 
     @staticmethod
     def print_pretest_result():
@@ -86,10 +100,11 @@ class Comparator:
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS,
                               self.COLUMN_BACKWARD_SUCCESS, "Message"]]
-        if not os.path.exists(self.save_path):
-            write_csv(summary_test_rows, self.save_path)
-        if not os.path.exists(self.detail_save_path):
-            write_csv(DETAIL_TEST_ROWS, self.detail_save_path)
+        for save_path, detail_save_path in zip(self.save_path_list, self.detail_save_path_list):
+            if not os.path.exists(save_path):
+                write_csv(summary_test_rows, save_path)
+            if not os.path.exists(detail_save_path):
+                write_csv(DETAIL_TEST_ROWS, detail_save_path)
 
     def write_summary_csv(self, test_result):
         test_rows = []
@@ -104,7 +119,8 @@ class Comparator:
             stack_info = "\n".join(self.stack_info[name])
             df_row.append(stack_info)
         test_rows.append(df_row)
-        write_csv(test_rows, self.save_path)
+        save_path = self.get_path_from_rank(test_result[-1], self.save_path_list, self.save_path_str)
+        write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
         test_rows = []
@@ -125,7 +141,10 @@ class Comparator:
                                 if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
 
-        write_csv(test_rows, self.detail_save_path)
+        detail_save_path = self.get_path_from_rank(test_result[-1],
+                                                   self.detail_save_path_list,
+                                                   self.detail_save_path_str)
+        write_csv(test_rows, detail_save_path)
 
     def record_results(self, args):
         self.write_summary_csv(args)

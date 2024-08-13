@@ -39,10 +39,12 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
                         f"is_fwd_success: {is_fwd_success}, "
                         f"is_bwd_success: {is_bwd_success}")
         except Exception as err:
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            [api_type, api_name, _] = api_full_name.split(Const.SEP)
             if "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
+            elif api_type in [Const.DISTRIBUTED]:
+                logger.info(f"{api_full_name} is not supported for run ut. SKIP.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: {str(err)}")
 

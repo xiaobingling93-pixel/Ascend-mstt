@@ -157,7 +157,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
-        
+
     @property
     def is_terminated(self):
         if self.overflow_nums == -1:
@@ -166,7 +166,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
             logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
-    
+
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
         api_info_struct = super().analyze_forward(name, module, module_input_output)
