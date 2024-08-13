@@ -18,13 +18,15 @@ import logging
 import os
 import random
 import stat
+import csv
+import json
 import torch
 import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.file_check import FileCheckConst, change_mode
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
+from msprobe.core.common.file_check import FileCheckConst, change_mode, FileOpen
 
 
 try:
@@ -294,5 +296,23 @@ def _create_logger(level=logging.INFO):
     return logger_
 
 
+def get_json_contents(file_path):
+    ops = get_file_content_bytes(file_path)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        logger.error('Json file %s, content is not a dictionary!' % file_path)
+        raise CompareException(CompareException.INVALID_FILE_ERROR)
+    return json_obj
+
+
+def get_file_content_bytes(file):
+    with FileOpen(file, 'rb') as file_handle:
+        return file_handle.read()
+
+    
 log_level = logging.DEBUG if os.environ.get("API_ACCURACY_CHECK_LOG_LEVEL") == "1" else logging.INFO
 logger = _create_logger(log_level)
