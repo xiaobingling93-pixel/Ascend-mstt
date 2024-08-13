@@ -97,8 +97,13 @@ class Comparator:
         else:
             try:
                 read_npy_data = getattr(self, "read_npy_data")
-                n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
-                b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
+                frame_name = getattr(self, "frame_name")
+                if frame_name == "MSComparator":
+                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
+                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                else:
+                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
+                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
             except IOError as error:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
