@@ -14,10 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-import json
 import os
 import re
-import csv
 
 import torch
 
@@ -36,12 +34,6 @@ from msprobe.core.common.utils import CompareException
 
 class DumpException(CompareException):
     pass
-
-
-def write_csv(data, filepath):
-    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
 
 
 def check_object_type(check_object, allow_type):
@@ -91,24 +83,6 @@ def check_file_or_directory_path(path, isdir=False):
         logger.error(
             'The path {} does not have permission to read. Please check the path permission'.format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file %s, content is not a dictionary!' % file_path)
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
 
 
 class SoftlinkCheckException(Exception):
