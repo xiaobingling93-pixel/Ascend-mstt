@@ -25,6 +25,7 @@ INSTALL_REQUIRED = [
     "tqdm",
     "openpyxl",
     "pyOpenSSL",
+    "twisted",
     "matplotlib"
 ]
 
