@@ -69,34 +69,34 @@ def read_op(op_data, op_name):
     if Const.FORWARD in op_name:
         if Const.INPUT in op_data:
             input_item = op_data[Const.INPUT]
-            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
         if Const.INPUT_KWARGS in op_data:
             kwargs_item = op_data[Const.INPUT_KWARGS]
             if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
-                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '_input', None)
+                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '.input', None)
                 op_parsed_list += kwarg_parsed_list
                 kwarg_parsed_list.clear()
             elif kwargs_item:
                 for kwarg in kwargs_item:
-                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '_input.' + kwarg, None)
+                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '.input.' + kwarg, None)
                     op_parsed_list += kwarg_parsed_list
                     kwarg_parsed_list.clear()
         if Const.OUTPUT in op_data:
             output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     if Const.BACKWARD in op_name:
         if Const.INPUT in op_data:
             input_item = op_data[Const.INPUT]
-            input_parsed_list = op_item_parse(input_item, op_name + '_input', None)
+            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
             op_parsed_list = input_parsed_list.copy()
             input_parsed_list.clear()
         if Const.OUTPUT in op_data:
             output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '_output', None)
+            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
             op_parsed_list += output_parsed_list
             output_parsed_list.clear()
     return op_parsed_list

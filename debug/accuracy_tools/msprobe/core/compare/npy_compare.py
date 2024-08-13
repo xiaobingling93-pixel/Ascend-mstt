@@ -5,7 +5,7 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
 
-def  handle_inf_nan(n_value, b_value):
+def handle_inf_nan(n_value, b_value):
     """处理inf和nan的数据"""
     n_inf = np.isinf(n_value)
     b_inf = np.isinf(b_value)
@@ -54,7 +54,7 @@ def reshape_value(n_value, b_value):
     return n_value, b_value
 
 
-def get_error_message(n_value, b_value, op_name, error_flag, error_file=None):
+def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None):
     """获取异常情况的错误信息"""
     if error_flag:
         if n_value == CompareConst.READ_NONE:
@@ -71,7 +71,7 @@ def get_error_message(n_value, b_value, op_name, error_flag, error_file=None):
         if not n_value.shape:
             return "This is type of scalar data, can not compare."
         if n_value.dtype != b_value.dtype:
-            logger.warning("Dtype of NPU and bench Tensor do not match: {}".format(op_name))
+            logger.warning("Dtype of NPU and bench Tensor do not match: {}".format(npu_op_name))
             return "Dtype of NPU and bench Tensor do not match."
     return ""
 
