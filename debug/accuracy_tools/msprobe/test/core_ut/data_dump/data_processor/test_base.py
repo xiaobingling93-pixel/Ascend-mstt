@@ -58,7 +58,7 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.config = MagicMock()
         self.data_writer = MagicMock()
         self.processor = BaseDataProcessor(self.config, self.data_writer)
-
+        self.data_writer.dump_tensor_data_dir = "./dump_data"
         self.processor.current_api_or_module_name = "test_api"
         self.processor.api_data_category = "input"
     
@@ -109,7 +109,6 @@ class TestBaseDataProcessor(unittest.TestCase):
     def test_recursive_apply_transform_with_warning(self, mock_logger):
         transform = lambda x, _: x * 2
         BaseDataProcessor.recursive_apply_transform({1, 2, 3}, transform)
-        print(mock_logger.call_args_list)
         mock_logger.assert_called_with(f"Data type {type({1, 2, 3})} is not supported.")
 
     def test_if_return_forward_new_output(self):
@@ -204,7 +203,3 @@ class TestBaseDataProcessor(unittest.TestCase):
         expected_file_name = "test_api.input.suffix.pt"
         expected_file_path = os.path.join(self.data_writer.dump_tensor_data_dir, expected_file_name)
         self.assertEqual(result, (expected_file_name, expected_file_path))
-
-
-if __name__ == '__main__':
-    unittest.main()
