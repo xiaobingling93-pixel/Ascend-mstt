@@ -132,8 +132,8 @@ class TrainerMon:
         cur_time = datetime.now().strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
         if dist.is_initialized():
+            cur_path = os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}")
             if (dist.get_rank() in self.module_rank_list) or len(self.module_rank_list) == 0:
-                cur_path = os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}")
                 check_path_length(cur_path)
                 check_path_pattern_valid(cur_path)
                 self.summary_writer = SummaryWriterWithAD(
@@ -145,7 +145,7 @@ class TrainerMon:
             self.summary_writer = SummaryWriterWithAD(cur_path, self.alert_rules, unique_id, anomaly_inform)
 
         full_path = os.path.realpath(cur_path)
-        change_mode(full_path,FileCheckConst.DATA_FILE_AUTHORITY)
+        change_mode(full_path,FileCheckConst.DATA_DIR_AUTHORITY)
 
         # A HeatmapVisualizer instance is associated with an image
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
