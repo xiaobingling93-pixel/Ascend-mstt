@@ -5,7 +5,7 @@ import unittest
 import torch
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents
+from msprobe.pytorch.common.utils import get_json_contents
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 forward_file = os.path.join(base_dir, "forward.json")
