@@ -6,12 +6,17 @@ from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate, AtenOPPacketTe
 def hook(name):
     def forward_pre_hook(nope, input, kwargs):
             return input, kwargs
+
     def forward_hook(nope, input, kwargs, result):
             return 2
+
     def backward_hook():
             pass
+
+    def forward_hook_torch_version_below_2():
+        pass
     
-    return forward_pre_hook, forward_hook, backward_hook
+    return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
 
 
 

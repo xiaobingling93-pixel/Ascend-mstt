@@ -1,7 +1,10 @@
 import functools
 import os
+import time
 from pathlib import Path
 
+from collections import namedtuple
+import torch
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_check import FileChecker, check_path_before_create
@@ -14,6 +17,10 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL, ApiData
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+
+HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
 
 class Service:
@@ -27,6 +34,7 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
+        self.attl = None
 
     @staticmethod
     def forward_backward_dump_end():
@@ -41,6 +49,8 @@ class Service:
 
             if not self.switch:
                 return args, kwargs
+            if self.config.online_run_ut:
+                return None, None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
@@ -53,12 +63,23 @@ class Service:
 
             if not self.switch:
                 return None
+
+            if self.config.online_run_ut:
+                if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
+                    return None
+                api_data = ApiData(name[:-1], args, kwargs, output, self.current_iter, self.current_rank)
+                self.attl_send(api_data)
+                return None
+
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
                 self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
             return output
+
+        def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
+            return forward_hook(api_or_module_name, module, args, {}, output)
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
@@ -67,6 +88,14 @@ class Service:
 
             if not self.switch:
                 return
+
+            if self.config.online_run_ut:
+                if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
+                    return
+                api_data = ApiData(name[:-1], grad_input, {}, grad_output, self.current_iter, self.current_rank)
+                self.attl_send(api_data)
+                return
+
             if self.data_collector:
                 # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
@@ -75,10 +104,11 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
-        forward_hook = functools.partial(forward_hook, forward_name_template)
-        backward_hook = functools.partial(backward_hook, backward_name_template)
-        return pre_forward_hook, forward_hook, backward_hook
+        pre_forward_hook_fn = functools.partial(pre_hook, forward_name_template)
+        forward_hook_fn = functools.partial(forward_hook, forward_name_template)
+        backward_hook_fn = functools.partial(backward_hook, backward_name_template)
+        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
+        return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
     def step(self):
         self.current_iter += 1
@@ -90,6 +120,9 @@ class Service:
     def start(self, model, api_origin=False):
         self.model = model
         if self.config.step and self.current_iter > max(self.config.step):
+            if self.config.online_run_ut:
+                # send stop signal if online_run_ut
+                self.attl_stop()
             self.stop()
             raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
         if self.config.step and self.current_iter not in self.config.step:
@@ -99,6 +132,7 @@ class Service:
                 self.current_rank = get_rank_if_initialized()
             except DistributedNotInitializedError:
                 self.current_rank = None
+            self.attl_init()
 
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
@@ -108,7 +142,7 @@ class Service:
             api_register.api_modularity()
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self.config.level != "L2":
+        if self.config.level != "L2" and not self.config.online_run_ut:
             self.create_dirs()
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
@@ -120,6 +154,8 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        if self.config.online_run_ut:
+            return
         self.data_collector.write_json()
 
     def create_dirs(self):
@@ -158,18 +194,25 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                pre_forward_hook, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
-                module.register_forward_hook(forward_hook, with_kwargs=True)
+                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
+                    = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                if torch_version_above_or_equal_2:
+                    module.register_forward_hook(forward_hook, with_kwargs=True)
+                else:
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    module.register_forward_hook(forward_hook_torch_version_below_2)
                 module.register_full_backward_hook(backward_hook)
 
                 module.register_forward_pre_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 module.register_forward_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                module.register_full_backward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                module.register_full_backward_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                if torch_version_above_or_equal_2:
+                    module.register_full_backward_pre_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
@@ -177,3 +220,33 @@ class Service:
 
         if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
             remove_dropout()
+
+    def attl_init(self):
+        if self.config.online_run_ut:
+            attl_config = ATTLConfig(is_benchmark_device=False,
+                                     connect_ip=self.config.host,
+                                     connect_port=self.config.port,
+                                     nfs_path=self.config.nfs_path,
+                                     tls_path=self.config.tls_path)
+            need_dump = len(self.config.rank) == 0 or self.current_rank in self.config.rank
+            self.attl = ATTL('npu', attl_config, need_dump=need_dump)
+            if self.config.nfs_path:
+                self.attl.upload("start")
+
+    def attl_send(self, api_data):
+        logger.info(f"tools is dumping api: {api_data.name}, rank: {self.current_rank}")
+        api_type, _, _ = api_data.name.split(Const.SEP)
+        if api_type in [Const.DISTRIBUTED]:
+            logger.info(f"api {api_data.name} is not supported, skip")
+            return
+        if self.config.nfs_path:
+            self.attl.upload(api_data)
+        else:
+            self.attl.send(api_data)
+
+    def attl_stop(self):
+        if self.config.nfs_path:
+            self.attl.upload("end")
+        elif self.attl.socket_manager is not None:
+            logger.info(f"pid: {os.getpid()} finished, start send STOP signal.")
+            self.attl.socket_manager.send_stop_signal()

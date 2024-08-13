@@ -48,7 +48,7 @@ class BitNoiseLayer(NpuBaseLayer):
             return type(tensor_obj)([self.add_bit_noise(value) for value in tensor_obj])
         return tensor_obj
 
-    def handle(self, params: DataParams) -> torch.Any:
+    def handle(self, params: DataParams):
         """
         对输入添加扰动并返回
         """

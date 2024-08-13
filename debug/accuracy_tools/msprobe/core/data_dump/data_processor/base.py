@@ -87,6 +87,10 @@ class BaseDataProcessor:
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
+    
+    @property
+    def is_terminated(self):
+        return False
 
     @staticmethod
     def analyze_api_call_stack(name):
@@ -274,6 +278,3 @@ class BaseDataProcessor:
                           suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
-
-    def stop_run(self):
-        return False

@@ -21,7 +21,7 @@ range_begin_flag, range_end_flag = False, False
 def check_list_or_acl_mode(name_prefix):
     global dump_count
     for item in DumpUtil.dump_switch_scope:
-        if PRE_FORWARD in name_prefix:
+        if Const.PRE_FORWARD in name_prefix:
             rename = item.rsplit(Const.DOT, 1)[0]
             if name_prefix.startswith(rename):
                 return True

@@ -15,63 +15,16 @@
 # limitations under the License.
 """
 import os
-import sys
-import re
 from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, task_dumppath_get, check_file_or_directory_path, check_regex_prefix_format_valid
-from msprobe.pytorch.compare.acc_compare import compare_core
+    check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.log import logger
+from msprobe.pytorch.compare.pt_compare import PTComparator
+from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
-    def check_and_return_dir_contents(dump_dir, prefix):
-        """
-        check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
-        pattern: ^{prefix}(?:0|[0-9][1-9]*)?$
-
-        Args:
-            dump_dir (str): dump dir
-            prefix (str): prefix for the patterns, prefix should be less than 20 characters and alphanumeric/-/_ only
-
-        Returns:
-            content [list]: dir contents
-        Raises:
-            CompareException: invalid path
-            ValueError: prefix not match the patterns
-
-        """
-        check_regex_prefix_format_valid(prefix)
-        check_file_or_directory_path(dump_dir, True)
-        contents = os.listdir(dump_dir)
-        pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
-        for name in contents:
-            if not pattern.match(name):
-                logger.error(
-                    f"dump_dir contains '{name}'. Expected '{prefix}'. This name is not in the format of dump "
-                    f"output. Please check and delete irrelevant files in {dump_dir} and try again."
-                )
-                raise CompareException(CompareException.INVALID_PATH_ERROR)
-        return contents
-
-    def extract_json(dirname, stack_json=False):
-        json_path = ''
-        for fname in os.listdir(dirname):
-            full_path = os.path.join(dirname, fname)
-            if full_path.endswith('.json'):
-                json_path = full_path
-                if not stack_json and 'stack' not in json_path:
-                    break
-                if stack_json and 'stack' in json_path:
-                    break
-
-        # Provide robustness on invalid directory inputs
-        if not json_path:
-            logger.error(f'No file is found in dump dir {dirname}. ')
-            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
-        return json_path
-
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -106,6 +59,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, md5_compare=md5_compare)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
-            sys.exit(error.code)
-        compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
+            raise CompareException(error.code) from error
+        ptComparator = PTComparator()
+        ptComparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
                      md5_compare=md5_compare, **kwargs)

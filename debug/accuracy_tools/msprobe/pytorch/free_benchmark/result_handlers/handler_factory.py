@@ -22,7 +22,6 @@ class FuzzHandlerFactory:
             handler = FuzzHandlerFactory.result_handlers.get(params.handler_type)
         else:
             handler = FuzzHandlerFactory.result_handlers.get(HandlerType.PREHEAT)
-            # TODO
         if not handler:
             raise FreeBenchmarkException(
                 FreeBenchmarkException.UnsupportedType,

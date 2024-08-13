@@ -8,7 +8,7 @@ from msprobe.pytorch.free_benchmark.perturbed_layers.base_layer import BaseLayer
 
 class CpuLayer(BaseLayer):
 
-    def handle(self, params: DataParams) -> torch.Any:
+    def handle(self, params: DataParams):
 
         logger.info_on_rank_0(
             f"[msprobe] Free benchmark: Perturbation is to_cpu of {self.api_name}."
