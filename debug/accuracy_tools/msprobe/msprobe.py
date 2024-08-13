@@ -18,12 +18,11 @@ import sys
 import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.common.log import logger
-
+from msprobe.core.compare.compare_cli import compare_cli
 
 def is_module_available(module_name):
     spec =importlib.util.find_spec(module_name)
     return spec is not None
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -53,7 +52,7 @@ def main():
             _api_precision_compare_command
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
-        from msprobe.pytorch.compare.compare_cli import compare_cli
+        
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
         multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
@@ -81,15 +80,13 @@ def main():
         elif sys.argv[3] == "run_overflow_check":
             _run_overflow_check_command(args)
         elif sys.argv[3] == "compare":
-            compare_cli(args)
+            compare_cli(args,"pytorch")
     else:
-        if is_module_available("mindspore"):
-            from msprobe.mindspore.compare.compare_cli import compare_cli_ms
-        else:
+        if not is_module_available("mindspore"):
             logger.error("MindSpore does not exit, please install MindSpore library")
             raise Exception("MindSpore does not exit, please install MindSpore library")
         if sys.argv[3] == "compare":
-            compare_cli_ms(args)
+            compare_cli(args,"mindspore")
 
 if __name__ == "__main__":
     main()

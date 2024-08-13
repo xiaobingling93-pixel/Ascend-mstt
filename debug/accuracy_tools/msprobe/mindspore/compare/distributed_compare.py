@@ -24,7 +24,7 @@ from msprobe.mindspore.compare.ms_compare import MSComparator
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
 
-def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
+def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
