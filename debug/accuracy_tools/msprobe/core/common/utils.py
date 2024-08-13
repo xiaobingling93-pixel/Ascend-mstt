@@ -154,17 +154,17 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    check_file_or_directory_path(input_param.get("npu_path"), False)
-    check_file_or_directory_path(input_param.get("bench_path"), False)
-    check_file_or_directory_path(input_param.get("stack_path"), False)
+    check_file_or_directory_path(input_param.get("npu_json_path"), False)
+    check_file_or_directory_path(input_param.get("bench_json_path"), False)
+    check_file_or_directory_path(input_param.get("stack_json_path"), False)
     if not summary_compare and not md5_compare:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
 
-    with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
-            FileOpen(input_param.get("bench_path"), "r") as bench_json, \
-            FileOpen(input_param.get("stack_path"), "r") as stack_json:
+    with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
+            FileOpen(input_param.get("bench_json_path"), "r") as bench_json, \
+            FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
         check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
@@ -205,9 +205,9 @@ def _check_json(json_file_handle, file_name):
 
 
 def check_json_file(input_param, npu_json, bench_json, stack_json):
-    _check_json(npu_json, input_param.get("npu_path"))
-    _check_json(bench_json, input_param.get("bench_path"))
-    _check_json(stack_json, input_param.get("stack_path"))
+    _check_json(npu_json, input_param.get("npu_json_path"))
+    _check_json(bench_json, input_param.get("bench_json_path"))
+    _check_json(stack_json, input_param.get("stack_json_path"))
 
 
 def check_file_size(input_file, max_size):
@@ -478,8 +478,8 @@ def md5_find(data):
 
 
 def task_dumppath_get(input_param, framework=Const.MS_FRAMEWORK):
-    npu_path = input_param.get("npu_path", None)
-    bench_path = input_param.get("bench_path", None)
+    npu_path = input_param.get("npu_json_path", None)
+    bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
