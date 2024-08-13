@@ -21,9 +21,12 @@ Successfully installed mindstudio_probe-{version}
 ```
 
 ### 下载whl包安装
-1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、matplotlib依赖。
-   
-   根据自己的环境选择安装 torch、mindspore。
+1. 使用pip命令安装依赖：
+
+   1. 根据实际环境安装torch或mindspore
+
+   2. 安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、einops、matplotlib
+
 
    若环境中已安装部分依赖，不需要重复安装。
 
@@ -161,7 +164,7 @@ Required-by:
 
    PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_overview.md)。
 
-   MindSpore场景：暂不支持。
+   MindSpore场景：详见[MindSpore_精度比对工具](./mindspore/doc/compare.md)。
 
 5. 执行溢出解析。
 
@@ -201,6 +204,12 @@ msprobe -f <framework> multi_run_ut [-h]
 
 ```bash
 msprobe -f <framework> api_precision_compare [-h]
+```
+
+精度比对工具
+
+```bash
+msprobe -f <framework> compare [-h]
 ```
 
 溢出解析工具
