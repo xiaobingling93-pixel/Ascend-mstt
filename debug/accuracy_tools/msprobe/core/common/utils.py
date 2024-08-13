@@ -520,9 +520,14 @@ def convert_tuple(data):
 
 
 def write_csv(data, filepath):
+    is_first_create = False
+    if not os.path.exists(filepath):
+        is_first_create = True
     with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
+        if is_first_create:
+            change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def load_npy(filepath):
