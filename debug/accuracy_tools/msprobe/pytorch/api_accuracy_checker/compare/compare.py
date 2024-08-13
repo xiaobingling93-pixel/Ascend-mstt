@@ -4,7 +4,7 @@ from collections import namedtuple
 import torch
 import numpy as np
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
+from msprobe.core.common.utils import write_csv
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
     ULPStandardApi, ThousandthStandardApi, apis_threshold
@@ -15,6 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get
     check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.core.common.const import Const, CompareConst
+from msprobe.pytorch.common.utils import get_json_contents
 
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
