@@ -21,7 +21,7 @@ Successfully installed mindstudio_probe-{version}
 ```
 
 ### 下载whl包安装
-1. 使用pip命令安装einops、numpy、openpyxl、pandas、PyYAML、rich、tqdm、pyOpenSSL、twisted、matplotlib依赖。
+1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、matplotlib依赖。
    
    根据自己的环境选择安装 torch、mindspore。
 
