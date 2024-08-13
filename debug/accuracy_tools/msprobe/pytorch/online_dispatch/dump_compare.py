@@ -32,10 +32,10 @@ class DispatchRunParam:
 
 
 class DisPatchDataInfo:
-    def __init__(self, cpu_args, cpu_kwargs, all_summery, func, npu_out_cpu, cpu_out, lock):
+    def __init__(self, cpu_args, cpu_kwargs, all_summary, func, npu_out_cpu, cpu_out, lock):
         self.cpu_args = cpu_args
         self.cpu_kwargs = cpu_kwargs
-        self.all_summery = all_summery
+        self.all_summary = all_summary
         self.func = func
         self.npu_out_cpu = npu_out_cpu
         self.cpu_out = cpu_out
@@ -87,24 +87,24 @@ def dump_data(data, prefix, dump_path):
     elif support_basic_type(data):
         if isinstance(data, torch.Tensor) and data.is_meta:
             return
-        # dump data may greater than summery_list collect
+        # dump data may greater than summary_list collect
         np_save_data(data, prefix, dump_path)
 
 
-def save_temp_summery(api_index, single_api_summery, path, lock):
-    summery_path = os.path.join(path, f'summery.json')
+def save_temp_summary(api_index, single_api_summary, path, lock):
+    summary_path = os.path.join(path, f'summary.json')
     lock.acquire()
-    with FileOpen(summery_path, "a") as f:
-        json.dump([api_index, single_api_summery], f)
+    with FileOpen(summary_path, "a") as f:
+        json.dump([api_index, single_api_summary], f)
         f.write('\n')
     lock.release()
 
 
 def dispatch_workflow(run_param: DispatchRunParam, data_info: DisPatchDataInfo):
     cpu_args, cpu_kwargs = data_info.cpu_args, data_info.cpu_kwargs
-    all_summery, func = data_info.all_summery, data_info.func
+    all_summary, func = data_info.all_summary, data_info.func
     npu_out_cpu, cpu_out, lock = data_info.npu_out_cpu, data_info.cpu_out, data_info.lock
-    single_api_summery = []
+    single_api_summary = []
 
     prefix_input = f'{run_param.aten_api}_{run_param.single_api_index}_input'
     prefix_output = f'{run_param.aten_api}_{run_param.single_api_index}_output'
@@ -127,9 +127,9 @@ def dispatch_workflow(run_param: DispatchRunParam, data_info: DisPatchDataInfo):
             dump_data(npu_out_cpu, prefix_output, run_param.root_npu_path)
 
     if run_param.process_num == 0:
-        all_summery[run_param.api_index - 1] = copy.deepcopy(single_api_summery)
+        all_summary[run_param.api_index - 1] = copy.deepcopy(single_api_summary)
     else:
-        save_temp_summery(run_param.api_index - 1, single_api_summery, run_param.root_cpu_path, lock)
+        save_temp_summary(run_param.api_index - 1, single_api_summary, run_param.root_cpu_path, lock)
 
 
 def get_torch_func(run_param):
@@ -156,10 +156,10 @@ def error_call(err):
     logger.error(f'multiprocess {err}')
 
 
-def save_csv(all_summery, call_stack_list, csv_path):
+def save_csv(all_summary, call_stack_list, csv_path):
     df = pd.DataFrame(columns=CSV_COLUMN_NAME)
 
-    for index, list_data in enumerate(all_summery):
+    for index, list_data in enumerate(all_summary):
         for data in list_data:
             csv_row_data = {CompareConst.NPU_NAME: data[CompareConst.NPU_NAME],
                             CompareConst.BENCH_NAME: data[CompareConst.BENCH_NAME],
