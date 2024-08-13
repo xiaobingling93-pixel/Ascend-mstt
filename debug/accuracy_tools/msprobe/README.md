@@ -25,7 +25,7 @@ Successfully installed mindstudio_probe-{version}
 
    1. 根据实际环境安装torch或mindspore
 
-   2. 安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、einops、matplotlib
+   2. 安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、einops、matplotlib、pyOpenSSL、twisted
 
 
    若环境中已安装部分依赖，不需要重复安装。
