@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,24 +23,24 @@ from unittest.mock import patch, MagicMock, mock_open
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import (CompareException,
-                                    check_seed_all,
-                                    check_inplace_op,
-                                    make_dump_path_if_not_exists,
-                                    check_mode_valid,
-                                    check_switch_valid,
-                                    check_dump_mode_valid,
-                                    check_summary_mode_valid,
-                                    check_summary_only_valid,
-                                    check_file_or_directory_path,
-                                    check_compare_param,
-                                    check_configuration_param,
-                                    is_starts_with,
-                                    _check_json,
-                                    check_json_file,
-                                    check_file_size,
-                                    check_regex_prefix_format_valid,
-                                    get_dump_data_path,
-                                    task_dumppath_get)
+                                       check_seed_all,
+                                       check_inplace_op,
+                                       make_dump_path_if_not_exists,
+                                       check_mode_valid,
+                                       check_switch_valid,
+                                       check_dump_mode_valid,
+                                       check_summary_mode_valid,
+                                       check_summary_only_valid,
+                                       check_file_or_directory_path,
+                                       check_compare_param,
+                                       check_configuration_param,
+                                       is_starts_with,
+                                       _check_json,
+                                       check_json_file,
+                                       check_file_size,
+                                       check_regex_prefix_format_valid,
+                                       get_dump_data_path,
+                                       task_dumppath_get)
 from msprobe.core.common.file_check import FileCheckConst
 
 
