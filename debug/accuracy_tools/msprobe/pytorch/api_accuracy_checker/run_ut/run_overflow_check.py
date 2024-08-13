@@ -11,7 +11,7 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents
+from msprobe.pytorch.common.utils import get_json_contents
 from msprobe.core.common.file_check import check_link
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
