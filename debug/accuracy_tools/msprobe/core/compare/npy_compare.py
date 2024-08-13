@@ -76,6 +76,59 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
     return ""
 
 
+def npy_data_check(n_value, b_value):
+    error_flag = False
+    error_message = ""
+    if n_value is None or b_value is None:
+        error_flag = True
+        error_message += "Dump file not found."
+
+    if not error_flag:
+        if n_value.size == 0 or b_value.size == 0:
+            error_flag = True
+            error_message += "This is empty data, can not compare."
+
+    if not error_flag:
+        if not n_value.shape or not b_value.shape:
+            error_flag = True
+            error_message += "This is type of scalar data, can not compare."
+        if n_value.shape != b_value.shape:
+            error_flag = True
+            error_message += "Shape of NPU and bench Tensor do not match."
+        if n_value.dtype != b_value.dtype:
+            error_flag = True
+            error_message += "Dtype of NPU and bench Tensor do not match. Skipped."
+
+    if not error_flag:
+        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
+        if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
+            error_flag = True
+            error_message += "The position of inf or nan in NPU and bench Tensor do not match."
+
+    return error_flag, error_message
+
+
+def statistics_data_check(result_dict):
+    error_flag = False
+    error_message = ""
+    if result_dict['NPU Name'] is None or result_dict['NPU Name'] is None:
+        error_flag = True
+        error_message += "Dump file not found."
+
+    if not error_flag:
+        if not result_dict['NPU Tensor Shape'] or not result_dict['Bench Tensor Shape']:
+            error_flag = True
+            error_message = "This is type of scalar data, can not compare."
+        if result_dict['NPU Tensor Shape'] != result_dict['Bench Tensor Shape']:
+            error_flag = True
+            error_message += "This is type of scalar data, can not compare."
+        if result_dict['Bench Dtype'] != result_dict['Bench Dtype']:
+            error_flag = True
+            error_message += "Dtype of NPU and bench Tensor do not match. Skipped."
+
+    return error_flag, error_message
+
+
 class TensorComparisonBasic(abc.ABC):
     """NPU和bench中npy数据的比较模板"""
     @abc.abstractmethod

@@ -1,6 +1,8 @@
 
 import multiprocessing
 from dataclasses import dataclass
+from functools import partial
+import numpy as np
 import pandas as pd
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -32,6 +34,33 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         result = pool.apply_async(func,
                                   args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
                                   error_callback=err_call)
+        results.append(result)
+    final_results = [r.get() for r in results]
+    pool.close()
+    pool.join()
+    return pd.concat(final_results, ignore_index=True)
+
+
+def _ms_graph_handle_multi_process(func, result_df, mode):
+    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+    df_chunk_size = len(result_df) // process_num
+    if df_chunk_size > 0:
+        df_chunks = [result_df.iloc[i:i + df_chunk_size] for i in range(0, len(result_df), df_chunk_size)]
+    else:
+        df_chunks = [result_df]
+
+    results = []
+    pool = multiprocessing.Pool(process_num)
+
+    def err_call(args):
+        logger.error('multiprocess compare failed! Reason: {}'.format(args))
+        try:
+            pool.terminate()
+        except OSError as e:
+            logger.error("pool terminate failed")
+
+    for _, df_chunk in enumerate(df_chunks):
+        result = pool.apply_async(func, args=(df_chunk, mode), error_callback=err_call)
         results.append(result)
     final_results = [r.get() for r in results]
     pool.close()
