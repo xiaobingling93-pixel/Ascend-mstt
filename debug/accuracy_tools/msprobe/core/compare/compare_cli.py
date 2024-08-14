@@ -11,18 +11,20 @@ def compare_cli(args,frame_name):
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
 
+    if frame_name == "pytorch":
+        from msprobe.pytorch.compare.pt_compare import compare
+        from msprobe.pytorch.compare.distributed_compare import compare_distributed
+    else:
+        from msprobe.mindspore.compare.ms_compare import ms_compare
+        from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
         input_param["stack_json_path"] = input_param.pop("stack_path")
         if frame_name == "pytorch":
-            from msprobe.pytorch.compare.pt_compare import compare
-            from msprobe.pytorch.compare.distributed_compare import compare_distributed
             compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze,
                 fuzzy_match=args.fuzzy_match)
         else:
-            from msprobe.mindspore.compare.ms_compare import ms_compare
-            from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed
             ms_compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=args.auto_analyze,
                 fuzzy_match=args.fuzzy_match)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
