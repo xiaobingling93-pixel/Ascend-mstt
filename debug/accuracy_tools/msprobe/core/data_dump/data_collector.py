@@ -90,7 +90,7 @@ class DataCollector:
         if self.config.level == "L2":
             return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        if self.data_processor.stop_run():
+        if self.data_processor.is_terminated:
             self.handle_data(name, data_info, use_buffer=False)
             raise Exception("[msprobe] exit")
         self.handle_data(name, data_info)
@@ -101,9 +101,25 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
-        if self.data_processor.stop_run():
+        if self.data_processor.is_terminated:
             self.handle_data(name, data_info, use_buffer=False)
             raise Exception("[msprobe] exit")
+        self.handle_data(name, data_info)
+
+    def backward_input_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_input(name, module, module_input_output)
+        self.handle_data(name, data_info)
+
+    def backward_output_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_backward_output(name, module, module_input_output)
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
@@ -112,7 +128,7 @@ class DataCollector:
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, use_buffer=True):
-        msg = f"msProbe is collecting data on {name}. "
+        msg = f"msprobe is collecting data on {name}. "
         if data_info:
             msg = self.update_data(data_info, msg)
             logger.info(msg)

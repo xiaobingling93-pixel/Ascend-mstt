@@ -3,16 +3,15 @@ import torch
 import numpy as np
 
 from grad_tool.common.base_comparator import BaseComparator
+from grad_tool.common.utils import check_file_or_directory_path
 
 
 class MsGradComparator(BaseComparator):
 
     @classmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
-        if not os.path.exists(grad_file1):
-            raise ValueError(f"file {grad_file1} not exists, please check the file path.")
-        if not os.path.exists(grad_file2):
-            raise ValueError(f"file {grad_file2} not exists, please check the file path.")
+        check_file_or_directory_path(grad_file1)
+        check_file_or_directory_path(grad_file2)
 
         grad1_suffix = grad_file1.split(".")[-1]
         grad2_suffix = grad_file2.split(".")[-1]

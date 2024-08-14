@@ -124,13 +124,20 @@ MindSpore静态图场景的jit_level为O0/O1时，不支持该功能，须配置
 
 仅PyTorch场景支持。
 
-| 参数名称        | 说明                                                         | 是否必选 |
-| --------------- | ------------------------------------------------------------ | -------- |
-| white_list      | API dump白名单，仅对指定的API进行dump。配置示例："white_list": ["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。 | 否       |
-| black_list      | API dump黑名单，被指定的API不进行dump。配置示例："black_list": ["conv1d", "conv2d"]。默认未配置黑名单，即dump全量API数据。 | 否       |
-| error_data_path | 配置保存精度未达标的API输入输出数据路径，默认为当前路径。配置示例"error_data_path": "./"。 | 否       |
+| 参数名称            | 说明                                                                                                                                            | 是否必选 |
+|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------|------|
+| white_list      | API dump白名单，仅对指定的API进行dump。配置示例："white_list": ["conv1d", "conv2d"]。默认未配置白名单，即dump全量API数据。                                                     | 否    |
+| black_list      | API dump黑名单，被指定的API不进行dump。配置示例："black_list": ["conv1d", "conv2d"]。默认未配置黑名单，即dump全量API数据。                                                     | 否    |
+| error_data_path | 配置保存精度未达标的API输入输出数据路径，默认为当前路径。配置示例"error_data_path": "./"。                                                                                    | 否    |
+| is_online       | 在线预检模式开关，bool类型，可取值true（开启）、false（关闭），默认关闭。                                                                                                   | 否    |
+| nfs_path        | 在线预检模式共享存储目录路径，str类型，用于GPU设备和NPU设备间进行通信。配置该参数后host和port不生效，仅在is_online字段配置为true时生效。                                                           | 否    |
+| host            | 在线预检模式局域网场景信息接收端IP，str类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机地址127.0.0.1或本机局域网IP。局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。仅在is_online字段配置为true时生效。            | 否    |
+| port            | 在线预检模式局域网场景信息接收端端口号，int类型，用于GPU设备和NPU设备间进行通信，GPU侧配置为本机可用端口。局域网场景时，不能配置nfs_path参数，否则局域网场景不生效。仅在is_online字段配置为true时生效。                          | 否    |
+| rank_list       | 指定在线预检的Rank ID，默认值为[0]，list[int]类型，应配置为大于等于0的整数，且须根据实际卡的Rank ID配置，若所配置的值大于实际训练所运行的卡的Rank ID，则在线预检输出数据为空。GPU和NPU须配置一致。仅在is_online字段配置为true时生效。 | 否    |
 
-说明：white_list和black_list同时配置时，二者配置的API名单若无交集，则白名单生效，若API名单存在交集，则白名单排除的部分以及交集的API不进行dump。
+说明： 
+<br>（1）white_list和black_list同时配置时，二者配置的API名单若无交集，则白名单生效，若API名单存在交集，则白名单排除的部分以及交集的API不进行dump。
+<br>（2）is_online、nfs_path、host、port、rank_list等字段仅在线预检场景GPU机器生效，详细说明见[《在线精度预检》](../pytorch/doc/api_accuracy_checker_online.md)
 
 ## 配置示例
 

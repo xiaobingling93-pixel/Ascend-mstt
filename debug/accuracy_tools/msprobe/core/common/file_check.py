@@ -263,3 +263,21 @@ def change_mode(path, mode):
 def path_len_exceeds_limit(file_path):
     return len(os.path.realpath(file_path)) > FileCheckConst.DIRECTORY_LENGTH or \
         len(os.path.basename(file_path)) > FileCheckConst.FILE_NAME_LENGTH
+
+
+def check_file_type(path):
+    """
+    Function Description:
+        determine if it is a file or a directory
+    Parameter:
+        path: path
+    Exception Description:
+        when neither a file nor a directory throw exception
+    """
+    if os.path.isdir(path):
+        return FileCheckConst.DIR
+    elif os.path.isfile(path):
+        return FileCheckConst.FILE
+    else:
+        logger.error('Neither a file nor a directory.')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)

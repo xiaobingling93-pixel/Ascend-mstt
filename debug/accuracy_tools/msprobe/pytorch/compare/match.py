@@ -10,7 +10,7 @@ class AtenIrMapping():
         yaml_path = os.path.join(cur_path, "mapping.yaml")
         with FileOpen(yaml_path, 'r') as f:
             self.aten_mapping = yaml.safe_load(f)
-
+    
     def match(self, op1, op2):
         if "Aten" in op1 and "Aten" not in op2:
             return self.match_op(op1, op2)

@@ -257,12 +257,13 @@ def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_p
     return args_result
 
 
-def gen_kwargs(api_info, convert_type=None, real_data_path=None):
+def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
     """
     Function Description:
         Based on API basic information, generate input parameters: kwargs, for API forward running
     Parameter:
         api_info: API basic information. Dict
+        api_name: API name
         convert_type: convert ori_type to dist_type flag.
         real_data_path: the root directory for storing real data.
     """
@@ -270,11 +271,11 @@ def gen_kwargs(api_info, convert_type=None, real_data_path=None):
     kwargs_params = api_info.get("input_kwargs")
     for key, value in kwargs_params.items():
         if isinstance(value, (list, tuple)):
-            kwargs_params[key] = gen_list_kwargs(value, convert_type, real_data_path)
+            kwargs_params[key] = gen_list_kwargs(value, api_name, convert_type, real_data_path)
         elif value is None:
             kwargs_params[key] = None
         elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
-            kwargs_params[key] = gen_data(value, True, convert_type, real_data_path)
+            kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
             gen_torch_kwargs(kwargs_params, key, value)
         else:
@@ -287,18 +288,19 @@ def gen_torch_kwargs(kwargs_params, key, value):
         kwargs_params[key] = eval(value.get('value'))
 
 
-def gen_list_kwargs(kwargs_item_value, convert_type, real_data_path=None):
+def gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path=None):
     """
     Function Description:
         When kwargs value is list, generate the list of kwargs result
     Parameter:
         kwargs_item_value: kwargs value before to generate. List
+        api_name: API name
         convert_type: convert ori_type to dist_type flag.
     """
     kwargs_item_result = []
     for item in kwargs_item_value:
         if item.get('type') in TENSOR_DATA_LIST:
-            item_value = gen_data(item, False, convert_type, real_data_path)
+            item_value = gen_data(item, api_name, False, convert_type, real_data_path)
         elif item.get('type') == "torch.Size":
             item_value = torch.Size(item.get('value'))
         else:
@@ -321,7 +323,7 @@ def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_d
     if convert_type and convert_type not in Const.CONVERT:
         error_info = f"convert_type params not support {convert_type}."
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
-    kwargs_params = gen_kwargs(api_info, convert_type, real_data_path)
+    kwargs_params = gen_kwargs(api_info, api_name, convert_type, real_data_path)
     if api_info.get("input_args"):
         args_params = gen_args(api_info.get("input_args"), api_name, need_grad, convert_type, real_data_path)
     else:

@@ -20,7 +20,7 @@ min_value = -1.444359375
 class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_api_params(self):
         api_info = copy.deepcopy(api_info_dict)
-        args_params, kwargs_params = gen_api_params(api_info, True, None, None)
+        args_params, kwargs_params = gen_api_params(api_info, "conv2d", True, None, None)
         max_diff = abs(args_params[0].max() - max_value)
         min_diff = abs(args_params[0].min() - min_value)
         self.assertEqual(len(args_params), 2)

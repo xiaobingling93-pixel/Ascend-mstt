@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-from unittest import TestCase
+import unittest
 from unittest.mock import patch, mock_open
 
 from msprobe.core.common.const import Const
 from msprobe.mindspore.ms_config import (parse_json_config, parse_task_config,
-                                         TensorConfig, StatisticsConfig, OverflowCheckConfig)
+                                         TensorConfig, StatisticsConfig, OverflowCheckConfig, FreeBenchmarkConfig)
 
 
-class TestMsConfig(TestCase):
+class TestMsConfig(unittest.TestCase):
     def test_parse_json_config(self):
         mock_json_data = {
             "dump_path": "./dump/",
@@ -64,6 +64,25 @@ class TestMsConfig(TestCase):
         task_config = parse_task_config("overflow_check", mock_json_config)
         self.assertTrue(isinstance(task_config, OverflowCheckConfig))
 
+        mock_json_config.update({"overflow_check": {"overflow_nums": "1"}})
         with self.assertRaises(Exception) as context:
-            parse_task_config("free_benchmark", mock_json_config)
+            task_config = parse_task_config("overflow_check", mock_json_config)
+        self.assertEqual(str(context.exception), "overflow_nums is invalid, it should be an integer")
+
+        mock_json_config.update({"overflow_check": {"overflow_nums": 0}})
+        with self.assertRaises(Exception) as context:
+            task_config = parse_task_config("overflow_check", mock_json_config)
+        self.assertEqual(str(context.exception), "overflow_nums should be -1 or positive integer")
+
+        mock_json_config.update({"overflow_check": {"overflow_nums": 1}})
+        mock_json_config.update({"overflow_check": {"check_mode": "core"}})
+        with self.assertRaises(Exception) as context:
+            task_config = parse_task_config("overflow_check", mock_json_config)
+        self.assertEqual(str(context.exception), "check_mode is invalid")
+
+        task_config = parse_task_config("free_benchmark", mock_json_config)
+        self.assertTrue(isinstance(task_config, FreeBenchmarkConfig))
+
+        with self.assertRaises(Exception) as context:
+            parse_task_config("unsupported_task", mock_json_config)
         self.assertEqual(str(context.exception), "task is invalid.")

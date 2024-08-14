@@ -37,10 +37,18 @@ PrecisionDebugger(config_path=None)
 **原型**
 
 ```Python
-debugger.start()
+debugger.start(model = None)
 ```
 
-该函数为类函数，可以使用debugger.start()也可以使用PrecisionDebugger.start()。
+该函数为类函数，可以使用debugger.start(model = None)也可以使用PrecisionDebugger.start(model = None)
+
+
+**参数说明**
+
+| 参数名      | 说明                                                                                    | 是否必选 |
+| ----------- |---------------------------------------------------------------------------------------| -------- |
+| model | 指具体的mindspore.nn.Cell，默认未配置，L1级别下传入model可以使能对primitive op的dump，否则无法dump primitive op。 | 否       |
+
 
 ### stop函数
 

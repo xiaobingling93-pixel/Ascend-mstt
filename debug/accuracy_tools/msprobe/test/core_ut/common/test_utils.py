@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -23,24 +23,24 @@ from unittest.mock import patch, MagicMock, mock_open
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import (CompareException,
-                                    check_seed_all,
-                                    check_inplace_op,
-                                    make_dump_path_if_not_exists,
-                                    check_mode_valid,
-                                    check_switch_valid,
-                                    check_dump_mode_valid,
-                                    check_summary_mode_valid,
-                                    check_summary_only_valid,
-                                    check_file_or_directory_path,
-                                    check_compare_param,
-                                    check_configuration_param,
-                                    is_starts_with,
-                                    _check_json,
-                                    check_json_file,
-                                    check_file_size,
-                                    check_regex_prefix_format_valid,
-                                    get_dump_data_path,
-                                    task_dumppath_get)
+                                       check_seed_all,
+                                       check_inplace_op,
+                                       make_dump_path_if_not_exists,
+                                       check_mode_valid,
+                                       check_switch_valid,
+                                       check_dump_mode_valid,
+                                       check_summary_mode_valid,
+                                       check_summary_only_valid,
+                                       check_file_or_directory_path,
+                                       check_compare_param,
+                                       check_configuration_param,
+                                       is_starts_with,
+                                       _check_json,
+                                       check_json_file,
+                                       check_file_size,
+                                       check_regex_prefix_format_valid,
+                                       get_dump_data_path,
+                                       task_dumppath_get)
 from msprobe.core.common.file_check import FileCheckConst
 
 
@@ -189,28 +189,28 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_json_path": "npu_json_path",
-            "bench_json_path": "bench_json_path",
-            "stack_json_path": "stack_json_path",
+            "npu_path": "npu_path",
+            "bench_path": "bench_path",
+            "stack_path": "stack_path",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
 
         call_args = [
-            ("npu_json_path", False),
-            ("bench_json_path", False),
-            ("stack_json_path", False),
+            ("npu_path", False),
+            ("bench_path", False),
+            ("stack_path", False),
             ("npu_dump_data_dir", True),
             ("bench_dump_data_dir", True),
             ("output_path", True),
-            ("npu_json_path", False),
-            ("bench_json_path", False),
-            ("stack_json_path", False),
+            ("npu_path", False),
+            ("bench_path", False),
+            ("stack_path", False),
             ("output_path", True)
         ]
 
         with self.assertRaises(CompareException) as context:
-            check_compare_param("npu_json_path", "output_path")
+            check_compare_param("npu_path", "output_path")
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameters")
 
@@ -264,14 +264,14 @@ class TestUtils(TestCase):
     @patch("msprobe.core.common.utils._check_json")
     def test_check_json_file(self, _mock_check_json):
         input_param = {
-            "npu_json_path": "npu_json_path",
-            "bench_json_path": "bench_json_path",
-            "stack_json_path": "stack_json_path"
+            "npu_path": "npu_path",
+            "bench_path": "bench_path",
+            "stack_path": "stack_path"
         }
         check_json_file(input_param, "npu_json", "bench_json", "stack_json")
-        self.assertEqual(_mock_check_json.call_args_list[0][0], ("npu_json", "npu_json_path"))
-        self.assertEqual(_mock_check_json.call_args_list[1][0], ("bench_json", "bench_json_path"))
-        self.assertEqual(_mock_check_json.call_args_list[2][0], ("stack_json", "stack_json_path"))
+        self.assertEqual(_mock_check_json.call_args_list[0][0], ("npu_json", "npu_path"))
+        self.assertEqual(_mock_check_json.call_args_list[1][0], ("bench_json", "bench_path"))
+        self.assertEqual(_mock_check_json.call_args_list[2][0], ("stack_json", "stack_path"))
 
     @patch.object(logger, "error")
     def test_check_file_size(self, mock_error):
@@ -307,8 +307,8 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_task_dumppath_get(self, mock_error):
         input_param = {
-            "npu_json_path": None,
-            "bench_json_path": "bench_json_path"
+            "npu_path": None,
+            "bench_path": "bench_path"
         }
         npu_json = {
             "task": Const.TENSOR,
@@ -321,7 +321,7 @@ class TestUtils(TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
         mock_error.assert_called_with("Please check the json path is valid.")
 
-        input_param["npu_json_path"] = "npu_json_path"
+        input_param["npu_path"] = "npu_path"
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
              patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)

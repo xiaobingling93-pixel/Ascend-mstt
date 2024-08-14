@@ -3,17 +3,15 @@ import os
 import torch
 
 from grad_tool.common.base_comparator import BaseComparator
+from grad_tool.common.utils import check_file_or_directory_path
 
 
 class PtGradComparator(BaseComparator):
 
     @classmethod
     def _load_grad_files(cls, grad_file1: str, grad_file2: str):
-        if not os.path.exists(grad_file1):
-            raise ValueError(f"file {grad_file1} not exists, please check the file path.")
-        if not os.path.exists(grad_file2):
-            raise ValueError(f"file {grad_file2} not exists, please check the file path.")
-
+        check_file_or_directory_path(grad_file1)
+        check_file_or_directory_path(grad_file2)
         try:
             tensor1 = torch.load(grad_file1, map_location=torch.device("cpu"))
             tensor2 = torch.load(grad_file2, map_location=torch.device("cpu"))

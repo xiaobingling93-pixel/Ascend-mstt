@@ -5,6 +5,7 @@ import inspect
 import torch
 import torch.nn as nn
 import torch.distributed as dist
+from kj600.utils import print_error_log
 
 from ..module_metric import get_metrics
 
@@ -16,12 +17,20 @@ except ImportError:
 PREFIX_POST = "post"
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
-with open(OpsPath) as f:
-    WrapDistributedOps = yaml.safe_load(f).get('distributed')
-
+try:
+    with open(OpsPath) as f:
+        WrapDistributedOps = yaml.safe_load(f).get('distributed')
+except Exception as e:
+    print_error_log(f"load file {OpsPath} failed.")
+    raise RuntimeError(f"load file {OpsPath} failed.") from e
+ 
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
-with open(StackBlackListPath) as f:
-    StackBlackList = yaml.safe_load(f).get('stack')
+try:
+    with open(StackBlackListPath) as f:
+        StackBlackList = yaml.safe_load(f).get('stack')
+except Exception as e:
+    print_error_log(f"load file {StackBlackListPath} failed.")
+    raise RuntimeError(f"load file {StackBlackListPath} failed.") from e
 
 distributed_func = {}
 for f in dir(dist):
@@ -133,7 +142,7 @@ def op_aggregate(op, tensorlist):
         return max(tensorlist)
     if op == 'norm':
         return sum(tensorlist)
-    if op == 'zeros': # TODO wrong
+    if op == 'zeros':
         return sum(tensorlist) / len(tensorlist) if len(tensorlist) != 0 else 0
     return torch.nan
 

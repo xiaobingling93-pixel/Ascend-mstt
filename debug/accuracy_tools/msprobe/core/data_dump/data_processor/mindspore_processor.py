@@ -74,8 +74,9 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if data.numel() == 0:
             return tensor_stat
         elif data.dtype == ms.bool_:
-            tensor_stat.max = self.mint_ops_func["max"](data).item()
-            tensor_stat.min = self.mint_ops_func["min"](data).item()
+            data_np = data.asnumpy()
+            tensor_stat.max = np.max(data_np)
+            tensor_stat.min = np.min(data_np)
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
@@ -154,8 +155,17 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
-        self.real_overflow_dump_times = 0
+        self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
+
+    @property
+    def is_terminated(self):
+        if self.overflow_nums == -1:
+            return False
+        if self.real_overflow_nums >= self.overflow_nums:
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
+            return True
+        return False
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -175,16 +185,8 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
                 tensor = convert_bf16_to_fp32(tensor)
                 np.save(file_path, tensor.asnumpy())
                 change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            self.real_overflow_dump_times += 1
+            self.real_overflow_nums += 1
         self.cached_tensors_and_file_paths = {}
-
-    def stop_run(self):
-        if self.overflow_nums == -1:
-            return False
-        if self.real_overflow_dump_times >= self.overflow_nums:
-            logger.warning(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
-            return True
-        return False
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
         if tensor_json['Max'] is None:

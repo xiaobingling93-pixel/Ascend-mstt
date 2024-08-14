@@ -22,11 +22,12 @@ import stat
 import subprocess
 import time
 import json
+import csv
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
 
-from msprobe.core.common.file_check import FileOpen, FileChecker
+from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
 from msprobe.core.common.log import logger
 
@@ -148,21 +149,32 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_parma, output_path, summary_compare=False, md5_compare=False):
-    if not (isinstance(input_parma, dict) and isinstance(output_path, str)):
+def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False, framework=Const.MS_FRAMEWORK):
+    if not (isinstance(input_param, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    check_file_or_directory_path(input_parma.get("npu_json_path"), False)
-    check_file_or_directory_path(input_parma.get("bench_json_path"), False)
-    check_file_or_directory_path(input_parma.get("stack_json_path"), False)
+    if framework == Const.MS_FRAMEWORK:
+        check_file_or_directory_path(input_param.get("npu_path"), False)
+        check_file_or_directory_path(input_param.get("bench_path"), False)
+        check_file_or_directory_path(input_param.get("stack_path"), False)
+    else:
+        check_file_or_directory_path(input_param.get("npu_json_path"), False)
+        check_file_or_directory_path(input_param.get("bench_json_path"), False)
+        check_file_or_directory_path(input_param.get("stack_json_path"), False)
     if not summary_compare and not md5_compare:
-        check_file_or_directory_path(input_parma.get("npu_dump_data_dir"), True)
-        check_file_or_directory_path(input_parma.get("bench_dump_data_dir"), True)
+        check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
+        check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-         FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-         FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-        check_json_file(input_parma, npu_json, bench_json, stack_json)
+    if framework == Const.MS_FRAMEWORK:
+        with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
+             FileOpen(input_param.get("bench_path"), "r") as bench_json, \
+             FileOpen(input_param.get("stack_path"), "r") as stack_json:
+            check_json_file(input_param, npu_json, bench_json, stack_json)
+    else:
+        with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
+             FileOpen(input_param.get("bench_json_path"), "r") as bench_json, \
+             FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
+            check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
@@ -201,9 +213,9 @@ def _check_json(json_file_handle, file_name):
 
 
 def check_json_file(input_param, npu_json, bench_json, stack_json):
-    _check_json(npu_json, input_param.get("npu_json_path"))
-    _check_json(bench_json, input_param.get("bench_json_path"))
-    _check_json(stack_json, input_param.get("stack_json_path"))
+    _check_json(npu_json, input_param.get("npu_path"))
+    _check_json(bench_json, input_param.get("bench_path"))
+    _check_json(stack_json, input_param.get("stack_path"))
 
 
 def check_file_size(input_file, max_size):
@@ -255,6 +267,17 @@ def remove_path(path):
     except PermissionError as err:
         logger.error("Failed to delete {}. Please check the permission.".format(path))
         raise CompareException(CompareException.INVALID_PATH_ERROR) from err
+
+
+def move_file(src_path, dst_path):
+    check_file_or_directory_path(src_path)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move file {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move file {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def get_dump_data_path(dump_dir):
@@ -462,15 +485,19 @@ def md5_find(data):
     return False
 
 
-def task_dumppath_get(input_param):
-    npu_json_path = input_param.get("npu_json_path", None)
-    bench_json_path = input_param.get("bench_json_path", None)
-    if not npu_json_path or not bench_json_path:
+def task_dumppath_get(input_param, framework=Const.MS_FRAMEWORK):
+    if framework == Const.MS_FRAMEWORK:
+        npu_path = input_param.get("npu_path", None)
+        bench_path = input_param.get("bench_path", None)
+    else:
+        npu_path = input_param.get("npu_json_path", None)
+        bench_path = input_param.get("bench_json_path", None)
+    if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    with FileOpen(npu_json_path, 'r') as npu_f:
+    with FileOpen(npu_path, 'r') as npu_f:
         npu_json_data = json.load(npu_f)
-    with FileOpen(bench_json_path, 'r') as bench_f:
+    with FileOpen(bench_path, 'r') as bench_f:
         bench_json_data = json.load(bench_f)
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
@@ -487,8 +514,8 @@ def task_dumppath_get(input_param):
     else:
         logger.error(f"Compare is not required for overflow_check or free_benchmark.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    input_param['npu_dump_data_dir'] = npu_json_data['dump_data_dir']
-    input_param['bench_dump_data_dir'] = bench_json_data['dump_data_dir']
+    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
     return summary_compare, md5_compare
 
 
@@ -505,3 +532,28 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
+
+
+def write_csv(data, filepath):
+    with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+
+
+def load_npy(filepath):
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath)
+    except Exception as e:
+        raise RuntimeError(f"load npy file {filepath} failed") from e
+    return npy
+
+
+def save_npy(data, filepath):
+    filepath = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        npy = np.save(filepath, data)
+    except Exception as e:
+        raise RuntimeError(f"save npy file {filepath} failed") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)

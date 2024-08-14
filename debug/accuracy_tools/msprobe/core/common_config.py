@@ -50,6 +50,14 @@ class BaseConfig:
         self.summary_mode = json_config.get("summary_mode")
         self.overflow_nums = json_config.get("overflow_nums")
         self.check_mode = json_config.get("check_mode")
+        self.fuzz_device = json_config.get("fuzz_device")
+        self.pert_mode = json_config.get("pert_mode")
+        self.handler_type = json_config.get("handler_type")
+        self.fuzz_level = json_config.get("fuzz_level")
+        self.fuzz_stage = json_config.get("fuzz_stage")
+        self.if_preheat = json_config.get("if_preheat")
+        self.preheat_step = json_config.get("preheat_step")
+        self.max_sample = json_config.get("max_sample")
 
     def check_config(self):
         if self.scope is not None and not isinstance(self.scope, list):
