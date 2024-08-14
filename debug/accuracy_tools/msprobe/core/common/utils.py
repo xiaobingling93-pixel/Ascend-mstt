@@ -149,7 +149,7 @@ def check_summary_only_valid(summary_only):
     return summary_only
 
 
-def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False, framework=Const.MS_FRAMEWORK):
+def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
     if not (isinstance(input_param, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -477,7 +477,7 @@ def md5_find(data):
     return False
 
 
-def task_dumppath_get(input_param, framework=Const.MS_FRAMEWORK):
+def task_dumppath_get(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:

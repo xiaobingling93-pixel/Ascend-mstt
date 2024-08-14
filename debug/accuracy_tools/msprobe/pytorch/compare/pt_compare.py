@@ -26,10 +26,10 @@ class PTComparator (Comparator):
     
 def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False):
     try:
-        summary_compare, md5_compare = task_dumppath_get(input_param, framework=Const.PT_FRAMEWORK)
+        summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
-        check_compare_param(input_param, output_path, summary_compare, md5_compare, framework=Const.PT_FRAMEWORK)
+        check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
