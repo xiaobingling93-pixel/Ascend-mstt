@@ -49,7 +49,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.single_api_index_dict = {}
         self.device_dump_path_cpu = None
         self.device_dump_path_npu = None
-        self.all_summery = []
+        self.all_summary = []
         self.call_stack_list = []
         self.process_num = process_num
         self.filter_dump_api()
@@ -90,12 +90,12 @@ class PtdbgDispatch(TorchDispatchMode):
         if self.process_num > 0:
             self.pool.close()
             self.pool.join()
-            summery_path = os.path.join(self.root_cpu_path, f'summary.json')
-            if not os.path.exists(summery_path):
+            summary_path = os.path.join(self.root_cpu_path, f'summary.json')
+            if not os.path.exists(summary_path):
                 logger_error("Please check train log, An exception may have occurred!")
                 return
-            check_file_or_directory_path(summery_path, False)
-            fp_handle = open(summery_path, "r")
+            check_file_or_directory_path(summary_path, False)
+            fp_handle = open(summary_path, "r")
             while True:
                 json_line_data = fp_handle.readline()
                 if json_line_data == '\n':
@@ -103,7 +103,7 @@ class PtdbgDispatch(TorchDispatchMode):
                 if len(json_line_data) == 0:
                     break
                 msg = json.loads(json_line_data)
-                self.all_summery[msg[0]] = msg[1]
+                self.all_summary[msg[0]] = msg[1]
             fp_handle.close()
 
         if self.debug_flag:
@@ -111,9 +111,9 @@ class PtdbgDispatch(TorchDispatchMode):
             output_num = 0
             total_num = 0
 
-            for list_data in self.all_summery:
+            for list_data in self.all_summary:
                 for data in list_data:
-                    logger_debug(f'summery: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
+                    logger_debug(f'summary: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
                     if "_input" in data[CompareConst.NPU_NAME]:
                         input_num = input_num + 1
                     if "_output" in data[CompareConst.NPU_NAME]:
@@ -175,16 +175,16 @@ class PtdbgDispatch(TorchDispatchMode):
             cpu_out = cpu_out.float()
 
         if self.process_num == 0:
-            self.all_summery.append([])
-            data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, func, npu_out_cpu, cpu_out, self.lock)
+            self.all_summary.append([])
+            data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, func, npu_out_cpu, cpu_out, self.lock)
             dispatch_workflow(run_param, data_info)
         else:
             self.lock.acquire()
-            self.all_summery.append([])
+            self.all_summary.append([])
             self.lock.release()
             run_param.process_flag = True
             if self.check_fun(func, run_param):
-                data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, None, npu_out_cpu, cpu_out,
+                data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, None, npu_out_cpu, cpu_out,
                                              self.lock)
                 self.pool.apply_async(func=dispatch_multiprocess, args=(run_param, data_info),
                                       error_callback=error_call)
