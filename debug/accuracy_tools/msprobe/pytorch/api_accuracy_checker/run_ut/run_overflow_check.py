@@ -83,7 +83,7 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
         del kwargs["device"]
     out = exec_api(api_type, api_name, args, kwargs)
     npu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
-    if not out and not npu_out:
+    if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return
 
