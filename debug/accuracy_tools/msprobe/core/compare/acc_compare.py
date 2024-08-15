@@ -1,6 +1,6 @@
 import multiprocessing
 import pandas as pd
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
 from msprobe.core.common.exceptions import FileCheckException
@@ -8,6 +8,7 @@ from msprobe.core.compare.utils import read_op, merge_tensor, CompareException
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process
 from msprobe.core.common.log import logger
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op
+
 
 class Comparator:
     
@@ -86,8 +87,8 @@ class Comparator:
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
-    def compare_by_op(self,op_name, op_name_mapping_dict, input_parma):
-        npu_bench_name_list = op_name_mapping_dict[op_name]
+    def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
+        npu_bench_name_list = op_name_mapping_dict[npu_op_name]
         data_name = npu_bench_name_list[1]
         error_file, relative_err, error_flag = None, None, False
         if data_name == '-1' or data_name == -1:  # 没有真实数据路径
@@ -95,9 +96,14 @@ class Comparator:
             error_flag = True
         else:
             try:
-                read_npy_data = getattr(self,"read_npy_data")
-                n_value = read_npy_data(input_parma.get("npu_dump_data_dir"), npu_bench_name_list[0])
-                b_value = read_npy_data(input_parma.get("bench_dump_data_dir"), npu_bench_name_list[1])
+                read_npy_data = getattr(self, "read_npy_data")
+                frame_name = getattr(self, "frame_name")
+                if frame_name == "MSComparator":
+                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
+                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                else:
+                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
+                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
             except IOError as error:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
@@ -112,10 +118,10 @@ class Comparator:
             relative_err = get_relative_err(n_value, b_value)
             n_value, b_value = reshape_value(n_value, b_value)
 
-        err_msg = get_error_message(n_value, b_value, op_name, error_flag, error_file=error_file)
+        err_msg = get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=error_file)
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
-        if npu_bench_name_list[0] != npu_bench_name_list[1]:
+        if npu_op_name != bench_op_name:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
