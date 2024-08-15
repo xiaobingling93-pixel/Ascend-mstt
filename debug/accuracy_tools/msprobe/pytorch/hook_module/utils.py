@@ -16,14 +16,14 @@
 """
 
 import os
-import yaml
+from msprobe.pytorch.common.utils import load_yaml
 
-from msprobe.core.common.file_check import FileOpen
 
-cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    Ops = yaml.safe_load(f)
+def get_Ops():
+    cur_path = os.path.dirname(os.path.realpath(__file__))
+    yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
+    Ops = load_yaml(yaml_path)
     WrapFunctionalOps = Ops.get('functional')
     WrapTensorOps = Ops.get('tensor')
     WrapTorchOps = Ops.get('torch')
+    return set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
