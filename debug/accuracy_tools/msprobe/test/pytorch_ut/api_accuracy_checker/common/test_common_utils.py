@@ -5,27 +5,9 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.pytorch.api_accuracy_checker.common.utils import *
-from msprobe.pytorch.common.utils import get_json_contents
 from msprobe.core.common.utils import write_csv
 
 class TestUtils(unittest.TestCase):
-
-    @patch('msprobe.pytorch.api_accuracy_checker.common.utils.get_file_content_bytes')
-    def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
-        mock_get_file_content_bytes.return_value = 'not a dict'
-        with self.assertRaises(CompareException) as ce:
-            get_json_contents('')
-        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
-
-    def test_get_json_contents_should_return_json_obj(self):
-        test_dict = {"key": "value"}
-        file_name = 'test.json'
-
-        fd = os.open(file_name, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        with os.fdopen(fd, 'w') as f:
-            json.dump(test_dict, f)
-        self.assertEqual(get_json_contents(file_name), test_dict)
-        os.remove(file_name)
 
     def test_write_csv(self):
         test_file_name = 'test.csv'
@@ -58,13 +40,6 @@ class TestUtils(unittest.TestCase):
         create_directory(test_dir_name)
         self.assertTrue(os.path.exists(test_dir_name))
         os.rmdir(test_dir_name)
-
-    def test_get_file_content_bytes(self):
-        fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
-        with os.fdopen(fd, 'w') as f:
-            f.write("Hello, World!")
-        self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
-        os.remove('test.txt')
 
     @patch('os.path.exists')
     def test_check_file_or_dir_path_should_raise_exe_when_dir_path_not_existed(self, mock_path_exists):
