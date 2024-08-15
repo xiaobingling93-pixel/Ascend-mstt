@@ -110,9 +110,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
             return self._analyze_builtin(element)
         return {}
 
-    def analyze_element(self, element):
-        return self.recursive_apply_transform(element, self.analyze_single_element)
-
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
         tensor_json = {

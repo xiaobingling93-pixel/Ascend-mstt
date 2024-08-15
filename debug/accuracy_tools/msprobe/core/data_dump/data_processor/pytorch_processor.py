@@ -140,9 +140,6 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_builtin(element)
         return {}
 
-    def analyze_element(self, element):
-        return self.recursive_apply_transform(element, self.analyze_single_element)
-
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
         tensor_json = {}
@@ -227,7 +224,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         self.cached_tensors_and_file_paths = {}
 
     def check_overflow_npu(self):
-        if self.overflow_debug_mode_enalbe():
+        if self.overflow_debug_mode_enable():
             float_status = torch.zeros(self.bits_for_overflow).npu()
             result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
             if result.cpu()[0] != 0:
