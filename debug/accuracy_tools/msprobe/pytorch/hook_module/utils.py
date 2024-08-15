@@ -19,11 +19,11 @@ import os
 from msprobe.pytorch.common.utils import load_yaml
 
 
-def get_Ops():
+def get_ops():
     cur_path = os.path.dirname(os.path.realpath(__file__))
     yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-    Ops = load_yaml(yaml_path)
-    WrapFunctionalOps = Ops.get('functional')
-    WrapTensorOps = Ops.get('tensor')
-    WrapTorchOps = Ops.get('torch')
+    ops = load_yaml(yaml_path)
+    WrapFunctionalOps = ops.get('functional')
+    WrapTensorOps = ops.get('tensor')
+    WrapTorchOps = ops.get('torch')
     return set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)

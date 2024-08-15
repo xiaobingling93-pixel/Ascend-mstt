@@ -4,7 +4,7 @@ import os
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
-from msprobe.pytorch.hook_module.utils import get_Ops
+from msprobe.pytorch.hook_module.utils import get_ops
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend
 
@@ -81,7 +81,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
 
 
 class RunUTConfig(BaseConfig):
-    WrapApi = get_Ops()
+    WrapApi = get_ops()
 
     def __init__(self, json_config):
         super().__init__(json_config)

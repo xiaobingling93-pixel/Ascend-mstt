@@ -291,10 +291,10 @@ def load_yaml(yaml_path):
     checked_path = path_checker.common_check()
     try:
         with FileOpen(checked_path, "r") as f:
-            Ops = yaml.safe_load(f)
+            yaml_data = yaml.safe_load(f)
     except Exception as e:
         raise RuntimeError(f"load yaml file {yaml_path} failed") from e
-    return Ops       
+    return yaml_data       
 
 
 def _create_logger(level=logging.INFO):
