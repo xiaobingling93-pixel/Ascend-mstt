@@ -40,7 +40,9 @@ from msprobe.core.common.utils import (CompareException,
                                        check_file_size,
                                        check_regex_prefix_format_valid,
                                        get_dump_data_path,
-                                       task_dumppath_get)
+                                       task_dumppath_get,
+                                       get_json_contents,
+                                       get_file_content_bytes)
 from msprobe.core.common.file_check import FileCheckConst
 
 
@@ -343,3 +345,26 @@ class TestUtils(TestCase):
                 task_dumppath_get(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
+
+    def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
+        mock_get_file_content_bytes.return_value = 'not a dict'
+        with self.assertRaises(CompareException) as ce:
+            get_json_contents('')
+        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
+
+    def test_get_json_contents_should_return_json_obj(self):
+        test_dict = {"key": "value"}
+        file_name = 'test.json'
+
+        fd = os.open(file_name, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
+            json.dump(test_dict, f)
+        self.assertEqual(get_json_contents(file_name), test_dict)
+        os.remove(file_name)
+
+    def test_get_file_content_bytes(self):
+        fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
+            f.write("Hello, World!")
+        self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
+        os.remove('test.txt')
