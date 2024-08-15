@@ -24,7 +24,7 @@ def module_dump(module, dump_name):
     dump_name = dump_name + Const.SEP + str(module_count.get(dump_name)) + Const.SEP
 
     pdg = PrecisionDebugger()
-    _, forward_hook, backward_hook = pdg.service.build_hook(BaseScope.Module_Type_Module, dump_name)
+    _, forward_hook, backward_hook, _ = pdg.service.build_hook(BaseScope.Module_Type_Module, dump_name)
     module.register_forward_hook(forward_hook, with_kwargs=True)
     module.register_full_backward_hook(backward_hook)
 

@@ -5,17 +5,34 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import Const
 from msprobe.pytorch.hook_module.utils import WrapFunctionalOps, WrapTensorOps, WrapTorchOps
+from msprobe.core.grad_probe.constant import level_adp
+from msprobe.core.grad_probe.utils import check_numeral_list_ascend
 
 
 class TensorConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
+        self.online_run_ut = json_config.get("online_run_ut", False)
+        self.nfs_path = json_config.get("nfs_path", "")
+        self.host = json_config.get("host", "")
+        self.port = json_config.get("port", -1)
+        self.tls_path = json_config.get("tls_path", "")
         self.check_config()
         self._check_file_format()
+        self._check_tls_path_config()
 
     def _check_file_format(self):
         if self.file_format is not None and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
+
+    def _check_tls_path_config(self):
+        if self.tls_path:
+            if not os.path.exists(self.tls_path):
+                raise Exception("tls_path: %s does not exist" % self.tls_path)
+            if not os.path.exists(os.path.join(self.tls_path, "client.key")):
+                raise Exception("tls_path does not contain client.key")
+            if not os.path.exists(os.path.join(self.tls_path, "client.crt")):
+                raise Exception("tls_path does not contain client.crt")
 
 
 class StatisticsConfig(BaseConfig):
@@ -65,11 +82,18 @@ class FreeBenchmarkCheckConfig(BaseConfig):
 
 class RunUTConfig(BaseConfig):
     WrapApi = set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
+
     def __init__(self, json_config):
         super().__init__(json_config)
         self.white_list = json_config.get("white_list", Const.DEFAULT_LIST)
         self.black_list = json_config.get("black_list", Const.DEFAULT_LIST)
         self.error_data_path = json_config.get("error_data_path", Const.DEFAULT_PATH)
+        self.is_online = json_config.get("is_online", False)
+        self.nfs_path = json_config.get("nfs_path", "")
+        self.host = json_config.get("host", "")
+        self.port = json_config.get("port", -1)
+        self.rank_list = json_config.get("rank_list", Const.DEFAULT_LIST)
+        self.tls_path = json_config.get("tls_path", "")
         self.check_run_ut_config()
 
     @classmethod
@@ -86,17 +110,43 @@ class RunUTConfig(BaseConfig):
     def check_error_data_path_config(cls, error_data_path):
         if not os.path.exists(error_data_path):
             raise Exception("error_data_path: %s does not exist" % error_data_path)
-        
+
+    @classmethod
+    def check_nfs_path_config(cls, nfs_path):
+        if nfs_path and not os.path.exists(nfs_path):
+            raise Exception("nfs_path: %s does not exist" % nfs_path)
+
+    @classmethod
+    def check_tls_path_config(cls, tls_path):
+        if tls_path:
+            if not os.path.exists(tls_path):
+                raise Exception("tls_path: %s does not exist" % tls_path)
+            if not os.path.exists(os.path.join(tls_path, "server.key")):
+                raise Exception("tls_path does not contain server.key")
+            if not os.path.exists(os.path.join(tls_path, "server.crt")):
+                raise Exception("tls_path does not contain server.crt")
+
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
         RunUTConfig.check_filter_list_config(Const.BLACK_LIST, self.black_list)
         RunUTConfig.check_error_data_path_config(self.error_data_path)
+        RunUTConfig.check_nfs_path_config(self.nfs_path)
+        RunUTConfig.check_tls_path_config(self.tls_path)
 
 
 class GradToolConfig(BaseConfig):
     def __init__(self, json_config):
         super().__init__(json_config)
-        self._config = json_config
+        self.grad_level = json_config.get("grad_level", "L1")
+        self.param_list = json_config.get("param_list", [])
+        self.bounds = json_config.get("bounds", [])
+    
+    def _check_config(self):
+        if self.grad_level not in level_adp.keys():
+            raise Exception(f"grad_level must be one of {level_adp.keys()}")
+        if not isinstance(self.param_list, list):
+            raise Exception(f"param_list must be a list")
+        check_numeral_list_ascend(self.bounds)
 
 
 def parse_task_config(task, json_config):

@@ -21,6 +21,7 @@ class ProfilingResult:
         self.python_function_data = []
         self.fwdbwd_dict = {}
         self.kernel_details = {}
+        self.bwd_tid = None
 
     def update_torch_op_data(self, event: TraceEventBean):
         event.is_torch_op = True
@@ -44,14 +45,17 @@ class ProfilingResult:
     def update_comm_task_data(self, comm_name: str, task_event: TraceEventBean):
         self.communication_dict.setdefault(comm_name, {}).setdefault("comm_task", {}).setdefault(
             task_event.name, []).append(task_event.dur)
-    
+
     def update_kernel_details(self, kernels: dict):
         self.kernel_details = kernels
+
+    def update_bwd_tid(self, bwd_tid):
+        self.bwd_tid = bwd_tid
 
 
 class BaseProfilingParser(ABC):
 
-    def __init__(self, args: any, path_dict: dict):
+    def __init__(self, args: any, path_dict: dict, step_id: int = Constant.VOID_STEP):
         self._args = args
         self._profiling_type = path_dict.get(Constant.PROFILING_TYPE)
         self._profiling_path = path_dict.get(Constant.PROFILING_PATH)
@@ -76,6 +80,7 @@ class BaseProfilingParser(ABC):
         self._categorize_performance_index = 0
         self._cpu_cube_op = None
         self._bwd_tid = None
+        self._step_id = step_id
 
     @property
     def cpu_cube_op(self):
@@ -115,6 +120,10 @@ class BaseProfilingParser(ABC):
         raise NotImplementedError("Function _get_dispatch_func need to be implemented.")
 
     def load_data(self) -> ProfilingResult:
+        self._result_data.update_bwd_tid(self._bwd_tid)
+        if self._step_id != Constant.VOID_STEP and self._profiling_type == Constant.GPU:
+            msg = "[WARNING] step id is invalid in GPU data, please use this when comparing between NPU datas."
+            raise RuntimeError(msg)
         self._dispatch_events()
         self._update_kernel_dict()
         self._update_communication_dict()
@@ -127,14 +136,13 @@ class BaseProfilingParser(ABC):
         self._check_result_data()
         return self._result_data
 
-    def categorize_computing_performance_data(self, tk: (TraceEventBean, KernelDetailsBean), flow_dict_new: dict):
+    def categorize_computing_performance_data(self, tk: (TraceEventBean, KernelDetailsBean), flow_start_time):
         if tk.is_page_attention():
             self._result_data.overall_metrics.update_page_attention_info(tk.dur)
             return
         if tk.is_sdma():
             self._result_data.overall_metrics.update_sdma_tensor_move_info(tk.dur)
             return
-        flow_start_time = flow_dict_new.get(tk.start_time)
         if flow_start_time:
             while self._categorize_performance_index < len(self.cpu_cube_op):
                 cur_op = self.cpu_cube_op[self._categorize_performance_index]
@@ -174,7 +182,7 @@ class BaseProfilingParser(ABC):
         判断fa/conv/matmul/vector使用cpu_op
         """
         if cpu_op.is_fa_for_cpu_op():
-            if self._is_backward(cpu_op):
+            if cpu_op.is_bwd_for_cpu_op():
                 if tk.is_cube_kernel_cat():
                     self._result_data.overall_metrics.update_fa_bwd_cube_info(tk.dur)
                 else:

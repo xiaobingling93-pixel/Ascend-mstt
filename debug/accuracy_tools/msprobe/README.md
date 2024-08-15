@@ -21,7 +21,12 @@ Successfully installed mindstudio_probe-{version}
 ```
 
 ### 下载whl包安装
-1. 使用pip命令安装numpy、openpyxl、pandas、PyYAML、rich、torch、tqdm依赖。
+1. 使用pip命令安装依赖：
+
+   1. 根据实际环境安装torch或mindspore
+
+   2. 安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、einops、matplotlib、pyOpenSSL、twisted
+
 
    若环境中已安装部分依赖，不需要重复安装。
 
@@ -29,13 +34,14 @@ Successfully installed mindstudio_probe-{version}
 
    请通过下表链接下载工具whl包。
 
-   | 版本  | 发布日期   | 支持PyTorch版本 | 下载链接                                                     | 校验码                                                       |
-   | ----- | ---------- | --------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 1.0.1 | 2024-07-25 | 2.0/2.1/2.2     | [mindstudio_probe-1.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.1-py3-none-any.whl) | b699e224e4d4e3bcf9412c54fa858a1ee370f0d7a2bc69cb3f1273ac14a6dc82 |
-   | 1.0   | 2024-07-09 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/1.0/ascend_training_accuracy_tools-1.0-py3-none-any.whl) | 5016dfe886c5d340ec6f60a959673355855f313c91f100680da814efb49f8e81 |
-   | 0.0.3 | 2024-06-11 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-0.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.3-py3-none-any.whl) | f46d9714704859e2d67861a65bbb3c76b0a250cf6e238b978b5b959ab1fe125a |
-   | 0.0.2 | 2024-05-23 | 2.0/2.1/2.2     | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
-   | 0.0.1 | 2024-03-15 | 2.0/2.1         | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
+   | 版本  | 发布日期   | 支持PyTorch版本  | 支持MindSpore版本 | 下载链接                                                     | 校验码                                                       |
+   | ----- | ---------- | ---------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 1.0.2 | 2024-08-09 | 1.11/2.0/2.1/2.2 | 2.3.1             | [mindstudio_probe-1.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.2-py3-none-any.whl) | e4a980e5d98c426ce5ce9842520d9bc031d3b3de621c74b3d59414cc6e238e0e |
+   | 1.0.1 | 2024-07-25 | 2.0/2.1/2.2      | 2.3.1             | [mindstudio_probe-1.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.1-py3-none-any.whl) | b699e224e4d4e3bcf9412c54fa858a1ee370f0d7a2bc69cb3f1273ac14a6dc82 |
+   | 1.0   | 2024-07-09 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/1.0/ascend_training_accuracy_tools-1.0-py3-none-any.whl) | 5016dfe886c5d340ec6f60a959673355855f313c91f100680da814efb49f8e81 |
+   | 0.0.3 | 2024-06-11 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-0.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.3-py3-none-any.whl) | f46d9714704859e2d67861a65bbb3c76b0a250cf6e238b978b5b959ab1fe125a |
+   | 0.0.2 | 2024-05-23 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
+   | 0.0.1 | 2024-03-15 | 2.0/2.1          | -                 | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
 
 3. whl包校验。
 
@@ -159,7 +165,7 @@ Required-by:
 
    PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_overview.md)。
 
-   MindSpore场景：暂不支持。
+   MindSpore场景：详见[MindSpore_精度比对工具](./mindspore/doc/compare.md)。
 
 5. 执行溢出解析。
 
@@ -177,6 +183,14 @@ Required-by:
 
    MindSpore场景：暂不支持。
 
+6. 执行梯度采集和比对。
+
+   用于采集梯度数据并进行梯度相似度比对。可以精准定位问题出现的step。
+
+   详见[梯度状态监测工具](./doc/grad_probe/grad_probe.md)。
+
+
+
 上述流程中的工具均为msprobe工具的子工具，使用相同的命令行，格式如下：
 
 精度预检工具
@@ -193,6 +207,12 @@ msprobe -f <framework> multi_run_ut [-h]
 msprobe -f <framework> api_precision_compare [-h]
 ```
 
+精度比对工具
+
+```bash
+msprobe -f <framework> compare [-h]
+```
+
 溢出解析工具
 
 ```bash
@@ -205,15 +225,11 @@ msprobe -f <framework> run_overflow_check [-h]
 msprobe -f <framework> parse [-h]
 ```
 
-| 参数 | 说明                                                   |
-| ---- | ------------------------------------------------------ |
-| -f   | 框架，请按所使用框架配置，当前支持pytorch或mindspore。 |
-| -h   | 帮助信息。                                             |
+| 参数 | 说明                                                         |
+| ---- | ------------------------------------------------------------ |
+| -f   | 框架，请按所使用框架配置，当前支持配置为：pytorch、mindspore。 |
+| -h   | 帮助信息。                                                   |
 
 ## 贡献
 
 push代码前，请务必保证已经完成了基础功能测试和网络测试。
-
-## Release Notes
-
-Release Notes请参见[RELEASE](RELEASE.md)。

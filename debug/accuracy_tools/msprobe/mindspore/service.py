@@ -19,6 +19,10 @@ from pathlib import Path
 import functools
 from collections import defaultdict
 
+from mindspore.common.tensor import Tensor
+from mindspore import ops
+from mindspore import nn
+
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.common.utils import get_rank_if_initialized
@@ -27,9 +31,11 @@ from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
+    ModuleBackwardInputs, ModuleBackwardOutputs
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.mindspore.dump.hook_cell.cell_processor import CellProcessor
+from msprobe.mindspore.cell_processor import CellProcessor
 
 
 class Service:
@@ -43,29 +49,54 @@ class Service:
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
+        self.primitive_counters = {}
         self.dump_iter_dir = None
         self.start_call = False
+        self.check_level_valid()
 
-    def build_hook(self, module_type, name):
-        def forward_hook(api_or_module_name, module, input, output):
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+    @staticmethod
+    def check_model_valid(model):
+        if not model or isinstance(model, nn.Cell):
+            return model
+        raise MsprobeException(
+            MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是 mindspore.nn.Cell 类型。"
+        )
+
+    def check_level_valid(self):
+        if self.config.level == "L2":
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
+            )
+
+    def build_hook(self, target_type, name):
+        def forward_hook(api_or_cell_name, cell, input, output):
+            if target_type == BaseScope.Module_Type_Module:
+                api_or_cell_name = cell.mindstudio_reserved_name
+            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
             if not self.switch:
                 return None
             if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=module.input_kwargs, output=output)
-                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
+                if target_type == BaseScope.Module_Type_Module:
+                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs={}, output=output)
+                else:
+                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs, output=output)
+                self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
-                del module.input_kwargs
+                if target_type == BaseScope.Module_Type_API:
+                    del cell.input_kwargs
             return output
 
-        def backward_hook(api_or_module_name, module, grad_input, grad_output):
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+        def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
+            if target_type == BaseScope.Module_Type_Module:
+                api_or_cell_name = cell.mindstudio_reserved_name
+            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
             if not self.switch:
                 return
             if self.data_collector:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
-                self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
+                # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
+                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
@@ -73,21 +104,148 @@ class Service:
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
 
-        def wrap_forward_hook(*args, **kwargs):
-            return forward_hook(*args, **kwargs)
+        def wrap_forward_hook(cell, input, output):
+            return forward_hook(cell, input, output)
 
-        def wrap_backward_hook(*args, **kwargs):
-            return backward_hook(*args, **kwargs)
+        def wrap_backward_hook(cell, grad_input, grad_output):
+            return backward_hook(cell, grad_input, grad_output)
 
         return wrap_forward_hook, wrap_backward_hook
+
+    def wrap_primitive(self, origin_func, primitive_name):
+        service_instance = self
+
+        def create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type):
+            def backward_hook(grad):
+                captured_grads.append(grad)
+                backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
+                try:
+                    if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
+                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
+                        service_instance.data_collector.backward_output_data_collect(
+                            backward_primitive_name, service_instance, os.getpid(), new_module_input_output
+                        )
+                        captured_grads.clear()
+                    elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
+                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
+                        service_instance.data_collector.backward_input_data_collect(
+                            backward_primitive_name, service_instance, os.getpid(), new_module_input_output
+                        )
+                        captured_grads.clear()
+
+                except Exception as exception:
+                    raise Exception(f"This is a primitive op {hook_type}_backward dump error: {exception},"
+                                    f" updated_primitive_name: {updated_primitive_name}") from exception
+
+            return backward_hook
+
+        def hook_primitive_inputs(args, captured_grads_input, updated_primitive_name):
+            hooked_inputs = []
+            num_tensors = sum(isinstance(arg, Tensor) for arg in args)
+            input_backward_hook = create_backward_hook(captured_grads_input, num_tensors, updated_primitive_name,
+                                                       Const.INPUT)
+            for _, arg in enumerate(args):
+                if isinstance(arg, Tensor):
+                    arg_hooked = ops.HookBackward(input_backward_hook)(arg)
+                    hooked_inputs.append(arg_hooked)
+                else:
+                    hooked_inputs.append(arg)
+            return hooked_inputs
+
+        def hook_primitive_outputs(out, captured_grads_output, updated_primitive_name):
+            if isinstance(out, tuple):
+                num_output_tensors = sum(isinstance(tensor, Tensor) for tensor in out)
+            else:
+                num_output_tensors = 1
+            output_backward_hook = create_backward_hook(captured_grads_output, num_output_tensors,
+                                                        updated_primitive_name, Const.OUTPUT)
+
+            if isinstance(out, Tensor):
+                return ops.HookBackward(output_backward_hook)(out)
+            elif isinstance(out, tuple):
+                hooked_outputs = []
+                for tensor in out:
+                    if isinstance(tensor, Tensor):
+                        hooked_outputs.append(ops.HookBackward(output_backward_hook)(tensor))
+                    else:
+                        hooked_outputs.append(tensor)
+                return tuple(hooked_outputs)
+            return out
+
+        def wrapped_primitive_call(instance_self, *args, **kwargs):
+            service_instance.update_primitive_counters(primitive_name)
+            current_count = service_instance.primitive_counters.get(primitive_name, 0)
+            updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
+
+            if not service_instance.switch:
+                return origin_func(*args, **kwargs)
+
+            captured_grads_input, captured_grads_output = [], []
+
+            try:
+                hooked_inputs = hook_primitive_inputs(args, captured_grads_input, updated_primitive_name)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during input hooking: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            try:
+                out = origin_func(*hooked_inputs, **kwargs)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during function call: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
+            service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            if service_instance.data_collector:
+                module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
+                try:
+                    service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self,
+                                                                         os.getpid(), module_input_output)
+                except Exception as exception:
+                    raise Exception("This is a primitive op dump error during forward data collection: {},"
+                                    " primitive_name: {}".format(exception, primitive_name)) from exception
+
+                if service_instance.data_collector.if_return_forward_new_output():
+                    out = service_instance.data_collector.get_forward_new_output()
+
+            try:
+                out = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during output hooking: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            return out
+
+        return wrapped_primitive_call
+
+    def update_primitive_counters(self, primitive_name):
+        if primitive_name not in self.primitive_counters:
+            self.primitive_counters[primitive_name] = 0
+        else:
+            self.primitive_counters[primitive_name] += 1
+
+    def register_hooks(self):
+        primitive_set = set()
+        for _, cell in self.model.cells_and_names():
+            for pname, primitive in cell._primitives.items():
+                primitive_set.add((pname, primitive))
+
+        for pname, primitive in primitive_set:
+            NewPrimitive = type('NewPrimitive', (primitive.__class__,),
+                                {'__call__': self.wrap_primitive(primitive.__call__, pname)})
+            primitive.__class__ = NewPrimitive
 
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         HOOKCell.cell_count = defaultdict(int)
+        CellProcessor.cell_count = {}
+        self.primitive_counters.clear()
 
     def start(self, model=None):
-        self.model = model
+        self.model = self.check_model_valid(model)
         self.start_call = True
         logger.info("msprobe: debugger.start() is set successfully")
         if self.config.step and self.current_iter > max(self.config.step):
@@ -152,22 +310,26 @@ class Service:
         if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
+            if self.model:
+                self.register_hooks()
 
-        if self.config.level == "L2":
+        if self.config.level == "L0":
+            if not self.model:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "The current level is L0, the model cannot be None")
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue
-                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
-                         module.__class__.__name__ + Const.SEP
+                prefix = 'Cell' + Const.SEP + name + Const.SEP + \
+                         cell.__class__.__name__ + Const.SEP
                 forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
                 cell.register_forward_hook(forward_hook)
-                cell.register_full_backward_hook(backward_hook)
+                cell.register_backward_hook(backward_hook)
 
                 cell.register_forward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
                 cell.register_forward_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                cell.register_full_backward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                cell.register_full_backward_hook(
-                    self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
+                cell.register_backward_pre_hook(
+                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                cell.register_backward_hook(
+                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))

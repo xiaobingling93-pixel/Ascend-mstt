@@ -11,19 +11,21 @@ class Singleton(object):
         self._cls = cls
         self._instance = {}
 
-    def __call__(self):
+    def __call__(self, args = None):
         if self._cls not in self._instance:
-            self._instance[self._cls] = self._cls()
+            self._instance[self._cls] = self._cls(args)
         return self._instance[self._cls]
 
 
 @Singleton
 class ArgsManager:
 
-    def __init__(self):
-        self._args = None
+    def __init__(self, args: any):
+        self._args = args
         self._base_path_dict = {}
         self._comparison_path_dict = {}
+        self._base_step = Constant.VOID_STEP
+        self._comparison_step = Constant.VOID_STEP
 
     @property
     def args(self):
@@ -52,6 +54,14 @@ class ArgsManager:
     @property
     def comparison_path_dict(self):
         return self._comparison_path_dict
+
+    @property
+    def base_step(self):
+        return self._base_step
+
+    @property
+    def comparison_step(self):
+        return self._comparison_step
 
     @property
     def enable_profiling_compare(self):
@@ -88,6 +98,18 @@ class ArgsManager:
         PathManager.make_dir_safety(output_path)
         PathManager.check_path_writeable(output_path)
 
+    def get_step_args_with_validating(self):
+        if self._args.base_step and self._args.comparison_step:
+            if all([self._args.base_step.isdigit(), self._args.comparison_step.isdigit()]):
+                self._base_step = int(self._args.base_step)
+                self._comparison_step = int(self._args.comparison_step)
+            else:
+                msg = "Invalid param, base_step and comparison_step must be a number."
+                raise RuntimeError(msg)
+        elif any([self._args.base_step, self._args.comparison_step]):
+            msg = "Invalid param, base_step and comparison_step must be set at the same time."
+            raise RuntimeError(msg)
+
     def parse_profiling_path(self, file_path: str):
         self.check_profiling_path(file_path)
         if os.path.isfile(file_path):
@@ -114,8 +136,7 @@ class ArgsManager:
                 path_dict.update({Constant.INFO_JSON_PATH: os.path.join(file_path, dir_name)})
         return path_dict
 
-    def init(self, args: any):
-        self._args = args
+    def init(self):
         if self._args.max_kernel_num is not None and self._args.max_kernel_num <= Constant.LIMIT_KERNEL:
             msg = f"Invalid param, --max_kernel_num has to be greater than {Constant.LIMIT_KERNEL}"
             raise RuntimeError(msg)
@@ -135,7 +156,8 @@ class ArgsManager:
             self._args.enable_communication_compare = True
             self._args.enable_api_compare = True
             self._args.enable_kernel_compare = True
-
+        
+        self.get_step_args_with_validating()
         base_profiling_path = PathManager.get_realpath(self._args.base_profiling_path)
         self.check_profiling_path(base_profiling_path)
         self._base_path_dict = self.parse_profiling_path(base_profiling_path)

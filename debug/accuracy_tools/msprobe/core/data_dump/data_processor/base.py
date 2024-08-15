@@ -41,6 +41,24 @@ class ModuleBackwardInputsOutputs:
         return convert_tuple(self.grad_output)
 
 
+@dataclass
+class ModuleBackwardInputs:
+    grad_input: Optional[Tuple]
+
+    @property
+    def grad_input_tuple(self):
+        return convert_tuple(self.grad_input)
+
+
+@dataclass
+class ModuleBackwardOutputs:
+    grad_output: Optional[Tuple]
+
+    @property
+    def grad_output_tuple(self):
+        return convert_tuple(self.grad_output)
+
+
 class TensorStatInfo:
     def __init__(self, max_val=None, min_val=None, mean_val=None, norm_val=None):
         self.max = max_val
@@ -69,6 +87,10 @@ class BaseDataProcessor:
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
+    
+    @property
+    def is_terminated(self):
+        return False
 
     @staticmethod
     def analyze_api_call_stack(name):
@@ -169,6 +191,9 @@ class BaseDataProcessor:
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
+    
+    def analyze_element(self, element):
+        return self.recursive_apply_transform(element, self.analyze_single_element)
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         api_info_struct = {}
@@ -228,12 +253,31 @@ class BaseDataProcessor:
 
         return api_info_struct
 
+    def analyze_backward_input(self, name, module,
+                               module_input_output: ModuleBackwardInputs):
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.INPUT):
+            api_info_struct[name] = {}
+            self.api_data_category = Const.INPUT
+
+            input_info_list = self.analyze_element(module_input_output.grad_input_tuple)
+            api_info_struct[name][Const.INPUT] = input_info_list
+        return api_info_struct
+
+    def analyze_backward_output(self, name, module,
+                                module_input_output: ModuleBackwardOutputs):
+        api_info_struct = {}
+        if self.is_dump_for_data_mode(Const.BACKWARD, Const.OUTPUT):
+            api_info_struct[name] = {}
+            self.api_data_category = Const.OUTPUT
+
+            output_info_list = self.analyze_element(module_input_output.grad_output_tuple)
+            api_info_struct[name][Const.OUTPUT] = output_info_list
+        return api_info_struct
+
     def get_save_file_path(self, suffix):
         file_format = Const.PT_SUFFIX if self.config.framework == Const.PT_FRAMEWORK else Const.NUMPY_SUFFIX
         dump_data_name = (self.current_api_or_module_name + Const.SEP + self.api_data_category + Const.SEP +
                           suffix + file_format)
         file_path = os.path.join(self.data_writer.dump_tensor_data_dir, dump_data_name)
         return dump_data_name, file_path
-
-    def stop_run(self):
-        return False
