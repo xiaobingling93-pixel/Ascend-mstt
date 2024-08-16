@@ -18,14 +18,13 @@ import logging
 import os
 import random
 import stat
-import yaml
 import torch
 import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.file_check import FileChecker, FileOpen, FileCheckConst, change_mode
+from msprobe.core.common.file_check import FileCheckConst, change_mode
 
 
 try:
@@ -286,17 +285,6 @@ def save_pt(tensor, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
     
     
-def load_yaml(yaml_path):
-    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
-    checked_path = path_checker.common_check()
-    try:
-        with FileOpen(checked_path, "r") as f:
-            yaml_data = yaml.safe_load(f)
-    except Exception as e:
-        raise RuntimeError(f"load yaml file {yaml_path} failed") from e
-    return yaml_data       
-
-
 def _create_logger(level=logging.INFO):
     logger_ = logging.getLogger()
     logger_.setLevel(level)

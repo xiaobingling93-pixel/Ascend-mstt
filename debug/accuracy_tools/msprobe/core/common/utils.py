@@ -23,6 +23,7 @@ import subprocess
 import time
 import json
 import csv
+import yaml
 from datetime import datetime, timezone
 from pathlib import Path
 import numpy as np
@@ -557,3 +558,14 @@ def save_npy(data, filepath):
     except Exception as e:
         raise RuntimeError(f"save npy file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def load_yaml(yaml_path):
+    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
+    checked_path = path_checker.common_check()
+    try:
+        with FileOpen(checked_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+    except Exception as e:
+        raise RuntimeError(f"load yaml file {yaml_path} failed") from e
+    return yaml_data
