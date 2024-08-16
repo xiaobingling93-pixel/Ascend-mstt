@@ -22,7 +22,6 @@ import torch.distributed as dist
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.utils import load_yaml
 
 
@@ -37,7 +36,7 @@ for f in dir(dist):
 
 def get_distributed_ops():
     _all_distributed_ops = dir(dist)
-    wrap_distributed_ops = load_yaml(yaml_path)
+    wrap_distributed_ops = load_yaml(yaml_path).get('distributed')
     return set(wrap_distributed_ops) & set(_all_distributed_ops)
 
 

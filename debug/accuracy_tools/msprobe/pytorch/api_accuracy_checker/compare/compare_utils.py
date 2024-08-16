@@ -22,10 +22,10 @@ BINARY_COMPARE_UNSUPPORT_LIST = BENCHMARK_COMPARE_SUPPORT_LIST + API_PRECISION_C
 cur_path = os.path.dirname(os.path.realpath(__file__))
 standard_yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
 apis = load_yaml(standard_yaml_path)
-AbsoluteStandardApi = apis.get('AbsoluteThreshStandard')
-BinaryStandardApi = apis.get('BinaryCompareStandard')
-ULPStandardApi = apis.get('ULPStandard')
-ThousandthStandardApi = apis.get('ThousandthStandard')
+absolute_standard_api = apis.get('AbsoluteThreshStandard')
+binary_standard_api = apis.get('BinaryCompareStandard')
+ulp_standard_api = apis.get('ULPStandard')
+thousandth_standard_api = apis.get('ThousandthStandard')
 
 
 threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
