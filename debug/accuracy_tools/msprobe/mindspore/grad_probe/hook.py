@@ -78,6 +78,7 @@ def hook_pynative_optimizer(opt, hook_input):
             dummy_csv_input = CsvInput(None, None, hook_input.bounds)
             output_lines.insert(0, GradStatCsv.get_csv_header(level_adapted, dummy_csv_input))
             write_csv(output_lines, output_csv_path)
+            logger.info(f"write grad data to {output_csv_path}")
         grad_context.update_step()
 
     opt.register_forward_pre_hook(hook_fn)
