@@ -15,13 +15,14 @@ except ImportError:
 else:
     is_npu = True
 
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
+from msprobe.core.common.const import Const, CompareConst
 from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
     DispatchRunParam, DisPatchDataInfo
 from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
     DispatchException
 from .compare import Comparator
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
-from msprobe.core.common.const import Const, CompareConst
+
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"

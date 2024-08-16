@@ -37,9 +37,9 @@ for f in dir(torch.ops.aten):
 
 
 def get_aten_ops():
-    global WrapAtenOps
+    global wrap_aten_ops
     _all_aten_ops = dir(torch.ops.aten)
-    return set(WrapAtenOps) & set(_all_aten_ops)
+    return set(wrap_aten_ops) & set(_all_aten_ops)
 
 
 class HOOKAtenOP(object):
