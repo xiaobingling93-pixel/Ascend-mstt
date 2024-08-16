@@ -283,8 +283,8 @@ def save_pt(tensor, filepath):
     except Exception as e:
         raise RuntimeError(f"save pt file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-    
-    
+
+
 def _create_logger(level=logging.INFO):
     logger_ = logging.getLogger()
     logger_.setLevel(level)
