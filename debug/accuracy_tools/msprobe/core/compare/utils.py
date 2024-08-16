@@ -326,9 +326,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
-    bench_name, bench_type, bench_shape = CompareConst.NAN, CompareConst.NAN, CompareConst.NAN
+    bench_name, bench_type, bench_shape = CompareConst.NONE, CompareConst.NONE, CompareConst.NONE
     err_msg = CompareConst.NO_BENCH
-    accuracy_check_res = CompareConst.NAN
+    accuracy_check_res = CompareConst.NONE
     for index, n_name in enumerate(n_dict["op_name"]):
         if n_name.find("input") != -1:
             n_struct = n_dict["input_struct"][index]
@@ -338,24 +338,28 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
         if md5_compare:
-            result_item.extend([CompareConst.NAN] * 3)
+            result_item.extend([CompareConst.NONE] * 3)
             if npu_stack_info and index == 0:
                 result_item.extend(npu_stack_info)
+            else:
+                result_item.append(CompareConst.NONE)
             result.append(result_item)
             continue
         if summary_compare:
-            result_item.extend([CompareConst.NAN] * 8)
+            result_item.extend([CompareConst.NONE] * 8)
         else:
-            result_item.extend([CompareConst.NAN] * 5)
+            result_item.extend([CompareConst.NONE] * 5)
         summary_data = n_dict.get("summary")[index]
         result_item.extend(summary_data)
-        summary_data = [CompareConst.NAN] * 4
+        summary_data = [CompareConst.NONE] * 4
         result_item.extend(summary_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
-        if not md5_compare and not summary_compare and result_item[1] == CompareConst.NAN:
+        else:
+            result_item.append(CompareConst.NONE)
+        if not md5_compare and not summary_compare and result_item[1] == CompareConst.NONE:
             if index == 0:
                 result_item.extend(["-1"])
             else:
