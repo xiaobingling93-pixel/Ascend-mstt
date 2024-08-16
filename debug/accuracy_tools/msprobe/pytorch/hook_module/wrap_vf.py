@@ -16,24 +16,21 @@
 """
 
 import os
-
 import torch
-import yaml
 
-from msprobe.pytorch.hook_module.hook_module import HOOKModule
-from msprobe.core.common.file_check import FileOpen
-from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import load_yaml
+from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.common.utils import torch_device_guard
+
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapVfOps = yaml.safe_load(f).get('_VF')
 
 
 def get_vf_ops():
-    global WrapVfOps
-    return WrapVfOps
+    wrap_vf_ops = load_yaml(yaml_path).get('_VF')
+    return wrap_vf_ops
 
 
 class HOOKVfOP(object):

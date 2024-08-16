@@ -17,18 +17,16 @@
 
 import os
 import torch
-import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapNpuOps = yaml.safe_load(f).get('torch_npu')
+
 
 try:
     import torch_npu
@@ -39,12 +37,12 @@ else:
 
 
 def get_npu_ops():
-    global WrapNpuOps
     if torch_without_guard_version:
         _npu_ops = dir(torch.ops.npu)
     else:
         _npu_ops = dir(torch_npu._C._VariableFunctionsClass)
-    return set(WrapNpuOps) & set(_npu_ops)
+    wrap_npu_ops = load_yaml(yaml_path).get('torch_npu')
+    return set(wrap_npu_ops) & set(_npu_ops)
 
 
 class HOOKNpuOP(object):

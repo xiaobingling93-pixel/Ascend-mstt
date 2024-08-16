@@ -18,23 +18,21 @@
 import os
 
 import torch
-import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, parameter_adapter
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
+
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapTensorOps = yaml.safe_load(f).get('tensor')
 
 
 def get_tensor_ops():
-    global WrapTensorOps
     _tensor_ops = dir(torch.Tensor)
-    return set(WrapTensorOps) & set(_tensor_ops)
+    wrap_tensor_ops = load_yaml(yaml_path).get('tensor')
+    return set(wrap_tensor_ops) & set(_tensor_ops)
 
 
 TensorOps = {op: getattr(torch.Tensor, op) for op in get_tensor_ops()}

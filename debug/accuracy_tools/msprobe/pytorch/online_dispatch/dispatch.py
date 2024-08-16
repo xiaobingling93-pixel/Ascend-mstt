@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from multiprocessing import Manager, Pool
 
-import yaml
 import torch
 
 from torch.utils._python_dispatch import TorchDispatchMode
@@ -21,8 +20,7 @@ from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, 
 from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
     DispatchException
 from .compare import Comparator
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
 from msprobe.core.common.const import Const, CompareConst
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -70,7 +68,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.aten_ops_blacklist = []
         self.npu_adjust_autogard = []
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
-        self.load_yaml_file(yaml_path)
+        self.get_ops(yaml_path)
 
         self.lock = None
         if process_num > 0:
@@ -214,11 +212,10 @@ class PtdbgDispatch(TorchDispatchMode):
             dir_name = f'msprobe_{tag}_rank{self.device_id}_{time_now}'
         return dir_name
 
-    def load_yaml_file(self, file_path):
-        with FileOpen(file_path, 'r') as f:
-            yaml_file = yaml.safe_load(f)
-            self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-            self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+    def get_ops(self, file_path):
+        yaml_file = load_yaml(file_path)
+        self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
+        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:

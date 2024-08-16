@@ -18,20 +18,17 @@
 import os
 import torch
 
-import yaml
-
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_grad_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    Ops = yaml.safe_load(f)
-    WrapAtenOps = Ops.get('aten')
-    WhiteAtenOps = Ops.get('white_aten_ops', [])
+ops = load_yaml(yaml_path)
+wrap_aten_ops = ops.get('aten')
+white_aten_ops = ops.get('white_aten_ops', [])
 
 
 aten_func = {}
@@ -69,7 +66,7 @@ class AtenOPTemplate(HOOKModule):
         if isinstance(self.op, str):
             if self.op in npu_custom_grad_functions:
                 return npu_custom_grad_functions[self.op](*args, **kwargs)
-            if self.op in WhiteAtenOps:
+            if self.op in white_aten_ops:
                 return eval(f"torch.ops.aten.{self.op}")(*args, **kwargs)
             if self.op not in aten_func:
                 raise Exception(f"Skip op[{self.op}] accuracy check, because the op is not "

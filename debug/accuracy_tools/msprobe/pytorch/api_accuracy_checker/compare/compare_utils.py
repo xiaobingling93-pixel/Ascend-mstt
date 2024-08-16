@@ -4,11 +4,10 @@ import math
 
 import numpy as np
 import torch
-import yaml
-from msprobe.core.common.utils import CompareException
+
+from msprobe.core.common.utils import CompareException, load_yaml
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileOpen
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -22,17 +21,15 @@ BINARY_COMPARE_UNSUPPORT_LIST = BENCHMARK_COMPARE_SUPPORT_LIST + API_PRECISION_C
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 standard_yaml_path = os.path.join(cur_path, "api_precision_standard.yaml")
-with FileOpen(standard_yaml_path, 'r') as f:
-    Apis = yaml.safe_load(f)
-    AbsoluteStandardApi = Apis.get('AbsoluteThreshStandard')
-    BinaryStandardApi = Apis.get('BinaryCompareStandard')
-    ULPStandardApi = Apis.get('ULPStandard')
-    ThousandthStandardApi = Apis.get('ThousandthStandard')
+apis = load_yaml(standard_yaml_path)
+AbsoluteStandardApi = apis.get('AbsoluteThreshStandard')
+BinaryStandardApi = apis.get('BinaryCompareStandard')
+ULPStandardApi = apis.get('ULPStandard')
+ThousandthStandardApi = apis.get('ThousandthStandard')
 
 
 threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
-with FileOpen(threshold_yaml_path, 'r') as f:
-    apis_threshold = yaml.safe_load(f)
+apis_threshold = load_yaml(threshold_yaml_path)
 
 
 DETAIL_TEST_ROWS = [[
