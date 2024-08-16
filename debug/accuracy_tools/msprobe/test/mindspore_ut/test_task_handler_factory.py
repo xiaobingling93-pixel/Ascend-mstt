@@ -25,8 +25,8 @@ from msprobe.mindspore.common.const import Const
 
 
 class TestTaskHandlerFactory(TestCase):
-
-    def test_create(self):
+    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    def test_create(self, _):
         class HandlerFactory:
             def create(self):
                 return None
@@ -57,4 +57,4 @@ class TestTaskHandlerFactory(TestCase):
         config.task = "Free_benchmark"
         with self.assertRaises(Exception) as context:
             TaskHandlerFactory.create(config)
-        self.assertEqual(str(context.exception), "valid task is needed.")
+        self.assertEqual(str(context.exception), "Valid task is needed.")
