@@ -18,7 +18,6 @@ import collections
 import os
 import re
 import shutil
-import stat
 import subprocess
 import time
 import json
@@ -29,7 +28,7 @@ import yaml
 import numpy as np
 
 from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
-from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
 
