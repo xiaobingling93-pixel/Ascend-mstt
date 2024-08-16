@@ -23,7 +23,7 @@ def get_ops():
     cur_path = os.path.dirname(os.path.realpath(__file__))
     yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
     ops = load_yaml(yaml_path)
-    WrapFunctionalOps = ops.get('functional')
+    wrap_functional_ops = ops.get('functional')
     WrapTensorOps = ops.get('tensor')
     WrapTorchOps = ops.get('torch')
     return set(WrapFunctionalOps) | set(WrapTensorOps) | set(WrapTorchOps)
