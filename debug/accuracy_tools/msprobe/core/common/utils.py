@@ -23,9 +23,9 @@ import subprocess
 import time
 import json
 import csv
-import yaml
 from datetime import datetime, timezone
 from pathlib import Path
+import yaml
 import numpy as np
 
 from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
