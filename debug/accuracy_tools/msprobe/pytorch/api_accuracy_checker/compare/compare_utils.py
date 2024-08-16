@@ -2,7 +2,6 @@ import time
 import os
 import math
 
-import numpy as np
 import torch
 
 from msprobe.core.common.utils import CompareException, load_yaml

@@ -1,5 +1,4 @@
 import os
-from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.utils import CompareException, load_yaml
 
 
