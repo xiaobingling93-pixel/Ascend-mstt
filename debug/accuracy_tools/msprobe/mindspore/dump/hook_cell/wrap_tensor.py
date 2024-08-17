@@ -29,7 +29,8 @@ for f in dir(ms.Tensor):
 
 
 def get_tensor_ops():
-    wrap_tensor_ops = load_yaml(yaml_path).get('tensor')
+    yaml_data = load_yaml(yaml_path)
+    wrap_tensor_ops = yaml_data.get('tensor')
     _tensor_ops = dir(ms.Tensor)
     return set(wrap_tensor_ops) & set(_tensor_ops)
 

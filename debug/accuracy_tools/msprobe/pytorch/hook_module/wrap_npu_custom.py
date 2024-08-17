@@ -41,7 +41,8 @@ def get_npu_ops():
         _npu_ops = dir(torch.ops.npu)
     else:
         _npu_ops = dir(torch_npu._C._VariableFunctionsClass)
-    wrap_npu_ops = load_yaml(yaml_path).get('torch_npu')
+    yaml_data = load_yaml(yaml_path)
+    wrap_npu_ops = yaml_data.get('torch_npu')
     return set(wrap_npu_ops) & set(_npu_ops)
 
 

@@ -30,7 +30,8 @@ yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 
 def get_torch_ops():
     _torch_ops = []
-    wrap_torch_ops = load_yaml(yaml_path).get('torch')
+    yaml_data = load_yaml(yaml_path)
+    wrap_torch_ops = yaml_data.get('torch')
     for operation in wrap_torch_ops:
         if '.' in operation:
             operation_sub_module_name, operation_sub_op = operation.rsplit('.', 1)

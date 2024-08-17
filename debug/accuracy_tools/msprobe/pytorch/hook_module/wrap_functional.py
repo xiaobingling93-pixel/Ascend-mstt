@@ -67,7 +67,8 @@ yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 
 
 def get_functional_ops():
-    wrap_functional_ops = load_yaml(yaml_path).get('functional')
+    yaml_data = load_yaml(yaml_path)
+    wrap_functional_ops = yaml_data.get('functional')
     _all_functional_ops = dir(torch.nn.functional)
     return set(wrap_functional_ops) & set(_all_functional_ops)
 

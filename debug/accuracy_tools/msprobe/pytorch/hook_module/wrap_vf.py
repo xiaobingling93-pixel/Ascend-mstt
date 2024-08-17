@@ -29,7 +29,8 @@ yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 
 
 def get_vf_ops():
-    wrap_vf_ops = load_yaml(yaml_path).get('_VF')
+    yaml_data = load_yaml(yaml_path)
+    wrap_vf_ops = yaml_data.get('_VF')
     return wrap_vf_ops
 
 

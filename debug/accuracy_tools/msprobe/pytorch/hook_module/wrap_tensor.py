@@ -31,7 +31,8 @@ yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 
 def get_tensor_ops():
     _tensor_ops = dir(torch.Tensor)
-    wrap_tensor_ops = load_yaml(yaml_path).get('tensor')
+    yaml_data = load_yaml(yaml_path)
+    wrap_tensor_ops = yaml_data.get('tensor')
     return set(wrap_tensor_ops) & set(_tensor_ops)
 
 

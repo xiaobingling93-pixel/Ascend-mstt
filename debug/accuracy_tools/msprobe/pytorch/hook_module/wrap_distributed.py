@@ -36,7 +36,8 @@ for f in dir(dist):
 
 def get_distributed_ops():
     _all_distributed_ops = dir(dist)
-    wrap_distributed_ops = load_yaml(yaml_path).get('distributed')
+    yaml_data = load_yaml(yaml_path)
+    wrap_distributed_ops = yaml_data.get('distributed')
     return set(wrap_distributed_ops) & set(_all_distributed_ops)
 
 
