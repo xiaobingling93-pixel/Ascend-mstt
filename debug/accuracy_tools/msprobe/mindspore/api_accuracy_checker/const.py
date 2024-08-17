@@ -7,3 +7,11 @@ MAX_RELATIVE_DIFF = "max relative difference"
 PASS = "pass"
 ERROR = "error"
 SKIP = "skip"
+
+
+#api_runner
+IS_MINDSPORE_API = True
+IS_TORCH_API = False
+
+MINT = "Mint"
+MINT_FUNCTIONAL = "MintFunctional"
