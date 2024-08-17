@@ -345,7 +345,8 @@ class TestUtils(TestCase):
                 task_dumppath_get(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
-
+    
+    @patch('msprobe.pytorch.common.utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
         with self.assertRaises(CompareException) as ce:
