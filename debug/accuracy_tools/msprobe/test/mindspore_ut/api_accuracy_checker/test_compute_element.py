@@ -55,13 +55,13 @@ class TestClass:
 
     def test_init_with_parameter_other_type(self):
         # input_parameter, origin_parameter, shape, dtype_str
-        parameter_results_mapping = {
+        parameter_results_mapping = [
             [1, 1, tuple(), INT_TYPE_STR],
             [1.0, 1.0, tuple(), FLOAT_TYPE_STR],
             ["string", "string", tuple(), STR_TYPE_STR],
             [slice(1, 10, 2), slice(1, 10, 2), tuple(), SLICE_TYPE_STR],
             [tuple([1, 2]), tuple([1, 2]), tuple(), TUPLE_TYPE_STR],
-        }
+        ]
 
         for parameter_result in parameter_results_mapping:
             input_parameter, origin_parameter, shape, dtype_str = parameter_result
@@ -73,6 +73,7 @@ class TestClass:
             assert compute_element.get_dtype() == dtype_str
 
     def test_init_with_compute_element_info_mstensor(self):
+        global_context.is_constructed = False
         compute_element_info = {
             "type": "mindspore.Tensor",
             "dtype": "Float32",
@@ -82,7 +83,7 @@ class TestClass:
             "data_name": "input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
-        assert compute_element.get_parameter(get_origin=True) == self.ms_tensor
+        assert (compute_element.get_parameter(get_origin=True) == self.ms_tensor).all()
         assert compute_element.get_shape() == self.tensor_shape
         assert compute_element.get_dtype() == FLOAT32
 

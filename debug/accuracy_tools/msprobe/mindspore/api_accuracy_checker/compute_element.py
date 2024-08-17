@@ -10,8 +10,9 @@ from msprobe.core.common.utils import load_npy
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np_dtype, api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
-                                                                 dtype_str_to_torch_dtype, DEFAULT_CONSTRUCT_NP_DTYPE,
-                                                                 TUPLE_TYPE_STR, MINDSPORE_TENSOR_TYPE_STR)
+                                                                 dtype_str_to_torch_dtype, type_to_api_info_type_str,
+                                                                 DEFAULT_CONSTRUCT_NP_DTYPE, TUPLE_TYPE_STR,
+                                                                 MINDSPORE_TENSOR_TYPE_STR)
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 
 
@@ -97,7 +98,7 @@ class ComputeElement:
             self.dtype_str = torch_dtype_to_dtype_str.get(parameter.dtype)
         elif isinstance(parameter, (int, float, str, slice, tuple)):
             self.shape = tuple()
-            self.dtype_str = TUPLE_TYPE_STR if isinstance(parameter, tuple) else api_info_type_str_to_type.get(type(parameter))
+            self.dtype_str = TUPLE_TYPE_STR if isinstance(parameter, tuple) else type_to_api_info_type_str.get(type(parameter))
         else:
             err_msg = "ComputeElement._init_with_parameter failed: " \
                 "parameter type is not in (int, float, str, slice, torch.Tensor, mindspore.Tensor)"
