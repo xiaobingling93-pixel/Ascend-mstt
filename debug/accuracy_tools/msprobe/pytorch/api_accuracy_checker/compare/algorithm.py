@@ -6,9 +6,6 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAM
 from msprobe.core.common.const import CompareConst
 
 
-DEFAULT_THRESHOLD = 1
-
-
 #cos
 def cosine_sim(bench_output, device_output):
     msg = ""
@@ -197,8 +194,8 @@ def check_norm_value(normal_value_mask, rel_err, rtol):
 
 def get_ulp_err(bench_output, device_output, dtype):
     parameters = ULP_PARAMETERS.get(dtype)
-    min_eb = parameters.get('min_eb', DEFAULT_THRESHOLD)[0]
-    exponent_num = parameters.get('exponent_num', DEFAULT_THRESHOLD)[0]
+    min_eb = parameters.get('min_eb')[0]
+    exponent_num = parameters.get('exponent_num')[0]
     abs_bench = np.abs(bench_output)
     eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
     eb = np.maximum(eb, min_eb)

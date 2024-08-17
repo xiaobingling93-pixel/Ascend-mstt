@@ -136,26 +136,6 @@ class DataCollector:
         else:
             self.write_json()
 
-    def module_count_func(self, name, name_template):
-        module_name = name.split(Const.SEP)[-3]
-        if "forward" in name_template:
-            if module_name not in self.module_count:
-                self.module_count[module_name] = [0, [0]]
-            else:
-                if self.module_count[module_name][-1] and \
-                        self.module_count[module_name][0] != self.module_count[module_name][-1][-1]:
-                    self.module_count[module_name][-1].pop()
-                self.module_count[module_name][0] += 1
-                self.module_count[module_name][-1].append(self.module_count[module_name][0])
-            index = self.module_count[module_name][0]
-        else:
-            backward_stack = self.module_count[module_name][-1] if module_name in self.module_count else []
-            if not backward_stack:
-                index = "abnormal"
-            else:
-                index = backward_stack.pop()
-        return index
-
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)
         self.data_writer.initialize_json_file(task=self.config.task, level=self.config.level)
