@@ -35,6 +35,108 @@ class ComputeElement:
                 "ComputeElement.__init__ failed: not init with parameter or compute_element info is not (list, dict)",
                 ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
+    @staticmethod
+    def transfer_to_torch_tensor(ms_tensor):
+        '''
+        Args:
+            ms_tensor: mindspore.Tensor
+        Return:
+            torch_tensor: torch.Tensor
+        '''
+        ms_dtype = ms_tensor.dtype
+        dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
+        if dtype_str not in dtype_str_to_torch_dtype:
+            err_msg = f"ComputeElement.transfer_to_torch_tensor failed: no matching torch dtype for {dtype_str}"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+        else:
+            torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
+        np_ndarray_float64 = ms_tensor.astype(mindspore.float64).numpy()
+        torch_tensor = torch.from_numpy(np_ndarray_float64).to(torch_dtype)
+        return torch_tensor
+
+    @staticmethod
+    def transfer_to_mindspore_tensor(torch_tensor):
+        '''
+        Args:
+            torch_tensor: torch.Tensor
+
+        Return:
+            ms_tensor: mindspore.Tensor
+        '''
+        torch_dtype = torch_tensor.dtype
+        dtype_str = torch_dtype_to_dtype_str.get(torch_dtype)
+        if dtype_str not in dtype_str_to_ms_dtype:
+            err_msg = \
+                f"ComputeElement._transfer_to_mindspore_tensor failed: no matching mindspore dtype for {dtype_str}"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+        else:
+            ms_dtype = dtype_str_to_ms_dtype.get(dtype_str)
+        np_ndarray_float64 = torch_tensor.to(torch.float64, copy=True).numpy()
+        ms_tensor = mindspore.Tensor.from_numpy(np_ndarray_float64).astype(ms_dtype)
+        return ms_tensor
+
+    @staticmethod
+    def convert_inf_to_real_num(value, dtype_str):
+        if value == float("inf"):
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            value = np.finfo(np_dtype).max
+        elif value == float("-inf"):
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            value = np.finfo(np_dtype).min
+        return value
+
+    def get_parameter(self, get_origin=True, get_mindspore_tensor=True):
+        '''
+        Args:
+            get_origin: boolean
+            get_mindspore_tensor: boolean
+
+        Return:
+            parameter: Union[int, float, str, slice,tuple,  torch.Tensor, mindspore.Tensor]
+        '''
+        if isinstance(self.parameter, (int, float, str, slice, torch.Tensor, tuple, mindspore.Tensor)):
+            parameter_tmp = self.parameter
+        elif isinstance(self.parameter, MstensorMetaData):
+            mstensor_meta_data = self.parameter
+            ms_dtype = dtype_str_to_ms_dtype.get(mstensor_meta_data.dtype_str)
+            if global_context.get_is_constructed():
+                np_dtype = dtype_str_to_np_dtype.get(mstensor_meta_data.dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+                ndarray = self._construct_ndarray(mstensor_meta_data.shape, mstensor_meta_data.maximum,
+                                                  mstensor_meta_data.minimum, np_dtype)
+            else:
+                ndarray = load_npy(mstensor_meta_data.npy_path)
+            parameter_tmp = mindspore.Tensor(ndarray, dtype=ms_dtype)
+        else:
+            err_msg = "ComputeElement.get_parameter failed: self.parameter type is not in " \
+                "(int, float, str, slice, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+
+        # if necessary, do transfer
+        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and not get_mindspore_tensor:
+            parameter = self.transfer_to_torch_tensor(parameter_tmp)
+        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and get_mindspore_tensor:
+            parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
+        else:
+            parameter = parameter_tmp
+
+        return parameter
+
+    def get_shape(self):
+        return self.shape
+
+    def get_dtype(self):
+        return self.dtype_str
+
+    def _construct_ndarray(self, shape, maximum, minimum, np_dtype):
+        shape = tuple(shape)
+        if np_dtype == np.bool_:
+            ndarray = np.random.rand(*shape) > 0.5
+        else:
+            maximum = self.convert_inf_to_real_num(maximum, np_dtype)
+            minimum = self.convert_inf_to_real_num(minimum, np_dtype)
+            ndarray = np.random.uniform(minimum, maximum, shape).astype(np_dtype)
+        return ndarray
+
     def _init_from_compute_element_info(self, compute_element_info):
         '''
         Args:
@@ -98,108 +200,9 @@ class ComputeElement:
             self.dtype_str = torch_dtype_to_dtype_str.get(parameter.dtype)
         elif isinstance(parameter, (int, float, str, slice, tuple)):
             self.shape = tuple()
-            self.dtype_str = TUPLE_TYPE_STR if isinstance(parameter, tuple) else type_to_api_info_type_str.get(type(parameter))
+            self.dtype_str =\
+                TUPLE_TYPE_STR if isinstance(parameter, tuple) else type_to_api_info_type_str.get(type(parameter))
         else:
             err_msg = "ComputeElement._init_with_parameter failed: " \
                 "parameter type is not in (int, float, str, slice, torch.Tensor, mindspore.Tensor)"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
-
-    def get_parameter(self, get_origin=True, get_mindspore_tensor=True):
-        '''
-        Args:
-            get_origin: boolean
-            get_mindspore_tensor: boolean
-
-        Return:
-            parameter: Union[int, float, str, slice,tuple,  torch.Tensor, mindspore.Tensor]
-        '''
-        if isinstance(self.parameter, (int, float, str, slice, torch.Tensor, tuple, mindspore.Tensor)):
-            parameter_tmp = self.parameter
-        elif isinstance(self.parameter, MstensorMetaData):
-            mstensor_meta_data = self.parameter
-            ms_dtype = dtype_str_to_ms_dtype.get(mstensor_meta_data.dtype_str)
-            if global_context.get_is_constructed():
-                np_dtype = dtype_str_to_np_dtype.get(mstensor_meta_data.dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
-                ndarray = self._construct_ndarray(mstensor_meta_data.shape, mstensor_meta_data.maximum,
-                                                  mstensor_meta_data.minimum, np_dtype)
-            else:
-                ndarray = load_npy(mstensor_meta_data.npy_path)
-            parameter_tmp = mindspore.Tensor(ndarray, dtype=ms_dtype)
-        else:
-            err_msg = "ComputeElement.get_parameter failed: self.parameter type is not in " \
-                "(int, float, str, slice, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
-
-        # if necessary, do transfer
-        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and not get_mindspore_tensor:
-            parameter = self._transfer_to_torch_tensor(parameter_tmp)
-        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and get_mindspore_tensor:
-            parameter = self._transfer_to_mindspore_tensor(parameter_tmp)
-        else:
-            parameter = parameter_tmp
-
-        return parameter
-
-    def get_shape(self):
-        return self.shape
-
-    def get_dtype(self):
-        return self.dtype_str
-
-
-    def _transfer_to_torch_tensor(self, ms_tensor):
-        '''
-        Args:
-            ms_tensor: mindspore.Tensor
-        Return:
-            torch_tensor: torch.Tensor
-        '''
-        ms_dtype = ms_tensor.dtype
-        dtype_str = ms_dtype_to_dtype_str.get(ms_dtype)
-        if dtype_str not in dtype_str_to_torch_dtype:
-            err_msg = f"ComputeElement._transfer_to_torch_tensor failed: no matching torch dtype for {dtype_str}"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
-        else:
-            torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
-        np_ndarray_float64 = ms_tensor.astype(mindspore.float64).numpy()
-        torch_tensor = torch.from_numpy(np_ndarray_float64).to(torch_dtype)
-        return torch_tensor
-
-    def _transfer_to_mindspore_tensor(self, torch_tensor):
-        '''
-        Args:
-            torch_tensor: torch.Tensor
-
-        Return:
-            ms_tensor: mindspore.Tensor
-        '''
-        torch_dtype = torch_tensor.dtype
-        dtype_str = torch_dtype_to_dtype_str.get(torch_dtype)
-        if dtype_str not in dtype_str_to_ms_dtype:
-            err_msg = \
-                f"ComputeElement._transfer_to_mindspore_tensor failed: no matching mindspore dtype for {dtype_str}"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
-        else:
-            ms_dtype = dtype_str_to_ms_dtype.get(dtype_str)
-        np_ndarray_float64 = torch_tensor.to(torch.float64, copy=True).numpy()
-        ms_tensor = mindspore.Tensor.from_numpy(np_ndarray_float64).astype(ms_dtype)
-        return ms_tensor
-
-    def _convert_inf_to_real_num(self, value, dtype_str):
-        if value == float("inf"):
-            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
-            value = np.finfo(np_dtype).max
-        elif value == float("-inf"):
-            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
-            value = np.finfo(np_dtype).min
-        return value
-
-    def _construct_ndarray(self, shape, maximum, minimum, np_dtype):
-        shape = tuple(shape)
-        if np_dtype == np.bool_:
-            ndarray = np.random.rand(*shape) > 0.5
-        else:
-            maximum = self._convert_inf_to_real_num(maximum, np_dtype)
-            minimum = self._convert_inf_to_real_num(minimum, np_dtype)
-            ndarray = np.random.uniform(minimum, maximum, shape).astype(np_dtype)
-        return ndarray

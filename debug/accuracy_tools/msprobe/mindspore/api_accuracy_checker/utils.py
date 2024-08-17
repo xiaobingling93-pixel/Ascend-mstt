@@ -31,7 +31,7 @@ def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_t
         logger.error_log_with_exp(
             f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}",
             parse_failed_exception)
-    elif accepted_value is not None and not value in accepted_value:
+    elif accepted_value is not None and value not in accepted_value:
         logger.error_log_with_exp(
             f"check_and_get_from_json_dict failed: {key_description} is not accepted value: {accepted_value}",
             parse_failed_exception)
