@@ -75,16 +75,16 @@ class MindsporeDataProcessor(BaseDataProcessor):
             return tensor_stat
         elif data.dtype == ms.bool_:
             data_np = data.asnumpy()
-            tensor_stat.max = np.max(data_np)
-            tensor_stat.min = np.min(data_np)
+            tensor_stat.max = np.max(data_np).item()
+            tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             data_abs = np.abs(data.asnumpy())
-            tensor_stat.max = np.max(data_abs)
-            tensor_stat.min = np.min(data_abs)
-            tensor_stat.mean = np.mean(data_abs)
-            tensor_stat.norm = np.linalg.norm(data_abs)
+            tensor_stat.max = np.max(data_abs).item()
+            tensor_stat.min = np.min(data_abs).item()
+            tensor_stat.mean = np.mean(data_abs).item()
+            tensor_stat.norm = np.linalg.norm(data_abs).item()
         else:
             if data.dtype == ms.bfloat16 or not ops.is_floating_point(data):
                 data = data.to(ms.float32)
