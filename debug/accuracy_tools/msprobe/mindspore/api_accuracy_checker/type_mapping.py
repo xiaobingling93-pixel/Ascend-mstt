@@ -1,4 +1,4 @@
-import mindspore.dtype as mstype
+from mindspore.common import dtype as mstype
 import numpy as np
 import mindspore
 import torch
@@ -73,6 +73,8 @@ BOOL_TYPE_STR = "bool"
 INT_TYPE_STR = "int"
 FLOAT_TYPE_STR = "float"
 SLICE_TYPE_STR = "slice"
+TUPLE_TYPE_STR = "tuple"
+STR_TYPE_STR = "str"
 
 api_info_type_str_to_type = {
     MINDSPORE_TENSOR_TYPE_STR: mindspore.Tensor,
@@ -80,6 +82,7 @@ api_info_type_str_to_type = {
     INT_TYPE_STR: int,
     FLOAT_TYPE_STR: float,
     SLICE_TYPE_STR: slice,
+    STR_TYPE_STR: str,
 }
 type_to_api_info_type_str = {value: key for key, value in api_info_type_str_to_type.items()}
 

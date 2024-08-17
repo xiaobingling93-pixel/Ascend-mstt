@@ -50,7 +50,7 @@ class GlobalContext:
         return self.dump_data_dir
 
     def get_is_constructed(self):
-        return self.dump_data_dir
+        return self.is_constructed
 
 
 global_context = GlobalContext()

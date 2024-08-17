@@ -7,16 +7,17 @@ import numpy as np
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.utils import load_npy
-from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np_type, api_info_type_str_to_type,
+from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np_dtype, api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
-                                                                 dtype_str_to_torch_dtype, DEFAULT_CONSTRUCT_NP_DTYPE)
+                                                                 dtype_str_to_torch_dtype, DEFAULT_CONSTRUCT_NP_DTYPE,
+                                                                 TUPLE_TYPE_STR, MINDSPORE_TENSOR_TYPE_STR)
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 
 
 class MstensorMetaData:
-    def __init__(self, dtype, npy_path, maximum, minimum, shape) -> None:
-        self.dtype = dtype
+    def __init__(self, dtype_str, npy_path, maximum, minimum, shape) -> None:
+        self.dtype_str = dtype_str
         self.npy_path = npy_path
         self.maximum = maximum
         self.minimum = minimum
@@ -46,14 +47,14 @@ class ComputeElement:
         '''
         if isinstance(compute_element_info, list):
             self.shape = tuple()
-            self.dtype_str = "tuple"
+            self.dtype_str = TUPLE_TYPE_STR
             self.parameter = tuple(ComputeElement(compute_element_info=sub_info).get_parameter()
                                    for sub_info in compute_element_info)
         else:
             type_str = check_and_get_from_json_dict(compute_element_info, "type", "type field in api_info.json",
                                                     accepted_type=str, accepted_value=api_info_type_str_to_type.keys())
 
-            if type_str == "mindspore.Tensor":
+            if type_str == MINDSPORE_TENSOR_TYPE_STR:
                 self._init_from_mstensor_compute_element_info(compute_element_info)
             else: # type_str in ("slice", "int", "float", "bool")
                 value = check_and_get_from_json_dict(compute_element_info, "value", "value field in api_info.json")
@@ -96,7 +97,7 @@ class ComputeElement:
             self.dtype_str = torch_dtype_to_dtype_str.get(parameter.dtype)
         elif isinstance(parameter, (int, float, str, slice, tuple)):
             self.shape = tuple()
-            self.dtype_str = "tuple" if isinstance(parameter, tuple) else api_info_type_str_to_type.get(type(parameter))
+            self.dtype_str = TUPLE_TYPE_STR if isinstance(parameter, tuple) else api_info_type_str_to_type.get(type(parameter))
         else:
             err_msg = "ComputeElement._init_with_parameter failed: " \
                 "parameter type is not in (int, float, str, slice, torch.Tensor, mindspore.Tensor)"
@@ -131,7 +132,7 @@ class ComputeElement:
         # if necessary, do transfer
         if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and not get_mindspore_tensor:
             parameter = self._transfer_to_torch_tensor(parameter_tmp)
-        elif not get_origin and isinstance(parameter, torch.Tensor) and get_mindspore_tensor:
+        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and get_mindspore_tensor:
             parameter = self._transfer_to_mindspore_tensor(parameter_tmp)
         else:
             parameter = parameter_tmp
@@ -159,7 +160,7 @@ class ComputeElement:
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
-        np_ndarray_float64 = ms_tensor.as_type(mindspore.float64).numpy()
+        np_ndarray_float64 = ms_tensor.astype(mindspore.float64).numpy()
         torch_tensor = torch.from_numpy(np_ndarray_float64).to(torch_dtype)
         return torch_tensor
 
@@ -185,10 +186,10 @@ class ComputeElement:
 
     def _convert_inf_to_real_num(self, value, dtype_str):
         if value == float("inf"):
-            np_dtype = dtype_str_to_np_type.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
             value = np.finfo(np_dtype).max
         elif value == float("-inf"):
-            np_dtype = dtype_str_to_np_type.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
             value = np.finfo(np_dtype).min
         return value
 
