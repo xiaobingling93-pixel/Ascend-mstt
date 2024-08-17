@@ -1,6 +1,8 @@
 import os
 import time
 import sys
+from msprobe.core.common.const import MsgConst
+
 
 class BaseLogger:
     def __init__(self):
@@ -20,12 +22,23 @@ class BaseLogger:
     def get_rank(self):
         return self.rank
 
+    def filter_special_chars(func):
+        def wrapper(self, msg):
+            if any(char in msg for char in MsgConst.SPECIAL_CHAR):
+                for char in MsgConst.SPECIAL_CHAR:
+                    msg = msg.replace(char, '_')
+            return func(self, msg)
+        return wrapper
+
+    @filter_special_chars
     def info(self, msg):
         self._print_log(self.info_level, msg)
 
+    @filter_special_chars
     def error(self, msg):
         self._print_log(self.error_level, msg)
 
+    @filter_special_chars
     def warning(self, msg):
         self._print_log(self.warning_level, msg)
 

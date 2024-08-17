@@ -257,3 +257,10 @@ class OverflowConst:
     OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
+
+class MsgConst:
+    """
+    Class for log messages const
+    """
+    SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
