@@ -1,6 +1,7 @@
 import os
 import time
 import sys
+from functools import wraps
 from msprobe.core.common.const import MsgConst
 
 
@@ -23,6 +24,7 @@ class BaseLogger:
         return self.rank
 
     def filter_special_chars(func):
+        @wraps(func)
         def wrapper(self, msg):
             if any(char in msg for char in MsgConst.SPECIAL_CHAR):
                 for char in MsgConst.SPECIAL_CHAR:
