@@ -26,9 +26,8 @@ class BaseLogger:
     def filter_special_chars(func):
         @wraps(func)
         def wrapper(self, msg):
-            if any(char in msg for char in MsgConst.SPECIAL_CHAR):
-                for char in MsgConst.SPECIAL_CHAR:
-                    msg = msg.replace(char, '_')
+            for char in MsgConst.SPECIAL_CHAR:
+                msg = msg.replace(char, '_')
             return func(self, msg)
         return wrapper
 
