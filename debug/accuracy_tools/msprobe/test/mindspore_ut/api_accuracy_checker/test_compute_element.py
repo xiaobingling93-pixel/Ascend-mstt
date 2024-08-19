@@ -11,6 +11,7 @@ from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElemen
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (FLOAT32, FLOAT_TYPE_STR, INT_TYPE_STR,
                                                                  TUPLE_TYPE_STR, STR_TYPE_STR, SLICE_TYPE_STR)
 from msprobe.mindspore.api_accuracy_checker.utils import global_context
+from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM
 
 logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -48,8 +49,8 @@ class TestClass:
             compute_element = ComputeElement(parameter=input_parameter)
 
             assert (compute_element.get_parameter(get_origin=True) == origin_parameter).all()
-            assert (compute_element.get_parameter(get_origin=False, get_mindspore_tensor=True) == mstensor_parameter).all()
-            assert (compute_element.get_parameter(get_origin=False, get_mindspore_tensor=False) == torchtensor_parameter).all()
+            assert (compute_element.get_parameter(get_origin=False, tensor_platform=MINDSPORE_PLATFORM) == mstensor_parameter).all()
+            assert (compute_element.get_parameter(get_origin=False, tensor_platform=TORCH_PLATFORM) == torchtensor_parameter).all()
             assert compute_element.get_shape() == shape
             assert compute_element.get_dtype() == dtype_str
 

@@ -1,4 +1,3 @@
-
 # base_compare_algorithm
 COSINE_SIMILARITY = "cosine similarity"
 MAX_ABSOLUTE_DIFF = "max absolute difference"
@@ -9,10 +8,12 @@ ERROR = "error"
 SKIP = "skip"
 
 
-#api_runner
+# compute_element
 MINDSPORE_PLATFORM = "mindspore_platform"
 TORCH_PLATFORM = "torch_platform"
 
+
+#api_runner
 MINT = "Mint"
 MINT_FUNCTIONAL = "MintFunctional"
 
