@@ -3,15 +3,15 @@ from functools import wraps
 import torch
 from prettytable import PrettyTable
 from collections import namedtuple
-from .utils import logger_user, logger_debug
+from msprobe.pytorch.common.log import logger
 
 def func_log_wrapper():
     def _out_wrapper(func):
         @wraps(func)
         def _in_wrapper(*kargs, **kwargs):
-            logger_debug("start to run: {}".format(func.__name__))
+            logger.info(f"start to run: {func.__name__}")
             x = func(*kargs, **kwargs)
-            logger_debug("end to run: {}".format(func.__name__))
+            logger.info(f"end to run: {func.__name__}")
             return x
         
         return _in_wrapper
@@ -165,7 +165,7 @@ class SingleBenchmarkAccuracyCompare:
     def compute_binary_diff(cls, npu_out, bench_out):
         result = torch.equal(npu_out, bench_out)
         if result:
-            logger_user("二进制精度比对通过, 无需单标杆比对法验证")
+            logger.info("二进制精度比对通过, 无需单标杆比对法验证")
         return SingleBenchmarkAccuracyResult(result=result, max_abs_diff=0, max_rel_diff=0, error_balance=0)
     
     @classmethod
@@ -301,7 +301,7 @@ class SingleBenchSummary:
         table.add_row(["max_rel_diff", self.max_rel_diff, self.error_thd])
         table.add_row(["max_rel_idx", self.max_rel_idx, "-"])
 
-        logger_user(table)
+        logger.info(table)
 
     def to_column_value(self):
         return [self.bench_dtype, self.npu_dtype, self.shape, self.error_balance,
