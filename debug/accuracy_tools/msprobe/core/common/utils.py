@@ -523,14 +523,12 @@ def convert_tuple(data):
 
 
 def write_csv(data, filepath):
-    is_first_create = False
-    if not os.path.exists(filepath):
-        is_first_create = True
+    is_first_create = os.path.exists(filepath)
     with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
-        if is_first_create:
-            change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+    if is_first_create:
+        change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def load_npy(filepath):
@@ -559,8 +557,10 @@ def get_json_contents(file_path):
     try:
         json_obj = json.loads(ops)
     except ValueError as error:
+        logger.error('Failed to load json.')
         raise CompareException(CompareException.INVALID_FILE_ERROR) from error
     if not isinstance(json_obj, dict):
+        logger.error('Json file content is not a dictionary!')
         raise CompareException(CompareException.INVALID_FILE_ERROR)
     return json_obj
 
