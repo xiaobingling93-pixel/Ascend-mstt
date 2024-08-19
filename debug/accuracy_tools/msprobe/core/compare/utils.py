@@ -417,7 +417,7 @@ def _compare_parser(parser):
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
-    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+    parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
