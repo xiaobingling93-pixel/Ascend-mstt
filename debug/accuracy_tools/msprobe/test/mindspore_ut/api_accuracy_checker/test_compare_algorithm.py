@@ -20,14 +20,14 @@ directory = os.path.dirname(file_path)
 @pytest.fixture
 def mock_mstensor_compute_element():
     mock = MagicMock()
-    mock.get_parameter.return_value = mindspore.Tensor([1., 1.9, 3.], dtype=mindspore.float32)
+    mock.get_parameter.return_value = mindspore.Tensor([1., 1.9, 3.])
     mock.get_shape.return_value = (3,)
     return mock
 
 @pytest.fixture
 def mock_torchtensor_compute_element():
     mock = MagicMock()
-    mock.get_parameter.return_value = torch.Tensor([1., 2., 3.], dtype=torch.float32)
+    mock.get_parameter.return_value = torch.Tensor([1., 2., 3.])
     mock.get_shape.return_value = (3,)
     return mock
 

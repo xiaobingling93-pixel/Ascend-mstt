@@ -59,7 +59,7 @@ def mock_compute_element_backward_result_instance():
 
 class TestClass:
 
-    def test_run_api(selfmock_compute_element_kwargs_instance, mock_compute_element_input_instance,
+    def test_run_api(self, mock_compute_element_kwargs_instance, mock_compute_element_input_instance,
                      mock_compute_element_forward_result_instance, mock_compute_element_backward_result_instance):
         kwargs = {"approximate": mock_compute_element_kwargs_instance}
         inputs = [mock_compute_element_input_instance]
