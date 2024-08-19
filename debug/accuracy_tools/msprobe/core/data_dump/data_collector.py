@@ -122,7 +122,7 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
-        if self.config.level not in DataCollector.level_without_construct:
+        if self.config.framework == Const.PT_FRAMEWORK and self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 

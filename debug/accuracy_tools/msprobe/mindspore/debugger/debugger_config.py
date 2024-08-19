@@ -43,8 +43,7 @@ class DebuggerConfig:
     def check(self):
         if not self.dump_path:
             raise Exception("Dump path is empty.")
-        if self.level_ori != "L1" and not os.path.isabs(self.dump_path):
-            raise Exception("Dump path must be absolute path.")
+        self.dump_path = os.path.abspath(self.dump_path)
         if not self.task:
             self.task = "statistics"
         if not self.level:
