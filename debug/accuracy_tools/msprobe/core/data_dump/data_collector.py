@@ -71,12 +71,11 @@ class DataCollector:
         backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
         if self.check_scope_and_pid(self.scope, backward_name, pid):
             self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
-        if not self.is_inplace(module):
+        if not self.is_inplace(module) or not self.check_scope_and_pid(self.scope, name, pid):
             return
         logger.info(f"API {name} is inplace.")
-        if self.check_scope_and_pid(self.scope, name, pid):
-            data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
-            self.update_data(data_info)
+        data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
+        self.handle_data(name, data_info)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -128,34 +127,14 @@ class DataCollector:
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, use_buffer=True):
-        msg = f"msprobe is collecting data on {name}. "
         if data_info:
+            msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
             logger.info(msg)
         if use_buffer:
             self.data_writer.flush_data_when_buffer_is_full()
         else:
             self.write_json()
-
-    def module_count_func(self, name, name_template):
-        module_name = name.split(Const.SEP)[-3]
-        if "forward" in name_template:
-            if module_name not in self.module_count:
-                self.module_count[module_name] = [0, [0]]
-            else:
-                if self.module_count[module_name][-1] and \
-                        self.module_count[module_name][0] != self.module_count[module_name][-1][-1]:
-                    self.module_count[module_name][-1].pop()
-                self.module_count[module_name][0] += 1
-                self.module_count[module_name][-1].append(self.module_count[module_name][0])
-            index = self.module_count[module_name][0]
-        else:
-            backward_stack = self.module_count[module_name][-1] if module_name in self.module_count else []
-            if not backward_stack:
-                index = "abnormal"
-            else:
-                index = backward_stack.pop()
-        return index
 
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)

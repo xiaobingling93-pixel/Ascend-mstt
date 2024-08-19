@@ -86,3 +86,11 @@ class DistributedNotInitializedError(Exception):
 
     def __str__(self):
         return self.msg
+
+class ApiAccuracyCheckerException(CodedException):
+    ParseJsonFailed = 0
+    UnsupportType = 1
+    err_strs = {
+        ParseJsonFailed: "[msprobe] Api Accuracy Checker parse json failed: ",
+        UnsupportType: "[msprobe] Api Accuracy Checker get unsupported type: ",
+    }
