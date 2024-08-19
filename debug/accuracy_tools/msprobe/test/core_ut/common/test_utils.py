@@ -44,7 +44,7 @@ from msprobe.core.common.utils import (CompareException,
                                        task_dumppath_get)
 
 from msprobe.core.common.file_check import FileCheckConst
-from msprobe.pytorch.common.utils import get_json_contents, get_file_content_bytes
+from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
