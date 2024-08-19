@@ -211,7 +211,7 @@ dump结果目录结构示例如下：
 |   |   |   |    ├── MyModule.0.forward.input.pt        # 开启模块级精度数据dump时存在模块级的dump数据文件
 |   |   |   |    ...
 |   |   |   |    └── Fcuntion.linear.5.backward.output.pt
-│   |   |   ├── dump.json        # 保存前反向算子、算子的统计量信息或溢出算子信息。包含dump数据的API名称（命名格式为：`{api_type}_{api_name}_{API调用次数}_{前向反向}_{input/output}.{参数序号}`）、dtype、 shape、各数据的max、min、mean、L2norm统计信息以及当配置summary_mode="md5"时的md5数据。其中，“参数序号”表示该API下的第n个参数，例如1，则为第一个参数，若该参数为list格式，则根据list继续排序，例如1.1，表示该API的第1个参数的第1个子参数；L2norm表示2范数（平方根）
+│   |   |   ├── dump.json        # 保存前反向算子、算子的统计量信息或溢出算子信息。包含dump数据的API名称（命名格式为：`{api_type}_{api_name}_{API调用次数}_{前向反向}_{input/output}.{参数序号}`）、dtype、 shape、各数据的max、min、mean、L2norm统计信息以及当配置summary_mode="md5"时的md5数据。其中，“参数序号”表示该API下的第n个参数，例如1，则为第一个参数，若该参数为list格式，则根据list继续排序，例如1.1，表示该API的第1个参数的第1个子参数；L2norm表示L2范数（平方根）
 │   |   |   ├── stack.json        # 算子调用栈信息
 │   |   |   └── construct.json        # 分层分级结构
 │   |   ├── rank1
@@ -228,9 +228,9 @@ dump结果目录结构示例如下：
 │   ├── step2
 ```
 
-dump过程中，pt文件在对应算子或者模块被执行后就会落盘，而json文件则需要在正常执行PrecisionDebugger.stop()后才会被落盘保存，异常的程序终止会保存终止前被执行算子的相关pt文件，但是不会生成json文件。
+dump过程中，pt文件在对应算子或者模块被执行后就会落盘，而json文件则需要在正常执行PrecisionDebugger.stop()后才会写入完整数据，异常的程序终止会保存终止前被执行算子的相关npy文件，可能会导致json文件中数据丢失。
 
-其中rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。
+其中rank为设备上各卡的ID，每张卡上dump的数据会生成对应dump目录。非分布式场景下没有rank ID，目录名称为rank。
 
 pt文件保存的前缀和PyTorch对应关系如下：
 
