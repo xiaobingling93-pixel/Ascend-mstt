@@ -28,7 +28,7 @@ class MstensorMetaData:
 
 class ComputeElement:
     def __init__(self, compute_element_info=None, parameter=None):
-        self.supported_parameter_type = tuple(api_info_type_str_to_type.keys()) + tuple([torch.Tensor, tuple])
+        self.supported_parameter_type = tuple(type_to_api_info_type_str.keys()) + tuple([torch.Tensor, tuple])
         if parameter is not None:
             self._init_with_parameter(parameter)
         elif isinstance(compute_element_info, (list, dict)):
