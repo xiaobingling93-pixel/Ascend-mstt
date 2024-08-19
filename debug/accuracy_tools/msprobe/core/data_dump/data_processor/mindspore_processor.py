@@ -14,6 +14,7 @@
 # ============================================================================
 
 import zlib
+
 import mindspore as ms
 from mindspore import ops
 import numpy as np
@@ -21,9 +22,9 @@ import numpy as np
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
+from msprobe.core.common.file_check import path_len_exceeds_limit
 from msprobe.mindspore.dump.hook_cell.wrap_functional import load_ops_functions
-from msprobe.mindspore.common.utils import convert_bf16_to_fp32
+from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
@@ -136,13 +137,7 @@ class TensorDataProcessor(MindsporeDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        if not path_len_exceeds_limit(file_path):
-            tensor = convert_bf16_to_fp32(tensor)
-            saved_tensor = tensor.asnumpy()
-            np.save(file_path, saved_tensor)
-            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        else:
-            logger.warning(f'The file path {file_path} length exceeds limit.')
+        save_tensor_as_npy(tensor, file_path)
         return single_arg
 
 
@@ -179,9 +174,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def maybe_save_overflow_data(self):
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                tensor = convert_bf16_to_fp32(tensor)
-                np.save(file_path, tensor.asnumpy())
-                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+                save_tensor_as_npy(tensor, file_path)
             self.real_overflow_nums += 1
         self.cached_tensors_and_file_paths = {}
 
