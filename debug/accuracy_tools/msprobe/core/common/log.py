@@ -25,11 +25,11 @@ class BaseLogger:
 
     def filter_special_chars(func):
         @wraps(func)
-        def wrapper(self, msg):
+        def func_level(self, msg):
             for char in MsgConst.SPECIAL_CHAR:
                 msg = msg.replace(char, '_')
             return func(self, msg)
-        return wrapper
+        return func_level
 
     @filter_special_chars
     def info(self, msg):
