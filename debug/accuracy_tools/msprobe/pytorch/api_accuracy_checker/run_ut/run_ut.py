@@ -560,8 +560,8 @@ def run_ut_command(args):
     # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
     forward_content, backward_content, real_data_path = None, None, None
     if args.api_info_file:
-        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, \
-        ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
+        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, 
+                                            ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
         checked_api_info = api_info_file_checker.common_check()
         forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
         if args.filter_api:
