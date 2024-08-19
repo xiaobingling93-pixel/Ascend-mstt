@@ -4,14 +4,16 @@ from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator 
-from msprobe.core.common.utils import create_directory, check_configuration_param, task_dumppath_get, check_compare_param, FileChecker
+from msprobe.core.common.utils import create_directory, check_configuration_param, task_dumppath_get, \
+    check_compare_param, FileChecker
 from msprobe.core.common.utils import CompareException
+
 
 class PTComparator (Comparator):
     def __init__(self):
-        self.frame_name=PTComparator.__name__
+        self.frame_name = PTComparator.__name__
     
-    def read_npy_data(self,dir_path, file_name):
+    def read_npy_data(self, dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                 FileCheckConst.PT_SUFFIX, False)

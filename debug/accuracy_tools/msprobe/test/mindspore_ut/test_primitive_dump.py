@@ -14,22 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-import os
-
 import unittest
 from unittest.mock import Mock, patch
-import copy
-from msprobe.core.common.utils import Const
-from msprobe.mindspore.service import Service
-import mindspore
-from mindspore.common.tensor import Tensor
-from mindspore import ops
+
 from mindspore import nn
+
+from msprobe.mindspore.service import Service
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from unittest.mock import MagicMock
-import numpy as np
 
 
 class DummyModel(nn.Cell):
@@ -39,8 +32,11 @@ class DummyModel(nn.Cell):
 
     def construct(self, x):
         return self.dense(x)
+
+
 class TestService(unittest.TestCase):
-    def setUp(self):
+    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    def setUp(self, _):
         json_config = {
             "task": "statistics",
             "dump_path": "/absolute_path",

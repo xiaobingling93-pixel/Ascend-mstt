@@ -21,31 +21,31 @@ from unittest.mock import patch
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.dump.api_kbk_dump import ApiKbkDump
+from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 
 
-class TestApiKbkDump(TestCase):
-
-    def test_handle(self):
+class TestKernelKbykDump(TestCase):
+    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    def test_handle(self, _):
         json_config = {
             "task": "statistics",
             "dump_path": "/absolute_path",
             "rank": [],
             "step": [0, 2],
-            "level": "L1"
+            "level": "L2"
         }
 
         common_config = CommonConfig(json_config)
         task_config = BaseConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
-        dumper = ApiKbkDump(config)
+        dumper = KernelKbykDump(config)
         self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
-        with patch("msprobe.mindspore.dump.api_kbk_dump.make_dump_path_if_not_exists"), \
-             patch("msprobe.mindspore.dump.api_kbk_dump.FileOpen"), \
-             patch("msprobe.mindspore.dump.api_kbk_dump.json.dump"), \
-             patch("msprobe.mindspore.dump.api_kbk_dump.logger.info"):
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.make_dump_path_if_not_exists"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.FileOpen"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.json.dump"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info:
             dumper.handle()
-        self.assertEqual(os.environ.get("GRAPH_OP_RUN"), "1")
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
         self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)

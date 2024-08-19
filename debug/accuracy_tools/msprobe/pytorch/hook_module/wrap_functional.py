@@ -16,15 +16,13 @@
 """
 
 import os
-
 import torch
-import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
 
 
 def remove_dropout():
@@ -66,14 +64,13 @@ def remove_dropout():
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapFunctionalOps = yaml.safe_load(f).get('functional')
 
 
 def get_functional_ops():
-    global WrapFunctionalOps
+    yaml_data = load_yaml(yaml_path)
+    wrap_functional_ops = yaml_data.get('functional')
     _all_functional_ops = dir(torch.nn.functional)
-    return set(WrapFunctionalOps) & set(_all_functional_ops)
+    return set(wrap_functional_ops) & set(_all_functional_ops)
 
 
 TorchFunctions = {func: getattr(torch.nn.functional, func) for func in get_functional_ops()}
