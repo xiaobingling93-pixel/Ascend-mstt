@@ -547,3 +547,21 @@ def save_npy(data, filepath):
     except Exception as e:
         raise RuntimeError(f"save npy file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def get_json_contents(file_path):
+    ops = get_file_content_bytes(file_path)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        logger.error('Failed to load "%s". %s', file_path, str(error))
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        logger.error('Json file %s, content is not a dictionary!', file_path)
+        raise CompareException(CompareException.INVALID_FILE_ERROR)
+    return json_obj
+
+
+def get_file_content_bytes(file):
+    with FileOpen(file, 'rb') as file_handle:
+        return file_handle.read()
