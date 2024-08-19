@@ -15,7 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get
     check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.pytorch.common.utils import get_json_contents
+from msprobe.core.common.utils import get_json_contents
 
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
