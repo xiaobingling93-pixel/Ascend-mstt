@@ -64,8 +64,7 @@ class ApiRunner:
 
         return api_type_str, api_sub_name
 
-    @classmethod
-    def get_api_instance(cls, api_type_str, api_sub_name, api_platform):
+    def get_api_instance(self, api_type_str, api_sub_name, api_platform):
         '''
         Args:
             api_type_str: str, Union["MintFunctional", "Mint"]
@@ -81,7 +80,7 @@ class ApiRunner:
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         '''
 
-        api_parent_module = cls.api_parent_module_mapping.get((api_type_str, api_platform))
+        api_parent_module = self.api_parent_module_mapping.get((api_type_str, api_platform))
         module_str = "mindspore.mint." if api_platform == MINDSPORE_PLATFORM else "torch."
         submodule_str = "nn.functional." if api_type_str == MINT_FUNCTIONAL else ""
         full_api_name = module_str + submodule_str + api_sub_name
@@ -111,12 +110,19 @@ class ApiRunner:
             if gradient_inputs is None:
                 err_msg = f"ApiRunner.run_api failed: run backward api but gradient_inputs is missing"
                 logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
-            gradient_inputs = \
-                tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
-                    for compute_element in gradient_inputs)
+            if len(gradient_inputs) == 1:
+                gradient_inputs = gradient_inputs[0].get_parameter(get_origin=False, tensor_platform=api_platform)
+            else:
+                gradient_inputs = \
+                    tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
+                        for compute_element in gradient_inputs)
             if api_platform == MINDSPORE_PLATFORM:
+                if kwargs != {}:
+                    err_msg = f"ApiRunner.run_api failed: backward api with kwargs is currently not supported."
+                    logger.error_log_with_exp(err_msg,
+                                              ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
                 grad_func = ops.GradOperation(get_all=True, sens_param=True)(api_instance)
-                backward_result = grad_func(*inputs,  **kwargs, gradient_inputs) # can be single tensor or tuple
+                backward_result = grad_func(*inputs, gradient_inputs, **kwargs) # can be single tensor or tuple
                 backward_result_tuple = convert_to_tuple(backward_result)
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_tuple]
             else:

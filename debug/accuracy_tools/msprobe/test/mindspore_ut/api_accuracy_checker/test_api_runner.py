@@ -36,37 +36,50 @@ def mock_compute_element_kwargs_instance():
     return mock
 
 @pytest.fixture
-def mock_compute_element_result_instance():
+def mock_compute_element_forward_result_instance():
     mock = MagicMock()
     def side_effect(**kwargs):
         if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
-            return mindspore.Tensor([1., 2., 3.])
+            return mindspore.Tensor([8.41192007e-01, 1.95459759e+00, 2.99636269e+00])
         else:
-            return torch.Tensor([1., 2., 3.])
+            return torch.Tensor([8.41192007e-01, 1.95459759e+00, 2.99636269e+00])
+    mock.get_parameter.side_effect = side_effect
+    return mock
+
+@pytest.fixture
+def mock_compute_element_backward_result_instance():
+    mock = MagicMock()
+    def side_effect(**kwargs):
+        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+            return mindspore.Tensor([1.0833155, 2.1704636, 3.0358372])
+        else:
+            return torch.Tensor([1.0833155, 2.1704636, 3.0358372])
     mock.get_parameter.side_effect = side_effect
     return mock
 
 class TestClass:
 
-    def test_run_api(self):
+    def test_run_api(selfmock_compute_element_kwargs_instance, mock_compute_element_input_instance,
+                     mock_compute_element_forward_result_instance, mock_compute_element_backward_result_instance):
         kwargs = {"approximate": mock_compute_element_kwargs_instance}
         inputs = [mock_compute_element_input_instance]
         gradient_inputs = [mock_compute_element_input_instance]
-        result = [mock_compute_element_result_instance]
+        forward_result = [mock_compute_element_forward_result_instance]
+        backward_result = [mock_compute_element_backward_result_instance]
 
 
         # api_instance, inputs, kwargs, gradient_inputs, forward_or_backward, api_platform, result
         test_cases = [
-            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, MINDSPORE_PLATFORM, result],
-            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, BACKWARD_API, MINDSPORE_PLATFORM, result],
-            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, TORCH_PLATFORM, result],
-            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, BACKWARD_API, TORCH_PLATFORM, result],
+            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
+            [mindspore.mint.nn.functional.gelu, inputs, {}, gradient_inputs, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
+            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, TORCH_PLATFORM, forward_result],
+            [torch.nn.functional.gelu, inputs, {}, gradient_inputs, BACKWARD_API, TORCH_PLATFORM, backward_result],
         ]
         for test_case in test_cases:
             api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform, results_target = test_case
             results_real = api_runner.run_api(api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform)
             for res_real, res_target in zip(results_real, results_target):
-                assert res_real.get_parameter() == res_target.get_parameter()
+                assert (abs(res_real.get_parameter() - res_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
 
 
     def test_get_api_instance(self):

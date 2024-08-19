@@ -67,13 +67,13 @@ class TestClass:
         api_info = ApiInfo("MintFuntional.gelu.0.forward")
         api_info.load_forward_info(forward_api_info_dict)
 
-        assert api_info.check_forward_info == True
-        assert api_info.check_backward_info == False
+        assert api_info.check_forward_info() == True
+        assert api_info.check_backward_info() == False
 
         input_compute_element_list = api_info.get_compute_element_list("forward_api", "input")
         parameter_real = input_compute_element_list[0].get_parameter()
         parameter_target = mindspore.Tensor([1., 2., 3.])
-        assert parameter_real == parameter_target
+        assert (parameter_real == parameter_target).all()
 
         kwargs_compute_element_dict = api_info.get_kwargs()
         assert kwargs_compute_element_dict.get("approximate").get_parameter() == "tanh"

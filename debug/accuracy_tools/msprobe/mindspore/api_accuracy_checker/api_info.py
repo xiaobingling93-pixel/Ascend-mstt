@@ -68,6 +68,6 @@ class ApiInfo:
                 logger.error_log_with_exp(err_msg,
                                           ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
         kwargs_compute_element_dict = {key_str: ComputeElement(compute_element_info=compute_element_info)
-                                       for key_str, compute_element_info in kwargs_dict}
+                                       for key_str, compute_element_info in kwargs_dict.items()}
         return kwargs_compute_element_dict
 

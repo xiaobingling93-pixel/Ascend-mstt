@@ -91,7 +91,7 @@ class BaseCompareAlgorithm(ABC):
         raise NotImplementedError
 
     @classmethod
-    def convert_to_np_float64_ndarray(tensor):
+    def convert_to_np_float64_ndarray(cls, tensor):
         if isinstance(tensor, mindspore.Tensor):
             ndarray = tensor.astype(mindspore.float64).numpy()
         elif isinstance(tensor, torch.Tensor):
@@ -103,7 +103,7 @@ class BaseCompareAlgorithm(ABC):
         return ndarray
 
     @classmethod
-    def check_two_tensor(bench_compute_element, tested_compute_element):
+    def check_two_tensor(cls, bench_compute_element, tested_compute_element):
         bench_parameter = bench_compute_element.get_parameter()
         tested_parameter = tested_compute_element.get_parameter()
 
