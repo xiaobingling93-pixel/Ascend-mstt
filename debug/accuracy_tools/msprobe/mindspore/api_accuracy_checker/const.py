@@ -10,8 +10,11 @@ SKIP = "skip"
 
 
 #api_runner
-IS_MINDSPORE_API = True
-IS_TORCH_API = False
+MINDSPORE_PLATFORM = "mindspore_platform"
+TORCH_PLATFORM = "torch_platform"
 
 MINT = "Mint"
 MINT_FUNCTIONAL = "MintFunctional"
+
+FORWARD_API = "forward_api"
+BACKWARD_API = "backward_api"
