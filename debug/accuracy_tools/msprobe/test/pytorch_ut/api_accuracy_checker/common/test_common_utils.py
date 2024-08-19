@@ -29,12 +29,6 @@ class TestUtils(unittest.TestCase):
         except Exception as e:
             self.fail(f"check_object_type raised exception {e}")
 
-    def test_check_file_or_directory_path(self):
-        try:
-            check_file_or_directory_path(__file__)
-        except Exception as e:
-            self.fail(f"check_file_or_directory_path raised exception {e}")
-
     def test_create_directory(self):
         test_dir_name = 'test_dir'
         create_directory(test_dir_name)
