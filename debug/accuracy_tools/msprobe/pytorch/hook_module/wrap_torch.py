@@ -16,25 +16,23 @@
 """
 
 import os
-
 import torch
-import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
+
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapTorchOps = yaml.safe_load(f).get('torch')
 
 
 def get_torch_ops():
-    global WrapTorchOps
     _torch_ops = []
-    for operation in WrapTorchOps:
+    yaml_data = load_yaml(yaml_path)
+    wrap_torch_ops = yaml_data.get('torch')
+    for operation in wrap_torch_ops:
         if '.' in operation:
             operation_sub_module_name, operation_sub_op = operation.rsplit('.', 1)
             operation_sub_module = getattr(torch, operation_sub_module_name)

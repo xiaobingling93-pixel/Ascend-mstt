@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from multiprocessing import Manager, Pool
 
-import yaml
 import torch
 
 from torch.utils._python_dispatch import TorchDispatchMode
@@ -16,14 +15,14 @@ except ImportError:
 else:
     is_npu = True
 
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
+from msprobe.core.common.const import Const, CompareConst
 from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
     DispatchRunParam, DisPatchDataInfo
 from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
     DispatchException
 from .compare import Comparator
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.const import Const, CompareConst
+
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -49,7 +48,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.single_api_index_dict = {}
         self.device_dump_path_cpu = None
         self.device_dump_path_npu = None
-        self.all_summery = []
+        self.all_summary = []
         self.call_stack_list = []
         self.process_num = process_num
         self.filter_dump_api()
@@ -70,7 +69,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.aten_ops_blacklist = []
         self.npu_adjust_autogard = []
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
-        self.load_yaml_file(yaml_path)
+        self.get_ops(yaml_path)
 
         self.lock = None
         if process_num > 0:
@@ -90,12 +89,12 @@ class PtdbgDispatch(TorchDispatchMode):
         if self.process_num > 0:
             self.pool.close()
             self.pool.join()
-            summery_path = os.path.join(self.root_cpu_path, f'summary.json')
-            if not os.path.exists(summery_path):
+            summary_path = os.path.join(self.root_cpu_path, f'summary.json')
+            if not os.path.exists(summary_path):
                 logger_error("Please check train log, An exception may have occurred!")
                 return
-            check_file_or_directory_path(summery_path, False)
-            fp_handle = open(summery_path, "r")
+            check_file_or_directory_path(summary_path, False)
+            fp_handle = open(summary_path, "r")
             while True:
                 json_line_data = fp_handle.readline()
                 if json_line_data == '\n':
@@ -103,7 +102,7 @@ class PtdbgDispatch(TorchDispatchMode):
                 if len(json_line_data) == 0:
                     break
                 msg = json.loads(json_line_data)
-                self.all_summery[msg[0]] = msg[1]
+                self.all_summary[msg[0]] = msg[1]
             fp_handle.close()
 
         if self.debug_flag:
@@ -111,9 +110,9 @@ class PtdbgDispatch(TorchDispatchMode):
             output_num = 0
             total_num = 0
 
-            for list_data in self.all_summery:
+            for list_data in self.all_summary:
                 for data in list_data:
-                    logger_debug(f'summery: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
+                    logger_debug(f'summary: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
                     if "_input" in data[CompareConst.NPU_NAME]:
                         input_num = input_num + 1
                     if "_output" in data[CompareConst.NPU_NAME]:
@@ -175,16 +174,16 @@ class PtdbgDispatch(TorchDispatchMode):
             cpu_out = cpu_out.float()
 
         if self.process_num == 0:
-            self.all_summery.append([])
-            data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, func, npu_out_cpu, cpu_out, self.lock)
+            self.all_summary.append([])
+            data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, func, npu_out_cpu, cpu_out, self.lock)
             dispatch_workflow(run_param, data_info)
         else:
             self.lock.acquire()
-            self.all_summery.append([])
+            self.all_summary.append([])
             self.lock.release()
             run_param.process_flag = True
             if self.check_fun(func, run_param):
-                data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summery, None, npu_out_cpu, cpu_out,
+                data_info = DisPatchDataInfo(cpu_args, cpu_kwargs, self.all_summary, None, npu_out_cpu, cpu_out,
                                              self.lock)
                 self.pool.apply_async(func=dispatch_multiprocess, args=(run_param, data_info),
                                       error_callback=error_call)
@@ -214,11 +213,10 @@ class PtdbgDispatch(TorchDispatchMode):
             dir_name = f'msprobe_{tag}_rank{self.device_id}_{time_now}'
         return dir_name
 
-    def load_yaml_file(self, file_path):
-        with FileOpen(file_path, 'r') as f:
-            yaml_file = yaml.safe_load(f)
-            self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-            self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+    def get_ops(self, file_path):
+        yaml_file = load_yaml(file_path)
+        self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
+        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:

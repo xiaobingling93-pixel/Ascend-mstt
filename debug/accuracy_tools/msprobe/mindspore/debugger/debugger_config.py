@@ -14,8 +14,7 @@ class DebuggerConfig:
         self.task = common_config.task
         self.rank = [] if not common_config.rank else common_config.rank
         self.step = [] if not common_config.step else common_config.step
-        if not common_config.level:
-            common_config.level = "L1"
+        common_config.level = Const.LEVEL_L1 if not common_config.level else common_config.level
         self.level = MsConst.TOOL_LEVEL_DICT.get(common_config.level, MsConst.API)
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list

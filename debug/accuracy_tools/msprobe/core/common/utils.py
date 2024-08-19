@@ -18,17 +18,17 @@ import collections
 import os
 import re
 import shutil
-import stat
 import subprocess
 import time
 import json
 import csv
 from datetime import datetime, timezone
 from pathlib import Path
+import yaml
 import numpy as np
 
 from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
-from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
 
@@ -153,17 +153,20 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
     if not (isinstance(input_param, dict) and isinstance(output_path, str)):
         logger.error("Invalid input parameters")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    check_file_or_directory_path(input_param.get("npu_path"), False)
-    check_file_or_directory_path(input_param.get("bench_path"), False)
-    check_file_or_directory_path(input_param.get("stack_path"), False)
+
+    check_file_or_directory_path(input_param.get("npu_json_path"), False)
+    check_file_or_directory_path(input_param.get("bench_json_path"), False)
+    check_file_or_directory_path(input_param.get("stack_json_path"), False)
     if not summary_compare and not md5_compare:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
-    with FileOpen(input_param.get("npu_path"), "r") as npu_json, \
-         FileOpen(input_param.get("bench_path"), "r") as bench_json, \
-         FileOpen(input_param.get("stack_path"), "r") as stack_json:
+
+    with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
+            FileOpen(input_param.get("bench_json_path"), "r") as bench_json, \
+            FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
         check_json_file(input_param, npu_json, bench_json, stack_json)
+
 
 
 def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
@@ -202,9 +205,9 @@ def _check_json(json_file_handle, file_name):
 
 
 def check_json_file(input_param, npu_json, bench_json, stack_json):
-    _check_json(npu_json, input_param.get("npu_path"))
-    _check_json(bench_json, input_param.get("bench_path"))
-    _check_json(stack_json, input_param.get("stack_path"))
+    _check_json(npu_json, input_param.get("npu_json_path"))
+    _check_json(bench_json, input_param.get("bench_json_path"))
+    _check_json(stack_json, input_param.get("stack_json_path"))
 
 
 def check_file_size(input_file, max_size):
@@ -475,8 +478,8 @@ def md5_find(data):
 
 
 def task_dumppath_get(input_param):
-    npu_path = input_param.get("npu_path", None)
-    bench_path = input_param.get("bench_path", None)
+    npu_path = input_param.get("npu_json_path", None)
+    bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
@@ -535,7 +538,8 @@ def load_npy(filepath):
     try:
         npy = np.load(filepath)
     except Exception as e:
-        raise RuntimeError(f"load npy file {filepath} failed") from e
+        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
     return npy
 
 
@@ -545,7 +549,8 @@ def save_npy(data, filepath):
     try:
         npy = np.save(filepath, data)
     except Exception as e:
-        raise RuntimeError(f"save npy file {filepath} failed") from e
+        logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
+        raise RuntimeError(f"Save numpy file {filepath} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
@@ -565,3 +570,15 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
+
+        
+def load_yaml(yaml_path):
+    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
+    checked_path = path_checker.common_check()
+    try:
+        with FileOpen(checked_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
+        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
+    return yaml_data

@@ -15,15 +15,120 @@
 # limitations under the License.
 """
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
+import zlib
 
+import mindspore as ms
 from mindspore import Tensor
 import numpy as np
 
-from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
-from msprobe.core.data_dump.data_processor.mindspore_processor import MindsporeDataProcessor, OverflowCheckDataProcessor
+from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, TensorStatInfo
+from msprobe.core.data_dump.data_processor.mindspore_processor import (
+    MindsporeDataProcessor,
+    TensorDataProcessor,
+    OverflowCheckDataProcessor
+) 
 from msprobe.core.common.const import FileCheckConst
 
+
+class TestMindsporeDataProcessor(unittest.TestCase):
+    def setUp(self):
+        self.config = MagicMock()
+        self.data_writer = MagicMock()
+        self.processor = MindsporeDataProcessor(self.config, self.data_writer)
+        self.tensor = ms.Tensor(np.array([1.0, 2.0, 3.0]).astype(np.float32))
+
+    def test_get_md5_for_tensor(self):
+        tensor = ms.Tensor([1.0, 2.0, 3.0], dtype=ms.bfloat16)
+        expected_crc32 = zlib.crc32(np.array([1.0, 2.0, 3.0], dtype=np.float32).tobytes())
+        expected_md5 = f"{expected_crc32:08x}"
+        result = self.processor.get_md5_for_tensor(tensor)
+        self.assertEqual(result, expected_md5)
+
+    def test_analyze_builtin(self):
+        test_slice = slice(1, 3, None)
+        expected_result = {"type": "slice", "value": [1, 3, None]}
+        result = self.processor._analyze_builtin(test_slice)
+        self.assertEqual(result, expected_result)
+
+        test_int = 42
+        expected_result = {"type": "int", "value": 42}
+        result = self.processor._analyze_builtin(test_int)
+        self.assertEqual(result, expected_result)
+
+    def test_get_stat_info_float(self):
+        tensor = ms.Tensor([1.0, 2.0, 3.0])
+        result = self.processor.get_stat_info(tensor)
+        self.assertEqual(result.max, 3.0)
+        self.assertEqual(result.min, 1.0)
+        self.assertEqual(result.mean, 2.0)
+        self.assertEqual(result.norm, ms.ops.norm(tensor).item())
+
+    def test_get_stat_info_int(self):
+        tensor =  ms.Tensor([1, 2, 3], dtype=ms.int32)
+        result = self.processor.get_stat_info(tensor)
+        self.assertEqual(result.max, 3)
+        self.assertEqual(result.min, 1)
+        self.assertEqual(result.mean, 2)
+        self.assertEqual(result.norm, ms.ops.norm(tensor).item())
+
+    def test_get_stat_info_bool(self):
+        tensor = ms.Tensor([True, False, True])
+        result = self.processor.get_stat_info(tensor)
+        self.assertEqual(result.max, True)
+        self.assertEqual(result.min, False)
+        self.assertIsNone(result.mean)
+        self.assertIsNone(result.norm)
+                               
+    @patch.object(MindsporeDataProcessor, 'get_md5_for_tensor')
+    def test__analyze_tensor(self, get_md5_for_tensor):
+        get_md5_for_tensor.return_value = "test_md5"
+        tensor = ms.Tensor(np.array([1, 2, 3], dtype=np.int32))
+        self.config.summary_mode = 'md5'
+        suffix = "test_tensor"
+        expected_result = {
+            'type': 'mindspore.Tensor',
+            'dtype': 'Int32',
+            'shape': (3,),
+            'Max': 3,
+            'Min': 1,
+            'Mean': 2,
+            'Norm': ms.ops.norm(tensor).item(),
+            'md5': 'test_md5',
+        }
+        result = self.processor._analyze_tensor(tensor, suffix)
+        self.assertEqual(result, expected_result)
+
+
+class TestTensorDataProcessor(unittest.TestCase):
+
+    def setUp(self):
+        self.config = MagicMock()
+        self.data_writer = MagicMock()
+        self.processor = TensorDataProcessor(self.config, self.data_writer)
+        self.data_writer.dump_tensor_data_dir = "./dump_data"
+        self.processor.current_api_or_module_name = "test_api"
+        self.processor.api_data_category = "input"
+
+    @patch('numpy.save')
+    def test_analyze_tensor(self, mock_save):
+        self.config.framework = "mindspore"
+        tensor = ms.Tensor([1.0, 2.0, 3.0])
+        suffix = 'suffix'
+        result = self.processor._analyze_tensor(tensor, suffix)
+        mock_save.assert_called_once()
+        expected = {
+            'type': 'mindspore.Tensor',
+            'dtype': str(tensor.dtype),
+            'shape': tensor.shape,
+            'Max': 3.0,
+            'Min': 1.0,
+            'Mean': 2.0,
+            'Norm': ms.ops.norm(tensor).item(),
+            'data_name': 'test_api.input.suffix.npy'
+        }
+        self.assertEqual(expected, result)
+    
 
 class TestOverflowCheckDataProcessor(unittest.TestCase):
     def setUp(self):

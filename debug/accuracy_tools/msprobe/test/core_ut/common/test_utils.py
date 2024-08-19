@@ -191,9 +191,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_path": "npu_path",
-            "bench_path": "bench_path",
-            "stack_path": "stack_path",
+            "npu_json_path": "npu_path",
+            "bench_json_path": "bench_path",
+            "stack_json_path": "stack_path",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
@@ -266,9 +266,9 @@ class TestUtils(TestCase):
     @patch("msprobe.core.common.utils._check_json")
     def test_check_json_file(self, _mock_check_json):
         input_param = {
-            "npu_path": "npu_path",
-            "bench_path": "bench_path",
-            "stack_path": "stack_path"
+            "npu_json_path": "npu_path",
+            "bench_json_path": "bench_path",
+            "stack_json_path": "stack_path"
         }
         check_json_file(input_param, "npu_json", "bench_json", "stack_json")
         self.assertEqual(_mock_check_json.call_args_list[0][0], ("npu_json", "npu_path"))
@@ -309,8 +309,8 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_task_dumppath_get(self, mock_error):
         input_param = {
-            "npu_path": None,
-            "bench_path": "bench_path"
+            "npu_json_path": None,
+            "bench_json_path": "bench_path"
         }
         npu_json = {
             "task": Const.TENSOR,
@@ -323,7 +323,7 @@ class TestUtils(TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
         mock_error.assert_called_with("Please check the json path is valid.")
 
-        input_param["npu_path"] = "npu_path"
+        input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
              patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)

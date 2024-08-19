@@ -1,10 +1,10 @@
 # **精度比对工具**
 
-## CPU或GPU与NPU精度数据比对
+## 总体说明
 
-### 总体说明
+- 本节主要介绍通过命令行方式和比对函数方式进行CPU或GPU与NPU的精度数据比对，执行精度比对操作前需要先完成CPU或GPU与NPU的精度数据dump，参见《[精度数据采集](./dump.md)》。
 
-- 本节主要介绍CPU或GPU与NPU精度数据比对的函数以及示例，执行精度比对操作前需要先完成CPU或GPU与NPU的精度数据dump，详见《[精度数据采集](./dump.md)》。
+- 训练精度一体化工具msprobe，使用子命令compare进行比对，可支持单卡和多卡场景的精度数据比对。
 
 - 比对函数均通过单独创建精度比对脚本执行，可支持单卡和多卡场景的精度数据比对。
 
@@ -12,11 +12,75 @@
 
   用户环境性能弱于标准约束或非独占使用的比对速度酌情向下浮动。比对速度的计算方式：两份比对文件大小/比对耗时。
 
-### 约束
+## 约束
 
 - NPU自研API，在CPU或GPU若没有对应的API，该API的dump数据不比对。
 - NPU与CPU或GPU的计算结果误差可能会随着模型的执行不断累积，最终会出现同一个API因为输入的数据差异较大而无法比对的情况。
 - CPU或GPU与NPU中两个相同的API会因为调用次数不同导致无法比对或比对到错误的API，不影响整体运行，该API忽略。
+
+## 命令行方式比对
+
+将CPU或GPU与NPU的dump文件进行比对，支持单卡和多卡，可同时比对多卡的dump数据。多机场景需要每个设备单独执行比对操作。
+
+请先参见《[精度数据采集](./dump.md)》完成CPU或GPU与NPU的精度数据dump。
+
+### 操作步骤
+
+1. 创建比对文件，文件内容及示例请参见“**比对文件**”。
+
+2. 执行如下示例命令进行比对：
+
+   ```shell
+   msprobe -f pytorch compare -i ./compare.json -o ./output -s
+   ```
+
+   **完整参数说明**
+
+   | 参数名             | 说明                                                                                                                                                       | 是否必选 |
+   | ------------------ |----------------------------------------------------------------------------------------------------------------------------------------------------------| -------- |
+   | -i或--input_path   | 指定比对文件路径。比对文件内容及示例请参见“**比对文件**”。                                                                                                                         | 是       |
+   | -o或--output_path  | 配置比对结果文件存盘目录。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.xlsx`。                                                                                        | 是       |
+   | -s或--stack_mode   | 配置stack_mode的开关。仅当**比对文件**配置"stack_path"需要开启。通过直接配置该参数开启，默认未配置，表示关闭。                                                                                     | 否       |
+   | -a或--auto_analyze | 自动精度分析，开启后工具自动针对比对结果进行分析，识别到第一个精度不达标节点（在比对结果文件中的“Accuracy Reached or Not”列显示为No），并给出问题可能产生的原因（打屏展示并生成advisor_{timestamp}.txt文件）。该参数默认未配置，表示开启，通过配置该参数关闭。 | 否       |
+   | -f或--fuzzy_match  | 模糊匹配。开启后，对于网络中同一层级且命名仅调用次数不同的API，可匹配并进行比对。通过直接配置该参数开启，默认未配置，表示关闭。                                                                                        | 否       |
+
+3. 查看比对结果，请参见“**比对结果分析**”。
+
+### 比对文件
+
+以在当前目录创建./compare.json为例。
+
+- 单卡场景示例
+
+  ```json
+  {
+  "npu_path": "./npu_dump/dump.json",
+  "bench_path": "./bench_dump/dump.json",
+  "stack_path": "./npu_dump/stack.json",
+  "is_print_compare_log": true
+  }
+  ```
+
+- 多卡场景示例
+
+  ```json
+  {
+  "npu_path": "./npu_dump/step0",
+  "bench_path": "./bench_dump/step0",
+  "is_print_compare_log": true
+  }
+  ```
+
+**参数说明**
+
+| 参数名               | 说明                                                         | 是否必选           |
+| -------------------- | ------------------------------------------------------------ | ------------------ |
+| npu_path             | 配置NPU环境下的dump.json文件（单卡场景）或真实数据目录（多卡场景）。数据类型：str。 | 是                 |
+| bench_path           | 配置CPU、GPU或NPU环境下的dump.json文件（单卡场景）或真实数据目录（多卡场景）。数据类型：str。 | 是                 |
+| stack_path           | 配置NPU dump目录下的stack.json文件。数据类型：str。          | 单卡必选，多卡不选 |
+| is_print_compare_log | 配置是否开启日志打屏。可取值True或False。数据类型：bool      | 否                 |
+
+## 比对函数方式比对
 
 ### compare_distributed
 
@@ -66,7 +130,7 @@ compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_mat
 
 | 参数名       | 说明                                                         | 是否必选 |
 | ------------ | ------------------------------------------------------------ | -------- |
-| input_param  | 配置dump数据文件及目录。数据类型：dict。配置参数包括：<br>        "npu_json_path"：指定NPU dump目录下的dump.json文件。参数示例："npu_json_path": "./npu_dump/dump.json"。必选。<br/>        "bench_json_path"：指定CPU、GPU或NPU dump目录下的dump.json文件。参数示例："bench_json_path": "./gpu_dump/dump.json"。必选。<br/>        "stack_json_path"：指定NPU dump目录下的stack.json文件。参数示例："stack_json_path": "./npu_dump/stack.json"。可选。<br/>        "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
+| input_param  | 配置dump数据文件及目录。数据类型：dict。配置参数包括：<br>        "npu_json_path"：指定NPU dump目录下的dump.json文件。参数示例："npu_json_path": "./npu_dump/dump.json"。必选。<br/>        "bench_json_path"：指定CPU、GPU或NPU dump目录下的dump.json文件。参数示例："bench_json_path": "./bench_dump/dump.json"。必选。<br/>        "stack_json_path"：指定NPU dump目录下的stack.json文件。参数示例："stack_json_path": "./npu_dump/stack.json"。可选。<br/>        "is_print_compare_log"：配置是否开启日志打屏。可取值True或False。可选。 | 是       |
 | output_path  | 配置比对结果文件存盘目录。参数示例：'./output'。文件名称基于时间戳自动生成，格式为：`compare_result_{timestamp}.xlsx`。数据类型：str。 | 是       |
 | stack_mode   | 配置stack_mode的开关。仅当配置"stack_json_path"需要开启。可取值True或False，参数示例：stack_mode=True，默认为False。数据类型：bool。 | 否       |
 | auto_analyze | 自动精度分析，开启后工具自动针对比对结果进行分析，识别到第一个精度不达标节点（在比对结果文件中的“Accuracy Reached or Not”列显示为No），并给出问题可能产生的原因（打屏展示并生成advisor_{timestamp}.txt文件）。可取值True或False，参数示例：auto_analyze=False，默认为True。数据类型：bool。 | 否       |
@@ -78,13 +142,13 @@ compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_mat
 
 ```Python
 from msprobe.pytorch import compare
-dump_result_param={
+input_param={
 "npu_json_path": "./npu_dump/dump.json",
-"bench_json_path": "./gpu_dump/dump.json",
+"bench_json_path": "./bench_dump/dump.json",
 "stack_json_path": "./npu_dump/stack.json",
 "is_print_compare_log": True
 }
-compare(dump_result_param, output_path="./output", stack_mode=True)
+compare(input_param, output_path="./output", stack_mode=True)
 ```
 
 ### 统计量比对
@@ -97,13 +161,13 @@ compare(dump_result_param, output_path="./output", stack_mode=True)
 
 ```Python
 from msprobe.pytorch import compare
-dump_result_param={
+input_param={
 "npu_json_path": "./npu_dump/dump.json",
-"bench_json_path": "./gpu_dump/dump.json",
+"bench_json_path": "./bench_dump/dump.json",
 "stack_json_path": "./npu_dump/stack.json",
 "is_print_compare_log": True
 }
-compare(dump_result_param, output_path="./output", stack_mode=True)
+compare(input_param, output_path="./output", stack_mode=True)
 ```
 
 **比对结果**

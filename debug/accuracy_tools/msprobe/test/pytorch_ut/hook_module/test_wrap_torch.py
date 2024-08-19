@@ -1,6 +1,5 @@
 import unittest
 import torch
-import yaml
 from msprobe.pytorch.hook_module.wrap_torch import *
 
 class TestWrapTorch(unittest.TestCase):

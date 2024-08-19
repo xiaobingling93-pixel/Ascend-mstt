@@ -18,12 +18,12 @@ import sys
 import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.common.log import logger
-
+from msprobe.core.compare.compare_cli import compare_cli
+from msprobe.core.common.const import Const
 
 def is_module_available(module_name):
     spec =importlib.util.find_spec(module_name)
     return spec is not None
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -34,7 +34,7 @@ def main():
     )
     
     parser.set_defaults(print_help=parser.print_help)
-    parser.add_argument('-f', '--framework', required=True, choices=['pytorch', 'mindspore'],
+    parser.add_argument('-f', '--framework', required=True, choices=[Const.PT_FRAMEWORK, Const.MS_FRAMEWORK],
                         help='Deep learning framework.')
     subparsers = parser.add_subparsers()
     subparsers.add_parser('parse')
@@ -53,7 +53,7 @@ def main():
             _api_precision_compare_command
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
-        from msprobe.pytorch.compare.compare_cli import compare_cli
+        
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
         multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
@@ -65,10 +65,10 @@ def main():
         parser.print_help()
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
-    if sys.argv[2] == "pytorch":
+    if sys.argv[2] == Const.PT_FRAMEWORK:
         if not is_torch_available:
-            logger.error("PyTorch does not exit, please install PyTorch library")
-            raise Exception("PyTorch does not exit, please install PyTorch library")
+            logger.error("PyTorch does not exist, please install PyTorch library")
+            raise Exception("PyTorch does not exist, please install PyTorch library")
         if sys.argv[3] == "run_ut":
             run_ut_command(args)
         elif sys.argv[3] == "parse":
@@ -83,13 +83,11 @@ def main():
         elif sys.argv[3] == "compare":
             compare_cli(args)
     else:
-        if is_module_available("mindspore"):
-            from msprobe.mindspore.compare.compare_cli import compare_cli_ms
-        else:
-            logger.error("MindSpore does not exit, please install MindSpore library")
-            raise Exception("MindSpore does not exit, please install MindSpore library")
+        if not is_module_available(Const.MS_FRAMEWORK):
+            logger.error("MindSpore does not exist, please install MindSpore library")
+            raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
-            compare_cli_ms(args)
+            compare_cli(args)
 
 if __name__ == "__main__":
     main()

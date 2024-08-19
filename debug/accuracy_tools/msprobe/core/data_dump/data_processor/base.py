@@ -191,6 +191,9 @@ class BaseDataProcessor:
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
+    
+    def analyze_element(self, element):
+        return self.recursive_apply_transform(element, self.analyze_single_element)
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         api_info_struct = {}
