@@ -295,24 +295,6 @@ def _create_logger(level=logging.INFO):
     logger_.addHandler(ch)
     return logger_
 
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load "%s". %s', file_path, str(error))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file %s, content is not a dictionary!', file_path)
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
-
     
 log_level = logging.DEBUG if os.environ.get("API_ACCURACY_CHECK_LOG_LEVEL") == "1" else logging.INFO
 logger = _create_logger(log_level)
