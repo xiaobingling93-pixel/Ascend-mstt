@@ -2,14 +2,7 @@ import json
 import re
 import abc
 import torch
-from kj600.utils import check_file_valid_readable
 
-
-def get_config(file_path='config.json'):
-    check_file_valid_readable(file_path)
-    with open(file_path, 'r') as file:
-        config = json.load(file)
-        return config
 
 # 用于存储所有validator实现类的注册表
 config_validator_registry = {}
