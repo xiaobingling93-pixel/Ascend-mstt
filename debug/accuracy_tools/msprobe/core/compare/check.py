@@ -2,11 +2,32 @@ from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api 
 
 
-def check_struct_match(npu_dict, bench_dict):
+dtype_mapping = {
+    "Int8": "torch.int8",
+    "UInt8": "torch.uint8",
+    "Int16": "torch.int16",
+    "UInt16": "torch.uint16",
+    "Int32": "torch.int32",
+    "UInt32": "torch.uint32",
+    "Int64": "torch.int64",
+    "UInt64": "torch.uint64",
+    "Float16": "torch.float16",
+    "Float32": "torch.float32",
+    "Float64": "torch.float64",
+    "Bool": "torch.bool",
+    "BFloat16": "torch.bfloat16"
+    }
+
+
+def check_struct_match(npu_dict, bench_dict, cross_frame=False):
     npu_struct_in = npu_dict.get("input_struct")
     bench_struct_in = bench_dict.get("input_struct")
     npu_struct_out = npu_dict.get("output_struct")
     bench_struct_out = bench_dict.get("output_struct")
+
+    if cross_frame:
+        npu_struct_in = [(dtype_mapping.get(item[0], item[0]), item[1]) for item in npu_struct_in]
+        npu_struct_out = [(dtype_mapping.get(item[0], item[0]), item[1]) for item in npu_struct_out]
     is_match = npu_struct_in == bench_struct_in and npu_struct_out == bench_struct_out
     if not is_match:
         if len(npu_struct_in) == 0 or len(bench_struct_in) == 0 or len(npu_struct_in) != len(bench_struct_in):

@@ -417,6 +417,9 @@ def _compare_parser(parser):
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
+                        help="<optional> The cell mapping file path.", required=False)
+    
 
 
     

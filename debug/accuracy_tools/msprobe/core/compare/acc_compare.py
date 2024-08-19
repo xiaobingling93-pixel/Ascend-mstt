@@ -18,7 +18,7 @@ from msprobe.core.advisor.advisor import Advisor
 class Comparator:
     
     def __init__(self):
-        pass    
+        pass
     
     @classmethod
     def make_result_table(cls,result,md5_compare,summary_compare,stack_mode):
@@ -169,8 +169,11 @@ class Comparator:
                 read_npy_data = getattr(self, "read_npy_data")
                 frame_name = getattr(self, "frame_name")
                 if frame_name == "MSComparator":
-                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
-                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                    n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX, load_pt=False)
+                    if self.cross_frame:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX, load_pt=True)
+                    else:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX, load_pt=False)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
                     b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
