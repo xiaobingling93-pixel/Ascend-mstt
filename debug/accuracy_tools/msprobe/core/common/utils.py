@@ -559,7 +559,7 @@ def get_json_contents(file_path):
     try:
         json_obj = json.loads(ops)
     except ValueError as error:
-        logger.error('Failed to load "%s". %s' % (file_path, str(error))
+        logger.error('Failed to load %s. %s' % (file_path, str(error))
         raise CompareException(CompareException.INVALID_FILE_ERROR) from error
     if not isinstance(json_obj, dict):
         logger.error('Json file %s, content is not a dictionary!' % file_path)
