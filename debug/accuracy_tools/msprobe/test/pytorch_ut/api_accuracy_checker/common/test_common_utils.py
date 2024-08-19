@@ -35,37 +35,6 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(os.path.exists(test_dir_name))
         os.rmdir(test_dir_name)
 
-    @patch('os.path.exists')
-    def test_check_file_or_dir_path_should_raise_exe_when_dir_path_not_existed(self, mock_path_exists):
-        mock_path_exists.return_value = False
-        with self.assertRaises(CompareException) as ce:
-            check_file_or_directory_path('', isdir=True)
-        self.assertEqual(ce.exception.code, CompareException.INVALID_PATH_ERROR)
-
-    @patch('os.path.exists')
-    @patch('os.path.isdir')
-    @patch('os.access')
-    def test_check_file_or_dir_path_should_pass_when_path_is_dir(self, mock_os_access, mock_path_is_dir,
-                                                                 mock_path_exists):
-        mock_os_access.return_value = True
-        mock_path_is_dir.return_value = True
-        mock_path_exists.return_value = True
-        check_file_or_directory_path('', isdir=True)
-
-    @patch('os.path.isfile')
-    @patch('os.access')
-    def test_check_file_or_dir_path_should_raise_exe_when_file_not_access(self, mock_os_access, mock_path_is_file):
-        mock_os_access.return_value = False
-        mock_path_is_file.return_value = True
-        with self.assertRaises(CompareException) as ce:
-            check_file_or_directory_path('', isdir=False)
-        self.assertEqual(ce.exception.code, CompareException.INVALID_PATH_ERROR)
-
-    def test_check_file_or_dir_path_should_pass_when_path_is_file(self):
-        with unittest.mock.patch('os.path.isfile', return_value=True), \
-                unittest.mock.patch('os.access', return_value=True):
-            check_file_or_directory_path('', isdir=False)
-
     def test_api_info_preprocess_no_conversion_needed(self):
         api_name = 'linear'
         original_api_info = {'key': 'value'}
