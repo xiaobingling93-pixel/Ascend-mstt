@@ -3,14 +3,6 @@ import torch
 import torch.distributed as dist
 
 
-def print_rank_0(message):
-    if dist.is_initialized():
-        if dist.get_rank() == 0:
-            print(message)
-    else:
-        print(message)
-
-
 class MixPrecsionOptimizerMon:
     wrapped_optimizer = None
 
