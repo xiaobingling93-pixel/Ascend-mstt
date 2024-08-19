@@ -1,10 +1,9 @@
 from collections import defaultdict
 import torch
 import torch.distributed as dist
-from kj600.visualizer import HeatmapVisualizer
 
 
-def print_rank_0(message, debug=False, force=False):
+def print_rank_0(message):
     if dist.is_initialized():
         if dist.get_rank() == 0:
             print(message)
