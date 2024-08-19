@@ -560,10 +560,10 @@ def run_ut_command(args):
     # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
     forward_content, backward_content, real_data_path = None, None, None
     if args.api_info_file:
-        check_link(args.api_info_file)
-        api_info = os.path.realpath(args.api_info_file)
-        check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
-        forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
+        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, \
+        ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
+        checked_api_info = api_info_file_checker.common_check()
+        forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
         if args.filter_api:
             logger.info("Start filtering the api in the forward_input_file.")
             forward_content = preprocess_forward_content(forward_content)
@@ -591,7 +591,10 @@ def run_ut_command(args):
     rank_list = msCheckerConfig.rank_list
     tls_path = msCheckerConfig.tls_path
     if args.config_path:
-        _, task_config = parse_json_config(args.config_path, Const.RUN_UT)
+        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        checked_config_path = config_path_checker.common_check()
+        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
         white_list = task_config.white_list
         black_list = task_config.black_list
         error_data_path = task_config.error_data_path
