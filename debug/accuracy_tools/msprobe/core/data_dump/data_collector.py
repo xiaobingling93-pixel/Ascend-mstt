@@ -71,12 +71,11 @@ class DataCollector:
         backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
         if self.check_scope_and_pid(self.scope, backward_name, pid):
             self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
-        if not self.is_inplace(module):
+        if not self.is_inplace(module) or not self.check_scope_and_pid(self.scope, name, pid):
             return
         logger.info(f"API {name} is inplace.")
-        if self.check_scope_and_pid(self.scope, name, pid):
-            data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
-            self.update_data(data_info)
+        data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
+        self.handle_data(name, data_info)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
