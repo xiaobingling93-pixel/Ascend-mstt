@@ -1,6 +1,6 @@
 import os
 import yaml
-from msprobe.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path
+from msprobe.pytorch.core.common.utils import check_file_or_directory_path
 from msprobe.core.common.file_check import FileOpen
 from msprobe.pytorch.pt_config import RunUTConfig
 
