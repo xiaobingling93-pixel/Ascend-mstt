@@ -11,8 +11,10 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
                                                                  dtype_str_to_torch_dtype, type_to_api_info_type_str,
-                                                                 DEFAULT_CONSTRUCT_NP_DTYPE, TUPLE_TYPE_STR,
-                                                                 MINDSPORE_TENSOR_TYPE_STR)
+                                                                 DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE, TUPLE_TYPE_STR,
+                                                                 MINDSPORE_TENSOR_TYPE_STR, float_dtype_str_list,
+                                                                 int_dtype_str_list)
+from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 
 
@@ -26,6 +28,7 @@ class MstensorMetaData:
 
 class ComputeElement:
     def __init__(self, compute_element_info=None, parameter=None):
+        self.supported_parameter_type = tuple(api_info_type_str_to_type.keys()) + tuple([torch.Tensor, tuple])
         if parameter is not None:
             self._init_with_parameter(parameter)
         elif isinstance(compute_element_info, (list, dict)):
@@ -50,8 +53,15 @@ class ComputeElement:
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
-        np_ndarray_float64 = ms_tensor.astype(mindspore.float64).numpy()
-        torch_tensor = torch.from_numpy(np_ndarray_float64).to(torch_dtype)
+
+        if dtype_str in float_dtype_str_list:
+            middle_dtype = mindspore.float64
+        elif dtype_str in int_dtype_str_list:
+            middle_dtype = mindspore.int64
+        else:
+            middle_dtype = mindspore.uint64
+        np_ndarray = ms_tensor.astype(middle_dtype).numpy()
+        torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
         return torch_tensor
 
     @staticmethod
@@ -71,21 +81,26 @@ class ComputeElement:
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         else:
             ms_dtype = dtype_str_to_ms_dtype.get(dtype_str)
-        np_ndarray_float64 = torch_tensor.to(torch.float64, copy=True).numpy()
-        ms_tensor = mindspore.Tensor.from_numpy(np_ndarray_float64).astype(ms_dtype)
+
+        if dtype_str in float_dtype_str_list:
+            middle_dtype = torch.float64
+        elif dtype_str in int_dtype_str_list:
+            middle_dtype = torch.int64
+        np_ndarray = torch_tensor.to(middle_dtype, copy=True).numpy()
+        ms_tensor = mindspore.Tensor.from_numpy(np_ndarray).astype(ms_dtype)
         return ms_tensor
 
     @staticmethod
     def convert_inf_to_real_num(value, dtype_str):
         if value == float("inf"):
-            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE)
             value = np.finfo(np_dtype).max
         elif value == float("-inf"):
-            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+            np_dtype = dtype_str_to_np_dtype.get(dtype_str, DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE)
             value = np.finfo(np_dtype).min
         return value
 
-    def get_parameter(self, get_origin=True, get_mindspore_tensor=True):
+    def get_parameter(self, get_origin=True, tensor_platform=MINDSPORE_PLATFORM):
         '''
         Args:
             get_origin: boolean
@@ -94,13 +109,13 @@ class ComputeElement:
         Return:
             parameter: Union[int, float, str, slice,tuple,  torch.Tensor, mindspore.Tensor]
         '''
-        if isinstance(self.parameter, (int, float, str, slice, torch.Tensor, tuple, mindspore.Tensor)):
+        if isinstance(self.parameter, self.supported_parameter_type):
             parameter_tmp = self.parameter
         elif isinstance(self.parameter, MstensorMetaData):
             mstensor_meta_data = self.parameter
             ms_dtype = dtype_str_to_ms_dtype.get(mstensor_meta_data.dtype_str)
             if global_context.get_is_constructed():
-                np_dtype = dtype_str_to_np_dtype.get(mstensor_meta_data.dtype_str, DEFAULT_CONSTRUCT_NP_DTYPE)
+                np_dtype = dtype_str_to_np_dtype.get(mstensor_meta_data.dtype_str, DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE)
                 ndarray = self._construct_ndarray(mstensor_meta_data.shape, mstensor_meta_data.maximum,
                                                   mstensor_meta_data.minimum, np_dtype)
             else:
@@ -108,13 +123,13 @@ class ComputeElement:
             parameter_tmp = mindspore.Tensor(ndarray, dtype=ms_dtype)
         else:
             err_msg = "ComputeElement.get_parameter failed: self.parameter type is not in " \
-                "(int, float, str, slice, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
+                "(int, float, str, slice, bool, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
         # if necessary, do transfer
-        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and not get_mindspore_tensor:
+        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == TORCH_PLATFORM:
             parameter = self.transfer_to_torch_tensor(parameter_tmp)
-        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and get_mindspore_tensor:
+        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform ==MINDSPORE_PLATFORM:
             parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
         else:
             parameter = parameter_tmp
@@ -192,17 +207,17 @@ class ComputeElement:
 
     def _init_with_parameter(self, parameter):
         self.parameter = parameter
+        if not isinstance(parameter, self.supported_parameter_type):
+            err_msg = "ComputeElement._init_with_parameter failed: " \
+                "parameter type is not in (int, float, str, slice, bool, torch.Tensor, mindspore.Tensor)"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         if isinstance(parameter, mindspore.Tensor):
             self.shape = tuple(parameter.shape)
             self.dtype_str = ms_dtype_to_dtype_str.get(parameter.dtype)
         elif isinstance(parameter, torch.Tensor):
             self.shape = tuple(parameter.shape)
             self.dtype_str = torch_dtype_to_dtype_str.get(parameter.dtype)
-        elif isinstance(parameter, (int, float, str, slice, tuple)):
-            self.shape = tuple()
-            self.dtype_str =\
-                TUPLE_TYPE_STR if isinstance(parameter, tuple) else type_to_api_info_type_str.get(type(parameter))
         else:
-            err_msg = "ComputeElement._init_with_parameter failed: " \
-                "parameter type is not in (int, float, str, slice, torch.Tensor, mindspore.Tensor)"
-            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
+            self.shape = tuple()
+            self.dtype_str = \
+                TUPLE_TYPE_STR if isinstance(parameter, tuple) else type_to_api_info_type_str.get(type(parameter))

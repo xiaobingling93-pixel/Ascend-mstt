@@ -86,4 +86,29 @@ api_info_type_str_to_type = {
 }
 type_to_api_info_type_str = {value: key for key, value in api_info_type_str_to_type.items()}
 
-DEFAULT_CONSTRUCT_NP_DTYPE = np.float64
+DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE = np.float64
+DEFAULT_CONSTRUCT_NP_INT_DTYPE = np.float64
+DEFAULT_CONSTRUCT_NP_UINT_DTYPE = np.float64
+
+float_dtype_str_list = [
+    FLOAT16,
+    FLOAT32,
+    FLOAT64,
+    BFLOAT16,
+]
+
+int_dtype_str_list = [
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+    BOOL,
+    INT4,
+]
+
+uint_dtype_str_list = [
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
+]
