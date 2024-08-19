@@ -127,8 +127,8 @@ class DataCollector:
             self.data_writer.update_construct(self.module_processor.module_node)
 
     def handle_data(self, name, data_info, use_buffer=True):
-        msg = f"msprobe is collecting data on {name}. "
         if data_info:
+            msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
             logger.info(msg)
         if use_buffer:
