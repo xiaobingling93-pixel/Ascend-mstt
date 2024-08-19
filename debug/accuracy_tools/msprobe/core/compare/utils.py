@@ -349,10 +349,10 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
-        summary_data = n_dict.get("summary")[index]
-        result_item.extend(summary_data)
-        summary_data = [CompareConst.N_A] * 4
-        result_item.extend(summary_data)
+        npu_summary_data = n_dict.get("summary")[index]
+        result_item.extend(npu_summary_data)
+        bench_summary_data = [CompareConst.N_A] * 4
+        result_item.extend(bench_summary_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
