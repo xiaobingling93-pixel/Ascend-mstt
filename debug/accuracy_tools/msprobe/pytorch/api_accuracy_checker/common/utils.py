@@ -51,40 +51,6 @@ def check_object_type(check_object, allow_type):
         raise CompareException(CompareException.INVALID_DATA_ERROR)
 
 
-def check_file_or_directory_path(path, isdir=False):
-    """
-    Function Description:
-        check whether the path is valid
-    Parameter:
-        path: the path to check
-        isdir: the path is dir or file
-    Exception Description:
-        when invalid data throw exception
-    """
-    if isdir:
-        if not os.path.exists(path):
-            logger.error('The path {} is not exist.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-        if not os.path.isdir(path):
-            logger.error('The path {} is not a directory.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-        if not os.access(path, os.W_OK):
-            logger.error(
-                'The path {} does not have permission to write. Please check the path permission'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-    else:
-        if not os.path.isfile(path):
-            logger.error('{} is an invalid file or non-exist.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not os.access(path, os.R_OK):
-        logger.error(
-            'The path {} does not have permission to read. Please check the path permission'.format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
 class SoftlinkCheckException(Exception):
     pass
 
