@@ -14,17 +14,14 @@
 # ============================================================================
 
 import os
-import yaml
 import mindspore as ms
-
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.core.common.utils import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import Const, load_yaml
+
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapTensorOps = yaml.safe_load(f).get('tensor')
+
 
 TensorFunc = {}
 for f in dir(ms.Tensor):
@@ -32,9 +29,10 @@ for f in dir(ms.Tensor):
 
 
 def get_tensor_ops():
-    global WrapTensorOps
+    yaml_data = load_yaml(yaml_path)
+    wrap_tensor_ops = yaml_data.get('tensor')
     _tensor_ops = dir(ms.Tensor)
-    return set(WrapTensorOps) & set(_tensor_ops)
+    return set(wrap_tensor_ops) & set(_tensor_ops)
 
 
 class HOOKTensor(object):
@@ -55,7 +53,6 @@ class TensorOPTemplate(HOOKCell):
 def wrap_tensor_op(op_name, hook):
     def tensor_op_template(*args, **kwargs):
         return TensorOPTemplate(op_name, hook)(*args, **kwargs)
-
     return tensor_op_template
 
 

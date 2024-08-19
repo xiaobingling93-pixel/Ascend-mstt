@@ -6,8 +6,8 @@ import numpy as np
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
-    ULPStandardApi, ThousandthStandardApi, apis_threshold
+    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
+    ulp_standard_api, thousandth_standard_api, apis_threshold
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
@@ -280,15 +280,15 @@ class Comparator:
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
-        if api_name in ThousandthStandardApi:
+        if api_name in thousandth_standard_api:
             thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
             compare_column.rel_err_thousandth = thousand_res
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in BinaryStandardApi:
+            if api_name in binary_standard_api:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
                 compare_column.error_rate = err_rate
-            elif api_name in AbsoluteStandardApi:
+            elif api_name in absolute_standard_api:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))
                 rel_err = abs_err / abs_bench_with_eps
@@ -298,7 +298,7 @@ class Comparator:
                                                                          dtype, rtol)
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
-            elif api_name in ULPStandardApi:
+            elif api_name in ulp_standard_api:
                 if bench_output.size == 0:
                     compare_column.max_ulp_error = 0
                     compare_column.mean_ulp_error = 0

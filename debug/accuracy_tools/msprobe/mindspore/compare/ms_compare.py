@@ -12,7 +12,7 @@ class MSComparator (Comparator):
     def __init__(self):
         self.frame_name = MSComparator.__name__
     
-    def read_npy_data(self,dir_path, file_name):
+    def read_npy_data(self, dir_path, file_name):
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                 FileCheckConst.NUMPY_SUFFIX, False)
