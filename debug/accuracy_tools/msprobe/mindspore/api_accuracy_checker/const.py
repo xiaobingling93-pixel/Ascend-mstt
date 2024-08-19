@@ -19,3 +19,7 @@ MINT_FUNCTIONAL = "MintFunctional"
 
 FORWARD_API = "forward_api"
 BACKWARD_API = "backward_api"
+
+#api_info
+INPUT = "input"
+OUTPUT = "output"

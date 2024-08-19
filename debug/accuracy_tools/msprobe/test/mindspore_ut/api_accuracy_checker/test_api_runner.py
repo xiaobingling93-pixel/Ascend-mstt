@@ -1,0 +1,86 @@
+import sys
+import logging
+import os
+
+import pytest
+import mindspore
+import torch
+from unittest.mock import MagicMock
+
+from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner
+from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM, FORWARD_API, BACKWARD_API
+
+logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
+
+file_path = os.path.abspath(__file__)
+directory = os.path.dirname(file_path)
+
+
+# 创建一个包含if判断的mock实例的fixture
+@pytest.fixture
+def mock_compute_element_input_instance():
+    mock = MagicMock()
+    def side_effect(**kwargs):
+        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+            return mindspore.Tensor([1., 2., 3.])
+        else:
+            return torch.Tensor([1., 2., 3.])
+    mock.get_parameter.side_effect = side_effect
+    return mock
+
+@pytest.fixture
+def mock_compute_element_kwargs_instance():
+    mock = MagicMock()
+    mock.get_parameter.return_value = "tanh"
+    return mock
+
+@pytest.fixture
+def mock_compute_element_result_instance():
+    mock = MagicMock()
+    def side_effect(**kwargs):
+        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+            return mindspore.Tensor([1., 2., 3.])
+        else:
+            return torch.Tensor([1., 2., 3.])
+    mock.get_parameter.side_effect = side_effect
+    return mock
+
+class TestClass:
+
+    def test_run_api(self):
+        kwargs = {"approximate": mock_compute_element_kwargs_instance}
+        inputs = [mock_compute_element_input_instance]
+        gradient_inputs = [mock_compute_element_input_instance]
+        result = [mock_compute_element_result_instance]
+
+
+        # api_instance, inputs, kwargs, gradient_inputs, forward_or_backward, api_platform, result
+        test_cases = [
+            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, MINDSPORE_PLATFORM, result],
+            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, BACKWARD_API, MINDSPORE_PLATFORM, result],
+            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, TORCH_PLATFORM, result],
+            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, BACKWARD_API, TORCH_PLATFORM, result],
+        ]
+        for test_case in test_cases:
+            api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform, results_target = test_case
+            results_real = api_runner.run_api(api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform)
+            for res_real, res_target in zip(results_real, results_target):
+                assert res_real.get_parameter() == res_target.get_parameter()
+
+
+    def test_get_api_instance(self):
+        #api_type_str, api_sub_name, api_platform, result_api
+        test_cases = [
+            ["MintFunctional", "relu", MINDSPORE_PLATFORM, mindspore.mint.nn.functional.relu],
+            ["MintFunctional", "relu", TORCH_PLATFORM, torch.nn.functional.relu]
+        ]
+        for test_case in test_cases:
+            api_type_str, api_sub_name, api_platform, result_api = test_case
+            assert api_runner.get_api_instance(api_type_str, api_sub_name, api_platform) == result_api
+
+    def test_get_info_from_name(self):
+        api_name = "MintFunctional.relu.0.backward"
+        api_type_str, api_sub_name = api_runner.get_info_from_name(api_name_str=api_name)
+        assert api_type_str == "MintFunctional"
+        assert api_sub_name == "relu"
