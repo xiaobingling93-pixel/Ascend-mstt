@@ -360,10 +360,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
         else:
             result_item.append(CompareConst.NONE)
         if not md5_compare and not summary_compare and result_item[1] == CompareConst.N_A:
-            if index == 0:
-                result_item.extend(["-1"])
-            else:
-                result_item.extend([CompareConst.NONE, "-1"])
+            result_item.extend(["-1"])
         result.append(result_item)
 
 
