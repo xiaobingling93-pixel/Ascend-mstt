@@ -189,8 +189,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
 
 def run_ut(config):
     logger.info("start UT test")
-    logger.info(f"UT task result will be saved in {config.result_csv_path}")
-    logger.info(f"UT task details will be saved in {config.details_csv_path}")
+    if config.online_config.is_online:
+        logger.info(f"UT task result will be saved in {config.result_csv_path}".replace(".csv", "_rank*.csv"))
+        logger.info(f"UT task details will be saved in {config.details_csv_path}".replace(".csv", "_rank*.csv"))
+    else:
+        logger.info(f"UT task result will be saved in {config.result_csv_path}")
+        logger.info(f"UT task details will be saved in {config.details_csv_path}")
+
     if config.save_error_data:
         logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
     compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
