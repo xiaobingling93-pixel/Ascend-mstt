@@ -31,6 +31,8 @@ class MSComparator (Comparator):
         a_op_name = [op_name.replace("Cell", "Module", 1) for op_name in a_op_name]
         if self.cell_mapping_dict:
             for index, op_name in enumerate(a_op_name):
+                # get cell name & class name from op_name
+                # Cell.fc1.Dense.forward.0.input.0
                 cell_name = op_name.split(Const.SEP, 1)[-1].rsplit(Const.SEP, 4)[0]
                 if cell_name in self.cell_mapping_dict:
                     a_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
