@@ -99,7 +99,7 @@ class Comparator:
         return small_value_threshold, small_value_atol, rtol
 
     @staticmethod
-    def get_run_ut_detail(test_result):
+    def _get_run_ut_detail(test_result):
         """get run_ut detail before write to csv, called by online run_ut"""
         test_rows = []
         try:
@@ -151,7 +151,7 @@ class Comparator:
         write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
-        test_rows = self.get_run_ut_detail(test_result)
+        test_rows = self._get_run_ut_detail(test_result)
         detail_save_path = self.get_path_from_rank(test_result[-1],
                                                    self.detail_save_path_list,
                                                    self.detail_save_path_str)
@@ -195,7 +195,7 @@ class Comparator:
                                  data_info.rank)
         if is_online:
             # get run_ut compare detail
-            return self.get_run_ut_detail(result_info)
+            return self._get_run_ut_detail(result_info)
         self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
