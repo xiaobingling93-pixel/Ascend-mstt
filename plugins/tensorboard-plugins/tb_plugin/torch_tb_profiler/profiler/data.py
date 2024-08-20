@@ -26,6 +26,7 @@ import re
 import tempfile
 from json.decoder import JSONDecodeError
 from typing import Dict, List, Optional
+from configparser import ConfigParser
 
 from .op_tree import OpTreeBuilder
 from .. import io, utils
@@ -44,6 +45,8 @@ from .tensor_cores_parser import TensorCoresParser
 from .trace import BaseEvent, EventTypes, MemoryEvent
 
 logger = utils.get_logger()
+config = ConfigParser()
+config.read('../../config/config.ini')
 
 
 class RunProfileData(object):
@@ -363,7 +366,7 @@ class RunProfileData(object):
         dataloader_ratio = self.avg_costs.costs[ProfileRole.DataLoader] / self.avg_costs.costs[ProfileRole.Total]
         if dataloader_ratio > 0.05:
             percentage = dataloader_ratio * 100
-            url = 'https://pytorch.org/docs/stable/data.html#single-and-multi-process-data-loading'
+            url = config.get('URL', 'pytorch_data_loading_url')
             self.recommendations.append(
                 f'This run has high time cost on input data loading. {percentage:.1f}% of the step ' +
                 "time is in DataLoader. You could try to set num_workers on DataLoader's construction " +
@@ -375,12 +378,11 @@ class RunProfileData(object):
 
         if self.device_props:
             # Tensor Cores feature is available on GPU cards with compute capability >= 7.0
-            # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#features-and-technical-specifications
             major = self.device_props[0].get('computeMajor')
             # If it's a pure CPU run, then self.tc_used_ratio is None, this rule will not be triggered.
             if major is not None and major >= 7:
                 if math.isclose(self.tc_used_ratio, 0.0) and self.tc_eligible_ops_kernel_ratio > 0.0:
-                    url = 'https://pytorch.org/docs/stable/amp.html'
+                    url = config.get('URL', 'pytorch_amp_url')
                     self.recommendations.append(
                         f'Kernels with {round(self.tc_eligible_ops_kernel_ratio * 100)}%'
                         ' time are launched by Tensor Cores eligible operators. '
@@ -395,8 +397,8 @@ class RunProfileData(object):
                     if total_mem is not None and peak_mem > total_mem * 0.9:
                         percentage = peak_mem / total_mem * 100 if total_mem > 0 else 0
                         total_mem_gb = total_mem / 1024 / 1024 / 1024
-                        ckp_url = 'https://pytorch.org/docs/stable/checkpoint.html'
-                        amp_url = 'https://pytorch.org/docs/stable/amp.html'
+                        ckp_url = config.get('URL', 'pytorch_ckp_url')
+                        amp_url = config.get('URL', 'pytorch_amp_url')
                         self.recommendations.append(
                             f'Device memory usage is at the limit of device memory capacity '
                             f'({percentage:.1f}% of {total_mem_gb:.1f}GB on GPU{dev_id}). '
@@ -406,7 +408,7 @@ class RunProfileData(object):
 
     def _analyze_distributed_metrics(self):
         if self.use_dp and len(self.used_devices) > 1:
-            url = 'https://pytorch.org/docs/stable/notes/cuda.html#cuda-nn-ddp-instead'
+            url = config.get('URL', 'cuda_nn_ddp_instead_url')
             self.recommendations.append(
                 f"It is recommended to {href('use DistributedDataParallel instead of DataParallel', url)}"
                 ' to do multi-GPU training.')
@@ -428,9 +430,9 @@ class RunProfileData(object):
         communication_ratio = self.avg_costs.costs[ProfileRole.Communication] / self.avg_costs.costs[ProfileRole.Total]
         if communication_ratio > 0.1:
             percentage = communication_ratio * 100
-            compress_url = 'https://pytorch.org/docs/stable/ddp_comm_hooks.html',
-            grad_acc_url = 'https://towardsdatascience.com/what-is-gradient-accumulation-in-deep-learning-ec034122cfa'
-            lamb_url = 'https://nvidia.github.io/apex/optimizers.html#apex.optimizers.FusedLAMB'
+            compress_url = config.get('URL', 'compress_url')
+            grad_acc_url = config.get('URL', 'grad_acc_url')
+            lamb_url = config.get('URL', 'lamb_url')
             self.recommendations.append(
                 f'This run has high time cost on communication. {percentage:.1f}% of the step time is in '
                 f"communication. You could try {href('Gradient Compression', compress_url)} or "
