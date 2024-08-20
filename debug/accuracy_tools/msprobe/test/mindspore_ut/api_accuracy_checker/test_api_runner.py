@@ -7,7 +7,7 @@ import torch
 from unittest.mock import MagicMock
 
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
-from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM, FORWARD_API, BACKWARD_API
+from msprobe.core.common.const import Const
 
 logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -24,49 +24,49 @@ def func(x_1, x_2, opt="opt1"):
     return y_1, y_2
 
 def side_effect_forward_input_1(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([1., 2., 3.])
     else:
         return torch.Tensor([1., 2., 3.])
 
 def side_effect_forward_input_2(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([1.1, 2., 3.])
     else:
         return torch.Tensor([1.1, 2., 3.])
 
 def side_effect_forward_output_1(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([3., 5., 7.])
     else:
         return torch.Tensor([3., 5., 7.])
 
 def side_effect_forward_output_2(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([2.1, 4., 6.])
     else:
         return torch.Tensor([2.1, 4., 6.])
 
 def side_effect_backward_input_1(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([1., 2., 3.])
     else:
         return torch.Tensor([1., 2., 3.])
 
 def side_effect_backward_input_2(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([1.11, 2., 3.])
     else:
         return torch.Tensor([1.11, 2., 3.])
 
 def side_effect_backward_output_1(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([3.11, 6., 9.])
     else:
         return torch.Tensor([3.11, 6., 9.])
 
 def side_effect_backward_output_2(**kwargs):
-    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+    if kwargs.get("tensor_platform") == Const.MS_FRAMEWORK:
         return mindspore.Tensor([1.11, 2., 3.])
     else:
         return torch.Tensor([1.11, 2., 3.])
@@ -114,10 +114,10 @@ class TestApiRunner(unittest.TestCase):
 
         # api_instance, api_input_aggregation, forward_or_backward, api_platform, result
         test_cases = [
-            [func, forward_api_input_aggregation, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
-            [func, backward_api_input_aggregation, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
-            [func, forward_api_input_aggregation, FORWARD_API, TORCH_PLATFORM, forward_result],
-            [func, backward_api_input_aggregation, BACKWARD_API, TORCH_PLATFORM, backward_result],
+            [func, forward_api_input_aggregation, Const.FORWARD, Const.MS_FRAMEWORK, forward_result],
+            [func, backward_api_input_aggregation, Const.BACKWARD, Const.MS_FRAMEWORK, backward_result],
+            [func, forward_api_input_aggregation, Const.FORWARD, Const.PT_FRAMEWORK, forward_result],
+            [func, backward_api_input_aggregation, Const.BACKWARD, Const.PT_FRAMEWORK, backward_result],
         ]
         for test_case in test_cases:
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
@@ -129,8 +129,8 @@ class TestApiRunner(unittest.TestCase):
     def test_get_api_instance(self):
         #api_type_str, api_sub_name, api_platform, result_api
         test_cases = [
-            ["MintFunctional", "relu", MINDSPORE_PLATFORM, mindspore.mint.nn.functional.relu],
-            ["MintFunctional", "relu", TORCH_PLATFORM, torch.nn.functional.relu]
+            ["MintFunctional", "relu", Const.MS_FRAMEWORK, mindspore.mint.nn.functional.relu],
+            ["MintFunctional", "relu", Const.PT_FRAMEWORK, torch.nn.functional.relu]
         ]
         for test_case in test_cases:
             api_type_str, api_sub_name, api_platform, result_api = test_case

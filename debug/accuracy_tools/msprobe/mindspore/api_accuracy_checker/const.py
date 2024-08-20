@@ -1,25 +1,13 @@
-# base_compare_algorithm
-COSINE_SIMILARITY = "cosine similarity"
-MAX_ABSOLUTE_DIFF = "max absolute difference"
-MAX_RELATIVE_DIFF = "max relative difference"
+class MsApiAccuracyCheckerConst:
+    #api_info
+    API_INFO_FORWARD_INPUT = "input_args"
+    API_INFO_FORWARD_OUTPUT = "output"
+    API_INFO_FORWARD_KWARGS = "input_kwargs"
+    API_INFO_BACKWARD_INPUT = "input"
+    API_INFO_BACKWARD_OUTPUT = "output"
 
-PASS = "pass"
-ERROR = "error"
-SKIP = "skip"
-
-
-# compute_element
-MINDSPORE_PLATFORM = "mindspore_platform"
-TORCH_PLATFORM = "torch_platform"
+    #api_runner
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
 
 
-#api_runner
-MINT = "Mint"
-MINT_FUNCTIONAL = "MintFunctional"
-
-FORWARD_API = "forward_api"
-BACKWARD_API = "backward_api"
-
-#api_info
-INPUT = "input"
-OUTPUT = "output"

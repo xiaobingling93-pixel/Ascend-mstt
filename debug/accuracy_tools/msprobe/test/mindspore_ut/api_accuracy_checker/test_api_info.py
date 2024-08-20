@@ -64,7 +64,7 @@ class TestApiInfo(unittest.TestCase):
         self.assertTrue(api_info.check_forward_info())
         self.assertFalse(api_info.check_backward_info())
 
-        input_compute_element_list = api_info.get_compute_element_list("forward_api", "input")
+        input_compute_element_list = api_info.get_compute_element_list("forward", "input")
         parameter_real = input_compute_element_list[0].get_parameter()
         parameter_target = mindspore.Tensor([1., 2., 3.])
         self.assertTrue((parameter_real == parameter_target).all())

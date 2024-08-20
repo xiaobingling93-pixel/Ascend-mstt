@@ -10,7 +10,7 @@ from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElemen
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (FLOAT32, FLOAT_TYPE_STR, INT_TYPE_STR,
                                                                  TUPLE_TYPE_STR, STR_TYPE_STR, SLICE_TYPE_STR)
 from msprobe.mindspore.api_accuracy_checker.utils import global_context
-from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM
+from msprobe.core.common.const import Const
 
 logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,8 +47,8 @@ class TestComputeElement(unittest.TestCase):
             compute_element = ComputeElement(parameter=input_parameter)
 
             self.assertTrue((compute_element.get_parameter(get_origin=True) == origin_parameter).all())
-            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=MINDSPORE_PLATFORM) == mstensor_parameter).all())
-            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=TORCH_PLATFORM) == torchtensor_parameter).all())
+            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=Const.MS_FRAMEWORK) == mstensor_parameter).all())
+            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=Const.PT_FRAMEWORK) == torchtensor_parameter).all())
             self.assertEqual(compute_element.get_shape(), shape)
             self.assertEqual(compute_element.get_dtype(), dtype_str)
 

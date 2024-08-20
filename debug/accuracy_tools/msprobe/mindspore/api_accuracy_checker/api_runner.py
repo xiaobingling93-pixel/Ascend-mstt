@@ -5,11 +5,12 @@ import torch
 from mindspore import ops
 
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
-from msprobe.mindspore.api_accuracy_checker.const import (MINDSPORE_PLATFORM, TORCH_PLATFORM, MINT, MINT_FUNCTIONAL,
-                                                          FORWARD_API)
+from msprobe.core.common.const import Const
+from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.api_accuracy_checker.type_mapping import api_parent_module_mapping
 
 
 class ApiInputAggregation:
@@ -28,20 +29,20 @@ class ApiInputAggregation:
 class ApiRunner:
     def __init__(self) -> None:
         self.api_parent_module_mapping = {
-            (MINT, MINDSPORE_PLATFORM): mindspore.mint,
-            (MINT, TORCH_PLATFORM): torch,
-            (MINT_FUNCTIONAL, MINDSPORE_PLATFORM): mindspore.mint.nn.functional,
-            (MINT_FUNCTIONAL, TORCH_PLATFORM): torch.nn.functional
+            (MsApiAccuracyCheckerConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
+            (MsApiAccuracyCheckerConst.MINT, Const.PT_FRAMEWORK): torch,
+            (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
+            (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
         }
 
-    def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=FORWARD_API,
-                 api_platform=MINDSPORE_PLATFORM):
+    def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=Const.FORWARD,
+                 api_platform=Const.MS_FRAMEWORK):
         '''
         Args:
             api_input_aggregation: ApiInputAggregation
             api_name_str: str, e.g. "MintFunctional.relu.0"
-            forward_or_backward: str, Union["forward_api", "backward_api"]
-            api_platform: str, Union["mindspore_api", "torch_api"]
+            forward_or_backward: str, Union["forward", "backward"]
+            api_platform: str, Union["mindspore", "torch"]
 
         Return:
             outputs: list[ComputeElement]
@@ -50,7 +51,7 @@ class ApiRunner:
             run mindspore.mint/torch api
         '''
         api_type_str, api_sub_name = self.get_info_from_name(api_name_str)
-        api_instance = self._get_api_instance(api_type_str, api_sub_name, api_platform)
+        api_instance = self.get_api_instance(api_type_str, api_sub_name, api_platform)
 
         self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
@@ -69,18 +70,19 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MINT, MINT_FUNCTIONAL]:
+        if api_type_str not in [MsApiAccuracyCheckerConst.MINT, MsApiAccuracyCheckerConst.MINT_FUNCTIONAL]:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint or mint.nn.functional api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
         return api_type_str, api_sub_name
 
-    def _get_api_instance(self, api_type_str, api_sub_name, api_platform):
+    @staticmethod
+    def get_api_instance(api_type_str, api_sub_name, api_platform):
         '''
         Args:
             api_type_str: str, Union["MintFunctional", "Mint"]
             api_sub_name: str, e.g. "relu"
-            api_platform: str: Union["mindpore_api", "torch_api"]
+            api_platform: str: Union["mindpore", "torch"]
 
         Return:
             api_instance: function object
@@ -91,9 +93,9 @@ class ApiRunner:
             mindspore.mint.nn.functional.{api_sub_name} <--> torch.nn.functional.{api_sub_name}
         '''
 
-        api_parent_module = self.api_parent_module_mapping.get((api_type_str, api_platform))
-        module_str = "mindspore.mint." if api_platform == MINDSPORE_PLATFORM else "torch."
-        submodule_str = "nn.functional." if api_type_str == MINT_FUNCTIONAL else ""
+        api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
+        module_str = "mindspore.mint." if api_platform == Const.MS_FRAMEWORK else "torch."
+        submodule_str = "nn.functional." if api_type_str == MsApiAccuracyCheckerConst.MINT_FUNCTIONAL else ""
         full_api_name = module_str + submodule_str + api_sub_name
         if not hasattr(api_parent_module, api_sub_name):
             err_msg = f"ApiRunner.get_api_instance failed: {full_api_name} is not found"
@@ -114,7 +116,7 @@ class ApiRunner:
                   for key, value in api_input_aggregation.kwargs.items()}
         gradient_inputs = api_input_aggregation.gradient_inputs
 
-        if forward_or_backward == FORWARD_API:
+        if forward_or_backward == Const.FORWARD:
             forward_result = api_instance(*inputs, **kwargs) # can be single tensor or tuple
             forward_result_tuple = convert_to_tuple(forward_result)
             res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in forward_result_tuple]
@@ -124,7 +126,7 @@ class ApiRunner:
                 logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
             gradient_inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
                                     for compute_element in gradient_inputs)
-            if api_platform == MINDSPORE_PLATFORM:
+            if api_platform == Const.MS_FRAMEWORK:
                 if len(gradient_inputs) == 1:
                     gradient_inputs = gradient_inputs[0]
                 def api_with_kwargs(forward_inputs):
