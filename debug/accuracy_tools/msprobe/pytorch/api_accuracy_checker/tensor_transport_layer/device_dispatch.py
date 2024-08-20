@@ -8,7 +8,7 @@ from msprobe.core.common.const import Const
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import online_api_precision_compare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS, thousandth_standard_api, \
     binary_standard_api, absolute_standard_api
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, UtDataInfo
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
 

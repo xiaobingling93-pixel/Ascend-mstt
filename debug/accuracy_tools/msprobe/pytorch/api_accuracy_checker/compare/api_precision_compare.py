@@ -15,7 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
     BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage, is_inf_or_nan, \
     check_inf_or_nan
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
