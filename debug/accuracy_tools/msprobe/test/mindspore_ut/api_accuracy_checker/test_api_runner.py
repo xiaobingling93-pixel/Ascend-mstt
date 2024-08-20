@@ -1,8 +1,7 @@
+import unittest
 import sys
 import logging
 import os
-
-import pytest
 import mindspore
 import torch
 from unittest.mock import MagicMock
@@ -16,67 +15,109 @@ logger = logging.getLogger(__name__)
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
 
+def func(x_1, x_2, opt="opt1"):
+    y_1 = x_1*2 + 1
+    if opt == "opt1":
+        y_2 = x_1 + x_2
+    else:
+        y_2 = x_1*2 + x_2
+    return y_1, y_2
 
-# 创建一个包含if判断的mock实例的fixture
-@pytest.fixture
-def mock_compute_element_input_instance():
-    mock = MagicMock()
-    def side_effect(**kwargs):
-        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
-            return mindspore.Tensor([1., 2., 3.])
-        else:
-            return torch.Tensor([1., 2., 3.])
-    mock.get_parameter.side_effect = side_effect
-    return mock
+def side_effect_forward_input_1(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([1., 2., 3.])
+    else:
+        return torch.Tensor([1., 2., 3.])
 
-@pytest.fixture
-def mock_compute_element_kwargs_instance():
-    mock = MagicMock()
-    mock.get_parameter.return_value = "tanh"
-    return mock
+def side_effect_forward_input_2(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([1.1, 2., 3.])
+    else:
+        return torch.Tensor([1.1, 2., 3.])
 
-@pytest.fixture
-def mock_compute_element_forward_result_instance():
-    mock = MagicMock()
-    def side_effect(**kwargs):
-        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
-            return mindspore.Tensor([8.41192007e-01, 1.95459759e+00, 2.99636269e+00])
-        else:
-            return torch.Tensor([8.41192007e-01, 1.95459759e+00, 2.99636269e+00])
-    mock.get_parameter.side_effect = side_effect
-    return mock
+def side_effect_forward_output_1(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([3., 5., 7.])
+    else:
+        return torch.Tensor([3., 5., 7.])
 
-@pytest.fixture
-def mock_compute_element_backward_result_instance():
-    mock = MagicMock()
-    def side_effect(**kwargs):
-        if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
-            return mindspore.Tensor([1.0833155, 2.1704636, 3.0358372])
-        else:
-            return torch.Tensor([1.0833155, 2.1704636, 3.0358372])
-    mock.get_parameter.side_effect = side_effect
-    return mock
+def side_effect_forward_output_2(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([2.1, 4., 6.])
+    else:
+        return torch.Tensor([2.1, 4., 6.])
 
-class TestClass:
+def side_effect_backward_input_1(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([1., 2., 3.])
+    else:
+        return torch.Tensor([1., 2., 3.])
 
-    def test_run_api(self, mock_compute_element_kwargs_instance, mock_compute_element_input_instance,
-                     mock_compute_element_forward_result_instance, mock_compute_element_backward_result_instance):
-        kwargs = {"approximate": mock_compute_element_kwargs_instance}
-        inputs = [mock_compute_element_input_instance]
-        gradient_inputs = [mock_compute_element_input_instance]
-        forward_result = [mock_compute_element_forward_result_instance]
-        backward_result = [mock_compute_element_backward_result_instance]
+def side_effect_backward_input_2(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([1.11, 2., 3.])
+    else:
+        return torch.Tensor([1.11, 2., 3.])
+
+def side_effect_backward_output_1(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([3.11, 6., 9.])
+    else:
+        return torch.Tensor([3.11, 6., 9.])
+
+def side_effect_backward_output_2(**kwargs):
+    if kwargs.get("tensor_platform") == MINDSPORE_PLATFORM:
+        return mindspore.Tensor([1.11, 2., 3.])
+    else:
+        return torch.Tensor([1.11, 2., 3.])
+
+
+class TestApiRunner(unittest.TestCase):
+
+    def setUp(self):
+        self.mock_compute_element_kwargs_instance = MagicMock()
+        self.mock_compute_element_kwargs_instance.get_parameter.return_value = "opt1"
+
+        self.mock_compute_element_forward_input_1_instance = MagicMock()
+        self.mock_compute_element_forward_input_1_instance.get_parameter.side_effect = side_effect_forward_input_1
+
+        self.mock_compute_element_forward_input_2_instance = MagicMock()
+        self.mock_compute_element_forward_input_2_instance.get_parameter.side_effect = side_effect_forward_input_2
+
+        self.mock_compute_element_backward_input_1_instance = MagicMock()
+        self.mock_compute_element_backward_input_1_instance.get_parameter.side_effect = side_effect_backward_input_1
+
+        self.mock_compute_element_backward_input_2_instance = MagicMock()
+        self.mock_compute_element_backward_input_2_instance.get_parameter.side_effect = side_effect_backward_input_2
+
+        self.mock_compute_element_forward_output_1_instance = MagicMock()
+        self.mock_compute_element_forward_output_1_instance.get_parameter.side_effect = side_effect_forward_output_1
+
+        self.mock_compute_element_forward_output_2_instance = MagicMock()
+        self.mock_compute_element_forward_output_2_instance.get_parameter.side_effect = side_effect_forward_output_2
+
+        self.mock_compute_element_backward_output_1_instance = MagicMock()
+        self.mock_compute_element_backward_output_1_instance.get_parameter.side_effect = side_effect_backward_output_1
+
+        self.mock_compute_element_backward_output_2_instance = MagicMock()
+        self.mock_compute_element_backward_output_2_instance.get_parameter.side_effect = side_effect_backward_output_2
+
+    def test_run_api(self):
+        kwargs = {"opt": self.mock_compute_element_kwargs_instance}
+        inputs = [self.mock_compute_element_forward_input_1_instance, self.mock_compute_element_forward_input_2_instance]
+        gradient_inputs = [self.mock_compute_element_backward_input_1_instance, self.mock_compute_element_backward_input_2_instance]
+        forward_result = [self.mock_compute_element_forward_output_1_instance, self.mock_compute_element_forward_output_2_instance]
+        backward_result = [self.mock_compute_element_backward_output_1_instance, self.mock_compute_element_backward_output_2_instance]
 
         forward_api_input_aggregation = ApiInputAggregation(inputs, kwargs, None)
         backward_api_input_aggregation = ApiInputAggregation(inputs, {}, gradient_inputs)
 
-
         # api_instance, api_input_aggregation, forward_or_backward, api_platform, result
         test_cases = [
-            [mindspore.mint.nn.functional.gelu, forward_api_input_aggregation, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
-            [mindspore.mint.nn.functional.gelu, backward_api_input_aggregation, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
-            [torch.nn.functional.gelu, forward_api_input_aggregation, FORWARD_API, TORCH_PLATFORM, forward_result],
-            [torch.nn.functional.gelu, backward_api_input_aggregation, BACKWARD_API, TORCH_PLATFORM, backward_result],
+            [func, forward_api_input_aggregation, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
+            [func, backward_api_input_aggregation, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
+            [func, forward_api_input_aggregation, FORWARD_API, TORCH_PLATFORM, forward_result],
+            [func, backward_api_input_aggregation, BACKWARD_API, TORCH_PLATFORM, backward_result],
         ]
         for test_case in test_cases:
             api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
@@ -96,7 +137,7 @@ class TestClass:
             assert api_runner.get_api_instance(api_type_str, api_sub_name, api_platform) == result_api
 
     def test_get_info_from_name(self):
-        api_name = "MintFunctional.relu.0.backward"
+        api_name = "MintFunctional.relu.0"
         api_type_str, api_sub_name = api_runner.get_info_from_name(api_name_str=api_name)
         assert api_type_str == "MintFunctional"
         assert api_sub_name == "relu"
