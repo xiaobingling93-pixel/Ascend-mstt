@@ -20,7 +20,7 @@ from tqdm import tqdm
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
+from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
@@ -34,6 +34,7 @@ from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
     change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec

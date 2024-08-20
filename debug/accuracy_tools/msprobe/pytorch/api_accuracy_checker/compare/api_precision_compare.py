@@ -7,7 +7,7 @@ from collections import namedtuple
 import torch
 import pandas as pd
 
-from msprobe.pytorch.api_accuracy_checker.common.utils import write_csv
+from msprobe.core.common.utils import write_csv
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \

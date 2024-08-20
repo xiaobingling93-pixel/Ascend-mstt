@@ -570,6 +570,24 @@ def save_npy_to_txt(self, data, dst_file='', align=0):
         self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
+def get_json_contents(file_path):
+    ops = get_file_content_bytes(file_path)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        logger.error('Failed to load json.')
+        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        logger.error('Json file content is not a dictionary!')
+        raise CompareException(CompareException.INVALID_FILE_ERROR)
+    return json_obj
+
+
+def get_file_content_bytes(file):
+    with FileOpen(file, 'rb') as file_handle:
+        return file_handle.read()
+
+        
 def load_yaml(yaml_path):
     path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
     checked_path = path_checker.common_check()
