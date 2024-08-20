@@ -63,8 +63,8 @@ class DebuggerConfig:
 
     def _check_step(self):
         for s in self.step:
-            if not isinstance(s, int):
-                raise ValueError(f"step element {s} should be int")
+            if not isinstance(s, int) or s < 0:
+                raise ValueError(f"step element {s} must be a positive integer.")
 
     def _make_dump_path_if_not_exists(self):
         check_path_before_create(self.dump_path)
