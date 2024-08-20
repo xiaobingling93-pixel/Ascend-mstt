@@ -117,10 +117,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
             'type': 'mindspore.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'Max': tensor_stat.max,
-            'Min': tensor_stat.min,
-            'Mean': tensor_stat.mean,
-            'Norm': tensor_stat.norm
+            'Max': self.transfer_type(tensor_stat.max),
+            'Min': self.transfer_type(tensor_stat.min),
+            'Mean': self.transfer_type(tensor_stat.mean),
+            'Norm': self.transfer_type(tensor_stat.norm),
         }
         if self.config.summary_mode == Const.MD5:
             tensor_md5 = self.get_md5_for_tensor(tensor)
