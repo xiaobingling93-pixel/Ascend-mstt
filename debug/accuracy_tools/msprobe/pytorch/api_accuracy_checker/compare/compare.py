@@ -98,6 +98,32 @@ class Comparator:
         rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
         return small_value_threshold, small_value_atol, rtol
 
+    @staticmethod
+    def get_run_ut_detail(test_result):
+        """get run_ut detail before write to csv, called by online run_ut"""
+        test_rows = []
+        try:
+            subject_prefix = test_result[0]
+            fwd_result = test_result[3]
+            bwd_result = test_result[4]
+        except IndexError as e:
+            logger.error("List index out of bounds when writing detail CSV.")
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR, "list index out of bounds") from e
+
+        if isinstance(fwd_result, list):
+            for i, test_subject in enumerate(fwd_result):
+                subject = subject_prefix + ".forward.output." + str(i)
+                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision)
+                                if isinstance(item, float) else item for item in test_subject]
+                test_rows.append([subject] + list(test_subject))
+        if isinstance(bwd_result, list):
+            for i, test_subject in enumerate(bwd_result):
+                subject = subject_prefix + ".backward.output." + str(i)
+                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision)
+                                if isinstance(item, float) else item for item in test_subject]
+                test_rows.append([subject] + list(test_subject))
+        return test_rows
+
     def write_csv_title(self):
         summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS,
                               self.COLUMN_BACKWARD_SUCCESS, "Message"]]
@@ -125,27 +151,7 @@ class Comparator:
         write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
-        test_rows = []
-        try:
-            subject_prefix = test_result[0]
-            fwd_result = test_result[3]
-            bwd_result = test_result[4]
-        except IndexError as e:
-            logger.error("List index out of bounds when writing detail CSV.")
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR, "list index out of bounds") from e
-
-        if isinstance(fwd_result, list):
-            for i, test_subject in enumerate(fwd_result):
-                subject = subject_prefix + ".forward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision)
-                                if isinstance(item, float) else item for item in test_subject]
-                test_rows.append([subject] + list(test_subject))
-        if isinstance(bwd_result, list):
-            for i, test_subject in enumerate(bwd_result):
-                subject = subject_prefix + ".backward.output." + str(i)
-                test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision)
-                                if isinstance(item, float) else item for item in test_subject]
-                test_rows.append([subject] + list(test_subject))
+        test_rows = self.get_run_ut_detail(test_result)
         detail_save_path = self.get_path_from_rank(test_result[-1],
                                                    self.detail_save_path_list,
                                                    self.detail_save_path_str)
@@ -155,7 +161,10 @@ class Comparator:
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
-    def compare_output(self, full_api_name, data_info):
+    def compare_output(self, full_api_name, data_info, is_online=False):
+        """Get compare result and write to result and detail csv.
+        is_online: bool, default False. True: called by online api precision compare, only compare without write to csv.
+        """
         _, api_name, _ = full_api_name.split(Const.SEP)
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
@@ -184,6 +193,9 @@ class Comparator:
                                  fwd_compare_alg_results,
                                  bwd_compare_alg_results,
                                  data_info.rank)
+        if is_online:
+            # get run_ut compare detail
+            return self.get_run_ut_detail(result_info)
         self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE

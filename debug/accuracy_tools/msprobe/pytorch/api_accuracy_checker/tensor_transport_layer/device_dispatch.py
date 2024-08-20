@@ -1,11 +1,19 @@
 import time
 
+import pandas as pd
 import torch
 import torch.multiprocessing as mp
 
 from msprobe.core.common.const import Const
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import online_api_precision_compare
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS, thousandth_standard_api, \
+    binary_standard_api, absolute_standard_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, UtDataInfo
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
+
+# NPU vs GPU api list
+CompareApi = set(absolute_standard_api) | set(binary_standard_api) | set(thousandth_standard_api)
 
 
 def run_ut_process(xpu_id, compare, consumer_queue, func, config):
@@ -17,7 +25,7 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
     :param config: run_ut_config
     :return:
     """
-    device = torch.device(f'cuda:{xpu_id}')
+    gpu_device = torch.device(f'cuda:{xpu_id}')
 
     while True:
         if consumer_queue.empty():
@@ -29,29 +37,92 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
             # current consumer finish
             return
 
-        api_full_name = api_data.name
-        api_data = move2target_device(api_data, device)
-        try:
-            data_info = func(api_full_name, api_data, config.backward_content)
-            logger.debug(f"success exec in device {api_full_name}")
-            is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
-            logger.info(f"running api_full_name {api_full_name} ut, "
-                        f"is_fwd_success: {is_fwd_success}, "
-                        f"is_bwd_success: {is_bwd_success}")
-        except Exception as err:
-            [api_type, api_name, _] = api_full_name.split(Const.SEP)
-            if "expected scalar type Long" in str(err):
-                logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
-                               f"'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
-            elif api_type in [Const.DISTRIBUTED]:
-                logger.info(f"{api_full_name} is not supported for run ut. SKIP.")
-            else:
-                logger.error(f"Run {api_full_name} UT Error: {str(err)}")
+        _, api_name, _ = api_data.name.split(Const.SEP)
+        if api_name in CompareApi:
+            # NPU vs GPU
+            online_compare(api_data, gpu_device, compare, func, config)
+        else:
+            # NPUvsCPU vs GPUvsCPU
+            online_precision_compare(api_data, gpu_device, compare, func, config)
 
-            compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
 
-        finally:
-            torch.cuda.empty_cache()
+def online_precision_compare(api_data, device, compare, func, config):
+    """online run_ut for precision_compare: NPUvsCPU vs GPUvsCPU
+    1. get NPUvsCPU compare result
+    2. get GPUvsCPU compare result
+    3. call online_api_precision_compare
+    """
+
+    api_full_name = api_data.name
+    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    npu_args, npu_kwargs, npu_out = api_data.args, api_data.kwargs, api_data.result
+
+    if npu_kwargs.get("device"):
+        del npu_kwargs["device"]
+
+    try:
+        # NPU vs CPU
+        cpu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+        npu_data_info = UtDataInfo(None, None, npu_out, cpu_out, None, [], None, rank=api_data.rank)
+        logger.debug(f"success exec run_ut in cpu device {api_full_name}")
+        npu_detail = compare.compare_output(api_full_name, npu_data_info, True)
+        npu_data = pd.DataFrame(npu_detail, columns=DETAIL_TEST_ROWS[-1])
+
+        # GPU vs CPU
+        api_data_gpu = move2target_device(api_data, device)  # args, kwargs -> gpu, result -> npu
+        data_info = func(api_full_name, api_data_gpu, config.backward_content)
+        gpu_out = data_info.bench_output
+        gpu_data_info = UtDataInfo(None, None, gpu_out, cpu_out, None, [], None, rank=api_data.rank)
+        logger.debug(f"success exec run_ut in gpu device {api_full_name}")
+        gpu_detail = compare.compare_output(api_full_name, gpu_data_info, True)
+        gpu_data = pd.DataFrame(gpu_detail, columns=DETAIL_TEST_ROWS[-1])
+
+        # NPUvsCPU vs GPUvsCPU
+        online_api_precision_compare(npu_data, gpu_data, api_data.rank)
+
+    except Exception as err:
+        if "expected scalar type Long" in str(err):
+            logger.warning(
+                f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
+                f"'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
+        elif api_type in [Const.DISTRIBUTED]:
+            logger.info(f"{api_full_name} is not supported for run ut. SKIP.")
+        else:
+            logger.error(f"Run {api_full_name} UT Error: {str(err)}")
+
+        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
+
+    finally:
+        torch.cuda.empty_cache()
+
+
+def online_compare(api_data, device, compare, func, config):
+    """online run_ut for compare：NPU vs GPU"""
+
+    api_full_name = api_data.name
+    api_data = move2target_device(api_data, device)
+    try:
+        data_info = func(api_full_name, api_data, config.backward_content)
+        logger.debug(f"success exec run_ut in device {api_full_name}")
+        is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
+        logger.info(f"running api_full_name {api_full_name} ut, "
+                    f"is_fwd_success: {is_fwd_success}, "
+                    f"is_bwd_success: {is_bwd_success}")
+    except Exception as err:
+        [api_type, api_name, _] = api_full_name.split(Const.SEP)
+        if "expected scalar type Long" in str(err):
+            logger.warning(
+                f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
+                f"'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
+        elif api_type in [Const.DISTRIBUTED]:
+            logger.info(f"{api_full_name} is not supported for run ut. SKIP.")
+        else:
+            logger.error(f"Run {api_full_name} UT Error: {str(err)}")
+
+        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err), api_data.rank))
+
+    finally:
+        torch.cuda.empty_cache()
 
 
 class ConsumerDispatcher:
