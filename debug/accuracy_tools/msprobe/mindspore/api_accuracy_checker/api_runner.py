@@ -12,6 +12,19 @@ from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
 
 
+class ApiInputAggregation:
+    def __init__(self, inputs, kwargs, gradient_inputs) -> None:
+        '''
+        Args:
+            inputs: List[ComputeElement]
+            kwargs: dict{str: ComputeElement}
+            gradient_inputs: Union[List[ComputeElement], None]
+        '''
+        self.inputs = inputs
+        self.kwargs = kwargs
+        self.gradient_inputs = gradient_inputs
+
+
 class ApiRunner:
     def __init__(self) -> None:
         self.api_parent_module_mapping = {
@@ -21,16 +34,14 @@ class ApiRunner:
             (MINT_FUNCTIONAL, TORCH_PLATFORM): torch.nn.functional
         }
 
-    def __call__(self, inputs, api_name_str, kwargs, gradient_inputs=None,
-                 forward_or_backward=FORWARD_API, api_platform=MINDSPORE_PLATFORM):
+    def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=FORWARD_API,
+                 api_platform=MINDSPORE_PLATFORM):
         '''
         Args:
-            inputs: List[ComputeElement]
-            api_name_str: str
-            kwargs: dict{str: ComputeElement}
-            gradient_inputs: Union[List[ComputeElement], None]
-            is_forward: boolean
-            is_mindspore_api: boolean
+            api_input_aggregation: ApiInputAggregation
+            api_name_str: str, e.g. "MintFunctional.relu.0"
+            forward_or_backward: str, Union["forward_api", "backward_api"]
+            api_platform: str, Union["mindspore_api", "torch_api"]
 
         Return:
             outputs: list[ComputeElement]
@@ -39,22 +50,22 @@ class ApiRunner:
             run mindspore.mint/torch api
         '''
         api_type_str, api_sub_name = self.get_info_from_name(api_name_str)
-        api_instance = self.get_api_instance(api_type_str, api_sub_name, api_platform)
+        api_instance = self._get_api_instance(api_type_str, api_sub_name, api_platform)
 
-        self.run_api(api_instance, inputs, kwargs, gradient_inputs, forward_or_backward, api_platform)
+        self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
-    @classmethod
-    def get_info_from_name(cls, api_name_str):
+    @staticmethod
+    def get_info_from_name(api_name_str):
         '''
         Args:
-            api_name_str: str, the key of data dict in api_info.json. e.g. "MintFunctional.relu.0.backward"
+            api_name_str: str, the trimmed key of data dict in api_info.json. e.g. "MintFunctional.relu.0"
 
         Return:
             api_type_str: str, Union["MintFunctional", "Mint"]
             api_sub_name: str, e.g. "relu"
         '''
         api_name_list = api_name_str.split('.')
-        if len(api_name_list) != 4:
+        if len(api_name_list) != 3:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
@@ -64,12 +75,12 @@ class ApiRunner:
 
         return api_type_str, api_sub_name
 
-    def get_api_instance(self, api_type_str, api_sub_name, api_platform):
+    def _get_api_instance(self, api_type_str, api_sub_name, api_platform):
         '''
         Args:
             api_type_str: str, Union["MintFunctional", "Mint"]
             api_sub_name: str, e.g. "relu"
-            is_mindspore_api: boolean
+            api_platform: str: Union["mindpore_api", "torch_api"]
 
         Return:
             api_instance: function object
@@ -95,12 +106,13 @@ class ApiRunner:
 
         return api_instance
 
-    @classmethod
-    def run_api(cls, api_instance, inputs, kwargs, gradient_inputs, forward_or_backward, api_platform):
+    @staticmethod
+    def run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform):
         inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
-                       for compute_element in inputs)
+                       for compute_element in api_input_aggregation.inputs)
         kwargs = {key: value.get_parameter(get_origin=False, tensor_platform=api_platform)
-                  for key, value in kwargs.items()}
+                  for key, value in api_input_aggregation.kwargs.items()}
+        gradient_inputs = api_input_aggregation.gradient_inputs
 
         if forward_or_backward == FORWARD_API:
             forward_result = api_instance(*inputs, **kwargs) # can be single tensor or tuple
@@ -110,19 +122,15 @@ class ApiRunner:
             if gradient_inputs is None:
                 err_msg = f"ApiRunner.run_api failed: run backward api but gradient_inputs is missing"
                 logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
-            if len(gradient_inputs) == 1:
-                gradient_inputs = gradient_inputs[0].get_parameter(get_origin=False, tensor_platform=api_platform)
-            else:
-                gradient_inputs = \
-                    tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
-                        for compute_element in gradient_inputs)
+            gradient_inputs = tuple(compute_element.get_parameter(get_origin=False, tensor_platform=api_platform)
+                                    for compute_element in gradient_inputs)
             if api_platform == MINDSPORE_PLATFORM:
-                if kwargs != {}:
-                    err_msg = f"ApiRunner.run_api failed: backward api with kwargs is currently not supported."
-                    logger.error_log_with_exp(err_msg,
-                                              ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
-                grad_func = ops.GradOperation(get_all=True, sens_param=True)(api_instance)
-                backward_result = grad_func(*inputs, gradient_inputs, **kwargs) # can be single tensor or tuple
+                if len(gradient_inputs) == 1:
+                    gradient_inputs = gradient_inputs[0]
+                def api_with_kwargs(forward_inputs):
+                    api_instance(forward_inputs, **kwargs)
+                grad_func = ops.GradOperation(get_all=True, sens_param=True)(api_with_kwargs)
+                backward_result = grad_func(*inputs, gradient_inputs) # can be single tensor or tuple
                 backward_result_tuple = convert_to_tuple(backward_result)
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_tuple]
             else:
@@ -130,8 +138,10 @@ class ApiRunner:
                 for tensor in inputs:
                     if hasattr(tensor, "requires_grad"):
                         setattr(tensor, "requires_grad", True)
-                forward_result = api_instance(*inputs, **kwargs)
-                forward_result.backward(gradient_inputs)
+                forward_results = api_instance(*inputs, **kwargs)
+                forward_results = convert_to_tuple(forward_results)
+                for forward_res, gradient_in in zip(forward_results, gradient_inputs):
+                    forward_res.backward(gradient_in)
                 backward_result_list = []
                 for tensor in inputs:
                     if hasattr(tensor, "grad"):

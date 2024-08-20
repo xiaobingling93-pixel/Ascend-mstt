@@ -1,8 +1,7 @@
+import unittest
 import sys
 import logging
 import os
-
-import pytest
 import mindspore
 import torch
 import numpy as np
@@ -20,14 +19,13 @@ file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
 
 
-
-class TestClass:
+class TestComputeElement(unittest.TestCase):
     @classmethod
-    def setup_class(cls):
+    def setUpClass(cls):
         """
         class level setup_class
         """
-        cls.init(TestClass)
+        cls.init(TestComputeElement)
 
     def init(self):
         global_context.init(False, os.path.join(directory, "files"))
@@ -48,11 +46,11 @@ class TestClass:
 
             compute_element = ComputeElement(parameter=input_parameter)
 
-            assert (compute_element.get_parameter(get_origin=True) == origin_parameter).all()
-            assert (compute_element.get_parameter(get_origin=False, tensor_platform=MINDSPORE_PLATFORM) == mstensor_parameter).all()
-            assert (compute_element.get_parameter(get_origin=False, tensor_platform=TORCH_PLATFORM) == torchtensor_parameter).all()
-            assert compute_element.get_shape() == shape
-            assert compute_element.get_dtype() == dtype_str
+            self.assertTrue((compute_element.get_parameter(get_origin=True) == origin_parameter).all())
+            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=MINDSPORE_PLATFORM) == mstensor_parameter).all())
+            self.assertTrue((compute_element.get_parameter(get_origin=False, tensor_platform=TORCH_PLATFORM) == torchtensor_parameter).all())
+            self.assertEqual(compute_element.get_shape(), shape)
+            self.assertEqual(compute_element.get_dtype(), dtype_str)
 
     def test_init_with_parameter_other_type(self):
         # input_parameter, origin_parameter, shape, dtype_str
@@ -69,9 +67,9 @@ class TestClass:
 
             compute_element = ComputeElement(parameter=input_parameter)
 
-            assert compute_element.get_parameter(get_origin=True) == origin_parameter
-            assert compute_element.get_shape() == shape
-            assert compute_element.get_dtype() == dtype_str
+            self.assertEqual(compute_element.get_parameter(get_origin=True), origin_parameter)
+            self.assertEqual(compute_element.get_shape(), shape)
+            self.assertEqual(compute_element.get_dtype(), dtype_str)
 
     def test_init_with_compute_element_info_mstensor(self):
         global_context.is_constructed = False
@@ -84,9 +82,9 @@ class TestClass:
             "data_name": "input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
-        assert (compute_element.get_parameter(get_origin=True) == self.ms_tensor).all()
-        assert compute_element.get_shape() == self.tensor_shape
-        assert compute_element.get_dtype() == FLOAT32
+        self.assertTrue((compute_element.get_parameter(get_origin=True) == self.ms_tensor).all())
+        self.assertEqual(compute_element.get_shape(), self.tensor_shape)
+        self.assertEqual(compute_element.get_dtype(), FLOAT32)
 
     def test_init_with_compute_element_info_mstensor_constructed(self):
         global_context.is_constructed = True
@@ -100,10 +98,10 @@ class TestClass:
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         parameter = compute_element.get_parameter(get_origin=True)
-        assert (parameter <= 3.0).all()
-        assert (parameter >= 1.0).all()
-        assert compute_element.get_shape() == self.tensor_shape
-        assert compute_element.get_dtype() == FLOAT32
+        self.assertTrue((parameter <= 3.0).all())
+        self.assertTrue((parameter >= 1.0).all())
+        self.assertEqual(compute_element.get_shape(), self.tensor_shape)
+        self.assertEqual(compute_element.get_dtype(), FLOAT32)
 
     def test_init_with_compute_element_info_tuple(self):
         global_context.is_constructed = False
@@ -127,11 +125,10 @@ class TestClass:
         ]
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         parameter = compute_element.get_parameter(get_origin=True)
-        assert (parameter[0] == self.ms_tensor).all()
-        assert (parameter[1] == self.ms_tensor).all()
-        assert compute_element.get_shape() == tuple()
-        assert compute_element.get_dtype() == TUPLE_TYPE_STR
-
+        self.assertTrue((parameter[0] == self.ms_tensor).all())
+        self.assertTrue((parameter[1] == self.ms_tensor).all())
+        self.assertEqual(compute_element.get_shape(), tuple())
+        self.assertEqual(compute_element.get_dtype(), TUPLE_TYPE_STR)
 
     def test_init_with_compute_element_info_int(self):
         compute_element_info = {
@@ -140,6 +137,9 @@ class TestClass:
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         parameter = compute_element.get_parameter(get_origin=True)
-        assert parameter == -1
-        assert compute_element.get_shape() == tuple()
-        assert compute_element.get_dtype() == INT_TYPE_STR
+        self.assertEqual(parameter, -1)
+        self.assertEqual(compute_element.get_shape(), tuple())
+        self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
+
+if __name__ == '__main__':
+    unittest.main()

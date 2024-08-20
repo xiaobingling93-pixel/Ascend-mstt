@@ -7,7 +7,7 @@ import mindspore
 import torch
 from unittest.mock import MagicMock
 
-from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner
+from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM, FORWARD_API, BACKWARD_API
 
 logging.basicConfig(stream = sys.stdout, level = logging.INFO, format = '[%(levelname)s] %(message)s')
@@ -67,17 +67,20 @@ class TestClass:
         forward_result = [mock_compute_element_forward_result_instance]
         backward_result = [mock_compute_element_backward_result_instance]
 
+        forward_api_input_aggregation = ApiInputAggregation(inputs, kwargs, None)
+        backward_api_input_aggregation = ApiInputAggregation(inputs, {}, gradient_inputs)
 
-        # api_instance, inputs, kwargs, gradient_inputs, forward_or_backward, api_platform, result
+
+        # api_instance, api_input_aggregation, forward_or_backward, api_platform, result
         test_cases = [
-            [mindspore.mint.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
-            [mindspore.mint.nn.functional.gelu, inputs, {}, gradient_inputs, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
-            [torch.nn.functional.gelu, inputs, kwargs, gradient_inputs, FORWARD_API, TORCH_PLATFORM, forward_result],
-            [torch.nn.functional.gelu, inputs, {}, gradient_inputs, BACKWARD_API, TORCH_PLATFORM, backward_result],
+            [mindspore.mint.nn.functional.gelu, forward_api_input_aggregation, FORWARD_API, MINDSPORE_PLATFORM, forward_result],
+            [mindspore.mint.nn.functional.gelu, backward_api_input_aggregation, BACKWARD_API, MINDSPORE_PLATFORM, backward_result],
+            [torch.nn.functional.gelu, forward_api_input_aggregation, FORWARD_API, TORCH_PLATFORM, forward_result],
+            [torch.nn.functional.gelu, backward_api_input_aggregation, BACKWARD_API, TORCH_PLATFORM, backward_result],
         ]
         for test_case in test_cases:
-            api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform, results_target = test_case
-            results_real = api_runner.run_api(api_instance, inputs_target, kwargs_target, gradient_inputs_target, forward_or_backward, api_platform)
+            api_instance, api_input_aggregation, forward_or_backward, api_platform, results_target = test_case
+            results_real = api_runner.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
             for res_real, res_target in zip(results_real, results_target):
                 assert (abs(res_real.get_parameter() - res_target.get_parameter(tensor_platform=api_platform)) < 1e-5).all()
 
