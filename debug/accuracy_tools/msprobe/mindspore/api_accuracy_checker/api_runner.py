@@ -25,16 +25,14 @@ class ApiInputAggregation:
         self.kwargs = kwargs
         self.gradient_inputs = gradient_inputs
 
+api_parent_module_mapping = {
+    (MsApiAccuracyCheckerConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
+    (MsApiAccuracyCheckerConst.MINT, Const.PT_FRAMEWORK): torch,
+    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
+    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
+}
 
 class ApiRunner:
-    def __init__(self) -> None:
-        self.api_parent_module_mapping = {
-            (MsApiAccuracyCheckerConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
-            (MsApiAccuracyCheckerConst.MINT, Const.PT_FRAMEWORK): torch,
-            (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
-            (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
-        }
-
     def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=Const.FORWARD,
                  api_platform=Const.MS_FRAMEWORK):
         '''

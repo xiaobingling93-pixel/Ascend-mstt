@@ -3,9 +3,6 @@ import numpy as np
 import mindspore
 import torch
 
-from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
-from msprobe.core.common.const import Const
-
 INT8 = "Int8"
 UINT8 = "UInt8"
 INT16 = "Int16"
@@ -115,10 +112,3 @@ uint_dtype_str_list = [
     UINT32,
     UINT64,
 ]
-
-api_parent_module_mapping = {
-    (MsApiAccuracyCheckerConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
-    (MsApiAccuracyCheckerConst.MINT, Const.PT_FRAMEWORK): torch,
-    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
-    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
-}
