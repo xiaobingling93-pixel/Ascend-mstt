@@ -77,6 +77,8 @@ class Util:
     @staticmethod
     def get_subdir_count(self, directory):
         subdir_count = 0
+        path_checker = FileChecker(directory)
+        path_checker.common_check()
         for _, dirs, _ in os.walk(directory):
             subdir_count += len(dirs)
             break
@@ -85,8 +87,15 @@ class Util:
     @staticmethod
     def get_subfiles_count(self, directory):
         file_count = 0
-        for _, _, files in os.walk(directory):
+        for root, _, files in os.walk(directory, topdown=True):
+            path_checker = FileChecker(root)
+            path_checker.common_check()
             file_count += len(files)
+            path_depth = root.count(os.sep)
+            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
+                yield root, _, files
+            else:
+                _[:] = []
         return file_count
 
     @staticmethod
