@@ -5,14 +5,13 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 
 
-
 def compare_cli(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
-    frame_name =args.framework
-    if frame_name ==Const.PT_FRAMEWORK:
+    frame_name = args.framework
+    if frame_name == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import compare
         from msprobe.pytorch.compare.distributed_compare import compare_distributed
     else:

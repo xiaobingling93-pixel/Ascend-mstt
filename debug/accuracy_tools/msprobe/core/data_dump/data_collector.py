@@ -122,7 +122,7 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
-        if self.config.level not in DataCollector.level_without_construct:
+        if self.config.framework == Const.PT_FRAMEWORK and self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
@@ -135,26 +135,6 @@ class DataCollector:
             self.data_writer.flush_data_when_buffer_is_full()
         else:
             self.write_json()
-
-    def module_count_func(self, name, name_template):
-        module_name = name.split(Const.SEP)[-3]
-        if "forward" in name_template:
-            if module_name not in self.module_count:
-                self.module_count[module_name] = [0, [0]]
-            else:
-                if self.module_count[module_name][-1] and \
-                        self.module_count[module_name][0] != self.module_count[module_name][-1][-1]:
-                    self.module_count[module_name][-1].pop()
-                self.module_count[module_name][0] += 1
-                self.module_count[module_name][-1].append(self.module_count[module_name][0])
-            index = self.module_count[module_name][0]
-        else:
-            backward_stack = self.module_count[module_name][-1] if module_name in self.module_count else []
-            if not backward_stack:
-                index = "abnormal"
-            else:
-                index = backward_stack.pop()
-        return index
 
     def update_dump_paths(self, *args):
         self.data_writer.update_dump_paths(*args)

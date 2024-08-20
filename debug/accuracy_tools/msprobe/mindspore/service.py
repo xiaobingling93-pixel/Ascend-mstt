@@ -35,6 +35,7 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
     ModuleBackwardInputs, ModuleBackwardOutputs
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.mindspore.cell_processor import CellProcessor
 
 
 class Service:
@@ -43,6 +44,7 @@ class Service:
         self.config = copy.deepcopy(config)
         self.config.level = self.config.level_ori
         self.data_collector = build_data_collector(self.config)
+        self.cell_processor = CellProcessor(self.data_collector.scope)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
@@ -50,6 +52,7 @@ class Service:
         self.primitive_counters = {}
         self.dump_iter_dir = None
         self.start_call = False
+        self.check_level_valid()
 
     @staticmethod
     def check_model_valid(model):
@@ -59,26 +62,41 @@ class Service:
             MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是 mindspore.nn.Cell 类型。"
         )
 
-    def build_hook(self, module_type, name):
-        def forward_hook(api_or_module_name, module, input, output):
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+    def check_level_valid(self):
+        if self.config.level == "L2":
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
+            )
+
+    def build_hook(self, target_type, name):
+        def forward_hook(api_or_cell_name, cell, input, output):
+            if target_type == BaseScope.Module_Type_Module:
+                api_or_cell_name = cell.mindstudio_reserved_name
+            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
             if not self.switch:
                 return None
             if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=module.input_kwargs, output=output)
-                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
+                if target_type == BaseScope.Module_Type_Module:
+                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs={}, output=output)
+                else:
+                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs, output=output)
+                self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
                 if self.data_collector.if_return_forward_new_output():
                     return self.data_collector.get_forward_new_output()
-                del module.input_kwargs
+                if target_type == BaseScope.Module_Type_API:
+                    del cell.input_kwargs
             return output
 
-        def backward_hook(api_or_module_name, module, grad_input, grad_output):
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+        def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
+            if target_type == BaseScope.Module_Type_Module:
+                api_or_cell_name = cell.mindstudio_reserved_name
+            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
             if not self.switch:
                 return
             if self.data_collector:
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
-                self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
+                # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
+                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
@@ -86,11 +104,11 @@ class Service:
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
 
-        def wrap_forward_hook(*args, **kwargs):
-            return forward_hook(*args, **kwargs)
+        def wrap_forward_hook(cell, input, output):
+            return forward_hook(cell, input, output)
 
-        def wrap_backward_hook(*args, **kwargs):
-            return backward_hook(*args, **kwargs)
+        def wrap_backward_hook(cell, grad_input, grad_output):
+            return backward_hook(cell, grad_input, grad_output)
 
         return wrap_forward_hook, wrap_backward_hook
 
@@ -223,10 +241,11 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         HOOKCell.cell_count = defaultdict(int)
+        CellProcessor.cell_count = {}
         self.primitive_counters.clear()
 
     def start(self, model=None):
-        self.model = Service.check_model_valid(model)
+        self.model = self.check_model_valid(model)
         self.start_call = True
         logger.info("msprobe: debugger.start() is set successfully")
         if self.config.step and self.current_iter > max(self.config.step):
@@ -293,3 +312,24 @@ class Service:
             api_register.api_set_hook_func()
             if self.model:
                 self.register_hooks()
+
+        if self.config.level == "L0":
+            if not self.model:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "The current level is L0, the model cannot be None")
+            for name, cell in self.model.cells_and_names():
+                if cell == self.model:
+                    continue
+                prefix = 'Cell' + Const.SEP + name + Const.SEP + \
+                         cell.__class__.__name__ + Const.SEP
+                forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                cell.register_forward_hook(forward_hook)
+                cell.register_backward_hook(backward_hook)
+
+                cell.register_forward_pre_hook(
+                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.START))
+                cell.register_forward_hook(
+                    self.cell_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
+                cell.register_backward_pre_hook(
+                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
+                cell.register_backward_hook(
+                    self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))

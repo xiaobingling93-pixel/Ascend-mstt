@@ -542,7 +542,7 @@ def save_npy(data, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
-        npy = np.save(filepath, data)
+        np.save(filepath, data)
     except Exception as e:
         logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
         raise RuntimeError(f"Save numpy file {filepath} failed.") from e
@@ -559,3 +559,19 @@ def load_yaml(yaml_path):
         logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
         raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
     return yaml_data
+
+
+def save_workbook(workbook, file_path):
+    """
+    保存工作簿到指定的文件路径
+    workbook: 要保存的工作簿对象
+    file_path: 文件保存路径
+    """
+    file_path = os.path.realpath(file_path)
+    check_path_before_create(file_path)
+    try:
+        workbook.save(file_path)
+    except Exception as e:
+        logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
+        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
