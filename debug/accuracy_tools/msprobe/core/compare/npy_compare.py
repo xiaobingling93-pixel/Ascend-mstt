@@ -90,7 +90,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
         if result == CompareConst.NAN:
             return result
         if float(result) > CompareConst.COSINE_THRESHOLD:
-            return 1.0
+            return round(float(result), 6)
         return result
 
     def apply(self, n_value, b_value, error_flag, relative_err=None):
