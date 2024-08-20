@@ -129,8 +129,8 @@ class ApiRunner:
             if api_platform == Const.MS_FRAMEWORK:
                 if len(gradient_inputs) == 1:
                     gradient_inputs = gradient_inputs[0]
-                def api_with_kwargs(forward_inputs):
-                    api_instance(forward_inputs, **kwargs)
+                def api_with_kwargs(*forward_inputs):
+                    return api_instance(*forward_inputs, **kwargs)
                 grad_func = ops.GradOperation(get_all=True, sens_param=True)(api_with_kwargs)
                 backward_result = grad_func(*inputs, gradient_inputs) # can be single tensor or tuple
                 backward_result_tuple = convert_to_tuple(backward_result)
