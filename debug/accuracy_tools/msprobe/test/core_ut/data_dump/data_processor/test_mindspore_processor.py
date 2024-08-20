@@ -22,13 +22,12 @@ import mindspore as ms
 from mindspore import Tensor
 import numpy as np
 
-from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, TensorStatInfo
+from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.mindspore_processor import (
     MindsporeDataProcessor,
     TensorDataProcessor,
     OverflowCheckDataProcessor
-) 
-from msprobe.core.common.const import FileCheckConst
+)
 
 
 class TestMindsporeDataProcessor(unittest.TestCase):
@@ -65,7 +64,7 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertEqual(result.norm, ms.ops.norm(tensor).item())
 
     def test_get_stat_info_int(self):
-        tensor =  ms.Tensor([1, 2, 3], dtype=ms.int32)
+        tensor = ms.Tensor([1, 2, 3], dtype=ms.int32)
         result = self.processor.get_stat_info(tensor)
         self.assertEqual(result.max, 3)
         self.assertEqual(result.min, 1)
@@ -79,7 +78,7 @@ class TestMindsporeDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, False)
         self.assertIsNone(result.mean)
         self.assertIsNone(result.norm)
-                               
+
     @patch.object(MindsporeDataProcessor, 'get_md5_for_tensor')
     def test__analyze_tensor(self, get_md5_for_tensor):
         get_md5_for_tensor.return_value = "test_md5"
@@ -110,7 +109,7 @@ class TestTensorDataProcessor(unittest.TestCase):
         self.processor.current_api_or_module_name = "test_api"
         self.processor.api_data_category = "input"
 
-    @patch('numpy.save')
+    @patch('msprobe.core.data_dump.data_processor.mindspore_processor.save_tensor_as_npy')
     def test_analyze_tensor(self, mock_save):
         self.config.framework = "mindspore"
         tensor = ms.Tensor([1.0, 2.0, 3.0])
@@ -128,7 +127,7 @@ class TestTensorDataProcessor(unittest.TestCase):
             'data_name': 'test_api.input.suffix.npy'
         }
         self.assertEqual(expected, result)
-    
+
 
 class TestOverflowCheckDataProcessor(unittest.TestCase):
     def setUp(self):
@@ -168,23 +167,17 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
             self.assertTrue(self.data_processor.has_overflow)
             self.assertEqual(api_info, {"min", 0})
 
-    @patch("msprobe.core.data_dump.data_processor.mindspore_processor.np.save")
-    @patch("msprobe.core.data_dump.data_processor.mindspore_processor.change_mode")
-    def test_maybe_save_overflow_data(self, mock_change_mode, mock_save):
+    @patch("msprobe.core.data_dump.data_processor.mindspore_processor.save_tensor_as_npy")
+    def test_maybe_save_overflow_data(self, mock_save):
         self.data_processor.has_overflow = True
         tensor1 = Tensor(1)
         tensor2 = Tensor(2)
         self.data_processor.cached_tensors_and_file_paths = {"tensor1": tensor1, "tensor2": tensor2}
-        with patch("mindspore.Tensor.asnumpy", return_value="npy"):
-            self.data_processor.maybe_save_overflow_data()
+        self.data_processor.maybe_save_overflow_data()
         self.assertEqual(mock_save.call_args_list[0][0],
-                         ("tensor1", "npy"))
+                         (tensor1, "tensor1"))
         self.assertEqual(mock_save.call_args_list[1][0],
-                         ("tensor2", "npy"))
-        self.assertEqual(mock_change_mode.call_args_list[0][0],
-                         ("tensor1", FileCheckConst.DATA_FILE_AUTHORITY))
-        self.assertEqual(mock_change_mode.call_args_list[1][0],
-                         ("tensor2", FileCheckConst.DATA_FILE_AUTHORITY))
+                         (tensor2, "tensor2"))
 
     @patch("msprobe.core.data_dump.data_processor.mindspore_processor.logger.info")
     def test_is_terminated(self, mock_info):

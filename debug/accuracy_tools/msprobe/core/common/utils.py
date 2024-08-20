@@ -304,6 +304,7 @@ def create_directory(dir_path):
         when invalid data throw exception
     """
     if not os.path.exists(dir_path):
+        check_path_before_create(dir_path)
         try:
             os.makedirs(dir_path, mode=0o700)
         except OSError as ex:
@@ -523,11 +524,11 @@ def convert_tuple(data):
 
 
 def write_csv(data, filepath):
-    is_first_create = os.path.exists(filepath)
+    exist = os.path.exists(filepath)
     with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
-    if not is_first_create:
+    if not exist:
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
@@ -545,12 +546,29 @@ def save_npy(data, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
-        npy = np.save(filepath, data)
+        np.save(filepath, data)
     except Exception as e:
         logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
         raise RuntimeError(f"Save numpy file {filepath} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
+def save_npy_to_txt(self, data, dst_file='', align=0):
+    if os.path.exists(dst_file):
+        self.log.info("Dst file %s exists, will not save new one.", dst_file)
+        return
+    shape = data.shape
+    data = data.flatten()
+    if align == 0:
+        align = 1 if len(shape) == 0 else shape[-1]
+    elif data.size % align != 0:
+        pad_array = np.zeros((align - data.size % align,))
+        data = np.append(data, pad_array)
+    check_path_before_create(dst_file)
+    try:
+        np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+    except Exception as e:
+        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
+    change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
 def get_json_contents(file_path):
     ops = get_file_content_bytes(file_path)

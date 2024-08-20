@@ -3,8 +3,9 @@ import os
 import numpy as np
 import mindspore
 from grad_tool.common.constant import GradConst
-from grad_tool.common.utils import (print_warn_log, create_directory, change_mode, check_file_or_directory_path,
+from grad_tool.common.utils import (create_directory, change_mode, check_file_or_directory_path,
                                     path_valid_check, check_param)
+from msprobe.core.common.const import FileCheckConst
 
 level_adp = {
         "L0": {
@@ -39,7 +40,7 @@ def save_grad_direction(param_name, grad, save_path):
         np.save(save_filepath, grad_direction_ndarray)
     except Exception as e:
         raise RuntimeError(f"An unexpected error occurred: {e} when saving numpy to {save_filepath}") from e
-    change_mode(save_filepath, 0o640)
+    change_mode(save_filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def get_adapted_level(level: str):

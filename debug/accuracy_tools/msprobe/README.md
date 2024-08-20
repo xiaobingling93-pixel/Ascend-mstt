@@ -98,7 +98,8 @@ Successfully installed mindstudio_probe-{version}
    
    ```shell
    python setup.py bdist_wheel
-   pip install dist/mindstudio_probe*.whl
+   cd dist
+   pip install mindstudio_probe*.whl
    ```
    提示出现如下信息则表示源码安装成功。
    ```shell
