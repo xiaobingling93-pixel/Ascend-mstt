@@ -137,8 +137,10 @@ class TCPClient:
                                     rank=rank,
                                     step=step)
             self.sequence_number += 1
-
-        self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
+        try:
+            self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
+        except Exception as e:
+            logger.debug(f"send_queue put send_data timeout, {str(e)}")
 
     def _send_data(self, data: TCPDataItem):
         self.tcp_manager.send_wrapped_data(data.raw_data,
@@ -305,7 +307,7 @@ class ClientProtocol(protocol.Protocol):
     def connectionLost(self, reason):
         self.signal_exit = True
         self.factory.num_connections -= 1
-        logger.info("Lost connection with server")
+        logger.info(f"Lost connection with server, reason is : {reason}")
 
 
 class MessageClientFactory(protocol.ClientFactory):
