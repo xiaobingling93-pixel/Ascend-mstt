@@ -65,7 +65,7 @@ class ApiRunner:
             api_type_str: str, Union["MintFunctional", "Mint"]
             api_sub_name: str, e.g. "relu"
         '''
-        api_name_list = api_name_str.split('.')
+        api_name_list = api_name_str.split(Const.SEP)
         if len(api_name_list) != 3:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))

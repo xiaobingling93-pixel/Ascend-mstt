@@ -10,22 +10,18 @@ class ApiInfo:
         self.api_name = api_name
         self.forward_info = None
         self.backward_info = None
-        self.has_forward_info = False
-        self.has_backward_info = False
 
     def load_forward_info(self, forward_info_dict):
         self.forward_info = forward_info_dict
-        self.has_forward_info = True
 
     def load_backward_info(self, backward_info_dict):
         self.backward_info = backward_info_dict
-        self.has_backward_info = True
 
     def check_forward_info(self):
-        return self.has_forward_info
+        return self.forward_info != None
 
     def check_backward_info(self):
-        return self.has_backward_info
+        return self.backward_info != None
 
     def get_compute_element_list(self, forward_or_backward, input_or_output):
         '''
@@ -37,13 +33,13 @@ class ApiInfo:
             compute_element_list: List[ComputeElement]
         '''
         mapping = {
-            (Const.FORWARD, Const.INPUT): [self.forward_info, MsApiAccuracyCheckerConst.API_INFO_FORWARD_INPUT,
+            (Const.FORWARD, Const.INPUT): [self.forward_info, Const.INPUT_ARGS,
                                            f"input_args field of {self.api_name} forward api in api_info.json"],
-            (Const.FORWARD, Const.OUTPUT): [self.forward_info, MsApiAccuracyCheckerConst.API_INFO_FORWARD_OUTPUT,
+            (Const.FORWARD, Const.OUTPUT): [self.forward_info, Const.OUTPUT,
                                             f"output field of {self.api_name} forward api in api_info.json"],
-            (Const.BACKWARD, Const.INPUT): [self.backward_info, MsApiAccuracyCheckerConst.API_INFO_BACKWARD_INPUT,
+            (Const.BACKWARD, Const.INPUT): [self.backward_info, Const.INPUT,
                                             f"input field of {self.api_name} backward api in api_info.json"],
-            (Const.BACKWARD, Const.OUTPUT): [self.backward_info, MsApiAccuracyCheckerConst.API_INFO_BACKWARD_OUTPUT,
+            (Const.BACKWARD, Const.OUTPUT): [self.backward_info, Const.OUTPUT,
                                              f"output field of {self.api_name} backward api in api_info.json"]
         }
         dict_instance, key, key_desc = mapping.get((forward_or_backward, input_or_output))
@@ -57,7 +53,7 @@ class ApiInfo:
         Return:
             kwargs_compute_element_dict: dict{str: ComputeElement}
         '''
-        kwargs_dict = check_and_get_from_json_dict(self.forward_info, MsApiAccuracyCheckerConst.API_INFO_FORWARD_KWARGS,
+        kwargs_dict = check_and_get_from_json_dict(self.forward_info, Const.INPUT_KWARGS,
                                                    "input_kwargs in api_info.json", accepted_type=dict)
         for key_str, compute_element_info in kwargs_dict.items():
             if not isinstance(key_str, str):
