@@ -542,7 +542,7 @@ def save_npy(data, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
-        npy = np.save(filepath, data)
+        np.save(filepath, data)
     except Exception as e:
         logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
         raise RuntimeError(f"Save numpy file {filepath} failed.") from e

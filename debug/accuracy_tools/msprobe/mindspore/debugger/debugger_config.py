@@ -69,6 +69,6 @@ class DebuggerConfig:
     def _make_dump_path_if_not_exists(self):
         check_path_before_create(self.dump_path)
         if not os.path.exists(self.dump_path):
-            Path(self.dump_path).mkdir(mode=0o750, exist_ok=True)
+            Path(self.dump_path).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
         file_check = FileChecker(self.dump_path, FileCheckConst.DIR)
         file_check.common_check()
