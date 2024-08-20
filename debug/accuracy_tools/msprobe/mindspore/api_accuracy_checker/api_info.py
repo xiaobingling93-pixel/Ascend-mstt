@@ -18,10 +18,10 @@ class ApiInfo:
         self.backward_info = backward_info_dict
 
     def check_forward_info(self):
-        return self.forward_info != None
+        return self.forward_info is not None
 
     def check_backward_info(self):
-        return self.backward_info != None
+        return self.backward_info is not None
 
     def get_compute_element_list(self, forward_or_backward, input_or_output):
         '''
