@@ -22,7 +22,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 
 from msprobe.core.common.const import CompareConst
-from msprobe.pytorch.online_dispatch.dump_compare import support_basic_type, dump_data, save_temp_summary, dispatch_workflow, get_torch_func, dispatch_multiprocess, error_call, save_csv
+from msprobe.pytorch.online_dispatch.dump_compare import support_basic_type, dump_data, save_temp_summary, dispatch_workflow, get_torch_func, dispatch_multiprocess, error_call
 
 
 
@@ -30,8 +30,6 @@ class TestDumpCompare(unittest.TestCase):
     def setUp(self):
         self.summary_path = "summary.json"
         Path(self.summary_path).touch()
-        self.csv_path = "test_save_csv.csv"
-        Path(self.csv_path).touch()
         self.data = {CompareConst.NPU_NAME: 1,
                     CompareConst.BENCH_NAME: 1,
                     CompareConst.NPU_DTYPE: 1,
@@ -71,8 +69,6 @@ class TestDumpCompare(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(self.summary_path):
             os.remove(self.summary_path)
-        if os.path.exists(self.csv_path):
-            os.remove(self.csv_path)
 
     def test_support_basic_type_should_return_true_when_is_instance(self):
         self.assertTrue(support_basic_type(2.3))
@@ -175,9 +171,3 @@ class TestDumpCompare(unittest.TestCase):
     def test_error_call(self,mock_error):
         error_call("messages")
         mock_error.assert_called_once_with("multiprocess messages")
-
-    def test_save_csv(self):
-        save_csv([[self.data]],[2],self.csv_path)
-        df = pd.read_csv(self.csv_path)
-        df_gt = pd.DataFrame.from_dict(self.data_gt, orient='index').T
-        self.assertTrue((df.all()==df_gt.all()).all())

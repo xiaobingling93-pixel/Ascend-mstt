@@ -5,11 +5,10 @@ from datetime import datetime, timezone
 
 import pandas as pd
 import torch
-from .utils import np_save_data, logger_debug, logger_error, logger_warn, logger_user, COLOR_RED, COLOR_GREEN, \
-    COLOR_RESET, CSV_COLUMN_NAME
-from msprobe.core.common.file_check import FileOpen, change_mode
-from msprobe.core.common.const import CompareConst, FileCheckConst, Const
 from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_check import FileOpen
+from .utils import np_save_data
+
 
 class DispatchRunParam:
     def __init__(self, debug_flag, device_id, root_npu_path, root_cpu_path, process_num, comparator):
@@ -57,7 +56,7 @@ class TimeStatistics:
     def __enter__(self):
         if self.debug:
             self.time = datetime.now(tz=timezone.utc)
-            logger_debug(f'Time[{self.tag}]-ENTER: Dev[{self.device}], Pid[{os.getpid()}], Fun[{self.fun}], ' \
+            logger.info(f'Time[{self.tag}]-ENTER: Dev[{self.device}], Pid[{os.getpid()}], Fun[{self.fun}], ' \
                          f'Id[{self.index}]')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -68,9 +67,9 @@ class TimeStatistics:
             hot_time_cost = "Hotspot " + time_cost
 
             if cost_time.total_seconds() > self.timeout:
-                logger_debug(hot_time_cost)
+                logger.info(hot_time_cost)
             else:
-                logger_debug(time_cost)
+                logger.info(time_cost)
 
 
 def support_basic_type(data):
@@ -155,32 +154,3 @@ def dispatch_multiprocess(run_param, dispatch_data_info):
 def error_call(err):
     logger.error(f'multiprocess {err}')
 
-
-def save_csv(all_summary, call_stack_list, csv_path):
-    df = pd.DataFrame(columns=CSV_COLUMN_NAME)
-
-    for index, list_data in enumerate(all_summary):
-        for data in list_data:
-            csv_row_data = {CompareConst.NPU_NAME: data[CompareConst.NPU_NAME],
-                            CompareConst.BENCH_NAME: data[CompareConst.BENCH_NAME],
-                            CompareConst.NPU_DTYPE: data[CompareConst.NPU_DTYPE],
-                            CompareConst.BENCH_DTYPE: data[CompareConst.BENCH_DTYPE],
-                            CompareConst.NPU_SHAPE: data[CompareConst.NPU_SHAPE],
-                            CompareConst.BENCH_SHAPE: data[CompareConst.BENCH_SHAPE],
-                            CompareConst.NPU_MAX: data[CompareConst.NPU_MAX],
-                            CompareConst.NPU_MIN: data[CompareConst.NPU_MIN],
-                            CompareConst.NPU_MEAN: data[CompareConst.NPU_MEAN],
-                            CompareConst.BENCH_MAX: data[CompareConst.BENCH_MAX],
-                            CompareConst.BENCH_MIN: data[CompareConst.BENCH_MIN],
-                            CompareConst.BENCH_MEAN: data[CompareConst.BENCH_MEAN],
-                            CompareConst.COSINE: data[CompareConst.COSINE],
-                            CompareConst.MAX_ABS_ERR: data[CompareConst.MAX_ABS_ERR],
-                            CompareConst.MAX_RELATIVE_ERR: data[CompareConst.MAX_RELATIVE_ERR],
-                            CompareConst.ACCURACY: data[CompareConst.ACCURACY],
-                            CompareConst.STACK: call_stack_list[index],
-                            CompareConst.ERROR_MESSAGE: data[CompareConst.ERROR_MESSAGE]}
-            row_df = pd.DataFrame.from_dict(csv_row_data, orient='index').T
-            df = pd.concat([df, row_df])
-
-    df.to_csv(csv_path, index=False)
-    change_mode(csv_path, FileCheckConst.DATA_FILE_AUTHORITY)

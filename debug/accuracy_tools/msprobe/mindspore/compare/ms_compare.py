@@ -21,7 +21,7 @@ class MSComparator (Comparator):
         self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
 
     def load_mapping_file(self, mapping_file):
-        if isinstance(self.cell_mapping, str):
+        if isinstance(mapping_file, str):
             mapping_dict = load_yaml(mapping_file)
         else:
             mapping_dict = {}
@@ -37,7 +37,6 @@ class MSComparator (Comparator):
                 if cell_name in self.cell_mapping_dict:
                     a_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return a_op_name
-
 
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
         a_op_name = npu_dict["op_name"]
@@ -76,6 +75,7 @@ class MSComparator (Comparator):
             data_path = path_checker.common_check()
             data_value = np.load(data_path)      
         return data_value    
+
 
 def ms_compare(input_param, output_path, **kwargs):
     try:

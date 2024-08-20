@@ -1,6 +1,5 @@
 import os
 import inspect
-import logging
 import psutil
 import torch
 import numpy as np
@@ -14,6 +13,7 @@ else:
 
 from msprobe.core.common.const import CompareConst, FileCheckConst
 from msprobe.core.common.file_check import change_mode
+from msprobe.core.common.log import logger
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -77,7 +77,7 @@ def np_save_data(data, file_name, data_path):
         np.save(dump_path, data)
         change_mode(dump_path, FileCheckConst.DATA_FILE_AUTHORITY)
     except Exception as e:
-        logger_error("save numpy failed, error: {}".format(e))
+        logger.error("save numpy failed, error: {}".format(e))
     finally:
         pass
 
@@ -122,47 +122,6 @@ def data_to_cpu(data, deep, data_cpu):
         if deep == 0:
             data_cpu.append(data)
         return data
-
-
-def get_mp_logger():
-    logger = logging.getLogger(__name__)
-    if not logger.handlers:
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s %(message)s')
-        logger.propagate = True
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    return logger.info
-
-
-def logger_debug(mesg):
-    logger = get_mp_logger()
-    logger(f'DEBUG ' + mesg)
-
-
-def logger_info(mesg):
-    logger = get_mp_logger()
-    logger(f'INFO ' + mesg)
-
-
-def logger_warn(mesg):
-    logger = get_mp_logger()
-    logger(f'{COLOR_YELLOW}WARNING {mesg} {COLOR_RESET}')
-
-
-def logger_error(mesg):
-    logger = get_mp_logger()
-    logger(f'{COLOR_RED}ERROR {mesg} {COLOR_RESET}')
-
-
-def logger_user(mesg):
-    logger = get_mp_logger()
-    logger(mesg)
-
-
-def logger_logo():
-    logger_user(f'{COLOR_CYAN}{COMPARE_LOGO} {COLOR_RESET}')
 
 
 def get_sys_info():

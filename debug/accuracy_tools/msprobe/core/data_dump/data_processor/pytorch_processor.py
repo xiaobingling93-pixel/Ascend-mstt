@@ -262,9 +262,13 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
                 self.has_overflow = True
         else:
-            self.has_overflow = self.check_overflow_npu()
-            if self.has_overflow:
-                self.clear_overflow_npu()
+            try:
+                self.has_overflow = self.check_overflow_npu()
+                if self.has_overflow:
+                    self.clear_overflow_npu()
+            except Exception as e:
+                logger.error(f"Overflow check failed, the current environment may be abnormal.")
+                raise RuntimeError(f"overflow check failed") from e
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
