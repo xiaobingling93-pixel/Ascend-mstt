@@ -1,6 +1,5 @@
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
 from msprobe.core.common.const import Const
-from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger

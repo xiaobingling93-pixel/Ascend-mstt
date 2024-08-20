@@ -10,7 +10,6 @@ from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerCon
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
-from msprobe.mindspore.api_accuracy_checker.type_mapping import api_parent_module_mapping
 
 
 class ApiInputAggregation:
