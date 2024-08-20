@@ -527,7 +527,7 @@ def write_csv(data, filepath):
     with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
-    if is_first_create:
+    if not is_first_create:
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
