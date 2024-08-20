@@ -111,6 +111,16 @@ class BaseDataProcessor:
         return stack_info_struct
 
     @staticmethod
+    def transfer_type(data):
+        dtype = str(type(data))
+        if 'int' in dtype:
+            return int(data)
+        elif 'float' in dtype:
+            return float(data)
+        else:
+            return data
+
+    @staticmethod
     def _convert_numpy_to_builtin(arg):
         type_mapping = {
             np.integer: int,
