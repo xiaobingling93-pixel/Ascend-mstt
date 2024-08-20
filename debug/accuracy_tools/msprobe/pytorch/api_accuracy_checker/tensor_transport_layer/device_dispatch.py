@@ -48,7 +48,7 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
             else:
                 logger.error(f"Run {api_full_name} UT Error: {str(err)}")
 
-            compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err), api_data.rank))
+            compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
 
         finally:
             torch.cuda.empty_cache()

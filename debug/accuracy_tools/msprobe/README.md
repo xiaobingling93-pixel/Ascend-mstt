@@ -97,11 +97,13 @@ Successfully installed mindstudio_probe-{version}
 3. 安装msprobe
    
    ```shell
-   python setup.py install
+   python setup.py bdist_wheel
+   cd dist
+   pip install mindstudio_probe*.whl
    ```
    提示出现如下信息则表示源码安装成功。
    ```shell
-   Finished processing dependencies for mindstudio-probe=={version}
+   Successfully installed ... mindstudio_probe-{version} ...
    ```
 
 ### 查看msprobe工具信息

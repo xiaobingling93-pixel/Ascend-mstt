@@ -1,27 +1,28 @@
 # 进行比对及结果展示
 import os
 from collections import namedtuple
-import torch
+
 import numpy as np
-from msprobe.pytorch.common.log import logger
+import torch
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.utils import CompareException
+from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, write_csv
-from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, AbsoluteStandardApi, BinaryStandardApi, \
-    ULPStandardApi, ThousandthStandardApi, apis_threshold
-from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
     check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
-from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
-from msprobe.core.common.const import Const, CompareConst
-
+from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
+    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
+    ulp_standard_api, thousandth_standard_api, apis_threshold
+from msprobe.pytorch.common.log import logger
 
 ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'bwd_success_status',
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results', 'rank'])
 
 
-INDEX_TEST_RESULT__GROUP = 3
+INDEX_TEST_RESULT_GROUP = 3
 INDEX_FIRST_GROUP = 0
 INDEX_MESSAGE = -1
 
@@ -60,7 +61,7 @@ class Comparator:
     @staticmethod
     def print_pretest_result():
         logger.info("Successfully completed run_ut/multi_run_ut.")
-    
+
     @staticmethod
     def _compare_dropout(bench_output, device_output):
         tensor_num = bench_output.numel()
@@ -89,7 +90,7 @@ class Comparator:
         error_rate = float(error_nums / bench_output.size)
         result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
         return error_rate, result, ""
-    
+
     @staticmethod
     def _get_absolute_threshold_attribute(api_name, dtype):
         small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
@@ -108,26 +109,31 @@ class Comparator:
 
     def write_summary_csv(self, test_result):
         test_rows = []
-        if self.stack_info:
-            test_rows[0].append(self.COLUMN_STACK_INFO)
-
-        name = test_result[0]
-        df_row = list(test_result[:INDEX_TEST_RESULT__GROUP])
-        if test_result[1] == "SKIP":
-            df_row.append(test_result[INDEX_TEST_RESULT__GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
-        if self.stack_info:
-            stack_info = "\n".join(self.stack_info[name])
-            df_row.append(stack_info)
-        test_rows.append(df_row)
-        save_path = self.get_path_from_rank(test_result[-1], self.save_path_list, self.save_path_str)
+        try:
+            name = test_result[0]
+            df_row = list(test_result[:INDEX_TEST_RESULT_GROUP])
+            if test_result[1] == "SKIP":
+                df_row.append(test_result[INDEX_TEST_RESULT_GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
+            if self.stack_info:
+                stack_info = "\n".join(self.stack_info[name])
+                df_row.append(stack_info)
+            test_rows.append(df_row)
+            save_path = self.get_path_from_rank(test_result[-1], self.save_path_list, self.save_path_str)
+        except IndexError as e:
+            logger.error("List index out of bounds when writing summary CSV.")
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR, "list index out of bounds") from e
         write_csv(test_rows, save_path)
 
     def write_detail_csv(self, test_result):
         test_rows = []
+        try:
+            subject_prefix = test_result[0]
+            fwd_result = test_result[3]
+            bwd_result = test_result[4]
+        except IndexError as e:
+            logger.error("List index out of bounds when writing detail CSV.")
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR, "list index out of bounds") from e
 
-        subject_prefix = test_result[0]
-        fwd_result = test_result[3]
-        bwd_result = test_result[4]
         if isinstance(fwd_result, list):
             for i, test_subject in enumerate(fwd_result):
                 subject = subject_prefix + ".forward.output." + str(i)
@@ -140,7 +146,6 @@ class Comparator:
                 test_subject = ["{:.{}f}".format(item, msCheckerConfig.precision)
                                 if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
-
         detail_save_path = self.get_path_from_rank(test_result[-1],
                                                    self.detail_save_path_list,
                                                    self.detail_save_path_str)
@@ -280,15 +285,15 @@ class Comparator:
         abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
-        if api_name in ThousandthStandardApi:
+        if api_name in thousandth_standard_api:
             thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
             compare_column.rel_err_thousandth = thousand_res
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
             both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in BinaryStandardApi:
+            if api_name in binary_standard_api:
                 err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
                 compare_column.error_rate = err_rate
-            elif api_name in AbsoluteStandardApi:
+            elif api_name in absolute_standard_api:
                 small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
                     api_name, str(dtype))
                 rel_err = abs_err / abs_bench_with_eps
@@ -298,7 +303,7 @@ class Comparator:
                                                                          dtype, rtol)
                 compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
                 compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
-            elif api_name in ULPStandardApi:
+            elif api_name in ulp_standard_api:
                 if bench_output.size == 0:
                     compare_column.max_ulp_error = 0
                     compare_column.mean_ulp_error = 0

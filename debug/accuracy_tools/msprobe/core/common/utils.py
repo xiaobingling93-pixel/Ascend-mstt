@@ -18,17 +18,17 @@ import collections
 import os
 import re
 import shutil
-import stat
 import subprocess
 import time
 import json
 import csv
 from datetime import datetime, timezone
 from pathlib import Path
+import yaml
 import numpy as np
 
 from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
-from msprobe.core.common.const import Const, FileCheckConst, CompareConst, OverflowConst
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
 
@@ -537,7 +537,8 @@ def load_npy(filepath):
     try:
         npy = np.load(filepath)
     except Exception as e:
-        raise RuntimeError(f"load npy file {filepath} failed") from e
+        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
     return npy
 
 
@@ -545,9 +546,10 @@ def save_npy(data, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
-        npy = np.save(filepath, data)
+        np.save(filepath, data)
     except Exception as e:
-        raise RuntimeError(f"save npy file {filepath} failed") from e
+        logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
+        raise RuntimeError(f"Save numpy file {filepath} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 def save_npy_to_txt(self, data, dst_file='', align=0):
@@ -567,3 +569,30 @@ def save_npy_to_txt(self, data, dst_file='', align=0):
     except Exception as e:
         self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
+
+def load_yaml(yaml_path):
+    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
+    checked_path = path_checker.common_check()
+    try:
+        with FileOpen(checked_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
+        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
+    return yaml_data
+
+
+def save_workbook(workbook, file_path):
+    """
+    保存工作簿到指定的文件路径
+    workbook: 要保存的工作簿对象
+    file_path: 文件保存路径
+    """
+    file_path = os.path.realpath(file_path)
+    check_path_before_create(file_path)
+    try:
+        workbook.save(file_path)
+    except Exception as e:
+        logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
+        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)

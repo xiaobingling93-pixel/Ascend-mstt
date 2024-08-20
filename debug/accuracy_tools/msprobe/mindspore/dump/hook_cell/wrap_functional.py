@@ -14,11 +14,9 @@
 # ============================================================================
 
 import os
-import yaml
 import mindspore as ms
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.core.common.utils import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import Const, load_yaml
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -34,15 +32,14 @@ def load_ops_functions():
 
 def get_functional_ops():
     ops_func, mint_ops_func, mint_func_ops_func = load_ops_functions()
-    with FileOpen(yaml_path, 'r') as f:
-        config = yaml.safe_load(f)
-        WrapFunctionalOps = config.get("ops")
-        WrapMintOps = config.get("mint.ops")
-        WrapMintFunctionalOps = config.get("mint.nn.functional")
+    config = load_yaml(yaml_path)
+    wrap_functional = config.get("ops")
+    wrap_mint = config.get("mint.ops")
+    wrap_mint_functional = config.get("mint.nn.functional")
     return (
-        set(WrapFunctionalOps) & set(ops_func.keys()),
-        set(WrapMintOps) & set(mint_ops_func.keys()),
-        set(WrapMintFunctionalOps) & set(mint_func_ops_func.keys())
+        set(wrap_functional) & set(ops_func.keys()),
+        set(wrap_mint) & set(mint_ops_func.keys()),
+        set(wrap_mint_functional) & set(mint_func_ops_func.keys())
     )
 
 

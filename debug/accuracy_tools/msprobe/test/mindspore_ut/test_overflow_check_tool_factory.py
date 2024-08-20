@@ -15,15 +15,17 @@
 # limitations under the License.
 """
 from unittest import TestCase
+from unittest.mock import patch
 
+from msprobe.mindspore.common.const import Const
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.overflow_check.overflow_check_tool_factory import OverflowCheckToolFactory
 
 
 class TestOverflowCheckToolFactory(TestCase):
-
-    def test_create(self):
+    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    def test_create(self, _):
         json_config = {
             "task": "overflow_check",
             "dump_path": "/absolute_path",
@@ -39,12 +41,14 @@ class TestOverflowCheckToolFactory(TestCase):
         config.level = "module"
         with self.assertRaises(Exception) as context:
             OverflowCheckToolFactory.create(config)
-        self.assertEqual(str(context.exception), "valid level is needed.")
+        self.assertEqual(str(context.exception), "Valid level is needed.")
 
+        config.execution_mode = Const.GRAPH_GE_MODE
         config.level = "cell"
         with self.assertRaises(Exception) as context:
             OverflowCheckToolFactory.create(config)
-        self.assertEqual(str(context.exception), "Overflow check in not supported in this mode.")
+        self.assertEqual(str(context.exception),
+                         f"Overflow check is not supported in {config.execution_mode} mode when level is {config.level}.")
 
         config.level = "kernel"
         dumper = OverflowCheckToolFactory.create(config)
