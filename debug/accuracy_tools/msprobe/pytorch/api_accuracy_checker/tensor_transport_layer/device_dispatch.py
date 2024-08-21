@@ -17,20 +17,21 @@ from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import mov
 CompareApi = set(absolute_standard_api) | set(binary_standard_api) | set(thousandth_standard_api)
 
 current_time = time.strftime("%Y%m%d%H%M%S")
-ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME = "api_precision_compare_result_" + current_time + ".csv"
-ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_" + current_time + ".csv"
+ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME = "api_precision_compare_result_" + current_time + "_rank*.csv"
+ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_" + current_time + "_rank*.csv"
 
 OnlineApiPrecisionCompareConfig = namedtuple('OnlineApiPrecisionCompareConfig',
                                              ['npu_data', 'gpu_data', 'rank', 'result_csv_path', 'details_csv_path'])
 
 
-def run_ut_process(xpu_id, compare, consumer_queue, func, config):
+def run_ut_process(xpu_id, compare, consumer_queue, func, config, api_precision_csv_file):
     """ When consumer_queue(shared with ConsumerDispatcher) is not empty, consume api data from consumer_queue.
     :param xpu_id: int
     :param compare: instance of Comparator
     :param consumer_queue: shared queues of ConsumerDispatcher
     :param func: run_touch_api_online
     :param config: run_ut_config
+    :param api_precision_csv_file: list, length is 2, result file name and details file name
     :return:
     """
     gpu_device = torch.device(f'cuda:{xpu_id}')
@@ -51,10 +52,10 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config):
             online_compare(api_data, gpu_device, compare, func, config)
         else:
             # NPUvsCPU vs GPUvsCPU
-            online_precision_compare(api_data, gpu_device, compare, func, config)
+            online_precision_compare(api_data, gpu_device, compare, func, config, api_precision_csv_file)
 
 
-def online_precision_compare(api_data, device, compare, func, config):
+def online_precision_compare(api_data, device, compare, func, config, api_precision_csv_file):
     """online run_ut for precision_compare: NPUvsCPU vs GPUvsCPU
     1. get NPUvsCPU compare result
     2. get GPUvsCPU compare result
@@ -84,9 +85,9 @@ def online_precision_compare(api_data, device, compare, func, config):
         gpu_data = pd.DataFrame(gpu_detail, columns=DETAIL_TEST_ROWS[-1])
 
         # NPUvsCPU vs GPUvsCPU
+        result_file_name, details_file_name = api_precision_csv_file
         precision_compare_config = OnlineApiPrecisionCompareConfig(npu_data, gpu_data, api_data.rank,
-                                                                   ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME,
-                                                                   ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME)
+                                                                   result_file_name, details_file_name)
         online_api_precision_compare(precision_compare_config)
 
     except Exception as err:
@@ -150,12 +151,15 @@ class ConsumerDispatcher:
 
     def start(self, handle_func, config):
         self.queues = [mp.Queue(maxsize=self.capacity) for _ in range(self.num_workers)]
+        api_precision_csv_file = [ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME, ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME]
         for xpu_id, q in enumerate(self.queues):
             p = mp.Process(name="run_ut_process", target=run_ut_process,
-                           args=(xpu_id, self.compare, q, handle_func, config))
+                           args=(xpu_id, self.compare, q, handle_func, config, api_precision_csv_file))
 
             p.start()
             self.processes.append(p)
+        logger.info(f"Api_precision_compare task result will be saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}")
+        logger.info(f"Api_precision_compare task details will be saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}")
         logger.info("Successfully start unittest process.")
 
     def stop(self):
@@ -167,8 +171,8 @@ class ConsumerDispatcher:
         for p in self.processes:
             p.join()
         logger.info("Successfully stop unittest process.")
-        logger.info(f"Api_precision_compare task result will be saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}".replace(".csv", "_rank*.csv"))
-        logger.info(f"Api_precision_compare task details will be saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}".replace(".csv", "_rank*.csv"))
+        logger.info(f"Api_precision_compare task result is saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}")
+        logger.info(f"Api_precision_compare task details is saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}")
 
     def update_consume_queue(self, api_data):
         while True:

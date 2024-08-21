@@ -291,8 +291,8 @@ def api_precision_compare(config):
 
 def online_api_precision_compare(online_config):
     rank = online_config.rank
-    result_csv_path = os.path.join("./", online_config.result_csv_path).replace(".csv", f"_rank{rank}.csv")
-    details_csv_path = os.path.join("./", online_config.details_csv_path).replace(".csv", f"_rank{rank}.csv")
+    result_csv_path = os.path.join("./", online_config.result_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
+    details_csv_path = os.path.join("./", online_config.details_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
     detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
     result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
     if not os.path.exists(result_csv_path):
