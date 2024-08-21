@@ -1,7 +1,7 @@
 import os.path
 import numpy as np
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, load_yaml
+    task_dumppath_get, load_yaml, load_npy
 from msprobe.core.common.file_check import FileChecker, create_directory
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.log import logger
@@ -11,7 +11,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 
 
-class MSComparator (Comparator):
+class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
@@ -58,22 +58,17 @@ class MSComparator (Comparator):
             is_match = False
         return is_match and struct_match
     
-    def read_npy_data(self, dir_path, file_name, load_pt=False):
+    def read_npy_data(self, dir_path, file_name, load_pt_file=False):
         data_path = os.path.join(dir_path, file_name)
-        if load_pt:
+        if load_pt_file:
             import torch
-            path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                    FileCheckConst.PT_SUFFIX, False)
-            data_path = path_checker.common_check()
-            data_value = torch.load(data_path, map_location=torch.device('cpu')).detach()       # detach for less memory
+            from msprobe.pytorch.common.utils import load_pt
+            data_value = load_pt(data_path).detach()
             if data_value.dtype == torch.bfloat16:
                 data_value = data_value.to(torch.float32)
             data_value = data_value.numpy()
         else:
-            path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                    FileCheckConst.NUMPY_SUFFIX, False)
-            data_path = path_checker.common_check()
-            data_value = np.load(data_path)      
+            data_value = load_npy(data_path) 
         return data_value    
 
 
