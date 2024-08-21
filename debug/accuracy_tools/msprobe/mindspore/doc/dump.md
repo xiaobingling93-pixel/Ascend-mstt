@@ -101,6 +101,8 @@ debugger.start()
 
 ### MindSpore动态图场景
 
+当使用模型使用for循环时，在每个迭代的开始插入debugger.start()，在每个迭代的结束插入debugger.stop()与debugger.step()：
+
 ```Python
 import mindspore as ms
 from msprobe.mindspore import PrecisionDebugger
@@ -120,6 +122,21 @@ for data, label in data_loader:
     # ...
     debugger.stop()     # 关闭数据dump
     debugger.step()     # 结束一个step的dump
+```
+
+当使用模型的train方法而非for循环时，可以通过在callbacks参数中传入MsprobeStep(debugger)：
+
+```Python
+from msprobe.mindspore.common.utils import MsprobeStep
+from msprobe.mindspore import PrecisionDebugger
+
+# 初始化PrecisionDebugger
+debugger = PrecisionDebugger(config_path="./config.json")
+
+# 自动在每个step开始时调用start()，在每个step结束时调用stop()和step()。
+# 这意味着您无需手动在循环内添加start、stop和step函数，框架会自动完成数据的dump操作。
+trainer.train(1, dataset_train, callbacks=[loss_monior, MsprobeStep(debugger)])
+
 ```
 
 ## dump结果文件介绍

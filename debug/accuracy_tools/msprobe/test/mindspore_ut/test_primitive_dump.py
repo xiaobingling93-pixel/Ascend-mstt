@@ -23,6 +23,8 @@ from msprobe.mindspore.service import Service
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from collections import defaultdict
 
 
 class DummyModel(nn.Cell):
@@ -76,3 +78,23 @@ class TestService(unittest.TestCase):
         self.assertEqual(self.service.primitive_counters[primitive_name], 0)
         self.service.update_primitive_counters(primitive_name)
         self.assertEqual(self.service.primitive_counters[primitive_name], 1)
+
+    def test_step_updates_iteration(self):
+        initial_iter = self.service.current_iter
+        self.service.step()
+        self.assertEqual(self.service.current_iter, initial_iter + 1)
+
+    @patch.object(HOOKCell, 'cell_count', new_callable=lambda: defaultdict(int))
+    def test_step_resets_counters(self, _):
+        # 假设在 step 调用之前已经有一些 primitive_counters
+        self.service.primitive_counters["test_primitive"] = 5
+        self.service.step()
+        self.assertEqual(self.service.primitive_counters, {})
+        self.assertEqual(HOOKCell.cell_count, defaultdict(int))
+
+    def test_step_calls_update_iter(self):
+        # 检查是否在调用 step 时调用了 update_iter
+        with patch.object(self.service.data_collector, 'update_iter') as mock_update_iter:
+            initial_iter = self.service.current_iter
+            self.service.step()
+            mock_update_iter.assert_called_once_with(initial_iter + 1)
