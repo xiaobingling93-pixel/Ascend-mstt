@@ -98,7 +98,8 @@ Successfully installed mindstudio_probe-{version}
    
    ```shell
    python setup.py bdist_wheel
-   pip install dist/mindstudio_probe*.whl
+   cd dist
+   pip install mindstudio_probe*.whl
    ```
    提示出现如下信息则表示源码安装成功。
    ```shell
@@ -164,7 +165,7 @@ Required-by:
 
    进行PyTorch整网API粒度的数据dump、精度比对和溢出检测，从而定位训练场景下的精度问题。
 
-   PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_overview.md)。
+   PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_compare.md)。
 
    MindSpore场景：详见[MindSpore_精度比对工具](./mindspore/doc/compare.md)。
 

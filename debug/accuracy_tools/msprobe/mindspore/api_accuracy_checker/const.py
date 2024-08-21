@@ -1,3 +1,6 @@
-# compute_element
-MINDSPORE_PLATFORM = "mindspore_platform"
-TORCH_PLATFORM = "torch_platform"
+class MsApiAccuracyCheckerConst:
+    #api_runner
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+
+

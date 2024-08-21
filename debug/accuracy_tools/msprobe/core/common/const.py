@@ -180,6 +180,7 @@ class CompareConst:
     WARNING = 'Warning'
     ERROR = 'error'
     SKIP = 'SKIP'
+    N_A = 'N/A'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8

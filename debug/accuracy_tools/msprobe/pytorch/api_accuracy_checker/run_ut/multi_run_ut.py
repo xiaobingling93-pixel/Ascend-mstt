@@ -117,7 +117,7 @@ def run_parallel_ut(config):
 
     for api_info in config.api_files:
         cmd = create_cmd(api_info, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1, shell=False)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
 

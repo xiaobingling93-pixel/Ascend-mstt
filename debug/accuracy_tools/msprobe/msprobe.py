@@ -44,7 +44,7 @@ def main():
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     _compare_parser(compare_cmd_parser)
-    is_torch_available=is_module_available("torch")
+    is_torch_available = is_module_available("torch")
     if is_torch_available:
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
         from msprobe.pytorch.parse_tool.cli import parse as cli_parse
