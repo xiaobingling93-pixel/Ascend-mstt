@@ -6,10 +6,9 @@ import json
 from collections import namedtuple
 from rich.table import Table
 from rich.console import Console
+from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.file_check import FileOpen, change_mode
 from .single_compare import single_benchmark_compare_wrap
-from .utils import DispatchException
-from msprobe.core.common.const import CompareConst
-from msprobe.core.common.file_check import FileOpen
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
 
@@ -42,6 +41,7 @@ def write_csv(data, filepath):
     with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 class Saver:

@@ -38,6 +38,7 @@ class Const:
     PKL_SUFFIX = ".pkl"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
+    MAX_TRAVERSAL_DEPTH = 5
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
     ONE_GB = 1 * 1024 * 1024 * 1024
     TEN_GB = 10 * 1024 * 1024 * 1024

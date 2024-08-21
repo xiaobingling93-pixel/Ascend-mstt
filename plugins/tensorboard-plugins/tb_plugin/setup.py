@@ -21,8 +21,13 @@
 import os
 import pathlib
 import subprocess
+from configparser import ConfigParser
+
 import setuptools
 
+
+config = ConfigParser()
+config.read('./config/config.ini')
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
@@ -83,11 +88,10 @@ setuptools.setup(
     name="torch-tb-profiler-ascend",
     version=get_version(os.path.join('torch_tb_profiler', '__init__.py')),
     description="PyTorch Ascend Profiler TensorBoard Plugin",
-    long_description="PyTorch Ascend Profiler TensorBoard Plugin : \
-        https://gitee.com/ascend/att/tree/master/plugins/tensorboard-plugins/tb_plugin",
-    url="https://gitee.com/ascend/att/tree/master/plugins/tensorboard-plugins/tb_plugin",
+    long_description=f"PyTorch Ascend Profiler TensorBoard Plugin: {config.get('URL', 'repository_url')}",
+    url=config.get('URL', 'repository_url'),
     author="Ascend Team",
-    author_email="pmail_mindstudio@huawei.com",
+    author_email=config.get('EMAIL', 'author_email'),
     cmdclass={
         "build_fe": build_fe
     },

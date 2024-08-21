@@ -61,8 +61,7 @@ class PrecisionDebugger:
             return
 
         instance.config.execution_mode = instance._get_execution_mode()
-        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API and \
-           instance.config.task != Const.FREE_BENCHMARK:
+        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.task != Const.FREE_BENCHMARK:
             if not instance.service:
                 instance.service = Service(instance.config)
             instance.service.start(target)

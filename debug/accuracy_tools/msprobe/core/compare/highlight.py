@@ -4,10 +4,9 @@ from collections import namedtuple
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from msprobe.core.common.utils import get_header_index, CompareException
+from msprobe.core.common.utils import get_header_index, save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import change_mode
-from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.const import CompareConst
 
 
 class HighlightCheck(abc.ABC):
@@ -219,9 +218,5 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             elif (i - 2) in highlight_dict['yellow_rows']:
                 ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
                                                             end_color=CompareConst.YELLOW, fill_type="solid")
-    try:
-        wb.save(file_path)
-    except Exception as e:
-        logger.error('Save result file failed')
-        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
-    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+    save_workbook(wb, file_path)

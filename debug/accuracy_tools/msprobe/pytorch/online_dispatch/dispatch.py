@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from multiprocessing import Manager, Pool
 
-import yaml
 import torch
 
 from torch.utils._python_dispatch import TorchDispatchMode
@@ -16,14 +15,14 @@ except ImportError:
 else:
     is_npu = True
 
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
+from msprobe.core.common.const import Const, CompareConst
+from msprobe.pytorch.common.log import logger
 from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
     DispatchRunParam, DisPatchDataInfo
-from .utils import get_callstack, data_to_cpu, logger_debug, logger_error, logger_warn, logger_logo, get_sys_info, \
-    DispatchException
+from .utils import get_callstack, data_to_cpu,  get_sys_info, DispatchException, COMPARE_LOGO
 from .compare import Comparator
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.const import Const, CompareConst
+
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -33,12 +32,12 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 class PtdbgDispatch(TorchDispatchMode):
     def __init__(self, dump_mode=Const.OFF, api_list=None, debug=False, dump_path=None, tag=None, process_num=0):
         super(PtdbgDispatch, self).__init__()
-        logger_logo()
+        logger.info(COMPARE_LOGO)
         if not is_npu:
-            logger_error("Please confirm you run environment installed torch_npu!")
+            logger.error("Please confirm you run environment installed torch_npu!")
             return
         if dump_path is None:
-            logger_error("Please set dump_path when dump_mode is config!")
+            logger.error("Please set dump_path when dump_mode is config!")
         check_file_or_directory_path(dump_path, True)
 
         self.device_id = torch_npu._C._npu_getDevice()
@@ -70,13 +69,13 @@ class PtdbgDispatch(TorchDispatchMode):
         self.aten_ops_blacklist = []
         self.npu_adjust_autogard = []
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
-        self.load_yaml_file(yaml_path)
+        self.get_ops(yaml_path)
 
         self.lock = None
         if process_num > 0:
             self.pool = Pool(process_num)
         if debug:
-            logger_debug(f'Main pid:{os.getpid()} device:{self.device_id} dump_list:{self.dump_api_list} '
+            logger.info(f'Main pid:{os.getpid()} device:{self.device_id} dump_list:{self.dump_api_list} '
                          f'dump_mode:{self.dump_mode} cpu_path[{self.root_cpu_path}], npu_path[{self.root_npu_path}], '
                          f'process[{process_num}]')
 
@@ -85,14 +84,14 @@ class PtdbgDispatch(TorchDispatchMode):
 
         if not is_npu:
             return
-        logger_debug(f'start write compare csv: Rank[{self.device_id}], Pid[{os.getpid()}')
+        logger.info(f'start write compare csv: Rank[{self.device_id}], Pid[{os.getpid()}')
 
         if self.process_num > 0:
             self.pool.close()
             self.pool.join()
             summary_path = os.path.join(self.root_cpu_path, f'summary.json')
             if not os.path.exists(summary_path):
-                logger_error("Please check train log, An exception may have occurred!")
+                logger.error("Please check train log, An exception may have occurred!")
                 return
             check_file_or_directory_path(summary_path, False)
             fp_handle = open(summary_path, "r")
@@ -113,18 +112,18 @@ class PtdbgDispatch(TorchDispatchMode):
 
             for list_data in self.all_summary:
                 for data in list_data:
-                    logger_debug(f'summary: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
+                    logger.info(f'summary: Device[{self.device_id}], Pid[{os.getpid()}], Data[{data}]')
                     if "_input" in data[CompareConst.NPU_NAME]:
                         input_num = input_num + 1
                     if "_output" in data[CompareConst.NPU_NAME]:
                         output_num = output_num + 1
                     total_num = total_num + 1
-            logger_debug(f'Dispatch exit: Device[{self.device_id}], Pid[{os.getpid()} Input[{input_num}] '
+            logger.info(f'Dispatch exit: Device[{self.device_id}], Pid[{os.getpid()} Input[{input_num}] '
                          f'Output[{output_num}] Total[{total_num}] API_Total[{self.api_index}]]')
 
     def __torch_dispatch__(self, func, types, args=(), kwargs=None):
         if not is_npu:
-            logger_error("Please confirm you run environment installed torch_npu!")
+            logger.error("Please confirm you run environment installed torch_npu!")
             return func(*args, **kwargs)
 
         func_name_split_list = func.__name__.split(".")
@@ -132,7 +131,7 @@ class PtdbgDispatch(TorchDispatchMode):
         try:
             aten_api_overload_name = func_name_split_list[1]
         except IndexError:
-            logger_error(f"Please check the func name {func.__name__}!")
+            logger.error(f"Please check the func name {func.__name__}!")
             return func(*args, **kwargs)
 
         self.enable_autogard(aten_api)
@@ -151,7 +150,7 @@ class PtdbgDispatch(TorchDispatchMode):
         run_param = self.get_run_param(aten_api, func.__name__, aten_api_overload_name)
 
         if self.debug_flag:
-            logger_debug(f'Dispatch Info: Rank[{self.device_id}], Pid[{os.getpid()}], Func[{func.__name__}], '
+            logger.info(f'Dispatch Info: Rank[{self.device_id}], Pid[{os.getpid()}], Func[{func.__name__}], '
                          f'Name[{run_param.aten_api}_{run_param.single_api_index}], '
                          f'Count[{self.api_index}], Sys[{get_sys_info()}]')
 
@@ -189,7 +188,7 @@ class PtdbgDispatch(TorchDispatchMode):
                 self.pool.apply_async(func=dispatch_multiprocess, args=(run_param, data_info),
                                       error_callback=error_call)
             else:
-                logger_error("can not get correct function please set process_num=0")
+                logger.error("can not get correct function please set process_num=0")
         return npu_out
 
     @staticmethod
@@ -208,17 +207,16 @@ class PtdbgDispatch(TorchDispatchMode):
         time.sleep(1)
         time_now = time.strftime("%Y%m%d%H%M%S", time.localtime(time.time()))
         if tag is None or not isinstance(tag, str):
-            logger_warn('There is not tag or the type of tag is not string.')
+            logger.warning('There is not tag or the type of tag is not string.')
             dir_name = f'msprobe_rank{self.device_id}_{time_now}'
         else:
             dir_name = f'msprobe_{tag}_rank{self.device_id}_{time_now}'
         return dir_name
 
-    def load_yaml_file(self, file_path):
-        with FileOpen(file_path, 'r') as f:
-            yaml_file = yaml.safe_load(f)
-            self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-            self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+    def get_ops(self, file_path):
+        yaml_file = load_yaml(file_path)
+        self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
+        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:
@@ -230,7 +228,7 @@ class PtdbgDispatch(TorchDispatchMode):
             if aten_api in aten_api_list:
                 dump_api_list.append(aten_api)
             else:
-                logger_warn(f'{aten_api} is not aten api will not dump, please refer to torch.ops.aten')
+                logger.warning(f'{aten_api} is not aten api will not dump, please refer to torch.ops.aten')
         self.dump_api_list = dump_api_list
 
     def get_run_param(self, aten_api, func_name, aten_api_overload_name):
@@ -257,16 +255,16 @@ class PtdbgDispatch(TorchDispatchMode):
 
     def check_param(self):
         if self.dump_mode not in Const.ONLINE_DUMP_MODE:
-            logger_error('The parameter "dump mode" can only be one of {}.'.format(Const.ONLINE_DUMP_MODE))
+            logger.error('The parameter "dump mode" can only be one of {}.'.format(Const.ONLINE_DUMP_MODE))
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.dump_api_list, list):
-            logger_error('The type of parameter "api_list" can only be list.')
+            logger.error('The type of parameter "api_list" can only be list.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.debug_flag, bool):
-            logger_error('The type of parameter "debug" can only be bool.')
+            logger.error('The type of parameter "debug" can only be bool.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.process_num, int) or self.process_num < 0:
-            logger_error('The type of parameter "process_num" can only be int and it should not be less than 0.')
+            logger.error('The type of parameter "process_num" can only be int and it should not be less than 0.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
 
     def enable_autogard(self, aten_api):

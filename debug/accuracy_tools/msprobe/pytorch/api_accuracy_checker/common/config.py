@@ -1,15 +1,14 @@
 import os
 import yaml
-from msprobe.pytorch.api_accuracy_checker.common.utils import check_file_or_directory_path
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import check_file_or_directory_path
+from msprobe.core.common.utils import load_yaml
 from msprobe.pytorch.pt_config import RunUTConfig
 
 
 class Config:
     def __init__(self, yaml_file):
         check_file_or_directory_path(yaml_file, False)
-        with FileOpen(yaml_file, 'r') as file:
-            config = yaml.safe_load(file)
+        config = load_yaml(yaml_file)
         self.config = {key: self.validate(key, value) for key, value in config.items()}
 
     def __getattr__(self, item):

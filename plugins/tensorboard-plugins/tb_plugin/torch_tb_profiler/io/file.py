@@ -160,10 +160,6 @@ class LocalFileSystem(LocalPath, BaseFileSystem):
         return StatData(file_length)
 
     def walk(self, top, topdown=True, onerror=None):
-        # Note on followlinks=True: per the tensorboard documentation [1], users are encouraged to
-        # use symlink trees to have fine-grained control over the filesystem layout of runs. To
-        # support such trees, we must follow links.
-        # [1] https://github.com/tensorflow/tensorboard/blob/master/README.md#logdir--logdir_spec-legacy-mode
         yield from os.walk(top, topdown, onerror, followlinks=True)
 
 
@@ -261,9 +257,6 @@ class S3FileSystem(RemotePath, BaseFileSystem):
     def download_file(self, file_to_download, file_to_save):
         logger.info("s3: starting downloading file %s as %s" %
                     (file_to_download, file_to_save))
-        # Use boto3.resource instead of boto3.client('s3') to support minio.
-        # https://docs.min.io/docs/how-to-use-aws-sdk-for-python-with-minio-server.html
-        # To support minio, the S3_ENDPOINT need to be set like: S3_ENDPOINT=http://localhost:9000
         s3 = boto3.resource("s3", endpoint_url=self._s3_endpoint)
         bucket, path = self.bucket_and_path(file_to_download)
         s3.Bucket(bucket).download_file(path, file_to_save)

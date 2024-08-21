@@ -18,18 +18,15 @@
 import os
 from functools import wraps
 import torch.distributed as dist
-import yaml
 
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import load_yaml
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-with FileOpen(yaml_path, 'r') as f:
-    WrapDistributedOps = yaml.safe_load(f).get('distributed')
 
 
 distributed_func = {}
@@ -38,9 +35,10 @@ for f in dir(dist):
 
 
 def get_distributed_ops():
-    global WrapDistributedOps
     _all_distributed_ops = dir(dist)
-    return set(WrapDistributedOps) & set(_all_distributed_ops)
+    yaml_data = load_yaml(yaml_path)
+    wrap_distributed_ops = yaml_data.get('distributed')
+    return set(wrap_distributed_ops) & set(_all_distributed_ops)
 
 
 class HOOKDistributedOP(object):
