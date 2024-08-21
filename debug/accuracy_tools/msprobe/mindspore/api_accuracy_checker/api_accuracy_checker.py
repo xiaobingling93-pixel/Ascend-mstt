@@ -2,13 +2,12 @@ import json
 import os
 
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import write_whole_csv, add_time_as_suffix
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.utils import write_new_csv, add_time_as_suffix
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
-from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 
 
@@ -40,25 +39,29 @@ class ApiAccuracyChecker:
             api_info_dict = json.load(f)
 
         # init global context
-        task = check_and_get_from_json_dict(api_info_dict, MsApiAccuracyCheckerConst.TASK_FIELD,
+        task = check_and_get_from_json_dict(api_info_dict, MsCompareConst.TASK_FIELD,
                                             "task field in api_info.json",accepted_type=str,
-                                            accepted_value=(MsApiAccuracyCheckerConst.STATISTICS_TASK,
-                                                            MsApiAccuracyCheckerConst.TENSOR_TASK))
-        is_constructed = task == MsApiAccuracyCheckerConst.STATISTICS_TASK
+                                            accepted_value=(MsCompareConst.STATISTICS_TASK,
+                                                            MsCompareConst.TENSOR_TASK))
+        is_constructed = task == MsCompareConst.STATISTICS_TASK
         if not is_constructed:
-            dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsApiAccuracyCheckerConst.DUMP_DATA_DIR_FIELD,
+            dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DUMP_DATA_DIR_FIELD,
                                                          "dump_data_dir field in api_info.json", accepted_type=str)
         else:
             dump_data_dir = ""
         global_context.init(is_constructed, dump_data_dir)
 
-        api_info_data = check_and_get_from_json_dict(api_info_dict, MsApiAccuracyCheckerConst.DATA_FIELD,
+        api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
                                                      "data field in api_info.json", accepted_type=dict)
         for api_name, api_info in api_info_data.items():
-            forbackward_str = api_name.split(".")[-1]
+            is_mint = api_name.split(Const.SEP)[0] in \
+                (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
+            if not is_mint:
+                continue
+            forbackward_str = api_name.split(Const.SEP)[-1]
             if forbackward_str not in (Const.FORWARD, Const.BACKWARD):
                 logger.warning(f"api: {api_name} is not recognized as forward api or backward api, skip this.")
-            api_name = Const.SEP.join(api_name.split(".")[:-1]) # www.xxx.yyy.zzz --> www.xxx.yyy
+            api_name = Const.SEP.join(api_name.split(Const.SEP)[:-1]) # www.xxx.yyy.zzz --> www.xxx.yyy
             if api_name not in self.api_infos:
                 self.api_infos[api_name] = ApiInfo(api_name)
 
@@ -86,7 +89,7 @@ class ApiAccuracyChecker:
             tested_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.MS_FRAMEWORK)
         else:
             tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
-        bench_outputs = api_runner(api_input_aggregation, api_name_str, Const.FORWARD, Const.PT_FRAMEWORK)
+        bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
 
         # compare output
         for i, (bench_out, tested_out) in enumerate(zip(bench_outputs, tested_outputs)):
@@ -113,12 +116,12 @@ class ApiAccuracyChecker:
                         compare_result_dict)
 
     def run_and_compare(self):
-        for api_name_str, api_info in self.api_infos:
+        for api_name_str, api_info in self.api_infos.items():
             if not api_info.check_forward_info():
                 logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check")
                 continue
             forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
-            kwargs = api_info.get_kwargs(api_info, api_name_str, )
+            kwargs = api_info.get_kwargs()
             forward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, None)
             self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
 
@@ -140,15 +143,15 @@ class ApiAccuracyChecker:
         # detail_csv
         detail_csv = []
         detail_csv_header_basic_info = [
-            MsApiAccuracyCheckerConst.DETAIL_CSV_API_NAME,
-            MsApiAccuracyCheckerConst.DETAIL_CSV_BENCH_DTYPE,
-            MsApiAccuracyCheckerConst.DETAIL_CSV_TESTED_DTYPE,
-            MsApiAccuracyCheckerConst.DETAIL_CSV_SHAPE,
+            MsCompareConst.DETAIL_CSV_API_NAME,
+            MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
+            MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
+            MsCompareConst.DETAIL_CSV_SHAPE,
         ]
         detail_csv_header_compare_result = list(compare_algorithms.keys())
         detail_csv_header_status = [
-            MsApiAccuracyCheckerConst.DETAIL_CSV_PASS_STATUS,
-            MsApiAccuracyCheckerConst.DETAIL_CSV_MESSAGE,
+            MsCompareConst.DETAIL_CSV_PASS_STATUS,
+            MsCompareConst.DETAIL_CSV_MESSAGE,
         ]
 
         detail_csv_header = detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
@@ -166,8 +169,8 @@ class ApiAccuracyChecker:
                 csv_row = csv_row_basic_info  + csv_row_compare_result + csv_row_status
                 detail_csv.append(csv_row)
 
-        file_name = os.path.join(csv_dir, add_time_as_suffix(MsApiAccuracyCheckerConst.DETAIL_CSV_FILE_NAME))
-        write_whole_csv(detail_csv, file_name)
+        file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.DETAIL_CSV_FILE_NAME))
+        write_new_csv(detail_csv, file_name)
 
 
     def to_result_csv(self, csv_dir):
@@ -198,14 +201,14 @@ class ApiAccuracyChecker:
         #result_csv
         result_csv = []
         result_csv_header = [
-            MsApiAccuracyCheckerConst.DETAIL_CSV_API_NAME,
-            MsApiAccuracyCheckerConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
-            MsApiAccuracyCheckerConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
-            MsApiAccuracyCheckerConst.DETAIL_CSV_MESSAGE,
+            MsCompareConst.DETAIL_CSV_API_NAME,
+            MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
+            MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
+            MsCompareConst.DETAIL_CSV_MESSAGE,
         ]
         result_csv.append(result_csv_header)
 
-        for api_name, result_csv_entry in result_csv_dict:
+        for api_name, result_csv_entry in result_csv_dict.items():
             if result_csv_entry.forward_pass_status == CompareConst.PASS and \
                 result_csv_entry.backward_pass_status == CompareConst.PASS:
                 overall_err_msg = ""
@@ -215,5 +218,5 @@ class ApiAccuracyChecker:
                    result_csv_entry.backward_pass_status, overall_err_msg]
             result_csv.append(row)
 
-        file_name = os.path.join(csv_dir, add_time_as_suffix(MsApiAccuracyCheckerConst.RESULT_CSV_FILE_NAME))
-        write_whole_csv(result_csv, file_name)
+        file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
+        write_new_csv(result_csv, file_name)

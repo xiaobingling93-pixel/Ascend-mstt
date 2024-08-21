@@ -527,11 +527,11 @@ def write_csv(data, filepath):
         writer = csv.writer(f)
         writer.writerows(data)
 
-def write_whole_csv(data_list, filepath):
+def write_new_csv(data, filepath):
     with FileOpen(filepath, 'w', encoding='utf-8-sig') as f:
         writer = csv.writer(f)
-        for data in data_list:
-            writer.writerows(data)
+        writer.writerows(data)
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def load_npy(filepath):

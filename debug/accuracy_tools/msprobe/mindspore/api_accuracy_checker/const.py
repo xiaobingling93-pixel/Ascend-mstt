@@ -1,4 +1,4 @@
-class MsApiAccuracyCheckerConst:
+class MsCompareConst:
     # api_info field
     MINT = "Mint"
     MINT_FUNCTIONAL = "MintFunctional"
@@ -22,4 +22,6 @@ class MsApiAccuracyCheckerConst:
     RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
     RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
     RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
 
