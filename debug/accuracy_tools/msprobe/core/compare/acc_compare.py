@@ -19,10 +19,10 @@ from msprobe.core.advisor.advisor import Advisor
 class Comparator:
     
     def __init__(self):
-        pass    
+        pass
     
     @classmethod
-    def make_result_table(cls,result,md5_compare,summary_compare,stack_mode):
+    def make_result_table(cls,result, md5_compare, summary_compare, stack_mode):
         header = []
         if md5_compare:
             header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
@@ -50,7 +50,7 @@ class Comparator:
         return result_df   
     
     @classmethod
-    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
+    def gen_merge_list(self, json_data, op_name,stack_json_data, summary_compare, md5_compare):
         op_data = json_data['data'][op_name]
         op_parsed_list = read_op(op_data, op_name)
         if op_name in stack_json_data:
@@ -93,7 +93,7 @@ class Comparator:
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
-    def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
+    def compare_process(self, file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
         npu_json_data = json.load(npu_json_handle)
         bench_json_data = json.load(bench_json_handle)
@@ -171,7 +171,10 @@ class Comparator:
                 frame_name = getattr(self, "frame_name")
                 if frame_name == "MSComparator":
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
-                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                    if self.cross_frame:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
+                    else:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
                     b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
