@@ -1,17 +1,39 @@
+import json
+import os
+
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.const import Const
+from msprobe.core.common.utils import write_whole_csv, add_time_as_suffix
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
+from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
 from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
-import json
+
+
+class BasicInfoAndStatus:
+    def __init__(self, api_name, bench_dtype, tested_dtype, shape, status, err_msg) -> None:
+        self.api_name = api_name
+        self.bench_dtype = bench_dtype
+        self.tested_dtype = tested_dtype
+        self.shape = shape
+        self.status = status
+        self.err_msg = err_msg
+
+class ResultCsvEntry:
+    def __init__(self) -> None:
+        self.forward_pass_status = None
+        self.backward_pass_status = None
+        self.forward_err_msg = ""
+        self.backward_err_msg = ""
+        self.overall_err_msg = None
 
 
 class ApiAccuracyChecker:
     def __init__(self):
         self.api_infos = dict()
-        self.results = None
+        self.results = dict()
 
     def parse(self, api_info_path):
         with FileOpen(api_info_path, "r") as f:
@@ -45,22 +67,153 @@ class ApiAccuracyChecker:
             else:
                 self.api_infos[api_name].load_backward_info(api_info)
 
+    def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
+        '''
+        Args:
+            api_info: ApiInfo
+            api_name_str: str
+            api_input_aggregation: ApiInputAggregation
+            forward_or_backward: str: Union["forward", "backward"]
+
+        Description:
+            get mindspore api output, run torch api and get output.
+            compare output.
+            record compare result.
+        '''
+        # get output
+        if global_context.get_is_constructed():
+            # constructed situation, need use constructed input to run mindspore api getting tested_output
+            tested_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.MS_FRAMEWORK)
+        else:
+            tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
+        bench_outputs = api_runner(api_input_aggregation, api_name_str, Const.FORWARD, Const.PT_FRAMEWORK)
+
+        # compare output
+        for i, (bench_out, tested_out) in enumerate(zip(bench_outputs, tested_outputs)):
+            api_name_with_slot = Const.SEP.join([api_name_str, forward_or_backward, Const.OUTPUT, str(i)])
+            bench_dtype = bench_out.get_dtype()
+            tested_dtype = tested_out.get_dtype()
+            shape = bench_out.get_shape()
+
+            compare_result_dict = dict()
+            for compare_algorithm_name, compare_algorithm in compare_algorithms.items():
+                compare_result = compare_algorithm(bench_out, tested_out)
+                compare_result_dict[compare_algorithm_name] = compare_result
+
+            if compare_result_dict.get(CompareConst.COSINE).pass_status == CompareConst.PASS and \
+                compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
+                status = CompareConst.PASS
+                err_msg = ""
+            else:
+                status = CompareConst.ERROR
+                err_msg = compare_result_dict.get(CompareConst.COSINE).err_msg + \
+                    compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg
+            self.record(api_name_str, forward_or_backward,
+                        BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg),
+                        compare_result_dict)
 
     def run_and_compare(self):
         for api_name_str, api_info in self.api_infos:
             if not api_info.check_forward_info():
-                logger.warning(f"api: {api_name_str} is lack of forward infomation skip checking")
+                logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check")
                 continue
-            # first run forapi_infoward and compare
-            inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
-            kwargs =api_info.get_kwargs()
+            forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
+            kwargs = api_info.get_kwargs(api_info, api_name_str, )
+            forward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, None)
+            self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
 
-            if global_context.get_is_constructed():
-                tested
+            if not api_info.check_backward_info():
+                logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check")
+                continue
+            gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
+            backward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
+            self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
 
-    def record(self, compare_result_collection):
-        pass
+    def record(self, api_real_name, forward_or_backward, basic_info, compare_result_dict):
+        key = tuple([api_real_name, forward_or_backward])
+        if key not in self.results:
+            self.results[key] = []
+        self.results[key].append(tuple([basic_info, compare_result_dict]))
 
 
-    def to_csv(self):
-        pass
+    def to_detail_csv(self, csv_dir):
+        # detail_csv
+        detail_csv = []
+        detail_csv_header_basic_info = [
+            MsApiAccuracyCheckerConst.DETAIL_CSV_API_NAME,
+            MsApiAccuracyCheckerConst.DETAIL_CSV_BENCH_DTYPE,
+            MsApiAccuracyCheckerConst.DETAIL_CSV_TESTED_DTYPE,
+            MsApiAccuracyCheckerConst.DETAIL_CSV_SHAPE,
+        ]
+        detail_csv_header_compare_result = list(compare_algorithms.keys())
+        detail_csv_header_status = [
+            MsApiAccuracyCheckerConst.DETAIL_CSV_PASS_STATUS,
+            MsApiAccuracyCheckerConst.DETAIL_CSV_MESSAGE,
+        ]
+
+        detail_csv_header = detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
+        detail_csv.append(detail_csv_header)
+
+        for _, results in self.results.items():
+            # detail csv
+            for res in results:
+                basic_info, compare_result_dict = res
+                csv_row_basic_info = \
+                    [basic_info.api_name, basic_info.bench_dtype, basic_info.tested_dtype, basic_info.shape]
+                csv_row_compare_result = list(compare_result_dict.get(algorithm_name).compare_value \
+                                            for algorithm_name in detail_csv_header_compare_result)
+                csv_row_status = [basic_info.status, basic_info.err_msg]
+                csv_row = csv_row_basic_info  + csv_row_compare_result + csv_row_status
+                detail_csv.append(csv_row)
+
+        file_name = os.path.join(csv_dir, add_time_as_suffix(MsApiAccuracyCheckerConst.DETAIL_CSV_FILE_NAME))
+        write_whole_csv(detail_csv, file_name)
+
+
+    def to_result_csv(self, csv_dir):
+        result_csv_dict = dict()
+        for key, results in self.results.items():
+            api_real_name, forward_or_backward = key
+            forward_or_backward_pass_status = CompareConst.PASS
+            forward_or_backward_overall_err_msg = ""
+            # detail csv
+            for res in results:
+                basic_info, _ = res
+                if basic_info.status != CompareConst.PASS:
+                    forward_or_backward_pass_status = CompareConst.ERROR
+                forward_or_backward_overall_err_msg += basic_info.err_msg
+            forward_or_backward_overall_err_msg = \
+                "" if forward_or_backward_pass_status == CompareConst.PASS else forward_or_backward_overall_err_msg
+
+            #result_csv_dict
+            if api_real_name not in result_csv_dict:
+                result_csv_dict[api_real_name] = ResultCsvEntry()
+            if forward_or_backward == Const.FORWARD:
+                result_csv_dict[api_real_name].forward_pass_status = forward_or_backward_pass_status
+                result_csv_dict[api_real_name].forward_err_msg = forward_or_backward_overall_err_msg
+            else:
+                result_csv_dict[api_real_name].backward_pass_status = forward_or_backward_pass_status
+                result_csv_dict[api_real_name].backward_err_msg = forward_or_backward_overall_err_msg
+
+        #result_csv
+        result_csv = []
+        result_csv_header = [
+            MsApiAccuracyCheckerConst.DETAIL_CSV_API_NAME,
+            MsApiAccuracyCheckerConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
+            MsApiAccuracyCheckerConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
+            MsApiAccuracyCheckerConst.DETAIL_CSV_MESSAGE,
+        ]
+        result_csv.append(result_csv_header)
+
+        for api_name, result_csv_entry in result_csv_dict:
+            if result_csv_entry.forward_pass_status == CompareConst.PASS and \
+                result_csv_entry.backward_pass_status == CompareConst.PASS:
+                overall_err_msg = ""
+            else:
+                overall_err_msg = result_csv_entry.forward_err_msg + result_csv_entry.backward_err_msg
+            row = [api_name, result_csv_entry.forward_pass_status,
+                   result_csv_entry.backward_pass_status, overall_err_msg]
+            result_csv.append(row)
+
+        file_name = os.path.join(csv_dir, add_time_as_suffix(MsApiAccuracyCheckerConst.RESULT_CSV_FILE_NAME))
+        write_whole_csv(result_csv, file_name)

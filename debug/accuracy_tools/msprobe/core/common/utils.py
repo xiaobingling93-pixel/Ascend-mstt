@@ -527,6 +527,12 @@ def write_csv(data, filepath):
         writer = csv.writer(f)
         writer.writerows(data)
 
+def write_whole_csv(data_list, filepath):
+    with FileOpen(filepath, 'w', encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        for data in data_list:
+            writer.writerows(data)
+
 
 def load_npy(filepath):
     check_file_or_directory_path(filepath)
