@@ -37,10 +37,7 @@ else:
     is_gpu = False
 
 
-if torch.__version__ >= '2.1':
-    torch_without_guard_version = True
-else:
-    torch_without_guard_version = False
+torch_without_guard_version = torch.__version__ >= '2.1'
 
 
 if not is_gpu and not torch_without_guard_version:
