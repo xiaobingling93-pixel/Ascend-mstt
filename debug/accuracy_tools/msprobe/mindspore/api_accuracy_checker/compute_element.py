@@ -14,7 +14,7 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np
                                                                  DEFAULT_CONSTRUCT_NP_FLOAT_DTYPE, TUPLE_TYPE_STR,
                                                                  MINDSPORE_TENSOR_TYPE_STR, float_dtype_str_list,
                                                                  int_dtype_str_list)
-from msprobe.mindspore.api_accuracy_checker.const import MINDSPORE_PLATFORM, TORCH_PLATFORM
+from msprobe.core.common.const import Const
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
 
 
@@ -100,7 +100,7 @@ class ComputeElement:
             value = np.finfo(np_dtype).min
         return value
 
-    def get_parameter(self, get_origin=True, tensor_platform=MINDSPORE_PLATFORM):
+    def get_parameter(self, get_origin=True, tensor_platform=Const.MS_FRAMEWORK):
         '''
         Args:
             get_origin: boolean
@@ -127,9 +127,9 @@ class ComputeElement:
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
         # if necessary, do transfer
-        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == TORCH_PLATFORM:
+        if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.PT_FRAMEWORK:
             parameter = self.transfer_to_torch_tensor(parameter_tmp)
-        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform ==MINDSPORE_PLATFORM:
+        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform ==Const.MS_FRAMEWORK:
             parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
         else:
             parameter = parameter_tmp
