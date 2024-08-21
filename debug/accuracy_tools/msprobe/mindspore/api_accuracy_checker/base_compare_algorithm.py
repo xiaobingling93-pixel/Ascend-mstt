@@ -79,9 +79,9 @@ class BaseCompareAlgorithm(ABC):
         tested_parameter = tested_compute_element.get_parameter()
 
         bench_is_tensor = isinstance(bench_parameter, (mindspore.Tensor, torch.Tensor))
-        tested_is_tensosr = isinstance(tested_parameter, (mindspore.Tensor, torch.Tensor))
+        tested_is_tensor = isinstance(tested_parameter, (mindspore.Tensor, torch.Tensor))
         shape_same = bench_compute_element.get_shape() == tested_compute_element.get_shape()
-        return bench_is_tensor and tested_is_tensosr and shape_same
+        return bench_is_tensor and tested_is_tensor and shape_same
 
     @abstractmethod
     def check_validity(self, bench_compute_element, tested_compute_element):
