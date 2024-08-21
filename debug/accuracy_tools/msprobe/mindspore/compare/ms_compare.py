@@ -16,7 +16,7 @@ class MSComparator(Comparator):
         self.api_mapping = api_mapping
         self.cross_frame = cell_mapping is not None or api_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
-        self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
+        self.api_mapping_dict = {}
         if api_mapping is not None:
             self.ms_to_pt_mapping = self.load_internal_api()
             
@@ -32,34 +32,34 @@ class MSComparator(Comparator):
             mapping_dict = {}
         return mapping_dict
 
-    def process_cell_mapping(self, a_op_name):
-        a_op_name = [op_name.replace("Cell", "Module", 1) for op_name in a_op_name]
+    def process_cell_mapping(self, npu_op_name):
+        npu_op_name = [op_name.replace("Cell", "Module", 1) for op_name in npu_op_name]
         if self.cell_mapping_dict:
-            for index, op_name in enumerate(a_op_name):
+            for index, op_name in enumerate(npu_op_name):
                 # get cell name & class name from op_name
                 # Cell.fc1.Dense.forward.0.input.0
                 cell_name = op_name.split(Const.SEP, 1)[-1].rsplit(Const.SEP, 4)[0]
                 if cell_name in self.cell_mapping_dict:
-                    a_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
-        return a_op_name
+                    npu_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
+        return npu_op_name
 
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        a_op_name = npu_dict["op_name"].copy()
-        b_op_name = bench_dict["op_name"].copy()
+        npu_op_name = npu_dict["op_name"].copy()
+        bench_op_name = bench_dict["op_name"].copy()
    
         if self.api_mapping is not None:
-            a_op_name = self.process_api_mapping(a_op_name, b_op_name)
+            npu_op_name = self.process_api_mapping(npu_op_name, bench_op_name)
         if self.cell_mapping is not None:
-            a_op_name = self.process_cell_mapping(a_op_name)
+            npu_op_name = self.process_cell_mapping(npu_op_name)
 
         struct_match = check_struct_match(npu_dict, bench_dict, cross_frame=self.cross_frame)
         if not fuzzy_match:
-            return a_op_name == b_op_name and struct_match
+            return npu_op_name == bench_op_name and struct_match
         is_match = True
         try:
-            is_match = fuzzy_check_op(a_op_name, b_op_name)
+            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
-            logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
+            logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
             is_match = False
         return is_match and struct_match
     
@@ -76,23 +76,25 @@ class MSComparator(Comparator):
             data_value = load_npy(data_path) 
         return data_value    
 
-    def api_replace(self, a_op_name, target, para):
-        for idx, _ in enumerate(a_op_name):
-            a_op_name[idx] = a_op_name[idx].replace(target, para)
-        return a_op_name
+    def api_replace(self, npu_op_name, target, para):
+        for idx, _ in enumerate(npu_op_name):
+            npu_op_name[idx] = npu_op_name[idx].replace(target, para)
+        return npu_op_name
     
-    def process_api_mapping(self, a_op_name, b_op_name):
+    def process_api_mapping(self, npu_op_name, bench_op_name):
         # get api name & class name from op_name
         # Functional.addcmul.0.forward.input.0
-        ms_api_name = a_op_name[0].rsplit(Const.SEP, 4)[0]
-        pt_api_name = b_op_name[0].rsplit(Const.SEP, 4)[0]
+        ms_api_name = npu_op_name[0].rsplit(Const.SEP, 4)[0]
+        pt_api_name = bench_op_name[0].rsplit(Const.SEP, 4)[0]
         class_name = ms_api_name.split(Const.SEP)[0]
         if class_name == "Mint":
-            return self.api_replace(a_op_name, "Mint", "Torch")
-        if class_name == "MintFunctional":
-            return self.api_replace(a_op_name, "MintFunctional", "Functional")
-        if self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
-            return self.api_replace(a_op_name, ms_api_name, pt_api_name)
+            return self.api_replace(npu_op_name, "Mint", "Torch")
+        elif class_name == "MintFunctional":
+            return self.api_replace(npu_op_name, "MintFunctional", "Functional")
+        elif self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
+            return self.api_replace(npu_op_name, ms_api_name, pt_api_name)
+        else:
+            return npu_op_name
         
 
 def ms_compare(input_param, output_path, **kwargs):

@@ -92,6 +92,8 @@ def main():
             logger.error("MindSpore does not exist, please install MindSpore library")
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
+            if isinstance(args.api_mapping, str):
+                logger.warning("User defined mapping tables are not supported in the current version")
             compare_cli(args)
 
 if __name__ == "__main__":
