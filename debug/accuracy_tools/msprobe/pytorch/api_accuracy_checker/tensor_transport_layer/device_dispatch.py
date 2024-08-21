@@ -22,15 +22,15 @@ ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_
 
 OnlineApiPrecisionCompareConfig = namedtuple('OnlineApiPrecisionCompareConfig',
                                              ['npu_data', 'gpu_data', 'rank', 'result_csv_path', 'details_csv_path'])
+# namedtuple of [instance of Comparator, func of run_touch_api_online, config of run_ut_config]
+CommonCompareConfig = namedtuple('CommonCompareConfig', ['compare', 'handle_func', 'config'])
 
 
-def run_ut_process(xpu_id, compare, consumer_queue, func, config, api_precision_csv_file):
+def run_ut_process(xpu_id, consumer_queue, common_config, api_precision_csv_file):
     """ When consumer_queue(shared with ConsumerDispatcher) is not empty, consume api data from consumer_queue.
     :param xpu_id: int
-    :param compare: instance of Comparator
     :param consumer_queue: shared queues of ConsumerDispatcher
-    :param func: run_touch_api_online
-    :param config: run_ut_config
+    :param common_config: namedtuple of CommonCompareConfig
     :param api_precision_csv_file: list, length is 2, result file name and details file name
     :return:
     """
@@ -49,19 +49,23 @@ def run_ut_process(xpu_id, compare, consumer_queue, func, config, api_precision_
         _, api_name, _ = api_data.name.split(Const.SEP)
         if api_name in CompareApi:
             # NPU vs GPU
-            online_compare(api_data, gpu_device, compare, func, config)
+            online_compare(api_data, gpu_device, common_config)
         else:
             # NPUvsCPU vs GPUvsCPU
-            online_precision_compare(api_data, gpu_device, compare, func, config, api_precision_csv_file)
+            online_precision_compare(api_data, gpu_device, common_config, api_precision_csv_file)
 
 
-def online_precision_compare(api_data, device, compare, func, config, api_precision_csv_file):
+def online_precision_compare(api_data, device, common_config, api_precision_csv_file):
     """online run_ut for precision_compare: NPUvsCPU vs GPUvsCPU
     1. get NPUvsCPU compare result
     2. get GPUvsCPU compare result
     3. call online_api_precision_compare
+    :param api_data
+    :param device
+    :param common_config: namedtuple of CommonCompareConfig
+    :param api_precision_csv_file: [result_file_name, details_file_name]
     """
-
+    compare, func, config = common_config.compare, common_config.handle_func, common_config.config
     api_full_name = api_data.name
     [api_type, api_name, _] = api_full_name.split(Const.SEP)
     npu_args, npu_kwargs, npu_out = api_data.args, api_data.kwargs, api_data.result
@@ -106,9 +110,10 @@ def online_precision_compare(api_data, device, compare, func, config, api_precis
         torch.cuda.empty_cache()
 
 
-def online_compare(api_data, device, compare, func, config):
-    """online run_ut for compare：NPU vs GPU"""
-
+def online_compare(api_data, device, common_config):
+    """online run_ut for compare：NPU vs GPU
+    """
+    compare, func, config = common_config.compare, common_config.handle_func, common_config.config
     api_full_name = api_data.name
     api_data = move2target_device(api_data, device)
     try:
@@ -152,9 +157,10 @@ class ConsumerDispatcher:
     def start(self, handle_func, config):
         self.queues = [mp.Queue(maxsize=self.capacity) for _ in range(self.num_workers)]
         api_precision_csv_file = [ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME, ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME]
+        common_config = CommonCompareConfig(self.compare, handle_func, config)
         for xpu_id, q in enumerate(self.queues):
             p = mp.Process(name="run_ut_process", target=run_ut_process,
-                           args=(xpu_id, self.compare, q, handle_func, config, api_precision_csv_file))
+                           args=(xpu_id, q, common_config, api_precision_csv_file))
 
             p.start()
             self.processes.append(p)
