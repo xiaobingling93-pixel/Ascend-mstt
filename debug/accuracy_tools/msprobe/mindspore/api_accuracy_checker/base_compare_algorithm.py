@@ -179,7 +179,7 @@ class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
         tested_ndarray = self.convert_to_np_float64_ndarray(tested_compute_element.get_parameter())
 
         abs_diff = np.abs(bench_ndarray - tested_ndarray)
-        bench_ndarray_nonzero = bench_ndarray + (bench_ndarray == 0) * MsCompareConst.EPSILON # prevent division by 0
+        bench_ndarray_nonzero = np.abs(bench_ndarray) + (bench_ndarray == 0) * MsCompareConst.EPSILON # prevent division by 0
         max_relative_diff = np.max(abs_diff / bench_ndarray_nonzero)
         return max_relative_diff
 
