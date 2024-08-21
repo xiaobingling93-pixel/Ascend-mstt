@@ -19,9 +19,16 @@ class MSComparator (Comparator):
         self.cross_frame = cell_mapping is not None or api_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
         self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
+        if api_mapping is not None:
+            self.ms_to_pt_mapping = self.load_internal_api()
+            
+    def load_internal_api(self):
+        cur_path = os.path.dirname(os.path.realpath(__file__))
+        yaml_path=os.path.join(cur_path,"ms_to_pt_api_dict.yaml")
+        return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
-        if isinstance(self.cell_mapping, str):
+        if isinstance(mapping_file, str):
             mapping_dict = load_yaml(mapping_file)
         else:
             mapping_dict = {}
@@ -75,12 +82,31 @@ class MSComparator (Comparator):
             data_value = np.load(data_path)      
         return data_value    
 
+    def api_replace(self, a_op_name, target, para):
+        for i in range(len(a_op_name)):
+            a_op_name[i] = a_op_name[i].replace(target, para)
+        return a_op_name
+    
+    def process_api_mapping(self, a_op_name, b_op_name):
+        ms_api_para_list = a_op_name[0].split(Const.SEP)
+        ms_api_name= ms_api_para_list[0] + Const.SEP + ms_api_para_list[1]
+        pt_api_para_list = b_op_name[0].split(Const.SEP)
+        pt_api_name= pt_api_para_list[0] + Const.SEP + pt_api_para_list[1]
+        if ms_api_para_list[0] == "Mint":
+            return self.api_replace(a_op_name, "Mint", "Torch")
+        if ms_api_para_list[0] == "MintFunctional":
+            return self.api_replace(a_op_name, "MintFunctional", "Functional")
+        if self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
+            return self.api_replace(a_op_name, ms_api_name, pt_api_name)
+        
+
 def ms_compare(input_param, output_path, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
         auto_analyze = kwargs.get('auto_analyze', True)
         fuzzy_match = kwargs.get('fuzzy_match', False)
         cell_mapping = kwargs.get('cell_mapping', None)
+        api_mapping = kwargs.get('api_mapping', None)
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
         create_directory(output_path)
@@ -88,7 +114,7 @@ def ms_compare(input_param, output_path, **kwargs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    ms_comparator = MSComparator(cell_mapping)
+    ms_comparator = MSComparator(cell_mapping, api_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)
