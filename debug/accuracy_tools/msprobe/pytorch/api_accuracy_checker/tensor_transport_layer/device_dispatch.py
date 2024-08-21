@@ -1,4 +1,5 @@
 import time
+from collections import namedtuple
 
 import pandas as pd
 import torch
@@ -9,11 +10,18 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import o
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS, thousandth_standard_api, \
     binary_standard_api, absolute_standard_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
-from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
 
 # NPU vs GPU api list
 CompareApi = set(absolute_standard_api) | set(binary_standard_api) | set(thousandth_standard_api)
+
+current_time = time.strftime("%Y%m%d%H%M%S")
+ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME = "api_precision_compare_result_" + current_time + ".csv"
+ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME = "api_precision_compare_details_" + current_time + ".csv"
+
+OnlineApiPrecisionCompareConfig = namedtuple('OnlineApiPrecisionCompareConfig',
+                                             ['npu_data', 'gpu_data', 'rank', 'result_csv_path', 'details_csv_path'])
 
 
 def run_ut_process(xpu_id, compare, consumer_queue, func, config):
@@ -64,7 +72,6 @@ def online_precision_compare(api_data, device, compare, func, config):
         # NPU vs CPU
         cpu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
         npu_data_info = UtDataInfo(None, None, npu_out, cpu_out, None, [], None, rank=api_data.rank)
-        logger.debug(f"success exec run_ut in cpu device {api_full_name}")
         npu_detail = compare.compare_output(api_full_name, npu_data_info, True)
         npu_data = pd.DataFrame(npu_detail, columns=DETAIL_TEST_ROWS[-1])
 
@@ -73,12 +80,14 @@ def online_precision_compare(api_data, device, compare, func, config):
         data_info = func(api_full_name, api_data_gpu, config.backward_content)
         gpu_out = data_info.bench_output
         gpu_data_info = UtDataInfo(None, None, gpu_out, cpu_out, None, [], None, rank=api_data.rank)
-        logger.debug(f"success exec run_ut in gpu device {api_full_name}")
         gpu_detail = compare.compare_output(api_full_name, gpu_data_info, True)
         gpu_data = pd.DataFrame(gpu_detail, columns=DETAIL_TEST_ROWS[-1])
 
         # NPUvsCPU vs GPUvsCPU
-        online_api_precision_compare(npu_data, gpu_data, api_data.rank)
+        precision_compare_config = OnlineApiPrecisionCompareConfig(npu_data, gpu_data, api_data.rank,
+                                                                   ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME,
+                                                                   ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME)
+        online_api_precision_compare(precision_compare_config)
 
     except Exception as err:
         if "expected scalar type Long" in str(err):
@@ -103,7 +112,6 @@ def online_compare(api_data, device, compare, func, config):
     api_data = move2target_device(api_data, device)
     try:
         data_info = func(api_full_name, api_data, config.backward_content)
-        logger.debug(f"success exec run_ut in device {api_full_name}")
         is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
         logger.info(f"running api_full_name {api_full_name} ut, "
                     f"is_fwd_success: {is_fwd_success}, "
@@ -119,7 +127,7 @@ def online_compare(api_data, device, compare, func, config):
         else:
             logger.error(f"Run {api_full_name} UT Error: {str(err)}")
 
-        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", str(err), api_data.rank))
+        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
 
     finally:
         torch.cuda.empty_cache()
@@ -159,6 +167,8 @@ class ConsumerDispatcher:
         for p in self.processes:
             p.join()
         logger.info("Successfully stop unittest process.")
+        logger.info(f"Api_precision_compare task result will be saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}".replace(".csv", "_rank*.csv"))
+        logger.info(f"Api_precision_compare task details will be saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}".replace(".csv", "_rank*.csv"))
 
     def update_consume_queue(self, api_data):
         while True:
@@ -166,9 +176,7 @@ class ConsumerDispatcher:
             if index != -1:
                 q = self.queues[index]
                 q.put(api_data)
-                logger.debug(f"将{api_data.name}调度给第{index}个GPU")
                 break
-            logger.debug("所有的UT队列都已满, 阻塞中")
             time.sleep(0.1)
 
     def _choose_max_empty_site_strategy(self):
