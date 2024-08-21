@@ -76,7 +76,6 @@ class Canonicalizer:
             input_time_metric='us',
             input_memory_metric='B'):
         # raw timestamp is in microsecond
-        # https://github.com/pytorch/pytorch/blob/v1.9.0/torch/csrc/autograd/profiler_kineto.cpp#L33
         time_metric_to_factor = {
             'us': 1,
             'ms': 1e3,

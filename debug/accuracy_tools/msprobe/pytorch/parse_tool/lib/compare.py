@@ -22,6 +22,8 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
+from msprobe.core.common.utils import create_directory, write_csv, save_npy_to_txt
+from msprobe.core.common.file_check import FileChecker
 
 
 class Compare:
@@ -36,7 +38,7 @@ class Compare:
         self.log.info("Compare finished!!")
 
     def compare_vector(self, my_dump_path, golden_dump_path, result_dir, msaccucmp_path):
-        self.util.create_dir(result_dir)
+        create_directory(result_dir)
         self.util.check_path_valid(result_dir)
         call_msaccucmp = self.util.check_msaccucmp(msaccucmp_path)
         cmd = '%s %s compare -m %s -g %s -out %s' % (
@@ -65,7 +67,7 @@ class Compare:
             self.util.print_panel("\n".join(summary_txt))
 
     def convert(self, dump_file, data_format, output, msaccucmp_path):
-        self.util.create_dir(output)
+        create_directory(output)
         self.util.check_path_valid(output)
         call_msaccucmp = self.util.check_msaccucmp(msaccucmp_path)
         if data_format:
@@ -97,8 +99,8 @@ class Compare:
 
         # save to txt
         if save_txt:
-            self.util.save_npy_to_txt(left_data, left + ".txt")
-            self.util.save_npy_to_txt(right_data, right + ".txt")
+            save_npy_to_txt(left_data, left + ".txt")
+            save_npy_to_txt(right_data, right + ".txt")
         # compare data
         (total_cnt, all_close, cos_sim, err_percent) = self.do_compare_data(left_data, right_data, rl, al, diff_count)
         content = ['Left:', ' ├─ NpyFile: %s' % left]
@@ -184,7 +186,7 @@ class Compare:
         rel_diff_max = np.max(rel_error)
         compare_result = [[filename, bench_filename, data_mean, bench_data_mean, md5_consistency, abs_diff_max,
                            rel_diff_max]]
-        self.util.write_csv(compare_result, output_path)
+        write_csv(compare_result, output_path)
 
     def compare_all_file_in_directory(self, my_dump_dir, golden_dump_dir, output_path):
         if not (self.util.is_subdir_count_equal(my_dump_dir, golden_dump_dir)
@@ -231,7 +233,7 @@ class Compare:
             "Max Abs Error",
             "Max Relative Error"
         ]]
-        self.util.write_csv(title_rows, output_path)
+        write_csv(title_rows, output_path)
 
         my_ordered_subdirs = self.util.get_sorted_subdirectories_names(my_dump_dir)
         golden_ordered_subdirs = self.util.get_sorted_subdirectories_names(golden_dump_dir)
@@ -249,7 +251,9 @@ class Compare:
 
     def convert_api_dir_to_npy(self, dump_dir, param, output_dir, msaccucmp_path):
         dump_dir = self.util.path_strip(dump_dir)
-        for root, _, files in os.walk(dump_dir):
+        for root, _, files in os.walk(dump_dir, topdown=True):
+            path_checker = FileChecker(root)
+            path_checker.common_check()
             for file in files:
                 file_path = os.path.join(root, file)
                 file_name = os.path.basename(file_path)
@@ -260,3 +264,8 @@ class Compare:
                 timestamp = parts[-1]
                 output_path = os.path.join(output_dir, op_name, timestamp)
                 self.convert_dump_to_npy(file_path, param, output_path, msaccucmp_path)
+            path_depth = root.count(os.sep)
+            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
+                yield root, _, files
+            else:
+                _[:] = []

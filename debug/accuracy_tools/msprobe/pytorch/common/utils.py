@@ -18,13 +18,15 @@ import logging
 import os
 import random
 import stat
+import csv
+import json
 import torch
 import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.file_check import FileCheckConst, change_mode
+from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
+from msprobe.core.common.file_check import FileCheckConst, change_mode, FileOpen
 
 
 try:
@@ -34,13 +36,9 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1', '2.2']
-for version in torch_without_guard_version_list:
-    if torch.__version__.startswith(version):
-        torch_without_guard_version = True
-        break
-    else:
-        torch_without_guard_version = False
+
+torch_without_guard_version = torch.__version__ >= '2.1'
+
 
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
@@ -293,6 +291,6 @@ def _create_logger(level=logging.INFO):
     logger_.addHandler(ch)
     return logger_
 
-
+    
 log_level = logging.DEBUG if os.environ.get("API_ACCURACY_CHECK_LOG_LEVEL") == "1" else logging.INFO
 logger = _create_logger(log_level)

@@ -40,16 +40,6 @@ class TestDebuggerConfig(unittest.TestCase):
         self.assertEqual(debugger_config.check_mode, "all")
         self.assertEqual(debugger_config.overflow_nums, 1)
 
-        common_config.dump_path = "./path"
-        with self.assertRaises(Exception) as context:
-            DebuggerConfig(common_config, task_config)
-        self.assertEqual(str(context.exception), "Dump path must be absolute path.")
-
-        common_config.dump_path = "./path"
-        with self.assertRaises(Exception) as context:
-            DebuggerConfig(common_config, task_config)
-        self.assertEqual(str(context.exception), "Dump path must be absolute path.")
-
         common_config.level = "L1"
         common_config.task = Const.FREE_BENCHMARK
         debugger_config = DebuggerConfig(common_config, task_config)

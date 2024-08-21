@@ -33,18 +33,18 @@ class TestLog(TestCase):
 
     @patch.object(BaseLogger, "_print_log")
     def test_print_info_log(self, mock__print_log):
-        logger.info("info_msg")
-        mock__print_log.assert_called_with("INFO", "info_msg")
+        logger.info("\n\n\ninfo_msg")
+        mock__print_log.assert_called_with("INFO", "___info_msg")
 
     @patch.object(BaseLogger, "_print_log")
     def test_print_warn_log(self, mock__print_log):
-        logger.warning("warn_msg")
-        mock__print_log.assert_called_with("WARNING", "warn_msg")
+        logger.warning("\n\n\nwarn_msg")
+        mock__print_log.assert_called_with("WARNING", "___warn_msg")
 
     @patch.object(BaseLogger, "_print_log")
     def test_print_error_log(self, mock__print_log):
-        logger.error("error_msg")
-        mock__print_log.assert_called_with("ERROR", "error_msg")
+        logger.error("\n\n\nerror_msg")
+        mock__print_log.assert_called_with("ERROR", "___error_msg")
 
     @patch.object(BaseLogger, "error")
     def test_error_log_with_exp(self, mock_error):

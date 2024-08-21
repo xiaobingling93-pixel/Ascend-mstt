@@ -6,16 +6,16 @@ from datetime import datetime
 import torch
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
-from kj600.module_spec_verifier import get_config, validate_config_spec
-from kj600.optimizer_collect import MixPrecsionOptimizerMon, print_rank_0, OptimizerMonFactory, MegatronDistributedOptimizerMon
+from kj600.module_spec_verifier import validate_config_spec
+from kj600.optimizer_collect import MixPrecsionOptimizerMon, OptimizerMonFactory
 from kj600.features import eff_rank, get_sign_matches
 from kj600.visualizer import HeatmapVisualizer
 from kj600.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
 from kj600.anomaly_inform import AnomalyInformFactory
 from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
 from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from kj600.utils import print_warn_log, print_info_log, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst
-
+from kj600.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst
+from kj600.file_check import FileOpen
 
 
 
@@ -84,7 +84,8 @@ class TrainerMon:
         self.optimizer_context = defaultdict(OptimizerContext)
         self.cc_context = defaultdict(CommunicationContext)
         self.params_have_main_grad = params_have_main_grad
-        self.config = get_config(config_file_path)
+        with FileOpen(config_file_path, 'r') as f:
+            self.config = json.load(f)
         self.module_rank_list = self.config.get("module_ranks", [])
         self.eps = self.config.get('eps', 1e-8)
         self.ops = self.config.get('ops', [])
@@ -264,7 +265,7 @@ class TrainerMon:
             context = self.optimizer_context[optimizer]
             if self.print_struct and not all(value == {} for value in self.module_struct.values()) and not self.struct_printed:
                 self._smallest_rank_print("> module struct:")
-                self._smallest_rank_print(json.dumps(self.module_struct, indent=4))
+                self._smallest_rank_print(json.dumps(self.module_struct))
                 self.struct_printed = True
                 if not self.cc_log_only:
                     raise Exception("exit after first step when print model struct")

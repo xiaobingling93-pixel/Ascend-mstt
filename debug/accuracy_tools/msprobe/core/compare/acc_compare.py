@@ -15,6 +15,7 @@ from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, 
     get_error_message
 from msprobe.core.advisor.advisor import Advisor
 
+
 class Comparator:
     
     def __init__(self):
@@ -154,7 +155,7 @@ class Comparator:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
                 
-        result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
+        result_df = self.make_result_table(result, md5_compare, summary_compare, stack_mode)
         return result_df
     
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
@@ -191,12 +192,12 @@ class Comparator:
         err_msg = get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=error_file)
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
-        if npu_op_name != bench_op_name:
+        if npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
     
-    def compare_core(self,input_parma, output_path, **kwargs):
+    def compare_core(self, input_parma, output_path, **kwargs):
         """
         Compares data from multiple JSON files and generates a comparison report.
 
@@ -270,12 +271,12 @@ class Comparator:
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
 
         cr = ComparisonResult(
-            cos_result = cos_result,
-            max_err_result = max_err_result,
+            cos_result=cos_result,
+            max_err_result=max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs = err_mess,
-            one_thousand_err_ratio_result = one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result = five_thousand_err_ratio_result
+            err_msgs=err_mess,
+            one_thousand_err_ratio_result=one_thousand_err_ratio_result,
+            five_thousand_err_ratio_result=five_thousand_err_ratio_result
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)   

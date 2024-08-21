@@ -11,7 +11,7 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import exec_api, generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents
+from msprobe.core.common.utils import get_json_contents
 from msprobe.core.common.file_check import check_link
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
@@ -83,6 +83,10 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
         del kwargs["device"]
     out = exec_api(api_type, api_name, args, kwargs)
     npu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+    if out is None and npu_out is None:
+        logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
+        return
+
     cpu_overflow = check_data_overflow(out)
     npu_overflow = torch_npu.npu.utils.npu_check_overflow(npu_out)
     if cpu_overflow == npu_overflow:

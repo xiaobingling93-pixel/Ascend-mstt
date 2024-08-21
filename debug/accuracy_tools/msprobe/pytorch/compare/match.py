@@ -1,15 +1,12 @@
 import os
-import yaml
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, load_yaml
 
 
 class AtenIrMapping():
     def __init__(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         yaml_path = os.path.join(cur_path, "mapping.yaml")
-        with FileOpen(yaml_path, 'r') as f:
-            self.aten_mapping = yaml.safe_load(f)
+        self.aten_mapping = load_yaml(yaml_path)
     
     def match(self, op1, op2):
         if "Aten" in op1 and "Aten" not in op2:

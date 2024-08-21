@@ -15,15 +15,17 @@
 # limitations under the License.
 """
 from unittest import TestCase
+from unittest.mock import patch
 
+from msprobe.mindspore.common.const import Const
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
 
 
 class TestDumpToolFactory(TestCase):
-
-    def test_create(self):
+    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    def test_create(self, _):
         json_config = {
             "task": "statistics",
             "dump_path": "/absolute_path",
@@ -39,13 +41,20 @@ class TestDumpToolFactory(TestCase):
         config.level = "module"
         with self.assertRaises(Exception) as context:
             DumpToolFactory.create(config)
-        self.assertEqual(str(context.exception), "valid level is needed.")
+        self.assertEqual(str(context.exception), "Valid level is needed.")
 
-        config.level = "cell"
+        config.level = Const.KERNEL
         with self.assertRaises(Exception) as context:
             DumpToolFactory.create(config)
-        self.assertEqual(str(context.exception), "Cell dump in not supported now.")
+        self.assertEqual(str(context.exception), "Data dump is not supported in None mode when dump level is kernel.")
 
-        config.level = "kernel"
+        config.execution_mode = Const.GRAPH_GE_MODE
+        config.level = Const.CELL
+        with self.assertRaises(Exception) as context:
+            DumpToolFactory.create(config)
+        self.assertEqual(str(context.exception), "Data dump is not supported in graph_ge mode when dump level is cell.")
+
+        config.execution_mode = Const.GRAPH_KBYK_MODE
+        config.level = Const.KERNEL
         dumper = DumpToolFactory.create(config)
         self.assertEqual(dumper.dump_json["common_dump_settings"]["net_name"], "Net")
