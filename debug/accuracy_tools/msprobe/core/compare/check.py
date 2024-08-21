@@ -15,7 +15,9 @@ dtype_mapping = {
     "Float32": "torch.float32",
     "Float64": "torch.float64",
     "Bool": "torch.bool",
-    "BFloat16": "torch.bfloat16"
+    "BFloat16": "torch.bfloat16",
+    "Complex64": "torch.complex64",
+    "Complex128": "torch.complex128"
     }
 
 

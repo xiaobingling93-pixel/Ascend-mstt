@@ -1,17 +1,15 @@
 import os.path
-import numpy as np
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, load_yaml
-from msprobe.core.common.file_check import FileChecker, create_directory
-from msprobe.core.common.const import FileCheckConst, Const
+    task_dumppath_get, load_yaml, load_npy
+from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 
 
-class MSComparator (Comparator):
+class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
@@ -24,7 +22,7 @@ class MSComparator (Comparator):
             
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_path=os.path.join(cur_path,"ms_to_pt_api_dict.yaml")
+        yaml_path = os.path.join(cur_path,"ms_to_pt_api.yaml")
         return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
@@ -38,15 +36,16 @@ class MSComparator (Comparator):
         a_op_name = [op_name.replace("Cell", "Module", 1) for op_name in a_op_name]
         if self.cell_mapping_dict:
             for index, op_name in enumerate(a_op_name):
+                # get cell name & class name from op_name
+                # Cell.fc1.Dense.forward.0.input.0
                 cell_name = op_name.split(Const.SEP, 1)[-1].rsplit(Const.SEP, 4)[0]
                 if cell_name in self.cell_mapping_dict:
                     a_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return a_op_name
 
-
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        a_op_name = npu_dict["op_name"]
-        b_op_name = bench_dict["op_name"]
+        a_op_name = npu_dict["op_name"].copy()
+        b_op_name = bench_dict["op_name"].copy()
    
         if self.api_mapping is not None:
             a_op_name = self.process_api_mapping(a_op_name, b_op_name)
@@ -64,37 +63,33 @@ class MSComparator (Comparator):
             is_match = False
         return is_match and struct_match
     
-    def read_npy_data(self, dir_path, file_name, load_pt=False):
+    def read_npy_data(self, dir_path, file_name, load_pt_file=False):
         data_path = os.path.join(dir_path, file_name)
-        if load_pt:
+        if load_pt_file:
             import torch
-            path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                    FileCheckConst.PT_SUFFIX, False)
-            data_path = path_checker.common_check()
-            data_value = torch.load(data_path, map_location=torch.device('cpu')).detach()       # detach for less memory
+            from msprobe.pytorch.common.utils import load_pt
+            data_value = load_pt(data_path).detach()
             if data_value.dtype == torch.bfloat16:
                 data_value = data_value.to(torch.float32)
             data_value = data_value.numpy()
         else:
-            path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                    FileCheckConst.NUMPY_SUFFIX, False)
-            data_path = path_checker.common_check()
-            data_value = np.load(data_path)      
+            data_value = load_npy(data_path) 
         return data_value    
 
     def api_replace(self, a_op_name, target, para):
-        for i in range(len(a_op_name)):
-            a_op_name[i] = a_op_name[i].replace(target, para)
+        for idx, _ in enumerate(a_op_name):
+            a_op_name[idx] = a_op_name[idx].replace(target, para)
         return a_op_name
     
     def process_api_mapping(self, a_op_name, b_op_name):
-        ms_api_para_list = a_op_name[0].split(Const.SEP)
-        ms_api_name= ms_api_para_list[0] + Const.SEP + ms_api_para_list[1]
-        pt_api_para_list = b_op_name[0].split(Const.SEP)
-        pt_api_name= pt_api_para_list[0] + Const.SEP + pt_api_para_list[1]
-        if ms_api_para_list[0] == "Mint":
+        # get api name & class name from op_name
+        # Functional.addcmul.0.forward.input.0
+        ms_api_name = a_op_name[0].rsplit(Const.SEP, 4)[0]
+        pt_api_name = b_op_name[0].rsplit(Const.SEP, 4)[0]
+        class_name = ms_api_name.split(Const.SEP)[0]
+        if class_name == "Mint":
             return self.api_replace(a_op_name, "Mint", "Torch")
-        if ms_api_para_list[0] == "MintFunctional":
+        if class_name == "MintFunctional":
             return self.api_replace(a_op_name, "MintFunctional", "Functional")
         if self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
             return self.api_replace(a_op_name, ms_api_name, pt_api_name)
