@@ -36,13 +36,12 @@ except ImportError:
 else:
     is_gpu = False
 
-torch_without_guard_version_list = ['2.1', '2.2']
-for version in torch_without_guard_version_list:
-    if torch.__version__.startswith(version):
-        torch_without_guard_version = True
-        break
-    else:
-        torch_without_guard_version = False
+
+if torch.__version__ >= '2.1':
+    torch_without_guard_version = True
+else:
+    torch_without_guard_version = False
+
 
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
