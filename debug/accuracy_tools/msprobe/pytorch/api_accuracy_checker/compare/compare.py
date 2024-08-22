@@ -156,7 +156,14 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, data_info):
-        _, api_name, _ = full_api_name.split(Const.SEP)
+        api_parts = full_api_name.split(Const.SEP)
+        api_parts_length = len(api_parts)
+        if api_parts_length == Const.THREE_SEGMENT:
+            _, api_name, _ = api_parts
+        elif api_parts_length == Const.FOUR_SEGMENT:
+            _, _, api_name, _ = api_parts
+        else:
+            raise ValueError(f"API name {full_api_name} has not been adapted.")
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
         backward_message = data_info.backward_message

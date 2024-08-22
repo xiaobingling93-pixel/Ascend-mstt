@@ -218,12 +218,27 @@ def run_ut(config):
 
 
 def run_api_offline(config, compare, api_name_set):
+    err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
             continue
-        [_, api_name, _] = api_full_name.split(Const.SEP)
+        try:
+            api_parts = api_full_name.split(Const.SEP)
+            api_parts_length = len(api_parts)
+            if api_parts_length == Const.THREE_SEGMENT:
+                _, api_name, _ = api_parts
+            elif api_parts_length == Const.FOUR_SEGMENT:
+                _, _, api_name, _ = api_parts
+            else:
+                raise ValueError(f"API name {api_full_name} has not been adapted.")
+        except ValueError as err:
+            logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
+            continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
@@ -237,7 +252,6 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            err_column = CompareColumn()
             fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
             result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
             compare.record_results(result_info)

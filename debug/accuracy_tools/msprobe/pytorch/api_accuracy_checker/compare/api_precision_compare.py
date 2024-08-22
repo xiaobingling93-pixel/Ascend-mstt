@@ -19,7 +19,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_res
 from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
 BenchmarkInf_Nan_Consistency = namedtuple('BenchmarkInf_Nan_Consistency', ['small_value_inf_nan_consistency', 
@@ -298,6 +298,16 @@ def analyse_csv(npu_data, gpu_data, config):
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
         _, api_name, _, direction_status, _, _ = full_api_name_with_direction_status.split(".")
+        api_parts = full_api_name_with_direction_status.split(Const.SEP)
+        api_parts_length = len(api_parts)
+        if api_parts_length == Const.SIX_SEGMENT:
+            api_type, api_name, api_order, direction_status, _, _ = full_api_name_with_direction_status.split(Const.SEP)
+            full_api_name = Const.SEP.join([api_type, api_name, api_order])
+        elif api_parts_length == Const.SEVEN_SEGMENT:
+            api_type, prefix, api_name, api_order, direction_status, _, _ = full_api_name_with_direction_status.split(Const.SEP)
+            full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
+        else:
+            raise CompareException(CompareException.INVALID_DATA_ERROR, "This type of API has not been adapted.")
         if row_gpu.empty:
             logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue
@@ -331,7 +341,7 @@ def analyse_csv(npu_data, gpu_data, config):
                 new_status = record_benchmark_compare_result(compare_column, bs)
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if last_api_name is not None and api_name != last_api_name:
+        if last_api_name is not None and full_api_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
@@ -346,7 +356,7 @@ def analyse_csv(npu_data, gpu_data, config):
                 message = ''
 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        last_api_name = api_name
+        last_api_name = full_api_name
 
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:

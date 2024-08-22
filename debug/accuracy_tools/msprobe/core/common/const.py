@@ -23,6 +23,10 @@ class Const:
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    THREE_SEGMENT = 3
+    FOUR_SEGMENT = 4
+    SIX_SEGMENT = 6
+    SEVEN_SEGMENT = 7
 
     # dump mode
     ALL = "all"
