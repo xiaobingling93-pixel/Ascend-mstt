@@ -1,7 +1,7 @@
 {
     "task": "statistics",
     "dump_data_dir": "",
-    "data":{
+    "data": {
         "MintFunctional.relu.0.forward": {
             "input_args": [
                 {
@@ -18,7 +18,7 @@
             ],
             "input_kwargs": {},
             "output": [
-                                {
+                {
                     "type": "mindspore.Tensor",
                     "dtype": "Float32",
                     "shape": [
