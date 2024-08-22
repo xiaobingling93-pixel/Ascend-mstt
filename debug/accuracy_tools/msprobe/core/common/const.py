@@ -143,6 +143,7 @@ class CompareConst:
     NPU_MD5 = "NPU MD5"
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
+    MAGNITUDE = 0.5
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -217,6 +218,19 @@ class CompareConst:
     MAX_RELATIVE_OUT_RED = 0.5
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
+    MS_GRAPH_BASE = {
+        NPU_NAME: None, BENCH_NAME: None, NPU_DTYPE: None, BENCH_DTYPE: None, NPU_SHAPE: None, BENCH_SHAPE: None,
+        NPU_MAX: None, NPU_MIN: None, NPU_MEAN: None, NPU_NORM: None, BENCH_MAX: None, BENCH_MIN: None,
+        BENCH_MEAN: None, BENCH_NORM: None, ACCURACY: '', ERROR_MESSAGE: ''
+    }
+    MS_GRAPH_NPY = {
+        COSINE: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
+        FIVE_THOUSANDTHS_ERR_RATIO: None
+    }
+    MS_GRAPH_STATISTIC = {
+        MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
+        MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
+    }
 
 
 class FileCheckConst:
@@ -296,3 +310,9 @@ class MsgConst:
     Class for log messages const
     """
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+
+class GraphMode:
+    NPY_MODE = "NPY_MODE"
+    STATISTIC_MODE = "STATISTIC_MODE"
+    ERROR_MODE = "ERROR_MODE"
