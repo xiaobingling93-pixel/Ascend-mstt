@@ -25,6 +25,7 @@ import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.log import logger as common_logger
 from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
 from msprobe.core.common.file_check import FileCheckConst, change_mode, FileOpen
 
@@ -279,6 +280,9 @@ def save_pt(tensor, filepath):
     try:
         torch.save(tensor, filepath)
     except Exception as e:
+        common_logger.error("Save pt file failed, please check according possible error causes: "
+                            "1. out of disk space or disk error, "
+                            "2. no permission to write files, etc.")
         raise RuntimeError(f"save pt file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
