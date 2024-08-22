@@ -183,6 +183,7 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     api_type = None
     prefix = None
     api_name = None
+    direction_status = None
     api_parts = full_api_name_with_direction_status.split(Const.SEP)
     api_parts_length = len(api_parts)
     if api_parts_length == Const.SIX_SEGMENT:
