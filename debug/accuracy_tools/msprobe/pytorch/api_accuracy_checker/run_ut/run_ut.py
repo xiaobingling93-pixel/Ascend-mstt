@@ -224,13 +224,11 @@ def run_api_offline(config, compare, api_name_set):
             continue
         if is_unsupported_api(api_full_name):
             continue
-        try:
-            _, _, api_name = extract_basic_api_segments(api_full_name)
-            if not api_name:
-                raise ValueError(f"API name {api_full_name} has not been adapted.")
-        except ValueError as err:
-            logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+        _, _, api_name = extract_basic_api_segments(api_full_name)
+        if not api_name:
+            err_message = f"API {api_full_name} not support for run ut. SKIP."
+            logger.error(err_message)
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
             result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
             compare.record_results(result_info)
             continue

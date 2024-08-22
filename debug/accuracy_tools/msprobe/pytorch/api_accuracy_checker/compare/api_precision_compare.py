@@ -298,17 +298,15 @@ def analyse_csv(npu_data, gpu_data, config):
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        try:
-            api_name, full_api_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
-            if not full_api_name:
-                raise CompareException(CompareException.INVALID_DATA_ERROR, "This type of API has not been adapted.")
-        except Exception as err:
-            logger.error(f"Compare Error: %s" % str(err))
+        api_name, full_api_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
+        if not full_api_name:
+            err_message = f"The API name {full_api_name_with_direction_status} is invalid."
+            logger.error(err_message)
             compare_column.api_name = full_api_name_with_direction_status
             compare_column.compare_result = CompareConst.SKIP
-            compare_column.compare_message = str(err)
+            compare_column.compare_message = err_message
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
-            write_csv([[full_api_name_with_direction_status, "skip", "skip",  str(err)]], config.result_csv_path)
+            write_csv([[full_api_name_with_direction_status, "skip", "skip",  err_message]], config.result_csv_path)
             continue
         if row_gpu.empty:
             logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
