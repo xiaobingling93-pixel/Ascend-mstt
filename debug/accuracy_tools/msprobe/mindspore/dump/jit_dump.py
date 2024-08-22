@@ -7,10 +7,12 @@ from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutput
 
 def dump_jit(name, in_feat, out_feat, is_forward):
     pid = os.getpid()
-    ori_args = str(type(name))
-    index = ori_args.find("__main__.")
-    if index!= -1:
-        result = ori_args[(index + len("__main__.")):-2]
+    ori_args = str(name)
+    index = ori_args.find("<")
+    if index != 0 and index != -1:
+        result = ori_args[0:index]
+    else:
+        result = "JitFunction"
     if is_forward:
         name_template = "Jit." + result + ".forward"
     else:
