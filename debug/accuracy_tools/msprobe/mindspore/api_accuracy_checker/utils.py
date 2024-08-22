@@ -37,6 +37,13 @@ def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_t
             parse_failed_exception)
     return value
 
+def convert_to_tuple(input):
+    if isinstance(input, (tuple, list)):
+        return tuple(input)
+    else:
+        input_list = [input]
+        return tuple(input_list)
+
 class GlobalContext:
     def __init__(self):
         self.is_constructed = True

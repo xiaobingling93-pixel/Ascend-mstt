@@ -90,7 +90,11 @@ class DistributedNotInitializedError(Exception):
 class ApiAccuracyCheckerException(CodedException):
     ParseJsonFailed = 0
     UnsupportType = 1
+    WrongValue = 2
+    ApiWrong = 3
     err_strs = {
         ParseJsonFailed: "[msprobe] Api Accuracy Checker parse json failed: ",
         UnsupportType: "[msprobe] Api Accuracy Checker get unsupported type: ",
+        WrongValue: "[msprobe] Api Accuracy Checker get wrong value: ",
+        ApiWrong: "[msprobe] Api Accuracy Checker something wrong with api: ",
     }

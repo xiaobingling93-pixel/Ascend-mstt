@@ -1,7 +1,6 @@
 import argparse
 import os
 import csv
-import re
 import sys
 import time
 import gc
@@ -18,21 +17,17 @@ else:
 import torch
 from tqdm import tqdm
 
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api, UtDataInfo, \
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor, extract_basic_api_segments
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
-from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
-from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
-from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
-from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
-    change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
+    change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
@@ -75,25 +70,6 @@ tqdm_params = {
     'dynamic_ncols': True,  # 动态调整进度条宽度以适应控制台
     'bar_format': '{l_bar}{bar}| {n}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'  # 自定义进度条输出格式
 }
-
-
-def exec_api(api_type, api_name, args, kwargs):
-    if api_type == "Functional":
-        functional_api = FunctionalOPTemplate(api_name, str, False)
-        out = functional_api.forward(*args, **kwargs)
-    if api_type == "Tensor":
-        tensor_api = TensorOPTemplate(api_name, str, False)
-        out = tensor_api.forward(*args, **kwargs)
-    if api_type == "Torch":
-        torch_api = TorchOPTemplate(api_name, str, False)
-        out = torch_api.forward(*args, **kwargs)
-    if api_type == "Aten":
-        torch_api = AtenOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
-    if api_type == "NPU":
-        torch_api = NpuOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
-    return out
 
 
 def deal_detach(arg, to_detach=True):
@@ -444,30 +420,6 @@ def initialize_save_error_data(error_data_path):
     return error_data_path
 
 
-def get_validated_result_csv_path(result_csv_path, mode):
-    if mode not in ['result', 'detail']:
-        raise ValueError("The csv mode must be result or detail")
-    result_csv_path_checker = FileChecker(result_csv_path, FileCheckConst.FILE, ability=FileCheckConst.READ_WRITE_ABLE,
-                                          file_type=FileCheckConst.CSV_SUFFIX)
-    validated_result_csv_path = result_csv_path_checker.common_check()
-    if mode == 'result':
-        result_csv_name = os.path.basename(validated_result_csv_path)
-        pattern = r"^accuracy_checking_result_\d{14}\.csv$"
-        if not re.match(pattern, result_csv_name):
-            raise ValueError("When continue run ut, please do not modify the result csv name.")
-    return validated_result_csv_path
-
-
-def get_validated_details_csv_path(validated_result_csv_path):
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    details_csv_name = result_csv_name.replace('result', 'details')
-    details_csv_path = os.path.join(os.path.dirname(validated_result_csv_path), details_csv_name)
-    details_csv_path_checker = FileChecker(details_csv_path, FileCheckConst.FILE,
-                                           ability=FileCheckConst.READ_WRITE_ABLE, file_type=FileCheckConst.CSV_SUFFIX)
-    validated_details_csv_path = details_csv_path_checker.common_check()
-    return validated_details_csv_path
-
-
 def init_attl(config):
     """config: OnlineConfig"""
     attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
@@ -633,19 +585,6 @@ def run_ut_command(args):
                                 args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
                                 online_config)
     run_ut(run_ut_config)
-
-
-class UtDataInfo:
-    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list,
-                 backward_message, rank=0):
-        self.bench_grad = bench_grad
-        self.device_grad = device_grad
-        self.device_output = device_output
-        self.bench_output = bench_output
-        self.grad_in = grad_in
-        self.in_fwd_data_list = in_fwd_data_list
-        self.backward_message = backward_message
-        self.rank = rank
 
 
 if __name__ == '__main__':

@@ -26,8 +26,15 @@ def compare_cli(args):
             compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=auto_analyze,
                     fuzzy_match=args.fuzzy_match)
         else:
-            ms_compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=auto_analyze,
-                       fuzzy_match=args.fuzzy_match)
+            kwargs = {
+                "stack_mode": args.stack_mode,
+                "auto_analyze": auto_analyze,
+                "fuzzy_match": args.fuzzy_match,
+                "cell_mapping": args.cell_mapping,
+                "api_mapping": args.api_mapping,
+            }
+
+            ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {"stack_mode": args.stack_mode, "auto_analyze": auto_analyze, "fuzzy_match": args.fuzzy_match}
         if frame_name == Const.PT_FRAMEWORK:

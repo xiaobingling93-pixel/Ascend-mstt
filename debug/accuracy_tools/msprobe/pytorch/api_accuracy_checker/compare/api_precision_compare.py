@@ -15,7 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
     BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage, is_inf_or_nan, \
     check_inf_or_nan
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
 from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
@@ -290,16 +290,38 @@ def api_precision_compare(config):
     change_mode(config.details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def online_api_precision_compare(online_config):
+    rank = online_config.rank
+    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
+    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
+    detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
+    result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
+    if not os.path.exists(result_csv_path):
+        write_csv(result_csv_title, result_csv_path)
+    if not os.path.exists(details_csv_path):
+        write_csv(detail_csv_title, details_csv_path)
+    config = CompareConfig("", "", result_csv_path, details_csv_path)
+    try:
+        npu_data, gpu_data = online_config.npu_data, online_config.gpu_data
+        check_csv_columns(npu_data.columns, "npu_csv")
+        check_csv_columns(gpu_data.columns, "gpu_csv")
+        analyse_csv(npu_data, gpu_data, config)
+    except Exception as err:
+        logger.error(f"Online api precision compare Error: {str(err)}")
+    change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+    change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
-    last_api_name, last_api_dtype = None, None
+    last_api_name, last_api_dtype, last_api_full_name = None, None, None
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        api_name, full_api_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
-        if not full_api_name:
+        api_name, api_full_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
+        if not api_full_name:
             err_message = f"The API name {full_api_name_with_direction_status} is invalid."
             logger.error(err_message)
             compare_column.api_name = full_api_name_with_direction_status
@@ -341,10 +363,11 @@ def analyse_csv(npu_data, gpu_data, config):
                 new_status = record_benchmark_compare_result(compare_column, bs)
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if last_api_name is not None and full_api_name != last_api_name:
+        if last_api_name is not None and api_full_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
                 write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
+                print_test_success(api_full_name, "skip", "skip")
                 forward_status, backward_status = [], []
                 message = ''
             else:
@@ -352,11 +375,12 @@ def analyse_csv(npu_data, gpu_data, config):
                 backward_result = get_api_checker_result(backward_status)
                 message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+                print_test_success(api_full_name, forward_result, backward_result)
                 forward_status, backward_status = [], []
                 message = ''
 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        last_api_name = full_api_name
+        last_api_name = api_full_name
 
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:
@@ -373,11 +397,21 @@ def analyse_csv(npu_data, gpu_data, config):
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
             message = unsupported_message
             write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
+            print_test_success(last_api_full_name, "skip", "skip")
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
             message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
+            print_test_success(last_api_full_name, forward_result, backward_result)
+
+
+def print_test_success(api_full_name, forward_result, backward_result):
+    is_fwd_success = (forward_result == CompareConst.PASS)
+    is_bwd_success = (backward_result == CompareConst.PASS or backward_result == CompareConst.SPACE)
+    logger.info(f"running api_full_name {api_full_name} compare, "
+                f"is_fwd_success: {is_fwd_success}, "
+                f"is_bwd_success: {is_bwd_success}")
 
 
 def check_error_rate(npu_error_rate):

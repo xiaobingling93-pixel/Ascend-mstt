@@ -21,9 +21,11 @@ from msprobe.core.common.log import logger
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.common.const import Const
 
+
 def is_module_available(module_name):
-    spec =importlib.util.find_spec(module_name)
+    spec = importlib.util.find_spec(module_name)
     return spec is not None
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -81,12 +83,17 @@ def main():
         elif sys.argv[3] == "run_overflow_check":
             _run_overflow_check_command(args)
         elif sys.argv[3] == "compare":
+            if args.cell_mapping is not None or args.api_mapping is not None:
+                logger.error("Argument -cm or -am is not supported in PyTorch framework")
+                raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             compare_cli(args)
     else:
         if not is_module_available(Const.MS_FRAMEWORK):
             logger.error("MindSpore does not exist, please install MindSpore library")
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
+            if isinstance(args.api_mapping, str):
+                logger.warning("User defined mapping tables are not supported in the current version")
             compare_cli(args)
 
 if __name__ == "__main__":
