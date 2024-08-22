@@ -183,7 +183,7 @@ class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
         return max_relative_diff
 
     def check_pass(self, compare_value):
-        if compare_value < CompareConst.MAX_ABS_ERR_THRESHOLD:
+        if compare_value < CompareConst.MAX_RELATIVE_ERR_THRESHOLD:
             return CompareConst.PASS
         else:
             return CompareConst.ERROR
