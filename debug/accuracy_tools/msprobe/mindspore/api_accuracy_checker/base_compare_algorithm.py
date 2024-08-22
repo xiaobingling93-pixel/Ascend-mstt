@@ -22,13 +22,13 @@ class BaseCompareAlgorithm(ABC):
         self.err_msg_mapping = {
             CompareConst.COSINE: {
                 CompareConst.PASS: "",
-                CompareConst.ERROR: f"cosine similarity is less than threshold: {CompareConst.COSINE_THRESHOLD} ",
+                CompareConst.ERROR: f"cosine similarity is less than threshold: {CompareConst.COS_THRESHOLD} ",
                 CompareConst.SKIP: "two inputs are not valid for computing cosine similarity, skip comparing ",
             },
             CompareConst.MAX_ABS_ERR: {
                 CompareConst.PASS: "",
                 CompareConst.ERROR: "max absolute difference is greater than " \
-                    f"threshold: {CompareConst.THOUSAND_RATIO_THRESHOLD} ",
+                    f"threshold: {CompareConst.MAX_ABS_ERR_THRESHOLD} ",
                 CompareConst.SKIP: "two inputs are not valid for computing max absolute difference, skip comparing ",
             },
             CompareConst.MAX_RELATIVE_ERR: {
