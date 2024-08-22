@@ -36,7 +36,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         api_accuracy_checker = ApiAccuracyChecker()
         api_accuracy_checker.parse(api_info_statistics_path)
         api_accuracy_checker.run_and_compare()
-        api_accuracy_checker.to_detail_csv()
+        api_accuracy_checker.to_detail_csv(result_directory)
         api_accuracy_checker.to_result_csv(result_directory)
         delete_files_with_prefix(result_directory, "accuracy_checking")
 
@@ -47,8 +47,9 @@ class TestApiAccuracyChecker(unittest.TestCase):
         api_accuracy_checker = ApiAccuracyChecker()
         api_accuracy_checker.parse(api_info_tensor_path)
         api_accuracy_checker.run_and_compare()
-        api_accuracy_checker.to_detail_csv()
+        api_accuracy_checker.to_detail_csv(result_directory)
         api_accuracy_checker.to_result_csv(result_directory)
         delete_files_with_prefix(result_directory, "accuracy_checking")
 
-
+if __name__ == '__main__':
+    unittest.main()
