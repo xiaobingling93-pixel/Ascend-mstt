@@ -157,7 +157,7 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, data_info):
-        _, api_name = get_segment_name(full_api_name)
+        _, _, api_name = get_segment_name(full_api_name)
         if not api_name:
             raise ValueError(f"API name {full_api_name} has not been adapted.")
         bench_output, device_output = data_info.bench_output, data_info.device_output
