@@ -21,9 +21,11 @@ from msprobe.core.common.log import logger
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.common.const import Const
 
+
 def is_module_available(module_name):
-    spec =importlib.util.find_spec(module_name)
+    spec = importlib.util.find_spec(module_name)
     return spec is not None
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -66,6 +68,9 @@ def main():
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == Const.PT_FRAMEWORK:
+        if args.cell_mapping is not None:
+            logger.error("Argument -cm is not supported in PyTorch framework")
+            raise Exception("Argument -cm is not supported in PyTorch framework")
         if not is_torch_available:
             logger.error("PyTorch does not exist, please install PyTorch library")
             raise Exception("PyTorch does not exist, please install PyTorch library")
