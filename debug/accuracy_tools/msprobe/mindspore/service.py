@@ -19,9 +19,16 @@ from pathlib import Path
 import functools
 from collections import defaultdict
 
+import mindspore as ms
 from mindspore.common.tensor import Tensor
 from mindspore import ops
 from mindspore import nn
+try:
+    from mindspore.common._pijit_context import PIJitCaptureContext
+    pijit_label = True
+except ImportError:
+    pijit_label = False
+
 
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
@@ -36,6 +43,7 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.dump.jit_dump import JitDump
 
 
 class Service:
@@ -267,6 +275,14 @@ class Service:
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+        if self.config.level == "L1":
+            JitDump.set_config(self.config)
+            JitDump.set_data_collector(self.data_collector)
+            ms.common.api._MindsporeFunctionExecutor =  JitDump
+            ms.common.api._PyNativeExecutor.grad =  JitDump.grad
+            if pijit_label:
+                PIJitCaptureContext.__enter__ = self.empty
+                PIJitCaptureContext.__exit__ = self.empty
 
     def stop(self):
         logger.info("msprobe: debugger.stop() is set successfully. "
@@ -304,6 +320,9 @@ class Service:
         construct_file_path = os.path.join(dump_dir, "construct.json")
         self.data_collector.update_dump_paths(
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None)
+        
+    def empty(self, *args, **kwargs):
+        pass
 
     def register_hook_new(self):
         logger.info("The {} hook function is successfully mounted to the model.".format(self.config.task))

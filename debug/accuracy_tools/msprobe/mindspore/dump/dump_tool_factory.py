@@ -19,7 +19,7 @@ class DumpToolFactory:
         Const.KERNEL: {
             Const.GRAPH_KBYK_MODE: KernelKbykDump,
             Const.GRAPH_GE_MODE: KernelGraphDump,
-            Const.PYNATIVE_MODE: None
+            Const.PYNATIVE_MODE: KernelKbykDump
         }
     }
 

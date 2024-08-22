@@ -7,4 +7,4 @@ cipher_list = ":".join([
     'ECDHE-RSA-CHACHA20-POLY1305',
     'DHE-RSA-AES128-GCM-SHA256',
     'DHE-RSA-AES256-GCM-SHA384'
-])
+]).encode()
