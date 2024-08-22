@@ -33,7 +33,7 @@ def generate_step(npu_path, rank_id):
     step_set = set()
     rank_path = os.path.join(npu_path, f"rank_{rank_id}")
     if not os.path.exists(rank_path):
-        return
+        return []
     for path in os.listdir(rank_path):
         if path not in ["execution_order", "graphs"]:
             data_path = os.path.join(rank_path, path)
@@ -147,30 +147,30 @@ class GraphMSComparator:
         self.output_path = output_path
         self.base_npu_path = input_param.get('npu_path', None)
         self.base_bench_path = input_param.get('bench_path', None)
-        self.rank_list = input_param.get('rank_list', [])
-        self.step_list = input_param.get('step_list', [])
+        self.rank_list = input_param.get('rank_id', [])
+        self.step_list = input_param.get('step_id', [])
 
     @staticmethod
     def compare_ops(compare_result_db, mode):
 
         def npy_mode_compute(row):
             result_dict = row_data(GraphMode.NPY_MODE)()
-            n_value = None
-            b_value = None
 
             def process_npy_file(file_path, name_prefix, result):
                 if os.path.exists(file_path):
                     data = read_npy_data(file_path)
-                    result[f'{name_prefix}_NAME'] = file_path
-                    result[f'{name_prefix}_DTYPE'] = data.dtype
-                    result[f'{name_prefix}_SHAPE'] = data.shape
-                    result[f'{name_prefix}_MAX'] = np.max(data)
-                    result[f'{name_prefix}_MIN'] = np.min(data)
-                    result[f'{name_prefix}_MEAN'] = np.mean(data)
-                    result[f'{name_prefix}_NORM'] = np.linalg.norm(data)
+                    result[f'{name_prefix} Name'] = file_path
+                    result[f'{name_prefix} Dtype'] = data.dtype
+                    result[f'{name_prefix} Tensor Shape'] = data.shape
+                    result[f'{name_prefix} max'] = np.max(data)
+                    result[f'{name_prefix} min'] = np.min(data)
+                    result[f'{name_prefix} mean'] = np.mean(data)
+                    result[f'{name_prefix} l2norm'] = np.linalg.norm(data)
+                    return data
+                return ""
 
-            process_npy_file(row[CompareConst.NPU_NAME], 'NPU', result_dict)
-            process_npy_file(row[CompareConst.BENCH_NAME], 'BENCH', result_dict)
+            n_value = process_npy_file(row[CompareConst.NPU_NAME], 'NPU', result_dict)
+            b_value = process_npy_file(row[CompareConst.BENCH_NAME], 'Bench', result_dict)
 
             error_flag, error_message = npy_data_check(n_value, b_value)
             result_dict[CompareConst.ERROR_MESSAGE] = error_message
@@ -192,17 +192,17 @@ class GraphMSComparator:
             result_dict = row_data('STATISTIC')()
 
             def update_result_dict(result, rows, prefix):
-                result[f'{prefix}_NAME'] = rows[f'{prefix}_NAME']
-                result[f'{prefix}_DTYPE'] = rows[f'{prefix}_DTYPE']
-                result[f'{prefix}_SHAPE'] = rows[f'{prefix}_SHAPE']
-                result[f'{prefix}_MAX'] = np.float32(rows[f'{prefix}_MAX'])
-                result[f'{prefix}_MIN'] = np.float32(rows[f'{prefix}_MIN'])
-                result[f'{prefix}_MEAN'] = np.float32(rows[f'{prefix}_MEAN'])
-                result[f'{prefix}_NORM'] = np.float32(rows[f'{prefix}_NORM'])
+                result[f'{prefix} Name'] = rows[f'{prefix} Name']
+                result[f'{prefix} Dtype'] = rows[f'{prefix} Dtype']
+                result[f'{prefix} Tensor Shape'] = rows[f'{prefix} Tensor Shape']
+                result[f'{prefix} max'] = np.float32(rows[f'{prefix} max'])
+                result[f'{prefix} min'] = np.float32(rows[f'{prefix} min'])
+                result[f'{prefix} mean'] = np.float32(rows[f'{prefix} mean'])
+                result[f'{prefix} l2norm'] = np.float32(rows[f'{prefix} l2norm'])
 
             # 使用示例
             update_result_dict(result_dict, row, 'NPU')
-            update_result_dict(result_dict, row, 'BENCH')
+            update_result_dict(result_dict, row, 'Bench')
             error_flag, error_message = statistics_data_check(result_dict)
             result_dict[CompareConst.ERROR_MESSAGE] += error_message
             if not error_flag:
@@ -263,7 +263,7 @@ class GraphMSComparator:
                 if is_empty or not mode:
                     continue
                 compare_result_df = self._do_multi_process(compare_result_df, mode)
-                compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(rank_id)}")
+                compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
                 compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
                 compare_result_df.to_excel(compare_result_path, index=False)
                 logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
