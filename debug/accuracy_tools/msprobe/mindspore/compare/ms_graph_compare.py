@@ -2,35 +2,25 @@ import csv
 import glob
 import os
 import sys
+import copy
 
 import numpy as np
 import pandas as pd
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, GraphMode
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
-
+from msprobe.core.common.file_check import FileOpen
 
 class row_data:
     def __init__(self, mode):
-        self.basic_data = {
-            CompareConst.NPU_NAME: None, CompareConst.BENCH_NAME: None, CompareConst.NPU_DTYPE: None, CompareConst.BENCH_DTYPE: None, CompareConst.NPU_SHAPE: None,
-            CompareConst.BENCH_SHAPE: None, CompareConst.NPU_MAX: None, CompareConst.NPU_MIN: None, CompareConst.NPU_MEAN: None, CompareConst.NPU_NORM: None,
-            CompareConst.BENCH_MAX: None, CompareConst.BENCH_MIN: None, CompareConst.BENCH_MEAN: None, CompareConst.BENCH_NORM: None,
-            CompareConst.ACCURACY: '', CompareConst.ERROR_MESSAGE: ''
-        }
-        self.npy_data = {
-            CompareConst.COSINE: None, CompareConst.MAX_ABS_ERR: None, CompareConst.MAX_RELATIVE_ERR: None, CompareConst.ONE_THOUSANDTH_ERR_RATIO: None,
-            CompareConst.FIVE_THOUSANDTHS_ERR_RATIO: None
-        }
-        self.statistic_data = {
-            CompareConst.MAX_DIFF: None, CompareConst.MIN_DIFF: None, CompareConst.MEAN_DIFF: None, CompareConst.NORM_DIFF: None, CompareConst.MAX_RELATIVE_ERR: None,
-            CompareConst.MIN_RELATIVE_ERR: None, CompareConst.MEAN_RELATIVE_ERR: None, CompareConst.NORM_RELATIVE_ERR: None
-        }
-        if mode == 'NPY_MODE':
+        self.basic_data = copy.deepcopy(CompareConst.MS_GRAPH_BASE)
+        self.npy_data = copy.deepcopy(CompareConst.MS_GRAPH_NPY)
+        self.statistic_data = copy.deepcopy(CompareConst.MS_GRAPH_STATISTIC)
+        if mode == GraphMode.NPY_MODE:
             self.data = {**self.basic_data, **self.npy_data}
         else:
             self.data = {**self.basic_data, **self.statistic_data}
@@ -47,17 +37,45 @@ def generate_step(npu_path, rank_id):
             data_path = os.path.join(rank_path, path)
             for graph_path in os.listdir(data_path):
                 step_set.update([int(i) for i in os.listdir(os.path.join(data_path, graph_path))])
-    return sorted(list(step_set))
+    return sorted(step_set)
 
 
 def generate_path_by_rank_step(base_path, rank_id, step_id):
     path_with_rank_id = os.path.join(base_path, f"rank_{rank_id}")
     for path in os.listdir(path_with_rank_id):
         if path not in ["execution_order", "graphs"]:
-            # TODO: graph id path need remove
+
             return os.path.join(path_with_rank_id, path, "*", str(step_id))
     logger.error(f"Data_path {path_with_rank_id} is not exist.")
     return ''
+
+
+def statistic_data_read(statistic_file_list, statistic_file_path):
+    data_list = []
+    statistic_data_list = []
+    for statistic_file in statistic_file_list:
+        with open(statistic_file, "r") as f:
+            csv_reader = csv.reader(f, delimiter=",")
+            header = next(csv_reader)
+            header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
+                            'Avg Value': None, 'L2Norm Value': None}
+            for key in header_index.keys():
+                for index, value in enumerate(header):
+                    if key == value:
+                        header_index[key] = index
+            for key in header_index.keys():
+                if header_index[key] is None:
+                    logger.error(f"Data_path {statistic_file_path} has no key {key}")
+                    raise FileCheckException(f"Data_path {statistic_file_path} has no key {key}")
+            statistic_data_list.extend([row for row in csv_reader])
+
+    for data in statistic_data_list:
+        compare_key = f"{data[1]}.{data[2]}.{data[3]}.{data[5]}"
+        timestamp = int(data[4])
+        data_list.append(
+            [statistic_file_path, compare_key, timestamp, data[header_index['Data Type']],
+             data[header_index['Shape']], data[header_index['Max Value']], data[header_index['Min Value']],
+             data[header_index['Avg Value']], data[header_index['L2Norm Value']]])
 
 
 def generate_data_name(data_path):
@@ -71,19 +89,20 @@ def generate_data_name(data_path):
     statistic_file_list = glob.glob(statistic_path)
     npy_file_list = glob.glob(npy_path)
 
-    mapping_exist = True if mapping_file_list else False
-    statistic_exist = True if statistic_file_list else False
-    npy_exist = True if npy_file_list else False
+    mapping_exist = bool(mapping_file_list)
+    statistic_exist = bool(statistic_file_list)
+    npy_exist = bool(npy_file_list)
+
+    mapping_dict = []
+    if mapping_exist:
+        for mapping_file in mapping_file_list:
+            with FileOpen(mapping_file, "r") as f:
+                csv_reader = csv.reader(f, delimiter=",")
+                header = next(csv_reader)
+                for row in csv_reader:
+                    mapping_dict[row[0]] = row[1]
 
     if npy_exist:
-        mapping_dict = []
-        if mapping_exist:
-            for mapping_file in mapping_file_list:
-                with open(mapping_file, "r") as f:
-                    csv_reader = csv.reader(f, delimiter=",")
-                    header = next(csv_reader)
-                    for row in csv_reader:
-                        mapping_dict[row[0]] = row[1]
         for data in npy_file_list:
             if data in mapping_dict:
                 split_list = mapping_dict[data].split(".")
@@ -94,37 +113,14 @@ def generate_data_name(data_path):
 
             data_list.append([os.path.join(data_path, data), compare_key, timestamp])
     elif statistic_exist:
-        statistic_data_list = []
-        for statistic_file in statistic_file_list:
-            with open(statistic_file, "r") as f:
-                csv_reader = csv.reader(f, delimiter=",")
-                header = next(csv_reader)
-                header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
-                                'Avg Value': None, 'L2Norm Value': None}
-                for key in header_index.keys():
-                    for index, value in enumerate(header):
-                        if key == value:
-                            header_index[key] = index
-                for key in header_index.keys():
-                    if header_index[key] is None:
-                        logger.error(f"Data_path {data_path} has no key {key}")
-                        raise FileCheckException(f"Data_path {data_path} has no key {key}")
-                statistic_data_list.extend([row for row in csv_reader])
-
-        for data in statistic_data_list:
-            compare_key = f"{data[1]}.{data[2]}.{data[3]}.{data[5]}"
-            timestamp = int(data[4])
-            data_list.append(
-                [os.path.join(data_path, statistic_path), compare_key, timestamp, data[header_index['Data Type']],
-                 data[header_index['Shape']], data[header_index['Max Value']], data[header_index['Min Value']],
-                 data[header_index['Avg Value']], data[header_index['L2Norm Value']]])
+        data_list = statistic_data_read(statistic_file_list, os.path.join(data_path, statistic_path))
 
     if npy_exist:
-        mode = "NPY_MODE"
+        mode = GraphMode.NPY_MODE
     elif statistic_exist:
-        mode = "STATISTIC_MODE"
+        mode = GraphMode.STATISTIC_MODE
     else:
-        mode = "ERROR_MODE"
+        mode = GraphMode.ERROR_MODE
         logger.error(f"Error mode.")
     return mode, data_list
 
@@ -151,7 +147,7 @@ class GraphMSComparator:
     def compare_ops(compare_result_db, mode):
 
         def npy_mode_compute(row):
-            result_dict = row_data('NPY_MODE')()
+            result_dict = row_data(GraphMode.NPY_MODE)()
             n_value = None
             b_value = None
 
@@ -213,7 +209,6 @@ class GraphMSComparator:
             error_flag, error_message = statistics_data_check(result_dict)
             result_dict[CompareConst.ERROR_MESSAGE] += error_message
             if not error_flag:
-                # TODO: check Algorithms
                 result_dict[CompareConst.MAX_DIFF] = np.abs(
                     result_dict[CompareConst.NPU_MAX] - result_dict[CompareConst.BENCH_MAX])
                 result_dict[CompareConst.MIN_DIFF] = np.abs(
@@ -245,7 +240,7 @@ class GraphMSComparator:
 
             return pd.Series(result_dict)
 
-        if mode == "NPY_MODE":
+        if mode == GraphMode.NPY_MODE:
             compare_result_db = compare_result_db.apply(npy_mode_compute, axis=1)
         else:
             compare_result_db = compare_result_db.apply(statistic_mode_compute, axis=1)
@@ -273,7 +268,6 @@ class GraphMSComparator:
                 compare_result_df = self._do_multi_process(compare_result_df, mode)
                 compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(rank_id)}")
                 compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
-                # TODO:重新排布
                 compare_result_df.to_excel(compare_result_path, index=False)
                 logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
 
@@ -289,7 +283,7 @@ class GraphMSComparator:
         match_mode, match_data_list = generate_data_name(bench_data_path)
 
         if npu_mode == "ERROR_MODE" or match_mode == "ERROR_MODE":
-            logger.error(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
+            logger.warning(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
             return [], ''
         if npu_mode != match_mode:
             logger.error(f"NPU mode {npu_mode} not equal to MATCH mode {match_mode}.")
@@ -320,10 +314,10 @@ class GraphMSComparator:
     def _do_multi_process(self, result_df, mode):
         try:
             result_df = _ms_graph_handle_multi_process(self.compare_ops, result_df, mode)
-            return result_df
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+        return result_df
 
 
 def ms_graph_compare(inputs, outputs):

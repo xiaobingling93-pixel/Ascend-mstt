@@ -77,56 +77,45 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
 
 
 def npy_data_check(n_value, b_value):
-    error_flag = False
     error_message = ""
     if n_value is None or b_value is None:
-        error_flag = True
-        error_message += "Dump file not found."
+        error_message += "Dump file not found.\n"
 
-    if not error_flag:
-        if n_value.size == 0 or b_value.size == 0:
-            error_flag = True
-            error_message += "This is empty data, can not compare."
+    # 检查 n_value 和 b_value 是否为空
+    if not error_message and (n_value.size == 0 or b_value.size == 0):
+        error_message += "This is empty data, can not compare.\n"
 
-    if not error_flag:
+    if not error_message:
         if not n_value.shape or not b_value.shape:
-            error_flag = True
-            error_message += "This is type of scalar data, can not compare."
+            error_message += "This is type of scalar data, can not compare.\n"
         if n_value.shape != b_value.shape:
-            error_flag = True
-            error_message += "Shape of NPU and bench Tensor do not match."
+            error_message += "Shape of NPU and bench Tensor do not match.\n"
         if n_value.dtype != b_value.dtype:
-            error_flag = True
-            error_message += "Dtype of NPU and bench Tensor do not match. Skipped."
+            error_message += "Dtype of NPU and bench Tensor do not match. Skipped.\n"
 
-    if not error_flag:
-        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
-        if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
-            error_flag = True
-            error_message += "The position of inf or nan in NPU and bench Tensor do not match."
+    if not error_message:
+        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有 nan/inf 数据
+        if CompareConst.NAN in (n_value, b_value):
+            error_message += "The position of inf or nan in NPU and bench Tensor do not match.\n"
 
-    return error_flag, error_message
+    return bool(error_message), error_message
 
 
 def statistics_data_check(result_dict):
-    error_flag = False
     error_message = ""
-    if result_dict['NPU Name'] is None or result_dict['NPU Name'] is None:
-        error_flag = True
-        error_message += "Dump file not found."
 
-    if not error_flag:
-        if not result_dict['NPU Tensor Shape'] or not result_dict['Bench Tensor Shape']:
-            error_flag = True
-            error_message = "This is type of scalar data, can not compare."
-        if result_dict['NPU Tensor Shape'] != result_dict['Bench Tensor Shape']:
-            error_flag = True
-            error_message += "This is type of scalar data, can not compare."
-        if result_dict['Bench Dtype'] != result_dict['Bench Dtype']:
-            error_flag = True
-            error_message += "Dtype of NPU and bench Tensor do not match. Skipped."
+    if result_dict.get(CompareConst.NPU_NAME) is None or result_dict.get(CompareConst.BENCH_NAME) is None:
+        error_message += "Dump file not found.\n"
 
-    return error_flag, error_message
+    if not result_dict.get(CompareConst.NPU_SHAPE) or not result_dict.get(CompareConst.BENCH_SHAPE):
+        error_message += "This is type of scalar data, can not compare.\n"
+    elif result_dict.get(CompareConst.NPU_SHAPE) != result_dict.get(CompareConst.BENCH_SHAPE):
+        error_message += "Tensor shapes do not match.\n"
+
+    if result_dict.get(CompareConst.NPU_DTYPE) != result_dict.get(CompareConst.BENCH_DTYPE):
+        error_message += "Dtype of NPU and bench Tensor do not match. Skipped.\n"
+
+    return bool(error_message), error_message
 
 
 class TensorComparisonBasic(abc.ABC):

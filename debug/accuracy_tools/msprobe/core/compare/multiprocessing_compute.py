@@ -42,7 +42,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
 
 
 def _ms_graph_handle_multi_process(func, result_df, mode):
-    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+    process_num = int((multiprocessing.cpu_count() + 1) // 2)
     df_chunk_size = len(result_df) // process_num
     if df_chunk_size > 0:
         df_chunks = [result_df.iloc[i:i + df_chunk_size] for i in range(0, len(result_df), df_chunk_size)]
@@ -59,7 +59,7 @@ def _ms_graph_handle_multi_process(func, result_df, mode):
         except OSError as e:
             logger.error("pool terminate failed")
 
-    for _, df_chunk in enumerate(df_chunks):
+    for df_chunk in df_chunks:
         result = pool.apply_async(func, args=(df_chunk, mode), error_callback=err_call)
         results.append(result)
     final_results = [r.get() for r in results]
