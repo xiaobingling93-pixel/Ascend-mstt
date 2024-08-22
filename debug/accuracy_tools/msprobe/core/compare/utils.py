@@ -420,6 +420,8 @@ def _compare_parser(parser):
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
+    parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
+                        help="<optional> The api mapping file path.", required=False)
     
 
 

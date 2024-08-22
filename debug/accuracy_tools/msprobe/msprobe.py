@@ -68,9 +68,6 @@ def main():
         sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == Const.PT_FRAMEWORK:
-        if args.cell_mapping is not None:
-            logger.error("Argument -cm is not supported in PyTorch framework")
-            raise Exception("Argument -cm is not supported in PyTorch framework")
         if not is_torch_available:
             logger.error("PyTorch does not exist, please install PyTorch library")
             raise Exception("PyTorch does not exist, please install PyTorch library")
@@ -86,12 +83,17 @@ def main():
         elif sys.argv[3] == "run_overflow_check":
             _run_overflow_check_command(args)
         elif sys.argv[3] == "compare":
+            if args.cell_mapping is not None or args.api_mapping is not None:
+                logger.error("Argument -cm or -am is not supported in PyTorch framework")
+                raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             compare_cli(args)
     else:
         if not is_module_available(Const.MS_FRAMEWORK):
             logger.error("MindSpore does not exist, please install MindSpore library")
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
+            if isinstance(args.api_mapping, str):
+                logger.warning("User defined mapping tables are not supported in the current version")
             compare_cli(args)
 
 if __name__ == "__main__":

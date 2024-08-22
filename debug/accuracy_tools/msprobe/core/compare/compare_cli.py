@@ -31,6 +31,7 @@ def compare_cli(args):
                 "auto_analyze": auto_analyze,
                 "fuzzy_match": args.fuzzy_match,
                 "cell_mapping": args.cell_mapping,
+                "api_mapping": args.api_mapping,
             }
 
             ms_compare(input_param, args.output_path, **kwargs)
