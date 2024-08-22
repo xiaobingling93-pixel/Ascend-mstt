@@ -523,19 +523,13 @@ def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
 
 
-def write_csv(data, filepath):
+def write_csv(data, filepath, mode="a+"):
     exist = os.path.exists(filepath)
-    with FileOpen(filepath, 'a+', encoding='utf-8-sig') as f:
+    with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
         writer = csv.writer(f)
         writer.writerows(data)
     if not exist:
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-def write_new_csv(data, filepath):
-    with FileOpen(filepath, 'w', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def load_npy(filepath):
@@ -593,7 +587,7 @@ def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
 
-        
+
 def load_yaml(yaml_path):
     path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
     checked_path = path_checker.common_check()

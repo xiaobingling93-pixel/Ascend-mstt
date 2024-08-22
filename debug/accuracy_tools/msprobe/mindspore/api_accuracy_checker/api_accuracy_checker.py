@@ -2,7 +2,7 @@ import json
 import os
 
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import write_new_csv, add_time_as_suffix
+from msprobe.core.common.utils import write_csv, add_time_as_suffix
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
@@ -194,7 +194,7 @@ class ApiAccuracyChecker:
                 detail_csv.append(csv_row)
 
         file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.DETAIL_CSV_FILE_NAME))
-        write_new_csv(detail_csv, file_name)
+        write_csv(detail_csv, file_name, mode="w")
 
 
     def to_result_csv(self, csv_dir):
@@ -243,4 +243,4 @@ class ApiAccuracyChecker:
             result_csv.append(row)
 
         file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
-        write_new_csv(result_csv, file_name)
+        write_csv(result_csv, file_name, mode="w")
