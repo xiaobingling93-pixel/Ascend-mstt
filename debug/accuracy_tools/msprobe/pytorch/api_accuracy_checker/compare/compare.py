@@ -15,6 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
     ulp_standard_api, thousandth_standard_api, apis_threshold
+from msprobe.pytorch.api_accuracy_checker.common.utils import get_segment_name
 from msprobe.pytorch.common.log import logger
 
 
@@ -156,13 +157,8 @@ class Comparator:
         self.write_detail_csv(args)
 
     def compare_output(self, full_api_name, data_info):
-        api_parts = full_api_name.split(Const.SEP)
-        api_parts_length = len(api_parts)
-        if api_parts_length == Const.THREE_SEGMENT:
-            _, api_name, _ = api_parts
-        elif api_parts_length == Const.FOUR_SEGMENT:
-            _, _, api_name, _ = api_parts
-        else:
+        _, api_name = get_segment_name(full_api_name)
+        if not api_name:
             raise ValueError(f"API name {full_api_name} has not been adapted.")
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad

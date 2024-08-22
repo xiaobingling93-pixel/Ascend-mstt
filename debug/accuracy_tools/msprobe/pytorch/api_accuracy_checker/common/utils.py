@@ -163,3 +163,15 @@ class UtDataProcessor:
                 self._save_recursive(api_name, value)
         else:
             self.index += 1
+
+
+def get_segment_name(api_full_name):
+    api_parts = api_full_name.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.THREE_SEGMENT:
+        api_type, api_name, _ = api_parts
+    elif api_parts_length == Const.FOUR_SEGMENT:
+        api_type, _, api_name, _ = api_parts
+    else:
+        api_name = None
+    return api_type, api_name

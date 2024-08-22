@@ -21,7 +21,7 @@ from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor
+    initialize_save_path, UtDataProcessor, get_segment_name
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
@@ -225,13 +225,8 @@ def run_api_offline(config, compare, api_name_set):
         if is_unsupported_api(api_full_name):
             continue
         try:
-            api_parts = api_full_name.split(Const.SEP)
-            api_parts_length = len(api_parts)
-            if api_parts_length == Const.THREE_SEGMENT:
-                _, api_name, _ = api_parts
-            elif api_parts_length == Const.FOUR_SEGMENT:
-                _, _, api_name, _ = api_parts
-            else:
+            _, api_name = get_segment_name(api_full_name)
+            if not api_name:
                 raise ValueError(f"API name {api_full_name} has not been adapted.")
         except ValueError as err:
             logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
@@ -283,7 +278,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            api_type, api_name = get_segment_name(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -304,7 +299,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name = get_segment_name(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -351,7 +346,7 @@ def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = get_segment_name(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -396,7 +391,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = get_segment_name(api_full_name)
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
