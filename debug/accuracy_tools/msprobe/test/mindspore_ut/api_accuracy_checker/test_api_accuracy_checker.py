@@ -19,11 +19,11 @@ def delete_files_with_prefix(directory, prefix):
             os.remove(full_path)
             print(f"已删除文件: {full_path}")
 
-def modify_tensor_api_info_json(json_file_path):
+def modify_tensor_api_info_json(json_file_path, modified_dump_data_dir):
     with open(json_file_path, 'r') as json_file:
         data = json.load(json_file)
     if 'dump_data_dir' in data:
-        data['dump_data_dir'] = os.path.join(directory, "files")
+        data['dump_data_dir'] = modified_dump_data_dir
     with open(json_file_path, 'w') as json_file:
         json.dump(data, json_file, indent=4)
 
@@ -42,13 +42,14 @@ class TestApiAccuracyChecker(unittest.TestCase):
 
     def test_tensor_mode(self):
         api_info_tensor_path = os.path.join(directory, "files", "api_info_tensor.json")
-        modify_tensor_api_info_json(api_info_tensor_path)
         result_directory = os.path.join(directory, "files")
+        modify_tensor_api_info_json(api_info_tensor_path, result_directory)
         api_accuracy_checker = ApiAccuracyChecker()
         api_accuracy_checker.parse(api_info_tensor_path)
         api_accuracy_checker.run_and_compare()
         api_accuracy_checker.to_detail_csv(result_directory)
         api_accuracy_checker.to_result_csv(result_directory)
+        modify_tensor_api_info_json(api_info_tensor_path, "")
         delete_files_with_prefix(result_directory, "accuracy_checking")
 
 if __name__ == '__main__':
