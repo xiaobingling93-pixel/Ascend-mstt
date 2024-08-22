@@ -166,12 +166,14 @@ class UtDataProcessor:
 
 
 def get_segment_name(api_full_name):
+    api_type = None
+    prefix = None
     api_parts = api_full_name.split(Const.SEP)
     api_parts_length = len(api_parts)
     if api_parts_length == Const.THREE_SEGMENT:
         api_type, api_name, _ = api_parts
     elif api_parts_length == Const.FOUR_SEGMENT:
-        api_type, _, api_name, _ = api_parts
+        api_type, prefix, api_name, _ = api_parts
     else:
         api_name = None
-    return api_type, api_name
+    return api_type, prefix, api_name

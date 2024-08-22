@@ -225,7 +225,7 @@ def run_api_offline(config, compare, api_name_set):
         if is_unsupported_api(api_full_name):
             continue
         try:
-            _, api_name = get_segment_name(api_full_name)
+            _, _, api_name = get_segment_name(api_full_name)
             if not api_name:
                 raise ValueError(f"API name {api_full_name} has not been adapted.")
         except ValueError as err:
@@ -278,7 +278,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            api_type, api_name = get_segment_name(api_full_name)
+            _, _, api_name = get_segment_name(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -299,7 +299,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            _, api_name = get_segment_name(api_full_name)
+            _, _, api_name = get_segment_name(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -346,7 +346,9 @@ def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    api_type, api_name = get_segment_name(api_full_name)
+    api_type, prefix, api_name = get_segment_name(api_full_name)
+    if prefix:
+        api_name = prefix + Const.SEP + api_name
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -391,7 +393,9 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    api_type, api_name = get_segment_name(api_full_name)
+    api_type, prefix, api_name = get_segment_name(api_full_name)
+    if prefix:
+        api_name = prefix + Const.SEP + api_name
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
