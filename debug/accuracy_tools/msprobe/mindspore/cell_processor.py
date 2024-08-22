@@ -21,13 +21,13 @@ class CellProcessor:
         return CellProcessor.cell_count[cell_name]
     
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
-        def begin_hook(cell, input, output=None):
+        def begin_hook(cell, input):
             index = self.set_cell_count(name_prefix)
             cell.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
             if self.scope:
                 self.scope.begin_module(full_name)
     
-        def end_hook(cell, input, output=None):
+        def end_hook(cell, input, output):
             if self.scope:
                 self.scope.end_module(cell.mindstudio_reserved_name)
 
