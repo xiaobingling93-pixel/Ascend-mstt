@@ -34,43 +34,8 @@ class ApiAccuracyChecker:
         self.api_infos = dict()
         self.results = dict()
 
-    def parse(self, api_info_path):
-        with FileOpen(api_info_path, "r") as f:
-            api_info_dict = json.load(f)
-
-        # init global context
-        task = check_and_get_from_json_dict(api_info_dict, MsCompareConst.TASK_FIELD,
-                                            "task field in api_info.json",accepted_type=str,
-                                            accepted_value=(MsCompareConst.STATISTICS_TASK,
-                                                            MsCompareConst.TENSOR_TASK))
-        is_constructed = task == MsCompareConst.STATISTICS_TASK
-        if not is_constructed:
-            dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DUMP_DATA_DIR_FIELD,
-                                                         "dump_data_dir field in api_info.json", accepted_type=str)
-        else:
-            dump_data_dir = ""
-        global_context.init(is_constructed, dump_data_dir)
-
-        api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
-                                                     "data field in api_info.json", accepted_type=dict)
-        for api_name, api_info in api_info_data.items():
-            is_mint = api_name.split(Const.SEP)[0] in \
-                (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
-            if not is_mint:
-                continue
-            forbackward_str = api_name.split(Const.SEP)[-1]
-            if forbackward_str not in (Const.FORWARD, Const.BACKWARD):
-                logger.warning(f"api: {api_name} is not recognized as forward api or backward api, skip this.")
-            api_name = Const.SEP.join(api_name.split(Const.SEP)[:-1]) # www.xxx.yyy.zzz --> www.xxx.yyy
-            if api_name not in self.api_infos:
-                self.api_infos[api_name] = ApiInfo(api_name)
-
-            if forbackward_str == Const.FORWARD:
-                self.api_infos[api_name].load_forward_info(api_info)
-            else:
-                self.api_infos[api_name].load_backward_info(api_info)
-
-    def run_and_compare_helper(self, api_info, api_name_str, api_input_aggregation, forward_or_backward):
+    @staticmethod
+    def run_and_compare_helper(api_info, api_name_str, api_input_aggregation, forward_or_backward):
         '''
         Args:
             api_info: ApiInfo
@@ -119,6 +84,42 @@ class ApiAccuracyChecker:
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
         return output_list
+
+    def parse(self, api_info_path):
+        with FileOpen(api_info_path, "r") as f:
+            api_info_dict = json.load(f)
+
+        # init global context
+        task = check_and_get_from_json_dict(api_info_dict, MsCompareConst.TASK_FIELD,
+                                            "task field in api_info.json",accepted_type=str,
+                                            accepted_value=(MsCompareConst.STATISTICS_TASK,
+                                                            MsCompareConst.TENSOR_TASK))
+        is_constructed = task == MsCompareConst.STATISTICS_TASK
+        if not is_constructed:
+            dump_data_dir = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DUMP_DATA_DIR_FIELD,
+                                                         "dump_data_dir field in api_info.json", accepted_type=str)
+        else:
+            dump_data_dir = ""
+        global_context.init(is_constructed, dump_data_dir)
+
+        api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
+                                                     "data field in api_info.json", accepted_type=dict)
+        for api_name, api_info in api_info_data.items():
+            is_mint = api_name.split(Const.SEP)[0] in \
+                (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
+            if not is_mint:
+                continue
+            forbackward_str = api_name.split(Const.SEP)[-1]
+            if forbackward_str not in (Const.FORWARD, Const.BACKWARD):
+                logger.warning(f"api: {api_name} is not recognized as forward api or backward api, skip this.")
+            api_name = Const.SEP.join(api_name.split(Const.SEP)[:-1]) # www.xxx.yyy.zzz --> www.xxx.yyy
+            if api_name not in self.api_infos:
+                self.api_infos[api_name] = ApiInfo(api_name)
+
+            if forbackward_str == Const.FORWARD:
+                self.api_infos[api_name].load_forward_info(api_info)
+            else:
+                self.api_infos[api_name].load_backward_info(api_info)
 
     def run_and_compare(self):
         for api_name_str, api_info in self.api_infos.items():
