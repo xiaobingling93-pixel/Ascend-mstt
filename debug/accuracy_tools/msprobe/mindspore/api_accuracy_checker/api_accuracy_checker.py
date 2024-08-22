@@ -78,6 +78,9 @@ class ApiAccuracyChecker:
             api_input_aggregation: ApiInputAggregation
             forward_or_backward: str: Union["forward", "backward"]
 
+        Return:
+            output_list: List[tuple(str, str, BasicInfoAndStatus, dict{str: CompareResult})]
+
         Description:
             get mindspore api output, run torch api and get output.
             compare output.
@@ -92,6 +95,7 @@ class ApiAccuracyChecker:
         bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
 
         # compare output
+        output_list = []
         for i, (bench_out, tested_out) in enumerate(zip(bench_outputs, tested_outputs)):
             api_name_with_slot = Const.SEP.join([api_name_str, forward_or_backward, Const.OUTPUT, str(i)])
             bench_dtype = bench_out.get_dtype()
@@ -111,9 +115,10 @@ class ApiAccuracyChecker:
                 status = CompareConst.ERROR
                 err_msg = compare_result_dict.get(CompareConst.COSINE).err_msg + \
                     compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg
-            self.record(api_name_str, forward_or_backward,
-                        BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg),
-                        compare_result_dict)
+            basic_info_status = \
+                BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
+            output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
+        return output_list
 
     def run_and_compare(self):
         for api_name_str, api_info in self.api_infos.items():
@@ -123,20 +128,38 @@ class ApiAccuracyChecker:
             forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
             kwargs = api_info.get_kwargs()
             forward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, None)
-            self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
+            forward_output_list = None
+            try:
+                forward_output_list = \
+                    self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
+            except Exception as e:
+                logger.warning(f"exception occurs when running and comparing {api_name_str} forward api"
+                               f"detailed exception information: {e}")
+            self.record(forward_output_list)
 
             if not api_info.check_backward_info():
                 logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check")
                 continue
             gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
             backward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
-            self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
+            backward_output_list = None
+            try:
+                backward_output_list = \
+                    self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
+            except Exception as e:
+                logger.warning(f"exception occurs when running and comparing {api_name_str} backward api"
+                               f"detailed exception information: {e}")
+            self.record(backward_output_list)
 
-    def record(self, api_real_name, forward_or_backward, basic_info, compare_result_dict):
-        key = tuple([api_real_name, forward_or_backward])
-        if key not in self.results:
-            self.results[key] = []
-        self.results[key].append(tuple([basic_info, compare_result_dict]))
+    def record(self, output_list):
+        if output_list is None:
+            return
+        for output in output_list:
+            api_real_name, forward_or_backward, basic_info, compare_result_dict = output
+            key = tuple([api_real_name, forward_or_backward])
+            if key not in self.results:
+                self.results[key] = []
+            self.results[key].append(tuple([basic_info, compare_result_dict]))
 
 
     def to_detail_csv(self, csv_dir):
