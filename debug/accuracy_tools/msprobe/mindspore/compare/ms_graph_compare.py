@@ -32,6 +32,8 @@ class row_data:
 def generate_step(npu_path, rank_id):
     step_set = set()
     rank_path = os.path.join(npu_path, f"rank_{rank_id}")
+    if not os.path.exists(rank_path):
+        return
     for path in os.listdir(rank_path):
         if path not in ["execution_order", "graphs"]:
             data_path = os.path.join(rank_path, path)
@@ -42,6 +44,8 @@ def generate_step(npu_path, rank_id):
 
 def generate_path_by_rank_step(base_path, rank_id, step_id):
     path_with_rank_id = os.path.join(base_path, f"rank_{rank_id}")
+    if not os.path.exists(path_with_rank_id):
+        return ''
     for path in os.listdir(path_with_rank_id):
         if path not in ["execution_order", "graphs"]:
 
@@ -76,6 +80,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
             [statistic_file_path, compare_key, timestamp, data[header_index['Data Type']],
              data[header_index['Shape']], data[header_index['Max Value']], data[header_index['Min Value']],
              data[header_index['Avg Value']], data[header_index['L2Norm Value']]])
+    return data_list
 
 
 def generate_data_name(data_path):
@@ -132,6 +137,8 @@ def read_npy_data(data_path):
             data_value = data_value.astype(np.float32)
     except FileNotFoundError as e:
         data_value = None
+    except EOFError:
+        data_value = None
     return data_value
 
 
@@ -151,25 +158,19 @@ class GraphMSComparator:
             n_value = None
             b_value = None
 
-            if os.path.exists(row[CompareConst.NPU_NAME]):
-                n_value = read_npy_data(row[CompareConst.NPU_NAME])
-                result_dict[CompareConst.NPU_NAME] = row[CompareConst.NPU_NAME]
-                result_dict[CompareConst.NPU_DTYPE] = n_value.dtype
-                result_dict[CompareConst.NPU_SHAPE] = n_value.shape
-                result_dict[CompareConst.NPU_MAX] = np.max(n_value)
-                result_dict[CompareConst.NPU_MIN] = np.min(n_value)
-                result_dict[CompareConst.NPU_MEAN] = np.mean(n_value)
-                result_dict[CompareConst.NPU_NORM] = np.linalg.norm(n_value)
+            def process_npy_file(file_path, name_prefix, result):
+                if os.path.exists(file_path):
+                    data = read_npy_data(file_path)
+                    result[f'{name_prefix}_NAME'] = file_path
+                    result[f'{name_prefix}_DTYPE'] = data.dtype
+                    result[f'{name_prefix}_SHAPE'] = data.shape
+                    result[f'{name_prefix}_MAX'] = np.max(data)
+                    result[f'{name_prefix}_MIN'] = np.min(data)
+                    result[f'{name_prefix}_MEAN'] = np.mean(data)
+                    result[f'{name_prefix}_NORM'] = np.linalg.norm(data)
 
-            if os.path.exists(row[CompareConst.BENCH_NAME]):
-                b_value = read_npy_data(row[CompareConst.BENCH_NAME])
-                result_dict[CompareConst.BENCH_NAME] = row[CompareConst.BENCH_NAME]
-                result_dict[CompareConst.BENCH_DTYPE] = b_value.dtype
-                result_dict[CompareConst.BENCH_SHAPE] = b_value.shape
-                result_dict[CompareConst.BENCH_MAX] = np.max(b_value)
-                result_dict[CompareConst.BENCH_MIN] = np.min(b_value)
-                result_dict[CompareConst.BENCH_MEAN] = np.mean(b_value)
-                result_dict[CompareConst.BENCH_NORM] = np.linalg.norm(b_value)
+            process_npy_file(row[CompareConst.NPU_NAME], 'NPU', result_dict)
+            process_npy_file(row[CompareConst.BENCH_NAME], 'BENCH', result_dict)
 
             error_flag, error_message = npy_data_check(n_value, b_value)
             result_dict[CompareConst.ERROR_MESSAGE] = error_message
@@ -190,22 +191,18 @@ class GraphMSComparator:
         def statistic_mode_compute(row):
             result_dict = row_data('STATISTIC')()
 
-            result_dict[CompareConst.NPU_NAME] = row[CompareConst.NPU_NAME]
-            result_dict[CompareConst.NPU_DTYPE] = row[CompareConst.NPU_DTYPE]
-            result_dict[CompareConst.NPU_SHAPE] = row[CompareConst.NPU_SHAPE]
-            result_dict[CompareConst.NPU_MAX] = np.float32(row[CompareConst.NPU_MAX])
-            result_dict[CompareConst.NPU_MIN] = np.float32(row[CompareConst.NPU_MIN])
-            result_dict[CompareConst.NPU_MEAN] = np.float32(row[CompareConst.NPU_MEAN])
-            result_dict[CompareConst.NPU_NORM] = np.float32(row[CompareConst.NPU_NORM])
+            def update_result_dict(result, rows, prefix):
+                result[f'{prefix}_NAME'] = rows[f'{prefix}_NAME']
+                result[f'{prefix}_DTYPE'] = rows[f'{prefix}_DTYPE']
+                result[f'{prefix}_SHAPE'] = rows[f'{prefix}_SHAPE']
+                result[f'{prefix}_MAX'] = np.float32(rows[f'{prefix}_MAX'])
+                result[f'{prefix}_MIN'] = np.float32(rows[f'{prefix}_MIN'])
+                result[f'{prefix}_MEAN'] = np.float32(rows[f'{prefix}_MEAN'])
+                result[f'{prefix}_NORM'] = np.float32(rows[f'{prefix}_NORM'])
 
-            result_dict[CompareConst.BENCH_NAME] = row[CompareConst.BENCH_NAME]
-            result_dict[CompareConst.BENCH_DTYPE] = row[CompareConst.BENCH_DTYPE]
-            result_dict[CompareConst.BENCH_SHAPE] = row[CompareConst.BENCH_SHAPE]
-            result_dict[CompareConst.BENCH_MAX] = np.float32(row[CompareConst.BENCH_MAX])
-            result_dict[CompareConst.BENCH_MIN] = np.float32(row[CompareConst.BENCH_MIN])
-            result_dict[CompareConst.BENCH_MEAN] = np.float32(row[CompareConst.BENCH_MEAN])
-            result_dict[CompareConst.BENCH_NORM] = np.float32(row[CompareConst.BENCH_NORM])
-
+            # 使用示例
+            update_result_dict(result_dict, row, 'NPU')
+            update_result_dict(result_dict, row, 'BENCH')
             error_flag, error_message = statistics_data_check(result_dict)
             result_dict[CompareConst.ERROR_MESSAGE] += error_message
             if not error_flag:
@@ -233,7 +230,7 @@ class GraphMSComparator:
                     result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
                 magnitude_diff = result_dict[CompareConst.MAX_DIFF] / (
                             max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
-                if magnitude_diff > 0.5:
+                if magnitude_diff > CompareConst.MAGNITUDE:
                     result_dict[CompareConst.ACCURACY] = 'No'
                 else:
                     result_dict[CompareConst.ACCURACY] = 'Yes'
@@ -318,13 +315,3 @@ class GraphMSComparator:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
         return result_df
-
-
-def ms_graph_compare(inputs, outputs):
-    try:
-        create_directory(outputs)
-    except (CompareException, FileCheckException) as error:
-        logger.error('Compare failed. Please check the arguments and do it again!')
-        return
-    msComparator = GraphMSComparator(inputs, outputs)
-    msComparator.compare_core()
