@@ -98,7 +98,7 @@ class ApiRegistry:
                 self.mint_ops_hook_attr[attr_name[Const.ATTR_NAME_PREFIX_LEN:]] = getattr(HOOKMintOP, attr_name)
         for attr_name in dir(HOOKMintNNFunctionalOP):
             if attr_name.startswith(Const.ATTR_NAME_PREFIX):
-                self.mint_func_ops_hook_attr[attr_name[Const.ATTR_NAME_PREFIX_LEN:]] = getattr(HOOKMintNNFunctionalOP, attr_name)    
+                self.mint_func_ops_hook_attr[attr_name[Const.ATTR_NAME_PREFIX_LEN:]] = getattr(HOOKMintNNFunctionalOP, attr_name)
 
 
 api_register = ApiRegistry()

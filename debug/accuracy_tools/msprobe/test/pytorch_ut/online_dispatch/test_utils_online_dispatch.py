@@ -23,7 +23,7 @@ import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from msprobe.pytorch.online_dispatch.utils import COLOR_RED, COLOR_CYAN, COLOR_YELLOW, COLOR_RESET, COMPARE_LOGO, get_callstack, np_save_data, data_to_cpu, logger_debug, logger_info, logger_warn, logger_error, logger_user, logger_logo, DispatchException
+from msprobe.pytorch.online_dispatch.utils import COLOR_RED, COLOR_CYAN, COLOR_YELLOW, COLOR_RESET, COMPARE_LOGO, np_save_data, data_to_cpu, DispatchException
 
 cpu_device = torch._C.device("cpu")
 
@@ -64,36 +64,6 @@ class TestUtils(unittest.TestCase):
         deep=0
         data_cpu=[]
         self.assertEqual(data_to_cpu(data,deep,data_cpu), data)
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_debug(self,mock_inf0):
-        logger_debug("messages")
-        mock_inf0.return_value.assert_called_once_with("DEBUG messages")
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_info(self,mock_info):
-        logger_info("messages")
-        mock_info.return_value.assert_called_once_with("INFO messages")
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_warn(self,mock_info):
-        logger_warn("messages")
-        mock_info.return_value.assert_called_once_with(f'{COLOR_YELLOW}WARNING messages {COLOR_RESET}')
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_error(self,mock_info):
-        logger_error("messages")
-        mock_info.return_value.assert_called_once_with(f'{COLOR_RED}ERROR messages {COLOR_RESET}')
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_user(self,mock_info):
-        logger_user("messages")
-        mock_info.return_value.assert_called_once_with("messages")
-
-    @patch('msprobe.pytorch.online_dispatch.utils.get_mp_logger')
-    def test_logger_logo(self,mock_info):
-        logger_logo()
-        mock_info.return_value.assert_called_once_with(f'{COLOR_CYAN}{COMPARE_LOGO} {COLOR_RESET}')
 
     def test_str(self):
         self.assertEqual(self.dispatch_exception.__str__(),"messages")

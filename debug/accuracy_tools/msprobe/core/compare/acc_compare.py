@@ -15,13 +15,14 @@ from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, 
     get_error_message
 from msprobe.core.advisor.advisor import Advisor
 
+
 class Comparator:
     
     def __init__(self):
-        pass    
+        pass
     
     @classmethod
-    def make_result_table(cls,result,md5_compare,summary_compare,stack_mode):
+    def make_result_table(cls,result, md5_compare, summary_compare, stack_mode):
         header = []
         if md5_compare:
             header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
@@ -49,7 +50,7 @@ class Comparator:
         return result_df   
     
     @classmethod
-    def gen_merge_list(self,json_data,op_name,stack_json_data,summary_compare,md5_compare):
+    def gen_merge_list(self, json_data, op_name,stack_json_data, summary_compare, md5_compare):
         op_data = json_data['data'][op_name]
         op_parsed_list = read_op(op_data, op_name)
         if op_name in stack_json_data:
@@ -92,7 +93,7 @@ class Comparator:
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
-    def compare_process(self,file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
+    def compare_process(self, file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
         npu_json_handle, bench_json_handle, stack_json_handle = file_handles
         npu_json_data = json.load(npu_json_handle)
         bench_json_data = json.load(bench_json_handle)
@@ -154,7 +155,7 @@ class Comparator:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, md5_compare, summary_compare)
                 
-        result_df = self.make_result_table(result,md5_compare,summary_compare,stack_mode)
+        result_df = self.make_result_table(result, md5_compare, summary_compare, stack_mode)
         return result_df
     
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
@@ -170,7 +171,10 @@ class Comparator:
                 frame_name = getattr(self, "frame_name")
                 if frame_name == "MSComparator":
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
-                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                    if self.cross_frame:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
+                    else:
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
                     b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
@@ -191,12 +195,12 @@ class Comparator:
         err_msg = get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=error_file)
         result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
-        if npu_op_name != bench_op_name:
+        if npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
     
-    def compare_core(self,input_parma, output_path, **kwargs):
+    def compare_core(self, input_parma, output_path, **kwargs):
         """
         Compares data from multiple JSON files and generates a comparison report.
 
@@ -270,12 +274,12 @@ class Comparator:
             five_thousand_err_ratio_result.append(five_thousand_err_ratio)
 
         cr = ComparisonResult(
-            cos_result = cos_result,
-            max_err_result = max_err_result,
+            cos_result=cos_result,
+            max_err_result=max_err_result,
             max_relative_err_result=max_relative_err_result,
-            err_msgs = err_mess,
-            one_thousand_err_ratio_result = one_thousand_err_ratio_result,
-            five_thousand_err_ratio_result = five_thousand_err_ratio_result
+            err_msgs=err_mess,
+            one_thousand_err_ratio_result=one_thousand_err_ratio_result,
+            five_thousand_err_ratio_result=five_thousand_err_ratio_result
         )
 
         return _save_cmp_result(idx, cr, result_df, lock)   

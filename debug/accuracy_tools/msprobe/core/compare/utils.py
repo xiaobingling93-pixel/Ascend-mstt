@@ -326,9 +326,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
-    bench_name, bench_type, bench_shape = CompareConst.NAN, CompareConst.NAN, CompareConst.NAN
+    bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
     err_msg = CompareConst.NO_BENCH
-    accuracy_check_res = CompareConst.NAN
+    accuracy_check_res = CompareConst.N_A
     for index, n_name in enumerate(n_dict["op_name"]):
         if n_name.find("input") != -1:
             n_struct = n_dict["input_struct"][index]
@@ -338,28 +338,29 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
         if md5_compare:
-            result_item.extend([CompareConst.NAN] * 3)
+            result_item.extend([CompareConst.N_A] * 3)
             if npu_stack_info and index == 0:
                 result_item.extend(npu_stack_info)
+            else:
+                result_item.append(CompareConst.NONE)
             result.append(result_item)
             continue
         if summary_compare:
-            result_item.extend([CompareConst.NAN] * 8)
+            result_item.extend([CompareConst.N_A] * 8)
         else:
-            result_item.extend([CompareConst.NAN] * 5)
-        summary_data = n_dict.get("summary")[index]
-        result_item.extend(summary_data)
-        summary_data = [CompareConst.NAN] * 4
-        result_item.extend(summary_data)
+            result_item.extend([CompareConst.N_A] * 5)
+        npu_summary_data = n_dict.get("summary")[index]
+        result_item.extend(npu_summary_data)
+        bench_summary_data = [CompareConst.N_A] * 4
+        result_item.extend(bench_summary_data)
         result_item.append(accuracy_check_res)
         result_item.append(err_msg)
         if npu_stack_info and index == 0:
             result_item.extend(npu_stack_info)
-        if not md5_compare and not summary_compare and result_item[1] == CompareConst.NAN:
-            if index == 0:
-                result_item.extend(["-1"])
-            else:
-                result_item.extend([CompareConst.NONE, "-1"])
+        else:
+            result_item.append(CompareConst.NONE)
+        if not md5_compare and not summary_compare and result_item[1] == CompareConst.N_A:
+            result_item.extend(["-1"])
         result.append(result_item)
 
 
@@ -413,10 +414,15 @@ def _compare_parser(parser):
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
-    parser.add_argument("-a", "--auto_analyze", dest="auto_analyze", action="store_false",
+    parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
                         help="<optional> Whether to perform a fuzzy match on the api name.", required=False)
+    parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
+                        help="<optional> The cell mapping file path.", required=False)
+    parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
+                        help="<optional> The api mapping file path.", required=False)
+    
 
 
     

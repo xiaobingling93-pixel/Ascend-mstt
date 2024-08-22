@@ -2,11 +2,31 @@ import os
 import time
 import sys
 import re
+from functools import wraps
+from torch import distributed as dist
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
 FILE_NAME_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
+
+
+
+class MsgConst:
+    """
+    Class for log messages const
+    """
+    SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+
+def filter_special_chars(func):
+    @wraps(func)
+    def func_level(msg):
+        for char in MsgConst.SPECIAL_CHAR:
+            msg = msg.replace(char, '_')
+        return func(msg)
+    return func_level
+
 
 class FileCheckConst:
     """
@@ -61,6 +81,15 @@ class FileCheckException(Exception):
     def __str__(self):
         return self.error_info
 
+
+def print_rank_0(message):
+    if dist.is_initialized():
+        if dist.get_rank() == 0:
+            print(message)
+    else:
+        print(message)
+
+
 def _print_log(level, msg, end='\n'):
     current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
     pid = os.getgid()
@@ -68,16 +97,18 @@ def _print_log(level, msg, end='\n'):
     sys.stdout.flush()
 
 
-def print_info_log(info_msg, end='\n'):
+@filter_special_chars
+def print_info_log(info_msg):
     """
     Function Description:
         print info log.
     Parameter:
         info_msg: the info message.
     """
-    _print_log("INFO", info_msg, end=end)
+    _print_log("INFO", info_msg)
 
 
+@filter_special_chars
 def print_error_log(error_msg):
     """
     Function Description:
@@ -88,6 +119,7 @@ def print_error_log(error_msg):
     _print_log("ERROR", error_msg)
 
 
+@filter_special_chars
 def print_warn_log(warn_msg):
     """
     Function Description:

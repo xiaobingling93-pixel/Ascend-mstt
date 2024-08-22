@@ -31,8 +31,8 @@ from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_check import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
+from msprobe.core.common.file_check import FileOpen, FileChecker
+from msprobe.core.common.utils import check_file_or_directory_path
 from msprobe.pytorch.common.log import logger
 
 
@@ -57,12 +57,7 @@ except ImportError as err:
 class Util:
     def __init__(self):
         self.ms_accu_cmp = None
-        logging.basicConfig(
-            level=Const.LOG_LEVEL,
-            format="%(asctime)s (%(process)d) -[%(levelname)s]%(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
-        self.log = logging.getLogger()
+        self.log = logger
         self.python = sys.executable
 
     @staticmethod
@@ -82,6 +77,8 @@ class Util:
     @staticmethod
     def get_subdir_count(self, directory):
         subdir_count = 0
+        path_checker = FileChecker(directory)
+        path_checker.common_check()
         for _, dirs, _ in os.walk(directory):
             subdir_count += len(dirs)
             break
@@ -90,8 +87,15 @@ class Util:
     @staticmethod
     def get_subfiles_count(self, directory):
         file_count = 0
-        for _, _, files in os.walk(directory):
+        for root, _, files in os.walk(directory, topdown=True):
+            path_checker = FileChecker(root)
+            path_checker.common_check()
             file_count += len(files)
+            path_depth = root.count(os.sep)
+            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
+                yield root, _, files
+            else:
+                _[:] = []
         return file_count
 
     @staticmethod
@@ -129,17 +133,6 @@ class Util:
         return md5_hash.hexdigest()
 
     @staticmethod
-    def write_csv(self, data, filepath):
-        need_change_mode = False
-        if not os.path.exists(filepath):
-            need_change_mode = True
-        with FileOpen(filepath, 'a') as f:
-            writer = csv.writer(f)
-            writer.writerows(data)
-        if need_change_mode:
-            change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-    @staticmethod
     def deal_with_dir_or_file_inconsistency(self, output_path):
         if os.path.exists(output_path):
             os.remove(output_path)
@@ -160,10 +153,17 @@ class Util:
     
     @staticmethod
     def dir_contains_only(self, path, endfix):
-        for _, _, files in os.walk(path):
+        for root, _, files in os.walk(path, topdown=True):
+            path_checker = FileChecker(root)
+            path_checker.common_check()
             for file in files:
                 if not file.endswith(endfix):
                     return False
+            path_depth = root.count(os.sep)
+            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
+                yield root, _, files
+            else:
+                _[:] = []
         return True
     
     @staticmethod
@@ -188,7 +188,7 @@ class Util:
         if not cmd:
             self.log.error("Commond is None")
             return -1
-        self.log.debug("[RUN CMD]: %s", cmd)
+        self.log.info("[RUN CMD]: %s", cmd)
         cmd = cmd.split(" ")
         complete_process = subprocess.run(cmd, shell=False)
         return complete_process.returncode
@@ -208,7 +208,7 @@ class Util:
                 "Check msaccucmp failed in dir %s. This is not a correct msaccucmp file" % target_file)
             raise ParseException(ParseException.PARSE_MSACCUCMP_ERROR)
         result = subprocess.run(
-            [self.python, target_file, "--help"], stdout=subprocess.PIPE)
+            [self.python, target_file, "--help"], stdout=subprocess.PIPE, shell=False)
         if result.returncode == 0:
             self.log.info("Check [%s] success.", target_file)
         else:
@@ -217,40 +217,11 @@ class Util:
             raise ParseException(ParseException.PARSE_MSACCUCMP_ERROR)
         return target_file
 
-    def create_dir(self, path):
-        path = self.path_strip(path)
-        if os.path.exists(path):
-            return
-        self.check_path_name(path)
-        try:
-            os.makedirs(path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
-        except OSError as e:
-            self.log.error("Failed to create %s.", path)
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR) from e
-
     def gen_npy_info_txt(self, source_data):
         (shape, dtype, max_data, min_data, mean) = \
             self.npy_info(source_data)
         return \
                 '[Shape: %s] [Dtype: %s] [Max: %s] [Min: %s] [Mean: %s]' % (shape, dtype, max_data, min_data, mean)
-
-    def save_npy_to_txt(self, data, dst_file='', align=0):
-        if os.path.exists(dst_file):
-            self.log.info("Dst file %s exists, will not save new one.", dst_file)
-            return
-        shape = data.shape
-        data = data.flatten()
-        if align == 0:
-            align = 1 if len(shape) == 0 else shape[-1]
-        elif data.size % align != 0:
-            pad_array = np.zeros((align - data.size % align,))
-            data = np.append(data, pad_array)
-        check_path_before_create(dst_file)
-        try:
-            np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
-        except Exception as e:
-            self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
-        change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
     def list_convert_files(self, path, external_pattern=""):
         return self.list_file_with_pattern(
@@ -278,27 +249,8 @@ class Util:
 
     def check_path_valid(self, path):
         path = self.path_strip(path)
-        if not path or not os.path.exists(path):
-            self.log.error("The path %s does not exist." % path)
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if os.path.islink(path):
-            self.log.error('The file path {} is a soft link.'.format(path))
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
-                Const.FILE_NAME_LENGTH:
-            self.log.error('The file path length exceeds limit.')
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
-            self.log.error('The file path {} contains special characters.'.format(path))
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if os.path.isfile(path):
-            file_size = os.path.getsize(path)
-            if path.endswith(Const.PKL_SUFFIX) and file_size > Const.ONE_GB:
-                self.log.error('The file {} size is greater than 1GB.'.format(path))
-                raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-            if path.endswith(Const.NPY_SUFFIX) and file_size > Const.TEN_GB:
-                self.log.error('The file {} size is greater than 10GB.'.format(path))
-                raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
+        path_checker = FileChecker(path)
+        path_checker.common_check()
         return True
 
     def check_files_in_path(self, path):
@@ -326,17 +278,24 @@ class Util:
         self.check_path_valid(path)
         file_list = {}
         re_pattern = re.compile(pattern)
-        for dir_path, _, file_names in os.walk(path, followlinks=True):
+        for dir_path, _, file_names in os.walk(path, topdown=True):
+            path_checker = FileChecker(dir)
+            path_checker.common_check()
             for name in file_names:
                 match = re_pattern.match(name)
                 if not match:
                     continue
-                if extern_pattern != '' and not re.match(extern_pattern, name):
+                if extern_pattern != '' and re_pattern.match(extern_pattern) and not re.match(extern_pattern, name):
                     continue
                 file_list[name] = gen_info_func(name, match, dir_path)
+            path_depth = dir_path.count(os.sep)
+            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
+                yield dir_path, _, file_names
+            else:
+                _[:] = []
         return file_list
 
-    def check_path_format(self, path, suffix):
+    def check_file_path_format(self, path, suffix):
         if os.path.isfile(path):
             if not path.endswith(suffix):
                 self.log.error("%s is not a %s file." % (path, suffix))
@@ -346,15 +305,6 @@ class Util:
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
         else:
             self.log.error("The file path %s is invalid" % path)
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-
-    def check_path_name(self, path):
-        if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
-                Const.FILE_NAME_LENGTH:
-            self.log.error('The file path length exceeds limit.')
-            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
-        if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
-            self.log.error('The file path {} contains special characters.'.format(path))
             raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
 
     def check_str_param(self, param):

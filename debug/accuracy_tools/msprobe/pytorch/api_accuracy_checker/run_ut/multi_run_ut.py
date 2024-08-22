@@ -9,8 +9,9 @@ import threading
 from collections import namedtuple
 from itertools import cycle
 from tqdm import tqdm
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, get_validated_result_csv_path, \
-    get_validated_details_csv_path, preprocess_forward_content
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, preprocess_forward_content
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path, \
+    get_validated_details_csv_path
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileChecker, check_file_suffix, check_link, FileOpen, \
@@ -117,7 +118,7 @@ def run_parallel_ut(config):
 
     for api_info in config.api_files:
         cmd = create_cmd(api_info, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1, shell=False)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
 
