@@ -297,7 +297,6 @@ def analyse_csv(npu_data, gpu_data, config):
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        _, api_name, _, direction_status, _, _ = full_api_name_with_direction_status.split(".")
         api_parts = full_api_name_with_direction_status.split(Const.SEP)
         api_parts_length = len(api_parts)
         if api_parts_length == Const.SIX_SEGMENT:
