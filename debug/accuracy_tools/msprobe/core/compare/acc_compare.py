@@ -141,7 +141,10 @@ class Comparator:
                 continue
 
             # APIs in NPU and Bench models unconsistent judgment
-            if (not npu_ops_queue and bench_ops_queue) or (npu_ops_queue and not bench_ops_queue):
+            if not npu_ops_queue and bench_ops_queue:
+                logger.info("Please check whether the number and calls of APIs in NPU and Bench models are consistent.")
+                break
+            elif npu_ops_queue and not bench_ops_queue:
                 logger.info("Please check whether the number and calls of APIs in NPU and Bench models are consistent.")
                 break
 
