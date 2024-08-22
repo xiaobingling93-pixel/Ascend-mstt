@@ -144,6 +144,7 @@ class ComputeElement:
 
     def _construct_ndarray(self, shape, maximum, minimum, np_dtype):
         shape = tuple(shape)
+        np.random.seed(42)
         if np_dtype == np.bool_:
             ndarray = np.random.rand(*shape) > 0.5
         else:
