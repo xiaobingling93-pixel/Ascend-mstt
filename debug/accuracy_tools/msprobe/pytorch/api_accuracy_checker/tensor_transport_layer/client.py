@@ -140,7 +140,8 @@ class TCPClient:
         try:
             self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
         except Exception as e:
-            logger.debug(f"send_queue put send_data timeout, {str(e)}")
+            logger.error(f"send_queue put send_data timeout, rank: {send_data.rank}, step: {send_data.step},"
+                         f"sequence_number: {send_data.sequence_number}, {str(e)}")
 
     def _send_data(self, data: TCPDataItem):
         self.tcp_manager.send_wrapped_data(data.raw_data,
