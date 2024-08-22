@@ -140,6 +140,16 @@ class Comparator:
             if both_empty or no_change:
                 continue
 
+            # dump data missing judgment
+            if not npu_ops_queue and bench_ops_queue:
+                logger.info("The dump data of npu may be missing. For data integrity, compare the size of dump.json "
+                            "of npu and bench is suggested.")
+                break
+            if npu_ops_queue and not bench_ops_queue:
+                logger.info("The dump data of bench may be missing. For data integrity, compare the size of dump.json "
+                            "of npu and bench is suggested.")
+                break
+
             n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
             if n_match_point == -1 and b_match_point == -1:
                 continue
