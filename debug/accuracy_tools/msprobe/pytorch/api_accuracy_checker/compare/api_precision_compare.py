@@ -16,6 +16,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
     check_inf_or_nan
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import get_validated_result_csv_path
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
 from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -297,16 +298,18 @@ def analyse_csv(npu_data, gpu_data, config):
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        api_parts = full_api_name_with_direction_status.split(Const.SEP)
-        api_parts_length = len(api_parts)
-        if api_parts_length == Const.SIX_SEGMENT:
-            api_type, api_name, api_order, direction_status, _, _ = full_api_name_with_direction_status.split(Const.SEP)
-            full_api_name = Const.SEP.join([api_type, api_name, api_order])
-        elif api_parts_length == Const.SEVEN_SEGMENT:
-            api_type, prefix, api_name, api_order, direction_status, _, _ = full_api_name_with_direction_status.split(Const.SEP)
-            full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
-        else:
-            raise CompareException(CompareException.INVALID_DATA_ERROR, "This type of API has not been adapted.")
+        try:
+            api_name, full_api_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
+            if not full_api_name:
+                raise CompareException(CompareException.INVALID_DATA_ERROR, "This type of API has not been adapted.")
+        except Exception as err:
+            logger.error(f"Compare Error: %s" % str(err))
+            compare_column.api_name = full_api_name_with_direction_status
+            compare_column.compare_result = CompareConst.SKIP
+            compare_column.compare_message = str(err)
+            write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
+            write_csv([[full_api_name_with_direction_status, "skip", "skip",  str(err)]], config.result_csv_path)
+            continue
         if row_gpu.empty:
             logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue

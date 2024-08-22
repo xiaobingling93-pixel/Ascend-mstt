@@ -165,7 +165,7 @@ class UtDataProcessor:
             self.index += 1
 
 
-def get_segment_name(api_full_name):
+def extract_basic_api_segments(api_full_name):
     api_type = None
     prefix = None
     api_parts = api_full_name.split(Const.SEP)
@@ -177,3 +177,21 @@ def get_segment_name(api_full_name):
     else:
         api_name = None
     return api_type, prefix, api_name
+
+
+def extract_detailed_api_segments(full_api_name_with_direction_status):
+    api_type = None
+    prefix = None
+    api_name = None
+    api_parts = full_api_name_with_direction_status.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.SIX_SEGMENT:
+        api_type, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, api_name, api_order])
+    elif api_parts_length == Const.SEVEN_SEGMENT:
+        api_type, prefix, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
+    else:
+        full_api_name = None
+    return api_name, full_api_name, direction_status
+    
