@@ -167,7 +167,7 @@ class Comparator:
         """Get compare result and write to result and detail csv.
         is_online: bool, default False. True: called by online api precision compare, only compare without write to csv.
         """
-        _, _, api_name = extract_basic_api_segments(full_api_name)
+        _, api_name = extract_basic_api_segments(full_api_name)
         if not api_name:
             raise ValueError(f"API name {full_api_name} has not been adapted.")
         bench_output, device_output = data_info.bench_output, data_info.device_output
