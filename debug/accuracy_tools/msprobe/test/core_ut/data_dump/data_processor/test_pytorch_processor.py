@@ -117,8 +117,12 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertTrue(np.isinf(result_min))
 
     def test_analyze_builtin(self):
-        result = self.processor._analyze_builtin(slice(1, 10, 2))
+        result = self.processor._analyze_builtin(slice(1, torch.tensor(10, dtype=torch.int32), np.int64(2)))
         expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(slice(torch.tensor([1, 2], dtype=torch.int32), None, None))
+        expected = {'type': 'slice', 'value': [None, None, None]}
         self.assertEqual(result, expected)
 
     def test_analyze_torch_size(self):

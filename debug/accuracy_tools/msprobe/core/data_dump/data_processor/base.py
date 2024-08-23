@@ -70,7 +70,7 @@ class TensorStatInfo:
 class BaseDataProcessor:
     _recursive_key_stack = []
     special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
-                    bool, int, float, str, slice)
+                    bool, int, float, str, slice, type(Ellipsis))
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -137,6 +137,29 @@ class BaseDataProcessor:
         return arg, ''
 
     @staticmethod
+    def _analyze_builtin(arg):
+        single_arg = {}
+        if isinstance(arg, slice):
+            # The slice parameter may be of the tensor, numpy or other types.
+            # It needs to be converted to the Python value type before JSON serialization
+            single_arg.update({"type": "slice"})
+            values = []
+            for value in [arg.start, arg.stop, arg.step]:
+                if value is not None:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        logger.warning(f"The data type {type(value)} cannot be converted to int type.")
+                        value = None
+                values.append(value)
+            single_arg.update({"value": values})
+        else:
+            single_arg.update({"type": type(arg).__name__})
+            # When arg is Ellipsis(...) type, it needs to be converted to str("...") type
+            single_arg.update({"value": arg if arg is not Ellipsis else "..."})
+        return single_arg
+
+    @staticmethod
     def _analyze_numpy(value, numpy_type):
         return {"type": numpy_type, "value": value}
 
@@ -157,12 +180,12 @@ class BaseDataProcessor:
                 cls._recursive_key_stack.pop()
             return type(args)(result_list)
         elif isinstance(args, dict):
-            resutl_dict = {}
+            result_dict = {}
             for k, arg in args.items():
                 cls._recursive_key_stack.append(str(k))
-                resutl_dict[k] = cls.recursive_apply_transform(arg, transform)
+                result_dict[k] = cls.recursive_apply_transform(arg, transform)
                 cls._recursive_key_stack.pop()
-            return resutl_dict
+            return result_dict
         elif args is not None:
             logger.warning(f"Data type {type(args)} is not supported.")
             return None
