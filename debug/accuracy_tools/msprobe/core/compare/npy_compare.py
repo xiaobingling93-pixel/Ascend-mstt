@@ -76,6 +76,57 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
     return ""
 
 
+def npy_data_check(n_value, b_value):
+    error_message = ""
+    if n_value is None or b_value is None:
+        error_message += "Dump file not found.\n"
+    if n_value == "" or b_value == "":
+        error_message += "Dump file not found.\n"
+
+    # 检查 n_value 和 b_value 是否为空
+    if not error_message and (n_value.size == 0 or b_value.size == 0):
+        error_message += "This is empty data, can not compare.\n"
+
+    if not error_message:
+        if not n_value.shape or not b_value.shape:
+            error_message += "This is type of scalar data, can not compare.\n"
+        if n_value.shape != b_value.shape:
+            error_message += "Shape of NPU and bench Tensor do not match.\n"
+        if n_value.dtype != b_value.dtype:
+            error_message += "Dtype of NPU and bench Tensor do not match. Skipped.\n"
+
+    if not error_message:
+        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有 nan/inf 数据
+        if CompareConst.NAN in (n_value, b_value):
+            error_message += "The position of inf or nan in NPU and bench Tensor do not match.\n"
+    if error_message == "":
+        error_flag = False
+    else:
+        error_flag = True
+    return error_flag, error_message
+
+
+def statistics_data_check(result_dict):
+    error_message = ""
+
+    if result_dict.get(CompareConst.NPU_NAME) is None or result_dict.get(CompareConst.BENCH_NAME) is None:
+        error_message += "Dump file not found.\n"
+
+    if not result_dict.get(CompareConst.NPU_SHAPE) or not result_dict.get(CompareConst.BENCH_SHAPE):
+        error_message += "This is type of scalar data, can not compare.\n"
+    elif result_dict.get(CompareConst.NPU_SHAPE) != result_dict.get(CompareConst.BENCH_SHAPE):
+        error_message += "Tensor shapes do not match.\n"
+
+    if result_dict.get(CompareConst.NPU_DTYPE) != result_dict.get(CompareConst.BENCH_DTYPE):
+        error_message += "Dtype of NPU and bench Tensor do not match. Skipped.\n"
+
+    if error_message == "":
+        error_flag = False
+    else:
+        error_flag = True
+    return error_flag, error_message
+
+
 class TensorComparisonBasic(abc.ABC):
     """NPU和bench中npy数据的比较模板"""
     @abc.abstractmethod

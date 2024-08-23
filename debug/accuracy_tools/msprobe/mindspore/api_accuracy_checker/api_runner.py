@@ -5,8 +5,7 @@ import torch
 from mindspore import ops
 
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
-from msprobe.core.common.const import Const
-from msprobe.mindspore.api_accuracy_checker.const import MsApiAccuracyCheckerConst
+from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
@@ -25,10 +24,10 @@ class ApiInputAggregation:
         self.gradient_inputs = gradient_inputs
 
 api_parent_module_mapping = {
-    (MsApiAccuracyCheckerConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
-    (MsApiAccuracyCheckerConst.MINT, Const.PT_FRAMEWORK): torch,
-    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
-    (MsApiAccuracyCheckerConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
+    (MsCompareConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
+    (MsCompareConst.MINT, Const.PT_FRAMEWORK): torch,
+    (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
+    (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
 }
 
 class ApiRunner:
@@ -50,7 +49,7 @@ class ApiRunner:
         api_type_str, api_sub_name = self.get_info_from_name(api_name_str)
         api_instance = self.get_api_instance(api_type_str, api_sub_name, api_platform)
 
-        self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
+        return self.run_api(api_instance, api_input_aggregation, forward_or_backward, api_platform)
 
     @staticmethod
     def get_info_from_name(api_name_str):
@@ -67,7 +66,7 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsApiAccuracyCheckerConst.MINT, MsApiAccuracyCheckerConst.MINT_FUNCTIONAL]:
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL]:
             err_msg = f"ApiRunner.get_info_from_name failed: not mint or mint.nn.functional api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
@@ -92,7 +91,7 @@ class ApiRunner:
 
         api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
         module_str = "mindspore.mint." if api_platform == Const.MS_FRAMEWORK else "torch."
-        submodule_str = "nn.functional." if api_type_str == MsApiAccuracyCheckerConst.MINT_FUNCTIONAL else ""
+        submodule_str = "nn.functional." if api_type_str == MsCompareConst.MINT_FUNCTIONAL else ""
         full_api_name = module_str + submodule_str + api_sub_name
         if not hasattr(api_parent_module, api_sub_name):
             err_msg = f"ApiRunner.get_api_instance failed: {full_api_name} is not found"

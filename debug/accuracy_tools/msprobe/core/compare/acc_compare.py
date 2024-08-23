@@ -140,6 +140,11 @@ class Comparator:
             if both_empty or no_change:
                 continue
 
+            # APIs in NPU and Bench models unconsistent judgment
+            if bool(npu_ops_queue) ^ bool(bench_ops_queue):
+                logger.info("Please check whether the number and calls of APIs in NPU and Bench models are consistent.")
+                break
+
             n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
             if n_match_point == -1 and b_match_point == -1:
                 continue

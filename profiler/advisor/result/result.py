@@ -14,9 +14,12 @@ from profiler.advisor.config.config import Config
 
 
 class ResultWriter:
+
+    MAX_SHEET_NAME_LENGTH = 31
+
     def __init__(self, result_path=None):
         self.result_path = result_path
-        self.workbook = xlsxwriter.Workbook(result_path)
+        self.workbook = xlsxwriter.Workbook(result_path, {"nan_inf_to_errors": True})
 
         self.header_format = None
         self.data_cell_format = None
@@ -44,6 +47,9 @@ class ResultWriter:
         })
 
     def add_data(self, sheet_name, headers, data_list):
+        if len(sheet_name) > self.MAX_SHEET_NAME_LENGTH:
+            sheet_name = sheet_name[:self.MAX_SHEET_NAME_LENGTH]
+
         sheet = self.workbook.add_worksheet(sheet_name)
 
         if headers:

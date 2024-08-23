@@ -29,7 +29,7 @@ class TestCompareAlgorithms(unittest.TestCase):
     def test_cosine_similarity(self):
         compare_result = compare_algorithms[CompareConst.COSINE](self.mock_torchtensor_compute_element, self.mock_mstensor_compute_element)
         self.assertAlmostEqual(compare_result.compare_value, 0.9997375534689601, places=5)
-        self.assertEqual(compare_result.pass_status, CompareConst.ERROR)
+        self.assertEqual(compare_result.pass_status, CompareConst.PASS)
 
     def test_max_absolute_difference(self):
         compare_result = compare_algorithms[CompareConst.MAX_ABS_ERR](self.mock_torchtensor_compute_element, self.mock_mstensor_compute_element)

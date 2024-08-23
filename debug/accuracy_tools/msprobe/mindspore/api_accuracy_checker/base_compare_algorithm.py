@@ -6,7 +6,7 @@ import numpy as np
 
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, MsCompareConst
 
 class CompareResult:
     def __init__(self, compare_value, pass_status, err_msg):
@@ -22,20 +22,19 @@ class BaseCompareAlgorithm(ABC):
         self.err_msg_mapping = {
             CompareConst.COSINE: {
                 CompareConst.PASS: "",
-                CompareConst.ERROR: f"cosine similarity is less than threshold: {CompareConst.COSINE_THRESHOLD}",
-                CompareConst.SKIP: "two inputs are not valid for computing cosine similarity, skip comparing",
+                CompareConst.ERROR: f"cosine similarity is less than threshold: {CompareConst.COS_THRESHOLD} ",
+                CompareConst.SKIP: "two inputs are not valid for computing cosine similarity, skip comparing ",
             },
             CompareConst.MAX_ABS_ERR: {
                 CompareConst.PASS: "",
                 CompareConst.ERROR: "max absolute difference is greater than " \
-                    f"threshold: {CompareConst.THOUSAND_RATIO_THRESHOLD}",
-                CompareConst.SKIP: "two inputs are not valid for computing max absolute difference, skip comparing",
+                    f"threshold: {CompareConst.MAX_ABS_ERR_THRESHOLD} ",
+                CompareConst.SKIP: "two inputs are not valid for computing max absolute difference, skip comparing ",
             },
             CompareConst.MAX_RELATIVE_ERR: {
                 CompareConst.PASS: "",
-                CompareConst.ERROR: "max relative difference is greater than " \
-                    f"threshold: {CompareConst.THOUSAND_RATIO_THRESHOLD}",
-                CompareConst.SKIP: "two inputs are not valid for computing max relative difference, skip comparing",
+                CompareConst.ERROR: "",
+                CompareConst.SKIP: "",
             },
         }
 
@@ -134,11 +133,11 @@ class CosineSimilarityCompareAlgorithm(BaseCompareAlgorithm):
         bench_norm = np.linalg.norm(bench_ndarray)
         tested_norm = np.linalg.norm(tested_ndarray)
         dot_product = np.dot(bench_ndarray.flatten(), tested_ndarray.flatten())
-        cosine_similarity = dot_product / (bench_norm * tested_norm)
+        cosine_similarity = (MsCompareConst.EPSILON + dot_product) / (MsCompareConst.EPSILON + bench_norm * tested_norm)
         return cosine_similarity
 
     def check_pass(self, compare_value):
-        if compare_value > CompareConst.COSINE_THRESHOLD:
+        if compare_value > CompareConst.COS_THRESHOLD:
             return CompareConst.PASS
         else:
             return CompareConst.ERROR
@@ -160,7 +159,7 @@ class MaxAbsoluteDiffCompareAlgorithm(BaseCompareAlgorithm):
         return max_absolute_diff
 
     def check_pass(self, compare_value):
-        if compare_value < CompareConst.THOUSAND_RATIO_THRESHOLD:
+        if compare_value < CompareConst.MAX_ABS_ERR_THRESHOLD:
             return CompareConst.PASS
         else:
             return CompareConst.ERROR
@@ -170,7 +169,6 @@ class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
     def __init__(self) -> None:
         super().__init__()
         self.compare_algorithm_name = CompareConst.MAX_RELATIVE_ERR
-        self.epsilon = 1e-8
 
     def check_validity(self, bench_compute_element, tested_compute_element):
         return self.check_two_tensor(bench_compute_element, tested_compute_element)
@@ -180,12 +178,12 @@ class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
         tested_ndarray = self.convert_to_np_float64_ndarray(tested_compute_element.get_parameter())
 
         abs_diff = np.abs(bench_ndarray - tested_ndarray)
-        bench_ndarray_nonzero = bench_ndarray + (bench_ndarray == 0) * self.epsilon # prevent division by 0
+        bench_ndarray_nonzero = np.abs(bench_ndarray) + (bench_ndarray == 0) * MsCompareConst.EPSILON
         max_relative_diff = np.max(abs_diff / bench_ndarray_nonzero)
         return max_relative_diff
 
     def check_pass(self, compare_value):
-        if compare_value < CompareConst.THOUSAND_RATIO_THRESHOLD:
+        if compare_value < CompareConst.MAX_RELATIVE_ERR_THRESHOLD:
             return CompareConst.PASS
         else:
             return CompareConst.ERROR
