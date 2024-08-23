@@ -201,6 +201,7 @@ npy文件保存的前缀和MindSpore对应关系如下：
 | -------------- | ---------------------------- |
 | Tensor         | mindspore.Tensor             |
 | Functional     | mindspore.ops                |
+| Primitive      | mindspore.ops.Primitive      |
 | Mint           | mindspore.mint               |
 | MintFunctional | mindspore.mint.nn.functional |
 | Jit            | mindspore.jit                |
