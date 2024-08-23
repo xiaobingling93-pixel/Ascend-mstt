@@ -36,6 +36,7 @@ Successfully installed mindstudio_probe-{version}
 
    | 版本  | 发布日期   | 支持PyTorch版本  | 支持MindSpore版本 | 下载链接                                                     | 校验码                                                       |
    | ----- | ---------- | ---------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+   | 1.0.3 | 2024-08-23 | 1.11/2.0/2.1/2.2 | 2.3.1             | [mindstudio_probe-1.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.3-py3-none-any.whl) | 7060cc141a5b98ef770cd9220995d299393f32a61938261e632c7e8b5160bef2 |
    | 1.0.2 | 2024-08-09 | 1.11/2.0/2.1/2.2 | 2.3.1             | [mindstudio_probe-1.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.2-py3-none-any.whl) | e4a980e5d98c426ce5ce9842520d9bc031d3b3de621c74b3d59414cc6e238e0e |
    | 1.0.1 | 2024-07-25 | 2.0/2.1/2.2      | 2.3.1             | [mindstudio_probe-1.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.1-py3-none-any.whl) | b699e224e4d4e3bcf9412c54fa858a1ee370f0d7a2bc69cb3f1273ac14a6dc82 |
    | 1.0   | 2024-07-09 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/1.0/ascend_training_accuracy_tools-1.0-py3-none-any.whl) | 5016dfe886c5d340ec6f60a959673355855f313c91f100680da814efb49f8e81 |
