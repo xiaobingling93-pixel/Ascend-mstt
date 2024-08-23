@@ -28,7 +28,7 @@ def compare_cli(args):
         else:
             kwargs = {
                 "stack_mode": args.stack_mode,
-                "auto_analyze": args.auto_analyze,
+                "auto_analyze": auto_analyze,
                 "fuzzy_match": args.fuzzy_match,
                 "cell_mapping": args.cell_mapping,
                 "api_mapping": args.api_mapping,
