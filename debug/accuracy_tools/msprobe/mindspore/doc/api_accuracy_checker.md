@@ -27,13 +27,13 @@ MindSpore动态图精度预检工具通过扫描昇腾NPU上用户训练MindSpor
 
 
 ```bash
-msprobe -f pytorch run_ut -api_info ./dump.json
+msprobe -f mindspore run_ut -api_info ./dump.json -o ./checker_result
 ```
 
-| 参数名称                     | 说明                                                         | 是否必选                           |
-| ---------------------------- | ------------------------------------------------------------ | ---------------------------------- |
-| -api_info或--api_info_file   | 指定API信息文件dump.json。                                   | 是                                 |
-| -o或--out_path               | 指定预检结果存盘路径，默认“./”。                        | 否                                 |
+| 参数名称                     | 说明                                    |参数类型                     | 是否必选                           |
+| ---------------------------- | --------------------------------------|---------------------- | ---------------------------------- |
+| -api_info或--api_info_file   | 指定API信息文件dump.json。          |  str                         | 是                                 |
+| -o或--out_path               | 指定预检结果存盘路径，默认“./”。     |   str                  | 否                                 |
 
 预检执行结果包括`accuracy_checking_result_{timestamp}.csv`和`accuracy_checking_details_{timestamp}.csv`两个文件。`accuracy_checking_result_{timestamp}.csv`是API粒度的，标明每个API是否通过测试。建议用户先查看`accuracy_checking_result_{timestamp}.csv`文件，对于其中没有通过测试的或者特定感兴趣的API，根据其API Name字段在`accuracy_checking_details_{timestamp}.csv`中查询其各个输出的达标情况以及比较指标。详细介绍请参见“**预检结果**”。
 
