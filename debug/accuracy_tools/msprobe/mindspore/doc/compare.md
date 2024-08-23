@@ -55,4 +55,4 @@ msprobe精度比对工具主要通过对同一个模型，在两个不同的Mind
 | npu_path             | 配置NPU环境下的dump.json文件（单卡场景）。数据类型：str。 | 是                 |
 | bench_path           | 配置CPU、GPU或NPU环境下的dump.json文件（单卡场景）。数据类型：str。 | 是                 |
 | stack_path           | 配置NPU dump目录下的stack.json文件。数据类型：str。          | 是|
-| is_print_compare_log | 配置是否开启日志打屏。可取值True或False，默认为True。数据类型：bool      | 否                 |
+| is_print_compare_log | 配置是否开启日志打屏。可取值true或false，默认为true。数据类型：bool      | 否                 |
