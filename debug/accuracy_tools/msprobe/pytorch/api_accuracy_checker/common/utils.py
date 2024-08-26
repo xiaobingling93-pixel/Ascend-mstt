@@ -182,7 +182,7 @@ def extract_basic_api_segments(api_full_name):
         api_type, api_name, _ = api_parts
     elif api_parts_length == Const.FOUR_SEGMENT:
         api_type, prefix, api_name, _ = api_parts
-        api_name = prefix + Const.SEP + api_name
+        api_name = Const.SEP.join([prefix, api_name])
     else:
         api_name = None
     return api_type, api_name
@@ -211,7 +211,7 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     elif api_parts_length == Const.SEVEN_SEGMENT:
         api_type, prefix, api_name, api_order, direction_status, _, _ = api_parts
         full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
-        api_name = prefix + Const.SEP + api_name
+        api_name = Const.SEP.join([prefix, api_name])
     else:
         full_api_name = None
     return api_name, full_api_name, direction_status
