@@ -19,13 +19,13 @@ __version__ = '1.0.3'
 INSTALL_REQUIRED = [
     "wheel",
     "einops",
-    "numpy < 2.0",
-    "pandas >= 1.3.5, < 2.1",
+    "numpy",
+    "pandas >= 1.3.5",
     "pyyaml",
     "rich",
     "tqdm",
     "openpyxl",
-    "pyopenssl",
+    "pyOpenSSL",
     "twisted",
     "matplotlib"
 ]
