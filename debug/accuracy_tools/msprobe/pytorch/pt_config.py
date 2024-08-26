@@ -176,7 +176,7 @@ def parse_task_config(task, json_config):
 def parse_json_config(json_file_path, task):
     if not json_file_path:
         config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-        json_file_path = os.path.join(os.path.join(config_dir, "config"), "config.json")
+        json_file_path = os.path.join(config_dir, "config.json")
     with FileOpen(json_file_path, 'r') as file:
         json_config = json.load(file)
     common_config = CommonConfig(json_config)
