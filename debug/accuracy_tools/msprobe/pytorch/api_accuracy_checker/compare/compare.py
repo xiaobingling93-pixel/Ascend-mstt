@@ -138,7 +138,7 @@ class Comparator:
         try:
             name = test_result[0]
             df_row = list(test_result[:INDEX_TEST_RESULT_GROUP])
-            if test_result[1] == "SKIP":
+            if test_result[1] == CompareConst.SKIP:
                 df_row.append(test_result[INDEX_TEST_RESULT_GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
             if self.stack_info:
                 stack_info = "\n".join(self.stack_info[name])

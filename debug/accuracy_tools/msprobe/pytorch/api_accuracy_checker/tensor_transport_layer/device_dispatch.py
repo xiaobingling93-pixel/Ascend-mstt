@@ -5,7 +5,7 @@ import pandas as pd
 import torch
 import torch.multiprocessing as mp
 
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import online_api_precision_compare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS, thousandth_standard_api, \
     binary_standard_api, absolute_standard_api
@@ -104,7 +104,7 @@ def online_precision_compare(api_data, device, common_config, api_precision_csv_
         else:
             logger.error(f"Run {api_full_name} UT Error: {str(err)}")
 
-        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
+        compare.write_summary_csv((api_full_name, CompareConst.SKIP, CompareConst.SKIP, [[str(err)]], api_data.rank))
 
     finally:
         torch.cuda.empty_cache()
@@ -133,7 +133,7 @@ def online_compare(api_data, device, common_config):
         else:
             logger.error(f"Run {api_full_name} UT Error: {str(err)}")
 
-        compare.write_summary_csv((api_full_name, "SKIP", "SKIP", [[str(err)]], api_data.rank))
+        compare.write_summary_csv((api_full_name, CompareConst.SKIP, CompareConst.SKIP, [[str(err)]], api_data.rank))
 
     finally:
         torch.cuda.empty_cache()

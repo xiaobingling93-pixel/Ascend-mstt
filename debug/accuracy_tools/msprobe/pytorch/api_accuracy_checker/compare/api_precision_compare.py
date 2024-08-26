@@ -357,8 +357,8 @@ def analyse_csv(npu_data, gpu_data, config):
         if last_api_name is not None and api_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
                 message = unsupported_message
-                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-                print_test_success(api_full_name, "skip", "skip")
+                write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
+                print_test_success(api_full_name, CompareConst.SKIP, CompareConst.SKIP)
                 forward_status, backward_status = [], []
                 message = ''
             else:
@@ -388,8 +388,8 @@ def analyse_csv(npu_data, gpu_data, config):
     if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
             message = unsupported_message
-            write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-            print_test_success(last_api_full_name, "skip", "skip")
+            write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
+            print_test_success(last_api_full_name, CompareConst.SKIP, CompareConst.SKIP)
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
