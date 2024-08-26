@@ -328,7 +328,8 @@ def analyse_csv(npu_data, gpu_data, config):
             compare_column.compare_result = CompareConst.SKIP
             compare_column.compare_message = err_message
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
-            write_csv([[full_api_name_with_direction_status, "skip", "skip",  err_message]], config.result_csv_path)
+            write_csv([[full_api_name_with_direction_status, CompareConst.SKIP, CompareConst.SKIP,  err_message]], 
+                      config.result_csv_path)
             continue
         if row_gpu.empty:
             logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
@@ -351,7 +352,7 @@ def analyse_csv(npu_data, gpu_data, config):
                 new_status = record_thousandth_threshold_result(compare_column, row_npu)
             elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or \
                 api_name in binary_standard_api:
-                new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
+                new_status = record_binary_consistency_result(api_name, compare_column, row_npu)
             elif api_name in absolute_standard_api:
                 new_status = record_absolute_threshold_result(compare_column, row_npu)
             elif api_name in ulp_standard_api and \
