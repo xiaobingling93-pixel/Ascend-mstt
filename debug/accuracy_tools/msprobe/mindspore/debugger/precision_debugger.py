@@ -31,7 +31,7 @@ class PrecisionDebugger:
             return
         self.initialized = True
         if not config_path:
-            config_path = os.path.join(os.path.dirname(__file__), "../../config/config.json")
+            config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         common_config, task_config = parse_json_config(config_path)
         self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
