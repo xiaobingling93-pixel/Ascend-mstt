@@ -267,8 +267,8 @@ msprobe -f pytorch api_precision_compare -npu /home/xxx/npu/accuracy_checking_de
 | 字段                  | 含义                                                         |
 | --------------------- | ------------------------------------------------------------ |
 | API name              | API名称。                                                    |
-| Forward Test Success  | 前向API是否通过测试，pass为通过，warning为待观察，error为错误，skip表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
-| Backward Test Success | 反向API是否通过测试，pass为通过，warning为待观察，error为错误，如果是空白的话代表该API没有反向输出，skip表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
+| Forward Test Success  | 前向API是否通过测试，pass为通过，warning为待观察，error为错误，SKIP表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
+| Backward Test Success | 反向API是否通过测试，pass为通过，warning为待观察，error为错误，如果是空白的话代表该API没有反向输出，SKIP表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
 | Message               | 提示信息。                                                   |
 
 Forward Test Success和Backward Test Success是否通过测试是由`api_precision_compare_details_{timestamp}.csv`中的各个指标判定结果决定的。需要注意的是`api_precision_compare_details_{timestamp}.csv`中可能存在一个API的前向（反向）有多个输出，那么每个输出记录一行，而在`api_precision_compare_result_{timestamp}.csv`中的结果需要该API的所有结果均为pass才能标记为pass，只要存在一个error则标记error，仅存在warning和pass且不存在error标记warning。
@@ -304,7 +304,7 @@ Forward Test Success和Backward Test Success是否通过测试是由`api_precisi
 | ULP误差判定结果          | ULP误差判定结果。<br/>     当NPU或GPU数据类型是float16或bfloat16时，以下两条标准满足其一标记为pass，否则标记为error：<br>          NPU ULP误差大于阈值占比小于0.001；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。<br/>     当NPU或GPU数据类型是float32时，以下三条标准满足其一标记为pass，否则标记为error：<br/>          NPU ULP误差平均值小于64；<br/>          NPU ULP误差大于阈值占比小于0.05；<br/>          NPU ULP误差大于阈值占比小于GPU ULP误差大于阈值占比。 |
 | 双千指标                 | 双千精度指标。是指NPU的Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的个数占总元素个数的比例。测试通过标准为相对误差大于千分之一的个数占总元素个数的比例小于千分之一。仅conv1d和conv2d使用该指标。双千指标法指标。 |
 | 双千指标判定结果         | 双千指标判定结果。双千指标大于0.999标记为pass，否则标记为error。 |
-| 比对结果                 | 综合所有指标的最终结果。如果比对指标中有error，则标记为error；有warning，则标记为warning；否则标记为pass；skip表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
+| 比对结果                 | 综合所有指标的最终结果。如果比对指标中有error，则标记为error；有warning，则标记为warning；否则标记为pass；SKIP表示该API的数据类型不支持使用新精度标准进行比对，如float64。 |
 | 比对算法                 | API使用的比对算法，为标杆比对法、二进制一致法、绝对阈值法和ULP误差比对法中的一种。 |
 | Message                  | 提示信息。当前提示该API比对结果为error或warning时对应不符合标准的指标。 |
 
