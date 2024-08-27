@@ -27,7 +27,7 @@ class TestLog(TestCase):
         self.assertIn("[level] msg", mock_print.call_args[0][0])
         self.assertEqual("\n", mock_print.call_args[1].get("end"))
 
-        logger._print_log("level", "msg", end="end")
+        logger._print_log("level", "msg", end="\r")
         self.assertIn("[level] msg", mock_print.call_args[0][0])
         self.assertEqual("\r", mock_print.call_args[1].get("end"))
 
