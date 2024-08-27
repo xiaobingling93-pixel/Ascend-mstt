@@ -5,20 +5,17 @@ import re
 from pathlib import Path
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
-from collections import namedtuple
 from dataclasses import dataclass
 
 import torch
 
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.common.utils import save_pt
 from msprobe.core.common.utils import remove_path
 
-
-ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
-                     defaults=['unknown', None, None, None, 0, 0])
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
 
 

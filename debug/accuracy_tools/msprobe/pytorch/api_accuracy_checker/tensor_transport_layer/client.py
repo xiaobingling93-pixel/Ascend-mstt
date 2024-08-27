@@ -9,8 +9,7 @@ from queue import Queue
 from threading import Thread
 from typing import Union
 
-from OpenSSL import SSL
-from twisted.internet import ssl, reactor, protocol, endpoints
+from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
@@ -90,6 +89,8 @@ class TCPClient:
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
         if self.tls_path:
+            from OpenSSL import SSL
+            from twisted.internet import ssl
             client_key = os.path.join(self.tls_path, "client.key")
             client_crt = os.path.join(self.tls_path, "client.crt")
             client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt, SSL.TLSv1_2_METHOD)
