@@ -21,7 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Me
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor
+    initialize_save_path, UtDataProcessor, extract_basic_api_segments
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
@@ -194,12 +194,20 @@ def run_ut(config):
 
 
 def run_api_offline(config, compare, api_name_set):
+    err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
             continue
-        [_, api_name, _] = api_full_name.split(Const.SEP)
+        _, api_name = extract_basic_api_segments(api_full_name)
+        if not api_name:
+            err_message = f"API {api_full_name} not support for run ut. SKIP."
+            logger.error(err_message)
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
+            continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
@@ -213,7 +221,6 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            err_column = CompareColumn()
             fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
             result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
             compare.record_results(result_info)
@@ -245,7 +252,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -266,7 +273,7 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             dispatcher.update_consume_queue(api_data)
@@ -313,7 +320,7 @@ def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -358,7 +365,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
