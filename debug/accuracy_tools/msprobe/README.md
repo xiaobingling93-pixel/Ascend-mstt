@@ -76,7 +76,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 本功能用于采集梯度数据并进行梯度相似度比对，可以精准定位出现问题的 step。
 
-[兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)
+[兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)（更新中）
 
 ## 🌟 新版本特性
 
@@ -91,12 +91,12 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 📑 补充材料
 
-[msprobe 精度工具标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)
+[msprobe 精度工具标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)（更新中）
 
-[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
+[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)（更新中）
 
 ## ❓ FAQ
 
-[FAQ for PyTorch](./docs/FAQ_PyTorch.md)
+[FAQ for PyTorch](./docs/FAQ_PyTorch.md)（更新中）
 
 FAQ for MindSpore
