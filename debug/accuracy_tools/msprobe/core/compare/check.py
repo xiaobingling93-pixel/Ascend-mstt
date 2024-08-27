@@ -1,5 +1,7 @@
 from msprobe.core.common.log import logger
-from msprobe.core.compare.utils import rename_api 
+from msprobe.core.compare.utils import rename_api
+from msprobe.core.common.utils import check_str_pattern_valid, CompareException
+from msprobe.core.common.const import CompareConst
 
 
 dtype_mapping = {
@@ -92,4 +94,44 @@ def fuzzy_check_name(npu_name, bench_name):
     return is_match
 
 
+def check_json_input(op_name, op_data):
+    if "forward" in op_name:
+        input_list = op_data.get("input_args", None)
+    else:
+        input_list = op_data.get("input", None)
+    input_kwargs = op_data.get("input_kwargs", None)
+    output_list = op_data.get("output", None)
 
+    if input_list:
+        for api_input in input_list:
+            if api_input:
+                check_json_key_value(api_input, op_name)
+    if input_kwargs:
+        if isinstance(input_kwargs, dict):
+            check_json_key_value(input_kwargs, op_name)
+        else:
+            for api_input_kwargs in input_kwargs:
+                if api_input_kwargs:
+                    check_json_key_value(api_input_kwargs, op_name)
+    if output_list:
+        for api_output in output_list:
+            if api_output:
+                check_json_key_value(api_output, op_name)
+
+
+def check_json_key_value(input_output, op_name):
+    if isinstance(input_output, list):
+        for param in input_output:
+            check_json_key_value(param, op_name)
+    else:
+        for key, value in input_output.items():
+            if isinstance(value, dict):
+                check_json_key_value(value, op_name)
+            else:
+                check_json_key_value(value, op_name)
+                if key == "shape" and not isinstance(value, (list, tuple)):
+                    raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+                elif key == "requires_grad" and not isinstance(value, bool):
+                    raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+                else:
+                    check_str_pattern_valid(value, op_name)

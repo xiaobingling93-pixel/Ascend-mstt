@@ -61,6 +61,8 @@ class CompareException(Exception):
     OVER_SIZE_FILE_ERROR = 18
     INVALID_SUMMARY_MODE = 19
     INVALID_TASK_ERROR = 20
+    INVALID_OBJECT_TYPE_ERROR = 21
+    INVALID_CHAR_ERROR = 22
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -614,3 +616,12 @@ def save_workbook(workbook, file_path):
         logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
         raise CompareException(CompareException.WRITE_FILE_ERROR) from e
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def check_str_pattern_valid(string, op_name=None):
+    if isinstance(string, str) and re.match(Const.STRING_INVALID_PATTERN, string):
+        if not op_name:
+            logger.error(f"data of {op_name} contains special characters, please check!")
+        else:
+            logger.error(f"op name contains special characters, please check!")
+        raise CompareException(CompareException.INVALID_CHAR_ERROR)
