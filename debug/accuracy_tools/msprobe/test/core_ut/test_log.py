@@ -25,11 +25,11 @@ class TestLog(TestCase):
     def test__print_log(self, mock_print):
         logger._print_log("level", "msg")
         self.assertIn("[level] msg", mock_print.call_args[0][0])
-        self.assertEqual("\n", mock_print.call_args.kwargs.get("end", None))
+        self.assertEqual("\n", mock_print.call_args[1].get("end", None))
 
         logger._print_log("level", "msg", end="end")
         self.assertIn("[level] msg", mock_print.call_args[0][0])
-        self.assertEqual("end", mock_print.call_args.kwargs.get("end", None))
+        self.assertEqual("end", mock_print.call_args[1].get("end", None))
 
     @patch.object(BaseLogger, "_print_log")
     def test_print_info_log(self, mock__print_log):
