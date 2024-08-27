@@ -24,11 +24,11 @@ class TestLog(TestCase):
     @patch("msprobe.core.common.log.print")
     def test__print_log(self, mock_print):
         logger._print_log("level", "msg")
-        self.assertIn("[level] msg", mock_print.call_args[0][0])
+        self.assertIn("[level] msg".strip(), mock_print.call_args[0][0].strip())
         self.assertEqual("\n", mock_print.call_args[1].get("end"))
 
         logger._print_log("level", "msg", end="end")
-        self.assertIn("[level] msg", mock_print.call_args[0][0])
+        self.assertIn("[level] msg".strip(), mock_print.call_args[0][0].strip())
         self.assertEqual("end", mock_print.call_args[1].get("end"))
 
     @patch.object(BaseLogger, "_print_log")
