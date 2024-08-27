@@ -287,6 +287,16 @@ def save_pt(tensor, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def load_npy(npy_path):
+    npy_path = os.path.realpath(npy_path)
+    check_file_or_directory_path(npy_path)
+    try:
+        data_np = np.load(npy_path)
+    except Exception as e:
+        raise RuntimeError(f"load npy file {npy_path} failed") from e
+    return data_np
+
+
 def _create_logger(level=logging.INFO):
     logger_ = logging.getLogger()
     logger_.setLevel(level)

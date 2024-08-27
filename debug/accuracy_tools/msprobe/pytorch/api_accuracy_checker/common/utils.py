@@ -27,9 +27,10 @@ else:
     IS_GPU = False
 
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
-from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.utils import CompareException
+from msprobe.pytorch.common.utils import save_pt
+from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import CompareException, make_dump_path_if_not_exists
 
 
 class DumpException(CompareException):
@@ -100,22 +101,8 @@ def cross_entropy_process(api_info_dict):
 
 def initialize_save_path(save_path, dir_name):
     data_path = os.path.join(save_path, dir_name)
-    if os.path.exists(data_path):
-        logger.warning(f"{data_path} already exists, it will be overwritten")
-    else:
-        os.mkdir(data_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
-    data_path_checker = FileChecker(data_path, FileCheckConst.DIR)
-    data_path_checker.common_check()
+    make_dump_path_if_not_exists(data_path)
     return data_path
-
-
-def write_pt(file_path, tensor):
-    if os.path.exists(file_path):
-        raise ValueError(f"File {file_path} already exists")
-    torch.save(tensor, file_path)
-    full_path = os.path.realpath(file_path)
-    change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    return full_path
 
 
 def get_real_data_path(file_path):
@@ -151,7 +138,8 @@ class UtDataProcessor:
             api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
-            write_pt(file_path, element.contiguous().cpu().detach())
+            tensor = element.contiguous().cpu().detach()
+            save_pt(tensor, file_path)
             self.index += 1
         elif element is None or isinstance(element, (bool, int, float, str, slice)):
             self.index += 1
