@@ -16,7 +16,7 @@ class BaseLogger:
         full_msg = f"{current_time} ({pid}) [{level}] {msg}"
         print(full_msg, end=end)
         sys.stdout.flush()
- 
+
     def get_rank(self):
         return self.rank
 
