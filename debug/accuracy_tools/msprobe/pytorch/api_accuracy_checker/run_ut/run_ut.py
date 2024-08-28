@@ -21,7 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Me
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor, ApiData
+    initialize_save_path, UtDataProcessor
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
