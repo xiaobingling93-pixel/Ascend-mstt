@@ -1,4 +1,5 @@
 import os
+from mindspore import Tensor
 from mindspore.common.api import _MindsporeFunctionExecutor
 from mindspore._c_expression import PyNativeExecutor_
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
@@ -33,7 +34,10 @@ class JitDump(_MindsporeFunctionExecutor):
     def __call__(self, *args, **kwargs):
         api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
-        dump_jit(args[0], args[1], out, True)
+        if isinstance(args[0], Tensor):
+            dump_jit({}, args, out, True)
+        else:
+            dump_jit(args[0], args[1:], out, True)
         JitDump.jit_enable = True
         api_register.api_set_hook_func()
         return out
@@ -51,6 +55,6 @@ class JitDump(_MindsporeFunctionExecutor):
             api_register.api_set_ori_func()
         output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
         if JitDump.jit_enable:
-            dump_jit(obj, args, output, False)
+            dump_jit(obj, args, None, False)
             api_register.api_set_hook_func()
         return output

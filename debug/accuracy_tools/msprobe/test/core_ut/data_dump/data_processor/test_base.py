@@ -91,6 +91,23 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.str_('test')), ('test', 'str_'))
         self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(5), (5, ''))
 
+    def test_analyze_builtin(self):
+        result = self.processor._analyze_builtin(slice(1, 10, 2))
+        expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(slice(1, np.int64(10), np.int64(2)))
+        expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(...)
+        expected = {'type': 'ellipsis', 'value': "..."}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(1)
+        expected = {'type': 'int', 'value': 1}
+        self.assertEqual(result, expected)
+
     def test_analyze_numpy(self):
         result = BaseDataProcessor._analyze_numpy(5, 'int32')
         self.assertEqual(result, {'type': 'int32', 'value': 5})

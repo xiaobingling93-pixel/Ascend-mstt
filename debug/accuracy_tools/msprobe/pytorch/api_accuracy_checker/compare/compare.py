@@ -15,6 +15,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
     DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
     ulp_standard_api, thousandth_standard_api, apis_threshold
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.pytorch.common.log import logger
 
 
@@ -138,7 +139,7 @@ class Comparator:
         try:
             name = test_result[0]
             df_row = list(test_result[:INDEX_TEST_RESULT_GROUP])
-            if test_result[1] == "SKIP":
+            if test_result[1] == CompareConst.SKIP:
                 df_row.append(test_result[INDEX_TEST_RESULT_GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
             if self.stack_info:
                 stack_info = "\n".join(self.stack_info[name])
@@ -161,11 +162,14 @@ class Comparator:
         self.write_summary_csv(args)
         self.write_detail_csv(args)
 
+
     def compare_output(self, full_api_name, data_info, is_online=False):
         """Get compare result and write to result and detail csv.
         is_online: bool, default False. True: called by online api precision compare, only compare without write to csv.
         """
-        _, api_name, _ = full_api_name.split(Const.SEP)
+        _, api_name = extract_basic_api_segments(full_api_name)
+        if not api_name:
+            raise ValueError(f"API name {full_api_name} has not been adapted.")
         bench_output, device_output = data_info.bench_output, data_info.device_output
         bench_grad, device_grad = data_info.bench_grad, data_info.device_grad
         backward_message = data_info.backward_message
