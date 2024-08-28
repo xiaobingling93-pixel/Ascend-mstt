@@ -48,3 +48,38 @@ class TestUtils(unittest.TestCase):
         convert_type, processed_api_info = api_info_preprocess(api_name, api_info.copy())
         self.assertEqual(convert_type, 'int32_to_int64')
         self.assertEqual(processed_api_info, api_info)
+        
+    def test_extract_basic_api_segments(self):
+        api_full_name = 'torch.matmul.0'
+        api_type, api_name = extract_basic_api_segments(api_full_name)
+        self.assertEqual(api_type, 'torch')
+        self.assertEqual(api_name, 'matmul')
+        
+        api_full_name = 'torch.linalg.vector_norm.0'
+        api_type, api_name = extract_basic_api_segments(api_full_name)
+        self.assertEqual(api_type, 'torch')
+        self.assertEqual(api_name, 'linalg.vector_norm')
+        
+        api_full_name = 'torch.nn.linalg.vector_norm.0'
+        api_type, api_name = extract_basic_api_segments(api_full_name)
+        self.assertEqual(api_type, None)
+        self.assertEqual(api_name, None)
+        
+    def test_extract_detailed_api_segments(self):
+        api_full_name = 'torch.matmul.0.forward.output.0'
+        api_name, full_api_name, direction_status = extract_detailed_api_segments(api_full_name)
+        self.assertEqual(api_name, 'matmul')
+        self.assertEqual(full_api_name, 'torch.matmul.0')
+        self.assertEqual(direction_status, 'forward')
+        
+        api_full_name = 'torch.linalg.vector_norm.0.backward.output.0'
+        api_name, full_api_name, direction_status = extract_detailed_api_segments(api_full_name)
+        self.assertEqual(api_name, 'linalg.vector_norm')
+        self.assertEqual(full_api_name, 'torch.linalg.vector_norm.0')
+        self.assertEqual(direction_status, 'backward')
+        
+        api_full_name = 'torch.nn.functional.linear.0.input.0.1'
+        api_name, full_api_name, direction_status = extract_detailed_api_segments(api_full_name)
+        self.assertEqual(api_name, None)
+        self.assertEqual(full_api_name, None)
+        self.assertEqual(direction_status, None)

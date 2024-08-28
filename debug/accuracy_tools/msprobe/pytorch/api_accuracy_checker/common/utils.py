@@ -163,3 +163,56 @@ class UtDataProcessor:
                 self._save_recursive(api_name, value)
         else:
             self.index += 1
+
+
+def extract_basic_api_segments(api_full_name):
+    """
+    Function Description:
+        Extract the name of the API.
+    Parameter:
+        api_full_name: Full name of the API. Example: torch.matmul.0, torch.linalg.inv.0
+    Return:
+        api_type: Type of api. Example: torch, tensor, etc.
+        api_name: Name of api. Example: matmul, linalg.inv, etc.
+    """
+    api_type = None
+    api_parts = api_full_name.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.THREE_SEGMENT:
+        api_type, api_name, _ = api_parts
+    elif api_parts_length == Const.FOUR_SEGMENT:
+        api_type, prefix, api_name, _ = api_parts
+        api_name = Const.SEP.join([prefix, api_name])
+    else:
+        api_name = None
+    return api_type, api_name
+
+
+def extract_detailed_api_segments(full_api_name_with_direction_status):
+    """
+    Function Description:
+        Extract the name of the API.
+    Parameter:
+        full_api_name_with_direction_status: Full name of the API. Example: torch.matmul.0.forward.output.0
+    Return:
+        api_name: Name of api. Example: matmul, mul, etc.
+        full_api_name: Full name of api. Example: torch.matmul.0
+        direction_status: Direction status of api. Example: forward, backward, etc.
+    """
+    api_type = None
+    prefix = None
+    api_name = None
+    direction_status = None
+    api_parts = full_api_name_with_direction_status.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.SIX_SEGMENT:
+        api_type, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, api_name, api_order])
+    elif api_parts_length == Const.SEVEN_SEGMENT:
+        api_type, prefix, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
+        api_name = Const.SEP.join([prefix, api_name])
+    else:
+        full_api_name = None
+    return api_name, full_api_name, direction_status
+    
