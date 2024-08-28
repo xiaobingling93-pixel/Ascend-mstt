@@ -76,6 +76,8 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
         data = info.get('value')
         if info.get("type") == "slice":
             data = slice(*data)
+        if info.get("type") == "ellipsis":
+            data = ...
     return data
 
 
