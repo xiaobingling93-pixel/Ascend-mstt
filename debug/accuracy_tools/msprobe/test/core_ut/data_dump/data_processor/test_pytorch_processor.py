@@ -117,8 +117,12 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertTrue(np.isinf(result_min))
 
     def test_analyze_builtin(self):
-        result = self.processor._analyze_builtin(slice(1, 10, 2))
+        result = self.processor._analyze_builtin(slice(1, torch.tensor(10, dtype=torch.int32), np.int64(2)))
         expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(slice(torch.tensor([1, 2], dtype=torch.int32), None, None))
+        expected = {'type': 'slice', 'value': [None, None, None]}
         self.assertEqual(result, expected)
 
     def test_analyze_torch_size(self):
@@ -209,15 +213,16 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         sys.modules['torch_npu.npu'] = Mock()
         sys.modules['torch_npu._C'] = Mock()
 
-    @patch('torch.save')
-    def test_maybe_save_overflow_data_and_check_overflow_times(self, mock_save):
-        self.processor.has_overflow = True
-        self.processor.real_overflow_nums = 0
-        self.processor.cached_tensors_and_file_paths = {'dummy_path': torch.tensor([1.0, 2.0, 3.0])}
-        self.processor.maybe_save_overflow_data_and_check_overflow_times()
-        mock_save.assert_called_once()
-        self.processor.maybe_save_overflow_data_and_check_overflow_times()
-        self.assertEqual(self.processor.real_overflow_nums, 2)
+    def test_is_terminated(self):
+        self.processor.overflow_nums = -1
+        self.assertFalse(self.processor.is_terminated)
+
+        self.processor.real_overflow_nums = 2
+        self.processor.overflow_nums = 2
+        self.assertTrue(self.processor.is_terminated)
+
+        self.processor.real_overflow_nums = 1
+        self.assertFalse(self.processor.is_terminated)
 
     @patch('os.getenv', return_value=Const.ENV_ENABLE)
     def test_overflow_debug_mode_enable(self, mock_getenv):
@@ -225,50 +230,88 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.assertTrue(result)
         mock_getenv.assert_called_once_with(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
 
-    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu', return_value=True)
-    def test_analyze_maybe_overflow_tensor(self, _):
-        tensor_json = {'Max': float('inf'), 'Min': 1.0}
-        self.processor._analyze_maybe_overflow_tensor(tensor_json)
-        self.assertTrue(self.processor.has_overflow)
+    def test_analyze_pre_forward_inplace(self):
+        module_input_output = ModuleForwardInputsOutputs(args=(1, 2), kwargs=None, output=None)
+        self.processor.analyze_pre_forward_inplace(None, module_input_output)
+        self.assertTrue(self.processor.forward_inplace_inputs == module_input_output)
+        self.assertFalse(self.processor.forward_inplace_inputs is module_input_output)
 
-    @patch('msprobe.core.common.file_check.path_len_exceeds_limit', return_value=False)
-    @patch.object(BaseDataProcessor, 'get_save_file_path', return_value=['test_api_name', 'test_api_name.0.forward.input.pt'])
-    def test_analyze_tensor(self, mock_path_len_exceeds_limit, _):
-        tensor = torch.tensor([1.0, 2.0, 3.0])
-        suffix = 'suffix'
-        expected = {'Max': 3.0, 'Min': 1.0, 'data_name': 'test_api_name'}
-        with patch.object(PytorchDataProcessor, '_analyze_tensor', return_value={'Max': 3.0, 'Min': 1.0}) as mock_super_analyze_tensor:
-            result = self.processor._analyze_tensor(tensor, suffix)
-            mock_super_analyze_tensor.assert_called_once_with(tensor, suffix)
-            mock_path_len_exceeds_limit.assert_called_once()
-            self.assertEqual(expected, result)
-
-    def test_analyze_backward(self):
-        def func(_):
-            self.processor.has_overflow = True
-        with patch.object(BaseDataProcessor, "analyze_backward", return_value={"min", 0}):
-            with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data_and_check_overflow_times"):
-                api_info = self.processor.analyze_backward("name", "module", "module_input_output")
-            self.assertFalse(self.processor.has_overflow)
-            self.assertIsNone(api_info)
-            with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data_and_check_overflow_times", new=func):
-                api_info = self.processor.analyze_backward("name", "module", "module_input_output")
-            self.assertTrue(self.processor.has_overflow)
-            self.assertEqual(api_info, {"min", 0})
+    def test_analyze_forward_inplace(self):
+        with patch.object(OverflowCheckDataProcessor, "analyze_forward"):
+            module_input_output = ModuleForwardInputsOutputs(args=(1, 2), kwargs={"k1": 3, "k2": 4}, output=None)
+            self.processor.forward_inplace_inputs = module_input_output
+            self.processor.analyze_forward_inplace("name", module_input_output)
+            self.assertIsNone(self.processor.forward_inplace_inputs)
+            self.assertEqual(module_input_output.output, (1, 2, 3, 4))
 
     def test_analyze_forward(self):
         def func(_):
             self.processor.has_overflow = True
+
         with patch.object(BaseDataProcessor, "analyze_forward", return_value={"min", 0}):
-            with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data_and_check_overflow_times"):
+            with patch.object(OverflowCheckDataProcessor, "handle_overflow"):
                 api_info = self.processor.analyze_forward("name", "module", "module_input_output")
             self.assertFalse(self.processor.has_overflow)
             self.assertIsNone(api_info)
-            with patch.object(OverflowCheckDataProcessor, "maybe_save_overflow_data_and_check_overflow_times", new=func):
+
+            with patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
                 api_info = self.processor.analyze_forward("name", "module", "module_input_output")
             self.assertTrue(self.processor.has_overflow)
             self.assertEqual(api_info, {"min", 0})
 
+    def test_analyze_backward(self):
+        def func(_):
+            self.processor.has_overflow = True
+
+        with patch.object(BaseDataProcessor, "analyze_backward", return_value={"min", 0}):
+            with patch.object(OverflowCheckDataProcessor, "handle_overflow"):
+                api_info = self.processor.analyze_backward("name", "module", "module_input_output")
+            self.assertFalse(self.processor.has_overflow)
+            self.assertIsNone(api_info)
+
+            with patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
+                api_info = self.processor.analyze_backward("name", "module", "module_input_output")
+            self.assertTrue(self.processor.has_overflow)
+            self.assertEqual(api_info, {"min", 0})
+
+    @patch('torch.save')
+    def test_handle_overflow(self, mock_save):
+        self.processor.has_overflow = True
+        self.processor.real_overflow_nums = 0
+        self.processor.is_support_inf_nan = True
+        self.processor.cached_tensors_and_file_paths = {'dump_path': torch.tensor([1.0, 2.0, 3.0])}
+        self.processor.handle_overflow()
+        mock_save.assert_called_once()
+        self.processor.handle_overflow()
+        self.assertEqual(self.processor.real_overflow_nums, 2)
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu', return_value=True)
+    def test_analyze_maybe_overflow_tensor(self, _):
+        tensor_json = {'Max': None, 'Min': None}
+        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+        self.assertFalse(self.processor.has_overflow)
+
+        tensor_json = {'Max': float('inf'), 'Min': 1.0}
+        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+        self.assertTrue(self.processor.has_overflow)
+
+        tensor_json = {'Max': 1.0, 'Min': float('inf')}
+        self.processor._analyze_maybe_overflow_tensor(tensor_json)
+        self.assertTrue(self.processor.has_overflow)
+
+    @patch('msprobe.core.common.file_check.path_len_exceeds_limit', return_value=False)
+    @patch.object(BaseDataProcessor, 'get_save_file_path',
+                  return_value=['test_api_name', 'test_api_name.0.forward.input.pt'])
+    def test_analyze_tensor(self, mock_path_len_exceeds_limit, _):
+        tensor = torch.tensor([1.0, 2.0, 3.0])
+        suffix = 'suffix'
+        expected = {'Max': 3.0, 'Min': 1.0, 'data_name': 'test_api_name'}
+        with patch.object(PytorchDataProcessor, '_analyze_tensor',
+                          return_value={'Max': 3.0, 'Min': 1.0}) as mock_super_analyze_tensor:
+            result = self.processor._analyze_tensor(tensor, suffix)
+            mock_super_analyze_tensor.assert_called_once_with(tensor, suffix)
+            mock_path_len_exceeds_limit.assert_called_once()
+            self.assertEqual(expected, result)
 
 class TestFreeBenchmarkDataProcessor(unittest.TestCase):
 
