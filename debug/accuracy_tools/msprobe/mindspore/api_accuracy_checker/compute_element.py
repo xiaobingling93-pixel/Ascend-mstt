@@ -169,8 +169,8 @@ class ComputeElement:
         if isinstance(compute_element_info, list):
             self.shape = tuple()
             self.dtype_str = TUPLE_TYPE_STR
-            self.parameter = tuple(ComputeElement(compute_element_info=sub_info)
-                                   for sub_info in compute_element_info)
+            self.parameter = tuple([ComputeElement(compute_element_info=sub_info)
+                                    for sub_info in compute_element_info])
         else:
             type_str = check_and_get_from_json_dict(compute_element_info, "type", "type field in api_info.json",
                                                     accepted_type=str, accepted_value=api_info_type_str_to_type.keys())
