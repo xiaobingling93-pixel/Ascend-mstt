@@ -25,7 +25,8 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type,
     CompareException
 from msprobe.core.common.file_check import FileChecker
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import load_pt, load_npy
+from msprobe.pytorch.common.utils import load_pt
+from msprobe.core.common.utils import load_npy
 from msprobe.core.common.const import Const, FileCheckConst
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
