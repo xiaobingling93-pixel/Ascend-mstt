@@ -104,12 +104,15 @@ class ComputeElement:
         '''
         Args:
             get_origin: boolean
-            get_mindspore_tensor: boolean
+            tensor_platform: str, Union["mindspore", "pytorch"]
 
         Return:
-            parameter: Union[int, float, str, slice,tuple,  torch.Tensor, mindspore.Tensor]
+            parameter: Union[int, float, str, slice, tuple, torch.Tensor, mindspore.Tensor]
         '''
-        if isinstance(self.parameter, self.supported_parameter_type):
+        if isinstance(self.parameter, tuple):
+            return tuple([compute_element.get_parameter(get_origin=get_origin, tensor_platform=tensor_platform)
+                          for compute_element in self.parameter])
+        elif isinstance(self.parameter, self.supported_parameter_type):
             parameter_tmp = self.parameter
         elif isinstance(self.parameter, MstensorMetaData):
             mstensor_meta_data = self.parameter
@@ -157,7 +160,6 @@ class ComputeElement:
         '''
         Args:
             compute_element_info: Union[list, dict]
-            is_constructed: boolean
 
         Return:
             void
@@ -167,7 +169,7 @@ class ComputeElement:
         if isinstance(compute_element_info, list):
             self.shape = tuple()
             self.dtype_str = TUPLE_TYPE_STR
-            self.parameter = tuple(ComputeElement(compute_element_info=sub_info).get_parameter()
+            self.parameter = tuple(ComputeElement(compute_element_info=sub_info)
                                    for sub_info in compute_element_info)
         else:
             type_str = check_and_get_from_json_dict(compute_element_info, "type", "type field in api_info.json",
@@ -218,6 +220,10 @@ class ComputeElement:
         elif isinstance(parameter, torch.Tensor):
             self.shape = tuple(parameter.shape)
             self.dtype_str = torch_dtype_to_dtype_str.get(parameter.dtype)
+        elif isinstance(parameter, tuple):
+            self.shape = tuple()
+            self.dtype_str = TUPLE_TYPE_STR
+            self.parameter = tuple([ComputeElement(parameter=param) for param in parameter])
         else:
             self.shape = tuple()
             self.dtype_str = \

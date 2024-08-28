@@ -141,5 +141,38 @@ class TestComputeElement(unittest.TestCase):
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
 
+    def test_init_with_compute_element_info_tuple_tensor(self):
+        global_context.is_constructed = False
+        compute_element_info = [
+          [
+            {
+                "type": "mindspore.Tensor",
+                "dtype": "Float32",
+                "shape":[2, 3],
+                "Max": 3.0,
+                "Min": 1.0,
+                "data_name": "input.npy"
+            },
+            {
+                "type": "mindspore.Tensor",
+                "dtype": "Float32",
+                "shape":[2, 3],
+                "Max": 3.0,
+                "Min": 1.0,
+                "data_name": "input.npy"
+            }
+          ]
+        ]
+        compute_element = ComputeElement(compute_element_info=compute_element_info)
+        torch_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="pytorch")
+        mindspore_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="mindspore")
+        assert isinstance(torch_parameter, tuple)
+        assert isinstance(mindspore_parameter, tuple)
+        for para in torch_parameter:
+            assert (para == self.torch_tensor).all()
+
+        for para in mindspore_parameter:
+            assert (para == self.ms_tensor).all()
+
 if __name__ == '__main__':
     unittest.main()
