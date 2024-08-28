@@ -25,6 +25,7 @@ from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.pytorch_processor import StatisticsDataProcessor
+from msprobe.core.common.const import MsgConst
 
 
 class TestDataCollector(unittest.TestCase):
@@ -74,7 +75,7 @@ class TestDataCollector(unittest.TestCase):
             self.data_collector.handle_data("Tensor.add", {"min": 0})
             msg = "msprobe is collecting data on Tensor.add. "
             mock_update_data.assert_called_with({"min": 0}, msg)
-            mock_info.assert_called_with("msg", end='\r')
+            mock_info.assert_called_with(''.join(["msg", ' '*MsgConst.SPACE_LENGTH]), end='\r')
             mock_flush.assert_called()
             mock_write_json.assert_not_called()
 
