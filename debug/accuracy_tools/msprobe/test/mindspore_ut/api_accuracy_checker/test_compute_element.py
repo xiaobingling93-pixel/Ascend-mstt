@@ -124,9 +124,12 @@ class TestComputeElement(unittest.TestCase):
             },
         ]
         compute_element = ComputeElement(compute_element_info=compute_element_info)
-        parameter = compute_element.get_parameter(get_origin=True)
-        self.assertTrue((parameter[0] == self.ms_tensor).all())
-        self.assertTrue((parameter[1] == self.ms_tensor).all())
+        mindspore_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="mindspore")
+        self.assertTrue((mindspore_parameter[0] == self.ms_tensor).all())
+        self.assertTrue((mindspore_parameter[1] == self.ms_tensor).all())
+        torch_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="pytorch")
+        self.assertTrue((torch_parameter[0] == self.torch_tensor).all())
+        self.assertTrue((torch_parameter[1] == self.torch_tensor).all())
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), TUPLE_TYPE_STR)
 
@@ -141,38 +144,6 @@ class TestComputeElement(unittest.TestCase):
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
 
-    def test_init_with_compute_element_info_tuple_tensor(self):
-        global_context.is_constructed = False
-        compute_element_info = [
-          [
-            {
-                "type": "mindspore.Tensor",
-                "dtype": "Float32",
-                "shape":[2, 3],
-                "Max": 3.0,
-                "Min": 1.0,
-                "data_name": "input.npy"
-            },
-            {
-                "type": "mindspore.Tensor",
-                "dtype": "Float32",
-                "shape":[2, 3],
-                "Max": 3.0,
-                "Min": 1.0,
-                "data_name": "input.npy"
-            }
-          ]
-        ]
-        compute_element = ComputeElement(compute_element_info=compute_element_info)
-        torch_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="pytorch")
-        mindspore_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="mindspore")
-        assert isinstance(torch_parameter, tuple)
-        assert isinstance(mindspore_parameter, tuple)
-        for para in torch_parameter:
-            assert (para == self.torch_tensor).all()
-
-        for para in mindspore_parameter:
-            assert (para == self.ms_tensor).all()
 
 if __name__ == '__main__':
     unittest.main()
