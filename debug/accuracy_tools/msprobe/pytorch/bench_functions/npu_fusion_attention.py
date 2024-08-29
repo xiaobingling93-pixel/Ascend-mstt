@@ -1,6 +1,14 @@
 import torch
 import numpy as np
 from einops import rearrange
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+    from flash_attn import flash_attn_func
+else:
+    is_gpu = False
+
 
 from msprobe.pytorch.common.utils import logger
 
@@ -43,7 +51,7 @@ def softmax_grad(dp, softmax_res):
 
 
 def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
-    if num_kv_heads == 0 or num_kv_heads < num_heads:
+    if num_kv_heads == 0 or num_kv_heads > num_heads:
         raise ValueError(f"num_kv_heads must be non-zero and less than num_heads.")
 
     factor = num_heads // num_kv_heads
@@ -266,12 +274,32 @@ def rebuild_softmax_by_max_sum(q, k, atten_mask, pse, scale, softmax_max, softma
     return softmax_res
 
 
+def get_head_num(*args, **kwargs):
+    if kwargs.get("head_num"):
+        head_num = kwargs.get("head_num")
+    elif len(args) >= 4:
+        head_num = args[3]
+    else:
+        raise ValueError(f"Unsupported npu_fusion_attention args {args}.")
+    return head_num
+
+
+def get_input_layout(*args, **kwargs):
+    if kwargs.get("input_layout"):
+        input_layout = kwargs.get("input_layout")
+    elif len(args) >= 5:
+        input_layout = args[4]
+    else:
+        raise ValueError(f"Unsupported npu_fusion_attention args {args}.")
+    return input_layout
+
+
 def npu_fusion_attention_forward_patch(*args, **kwargs):
     # query, key, value, head_num, input_layout
-    if len(args) != 5:
-        raise ValueError(f"Unsupported npu_fusion_attention args {args}.")
+    head_num = get_head_num(*args, **kwargs)
+    input_layout = get_input_layout(*args, **kwargs)
 
-    B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], args[3], args[4])
+    B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], head_num, input_layout)
     if N1 == N2 and S1 == S2:
         logger.debug(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
@@ -332,7 +360,8 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
 
 def npu_fusion_attention(*args, **kwargs):
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_forward_patch(*args, **kwargs)
-    query, key, value, input_layout = new_args[0], new_args[1], new_args[2], new_args[4]
+    query, key, value = new_args[0], new_args[1], new_args[2]
+    input_layout = get_input_layout(*args, **kwargs)
     N1 = dims_kwargs.get("N1")
     N2 = dims_kwargs.get("N2")
     S1 = dims_kwargs.get("S1")
@@ -419,3 +448,46 @@ def npu_fusion_attention_grad(*args, **kwargs):
     dv = convert_from_bnsd(dv, input_layout)
 
     return dq.cpu(), dk.cpu(), dv.cpu()
+
+def gpu_fusion_attention(*args, **kwargs):
+    deterministic = False
+    new_args, dims_kwargs, new_kwargs = npu_fusion_attention_forward_patch(*args, **kwargs)
+    query, key, value = new_args[0], new_args[1], new_args[2]
+    keep_prob = new_kwargs.get("keep_prob", 1.0)
+    scale = new_kwargs.get("scale")
+    N1 = dims_kwargs.get("N1")
+    N2 = dims_kwargs.get("N2")
+    S1 = dims_kwargs.get("S1")
+    S2 = dims_kwargs.get("S2")
+    B = dims_kwargs.get("B")
+    pse = new_kwargs.get("pse")
+    sparse_mode = new_kwargs.get("sparse_mode")
+    pre_tockens = new_kwargs.get("pre_tockens")
+    next_tockens = new_kwargs.get("next_tockens")
+    attn_mask = new_kwargs.get("atten_mask")
+    atten_mask_dtype = attn_mask.dtype if new_kwargs.get("atten_mask") is not None else None
+    pre_tockens = 65536 if pre_tockens > 65536 else pre_tockens
+    next_tockens = 65536 if next_tockens > 65536 else next_tockens
+    if (not atten_mask_dtype) or (sparse_mode == 4 and (next_tockens != 0 or pre_tockens < S1)) \
+        or (sparse_mode == 0 and pre_tockens >= S1 and next_tockens >= S2):
+        atten_off = True
+    else:
+        atten_off = False
+    causal_switch = False if atten_off else True
+    if sparse_mode == 4:
+        window_left = pre_tockens
+        window_right = next_tockens
+    else:
+        pre_tockens = next_tockens = 65536
+        window_left = pre_tockens - S1 + S2
+        window_right = next_tockens + S1 - S2
+    
+    pttype = query.dtype
+    if pse is not None:
+        alibi_scopes = torch.rand(B, N1, dtype=torch.float32) * 0.3
+    else:
+        alibi_scopes = None
+    
+    out = flash_attn_func(query, key, value, dropout_p=(1-keep_prob), softmax_scale=scale, causal=causal_switch, 
+                          window_size=(window_left, window_right), alibi_scopes=alibi_scopes, deterministic=deterministic)
+    return out.cpu(), None, None

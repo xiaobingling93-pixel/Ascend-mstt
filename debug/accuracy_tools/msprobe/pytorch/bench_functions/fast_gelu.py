@@ -1,7 +1,7 @@
 import torch
 
 
-def fast_gelu(input0):
+def npu_fast_gelu(input0):
     attr = 1.702
     const_0 = 0 - attr
     const_1 = 1

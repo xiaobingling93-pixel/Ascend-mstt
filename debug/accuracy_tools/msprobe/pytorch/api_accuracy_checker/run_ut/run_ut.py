@@ -292,7 +292,7 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
 
 def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
-    flag = split_name in [Const.NPU, Const.DISTRIBUTED]
+    flag = split_name == Const.DISTRIBUTED
     if flag:
         logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag
@@ -331,8 +331,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     bench_grad_out, device_grad_out = None, None
-    out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
-    device_out = exec_api(api_type, api_name, device_args, device_kwargs)
+    out = exec_api(api_type, api_name, cpu_args, cpu_kwargs, Const.CPU_LOWERCASE)
+    device_out = exec_api(api_type, api_name, device_args, device_kwargs, current_device)
     current_path = os.path.dirname(os.path.realpath(__file__))
     ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
     api_setting_dict = get_json_contents(ut_setting_path)
