@@ -23,6 +23,7 @@ class Const:
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    NONE = None
 
     # dump mode
     ALL = "all"

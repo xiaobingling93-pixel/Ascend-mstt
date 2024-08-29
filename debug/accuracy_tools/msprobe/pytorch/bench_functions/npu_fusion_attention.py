@@ -5,12 +5,18 @@ try:
     import torch_npu
 except ImportError:
     is_gpu = True
-    from flash_attn import flash_attn_func
+    try:
+        # flash_attn为gpu的fa三方库
+        from flash_attn import flash_attn_func
+    except ImportError:
+        #如果为cpu的ut环境，则不做任何处理
+        pass
 else:
     is_gpu = False
 
 
 from msprobe.pytorch.common.utils import logger
+from msprobe.core.common.const import Const
 
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 softmax_build_mode = "QKV"  # "MAX_SUM"
@@ -449,6 +455,19 @@ def npu_fusion_attention_grad(*args, **kwargs):
 
     return dq.cpu(), dk.cpu(), dv.cpu()
 
+
+def is_attention_off_due_to_mask(atten_mask_dtype):
+    return not atten_mask_dtype
+
+
+def is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, S1):
+    return sparse_mode == 4 and (next_tockens != 0 or pre_tockens < S1)
+
+
+def is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, S1, S2):
+    return sparse_mode == 0 and pre_tockens >= S1 and next_tockens >= S2
+
+
 def gpu_fusion_attention(*args, **kwargs):
     deterministic = False
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_forward_patch(*args, **kwargs)
@@ -468,11 +487,9 @@ def gpu_fusion_attention(*args, **kwargs):
     atten_mask_dtype = attn_mask.dtype if new_kwargs.get("atten_mask") is not None else None
     pre_tockens = 65536 if pre_tockens > 65536 else pre_tockens
     next_tockens = 65536 if next_tockens > 65536 else next_tockens
-    if (not atten_mask_dtype) or (sparse_mode == 4 and (next_tockens != 0 or pre_tockens < S1)) \
-        or (sparse_mode == 0 and pre_tockens >= S1 and next_tockens >= S2):
-        atten_off = True
-    else:
-        atten_off = False
+    atten_off = (is_attention_off_due_to_mask(atten_mask_dtype) or
+             is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, S1) or
+             is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, S1, S2))
     causal_switch = False if atten_off else True
     if sparse_mode == 4:
         window_left = pre_tockens
@@ -490,4 +507,4 @@ def gpu_fusion_attention(*args, **kwargs):
     
     out = flash_attn_func(query, key, value, dropout_p=(1-keep_prob), softmax_scale=scale, causal=causal_switch, 
                           window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic)
-    return out, None, None
+    return out, Const.NONE, Const.NONE
