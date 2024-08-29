@@ -71,7 +71,7 @@ class SummaryWriterWithAD(SummaryWriter):
             print_error_log(f'error when init summary writer at {path}: {e}')
             raise e
         for event in os.listdir(path):
-            change_mode(os.path.join(path), FileCheckConst.DATA_FILE_AUTHORITY)
+            change_mode(os.path.join(path, event), FileCheckConst.DATA_FILE_AUTHORITY)
         self.tag2scalars = defaultdict(list)
         self.ad_rules = ad_rules
         self.job_id = job_id
