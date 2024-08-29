@@ -140,9 +140,9 @@ class UtDataProcessor:
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
             try:
                 tensor = element.contiguous().detach().cpu()
-            except RuntimeError:
+            except Exception as err:
                 logger.error(f"Failed to transfer tensor to cpu for {api_args}")
-                raise DumpException(DumpException.SAVE_TENSOR_ERROR)
+                raise DumpException(DumpException.INVALID_DATA_ERROR) from err
             save_pt(tensor, file_path)
             self.index += 1
         elif element is None or isinstance(element, (bool, int, float, str, slice)):
