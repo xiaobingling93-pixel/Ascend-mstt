@@ -3,7 +3,7 @@ def npu_confusion_transpose(data, perm, shape, transpose_first):
         output = data.permute(*perm).contiguous().view(shape)
     else:
         output = data.view(shape).permute(*perm)
-    return output.cpu()
+    return output
 
 
 def npu_confusion_transpose_backward(grad, perm, shape, transpose_first):

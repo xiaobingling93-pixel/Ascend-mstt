@@ -484,10 +484,10 @@ def gpu_fusion_attention(*args, **kwargs):
     
     pttype = query.dtype
     if pse is not None:
-        alibi_scopes = torch.rand(B, N1, dtype=torch.float32) * 0.3
+        alibi_slopes = torch.rand(B, N1, dtype=torch.float32) * 0.3
     else:
-        alibi_scopes = None
+        alibi_slopes = None
     
     out = flash_attn_func(query, key, value, dropout_p=(1-keep_prob), softmax_scale=scale, causal=causal_switch, 
-                          window_size=(window_left, window_right), alibi_scopes=alibi_scopes, deterministic=deterministic)
-    return out.cpu(), None, None
+                          window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic)
+    return out, None, None
