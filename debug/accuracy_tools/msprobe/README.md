@@ -47,35 +47,35 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 该功能进行 PyTorch 整网 API 粒度的数据 dump、精度比对，进而定位训练场景下的精度问题。
 
-[PyTorch 场景的精度比对](./docs/11.accuracy_compare_PyTorch.md)
+[PyTorch 场景的精度比对](./docs/10.accuracy_compare_PyTorch.md)
 
-[MindSpore 场景的精度比对](./docs/12.accuracy_compare_MindSpore.md)
+[MindSpore 场景的精度比对](./docs/11.accuracy_compare_MindSpore.md)
 
 ### 4 溢出检测与解析
 
 溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。
 
-[PyTorch 场景的溢出检测与解析](./docs/13.overflow_check_PyTorch.md)（更新中）
+[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)（更新中）
 
-[MindSpore 场景的溢出检测与解析](./docs/14.overflow_check_MindSpore.md)（更新中）
+[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)（更新中）
 
 ### 5 数据解析
 
 该功能用于比对前后两次 NPU ACL 层级 dump 数据的一致性。
 
-[PyTorch 场景的数据解析](./docs/15.data_parse_PyTorch.md)
+[PyTorch 场景的数据解析](./docs/14.data_parse_PyTorch.md)
 
 ### 6 无标杆比对
 
-[PyTorch 场景的无标杆比对](./docs/17.free_benchmarking_PyTorch.md)（更新中）
+[PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)（更新中）
 
-[MindSpore 场景的无标杆比对](./docs/18.overflow_check_MindSpore.md)（更新中）
+[MindSpore 场景的无标杆比对](./docs/16.overflow_check_MindSpore.md)（更新中）
 
 ### 7 梯度状态监测
 
 本功能用于采集梯度数据并进行梯度相似度比对，可以精准定位出现问题的 step。
 
-[兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/19.grad_probe.md)
+[兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)（更新中）
 
 ## 🌟 新版本特性
 
@@ -90,12 +90,12 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 📑 补充材料
 
-[msprobe 精度工具标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)
+[msprobe 精度工具标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)（更新中）
 
-[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
+[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)（更新中）
 
 ## ❓ FAQ
 
-[FAQ for PyTorch](./docs/FAQ_PyTorch.md)
+[FAQ for PyTorch](./docs/FAQ_PyTorch.md)（更新中）
 
 FAQ for MindSpore
