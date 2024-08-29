@@ -1,10 +1,12 @@
+import os
 import statistics  as st
 from abc import ABC
 from typing import List
 import sys
 from torch.utils.tensorboard import SummaryWriter
 from collections import defaultdict
-from kj600.utils import print_info_log
+from kj600.utils import print_info_log, print_error_log
+from kj600.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
 
 class ScanRule(ABC):
     def apply(self, history, cur):
@@ -61,7 +63,16 @@ class bcolors:
 
 class SummaryWriterWithAD(SummaryWriter):
     def __init__(self, path, ad_rules, job_id, anomaly_inform=False):
-        super().__init__(path)
+        check_path_before_create(path)
+        create_directory(path)
+        change_mode(path, FileCheckConst.DATA_DIR_AUTHORITY)
+        try:
+            super().__init__(path)
+        except Exception as e:
+            print_error_log(f'error when init summary writer at {path}: {e}')
+            raise e
+        for event in os.listdir(path):
+            change_mode(os.path.join(path), FileCheckConst.DATA_FILE_AUTHORITY)
         self.tag2scalars = defaultdict(list)
         self.ad_rules = ad_rules
         self.job_id = job_id
