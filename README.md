@@ -51,11 +51,7 @@
 
 3. [advisor](./profiler/advisor)
 
-<<<<<<< HEAD
-   将 Ascend PyTorch Profiler 或者 msprof 采集的 PyThon 场景性能数据进行分析，并输出性能调优建议。
-=======
    将 Ascend PyTorch Profiler 或者 msprof 采集的 PyTorch 场景性能数据进行分析，并输出性能调优建议。
->>>>>>> upstream/master
 
 4. [bind_core](./profiler/affinity_cpu_bind)
 
