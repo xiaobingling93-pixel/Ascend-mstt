@@ -65,7 +65,6 @@ class SummaryWriterWithAD(SummaryWriter):
     def __init__(self, path, ad_rules, job_id, anomaly_inform=False):
         check_path_before_create(path)
         create_directory(path)
-        change_mode(path, FileCheckConst.DATA_DIR_AUTHORITY)
         try:
             super().__init__(path)
         except Exception as e:
