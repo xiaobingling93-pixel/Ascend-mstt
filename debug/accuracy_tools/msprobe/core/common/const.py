@@ -88,6 +88,7 @@ class Const:
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    NPU_LOWERCASE = 'npu'
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
