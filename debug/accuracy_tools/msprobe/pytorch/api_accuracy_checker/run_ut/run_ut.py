@@ -18,7 +18,7 @@ import torch
 from tqdm import tqdm
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api, UtDataInfo, \
-    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, unsupported_api
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor
@@ -292,7 +292,7 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
 
 def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
-    flag = split_name == Const.DISTRIBUTED or api_name in unsupported_api
+    flag = split_name == Const.DISTRIBUTED
     if flag:
         logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag

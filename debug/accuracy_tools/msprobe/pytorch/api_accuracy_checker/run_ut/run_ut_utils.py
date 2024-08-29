@@ -10,7 +10,6 @@ from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
 from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
 
 hf_32_standard_api = ["conv1d", "conv2d"]
-unsupported_api = ["NPU.npu_fusion_attention.1", "NPU.npu_fusion_attention.2"]
 
 
 class Backward_Message:
