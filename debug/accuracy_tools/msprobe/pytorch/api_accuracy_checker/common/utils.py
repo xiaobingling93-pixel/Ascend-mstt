@@ -16,6 +16,7 @@
 """
 import os
 import re
+from collections import namedtuple
 
 import torch
 
@@ -30,6 +31,9 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.utils import CompareException
+
+ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
+                     defaults=['unknown', None, None, None, 0, 0])
 
 
 class DumpException(CompareException):

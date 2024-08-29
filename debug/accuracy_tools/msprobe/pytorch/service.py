@@ -17,7 +17,7 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL, ApiData
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
@@ -223,6 +223,7 @@ class Service:
 
     def attl_init(self):
         if self.config.online_run_ut:
+            from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL
             attl_config = ATTLConfig(is_benchmark_device=False,
                                      connect_ip=self.config.host,
                                      connect_port=self.config.port,

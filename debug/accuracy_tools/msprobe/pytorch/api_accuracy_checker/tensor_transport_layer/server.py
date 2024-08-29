@@ -5,8 +5,7 @@ import time
 import io
 from threading import Thread
 
-from OpenSSL import SSL
-from twisted.internet import ssl, reactor, protocol, endpoints
+from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
@@ -29,6 +28,8 @@ class TCPServer:
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
+            from OpenSSL import SSL
+            from twisted.internet import ssl
             server_key = os.path.join(self.tls_path, "server.key")
             server_crt = os.path.join(self.tls_path, "server.crt")
             server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)

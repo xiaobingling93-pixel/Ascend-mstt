@@ -21,7 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Me
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor, extract_basic_api_segments
+    initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
@@ -32,7 +32,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 
 
