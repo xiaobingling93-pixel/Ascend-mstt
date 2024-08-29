@@ -50,22 +50,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def analyze_dtype_in_kwargs(element):
         return {"type": "mindspore.dtype", "value": str(element)}
 
-    @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-            values = [
-                value if not isinstance(value, ms.Tensor) else value.item()
-                for value in [arg.start, arg.stop, arg.step]
-            ]
-            single_arg.update({"value": values})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.mindspore_special_type
@@ -107,7 +91,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if isinstance(element, ms.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
 
-        if isinstance(element, (bool, int, float, str, slice)):
+        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
 
