@@ -19,7 +19,7 @@ class PTComparator (Comparator):
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                 FileCheckConst.PT_SUFFIX, False)
         data_path = path_checker.common_check()
-        data_value = load_pt(data_path, to_cpu=True)
+        data_value = load_pt(data_path, to_cpu=True).detach()
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
