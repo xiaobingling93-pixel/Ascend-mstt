@@ -16,6 +16,11 @@ class Const:
     PYNATIVE_MODE = "pynative"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
+    JIT_LEVEL = "jit_level"
+    JIT_LEVEL_O0 = "O0"
+    JIT_LEVEL_O1 = "O1"
+    JIT_LEVEL_O2 = "O2"
+    ASCEND_910A = "ascend910"
 
 
 class FreeBenchmarkConst:

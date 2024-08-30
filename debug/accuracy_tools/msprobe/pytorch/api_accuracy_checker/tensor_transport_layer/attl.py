@@ -1,24 +1,20 @@
-import io
+import glob
 import os.path
 import time
 import re
-from pathlib import Path
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
-from collections import namedtuple
 from dataclasses import dataclass
 
 import torch
 
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.common.utils import save_pt
 from msprobe.core.common.utils import remove_path
+from msprobe.pytorch.common.utils import save_api_data, load_api_data, save_pt, load_pt
 
-
-ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
-                     defaults=['unknown', None, None, None, 0, 0])
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
 
 
@@ -46,7 +42,7 @@ class ATTL:
         self.kill_progress = False
         self.check_attl_config()
         if self.session_config.nfs_path:
-            self.nfs_path = Path(self.session_config.nfs_path)
+            self.nfs_path = self.session_config.nfs_path
         elif self.session_config.is_benchmark_device:
 
             self.socket_manager = TCPServer(self.session_config.connect_port,
@@ -89,9 +85,8 @@ class ATTL:
             buffer.kwargs.pop('device')
         rank = buffer.rank if hasattr(buffer, "rank") and buffer.rank is not None else 0
         step = buffer.step if hasattr(buffer, "step") else 0
-        io_buff = io.BytesIO()
         try:
-            torch.save(buffer, io_buff)
+            io_buff = save_api_data(buffer)
         except Exception as e:
             self.logger.info(f"{buffer.name} can not be saved, skip: {e}")
             return
@@ -125,9 +120,8 @@ class ATTL:
             if buffer == b"KILL_CONFIRM":
                 self.kill_progress = True
                 return "KILL_"
-            buffer = io.BytesIO(buffer)
             try:
-                buffer = torch.load(buffer, map_location="cpu")
+                buffer = load_api_data(buffer)
             except Exception as e:
                 self.logger.warning("there is something error. please check it. %s", e)
             if isinstance(buffer, bytes):
@@ -150,21 +144,22 @@ class ATTL:
             self.logger.warning("there is something error in save_pt. please check it. %s", e)
 
     def download(self):
+        buffer = None
+        cur_file = None
         for file_type in ("start*", "*.pt", "end*"):
-            cur_file = next(self.nfs_path.glob(file_type), None)
-            if cur_file is not None:
+            pattern = os.path.join(self.nfs_path, file_type)
+            files = glob.glob(pattern)
+            if len(files) > 0:
+                cur_file = files[0]
                 break
 
-        if cur_file is None:
-            return None
-        else:
-            buffer = None
+        if cur_file is not None:
             try:
-                buffer = torch.load(cur_file)
+                buffer = load_pt(cur_file)
             except Exception as e:
                 self.logger.warning("there is something error. please check it. %s", e)
             remove_path(cur_file)
-            return buffer
+        return buffer
 
 
 def move2device_exec(obj, device):
