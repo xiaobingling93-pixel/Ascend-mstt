@@ -43,7 +43,7 @@ def softmax_grad(dp, softmax_res):
 
 
 def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
-    if num_kv_heads == 0 or num_kv_heads < num_heads:
+    if num_kv_heads == 0 or num_kv_heads > num_heads:
         raise ValueError(f"num_kv_heads must be non-zero and less than num_heads.")
 
     factor = num_heads // num_kv_heads
