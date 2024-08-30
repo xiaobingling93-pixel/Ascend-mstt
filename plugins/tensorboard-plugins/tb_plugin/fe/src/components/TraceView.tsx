@@ -59,7 +59,7 @@ export const TraceView: React.FC<IProps> = (props) => {
       traceData.then((data) => {
         iframeRef.current?.contentWindow?.postMessage(
           { msg: 'data', data },
-          '*'
+          window.origin
         )
       })
     }
