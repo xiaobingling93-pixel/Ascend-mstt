@@ -86,7 +86,7 @@ class TestDataCollector(unittest.TestCase):
             mock_update_data.assert_not_called()
             mock_info.assert_not_called()
             mock_write_json.assert_called()
-
+    
     @patch.object(DataCollector, "update_construct")
     @patch.object(DataWriter, "update_stack")
     @patch.object(BaseDataProcessor, "analyze_api_call_stack")
