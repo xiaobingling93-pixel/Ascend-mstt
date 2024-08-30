@@ -309,7 +309,7 @@ class MsgConst:
     """
     Class for log messages const
     """
-    SPACE_LENGTH = 128
+    CHAR_LENGTH = 512
     LEVEL = ["INFO", "WARNING", "ERROR"]
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
