@@ -9,6 +9,7 @@ from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 
 
 class ApiInputAggregation:
@@ -30,7 +31,6 @@ api_parent_module_mapping = {
     (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
 }
 
-torch_float_type = [torch.float16, torch.float32, torch.float64, torch.bfloat16]
 
 class ApiRunner:
     def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=Const.FORWARD,
@@ -137,7 +137,8 @@ class ApiRunner:
                 #set requires_grad
                 requires_grad_index = []
                 for index, tensor in enumerate(inputs):
-                    if isinstance(tensor, torch.Tensor) and tensor.dtype in torch_float_type:
+                    if isinstance(tensor, torch.Tensor) and \
+                        torch_dtype_to_dtype_str.get(tensor.dtype) in float_dtype_str_list:
                         setattr(tensor, "requires_grad", True)
                         requires_grad_index.append(index)
                 forward_results = api_instance(*inputs, **kwargs)
