@@ -44,6 +44,13 @@ def convert_to_tuple(input):
         input_list = [input]
         return tuple(input_list)
 
+def compute_element_list_trim_none(compute_element_list):
+    trimmed_list = []
+    for compute_element in compute_element_list:
+        if compute_element.get_parameter() is not None:
+            trimmed_list.append(compute_element)
+    return trimmed_list
+
 class GlobalContext:
     def __init__(self):
         self.is_constructed = True
