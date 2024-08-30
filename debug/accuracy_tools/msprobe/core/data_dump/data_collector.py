@@ -130,8 +130,7 @@ class DataCollector:
         if data_info:
             msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
-            msg.ljust(MsgConst.CHAR_LENGTH)
-            logger.info(msg, end='\r')
+            logger.info(MsgConst.CLEAR_SYMBOL+msg, end='\r')
         if use_buffer:
             self.data_writer.flush_data_when_buffer_is_full()
         else:
