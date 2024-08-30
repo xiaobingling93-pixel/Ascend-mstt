@@ -309,7 +309,7 @@ class MsgConst:
     """
     Class for log messages const
     """
-    CLEAR_SYMBOL = "KKK"  #"\033[K"
+    CLEAR_SYMBOL = "\033[K"
     LEVEL = ["INFO", "WARNING", "ERROR"]
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
