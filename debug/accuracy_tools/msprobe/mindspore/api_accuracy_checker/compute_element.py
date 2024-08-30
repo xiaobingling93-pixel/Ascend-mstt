@@ -112,7 +112,7 @@ class ComputeElement:
             parameter: Union[int, float, str, slice, tuple, torch.Tensor, mindspore.Tensor]
         '''
         if self.parameter is None:
-            return None
+            return self.parameter
         if isinstance(self.parameter, tuple):
             return tuple([compute_element.get_parameter(get_origin=get_origin, tensor_platform=tensor_platform)
                           for compute_element in self.parameter])
