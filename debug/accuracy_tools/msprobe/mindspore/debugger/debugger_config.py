@@ -33,12 +33,12 @@ class DebuggerConfig:
                               if not task_config.pert_mode else task_config.pert_mode)
             self.handler_type = (FreeBenchmarkConst.DEFAULT_HANDLER_TYPE
                                  if not task_config.handler_type else task_config.handler_type)
-            if self.handler_type == FreeBenchmarkConst.FIX_HANDLER_MODE and \
+            self.stage = FreeBenchmarkConst.DEFAULT_STAGE if not task_config.fuzz_stage else task_config.fuzz_stage
+            if self.handler_type == FreeBenchmarkConst.FIX and \
                self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
                 raise ValueError("pert_mode must be improve_precision or empty when handler_type is fix, "
                                  f"but got {self.pert_type}.")
             self.dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
-            self.stage = FreeBenchmarkConst.DEFAULT_STAGE
 
     def check(self):
         if not self.dump_path:
