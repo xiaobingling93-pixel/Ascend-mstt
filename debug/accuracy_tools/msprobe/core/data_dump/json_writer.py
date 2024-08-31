@@ -7,6 +7,7 @@ from pathlib import Path
 from msprobe.core.common.file_check import change_mode, FileOpen
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.utils import remove_path
 
 
 class DataWriter:
@@ -46,12 +47,12 @@ class DataWriter:
         change_mode(self.dump_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
         if os.path.exists(self.stack_file_path):
-            os.remove(self.stack_file_path)
+            remove_path(self.stack_file_path)
         Path(self.stack_file_path).touch()
         change_mode(self.stack_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
         if os.path.exists(self.construct_file_path):
-            os.remove(self.construct_file_path)
+            remove_path(self.construct_file_path)
         Path(self.construct_file_path).touch()
         change_mode(self.construct_file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
