@@ -61,6 +61,7 @@ class GradientMonitor:
     def _hook_optimizer(self):
         def optimizer_pre_step_hook(optimizer, args, kargs):
             self._step += 1
+            logger.info(f"grad_probe: optimizer step {self._step}")
             if not data_in_list_target(self._step, self._target_step):
                 return
             output_lines = []
@@ -86,5 +87,6 @@ class GradientMonitor:
             header_result = GradStatCsv.generate_csv_header(self._level_adp, self._bounds)
             output_lines.insert(0, header_result)
             write_csv(output_lines, output_path)
+            logger.info(f"write grad data to {output_path}")
         if int(torch.__version__.split('.')[0]) >= 2:
             register_optimizer_step_pre_hook(optimizer_pre_step_hook)
