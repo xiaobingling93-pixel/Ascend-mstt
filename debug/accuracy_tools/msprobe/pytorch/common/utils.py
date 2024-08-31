@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+import io
 import logging
 import os
 import random
@@ -285,6 +286,26 @@ def save_pt(tensor, filepath):
                             "2. no permission to write files, etc.")
         raise RuntimeError(f"save pt file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_api_data(api_data):
+    """Save data to io stream"""
+    try:
+        io_buff = io.BytesIO()
+        torch.save(api_data, io_buff)
+    except Exception as e:
+        raise RuntimeError(f"save api_data to io_buff failed") from e
+    return io_buff
+
+
+def load_api_data(api_data_bytes):
+    """Load data from bytes stream"""
+    try:
+        buffer = io.BytesIO(api_data_bytes)
+        buffer = torch.load(buffer, map_location="cpu")
+    except Exception as e:
+        raise RuntimeError(f"load api_data from bytes failed") from e
+    return buffer
 
 
 def _create_logger(level=logging.INFO):
