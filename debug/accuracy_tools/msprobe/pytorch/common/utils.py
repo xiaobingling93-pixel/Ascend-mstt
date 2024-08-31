@@ -271,7 +271,7 @@ def load_pt(pt_path, to_cpu=False):
         else:
             pt = torch.load(pt_path)
     except Exception:
-        logger.error(f"load pt file {pt_path} failed")
+        logger.error("load pt file {} failed".format(pt_path))
     return pt
 
 
