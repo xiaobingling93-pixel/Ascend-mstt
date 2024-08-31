@@ -270,8 +270,8 @@ def load_pt(pt_path, to_cpu=False):
             pt = torch.load(pt_path, map_location=torch.device("cpu"))
         else:
             pt = torch.load(pt_path)
-    except Exception as e:
-        raise RuntimeError(f"load pt file {pt_path} failed") from e
+    except Exception:
+        logger.error(f"load pt file {pt_path} failed")
     return pt
 
 
