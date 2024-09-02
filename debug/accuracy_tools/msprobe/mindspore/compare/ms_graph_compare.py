@@ -11,6 +11,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException, load_npy
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
+from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories
 
 
 class row_data:
@@ -27,38 +28,15 @@ class row_data:
         return self.data
 
 
-def list_lowest_level_directories(root_dir):
-    lowest_level_dirs = []
-
-    def recurse_dirs(current_dir):
-        for entry in os.listdir(current_dir):
-            full_path = os.path.join(current_dir, entry)
-            if os.path.isdir(full_path):
-                if any(os.path.isdir(os.path.join(full_path, subentry)) for subentry in os.listdir(full_path)):
-                    recurse_dirs(full_path)
-                else:
-                    lowest_level_dirs.append(full_path)
-
-    recurse_dirs(root_dir)
-    return lowest_level_dirs
-
-
-def generate_id(value):
-    try:
-        return int(value)
-    except ValueError:
-        return -1
-
-
 def npy_data_read(data_path, npy_file_list, mapping_dict):
     data_list = []
     for data in npy_file_list:
         if data in mapping_dict:
-            split_list = mapping_dict[data].split(".")
+            split_list = mapping_dict[data].split(CompareConst.SEP)
         else:
             split_list = data.split(".")
         compare_key = f"{split_list[1]}.{split_list[2]}.{split_list[3]}.{split_list[5]}.{split_list[6]}"
-        timestamp = int(split_list[4])
+        timestamp = convert_to_int(split_list[4])
 
         data_list.append([os.path.join(data_path, data), compare_key, timestamp])
     return data_list
@@ -141,8 +119,8 @@ class GraphMSComparator:
         self.output_path = output_path
         self.base_npu_path = input_param.get('npu_path', None)
         self.base_bench_path = input_param.get('bench_path', None)
-        self.rank_list = [generate_id(rank_id) for rank_id in input_param.get('rank_id', [])]
-        self.step_list = [generate_id(step_id) for step_id in input_param.get('step_id', [])]
+        self.rank_list = [convert_to_int(rank_id) for rank_id in input_param.get('rank_id', [])]
+        self.step_list = [convert_to_int(step_id) for step_id in input_param.get('step_id', [])]
         # split by rank and step, generate rank step path
         self.npu_rank_step_dict = self.generate_rank_step_path(self.base_npu_path)
         self.bench_rank_step_dict = self.generate_rank_step_path(self.base_bench_path)
@@ -153,13 +131,16 @@ class GraphMSComparator:
 
         def generate_rank_step_id(path_with_rank_step):
             split_path = path_with_rank_step.split("/")
+            rank_id = -1
             if "rank_" in path_with_rank_step:
                 # KBK mode
-                rank_id = generate_id(split_path[-4].split("_")[-1])
-                step_id = generate_id(split_path[-1])
+                if len(split_path > 4):
+                    rank_id = convert_to_int(split_path[-4].split("_")[-1])
+                step_id = convert_to_int(split_path[-1])
             else:
-                rank_id = generate_id(split_path[-4])
-                step_id = generate_id(split_path[-1])
+                if len(split_path > 4):
+                    rank_id = convert_to_int(split_path[-4])
+                step_id = convert_to_int(split_path[-1])
             return rank_id, step_id
 
         base_path = os.path.abspath(base_path)
