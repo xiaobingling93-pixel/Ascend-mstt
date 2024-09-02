@@ -8,7 +8,8 @@ from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
-from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
+from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
+                                                          trim_output_compute_element_list)
 
 
 class BasicInfoAndStatus:
@@ -58,6 +59,12 @@ class ApiAccuracyChecker:
         else:
             tested_outputs = api_info.get_compute_element_list(forward_or_backward, Const.OUTPUT)
         bench_outputs = api_runner(api_input_aggregation, api_name_str, forward_or_backward, Const.PT_FRAMEWORK)
+        tested_outputs = trim_output_compute_element_list(tested_outputs, forward_or_backward)
+        bench_outputs = trim_output_compute_element_list(bench_outputs, forward_or_backward)
+        if len(tested_outputs) != len(bench_outputs):
+            logger.warning(f"ApiAccuracyChecker.run_and_compare_helper: api: {api_name_str}.{forward_or_backward}, "
+                           "number of bench outputs and tested outputs is different, comparing result can be wrong. "
+                           f"tested outputs: {len(tested_outputs)}, bench outputs: {len(bench_outputs)}")
 
         # compare output
         output_list = []

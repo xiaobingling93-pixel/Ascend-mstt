@@ -33,6 +33,8 @@ class ComputeElement:
             self._init_with_parameter(parameter)
         elif isinstance(compute_element_info, (list, dict)):
             self._init_from_compute_element_info(compute_element_info)
+        elif compute_element_info is None:
+            self._init_from_null_compute_element_info()
         else:
             logger.error_log_with_exp(
                 "ComputeElement.__init__ failed: not init with parameter or compute_element info is not (list, dict)",
@@ -109,6 +111,8 @@ class ComputeElement:
         Return:
             parameter: Union[int, float, str, slice, tuple, torch.Tensor, mindspore.Tensor]
         '''
+        if self.parameter is None:
+            return self.parameter
         if isinstance(self.parameter, tuple):
             return tuple([compute_element.get_parameter(get_origin=get_origin, tensor_platform=tensor_platform)
                           for compute_element in self.parameter])
@@ -155,6 +159,11 @@ class ComputeElement:
             minimum = self.convert_inf_to_real_num(minimum, np_dtype)
             ndarray = np.random.uniform(minimum, maximum, shape).astype(np_dtype)
         return ndarray
+
+    def _init_from_null_compute_element_info(self):
+        self.parameter = None
+        self.shape = tuple()
+        self.dtype = "None"
 
     def _init_from_compute_element_info(self, compute_element_info):
         '''

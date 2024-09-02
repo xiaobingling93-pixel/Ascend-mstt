@@ -1,5 +1,7 @@
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list
 
 def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_type=None, accepted_value=None):
     '''
@@ -43,6 +45,21 @@ def convert_to_tuple(input):
     else:
         input_list = [input]
         return tuple(input_list)
+
+def trim_output_compute_element_list(compute_element_list, forward_or_backward):
+    '''
+    Args:
+        compute_element_list: List[ComputeElement]
+        forward_or_backward: str, Union["forward", "backward"]
+    '''
+    trimmed_list = []
+    for compute_element in compute_element_list:
+        if compute_element.get_parameter() is None or \
+            (forward_or_backward == Const.BACKWARD and compute_element.get_dtype() not in float_dtype_str_list):
+            # trim case: 1. parameter is None. 2. backward output has non float parameter
+            continue
+        trimmed_list.append(compute_element)
+    return trimmed_list
 
 class GlobalContext:
     def __init__(self):

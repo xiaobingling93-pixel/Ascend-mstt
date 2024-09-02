@@ -9,6 +9,7 @@ from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 
 
 class ApiInputAggregation:
@@ -29,6 +30,7 @@ api_parent_module_mapping = {
     (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
     (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
 }
+
 
 class ApiRunner:
     def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=Const.FORWARD,
@@ -133,17 +135,19 @@ class ApiRunner:
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_tuple]
             else:
                 #set requires_grad
-                for tensor in inputs:
-                    if hasattr(tensor, "requires_grad"):
+                requires_grad_index = []
+                for index, tensor in enumerate(inputs):
+                    if isinstance(tensor, torch.Tensor) and \
+                        torch_dtype_to_dtype_str.get(tensor.dtype) in float_dtype_str_list:
                         setattr(tensor, "requires_grad", True)
+                        requires_grad_index.append(index)
                 forward_results = api_instance(*inputs, **kwargs)
                 forward_results = convert_to_tuple(forward_results)
                 for forward_res, gradient_in in zip(forward_results, gradient_inputs):
                     forward_res.backward(gradient_in)
                 backward_result_list = []
-                for tensor in inputs:
-                    if hasattr(tensor, "grad"):
-                        backward_result_list.append(getattr(tensor, "grad"))
+                for index in requires_grad_index:
+                    backward_result_list.append(getattr(inputs[index], "grad"))
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_list]
 
         return res_compute_element_list
