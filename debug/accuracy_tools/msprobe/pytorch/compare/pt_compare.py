@@ -19,7 +19,15 @@ class PTComparator (Comparator):
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                 FileCheckConst.PT_SUFFIX, False)
         data_path = path_checker.common_check()
-        data_value = load_pt(data_path, to_cpu=True).detach()   # detach() because numpy can not process gradient information
+        try:
+            data_value = load_pt(data_path,
+                                 to_cpu=True).detach()  # detach because numpy can not process gradient information
+        except RuntimeError as e:
+            # 这里捕获 load_pt 中抛出的异常
+            raise RuntimeError(f"Failed to load the .pt file at {data_path}.") from e
+        except AttributeError as e:
+            # 这里捕获 detach 方法抛出的异常
+            raise RuntimeError(f"Failed to detach the loaded tensor.") from e
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
