@@ -4,7 +4,7 @@ from pathlib import Path
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from msprobe.core.common.file_utils import FileChecker, FileCheckConst, check_path_before_create
 
 
 class DebuggerConfig:

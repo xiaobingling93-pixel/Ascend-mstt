@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import pandas as pd
 import torch
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from .utils import np_save_data
 
 

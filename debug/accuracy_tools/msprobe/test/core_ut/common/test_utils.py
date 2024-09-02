@@ -43,7 +43,7 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_check import FileCheckConst
+from msprobe.core.common.file_utils import FileCheckConst
 from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
 
 class TestUtils(TestCase):

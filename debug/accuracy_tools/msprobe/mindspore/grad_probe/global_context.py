@@ -5,7 +5,7 @@ from typing import Dict, Union
 from msprobe.core.grad_probe.utils import check_str
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import create_directory, check_path_before_create
+from msprobe.core.common.file_utils import create_directory, check_path_before_create
 
 
 class GlobalContext:

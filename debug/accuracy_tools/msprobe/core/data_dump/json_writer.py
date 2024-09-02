@@ -4,7 +4,7 @@ import fcntl
 import json
 from pathlib import Path
 
-from msprobe.core.common.file_check import change_mode, FileOpen
+from msprobe.core.common.file_utils import change_mode, FileOpen
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.utils import remove_path

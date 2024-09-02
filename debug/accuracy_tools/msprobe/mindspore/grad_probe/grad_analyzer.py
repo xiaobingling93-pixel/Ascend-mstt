@@ -13,7 +13,7 @@ from mindspore.common.parameter import Parameter
 from msprobe.core.grad_probe.utils import ListCache
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.utils import check_file_or_directory_path, write_csv, remove_path, move_file
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
 

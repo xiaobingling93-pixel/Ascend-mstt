@@ -1,7 +1,7 @@
 import json
 import os
 
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import write_csv, add_time_as_suffix
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.log import logger

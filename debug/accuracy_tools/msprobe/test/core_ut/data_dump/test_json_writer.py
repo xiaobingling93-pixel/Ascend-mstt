@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 
 from msprobe.core.common import utils
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.data_dump.json_writer import DataWriter
 
 

@@ -52,7 +52,7 @@ class TestService(unittest.TestCase):
 
     def test_create_dirs(self):
         with patch("msprobe.pytorch.service.Path.mkdir", return_value=None), \
-                patch("msprobe.core.common.file_check.FileChecker.common_check", return_value=None), \
+                patch("msprobe.core.common.file_utils.FileChecker.common_check", return_value=None), \
                 patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths",
                       return_value=None):
             self.service.create_dirs()

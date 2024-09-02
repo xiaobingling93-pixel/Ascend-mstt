@@ -20,7 +20,7 @@ import numpy as np
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import save_npy_to_txt, load_npy
 
 

@@ -48,7 +48,7 @@ class TestUtils(unittest.TestCase):
         if os.path.exists(os.path.join(self.data_path, f'{self.file_name}.npy')):
             os.remove(os.path.join(self.data_path, f'{self.file_name}.npy'))
 
-    @patch('msprobe.core.common.file_check.change_mode')
+    @patch('msprobe.core.common.file_utils.change_mode')
     def test_np_save_data_should_error_when_input_wrong(self,mock_change_mode):
         np_save_data(self.data_nonumpy,self.file_name,self.data_path)
         mock_change_mode.assert_not_called()

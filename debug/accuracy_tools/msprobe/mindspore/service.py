@@ -33,7 +33,7 @@ except ImportError:
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.common.utils import get_rank_if_initialized
-from msprobe.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from msprobe.core.common.file_utils import FileChecker, FileCheckConst, check_path_before_create
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError

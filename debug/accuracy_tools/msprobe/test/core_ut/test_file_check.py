@@ -22,25 +22,25 @@ from unittest.mock import patch, MagicMock
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_check import (check_link,
-                                         check_path_length,
-                                         check_path_exists,
-                                         check_path_readability,
-                                         check_path_writability,
-                                         check_path_executable,
-                                         check_other_user_writable,
-                                         check_path_owner_consistent,
-                                         check_path_pattern_vaild,
-                                         check_file_size,
-                                         check_common_file_size,
-                                         check_file_suffix,
-                                         check_path_type)
+from msprobe.core.common.file_utils import (check_link,
+                                            check_path_length,
+                                            check_path_exists,
+                                            check_path_readability,
+                                            check_path_writability,
+                                            check_path_executable,
+                                            check_other_user_writable,
+                                            check_path_owner_consistent,
+                                            check_path_pattern_vaild,
+                                            check_file_size,
+                                            check_common_file_size,
+                                            check_file_suffix,
+                                            check_path_type)
 
 
 class TestFileCheckUtil(TestCase):
     @patch.object(logger, "error")
     def test_check_link(self, mock_logger_error):
-        with patch("msprobe.core.common.file_check.os.path.islink", return_value=True):
+        with patch("msprobe.core.common.file_utils.os.path.islink", return_value=True):
             with self.assertRaises(FileCheckException) as context:
                 check_link("link_path")
             self.assertEqual(str(context.exception),
@@ -72,7 +72,7 @@ class TestFileCheckUtil(TestCase):
 
     @patch.object(logger, "error")
     def test_check_path_exists(self, mock_logger_error):
-        with patch("msprobe.core.common.file_check.os.path.exists", return_value=False):
+        with patch("msprobe.core.common.file_utils.os.path.exists", return_value=False):
             with self.assertRaises(FileCheckException) as context:
                 check_path_exists("file_path")
             self.assertEqual(str(context.exception),
@@ -82,7 +82,7 @@ class TestFileCheckUtil(TestCase):
     @patch.object(logger, "error")
     def test_check_path_readability(self, mock_logger_error):
         path = "file_path"
-        with patch("msprobe.core.common.file_check.os.access", return_value=False):
+        with patch("msprobe.core.common.file_utils.os.access", return_value=False):
             with self.assertRaises(FileCheckException) as context:
                 check_path_readability(path)
             self.assertEqual(str(context.exception),
@@ -91,14 +91,14 @@ class TestFileCheckUtil(TestCase):
 
         mock_access = MagicMock()
         mock_access.return_value = True
-        with patch("msprobe.core.common.file_check.os.access", new=mock_access):
+        with patch("msprobe.core.common.file_utils.os.access", new=mock_access):
             check_path_readability(path)
         self.assertEqual(mock_access.call_args[0], (path, os.R_OK))
 
     @patch.object(logger, "error")
     def test_check_path_writability(self, mock_logger_error):
         path = "file_path"
-        with patch("msprobe.core.common.file_check.os.access", return_value=False):
+        with patch("msprobe.core.common.file_utils.os.access", return_value=False):
             with self.assertRaises(FileCheckException) as context:
                 check_path_writability(path)
             self.assertEqual(str(context.exception),
@@ -107,14 +107,14 @@ class TestFileCheckUtil(TestCase):
 
         mock_access = MagicMock()
         mock_access.return_value = True
-        with patch("msprobe.core.common.file_check.os.access", new=mock_access):
+        with patch("msprobe.core.common.file_utils.os.access", new=mock_access):
             check_path_writability(path)
         self.assertEqual(mock_access.call_args[0], (path, os.W_OK))
 
     @patch.object(logger, "error")
     def test_check_path_executable(self, mock_logger_error):
         path = "file_path"
-        with patch("msprobe.core.common.file_check.os.access", return_value=False):
+        with patch("msprobe.core.common.file_utils.os.access", return_value=False):
             with self.assertRaises(FileCheckException) as context:
                 check_path_executable(path)
             self.assertEqual(str(context.exception),
@@ -123,7 +123,7 @@ class TestFileCheckUtil(TestCase):
 
         mock_access = MagicMock()
         mock_access.return_value = True
-        with patch("msprobe.core.common.file_check.os.access", new=mock_access):
+        with patch("msprobe.core.common.file_utils.os.access", new=mock_access):
             check_path_executable(path)
         self.assertEqual(mock_access.call_args[0], (path, os.X_OK))
 
@@ -135,7 +135,7 @@ class TestFileCheckUtil(TestCase):
 
         path = "file_path"
         mock_stat = TestStat(0o002)
-        with patch("msprobe.core.common.file_check.os.stat", return_value=mock_stat):
+        with patch("msprobe.core.common.file_utils.os.stat", return_value=mock_stat):
             with self.assertRaises(FileCheckException) as context:
                 check_other_user_writable(path)
             self.assertEqual(str(context.exception),
@@ -147,7 +147,7 @@ class TestFileCheckUtil(TestCase):
     def test_check_path_owner_consistent(self, mock_logger_error):
         file_path = os.path.realpath(__file__)
         file_owner = os.stat(file_path).st_uid
-        with patch("msprobe.core.common.file_check.os.getuid", return_value=file_owner+1):
+        with patch("msprobe.core.common.file_utils.os.getuid", return_value=file_owner+1):
             with self.assertRaises(FileCheckException) as context:
                 check_path_owner_consistent(file_path)
             self.assertEqual(str(context.exception),
@@ -160,7 +160,7 @@ class TestFileCheckUtil(TestCase):
         path = "path"
         mock_re_match = MagicMock()
         mock_re_match.return_value = False
-        with patch("msprobe.core.common.file_check.re.match", new=mock_re_match):
+        with patch("msprobe.core.common.file_utils.re.match", new=mock_re_match):
             with self.assertRaises(FileCheckException) as context:
                 check_path_pattern_vaild(path)
             self.assertEqual(str(context.exception),
@@ -181,8 +181,8 @@ class TestFileCheckUtil(TestCase):
 
     def test_check_common_file_size(self):
         mock_check_file_size = MagicMock()
-        with patch("msprobe.core.common.file_check.os.path.isfile", return_value=True), \
-             patch("msprobe.core.common.file_check.check_file_size", new=mock_check_file_size):
+        with patch("msprobe.core.common.file_utils.os.path.isfile", return_value=True), \
+             patch("msprobe.core.common.file_utils.check_file_size", new=mock_check_file_size):
             for suffix, max_size in FileCheckConst.FILE_SIZE_DICT.items():
                 check_common_file_size(suffix)
                 mock_check_file_size.assert_called_with(suffix, max_size)
@@ -201,16 +201,16 @@ class TestFileCheckUtil(TestCase):
     def test_check_path_type(self, mock_logger_error):
         file_path = "file_path"
 
-        with patch("msprobe.core.common.file_check.os.path.isfile", return_value=False), \
-             patch("msprobe.core.common.file_check.os.path.isdir", return_value=True):
+        with patch("msprobe.core.common.file_utils.os.path.isfile", return_value=False), \
+             patch("msprobe.core.common.file_utils.os.path.isdir", return_value=True):
             with self.assertRaises(FileCheckException) as context:
                 check_path_type(file_path, FileCheckConst.FILE)
             self.assertEqual(str(context.exception),
                              FileCheckException.err_strs.get(FileCheckException.INVALID_FILE_ERROR))
         mock_logger_error.assert_called_with(f"The {file_path} should be a file!")
 
-        with patch("msprobe.core.common.file_check.os.path.isfile", return_value=True), \
-             patch("msprobe.core.common.file_check.os.path.isdir", return_value=False):
+        with patch("msprobe.core.common.file_utils.os.path.isfile", return_value=True), \
+             patch("msprobe.core.common.file_utils.os.path.isdir", return_value=False):
             with self.assertRaises(FileCheckException) as context:
                 check_path_type(file_path, FileCheckConst.DIR)
             self.assertEqual(str(context.exception),

@@ -3,7 +3,7 @@ import json
 from msprobe.core.common.utils import make_dump_path_if_not_exists
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 
 
 class KernelGraphDump:

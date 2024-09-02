@@ -2,7 +2,7 @@ import multiprocessing
 import os
 import json
 import pandas as pd
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger

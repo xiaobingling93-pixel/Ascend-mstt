@@ -29,7 +29,7 @@ else:
 
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import save_pt
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException, make_dump_path_if_not_exists
 

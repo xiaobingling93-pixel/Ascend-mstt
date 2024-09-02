@@ -28,10 +28,10 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.file_desc import DumpDecodeFileDesc, FileDesc
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_check import change_mode, check_other_user_writable,\
+from msprobe.core.common.file_utils import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_check import FileOpen, FileChecker
+from msprobe.core.common.file_utils import FileOpen, FileChecker
 from msprobe.core.common.utils import check_file_or_directory_path, remove_path
 from msprobe.pytorch.common.log import logger
 

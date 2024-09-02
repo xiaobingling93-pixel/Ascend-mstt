@@ -27,7 +27,7 @@ from pathlib import Path
 import yaml
 import numpy as np
 
-from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode, check_path_before_create
+from msprobe.core.common.file_utils import FileOpen, FileChecker, change_mode, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 

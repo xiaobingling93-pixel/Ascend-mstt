@@ -7,7 +7,7 @@ from collections import namedtuple
 import torch
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
-from msprobe.core.common.file_check import FileChecker, check_path_before_create
+from msprobe.core.common.file_utils import FileChecker, check_path_before_create
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope

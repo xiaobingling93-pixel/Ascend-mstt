@@ -1,7 +1,7 @@
 import os.path
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
     task_dumppath_get, load_yaml, load_npy
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException

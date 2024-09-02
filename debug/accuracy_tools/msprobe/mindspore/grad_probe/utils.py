@@ -4,7 +4,7 @@ import numpy as np
 import mindspore
 from msprobe.core.grad_probe.constant import GradConst, level_adp
 from msprobe.core.grad_probe.utils import check_param
-from msprobe.core.common.file_check import create_directory, check_path_before_create
+from msprobe.core.common.file_utils import create_directory, check_path_before_create
 from msprobe.core.common.utils import change_mode, check_file_or_directory_path, save_npy
 
 

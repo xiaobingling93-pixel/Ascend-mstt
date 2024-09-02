@@ -23,7 +23,7 @@ import numpy
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type, get_full_data_path, \
     CompareException
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import FileChecker
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
 from msprobe.core.common.utils import load_npy
