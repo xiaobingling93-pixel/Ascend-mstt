@@ -4,6 +4,7 @@ from .add_noise import AddNoisePerturbation
 from .bit_noise import BitNoisePerturbation
 from .no_change import NoChangePerturbation
 from .improve_precision import ImprovePrecisionPerturbation
+from .exchange_value import ExchangeValuePerturbation
 
 
 class PerturbationFactory:
@@ -16,6 +17,7 @@ class PerturbationFactory:
         FreeBenchmarkConst.ADD_NOISE: AddNoisePerturbation,
         FreeBenchmarkConst.BIT_NOISE: BitNoisePerturbation,
         FreeBenchmarkConst.NO_CHANGE: NoChangePerturbation,
+        FreeBenchmarkConst.EXCHANGE_VALUE: ExchangeValuePerturbation
     }
 
     @staticmethod
