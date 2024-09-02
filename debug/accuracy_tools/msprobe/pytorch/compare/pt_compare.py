@@ -24,10 +24,12 @@ class PTComparator (Comparator):
                                  to_cpu=True).detach()  # detach because numpy can not process gradient information
         except RuntimeError as e:
             # 这里捕获 load_pt 中抛出的异常
-            raise RuntimeError(f"Failed to load the .pt file at {data_path}.") from e
+            logger.error(f"Failed to load the .pt file at {data_path}.")
+            raise CompareException(CompareException.INVALID_FILE_ERROR) from e
         except AttributeError as e:
             # 这里捕获 detach 方法抛出的异常
-            raise RuntimeError(f"Failed to detach the loaded tensor.") from e
+            logger.error(f"Failed to detach the loaded tensor.")
+            raise CompareException(CompareException.DETACH_ERROR) from e
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
