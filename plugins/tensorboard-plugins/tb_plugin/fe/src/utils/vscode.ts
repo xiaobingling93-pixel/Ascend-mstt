@@ -8,6 +8,6 @@ export function navToCode(filename: string, line: number) {
       filename,
       line
     },
-    '*'
+    window.origin
   )
 }

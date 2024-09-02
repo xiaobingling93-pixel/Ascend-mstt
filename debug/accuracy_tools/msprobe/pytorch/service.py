@@ -1,13 +1,11 @@
 import functools
 import os
-import time
-from pathlib import Path
 
 from collections import namedtuple
 import torch
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
-from msprobe.core.common.file_check import FileChecker, check_path_before_create
+from msprobe.core.common.file_check import create_directory
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
@@ -17,7 +15,7 @@ from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL, ApiData
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
@@ -159,19 +157,14 @@ class Service:
         self.data_collector.write_json()
 
     def create_dirs(self):
-        check_path_before_create(self.config.dump_path)
-        if not os.path.exists(self.config.dump_path):
-            Path(self.config.dump_path).mkdir(mode=0o750, exist_ok=True)
-        file_check = FileChecker(self.config.dump_path, FileCheckConst.DIR)
-        file_check.common_check()
+        create_directory(self.config.dump_path)
         self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
         cur_rank = self.current_rank if self.current_rank is not None else ''
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
-        if not os.path.exists(dump_dir):
-            Path(dump_dir).mkdir(mode=0o750, parents=True, exist_ok=True)
+        create_directory(dump_dir)
         if self.config.task in self.data_collector.tasks_need_tensor_data:
             dump_data_dir = os.path.join(dump_dir, "dump_tensor_data")
-            Path(dump_data_dir).mkdir(mode=0o750, exist_ok=True)
+            create_directory(dump_data_dir)
         else:
             dump_data_dir = None
 
@@ -223,6 +216,7 @@ class Service:
 
     def attl_init(self):
         if self.config.online_run_ut:
+            from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL
             attl_config = ATTLConfig(is_benchmark_device=False,
                                      connect_ip=self.config.host,
                                      connect_port=self.config.port,

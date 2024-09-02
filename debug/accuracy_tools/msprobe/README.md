@@ -1,238 +1,101 @@
-# MindStudio精度调试工具
+# 📖 msprobe 使用手册
 
-MindStudio精度调试工具（MindStudio Probe），简称msprobe，是MindStudio Training Tools工具链下精度调试部分的工具包。主要包括精度预检和精度比对等子工具，当前适配场景包括PyTorch和MindSpore。
+![version](https://img.shields.io/badge/version-1.0.3-blueviolet)
+![python](https://img.shields.io/badge/python-3.8|3.9|3.10-blue)
+![platform](https://img.shields.io/badge/platform-Linux-yellow)
 
-## 工具安装
+[**msprobe**](./) 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些子工具侧重不同的训练场景，可以定位模型训练中的精度问题。
 
-精度工具合一软件包名称：`mindstudio_probe-{version}-py3-none-any.whl`
+为方便使用，本工具提供了一个统一、简易的程序接口，**PrecisionDebugger**，以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可轻松使用各种功能。
 
-### pip安装
-   ```shell
-   pip install mindstudio-probe
-   ```
-使用`pip install mindstudio-probe==版本号`可安装指定版本的包。
+```python
+from msprobe.pytorch import PrecisionDebugger  
 
-pip命令会自动安装最新的包及其配套依赖。
-
-提示如下信息则表示安装成功。
-
-```bash
-Successfully installed mindstudio_probe-{version}
+debugger = PrecisionDebugger(config_path='./config.json')
+...
+debugger.start() # 一般在训练循环开头启动工具
+... # 循环体
+debugger.stop() # 一般在训练循环末尾结束工具
+debugger.step() # 在训练循环的最后需要重置工具，非循环场景不需要
 ```
 
-### 下载whl包安装
-1. 使用pip命令安装依赖：
+除了在训练脚本中调用接口函数，还可以通过命令行使用 **msprobe** 的其他功能，具体的使用规则和 **config.json** 的配置要求详见以下章节。
 
-   1. 根据实际环境安装torch或mindspore
+## ⚙️ [安装](./docs/01.installation.md)
 
-   2. 安装numpy、openpyxl、pandas、PyYAML、rich、tqdm、einops、matplotlib、pyOpenSSL、twisted
-
-
-   若环境中已安装部分依赖，不需要重复安装。
-
-2. whl包获取。
-
-   请通过下表链接下载工具whl包。
-
-   | 版本  | 发布日期   | 支持PyTorch版本  | 支持MindSpore版本 | 下载链接                                                     | 校验码                                                       |
-   | ----- | ---------- | ---------------- | ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-   | 1.0.3 | 2024-08-23 | 1.11/2.0/2.1/2.2 | 2.3.1             | [mindstudio_probe-1.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.3-py3-none-any.whl) | 7060cc141a5b98ef770cd9220995d299393f32a61938261e632c7e8b5160bef2 |
-   | 1.0.2 | 2024-08-09 | 1.11/2.0/2.1/2.2 | 2.3.1             | [mindstudio_probe-1.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.2-py3-none-any.whl) | e4a980e5d98c426ce5ce9842520d9bc031d3b3de621c74b3d59414cc6e238e0e |
-   | 1.0.1 | 2024-07-25 | 2.0/2.1/2.2      | 2.3.1             | [mindstudio_probe-1.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/msprobe/1.0/mindstudio_probe-1.0.1-py3-none-any.whl) | b699e224e4d4e3bcf9412c54fa858a1ee370f0d7a2bc69cb3f1273ac14a6dc82 |
-   | 1.0   | 2024-07-09 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-1.0-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/1.0/ascend_training_accuracy_tools-1.0-py3-none-any.whl) | 5016dfe886c5d340ec6f60a959673355855f313c91f100680da814efb49f8e81 |
-   | 0.0.3 | 2024-06-11 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-0.0.3-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.3-py3-none-any.whl) | f46d9714704859e2d67861a65bbb3c76b0a250cf6e238b978b5b959ab1fe125a |
-   | 0.0.2 | 2024-05-23 | 2.0/2.1/2.2      | 2.3.0             | [ascend_training_accuracy_tools-0.0.2-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.2-py3-none-any.whl) | 2e35809bde559e9c4d2f16a02ccde779ed9e436bb65fded0b7ebaf6ac2c88d93 |
-   | 0.0.1 | 2024-03-15 | 2.0/2.1          | -                 | [ascend_training_accuracy_tools-0.0.1-py3-none-any.whl](https://ptdbg.obs.myhuaweicloud.com/att/0.0/ascend_training_accuracy_tools-0.0.1-py3-none-any.whl) | 5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 |
+## 🛠️ config.json [介绍](./docs/02.config_introduction.md) 和 [示例](./docs/03.config_examples.md)
 
-3. whl包校验。
+## 🧰 主要功能
 
-   1. 根据以上下载链接下载whl包到Linux安装环境。
+### 1 数据采集
 
-   2. 进入whl包所在目录，执行如下命令。
+msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 执行精度数据 dump 操作，对应 config.json 中的 task 为 statistics 或 tensor。
 
-      ```bash
-      sha256sum {name}.whl
-      ```
+[PyTorch 场景的数据采集](./docs/05.data_dump_PyTorch.md)
 
-      {name}为whl包名称。
+[MindSpore 场景的数据采集](./docs/06.data_dump_MindSpore.md)
 
-      若回显呈现对应版本whl包一致的**校验码**，则表示下载了正确的ptdbg_ascend精度工具whl安装包。示例如下：
+### 2 精度预检
 
-      ```bash
-      sha256sum ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
-      5801510d4e827e4859bc9a5aca021e4d30c2ea42d60a4c8ad0c2baab1b7782c9 *ascend_training_accuracy_tools-0.0.1-py3-none-any.whl
-      ```
+精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 task 为 run_ut。
 
-4. 执行如下命令进行安装。
+PyTorch 场景的[离线预检](./docs/07.accuracy_checker_PyTorch.md)和[在线预检](./docs/08.accuracy_checker_online_PyTorch.md)
 
-   ```bash
-   pip3 install ./mindstudio_probe-{version}-py3-none-any.whl
-   ```
+MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.md)
 
-   若为覆盖安装，请在命令行末尾增加“--force-reinstall”参数强制安装，例如：
+### 3 精度比对
 
-   ```bash
-   pip3 install ./mindstudio_probe-{version}-py3-none-any.whl --force-reinstall
-   ```
+该功能进行 PyTorch 整网 API 粒度的数据 dump、精度比对，进而定位训练场景下的精度问题。
 
-   提示如下信息则表示安装成功。
+[PyTorch 场景的精度比对](./docs/10.accuracy_compare_PyTorch.md)
 
-   ```bash
-   Successfully installed mindstudio_probe-{version}
-   ```
+[MindSpore 场景的精度比对](./docs/11.accuracy_compare_MindSpore.md)
 
-### 从源码安装
-1. 克隆或者下载项目源代码
-   
-   ```shell
-   git clone https://gitee.com/ascend/mstt.git
-   cd debug/accuracy_tools
-   ```
-   
-2. 安装setuptools和wheel
-   
-   ```shell
-   pip install setuptools wheel
-   ```
-   
-3. 安装msprobe
-   
-   ```shell
-   python setup.py bdist_wheel
-   cd dist
-   pip install mindstudio_probe*.whl
-   ```
-   提示出现如下信息则表示源码安装成功。
-   ```shell
-   Successfully installed ... mindstudio_probe-{version} ...
-   ```
+### 4 溢出检测与解析
 
-### 查看msprobe工具信息
+溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。
 
-执行如下命令查看msprobe工具信息。
+[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)（更新中）
 
-```bash
-pip show mindstudio-probe
-```
+[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)（更新中）
 
-输出结果如下示例：
+### 5 数据解析
 
-```bash
-Name: mindstudio-probe
-Version: 1.0
-Summary: This is a pytorch precision comparison tools
-Home-page:
-Author:
-Author-email:
-License:
-Location: /home/xx/anaconda3/envs/pt21py38/lib/python3.8/site-packages
-Requires: numpy, openpyxl, pandas, pyyaml, rich, tqdm, wheel
-Required-by:
-```
+该功能用于比对前后两次 NPU ACL 层级 dump 数据的一致性。
 
-关键字段含义：
+[PyTorch 场景的数据解析](./docs/14.data_parse_PyTorch.md)
 
-- Name：工具名称。
-- Version：工具版本号。
-- Summary：工具概述。
-- Location：工具安装路径。
-- Requires：工具依赖。
+### 6 无标杆比对
 
-## 工具使用
+[PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)（更新中）
 
-安装msprobe工具后，可以按照如下思路选择合适的子工具进行精度调试：
+[MindSpore 场景的无标杆比对](./docs/16.overflow_check_MindSpore.md)（更新中）
 
-1. 判断框架场景。
+### 7 梯度状态监测
 
-   当前支持PyTorch和MindSpore场景。
+本功能用于采集梯度数据并进行梯度相似度比对，可以精准定位出现问题的 step。
 
-2. 执行数据采集。 
+[兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)（更新中）
 
-   工具通过在训练脚本中添加PrecisionDebugger接口的方式对API执行精度数据dump操作。
+## 🌟 新版本特性
 
-   PyTorch场景：详见[PyTorch_精度数据采集](./pytorch/doc/dump.md)。
+【精度预检】
+- 落盘数据小。
+- 支持随机生成模式和真实数据模式。
+- 单 API 测试，排除整网中的累计误差问题。
 
-   MindSpore场景：详见[MindSpore_精度数据采集](./mindspore/doc/dump.md)。
+【梯度检测】
+- 使用便捷，无需在训练流程里插入代码。
+- 可以精准定位问题出现的 step。
 
-3. 执行精度预检。
+## 📑 补充材料
 
-   在昇腾NPU上扫描用户训练模型中所有API，进行API复现，给出精度情况的诊断和分析。
+[msprobe 精度工具标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)（更新中）
 
-   PyTorch场景：详见[PyTorch_精度预检工具](./pytorch/doc/api_accuracy_checker.md)。
+[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)（更新中）
 
-   MindSpore场景：暂不支持。
+## ❓ FAQ
 
-4. 执行精度比对。
+[FAQ for PyTorch](./docs/FAQ_PyTorch.md)（更新中）
 
-   进行PyTorch整网API粒度的数据dump、精度比对和溢出检测，从而定位训练场景下的精度问题。
-
-   PyTorch场景：详见[PyTorch_精度比对工具](./pytorch/doc/ptdbg_ascend_compare.md)。
-
-   MindSpore场景：详见[MindSpore_精度比对工具](./mindspore/doc/compare.md)。
-
-5. 执行溢出解析。
-
-   溢出解析是在执行精度数据dump时，配置了溢出检测dump，那么对于输入正常但输出存在溢出的API，可以判断是否为正常溢出。
-
-   PyTorch场景：详见[PyTorch_溢出解析工具](./pytorch/doc/run_overflow_check.md)。
-
-   MindSpore场景：暂不支持。
-
-6. 执行数据解析。
-
-   用于比对前后两次NPU ACL层级dump数据的一致性。
-
-   PyTorch场景：详见[PyTorch_数据解析工具](./pytorch/doc/parse_tool.md)。
-
-   MindSpore场景：暂不支持。
-
-6. 执行梯度采集和比对。
-
-   用于采集梯度数据并进行梯度相似度比对。可以精准定位问题出现的step。
-
-   详见[梯度状态监测工具](./doc/grad_probe/grad_probe.md)。
-
-
-
-上述流程中的工具均为msprobe工具的子工具，使用相同的命令行，格式如下：
-
-精度预检工具
-
-```bash
-msprobe -f <framework> run_ut [-h]
-```
-
-```bash
-msprobe -f <framework> multi_run_ut [-h]
-```
-
-```bash
-msprobe -f <framework> api_precision_compare [-h]
-```
-
-精度比对工具
-
-```bash
-msprobe -f <framework> compare [-h]
-```
-
-溢出解析工具
-
-```bash
-msprobe -f <framework> run_overflow_check [-h]
-```
-
-数据解析工具
-
-```bash
-msprobe -f <framework> parse [-h]
-```
-
-| 参数 | 说明                                                         |
-| ---- | ------------------------------------------------------------ |
-| -f   | 框架，请按所使用框架配置，当前支持配置为：pytorch、mindspore。 |
-| -h   | 帮助信息。                                                   |
-
-## 贡献
-
-push代码前，请务必保证已经完成了基础功能测试和网络测试。
+FAQ for MindSpore

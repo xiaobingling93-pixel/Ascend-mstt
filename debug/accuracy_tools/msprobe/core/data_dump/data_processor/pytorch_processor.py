@@ -12,8 +12,7 @@ from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.pytorch.common.utils import save_pt
-
+from msprobe.pytorch.common.utils import save_pt, load_pt
 
 try:
     import torch_npu
@@ -103,22 +102,6 @@ class PytorchDataProcessor(BaseDataProcessor):
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-            values = [
-                value if not isinstance(value, torch.Tensor) else value.item()
-                for value in [arg.start, arg.stop, arg.step]
-            ]
-            single_arg.update({"value": values})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-
-    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -136,7 +119,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_numpy(converted_numpy, numpy_type)
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-        if isinstance(element, (bool, int, float, str, slice)):
+        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
 
@@ -189,6 +172,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
         self.forward_inplace_inputs = None
+        self.is_support_inf_nan = self.is_support_inf_nan()
 
     @property
     def is_terminated(self):
@@ -198,6 +182,10 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
+
+    @staticmethod
+    def is_support_inf_nan():
+        return is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan())
 
     @staticmethod
     def overflow_debug_mode_enable():
@@ -219,16 +207,18 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
         api_info_struct = super().analyze_forward(name, module, module_input_output)
-        self.maybe_save_overflow_data_and_check_overflow_times()
+        self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
         api_info_struct = super().analyze_backward(name, module, module_input_output)
-        self.maybe_save_overflow_data_and_check_overflow_times()
+        self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
-    def maybe_save_overflow_data_and_check_overflow_times(self):
+    def handle_overflow(self):
+        if not self.is_support_inf_nan:
+            self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_pt(tensor, file_path)
@@ -253,22 +243,20 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         else:
             torch_npu._C._clear_overflow_npu()
 
+    def _analyze_maybe_overflow_flag(self):
+        try:
+            self.has_overflow = self.check_overflow_npu()
+            if self.has_overflow:
+                self.clear_overflow_npu()
+        except Exception as e:
+            logger.error(f"Overflow check failed, the current environment may be abnormal.")
+            raise RuntimeError(f"overflow check failed") from e
+
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan()):
-            if tensor_json['Max'] is None:
-                return
-            if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-                self.has_overflow = True
-            if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-                self.has_overflow = True
-        else:
-            try:
-                self.has_overflow = self.check_overflow_npu()
-                if self.has_overflow:
-                    self.clear_overflow_npu()
-            except Exception as e:
-                logger.error(f"Overflow check failed, the current environment may be abnormal.")
-                raise RuntimeError(f"overflow check failed") from e
+        if tensor_json['Max'] is None or tensor_json['Min'] is None:
+            return
+        self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
+            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
@@ -277,8 +265,9 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         else:
             logger.warning(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
-        self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
+        if not self.has_overflow and self.is_support_inf_nan:
+            self._analyze_maybe_overflow_tensor(single_arg)
         return single_arg
 
 
@@ -372,7 +361,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         if not KernelDumpDataProcessor.forward_init_status:
             KernelDumpDataProcessor.forward_init_status = True
             output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            grad = torch.load(grad_path).to("npu").requires_grad_()
+            pt = load_pt(grad_path)
+            grad = pt.to("npu").requires_grad_()
             torch_npu.npu.init_dump()
             torch_npu.npu.set_dump(self.config.acl_config)
             torch_npu.npu.synchronize()

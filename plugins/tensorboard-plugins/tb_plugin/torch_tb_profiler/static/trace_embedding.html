@@ -91,7 +91,7 @@ found in the LICENSE file.
                 Polymer.dom(document.body).appendChild(viewer);
 
                 if (window.parent) {
-                  window.parent.postMessage({ msg: 'ready' }, '*')
+                  window.parent.postMessage({ msg: 'ready' }, window.origin)
                 }
             });
         }());
