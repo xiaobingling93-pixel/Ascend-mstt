@@ -26,7 +26,6 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.utils import (CompareException,
                                        check_seed_all,
                                        check_inplace_op,
-                                       make_dump_path_if_not_exists,
                                        check_mode_valid,
                                        check_switch_valid,
                                        check_dump_mode_valid,
@@ -80,23 +79,6 @@ class TestUtils(TestCase):
         self.assertFalse(check_inplace_op(test_prefix_2))
         test_prefix_3 = "Torch.sum.0.backward.output.0"
         self.assertFalse(check_inplace_op(test_prefix_3))
-
-    @patch.object(logger, "error")
-    def test_make_dump_path_if_not_exists(self, mock_error):
-        file_path = os.path.realpath(__file__)
-        dirname = os.path.dirname(file_path) + str(uuid.uuid4())
-
-        def test_mkdir(self, **kwargs):
-            raise OSError
-
-        if not os.path.exists(dirname):
-            with patch("msprobe.core.common.utils.Path.mkdir", new=test_mkdir):
-                with self.assertRaises(CompareException) as context:
-                    make_dump_path_if_not_exists(dirname)
-                self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-
-        make_dump_path_if_not_exists(file_path)
-        mock_error.assert_called_with(f"{file_path} already exists and is not a directory.")
 
     def test_check_mode_valid(self):
         with self.assertRaises(ValueError) as context:

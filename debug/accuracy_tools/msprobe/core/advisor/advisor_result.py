@@ -20,7 +20,7 @@ import time
 from msprobe.core.advisor.advisor_const import AdvisorConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import change_mode
+from msprobe.core.common.file_check import change_mode, FileOpen
 
 
 class AdvisorResult:
@@ -38,7 +38,7 @@ class AdvisorResult:
         file_name = 'advisor_{}.txt'.format(time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
         result_file = os.path.join(out_path, file_name)
         try:
-            with os.fdopen(os.open(result_file, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as output_file:
+            with FileOpen(result_file, 'w+') as output_file:
                 output_file.truncate(0)
                 message_list = [message + AdvisorConst.NEW_LINE for message in message_list]
                 output_file.writelines(message_list)

@@ -1,9 +1,8 @@
 import os
 import json
-from msprobe.core.common.utils import make_dump_path_if_not_exists
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_check import FileOpen, create_directory
 
 
 class KernelGraphDump:
@@ -45,7 +44,7 @@ class KernelGraphDump:
         if os.getenv("GRAPH_OP_RUN") == "1":
             raise Exception("Must run in graph mode, not kbk mode")
         json_path = self.dump_json["common_dump_settings"]["path"]
-        make_dump_path_if_not_exists(json_path)
+        create_directory(json_path)
         json_path = os.path.join(json_path, "kernel_graph_dump.json")
         with FileOpen(json_path, 'w') as f:
             json.dump(self.dump_json, f)

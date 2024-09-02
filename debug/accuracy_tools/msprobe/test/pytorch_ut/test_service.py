@@ -51,9 +51,7 @@ class TestService(unittest.TestCase):
             self.assertEqual(mock_logger.call_count, 2)
 
     def test_create_dirs(self):
-        with patch("msprobe.pytorch.service.Path.mkdir", return_value=None), \
-                patch("msprobe.core.common.file_utils.FileChecker.common_check", return_value=None), \
-                patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths",
-                      return_value=None):
+        with patch("msprobe.pytorch.service.create_directory"), \
+                patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"):
             self.service.create_dirs()
         self.assertEqual(self.service.dump_iter_dir, "./ut_dump/step0")

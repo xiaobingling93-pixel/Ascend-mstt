@@ -1,10 +1,9 @@
 import os
 import json
 
-from msprobe.core.common.utils import make_dump_path_if_not_exists
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_check import FileOpen, create_directory
 from msprobe.core.common.const import Const
 
 
@@ -54,7 +53,7 @@ class KernelKbykDump:
 
     def handle(self):
         json_path = self.dump_json[KernelKbykDump.COMMON_SETTINGS]["path"]
-        make_dump_path_if_not_exists(json_path)
+        create_directory(json_path)
         json_path = os.path.join(json_path, "kernel_kbyk_dump.json")
         with FileOpen(json_path, 'w') as f:
             json.dump(self.dump_json, f)
