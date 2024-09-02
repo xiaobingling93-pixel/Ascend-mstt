@@ -2,7 +2,7 @@ import os
 import json
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import FileOpen, create_directory
+from msprobe.core.common.file_utils import FileOpen, create_directory
 
 
 class KernelGraphDump:
