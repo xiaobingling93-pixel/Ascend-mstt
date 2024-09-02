@@ -22,6 +22,7 @@ import gzip
 import io as sysio
 import json
 import math
+import os.path
 import re
 import tempfile
 from json.decoder import JSONDecodeError
@@ -46,7 +47,8 @@ from .trace import BaseEvent, EventTypes, MemoryEvent
 
 logger = utils.get_logger()
 config = ConfigParser()
-config.read('../../config/config.ini')
+config_path = os.path.join(os.getcwd(), 'torch_tb_profiler', 'config', '../config/config.ini')
+config.read(config_path)
 
 
 class RunProfileData(object):

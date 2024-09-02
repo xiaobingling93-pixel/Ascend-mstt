@@ -255,7 +255,8 @@ def run_api_online(config, compare):
             _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
-            dispatcher.update_consume_queue(api_data)
+            if api_data.rank in config.online_config.rank_list:
+                dispatcher.update_consume_queue(api_data)
 
     def shared_storage_communication_flow():
         flag_num = -1
@@ -276,7 +277,8 @@ def run_api_online(config, compare):
             _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
-            dispatcher.update_consume_queue(api_data)
+            if api_data.rank in config.online_config.rank_list:
+                dispatcher.update_consume_queue(api_data)
 
     if config.online_config.nfs_path:
         shared_storage_communication_flow()

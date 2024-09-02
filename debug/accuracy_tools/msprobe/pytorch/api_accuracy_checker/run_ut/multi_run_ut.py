@@ -14,9 +14,10 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validat
     get_validated_details_csv_path
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_check import FileChecker, check_file_suffix, check_link, FileOpen, \
     check_path_before_create, create_directory
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import remove_path
 from msprobe.core.common.const import FileCheckConst
 
 
@@ -136,7 +137,7 @@ def run_parallel_ut(config):
         for file in config.api_files:
             check_link(file)
             try:
-                os.remove(file)
+                remove_path(file)
             except FileNotFoundError:
                 logger.warning(f"File not found and could not be deleted: {file}")
 
