@@ -42,7 +42,7 @@ class TestKernelKbykDump(TestCase):
         self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
-        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.make_dump_path_if_not_exists"), \
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.FileOpen"), \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.json.dump"), \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info:

@@ -34,7 +34,7 @@ class TestApiInfo(unittest.TestCase):
                     ],
                     "Max": 3.0,
                     "Min": 1.0,
-                    "data_name": "input.npy",
+                    "data_name": "2_3_input.npy",
                 }
             ],
             "input_kwargs": {
@@ -53,7 +53,7 @@ class TestApiInfo(unittest.TestCase):
                     ],
                     "Max": 3.0,
                     "Min": 1.0,
-                    "data_name": "input.npy",
+                    "data_name": "2_3_input.npy",
                 }
             ],
         }

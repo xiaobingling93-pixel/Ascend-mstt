@@ -21,7 +21,7 @@ from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import save_npy_to_txt
+from msprobe.core.common.utils import save_npy_to_txt, load_npy
 
 
 class Visualization:
@@ -29,12 +29,7 @@ class Visualization:
         self.util = Util()
 
     def print_npy_summary(self, target_file):
-        try:
-            np_data = np.load(target_file, allow_pickle=True)
-        except UnicodeError as e:
-            self.util.log.error("%s %s" % ("UnicodeError", str(e)))
-            self.util.log.warning("Please check the npy file")
-            raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
+        np_data = load_npy(target_file, enable_pickle=True)
         table = self.util.create_table('', ['Index', 'Data'])
         flatten_data = np_data.flatten()
         tablesize = 8
