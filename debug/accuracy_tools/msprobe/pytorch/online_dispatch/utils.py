@@ -12,8 +12,8 @@ else:
     pta_cpu_device = torch.device("cpu")
 
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import change_mode
-from msprobe.core.common.log import logger
+from msprobe.core.common.file_check import change_mode
+from msprobe.pytorch.common.log import logger
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'

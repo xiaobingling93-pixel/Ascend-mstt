@@ -4,7 +4,7 @@ import os
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import write_csv, add_time_as_suffix
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms

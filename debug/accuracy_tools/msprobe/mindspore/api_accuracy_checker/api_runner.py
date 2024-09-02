@@ -7,7 +7,7 @@ from mindspore import ops
 from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
 from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
 from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 

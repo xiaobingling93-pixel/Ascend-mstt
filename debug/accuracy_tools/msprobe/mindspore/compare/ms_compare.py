@@ -3,7 +3,7 @@ from msprobe.core.common.utils import check_compare_param, CompareException, che
     task_dumppath_get, load_yaml, load_npy
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
