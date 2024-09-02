@@ -28,7 +28,7 @@ from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
-from msprobe.core.common.file_check import FileCheckConst, change_mode, FileOpen
+from msprobe.core.common.file_utils import FileCheckConst, change_mode, FileOpen
 
 
 try:
