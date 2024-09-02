@@ -58,7 +58,7 @@ def softmax_grad(dp, softmax_res):
 
 def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
     if num_kv_heads == 0 or num_kv_heads > num_heads:
-        raise ValueError(f"num_kv_heads must be non-zero and less than num_heads.")
+        raise ValueError(f"num_kv_heads must be non-zero and bigger than num_heads.")
 
     factor = num_heads // num_kv_heads
     kv_shape = kv_tensor.shape
@@ -281,7 +281,7 @@ def rebuild_softmax_by_max_sum(q, k, atten_mask, pse, scale, softmax_max, softma
 
 
 def get_head_num(*args, **kwargs):
-    if kwargs.get("head_num"):
+    if kwargs.get("head_num", None):
         head_num = kwargs.get("head_num")
     elif len(args) >= 4:
         head_num = args[3]
@@ -291,7 +291,7 @@ def get_head_num(*args, **kwargs):
 
 
 def get_input_layout(*args, **kwargs):
-    if kwargs.get("input_layout"):
+    if kwargs.get("input_layout", None):
         input_layout = kwargs.get("input_layout")
     elif len(args) >= 5:
         input_layout = args[4]
