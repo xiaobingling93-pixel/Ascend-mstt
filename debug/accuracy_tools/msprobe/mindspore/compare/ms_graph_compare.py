@@ -5,10 +5,10 @@ import os
 
 import numpy as np
 import pandas as pd
-from msprobe.core.common.const import CompareConst, GraphMode
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
+from msprobe.core.common.file_check import FileOpen, check_path_before_create, change_mode
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, load_npy
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
 from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories
@@ -32,9 +32,11 @@ def npy_data_read(data_path, npy_file_list, mapping_dict):
     data_list = []
     for data in npy_file_list:
         if data in mapping_dict:
-            split_list = mapping_dict[data].split(CompareConst.SEP)
+            split_list = mapping_dict[data].split(Const.SEP)
         else:
-            split_list = data.split(".")
+            split_list = data.split(Const.SEP)
+        if len(split_list) < 7:
+            continue
         compare_key = f"{split_list[1]}.{split_list[2]}.{split_list[3]}.{split_list[5]}.{split_list[6]}"
         timestamp = convert_to_int(split_list[4])
 
@@ -48,7 +50,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
                     'Avg Value': None, 'L2Norm Value': None}
     for statistic_file in statistic_file_list:
-        with FileOpen(statistic_file, "r") as f:
+        with open(statistic_file, "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
             header = next(csv_reader)
             for key in header_index.keys():
@@ -114,6 +116,18 @@ def generate_data_name(data_path):
     return mode, data_list
 
 
+def read_npy_data(data_path):
+    try:
+        data_value = np.load(data_path)
+        if data_value.dtype == np.float16:
+            data_value = data_value.astype(np.float32)
+    except FileNotFoundError as e:
+        data_value = None
+    except EOFError:
+        data_value = None
+    return data_value
+
+
 class GraphMSComparator:
     def __init__(self, input_param, output_path):
         self.output_path = output_path
@@ -127,41 +141,6 @@ class GraphMSComparator:
         self.common_rank_step = sorted(
             set(self.npu_rank_step_dict.keys()).intersection(self.bench_rank_step_dict.keys()))
 
-    def generate_rank_step_path(self, base_path):
-
-        def generate_rank_step_id(path_with_rank_step):
-            split_path = path_with_rank_step.split("/")
-            rank_id = -1
-            if "rank_" in path_with_rank_step:
-                # KBK mode
-                if len(split_path > 4):
-                    rank_id = convert_to_int(split_path[-4].split("_")[-1])
-                step_id = convert_to_int(split_path[-1])
-            else:
-                if len(split_path > 4):
-                    rank_id = convert_to_int(split_path[-4])
-                step_id = convert_to_int(split_path[-1])
-            return rank_id, step_id
-
-        base_path = os.path.abspath(base_path)
-        lowest_level = list_lowest_level_directories(base_path)
-
-        rank_step_path_dict = {}
-        for dir_path in lowest_level:
-            rank_id, step_id = generate_rank_step_id(dir_path)
-            if rank_id == -1 or step_id == -1:
-                continue
-            if self.rank_list and rank_id not in self.rank_list:
-                continue
-            if self.step_list and step_id not in self.step_list:
-                continue
-            rank_step_key = (rank_id, step_id)
-            if rank_step_key in rank_step_path_dict:
-                rank_step_path_dict[rank_step_key].append(dir_path)
-            else:
-                rank_step_path_dict[rank_step_key] = [dir_path]
-        return dict(sorted(rank_step_path_dict.items()))
-
     @staticmethod
     def compare_ops(compare_result_db, mode):
 
@@ -170,7 +149,7 @@ class GraphMSComparator:
 
             def process_npy_file(file_path, name_prefix, result):
                 if os.path.exists(file_path):
-                    data = load_npy(file_path)
+                    data = read_npy_data(file_path)
                     result[f'{name_prefix} Name'] = file_path
                     result[f'{name_prefix} Dtype'] = data.dtype
                     result[f'{name_prefix} Tensor Shape'] = data.shape
@@ -271,7 +250,9 @@ class GraphMSComparator:
             compare_result_df = self._do_multi_process(compare_result_df, mode)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
+            check_path_before_create(compare_result_path)
             compare_result_df.to_excel(compare_result_path, index=False)
+            change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
 
     def compare_process(self, rank_id, step_id):
@@ -332,6 +313,41 @@ class GraphMSComparator:
         compare_result_df[CompareConst.BENCH_NAME] = compare_result_df[CompareConst.BENCH_NAME].fillna('')
 
         return compare_result_df, npu_mode
+
+    def generate_rank_step_path(self, base_path):
+
+        def generate_rank_step_id(path_with_rank_step):
+            split_path = path_with_rank_step.split("/")
+            rank_id = -1
+            if "rank_" in path_with_rank_step:
+                # KBK mode
+                if len(split_path) > 4:
+                    rank_id = convert_to_int(split_path[-4].split("_")[-1])
+                step_id = convert_to_int(split_path[-1])
+            else:
+                if len(split_path) > 4:
+                    rank_id = convert_to_int(split_path[-4])
+                step_id = convert_to_int(split_path[-1])
+            return rank_id, step_id
+
+        base_path = os.path.abspath(base_path)
+        lowest_level = list_lowest_level_directories(base_path)
+
+        rank_step_path_dict = {}
+        for dir_path in lowest_level:
+            rank_id, step_id = generate_rank_step_id(dir_path)
+            if rank_id == -1 or step_id == -1:
+                continue
+            if self.rank_list and rank_id not in self.rank_list:
+                continue
+            if self.step_list and step_id not in self.step_list:
+                continue
+            rank_step_key = (rank_id, step_id)
+            if rank_step_key in rank_step_path_dict:
+                rank_step_path_dict[rank_step_key].append(dir_path)
+            else:
+                rank_step_path_dict[rank_step_key] = [dir_path]
+        return dict(sorted(rank_step_path_dict.items()))
 
     def _do_multi_process(self, result_df, mode):
         try:

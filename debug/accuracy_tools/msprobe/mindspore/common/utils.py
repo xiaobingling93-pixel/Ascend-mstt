@@ -46,7 +46,7 @@ def save_tensor_as_npy(tensor, file_path):
 def convert_to_int(value):
     try:
         return int(value)
-    except ValueError:
+    except Exception:
         return -1
 
 
