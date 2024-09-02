@@ -16,7 +16,7 @@ else:
 
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 
 gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
 softmax_build_mode = "QKV"  # "MAX_SUM"
@@ -485,21 +485,20 @@ def gpu_fusion_attention(*args, **kwargs):
     next_tockens = new_kwargs.get("next_tockens")
     attn_mask = new_kwargs.get("atten_mask")
     atten_mask_dtype = attn_mask.dtype if new_kwargs.get("atten_mask") is not None else None
-    pre_tockens = 65536 if pre_tockens > 65536 else pre_tockens
-    next_tockens = 65536 if next_tockens > 65536 else next_tockens
+    pre_tockens = min(CompareConst.MAX_TOKENS, pre_tockens)
+    next_tockens = min(CompareConst.MAX_TOKENS, next_tockens)
     atten_off = (is_attention_off_due_to_mask(atten_mask_dtype) or
              is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, S1) or
              is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, S1, S2))
-    causal_switch = False if atten_off else True
-    if sparse_mode == 4:
+    causal_switch = not atten_off
+    if sparse_mode == CompareConst.SPECIAL_SPARSE_MOED:
         window_left = pre_tockens
         window_right = next_tockens
     else:
-        pre_tockens = next_tockens = 65536
+        pre_tockens = next_tockens = CompareConst.MAX_TOKENS
         window_left = pre_tockens - S1 + S2
         window_right = next_tockens + S1 - S2
     
-    pttype = query.dtype
     if pse is not None:
         alibi_slopes = torch.rand(B, N1, dtype=torch.float32) * 0.3
     else:

@@ -210,6 +210,10 @@ class CompareConst:
     RED = "FFFF0000"
     YELLOW = "FFFF00"
     BLUE = "0000FF"
+    
+    # run_ut const
+    MAX_TOKENS = 65536
+    SPECIAL_SPARSE_MOED = 4
 
     # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']

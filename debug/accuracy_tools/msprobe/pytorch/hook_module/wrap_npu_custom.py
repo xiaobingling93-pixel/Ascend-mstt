@@ -73,7 +73,7 @@ class NpuOPTemplate(HOOKModule):
             if self.device == Const.CUDA_LOWERCASE:
                 self.op_name_ = cuda_func_mapping.get(self.op_name_, self.op_name_)
             if self.device in [Const.CUDA_LOWERCASE, Const.CPU_LOWERCASE]:
-                return npu_custom_functions[self.op_name_](*args, **kwargs)
+                return npu_custom_functions.get(self.op_name_)(*args, **kwargs)
         if torch_without_guard_version:
             return getattr(torch.ops.npu, str(self.op_name_))(*args, **kwargs)
         else:
