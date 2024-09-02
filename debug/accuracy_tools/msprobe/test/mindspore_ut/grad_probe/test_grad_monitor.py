@@ -7,7 +7,7 @@ import hashlib
 import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
-from grad_tool.grad_monitor import GradientMonitor
+from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
 
 
 file_path = os.path.abspath(__file__)
