@@ -532,10 +532,10 @@ def write_csv(data, filepath, mode="a+"):
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def load_npy(filepath):
+def load_npy(filepath, enable_pickle=False):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath)
+        npy = np.load(filepath, allow_pickle=enable_pickle)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
