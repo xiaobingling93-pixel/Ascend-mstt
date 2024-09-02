@@ -27,7 +27,7 @@ from pathlib import Path
 import yaml
 import numpy as np
 
-from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
+from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode, check_path_before_create
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
@@ -445,17 +445,6 @@ def check_file_valid(file_path):
         if file_path.endswith(Const.NUMPY_SUFFIX) and file_size > Const.TEN_GB:
             logger.error('The file {} size is greater than 10GB.'.format(file_path))
             raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def check_path_before_create(path):
-    if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
-            Const.FILE_NAME_LENGTH:
-        logger.error('The file path length exceeds limit.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
-        logger.error('The file path {} contains special characters.'.format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
 
 
 def check_inplace_op(prefix):
