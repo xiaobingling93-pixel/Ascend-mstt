@@ -43,7 +43,7 @@ class TestKernelGraphOverflowCheck(TestCase):
         self.assertEqual(checker.dump_json["common_dump_settings"]["op_debug_mode"], 2)
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
-        with patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.make_dump_path_if_not_exists"), \
+        with patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.create_directory"), \
              patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.FileOpen"), \
              patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.json.dump"), \
              patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.logger.info"):
