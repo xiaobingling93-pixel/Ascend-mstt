@@ -192,7 +192,11 @@ def check_path_pattern_vaild(path):
 
 
 def check_file_size(file_path, max_size):
-    file_size = os.path.getsize(file_path)
+    try:
+        file_size = os.path.getsize(file_path)
+    except OSError as os_error:
+        logger.error('Failed to open "%s". %s' % (file_path, str(os_error)))
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from os_error
     if file_size >= max_size:
         logger.error(f'The size of file path {file_path} exceeds {max_size} bytes.')
         raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)

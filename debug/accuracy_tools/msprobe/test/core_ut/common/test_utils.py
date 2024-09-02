@@ -37,12 +37,11 @@ from msprobe.core.common.utils import (CompareException,
                                        is_starts_with,
                                        _check_json,
                                        check_json_file,
-                                       check_file_size,
                                        check_regex_prefix_format_valid,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_utils import FileCheckConst
+from msprobe.core.common.file_utils import FileCheckConst, check_file_size
 from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
 
 class TestUtils(TestCase):

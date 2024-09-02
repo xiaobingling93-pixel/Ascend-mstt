@@ -197,18 +197,6 @@ def check_json_file(input_param, npu_json, bench_json, stack_json):
     _check_json(stack_json, input_param.get("stack_json_path"))
 
 
-def check_file_size(input_file, max_size):
-    try:
-        file_size = os.path.getsize(input_file)
-    except OSError as os_error:
-        logger.error('Failed to open "%s". %s' % (input_file, str(os_error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from os_error
-    if file_size > max_size:
-        logger.error('The size (%d) of %s exceeds (%d) bytes, tools not support.'
-                        % (file_size, input_file, max_size))
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-
-
 def check_file_not_exists(file_path):
     if os.path.exists(file_path) or os.path.islink(file_path):
         remove_path(file_path)
