@@ -2,7 +2,7 @@ from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElemen
 from msprobe.core.common.const import Const
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 
 class ApiInfo:
     def __init__(self, api_name):

@@ -5,7 +5,7 @@ import torch
 import numpy as np
 
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 from msprobe.core.common.const import CompareConst, MsCompareConst
 
 class CompareResult:

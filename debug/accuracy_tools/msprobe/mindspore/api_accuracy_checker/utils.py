@@ -1,7 +1,7 @@
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list
+from msprobe.mindspore.common.log import logger
 
 def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_type=None, accepted_value=None):
     '''
