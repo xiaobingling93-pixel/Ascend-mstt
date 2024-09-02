@@ -12,19 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+import os
 import unittest
-import torch
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pandas as pd
+from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver
 
-import json
-import csv
-import os
-import logging
-import threading
-from pathlib import Path
-import pandas as pd
-from unittest.mock import Mock, patch
-from msprobe.core.common.utils import CompareException
 
 class TestCompare(unittest.TestCase):
     def setUp(self):
@@ -40,26 +38,27 @@ class TestCompare(unittest.TestCase):
             os.remove(self.list_json_path)
 
     def test_get_json_contents_when_get_json(self):
-        data = {"one":1}
-        with open(self.dict_json_path,'w') as f:
+        data = {"one": 1}
+        with FileOpen(self.dict_json_path, 'w') as f:
             json.dump(data, f)
-        self.assertEqual(get_json_contents(self.dict_json_path),data)
+        self.assertEqual(get_json_contents(self.dict_json_path), data)
 
     @patch('msprobe.core.common.log.BaseLogger.error')
-    def test_get_json_contents_when_get_list(self,mock_error):
-        data = [1,2]
-        with open(self.list_json_path,'w') as f:
+    def test_get_json_contents_when_get_list(self, mock_error):
+        data = [1, 2]
+        with FileOpen(self.list_json_path, 'w') as f:
             json.dump(data, f)
         with self.assertRaises(CompareException) as context:
             get_json_contents(self.list_json_path)
             self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
         mock_error.assert_called_once_with('Json file %s, content is not a dictionary!' % self.list_json_path)
 
+
 class TestSaver(unittest.TestCase):
     def setUp(self):
         self.save_path = "./saver_save.csv"
         self.detail_save_path = "./saver_detail.csv"
-        self.saver = Saver(self.save_path,self.detail_save_path,False)
+        self.saver = Saver(self.save_path, self.detail_save_path, False)
         Path(self.save_path).touch()
         Path(self.detail_save_path).touch()
 
@@ -71,14 +70,16 @@ class TestSaver(unittest.TestCase):
 
     def test_write_csv_title(self):
         self.saver.write_csv_title()
-        mock_data_save = {self.saver.COLUMN_API_NAME:{}, 
-                            self.saver.COLUMN_FORWARD_SUCCESS:{},
-                            self.saver.COLUMN_BACKWARD_SUCCESS:{},
-                            "Message":{}}
-        mock_data_detail = {'Npu Name': {}, 'Bench Dtype': {}, 'NPU Dtype': {}, 'Shape': {}, 'error_balance': {}, 'max_abs_diff': {}, 'max_abs_idx': {}, 'max_rel_diff': {}, 'max_rel_idx': {}, 'eb_thd': {}, 'error_thd': {}, 'Status': {}, 'Message': {}}
+        mock_data_save = {self.saver.COLUMN_API_NAME: {},
+                          self.saver.COLUMN_FORWARD_SUCCESS: {},
+                          self.saver.COLUMN_BACKWARD_SUCCESS: {},
+                          "Message": {}}
+        mock_data_detail = {'Npu Name': {}, 'Bench Dtype': {}, 'NPU Dtype': {}, 'Shape': {}, 'error_balance': {},
+                            'max_abs_diff': {}, 'max_abs_idx': {}, 'max_rel_diff': {}, 'max_rel_idx': {}, 'eb_thd': {},
+                            'error_thd': {}, 'Status': {}, 'Message': {}}
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
-        
+
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
@@ -86,8 +87,8 @@ class TestSaver(unittest.TestCase):
         mock_test_result.is_bwd_success = "NOSKIP"
         mock_test_result.fwd_compare_alg_results = "result"
         self.saver.write_summary_csv(mock_test_result)
-        mock_data_save = {"api_name":{}, "SKIP":{}, "NOSKIP":{}, "result":{}}
-        self.assertTrue(pd.read_csv(self.save_path).to_dict()==mock_data_save)
+        mock_data_save = {"api_name": {}, "SKIP": {}, "NOSKIP": {}, "result": {}}
+        self.assertTrue(pd.read_csv(self.save_path).to_dict() == mock_data_save)
 
     def test_write_detail_csv(self):
         mock_test_result = Mock()
@@ -97,5 +98,4 @@ class TestSaver(unittest.TestCase):
         self.saver.write_detail_csv(mock_test_result)
         mock_data_detail = {'api_name.forward.output.0': {0: 'api_name.backward.output.0'}, 'f': {0: 'b'}}
 
-        self.assertTrue(pd.read_csv(self.detail_save_path).to_dict()==mock_data_detail)
-    
+        self.assertTrue(pd.read_csv(self.detail_save_path).to_dict() == mock_data_detail)

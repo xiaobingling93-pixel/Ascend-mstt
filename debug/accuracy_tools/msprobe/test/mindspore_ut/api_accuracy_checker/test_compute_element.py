@@ -124,9 +124,12 @@ class TestComputeElement(unittest.TestCase):
             },
         ]
         compute_element = ComputeElement(compute_element_info=compute_element_info)
-        parameter = compute_element.get_parameter(get_origin=True)
-        self.assertTrue((parameter[0] == self.ms_tensor).all())
-        self.assertTrue((parameter[1] == self.ms_tensor).all())
+        mindspore_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="mindspore")
+        self.assertTrue((mindspore_parameter[0] == self.ms_tensor).all())
+        self.assertTrue((mindspore_parameter[1] == self.ms_tensor).all())
+        torch_parameter = compute_element.get_parameter(get_origin=False, tensor_platform="pytorch")
+        self.assertTrue((torch_parameter[0] == self.torch_tensor).all())
+        self.assertTrue((torch_parameter[1] == self.torch_tensor).all())
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), TUPLE_TYPE_STR)
 
@@ -140,6 +143,7 @@ class TestComputeElement(unittest.TestCase):
         self.assertEqual(parameter, -1)
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
+
 
 if __name__ == '__main__':
     unittest.main()
