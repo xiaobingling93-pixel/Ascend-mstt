@@ -1,7 +1,7 @@
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api
-from msprobe.core.common.utils import check_str_pattern_valid, CompareException
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
+from msprobe.core.common.const import CompareConst, Const
 
 
 dtype_mapping = {
@@ -94,11 +94,8 @@ def fuzzy_check_name(npu_name, bench_name):
     return is_match
 
 
-def check_json_input(op_name, op_data):
-    if "forward" in op_name:
-        input_list = op_data.get("input_args", None)
-    else:
-        input_list = op_data.get("input", None)
+def check_dump_json_str(op_data, op_name):
+    input_list = op_data.get("input_args", None) if Const.FORWARD in op_name else op_data.get("input", None)
     input_kwargs = op_data.get("input_kwargs", None)
     output_list = op_data.get("output", None)
 
@@ -119,19 +116,40 @@ def check_json_input(op_name, op_data):
                 check_json_key_value(api_output, op_name)
 
 
+def check_json_collection(collection, op_name):
+    if isinstance(collection, dict):
+        check_json_key_value(collection, op_name)
+    else:
+        for item in collection:
+            if item:
+                check_json_key_value(item, op_name)
+
+
 def check_json_key_value(input_output, op_name):
     if isinstance(input_output, list):
-        for param in input_output:
-            check_json_key_value(param, op_name)
-    else:
+        for item in input_output:
+            check_json_key_value(item, op_name)
+    elif isinstance(input_output, dict):
         for key, value in input_output.items():
             if isinstance(value, dict):
                 check_json_key_value(value, op_name)
             else:
-                check_json_key_value(value, op_name)
-                if key == "shape" and not isinstance(value, (list, tuple)):
-                    raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
-                elif key == "requires_grad" and not isinstance(value, bool):
-                    raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
-                else:
-                    check_str_pattern_valid(value, op_name)
+                valid_key_value(key, value, op_name)
+
+
+def valid_key_value(key, value, op_name):
+    if key == "shape" and not isinstance(value, (list, tuple)):
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+    elif key == "requires_grad" and not isinstance(value, bool):
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
+    else:
+        check_op_str_pattern_valid(value, op_name)
+
+
+def check_stack_json_str(stack_info, op_name):
+    if isinstance(stack_info, list):
+        for item in stack_info:
+            check_op_str_pattern_valid(item, op_name, stack_info=True)
+    else:
+        raise TypeError(
+            f"Expected stack_info to be a list, but got {type(stack_info).__name__} for operation '{op_name}'.")

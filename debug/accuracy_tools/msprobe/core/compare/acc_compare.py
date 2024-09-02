@@ -6,8 +6,9 @@ from msprobe.core.common.file_check import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, check_file_not_exists, check_str_pattern_valid
-from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_json_input
+from msprobe.core.common.utils import add_time_with_xlsx, check_file_not_exists, check_op_str_pattern_valid
+from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
+    check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.utils import read_op, merge_tensor, CompareException, get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
@@ -52,12 +53,16 @@ class Comparator:
     @classmethod
     def gen_merge_list(self, json_data, op_name,stack_json_data, summary_compare, md5_compare):
         op_data = json_data['data'][op_name]
-        check_json_input(op_name, op_data)
+        check_dump_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
-        if op_name in stack_json_data:
-            op_parsed_list.append({'full_op_name': op_name, 'full_info': stack_json_data[op_name]})
-        else:
-            op_parsed_list.append({'full_op_name': op_name, 'full_info': None})
+
+        stack_info = stack_json_data.get(op_name)
+        if stack_info is not None:
+            check_stack_json_str(stack_info, op_name)
+        op_parsed_list.append({
+            'full_op_name': op_name,
+            'full_info': stack_info
+        })
             
         merge_list = merge_tensor(op_parsed_list, summary_compare, md5_compare)
         return merge_list
@@ -120,7 +125,7 @@ class Comparator:
             try:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
-                check_str_pattern_valid(op_name_npu)
+                check_op_str_pattern_valid(op_name_npu)
                 read_err_npu = True
                 npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data, summary_compare, md5_compare)
                 if npu_merge_list:
@@ -130,7 +135,7 @@ class Comparator:
             try:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
-                check_str_pattern_valid(op_name_bench)
+                check_op_str_pattern_valid(op_name_bench)
                 bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data, summary_compare, md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)

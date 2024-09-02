@@ -618,10 +618,11 @@ def save_workbook(workbook, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def check_str_pattern_valid(string, op_name=None):
+def check_op_str_pattern_valid(string, op_name=None, stack_info=False):
     if isinstance(string, str) and re.match(Const.STRING_INVALID_PATTERN, string):
         if not op_name:
-            logger.error(f"data of {op_name} contains special characters, please check!")
+            message = "op name contains special characters, please check!"
         else:
-            logger.error(f"op name contains special characters, please check!")
+            message = f"{'stack info' if stack_info else 'data'} of {op_name} contains special characters, please check!"
+        logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)
