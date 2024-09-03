@@ -8,7 +8,7 @@ import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
 from msprobe.mindspore import PrecisionDebugger
-
+from msprobe.core.common.file_check import FileOpen
 
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
@@ -42,13 +42,13 @@ def main():
 
 
 def save_dict_as_json(data, json_file_path):
-    with open(json_file_path, 'w') as f:
+    with FileOpen(json_file_path, 'w') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     print(f"字典已保存为json文件: {json_file_path}")
 
 
 def get_hash(file_path):
-    with open(file_path, 'rb') as file:
+    with FileOpen(file_path, 'rb') as file:
         hash_object = hashlib.md5()
         for chunk in iter(lambda: file.read(4096), b""):
             hash_object.update(chunk)
