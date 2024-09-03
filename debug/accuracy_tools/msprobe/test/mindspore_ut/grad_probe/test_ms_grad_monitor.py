@@ -1,21 +1,21 @@
 import os
 import numpy as np
 import shutil
-import yaml
+import json
 from unittest import TestCase
 import hashlib
 import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
-from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
+from msprobe.mindspore import PrecisionDebugger
 
 
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
-
+config_json_path = os.path.join(directory, "config.json")
 
 def main():
-    gm = GradientMonitor(os.path.join(directory, "config.yaml"), framework="MindSpore")
+    debugger = PrecisionDebugger(config_json_path)
 
     class SimpleNet(nn.Cell):
         def __init__(self):
@@ -29,7 +29,7 @@ def main():
     model = SimpleNet()
     optimizer = SGD(model.trainable_params(), learning_rate=0.001)
 
-    gm.monitor(optimizer)
+    debugger.monitor(optimizer)
 
     fix_gradient = tuple([Tensor(np.arange(5*16).reshape((5, 16)), dtype=mindspore.float32),
                         Tensor(np.arange(5).reshape(5), dtype=mindspore.float32)])
@@ -40,11 +40,10 @@ def main():
         optimizer(fix_gradient)
 
 
-def save_dict_as_yaml(data, yaml_file_path):
-    # 将字典保存为YAML文件
-    with open(yaml_file_path, 'w') as yaml_file:
-        yaml.dump(data, yaml_file, default_flow_style=False)
-    print(f"字典已保存为YAML文件: {yaml_file_path}")
+def save_dict_as_json(data, json_file_path):
+    with open(json_file_path, 'w') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    print(f"字典已保存为json文件: {json_file_path}")
 
 
 def get_hash(file_path):
@@ -56,14 +55,14 @@ def get_hash(file_path):
 
 
 def check_npy(gradient_output_path):
-    my_dense_bias_path = os.path.join(gradient_output_path, "rank_0", "step_1", "my_dense.bias.npy")
+    my_dense_bias_path = os.path.join(gradient_output_path, "rank0", "step1", "my_dense.bias.npy")
     assert  os.path.isfile(my_dense_bias_path)
     my_dense_bias_real = np.load(my_dense_bias_path)
     my_dense_bias_target = np.arange(5).reshape(5) > 0
 
     assert (my_dense_bias_real == my_dense_bias_target).all()
 
-    my_dense_weight_path = os.path.join(gradient_output_path, "rank_0", "step_1", "my_dense.weight.npy")
+    my_dense_weight_path = os.path.join(gradient_output_path, "rank0", "step1", "my_dense.weight.npy")
     assert  os.path.isfile(my_dense_weight_path)
     my_dense_weight_real = np.load(my_dense_weight_path)
     my_dense_weight_target = np.arange(5*16).reshape((5, 16)) > 0
@@ -77,20 +76,21 @@ def check_stat_csv(csv_path, md5_value):
 
 class TestMsGradientMonitor(TestCase):
     def test_gradient_monitor(self):
-        config_path = os.path.join(directory, "config.yaml")
         gradient_output_path = os.path.join(directory, "gradient_output")
         config_dict = {
-            "level": "L2",
-            "param_list": None,
-            "rank": None,
+            "task": "grad_probe",
+            "dump_path": gradient_output_path,
+            "rank": [],
             "step": [1],
-            "bounds": None,
-            "output_path": gradient_output_path,
+            "grad_probe": {
+                "grad_level": "L2",
+                "param_list": []
+            }
         }
-        save_dict_as_yaml(config_dict, config_path)
+        save_dict_as_json(config_dict, config_json_path)
 
         main()
         check_npy(gradient_output_path)
-        check_stat_csv(os.path.join(gradient_output_path, "rank_0", "grad_summary_1.csv"), "b00499bee5c3e3ca96aaee773a092dd7")
-        os.remove(config_path)
+        check_stat_csv(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"), "874174395c56922f86118050e8c93e74")
+        os.remove(config_json_path)
         shutil.rmtree(gradient_output_path)
