@@ -9,7 +9,7 @@ from mindspore.common.parameter import Parameter
 from mindspore.common.initializer import initializer
 
 from msprobe.core.grad_probe.constant import GradConst
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 
 from msprobe.core.common.utils import write_csv, remove_path
 from msprobe.mindspore.grad_probe.global_context import grad_context

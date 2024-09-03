@@ -1,4 +1,4 @@
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.core.common.const import Const
 

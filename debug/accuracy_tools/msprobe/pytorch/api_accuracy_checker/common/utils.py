@@ -31,7 +31,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import save_pt
 from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import CompareException, make_dump_path_if_not_exists
+from msprobe.core.common.utils import CompareException
 
 ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
                      defaults=['unknown', None, None, None, 0, 0])
@@ -96,16 +96,16 @@ def cross_entropy_process(api_info_dict):
     Return api_info_dict:
         api_info_dict: Processed argument of the API.
     """
-    if 'args' in api_info_dict and len(api_info_dict['args']) > 1 and 'Min' in api_info_dict['args'][1]:
-        if api_info_dict['args'][1]['Min'] <= 0:
+    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 and 'Min' in api_info_dict['input_args'][1]:
+        if api_info_dict['input_args'][1]['Min'] <= 0:
             # The second argument in cross_entropy should be -100 or not less than 0
-            api_info_dict['args'][1]['Min'] = 0
+            api_info_dict['input_args'][1]['Min'] = 0
     return api_info_dict
 
 
 def initialize_save_path(save_path, dir_name):
     data_path = os.path.join(save_path, dir_name)
-    make_dump_path_if_not_exists(data_path)
+    create_directory(data_path)
     return data_path
 
 
