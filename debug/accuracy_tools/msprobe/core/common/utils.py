@@ -15,7 +15,6 @@
 # limitations under the License.
 """
 import collections
-import fcntl
 import os
 import re
 import subprocess
@@ -23,9 +22,8 @@ import time
 import json
 from datetime import datetime, timezone
 
-from msprobe.core.common.file_utils import (FileOpen, change_mode,
-                                            check_path_before_create, check_file_or_directory_path)
-from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
 
