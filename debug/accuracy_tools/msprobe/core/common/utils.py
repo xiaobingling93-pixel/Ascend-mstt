@@ -385,29 +385,3 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
-
-
-def load_json(json_path):
-    try:
-        with FileOpen(json_path, "r") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            data = json.load(f)
-            fcntl.flock(f, fcntl.LOCK_UN)
-    except Exception as e:
-        logger.error(f'load json file "{os.path.basename(json_path)}" failed.')
-        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
-    return data
-
-
-def save_json(json_path, data, indent=None):
-    json_path = os.path.realpath(json_path)
-    check_path_before_create(json_path)
-    try:
-        with FileOpen(json_path, 'w') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            json.dump(data, f, indent=indent)
-            fcntl.flock(f, fcntl.LOCK_UN)
-    except Exception as e:
-        logger.error(f'Save json file "{os.path.basename(json_path)}" failed.')
-        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
-    change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)
