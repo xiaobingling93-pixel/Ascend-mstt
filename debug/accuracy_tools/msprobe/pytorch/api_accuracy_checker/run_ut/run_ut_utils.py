@@ -55,20 +55,16 @@ def get_validated_details_csv_path(validated_result_csv_path):
     return validated_details_csv_path
 
 
-def exec_api(api_type, api_name, args, kwargs):
+def exec_api(api_type, api_name, device, args, kwargs):
     if api_type == "Functional":
-        functional_api = FunctionalOPTemplate(api_name, str, False)
-        out = functional_api.forward(*args, **kwargs)
+        torch_api = FunctionalOPTemplate(api_name, str, False)
     if api_type == "Tensor":
-        tensor_api = TensorOPTemplate(api_name, str, False)
-        out = tensor_api.forward(*args, **kwargs)
+        torch_api = TensorOPTemplate(api_name, str, False)
     if api_type == "Torch":
         torch_api = TorchOPTemplate(api_name, str, False)
-        out = torch_api.forward(*args, **kwargs)
     if api_type == "Aten":
         torch_api = AtenOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
     if api_type == "NPU":
-        torch_api = NpuOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
+        torch_api = NpuOPTemplate(api_name, None, False, device)
+    out = torch_api.forward(*args, **kwargs)
     return out

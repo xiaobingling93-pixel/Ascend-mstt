@@ -5,7 +5,7 @@ def npu_rotary_mul(x, r1, r2):
     x1, x2 = torch.chunk(x, 2, -1)
     x_new = torch.cat((-x2, x1), dim=-1)
     output = r1 * x + r2 * x_new
-    return output.cpu()
+    return output
 
 
 def npu_rotary_mul_backward(dy_tensor, x, r1, r2):

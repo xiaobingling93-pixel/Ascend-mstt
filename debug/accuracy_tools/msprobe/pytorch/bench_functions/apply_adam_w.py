@@ -25,4 +25,4 @@ def npu_apply_adam_w(beta1_power, beta2_power, lr, weight_decay,
     if (1 - beta1_power_out) == 0:
         beta1_power_out -= eps
     var_out = var_t + torch.div(-lr * m_out, (1 - beta1_power_out)).div(denom)
-    return var_out.cpu(), m_out.cpu(), v_out.cpu()
+    return var_out, m_out, v_out
