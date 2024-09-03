@@ -40,8 +40,11 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_utils import FileCheckConst, check_file_size, check_file_or_directory_path
-from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
+from msprobe.core.common.file_utils import (FileCheckConst,
+                                            check_file_size,
+                                            check_file_or_directory_path,
+                                            get_json_contents,
+                                            get_file_content_bytes)
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")

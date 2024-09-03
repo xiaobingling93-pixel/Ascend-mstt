@@ -26,8 +26,8 @@ import csv
 from datetime import datetime, timezone
 import numpy as np
 
-from msprobe.core.common.file_utils import (FileOpen, FileChecker,
-                                            change_mode, check_path_before_create, check_file_or_directory_path)
+from msprobe.core.common.file_utils import (FileOpen, change_mode,
+                                            check_path_before_create, check_file_or_directory_path)
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
@@ -271,16 +271,6 @@ def parse_value_by_comma(value):
     return value_list
 
 
-def get_data_len_by_shape(shape):
-    data_len = 1
-    for item in shape:
-        if item == -1:
-            logger.error("please check your input shape, one dim in shape is -1.")
-            return -1
-        data_len = data_len * item
-    return data_len
-
-
 def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
@@ -342,30 +332,6 @@ def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
         logger.error(f"Failed to open file. Please check file {template_path} or path {pkl_dir}.")
 
     logger.info(f"Generate compare script successfully which is {compare_script_path}.")
-
-
-def check_file_valid(file_path):
-    if os.path.islink(file_path):
-        logger.error('The file path {} is a soft link.'.format(file_path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if len(os.path.realpath(file_path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(file_path)) > \
-            Const.FILE_NAME_LENGTH:
-        logger.error('The file path length exceeds limit.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not re.match(Const.FILE_PATTERN, os.path.realpath(file_path)):
-        logger.error('The file path {} contains special characters.'.format(file_path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if os.path.isfile(file_path):
-        file_size = os.path.getsize(file_path)
-        if file_path.endswith(Const.PKL_SUFFIX) and file_size > Const.ONE_GB:
-            logger.error('The file {} size is greater than 1GB.'.format(file_path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-        if file_path.endswith(Const.NUMPY_SUFFIX) and file_size > Const.TEN_GB:
-            logger.error('The file {} size is greater than 10GB.'.format(file_path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
 
 
 def check_inplace_op(prefix):
@@ -442,16 +408,6 @@ def write_csv(data, filepath, mode="a+"):
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def load_npy(filepath, enable_pickle=False):
-    check_file_or_directory_path(filepath)
-    try:
-        npy = np.load(filepath, allow_pickle=enable_pickle)
-    except Exception as e:
-        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
-        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
-    return npy
-
-
 def save_npy(data, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
@@ -479,23 +435,6 @@ def save_npy_to_txt(self, data, dst_file='', align=0):
     except Exception as e:
         self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load json.')
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file content is not a dictionary!')
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
 
 
 def save_workbook(workbook, file_path):

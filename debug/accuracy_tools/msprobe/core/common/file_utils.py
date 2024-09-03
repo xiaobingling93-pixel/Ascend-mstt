@@ -15,14 +15,15 @@
 # limitations under the License.
 """
 import os
+import json
 import re
 import shutil
 import yaml
+import numpy as np
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.utils import CompareException
 
 
 class FileChecker:
@@ -327,6 +328,16 @@ def load_yaml(yaml_path):
     return yaml_data
 
 
+def load_npy(filepath, enable_pickle=False):
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath, allow_pickle=enable_pickle)
+    except Exception as e:
+        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
+    return npy
+
+
 def remove_path(path):
     if not os.path.exists(path):
         return
@@ -337,4 +348,22 @@ def remove_path(path):
             shutil.rmtree(path)
     except PermissionError as err:
         logger.error("Failed to delete {}. Please check the permission.".format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR) from err
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
+
+
+def get_json_contents(file_path):
+    ops = get_file_content_bytes(file_path)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        logger.error('Failed to load json.')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        logger.error('Json file content is not a dictionary!')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+    return json_obj
+
+
+def get_file_content_bytes(file):
+    with FileOpen(file, 'rb') as file_handle:
+        return file_handle.read()
