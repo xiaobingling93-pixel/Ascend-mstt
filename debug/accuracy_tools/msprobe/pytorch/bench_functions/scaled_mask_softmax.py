@@ -9,7 +9,7 @@ def npu_scaled_masked_softmax(x, mask, scale, fixed_triu_mask):
     x = x - torch.max(x, dim=-1, keepdims=True)[0]
     x = torch.exp(x.float())
     y = torch.div(x, torch.sum(x, dim=-1, keepdims=True))
-    return y.to(dtype).cpu()
+    return y.to(dtype)
 
 
 def npu_scaled_masked_softmax_backward(y_grad, y, mask, scale, fixed_triu_mask):

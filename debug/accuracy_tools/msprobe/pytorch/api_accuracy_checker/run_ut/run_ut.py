@@ -300,7 +300,7 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
 
 def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
-    flag = split_name in [Const.NPU, Const.DISTRIBUTED]
+    flag = split_name == Const.DISTRIBUTED
     if flag:
         logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag
@@ -339,8 +339,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     bench_grad_out, device_grad_out = None, None
-    out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
-    device_out = exec_api(api_type, api_name, device_args, device_kwargs)
+    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
+    device_out = exec_api(api_type, api_name, current_device, device_args, device_kwargs)
     current_path = os.path.dirname(os.path.realpath(__file__))
     ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
     api_setting_dict = get_json_contents(ut_setting_path)
@@ -360,6 +360,9 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
         else:
             backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
+    if api_name == "npu_fusion_attention":
+        out = out[0]
+        device_out = device_out[0]
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
@@ -373,7 +376,7 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
     if kwargs.get("device"):
         del kwargs["device"]
 
-    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = exec_api(api_type, api_name, Const.CUDA_LOWERCASE, args, kwargs)
     device_out = move2device_exec(device_out, "cpu")
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 

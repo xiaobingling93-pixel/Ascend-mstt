@@ -81,8 +81,8 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
         del kwargs["device"]
-    out = exec_api(api_type, api_name, args, kwargs)
-    npu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
+    npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
     if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return
