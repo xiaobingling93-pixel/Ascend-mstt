@@ -3,8 +3,10 @@ import os
 import mindspore
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_param
-from msprobe.core.common.file_utils import create_directory, check_path_before_create, check_file_or_directory_path
-from msprobe.core.common.utils import save_npy
+from msprobe.core.common.file_utils import (create_directory,
+                                            check_path_before_create,
+                                            check_file_or_directory_path,
+                                            save_npy)
 
 
 def save_grad_direction(param_name, grad, save_path):

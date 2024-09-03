@@ -3,8 +3,8 @@ import os
 from collections import namedtuple
 
 import numpy as np
-from msprobe.core.common.utils import write_csv, CompareException
-from msprobe.core.common.file_utils import get_json_contents
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import get_json_contents, write_csv
 import torch
 from msprobe.core.common.const import CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \

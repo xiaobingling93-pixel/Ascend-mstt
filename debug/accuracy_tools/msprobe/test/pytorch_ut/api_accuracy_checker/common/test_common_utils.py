@@ -5,7 +5,8 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.pytorch.api_accuracy_checker.common.utils import *
-from msprobe.core.common.utils import write_csv
+from msprobe.core.common.file_utils import write_csv
+
 
 class TestUtils(unittest.TestCase):
 

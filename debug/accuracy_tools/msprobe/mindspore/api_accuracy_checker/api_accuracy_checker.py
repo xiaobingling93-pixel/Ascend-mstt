@@ -1,8 +1,8 @@
 import json
 import os
 
-from msprobe.core.common.file_utils import FileOpen, create_directory
-from msprobe.core.common.utils import write_csv, add_time_as_suffix
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
+from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo

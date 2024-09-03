@@ -6,11 +6,10 @@ if int(torch.__version__.split('.')[0]) >= 2:
     from torch.optim.optimizer import register_optimizer_step_pre_hook
 from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
-from msprobe.core.grad_probe.constant import GradConst, level_adp
+from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.common.file_utils import create_directory
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import write_csv, save_npy
-from msprobe.core.common.file_utils import remove_path
+from msprobe.core.common.file_utils import remove_path, save_npy, write_csv
 from msprobe.pytorch.common.utils import get_rank_id, print_rank_0
 
 

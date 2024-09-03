@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+import csv
 import os
 import json
 import re
@@ -336,6 +337,72 @@ def load_npy(filepath, enable_pickle=False):
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
     return npy
+
+
+def move_file(src_path, dst_path):
+    check_file_or_directory_path(src_path)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move file {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move file {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_npy(data, filepath):
+    filepath = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        np.save(filepath, data)
+    except Exception as e:
+        logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
+        raise RuntimeError(f"Save numpy file {filepath} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_npy_to_txt(self, data, dst_file='', align=0):
+    if os.path.exists(dst_file):
+        self.log.info("Dst file %s exists, will not save new one.", dst_file)
+        return
+    shape = data.shape
+    data = data.flatten()
+    if align == 0:
+        align = 1 if len(shape) == 0 else shape[-1]
+    elif data.size % align != 0:
+        pad_array = np.zeros((align - data.size % align,))
+        data = np.append(data, pad_array)
+    check_path_before_create(dst_file)
+    try:
+        np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+    except Exception as e:
+        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
+    change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_workbook(workbook, file_path):
+    """
+    保存工作簿到指定的文件路径
+    workbook: 要保存的工作簿对象
+    file_path: 文件保存路径
+    """
+    file_path = os.path.realpath(file_path)
+    check_path_before_create(file_path)
+    try:
+        workbook.save(file_path)
+    except Exception as e:
+        logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save result file {file_path} failed.") from e
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def write_csv(data, filepath, mode="a+"):
+    exist = os.path.exists(filepath)
+    with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
+        writer = csv.writer(f)
+        writer.writerows(data)
+    if not exist:
+        change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def remove_path(path):
