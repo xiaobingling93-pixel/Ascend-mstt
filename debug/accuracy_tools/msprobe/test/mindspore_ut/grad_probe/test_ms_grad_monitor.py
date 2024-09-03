@@ -88,7 +88,7 @@ class TestMsGradientMonitor(TestCase):
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
         target_md5_value = "874174395c56922f86118050e8c93e74"
-        self.assertTrue(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
+        self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
 
         os.remove(config_json_path)
         shutil.rmtree(gradient_output_path)
