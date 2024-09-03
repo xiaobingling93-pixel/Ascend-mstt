@@ -11,7 +11,8 @@ from mindspore.common.initializer import initializer
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 
-from msprobe.core.common.utils import write_csv, remove_path
+from msprobe.core.common.utils import write_csv
+from msprobe.core.common.file_utils import remove_path
 from msprobe.mindspore.grad_probe.global_context import grad_context
 from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id
 from msprobe.mindspore.grad_probe.grad_analyzer import csv_generator

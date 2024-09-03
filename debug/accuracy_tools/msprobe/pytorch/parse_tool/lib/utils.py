@@ -32,7 +32,8 @@ from msprobe.core.common.file_utils import change_mode, check_other_user_writabl
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import FileOpen, FileChecker
-from msprobe.core.common.utils import check_file_or_directory_path, remove_path
+from msprobe.core.common.utils import check_file_or_directory_path
+from msprobe.core.common.file_utils import remove_path
 from msprobe.pytorch.common.log import logger
 
 

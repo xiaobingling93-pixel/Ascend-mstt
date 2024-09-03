@@ -1,5 +1,6 @@
 import os
-from msprobe.core.common.utils import CompareException, load_yaml
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import load_yaml
 
 
 class AtenIrMapping():

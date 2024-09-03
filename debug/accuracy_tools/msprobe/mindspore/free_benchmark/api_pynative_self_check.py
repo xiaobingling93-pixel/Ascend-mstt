@@ -5,7 +5,7 @@ import importlib
 import mindspore as ms
 from mindspore.communication import comm_func
 
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config

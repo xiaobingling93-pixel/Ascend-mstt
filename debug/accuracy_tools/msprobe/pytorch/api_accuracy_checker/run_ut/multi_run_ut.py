@@ -17,7 +17,7 @@ from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
     check_path_before_create, create_directory
-from msprobe.core.common.utils import remove_path
+from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.const import FileCheckConst
 
 

@@ -1,7 +1,7 @@
 import os
 import yaml
 from msprobe.core.common.utils import check_file_or_directory_path
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.pt_config import RunUTConfig
 
 

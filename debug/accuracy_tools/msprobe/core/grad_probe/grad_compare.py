@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from msprobe.core.common.utils import check_file_or_directory_path
 from msprobe.core.common.file_utils import create_directory, check_path_before_create
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import remove_path, write_csv, load_npy
+from msprobe.core.common.utils import write_csv, load_npy
+from msprobe.core.common.file_utils import remove_path
 from msprobe.core.grad_probe.constant import GradConst
 
 

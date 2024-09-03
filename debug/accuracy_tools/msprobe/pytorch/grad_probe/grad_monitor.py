@@ -9,8 +9,9 @@ from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_lis
 from msprobe.core.grad_probe.constant import GradConst, level_adp
 from msprobe.core.common.file_utils import create_directory
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import remove_path, write_csv, save_npy
-from msprobe.pytorch.common.utils import  get_rank_id, print_rank_0, save_pt
+from msprobe.core.common.utils import write_csv, save_npy
+from msprobe.core.common.file_utils import remove_path
+from msprobe.pytorch.common.utils import get_rank_id, print_rank_0
 
 
 class GradientMonitor:

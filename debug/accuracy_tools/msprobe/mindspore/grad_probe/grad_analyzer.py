@@ -14,7 +14,8 @@ from msprobe.core.grad_probe.utils import ListCache
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import check_file_or_directory_path, write_csv, remove_path, move_file
+from msprobe.core.common.utils import check_file_or_directory_path, write_csv, move_file
+from msprobe.core.common.file_utils import remove_path
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
 
 

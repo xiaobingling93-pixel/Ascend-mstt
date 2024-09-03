@@ -24,7 +24,6 @@ import time
 import json
 import csv
 from datetime import datetime, timezone
-import yaml
 import numpy as np
 
 from msprobe.core.common.file_utils import FileOpen, FileChecker, change_mode, check_path_before_create
@@ -197,11 +196,6 @@ def check_json_file(input_param, npu_json, bench_json, stack_json):
     _check_json(stack_json, input_param.get("stack_json_path"))
 
 
-def check_file_not_exists(file_path):
-    if os.path.exists(file_path) or os.path.islink(file_path):
-        remove_path(file_path)
-
-
 def check_regex_prefix_format_valid(prefix):
     """
         validate the format of the regex prefix
@@ -221,19 +215,6 @@ def check_regex_prefix_format_valid(prefix):
                          f"is {len(prefix)}")
     if not re.match(Const.REGEX_PREFIX_PATTERN, prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
-
-
-def remove_path(path):
-    if not os.path.exists(path):
-        return
-    try:
-        if os.path.islink(path) or os.path.isfile(path):
-            os.remove(path)
-        else:
-            shutil.rmtree(path)
-    except PermissionError as err:
-        logger.error("Failed to delete {}. Please check the permission.".format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR) from err
 
 
 def move_file(src_path, dst_path):
@@ -531,18 +512,6 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
-
-
-def load_yaml(yaml_path):
-    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
-    checked_path = path_checker.common_check()
-    try:
-        with FileOpen(checked_path, "r") as f:
-            yaml_data = yaml.safe_load(f)
-    except Exception as e:
-        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
-        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
-    return yaml_data
 
 
 def save_workbook(workbook, file_path):

@@ -4,8 +4,7 @@ import os
 import unittest
 from pathlib import Path
 
-from msprobe.core.common import utils
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import FileOpen, remove_path
 from msprobe.core.data_dump.json_writer import DataWriter
 
 
@@ -15,7 +14,7 @@ class TestDataWriter(unittest.TestCase):
         file_path = os.path.join(cur_path, "test.csv")
 
         if os.path.exists(file_path):
-            utils.remove_path(file_path)
+            remove_path(file_path)
 
         data = {"A": "1", "B": "2", "C": "3"}
         result = data.values()
@@ -35,7 +34,7 @@ class TestDataWriter(unittest.TestCase):
             column_last = [row for row in reader][-1]
         self.assertEqual(data, column_last)
 
-        utils.remove_path(file_path)
+        remove_path(file_path)
 
     def test_initialize_json_file(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))

@@ -16,10 +16,13 @@
 """
 import os
 import re
+import shutil
+import yaml
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.utils import CompareException
 
 
 class FileChecker:
@@ -257,6 +260,11 @@ def check_path_before_create(path):
                                  'The file path {} contains special characters.'.format(path))
 
 
+def check_file_not_exists(file_path):
+    if os.path.exists(file_path) or os.path.islink(file_path):
+        remove_path(file_path)
+
+
 def change_mode(path, mode):
     if not os.path.exists(path) or os.path.islink(path):
         return
@@ -288,3 +296,28 @@ def check_file_type(path):
     else:
         logger.error('Neither a file nor a directory.')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+
+def load_yaml(yaml_path):
+    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
+    checked_path = path_checker.common_check()
+    try:
+        with FileOpen(checked_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
+        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
+    return yaml_data
+
+
+def remove_path(path):
+    if not os.path.exists(path):
+        return
+    try:
+        if os.path.islink(path) or os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+    except PermissionError as err:
+        logger.error("Failed to delete {}. Please check the permission.".format(path))
+        raise CompareException(CompareException.INVALID_PATH_ERROR) from err

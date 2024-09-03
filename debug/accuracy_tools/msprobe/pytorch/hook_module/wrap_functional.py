@@ -22,7 +22,7 @@ from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 
 
 def remove_dropout():
