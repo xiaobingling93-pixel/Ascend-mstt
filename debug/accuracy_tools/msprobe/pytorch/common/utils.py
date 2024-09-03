@@ -15,20 +15,17 @@
 # limitations under the License.
 """
 import io
-import logging
 import os
 import random
 import stat
-import csv
-import json
 import torch
 import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
-from msprobe.core.common.file_utils import FileCheckConst, change_mode, FileOpen
+from msprobe.core.common.utils import check_path_before_create
+from msprobe.core.common.file_utils import FileCheckConst, change_mode, check_file_or_directory_path
 
 
 try:

@@ -31,7 +31,6 @@ from msprobe.core.common.utils import (CompareException,
                                        check_dump_mode_valid,
                                        check_summary_mode_valid,
                                        check_summary_only_valid,
-                                       check_file_or_directory_path,
                                        check_compare_param,
                                        check_configuration_param,
                                        is_starts_with,
@@ -41,7 +40,7 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_utils import FileCheckConst, check_file_size
+from msprobe.core.common.file_utils import FileCheckConst, check_file_size, check_file_or_directory_path
 from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
 
 class TestUtils(TestCase):

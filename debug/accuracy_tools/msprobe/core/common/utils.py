@@ -26,7 +26,8 @@ import csv
 from datetime import datetime, timezone
 import numpy as np
 
-from msprobe.core.common.file_utils import FileOpen, FileChecker, change_mode, check_path_before_create
+from msprobe.core.common.file_utils import (FileOpen, FileChecker,
+                                            change_mode, check_path_before_create, check_file_or_directory_path)
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.core.common.log import logger
 
@@ -159,23 +160,6 @@ def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=F
     if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
         logger.error("Invalid input parameters which should be only bool type.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-
-
-def check_file_or_directory_path(path, isdir=False):
-    """
-    Function Description:
-        check whether the path is valid
-    Parameter:
-        path: the path to check
-        isdir: the path is dir or file
-    Exception Description:
-        when invalid data throw exception
-    """
-    if isdir:
-        path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
-    else:
-        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
-    path_checker.common_check()
 
 
 def is_starts_with(string, prefix_list):

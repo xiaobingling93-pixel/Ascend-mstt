@@ -265,6 +265,23 @@ def check_file_not_exists(file_path):
         remove_path(file_path)
 
 
+def check_file_or_directory_path(path, isdir=False):
+    """
+    Function Description:
+        check whether the path is valid
+    Parameter:
+        path: the path to check
+        isdir: the path is dir or file
+    Exception Description:
+        when invalid data throw exception
+    """
+    if isdir:
+        path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
+    else:
+        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
+    path_checker.common_check()
+
+
 def change_mode(path, mode):
     if not os.path.exists(path) or os.path.islink(path):
         return

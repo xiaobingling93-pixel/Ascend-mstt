@@ -15,8 +15,7 @@ except ImportError:
 else:
     is_npu = True
 
-from msprobe.core.common.utils import check_file_or_directory_path
-from msprobe.core.common.file_utils import check_path_before_create, load_yaml
+from msprobe.core.common.file_utils import check_path_before_create, check_file_or_directory_path, load_yaml
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.common.log import logger
 from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \

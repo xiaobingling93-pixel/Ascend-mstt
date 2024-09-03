@@ -1,21 +1,19 @@
 import os
 import time
-from typing import List, Tuple
+from typing import List
 import multiprocessing
 from multiprocessing import Process 
 
 import numpy as np
 import mindspore as ms
 from mindspore.communication import get_rank
-from mindspore.ops import operations as P
 from mindspore.common.parameter import Parameter
 
 from msprobe.core.grad_probe.utils import ListCache
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
-from msprobe.core.common.file_utils import create_directory
-from msprobe.core.common.utils import check_file_or_directory_path, write_csv, move_file
-from msprobe.core.common.file_utils import remove_path
+from msprobe.core.common.file_utils import create_directory, check_file_or_directory_path, remove_path
+from msprobe.core.common.utils import write_csv, move_file
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
 
 
