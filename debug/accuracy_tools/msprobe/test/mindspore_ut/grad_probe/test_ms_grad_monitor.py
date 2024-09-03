@@ -15,6 +15,7 @@ directory = os.path.dirname(file_path)
 config_json_path = os.path.join(directory, "config.json")
 
 def main():
+    PrecisionDebugger._instance = None
     debugger = PrecisionDebugger(config_json_path)
 
     class SimpleNet(nn.Cell):
