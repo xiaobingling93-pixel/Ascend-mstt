@@ -43,7 +43,7 @@ class Service:
         def pre_hook(api_or_module_name, module, args, kwargs):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if not self.switch:
                 return args, kwargs
@@ -57,7 +57,7 @@ class Service:
         def forward_hook(api_or_module_name, module, args, kwargs, output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if not self.switch:
                 return None
@@ -82,7 +82,7 @@ class Service:
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_module_name)
+            self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if not self.switch:
                 return

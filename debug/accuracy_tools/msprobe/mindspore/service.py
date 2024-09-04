@@ -88,7 +88,7 @@ class Service:
                 module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs,
                                                                  output=output)
 
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
             self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
@@ -102,7 +102,7 @@ class Service:
 
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
@@ -131,14 +131,14 @@ class Service:
                 backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
-                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
                         service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, service_instance, os.getpid(), new_module_input_output
                         )
                         captured_grads.clear()
                     elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
-                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
                         service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, service_instance, os.getpid(), new_module_input_output
@@ -207,7 +207,7 @@ class Service:
                                 " primitive_name: {}".format(exception, primitive_name)) from exception
 
             forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
-            service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
             if service_instance.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
                 try:

@@ -293,7 +293,6 @@ class OverflowConst:
     """
     Class for Overflow
     """
-    OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
 
