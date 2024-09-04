@@ -23,7 +23,7 @@ import logging
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from msprobe.pytorch.online_dispatch.utils import COLOR_RED, COLOR_CYAN, COLOR_YELLOW, COLOR_RESET, COMPARE_LOGO, np_save_data, data_to_cpu, DispatchException
+from msprobe.pytorch.online_dispatch.utils import COLOR_RED, COLOR_CYAN, COLOR_YELLOW, COLOR_RESET, COMPARE_LOGO, data_to_cpu, DispatchException
 
 cpu_device = torch._C.device("cpu")
 
@@ -47,11 +47,6 @@ class TestUtils(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(os.path.join(self.data_path, f'{self.file_name}.npy')):
             os.remove(os.path.join(self.data_path, f'{self.file_name}.npy'))
-
-    @patch('msprobe.core.common.file_utils.change_mode')
-    def test_np_save_data_should_error_when_input_wrong(self,mock_change_mode):
-        np_save_data(self.data_nonumpy,self.file_name,self.data_path)
-        mock_change_mode.assert_not_called()
 
     def test_data_to_cpu_should_return_tensor_copy_when_input_tensor(self):
         data = torch.tensor([1,2],device=cpu_device,dtype=torch.float16)

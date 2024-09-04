@@ -1,8 +1,7 @@
 import os
 import time
 import json
-from pathlib import Path
-from multiprocessing import Manager, Pool
+from multiprocessing import Pool
 
 import torch
 
@@ -18,10 +17,11 @@ else:
 from msprobe.core.common.file_utils import check_path_before_create, check_file_or_directory_path, load_yaml
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.common.log import logger
-from .dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
+from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
     DispatchRunParam, DisPatchDataInfo
-from .utils import get_callstack, data_to_cpu,  get_sys_info, DispatchException, COMPARE_LOGO
-from .compare import Comparator
+from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu,  get_sys_info, DispatchException, COMPARE_LOGO
+from msprobe.pytorch.online_dispatch.compare import Comparator
+from msprobe.core.common.file_check import FileOpen, create_directory
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -59,8 +59,8 @@ class PtdbgDispatch(TorchDispatchMode):
         self.root_npu_path = os.path.join(self.root_path, f'npu')
         check_path_before_create(self.root_cpu_path)
         check_path_before_create(self.root_npu_path)
-        Path(self.root_cpu_path).mkdir(mode=0o750, parents=True, exist_ok=True)
-        Path(self.root_npu_path).mkdir(mode=0o750, parents=True, exist_ok=True)
+        create_directory(self.root_cpu_path)
+        create_directory(self.root_npu_path)
 
         self.result_csv_path = os.path.join(self.root_path, RESULT_FILE_NAME)
         self.detail_csv_path = os.path.join(self.root_path, DETAILS_FILE_NAME)
@@ -94,7 +94,7 @@ class PtdbgDispatch(TorchDispatchMode):
                 logger.error("Please check train log, An exception may have occurred!")
                 return
             check_file_or_directory_path(summary_path, False)
-            fp_handle = open(summary_path, "r")
+            fp_handle = FileOpen(summary_path, "r")
             while True:
                 json_line_data = fp_handle.readline()
                 if json_line_data == '\n':

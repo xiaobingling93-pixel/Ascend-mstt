@@ -7,8 +7,8 @@ from collections import namedtuple
 from rich.table import Table
 from rich.console import Console
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode
-from .single_compare import single_benchmark_compare_wrap
+from msprobe.core.common.file_check import FileOpen, change_mode
+from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
 
