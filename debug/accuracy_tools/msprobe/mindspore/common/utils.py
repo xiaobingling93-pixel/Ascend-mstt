@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-
+import os
 import mindspore as ms
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.file_check import path_len_exceeds_limit
+from msprobe.core.common.file_check import path_len_exceeds_limit, check_path_exists
 from msprobe.core.common.utils import save_npy
 from msprobe.core.common.log import logger
 
@@ -41,6 +41,31 @@ def save_tensor_as_npy(tensor, file_path):
         save_npy(saved_tensor, file_path)
     else:
         logger.warning(f'The file path {file_path} length exceeds limit.')
+
+
+def convert_to_int(value):
+    try:
+        return int(value)
+    except Exception:
+        return -1
+
+
+def list_lowest_level_directories(root_dir):
+    check_path_exists(root_dir)
+    lowest_level_dirs = []
+
+    def recurse_dirs(current_dir):
+        for entry in os.listdir(current_dir):
+            full_path = os.path.join(current_dir, entry)
+            if os.path.isdir(full_path):
+                if any(os.path.isdir(os.path.join(full_path, subentry)) for subentry in os.listdir(full_path)):
+                    recurse_dirs(full_path)
+                else:
+                    lowest_level_dirs.append(full_path)
+
+    recurse_dirs(root_dir)
+    return lowest_level_dirs
+
 
 
 class MsprobeStep(ms.train.Callback):
