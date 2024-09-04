@@ -333,9 +333,9 @@ class TestUtils(TestCase):
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
-        with self.assertRaises(CompareException) as ce:
+        with self.assertRaises(FileCheckException) as ce:
             get_json_contents('')
-        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
+        self.assertEqual(ce.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
     def test_get_json_contents_should_return_json_obj(self):
         test_dict = {"key": "value"}

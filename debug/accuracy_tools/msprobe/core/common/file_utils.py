@@ -38,6 +38,7 @@ class FileChecker:
         ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
         file_type(str): The correct file type for file
     """
+
     def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
@@ -193,7 +194,7 @@ def check_path_owner_consistent(path):
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        logger.error('The file path %s contains special characters.' %(path))
+        logger.error('The file path %s contains special characters.' % (path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
@@ -204,7 +205,8 @@ def check_file_size(file_path, max_size):
         logger.error('Failed to open "%s". %s' % (file_path, str(os_error)))
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from os_error
     if file_size >= max_size:
-        logger.error(f'The size of file path {file_path} exceeds {max_size} bytes.')
+        logger.error('The size (%d) of %s exceeds (%d) bytes, tools not support.'
+                     % (file_size, file_path, max_size))
         raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
 
 
@@ -249,7 +251,8 @@ def create_directory(dir_path):
         os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
-            'Failed to create {}. Please check the path permission or disk space .{}'.format(dir_path, str(ex))) from ex
+                                 'Failed to create {}. Please check the path permission or disk space .{}'.format(
+                                     dir_path, str(ex))) from ex
     file_check = FileChecker(dir_path, FileCheckConst.DIR)
     file_check.common_check()
 
