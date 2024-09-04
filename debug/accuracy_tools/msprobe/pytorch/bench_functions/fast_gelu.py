@@ -1,7 +1,7 @@
 import torch
 
 
-def fast_gelu(input0):
+def npu_fast_gelu(input0):
     attr = 1.702
     const_0 = 0 - attr
     const_1 = 1
@@ -19,7 +19,7 @@ def fast_gelu(input0):
     div_down_rec = torch.reciprocal(div_down)
     result = div_up * div_down_rec
 
-    return result.cpu()
+    return result
 
 
 def npu_fast_gelu_backward(grad, input_x):

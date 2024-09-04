@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_check import FileOpen
-from .utils import np_save_data
+from msprobe.core.common.utils import save_npy
 
 
 class DispatchRunParam:
@@ -87,7 +87,8 @@ def dump_data(data, prefix, dump_path):
         if isinstance(data, torch.Tensor) and data.is_meta:
             return
         # dump data may greater than summary_list collect
-        np_save_data(data, prefix, dump_path)
+        path = os.path.join(dump_path, f'{prefix}.npy')
+        save_npy(data, path)
 
 
 def save_temp_summary(api_index, single_api_summary, path, lock):

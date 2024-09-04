@@ -10,6 +10,7 @@ from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import remove_path, write_csv, load_npy
 from msprobe.core.grad_probe.constant import GradConst
+from msprobe.core.grad_probe.utils import plt_savefig
 
 
 class GradComparator:
@@ -90,11 +91,7 @@ class GradComparator:
                 create_directory(picture_dir)
             fig_save_path = os.path.join(picture_dir, f"{key}_similarities.png")
 
-            check_path_before_create(fig_save_path)
-            try:
-                plt.savefig(fig_save_path)
-            except Exception as e:
-                raise RuntimeError(f"save plt figure {fig_save_path} failed") from e
+            plt_savefig(fig_save_path)
             plt.close()
 
             result.append([key] + value)

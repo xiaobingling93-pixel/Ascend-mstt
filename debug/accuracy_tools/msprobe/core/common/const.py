@@ -23,6 +23,7 @@ class Const:
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    NONE = None
     THREE_SEGMENT = 3
     FOUR_SEGMENT = 4
     SIX_SEGMENT = 6
@@ -92,6 +93,9 @@ class Const:
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    NPU_LOWERCASE = 'npu'
+    CPU_LOWERCASE = 'cpu'
+    CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
 
     INPLACE_LIST = [
@@ -210,6 +214,10 @@ class CompareConst:
     RED = "FFFF0000"
     YELLOW = "FFFF00"
     BLUE = "0000FF"
+    
+    # run_ut const
+    MAX_TOKENS = 65536
+    SPECIAL_SPARSE_MOED = 4
 
     # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
