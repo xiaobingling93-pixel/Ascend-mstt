@@ -8,12 +8,12 @@ import numpy as np
 import pandas as pd
 from msprobe.core.common.const import CompareConst, GraphMode
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.file_check import create_directory
 from msprobe.mindspore.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException, load_npy
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_check import FileOpen
 
 class row_data:
     def __init__(self, mode):
@@ -58,7 +58,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     data_list = []
     statistic_data_list = []
     for statistic_file in statistic_file_list:
-        with open(statistic_file, "r") as f:
+        with FileOpen(statistic_file, "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
             header = next(csv_reader)
             header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
@@ -130,18 +130,6 @@ def generate_data_name(data_path):
     return mode, data_list
 
 
-def read_npy_data(data_path):
-    try:
-        data_value = np.load(data_path)
-        if data_value.dtype == np.float16:
-            data_value = data_value.astype(np.float32)
-    except FileNotFoundError as e:
-        data_value = None
-    except EOFError:
-        data_value = None
-    return data_value
-
-
 class GraphMSComparator:
     def __init__(self, input_param, output_path):
         self.output_path = output_path
@@ -158,7 +146,7 @@ class GraphMSComparator:
 
             def process_npy_file(file_path, name_prefix, result):
                 if os.path.exists(file_path):
-                    data = read_npy_data(file_path)
+                    data = load_npy(file_path)
                     result[f'{name_prefix} Name'] = file_path
                     result[f'{name_prefix} Dtype'] = data.dtype
                     result[f'{name_prefix} Tensor Shape'] = data.shape
