@@ -14,7 +14,7 @@ def npu_swiglu(x, dim=-1):
         tensor_out_float = torch.nn.functional.silu(tensor_self_float).type(tensor_dtype).type(
             torch.float32) * tensor_other_float
         output_data = tensor_out_float.type(tensor_dtype)
-    return output_data.cpu()
+    return output_data
 
 
 def npu_swiglu_backward(grad, x, dim=-1):

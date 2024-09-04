@@ -21,7 +21,7 @@ class TestRunUtMethods(unittest.TestCase):
         [api_type, api_name, _, _] = api_full_name.split(".")
         args, kwargs, need_grad = get_api_info(api_info, api_name, None)
         cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, True, '')
-        out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
+        out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
         self.assertEqual(out[0].dtype, torch.float32)
         self.assertTrue(out[0].requires_grad)
         self.assertEqual(out[0].shape, torch.Size([2048, 2, 1, 128]))

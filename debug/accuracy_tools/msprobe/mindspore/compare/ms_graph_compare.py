@@ -8,7 +8,7 @@ import pandas as pd
 from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
 from msprobe.core.common.file_check import FileOpen, check_path_before_create, change_mode
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException, load_npy
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
 from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories
@@ -50,7 +50,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
                     'Avg Value': None, 'L2Norm Value': None}
     for statistic_file in statistic_file_list:
-        with open(statistic_file, "r") as f:
+        with FileOpen(statistic_file, "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
             header = next(csv_reader)
             for key in header_index.keys():
@@ -116,18 +116,6 @@ def generate_data_name(data_path):
     return mode, data_list
 
 
-def read_npy_data(data_path):
-    try:
-        data_value = np.load(data_path)
-        if data_value.dtype == np.float16:
-            data_value = data_value.astype(np.float32)
-    except FileNotFoundError as e:
-        data_value = None
-    except EOFError:
-        data_value = None
-    return data_value
-
-
 class GraphMSComparator:
     def __init__(self, input_param, output_path):
         self.output_path = output_path
@@ -149,7 +137,7 @@ class GraphMSComparator:
 
             def process_npy_file(file_path, name_prefix, result):
                 if os.path.exists(file_path):
-                    data = read_npy_data(file_path)
+                    data = load_npy(file_path)
                     result[f'{name_prefix} Name'] = file_path
                     result[f'{name_prefix} Dtype'] = data.dtype
                     result[f'{name_prefix} Tensor Shape'] = data.shape
