@@ -38,7 +38,7 @@ class BaseLogger:
     @filter_special_chars
     def debug(self, msg):
         if LOG_LEVEL == MsgConst.LEVEL[3]:
-            self._print_log(MsgConst.LEVEL[1], msg)
+            self._print_log(MsgConst.LEVEL[3], msg)
 
     def on_rank_0(self, func):
         def func_rank_0(*args, **kwargs):
