@@ -177,7 +177,8 @@ class TestFileCheckUtil(TestCase):
             check_file_size(file_path, max_size)
         self.assertEqual(str(context.exception),
                          FileCheckException.err_strs.get(FileCheckException.FILE_TOO_LARGE_ERROR))
-        mock_logger_error.assert_called_with(f"The size of file path {file_path} exceeds {max_size} bytes.")
+        mock_logger_error.assert_called_with(f"The size ({file_size}) of {file_path} exceeds ({max_size}) bytes, "
+                                             f"tools not support.")
 
     def test_check_common_file_size(self):
         mock_check_file_size = MagicMock()
