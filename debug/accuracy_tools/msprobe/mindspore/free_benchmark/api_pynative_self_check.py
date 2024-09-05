@@ -5,12 +5,11 @@ import importlib
 import mindspore as ms
 from mindspore.communication import comm_func
 
-from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml, check_path_length
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
-from msprobe.core.common.file_utils import check_path_length
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.free_benchmark.decorator.decorator_factory import decorate_forward_function
