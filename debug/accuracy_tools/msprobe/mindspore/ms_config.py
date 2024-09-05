@@ -65,7 +65,8 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.fuzz_device and self.fuzz_device not in FreeBenchmarkConst.DEVICE_LIST:
             raise Exception("fuzz_device must be npu or empty")
         if self.pert_mode and self.pert_mode not in FreeBenchmarkConst.PERT_TYPE_LIST:
-            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise, no_change or empty")
+            raise Exception("pert_mode must be improve_precision, add_noise, bit_noise, "
+                            "no_change, change_value or empty")
         if self.handler_type and self.handler_type not in FreeBenchmarkConst.HANDLER_TYPE_LIST:
             raise Exception("handler_type must be check, fix or empty")
         if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
@@ -84,12 +85,12 @@ class GradProbeConfig(BaseConfig):
         self.param_list = json_config.get("param_list", [])
         self.bounds = json_config.get("bounds", [-1, 0, 1])
         self._check_config()
-    
+
     def _check_config(self):
         if self.grad_level not in level_adp.keys():
             raise Exception(f"grad_level must be one of {level_adp.keys()}")
         if not isinstance(self.param_list, list):
-            raise Exception(f"param_list must be a list")
+            raise Exception("param_list must be a list")
         check_numeral_list_ascend(self.bounds)
 
 
@@ -98,7 +99,7 @@ TaskDict = {
     Const.STATISTICS: StatisticsConfig,
     Const.OVERFLOW_CHECK: OverflowCheckConfig,
     Const.FREE_BENCHMARK: FreeBenchmarkConfig,
-    Const.GRAD_PROBE: GradProbeConfig,
+    Const.GRAD_PROBE: GradProbeConfig
 }
 
 
