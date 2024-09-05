@@ -1,10 +1,9 @@
 import os
-from pathlib import Path
 
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
+from msprobe.core.common.file_check import create_directory
 
 
 class DebuggerConfig:
@@ -26,7 +25,7 @@ class DebuggerConfig:
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
         self.check()
-        self._make_dump_path_if_not_exists()
+        create_directory(self.dump_path)
 
         if self.task == Const.FREE_BENCHMARK:
             self.pert_type = (FreeBenchmarkConst.DEFAULT_PERT_TYPE
@@ -65,10 +64,3 @@ class DebuggerConfig:
         for s in self.step:
             if not isinstance(s, int) or s < 0:
                 raise ValueError(f"step element {s} must be a positive integer.")
-
-    def _make_dump_path_if_not_exists(self):
-        check_path_before_create(self.dump_path)
-        if not os.path.exists(self.dump_path):
-            Path(self.dump_path).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-        file_check = FileChecker(self.dump_path, FileCheckConst.DIR)
-        file_check.common_check()

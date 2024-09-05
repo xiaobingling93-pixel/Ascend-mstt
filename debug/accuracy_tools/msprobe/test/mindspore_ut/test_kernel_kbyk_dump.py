@@ -25,7 +25,7 @@ from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 
 
 class TestKernelKbykDump(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "statistics",
