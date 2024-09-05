@@ -100,7 +100,8 @@ class Const:
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
+        "all_gather_into_tensor", "reduce_scatter_tensor"
     ]
 
     CONVERT = {
@@ -152,7 +153,11 @@ class CompareConst:
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
     MAGNITUDE = 0.5
-
+    OP_NAME = "op_name"
+    INPUT_STRUCT = "input_struct"
+    OUTPUT_STRUCT = "output_struct"
+    SUMMARY = "summary"
+    
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
         ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,

@@ -25,7 +25,7 @@ from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class TestKernelGraphDump(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "tensor",

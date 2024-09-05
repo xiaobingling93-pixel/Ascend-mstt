@@ -235,6 +235,21 @@ def check_path_type(file_path, file_type):
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
+def make_dir(dir_path):
+    dir_path = os.path.realpath(dir_path)
+    check_path_before_create(dir_path)
+    if os.path.isdir(dir_path):
+        return
+    try:
+        os.mkdir(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
+    except OSError as ex:
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
+                                 f"Failed to create {dir_path}. "
+                                 f"Please check the path permission or disk space. {str(ex)}") from ex
+    file_check = FileChecker(dir_path, FileCheckConst.DIR)
+    file_check.common_check()
+
+
 def create_directory(dir_path):
     """
     Function Description:
@@ -246,14 +261,10 @@ def create_directory(dir_path):
     """
     dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
-    try:
-        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-    except OSError as ex:
-        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
-                                 'Failed to create {}. Please check the path permission or disk space .{}'.format(
-                                     dir_path, str(ex))) from ex
-    file_check = FileChecker(dir_path, FileCheckConst.DIR)
-    file_check.common_check()
+    parent_dir = os.path.dirname(dir_path)
+    if not os.path.isdir(parent_dir):
+        create_directory(parent_dir)
+    make_dir(dir_path)
 
 
 def check_path_before_create(path):

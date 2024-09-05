@@ -60,7 +60,7 @@ def make_unequal_row(
         row.max_rel = ratio - 1
     original_tensor = params.original_result
     fuzzed_tensor = params.fuzzed_result
-    if index:
+    if index is not None:
         original_tensor = original_tensor[index]
         fuzzed_tensor = fuzzed_tensor[index]
         row.output_index = index
