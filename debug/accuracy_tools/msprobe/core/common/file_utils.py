@@ -202,11 +202,10 @@ def check_file_size(file_path, max_size):
     try:
         file_size = os.path.getsize(file_path)
     except OSError as os_error:
-        logger.error('Failed to open "%s". %s' % (file_path, str(os_error)))
+        logger.error(f'Failed to open "{file_path}". {str(os_error)}')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from os_error
     if file_size >= max_size:
-        logger.error('The size (%d) of %s exceeds (%d) bytes, tools not support.'
-                     % (file_size, file_path, max_size))
+        logger.error(f'The size ({file_size}) of {file_path} exceeds ({max_size}) bytes, tools not support.')
         raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
 
 
@@ -264,11 +263,6 @@ def check_path_before_create(path):
     if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
-
-
-def check_file_not_exists(file_path):
-    if os.path.exists(file_path) or os.path.islink(file_path):
-        remove_path(file_path)
 
 
 def check_file_or_directory_path(path, isdir=False):
@@ -427,12 +421,16 @@ def save_workbook(workbook, file_path):
 
 
 def write_csv(data, filepath, mode="a+"):
-    exist = os.path.exists(filepath)
-    with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-    if not exist:
-        change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+    file_path = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def remove_path(path):
@@ -446,6 +444,9 @@ def remove_path(path):
     except PermissionError as err:
         logger.error("Failed to delete {}. Please check the permission.".format(path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
+    except Exception as e:
+        logger.error("Failed to delete {}. Please check.".format(path))
+        raise RuntimeError(f"Delete {path} failed.") from e
 
 
 def get_json_contents(file_path):
