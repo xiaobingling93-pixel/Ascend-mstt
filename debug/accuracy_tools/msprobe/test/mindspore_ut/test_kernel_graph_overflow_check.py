@@ -25,7 +25,7 @@ from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelG
 
 
 class TestKernelGraphOverflowCheck(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "overflow_check",

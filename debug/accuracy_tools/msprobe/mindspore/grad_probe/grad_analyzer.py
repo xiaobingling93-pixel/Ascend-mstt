@@ -2,7 +2,7 @@ import os
 import time
 from typing import List, Tuple
 import multiprocessing
-from multiprocessing import Process 
+from multiprocessing import Process
 
 import numpy as np
 import mindspore as ms
@@ -14,7 +14,7 @@ from msprobe.core.grad_probe.utils import ListCache
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.file_check import create_directory
-from msprobe.core.common.utils import check_file_or_directory_path, write_csv, remove_path, move_file
+from msprobe.core.common.utils import check_file_or_directory_path, write_csv, remove_path, move_file, load_npy
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
 
 
@@ -77,7 +77,7 @@ class CSVGenerator(Process):
         self.level = GradConst.LEVEL0
         self.cache_list = ListCache()
         self.current_step = None
-        self.stop_event = None  
+        self.stop_event = None
         self.last_finish = False
         self.bounds = [-0.1, 0.0, 0.1],
 
@@ -89,7 +89,7 @@ class CSVGenerator(Process):
         self.dump_dir = f"{output_path}/rank{rank_id}/Dump/"
         self.save_dir = f"{output_path}/rank{rank_id}/"
         self.current_step = None
-        self.stop_event = multiprocessing.Event()  
+        self.stop_event = multiprocessing.Event()
         self.last_finish = False
 
     def run(self):
@@ -139,7 +139,7 @@ class CSVGenerator(Process):
                 if stat_data is None:
                     continue
                 if not self.check_valid(stat_data):
-                    os.remove(file_path)
+                    remove_path(file_path)
                     continue
                 step = int(stat_data[GradConst.STEP_IDX])
                 update_step = self.current_step is None or step != self.current_step
@@ -147,7 +147,7 @@ class CSVGenerator(Process):
                 if update_step:
                     self.create_csv_file()
                 self.gen_csv_line(file_path, stat_data)
-                os.remove(file_path)
+                remove_path(file_path)
                 self.last_finish = False
 
     def check_valid(self, stat_data):
@@ -170,7 +170,7 @@ class CSVGenerator(Process):
         max_try = 10
         while max_try:
             try:
-                stat_data = np.load(file_path)
+                stat_data = load_npy(file_path)
                 return stat_data
             except Exception as err:
                 logger.warning(f"load numpy file failed, retry...")
