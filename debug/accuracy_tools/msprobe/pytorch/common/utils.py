@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+import io
 import logging
 import os
 import random
@@ -25,7 +26,7 @@ import torch.distributed as dist
 import numpy as np
 from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.log import logger as common_logger
+from msprobe.core.common.log import logger
 from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, CompareException
 from msprobe.core.common.file_check import FileCheckConst, change_mode, FileOpen
 
@@ -280,21 +281,28 @@ def save_pt(tensor, filepath):
     try:
         torch.save(tensor, filepath)
     except Exception as e:
-        common_logger.error("Save pt file failed, please check according possible error causes: "
+        logger.error("Save pt file failed, please check according possible error causes: "
                             "1. out of disk space or disk error, "
                             "2. no permission to write files, etc.")
         raise RuntimeError(f"save pt file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def _create_logger(level=logging.INFO):
-    logger_ = logging.getLogger()
-    logger_.setLevel(level)
-    ch = logging.StreamHandler()
-    ch.setLevel(level)
-    logger_.addHandler(ch)
-    return logger_
+def save_api_data(api_data):
+    """Save data to io stream"""
+    try:
+        io_buff = io.BytesIO()
+        torch.save(api_data, io_buff)
+    except Exception as e:
+        raise RuntimeError(f"save api_data to io_buff failed") from e
+    return io_buff
 
-    
-log_level = logging.DEBUG if os.environ.get("API_ACCURACY_CHECK_LOG_LEVEL") == "1" else logging.INFO
-logger = _create_logger(log_level)
+
+def load_api_data(api_data_bytes):
+    """Load data from bytes stream"""
+    try:
+        buffer = io.BytesIO(api_data_bytes)
+        buffer = torch.load(buffer, map_location="cpu")
+    except Exception as e:
+        raise RuntimeError(f"load api_data from bytes failed") from e
+    return buffer

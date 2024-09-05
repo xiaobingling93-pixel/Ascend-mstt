@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import collections
+import fcntl
 import os
 import re
 import shutil
@@ -23,7 +24,6 @@ import time
 import json
 import csv
 from datetime import datetime, timezone
-from pathlib import Path
 import yaml
 import numpy as np
 
@@ -61,8 +61,9 @@ class CompareException(Exception):
     OVER_SIZE_FILE_ERROR = 18
     INVALID_SUMMARY_MODE = 19
     INVALID_TASK_ERROR = 20
-    INVALID_OBJECT_TYPE_ERROR = 21
-    INVALID_CHAR_ERROR = 22
+    DETACH_ERROR = 21
+    INVALID_OBJECT_TYPE_ERROR = 22
+    INVALID_CHAR_ERROR = 23
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -75,19 +76,6 @@ class CompareException(Exception):
 
 class DumpException(CompareException):
     pass
-
-
-def make_dump_path_if_not_exists(dump_path):
-    if not os.path.exists(dump_path):
-        try:
-            Path(dump_path).mkdir(mode=0o750, exist_ok=True, parents=True)
-        except OSError as ex:
-            logger.error(
-                'Failed to create {}.Please check the path permission or disk space .{}'.format(dump_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
-    else:
-        if not os.path.isdir(dump_path):
-            logger.error('{} already exists and is not a directory.'.format(dump_path))
 
 
 def check_mode_valid(mode, scope=None, api_list=None):
@@ -294,25 +282,6 @@ def get_dump_data_path(dump_dir):
             break
         dump_data_path = dir_path
     return dump_data_path, file_is_exist
-
-
-def create_directory(dir_path):
-    """
-    Function Description:
-        creating a directory with specified permissions
-    Parameter:
-        dir_path: directory path
-    Exception Description:
-        when invalid data throw exception
-    """
-    if not os.path.exists(dir_path):
-        check_path_before_create(dir_path)
-        try:
-            os.makedirs(dir_path, mode=0o700)
-        except OSError as ex:
-            logger.error(
-                'Failed to create {}.Please check the path permission or disk space .{}'.format(dir_path, str(ex)))
-            raise CompareException(CompareException.INVALID_PATH_ERROR) from ex
 
 
 def execute_command(cmd):
@@ -534,10 +503,10 @@ def write_csv(data, filepath, mode="a+"):
         change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def load_npy(filepath):
+def load_npy(filepath, enable_pickle=False):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath)
+        npy = np.load(filepath, allow_pickle=enable_pickle)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
@@ -626,3 +595,29 @@ def check_op_str_pattern_valid(string, op_name=None, stack_info=False):
             message = f"{'stack info' if stack_info else 'data'} of {op_name} contains special characters, please check!"
         logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)
+
+
+def load_json(json_path):
+    try:
+        with FileOpen(json_path, "r") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'load json file "{os.path.basename(json_path)}" failed.')
+        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
+    return data
+
+
+def save_json(json_path, data, indent=None):
+    json_path = os.path.realpath(json_path)
+    check_path_before_create(json_path)
+    try:
+        with FileOpen(json_path, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            json.dump(data, f, indent=indent)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save json file "{os.path.basename(json_path)}" failed.')
+        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
+    change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)

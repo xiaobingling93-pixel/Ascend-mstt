@@ -8,7 +8,7 @@ from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
 from msprobe.core.grad_probe.constant import GradConst, level_adp
 from msprobe.core.common.file_check import create_directory
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import remove_path, write_csv, save_npy
 from msprobe.pytorch.common.utils import  get_rank_id, print_rank_0, save_pt
 
@@ -61,6 +61,7 @@ class GradientMonitor:
     def _hook_optimizer(self):
         def optimizer_pre_step_hook(optimizer, args, kargs):
             self._step += 1
+            logger.info(f"grad_probe: optimizer step {self._step}")
             if not data_in_list_target(self._step, self._target_step):
                 return
             output_lines = []
@@ -86,5 +87,6 @@ class GradientMonitor:
             header_result = GradStatCsv.generate_csv_header(self._level_adp, self._bounds)
             output_lines.insert(0, header_result)
             write_csv(output_lines, output_path)
+            logger.info(f"write grad data to {output_path}")
         if int(torch.__version__.split('.')[0]) >= 2:
             register_optimizer_step_pre_hook(optimizer_pre_step_hook)

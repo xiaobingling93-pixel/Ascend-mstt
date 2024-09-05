@@ -12,7 +12,7 @@ from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.pytorch.common.utils import save_pt
+from msprobe.pytorch.common.utils import save_pt, load_pt
 
 try:
     import torch_npu
@@ -102,22 +102,6 @@ class PytorchDataProcessor(BaseDataProcessor):
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-            values = [
-                value if not isinstance(value, torch.Tensor) else value.item()
-                for value in [arg.start, arg.stop, arg.step]
-            ]
-            single_arg.update({"value": values})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-
-    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -135,7 +119,7 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self._analyze_numpy(converted_numpy, numpy_type)
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-        if isinstance(element, (bool, int, float, str, slice)):
+        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
 
@@ -377,7 +361,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         if not KernelDumpDataProcessor.forward_init_status:
             KernelDumpDataProcessor.forward_init_status = True
             output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            grad = torch.load(grad_path).to("npu").requires_grad_()
+            pt = load_pt(grad_path)
+            grad = pt.to("npu").requires_grad_()
             torch_npu.npu.init_dump()
             torch_npu.npu.set_dump(self.config.acl_config)
             torch_npu.npu.synchronize()

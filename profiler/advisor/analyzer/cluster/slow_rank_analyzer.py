@@ -20,7 +20,8 @@ from profiler.advisor.common import constant
 from profiler.advisor.result.result import OptimizeResult
 from profiler.advisor.result.item import OptimizeItem, OptimizeRecord
 from profiler.advisor.dataset.cluster.cluster_dataset import ClusterStepTraceTimeDataset
-from profiler.advisor.utils.utils import safe_index
+from profiler.advisor.utils.utils import safe_index_value
+from profiler.advisor.utils.utils import safe_division
 
 logger = logging.getLogger()
 
@@ -139,9 +140,9 @@ class SlowRankAnalyzer(BaseAnalyzer):
 
         headers = self.format_datas.get("headers")
 
-        dimension_index = safe_index(headers, dimension)
-        rank_id_index = safe_index(headers, "rank_id")
-        step_index = safe_index(headers, "step")
+        dimension_index = safe_index_value(headers, dimension)
+        rank_id_index = safe_index_value(headers, "rank_id")
+        step_index = safe_index_value(headers, "step")
         if dimension_index is None or rank_id_index is None:
             return global_step_rank
 
@@ -172,9 +173,9 @@ class SlowRankAnalyzer(BaseAnalyzer):
         stage_step_rank = {}
 
         headers = self.format_datas.get("headers")
-        dimension_index = safe_index(headers, dimension)
-        rank_id_index = safe_index(headers, "rank_id")
-        step_index = safe_index(headers, "step")
+        dimension_index = safe_index_value(headers, dimension)
+        rank_id_index = safe_index_value(headers, "rank_id")
+        step_index = safe_index_value(headers, "step")
         if dimension_index is None or rank_id_index is None:
             return stage_step_rank
 
@@ -196,8 +197,8 @@ class SlowRankAnalyzer(BaseAnalyzer):
                 tmp_rank_list.append(rank_id)
                 tmp_time_list.append(time)
 
-            if self.compute_max_gap_ratio(tmp_time_list, sum(tmp_time_list) / len(
-                    tmp_time_list)) < self.RATIO_THRESHOLD:
+            if self.compute_max_gap_ratio(tmp_time_list, safe_division(sum(tmp_time_list), len(
+                    tmp_time_list))) < self.RATIO_THRESHOLD:
                 continue
 
             max_time, min_time = max(tmp_time_list), min(tmp_time_list)

@@ -21,7 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Me
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor
+    initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
@@ -32,7 +32,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, ApiData, move2device_exec
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 
 
@@ -194,12 +194,20 @@ def run_ut(config):
 
 
 def run_api_offline(config, compare, api_name_set):
+    err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
             continue
-        [_, api_name, _] = api_full_name.split(Const.SEP)
+        _, api_name = extract_basic_api_segments(api_full_name)
+        if not api_name:
+            err_message = f"API {api_full_name} not support for run ut. SKIP."
+            logger.error(err_message)
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
+            continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
@@ -213,7 +221,6 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            err_column = CompareColumn()
             fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
             result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
             compare.record_results(result_info)
@@ -245,10 +252,11 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
-            dispatcher.update_consume_queue(api_data)
+            if api_data.rank in config.online_config.rank_list:
+                dispatcher.update_consume_queue(api_data)
 
     def shared_storage_communication_flow():
         flag_num = -1
@@ -266,10 +274,11 @@ def run_api_online(config, compare):
             if not isinstance(api_data, ApiData):
                 continue
             api_full_name = api_data.name
-            [_, api_name, _] = api_full_name.split(Const.SEP)
+            _, api_name = extract_basic_api_segments(api_full_name)
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
-            dispatcher.update_consume_queue(api_data)
+            if api_data.rank in config.online_config.rank_list:
+                dispatcher.update_consume_queue(api_data)
 
     if config.online_config.nfs_path:
         shared_storage_communication_flow()
@@ -292,7 +301,7 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
 
 def is_unsupported_api(api_name):
     split_name = api_name.split(Const.SEP)[0]
-    flag = split_name in [Const.NPU, Const.DISTRIBUTED]
+    flag = split_name == Const.DISTRIBUTED
     if flag:
         logger.info(f"{split_name} api is not supported for run ut. SKIP.")
     return flag
@@ -313,7 +322,7 @@ def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -331,8 +340,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     bench_grad_out, device_grad_out = None, None
-    out = exec_api(api_type, api_name, cpu_args, cpu_kwargs)
-    device_out = exec_api(api_type, api_name, device_args, device_kwargs)
+    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
+    device_out = exec_api(api_type, api_name, current_device, device_args, device_kwargs)
     current_path = os.path.dirname(os.path.realpath(__file__))
     ut_setting_path = os.path.join(current_path, "torch_ut_setting.json")
     api_setting_dict = get_json_contents(ut_setting_path)
@@ -352,20 +361,23 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
         else:
             backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
+    if api_name == "npu_fusion_attention":
+        out = out[0]
+        device_out = device_out[0]
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
 def run_torch_api_online(api_full_name, api_data, backward_content):
     in_fwd_data_list = []
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
     if kwargs.get("device"):
         del kwargs["device"]
 
-    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = exec_api(api_type, api_name, Const.CUDA_LOWERCASE, args, kwargs)
     device_out = move2device_exec(device_out, "cpu")
     return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
 

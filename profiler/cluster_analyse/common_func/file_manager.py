@@ -101,13 +101,17 @@ class FileManager:
             raise RuntimeError(f"Can't create file: {base_name}") from e
 
     @classmethod
-    def create_json_file(cls, profiler_path: str, data: dict, file_name: str) -> None:
+    def create_json_file(cls, profiler_path: str, data: dict, file_name: str, common_flag: bool = False) -> None:
         if not data:
             return
-        output_path = os.path.join(profiler_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
-        output_file = os.path.join(output_path, file_name)
+        if not common_flag:
+            output_path = os.path.join(profiler_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
+            output_file = os.path.join(output_path, file_name)
+            PathManager.check_path_writeable(output_path)
+        else:
+            output_file = os.path.join(profiler_path, file_name)
+            PathManager.check_path_writeable(profiler_path)
         base_name = os.path.basename(output_file)
-        PathManager.check_path_writeable(output_path)
         try:
             with os.fdopen(
                 os.open(output_file, os.O_WRONLY | os.O_CREAT, cls.DATA_FILE_AUTHORITY), 'w'
@@ -124,7 +128,8 @@ class FileManager:
             if not os.path.exists(output_path):
                 PathManager.make_dir_safety(output_path)
             return
-        PathManager.remove_path_safety(output_path)
+        if os.path.exists(output_path):
+            PathManager.remove_path_safety(output_path)
         PathManager.make_dir_safety(output_path)
 
     @classmethod

@@ -9,7 +9,7 @@
 
 ## 工具特性
 
-- 使用便捷，修改处少
+- 使用便捷，修改点少
 - 梯度是一步训练过程中差异最大的地方，精度差异体现到梯度差异上比loss差异更明显
 
 ## 工具安装
@@ -44,57 +44,65 @@
 
    | 参数                       | 说明                          | 输入类型                     | 是否必选 |
    |--------------------------------|-----------------------------------|-----------------|----------|
-   | level                  | 输出级别。决定导出数据的详细程度，级别越大导出数据越详细。可取值：L0, L1, L2|str  | 是     |
+   | level                  | 输出级别。决定导出数据的详细程度，级别越大导出数据越详细。可取值：L0、L1、L2 |str  | 是     |
    | param_list             | 权重名称列表，表示需要监控的权重。不指定或列表为空就表示监控所有权重。 | List[str] | 否       |
-   | rank                   | rank id列表，在多卡场景下，表示需要导出梯度数据的进程的rank id。不指定或列表为空就表示导出所有rank的数据。单卡场景无需关注该参数。 （MindSpore静态图模式下，当前暂不支持指定rank功能） | List[int] | 否       |
-   | step                   | step列表，表示需要导出数据的step列表。不指定或列表为空就表示导出所有step的数据。（MindSpore静态图模式下，当前暂不支持指定step功能） | List[int] | 否 |
-   | bounds                 | 区间列表，用来划分区间以统计数值的分布。需要保证由数据小到大排列。不指定则使用默认值[-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10] | List[float] | 否  |
+   | rank                   | Rank ID列表，在多卡场景下，表示需要导出梯度数据的进程的Rank ID。不指定或列表为空就表示导出所有Rank的数据。单卡场景无需关注该参数。（MindSpore静态图场景暂不支持指定Rank功能） | List[int] | 否       |
+   | step                   | step列表，表示需要导出数据的step列表。不指定或列表为空就表示导出所有step的数据。（MindSpore静态图场景暂不支持指定step功能） | List[int] | 否 |
+   | bounds                 | 区间列表，用来划分区间以统计数值的分布。需要保证由数据从小到大排列。不指定则使用默认值[-10.0, -1.0, -0.1, -0.01, -0.001, 0.0, 0.001, 0.01, 0.1, 1.0, 10.0] | List[float] | 否  |
    | output_path            | 输出目录。如果不存在就会创建一个新目录。 |  str | 是 |
 
    **不同级别的level的导出数据**
-
-
+   
    | 级别 | 特征数据表头                                                 | 是否有方向数据 |
    | ---- | ------------------------------------------------------------ | -------------- |
    | L0   | ("param_name", "MD5", "max", "min", "norm", "shape")         | 否             |
-   | L1   | ("param_name", "max", "min", "norm", "shape")         | 是             |
+   | L1   | ("param_name", "max", "min", "norm", "shape")                | 是             |
    | L2   | ("param_name", *intervals, "=0", "max", "min", "norm", "shape") | 是             |
    
    intervals就是根据值分布bounds划分出的区间。
+   
    MindSpore静态图模式下，L0级别中暂不支持"MD5"
    
-   **方向数据解释**
+   **方向数据说明**
    
    因为模型的参数往往非常大，所以存储真实数据是不可接受的，这里折衷一下，只存储梯度数据的正负号（一个布尔值），也就是方向。
    
    **bounds和值分布解释**
    
-   + 值分布：梯度数据落在各个区间的元素个数占总元素个数的比例。
-   + bounds：一个列表，用来划分出区间以统计值分布。例如传入bounds = [-10, 0, 10]，此时有一个 grad_value: Tensor = [9.3 , 5.4, -1.0, -12.3]，依据 bounds 划分出 (-inf, -10]、(-10, 0]、(0, 10]、(10, inf) 四个区间，然后统计grad_value里的数据落在每个区间内的个数，得到 1、1、2、0。如下图所示：   
-   ![Alt text](img/image-1.png)
+      + 值分布：梯度数据落在各个区间的元素个数占总元素个数的比例。
+   
+      + bounds：一个列表，用来划分出区间以统计值分布。例如传入bounds = [-10, 0, 10]，此时有一个 grad_value: Tensor = [9.3 , 5.4, -1.0, -12.3]，依据bounds 划分出 (-inf, -10]、(-10, 0]、(0, 10]、(10, inf) 四个区间，然后统计grad_value里的数据落在每个区间内的个数，得到 1、1、2、0。如下图所示：
+   
+        ![Alt text](img/image-1.png)
 
 2. 插入代码。示例代码如下：
 
-- PyTorch框架：模型构造完成时，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将模型作为参数传入。
-```python
-from grad_tool.grad_monitor import GradientMonitor
-gm = GradientMonitor("config_path")
-gm.monitor(model)
-```
-- MindSpore框架：在训练开始前，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将优化器作为参数传入。
-```python
-from grad_tool.grad_monitor import GradientMonitor
-gm = GradientMonitor("config_path", framework="MindSpore")
-gm.monitor(optimizer)
-```
+   - PyTorch框架：模型构造完成时，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将模型作为参数传入。
+
+     ```python
+     from grad_tool.grad_monitor import GradientMonitor
+     gm = GradientMonitor("config_path")
+     gm.monitor(model)
+     ```
+
+   - MindSpore框架：在训练开始前，传入config.yaml的路径实例化一个GradientMonitor对象，然后调用gm.monitor并将优化器作为参数传入。
+
+     ```python
+     from grad_tool.grad_monitor import GradientMonitor
+     gm = GradientMonitor("config_path", framework="MindSpore")
+     gm.monitor(optimizer)
+     ```
+
+     动态图场景下，optimizer不能在jit装饰器修饰范围内。
+
 
 3. 结束监控（MindSpore静态图模式下需要）
 
    在训练结束之后，调用stop接口
-
-```python
-gm.stop()
-```
+   
+   ```python
+   gm.stop()
+   ```
 
 ### 输出结果
 **输出目录结构**（以level配置L2为例）
@@ -106,7 +114,6 @@ gm.stop()
       │        ├── step_{step}
       │        │        ├── {param_name}.pt(npy)
 ```
-+ {timestamp}：梯度工具导出数据的时候会在output_path下生成一个时间戳目录，然后在这个时间戳目录下输出结果。
 + rank_{rank_id}：在分布式场景下，会记录卡的rank_id。非分布式场景下，如果是CPU则记录进程号，如果是CPU或GPU则记录卡号
 + grad_summary_{step}.csv：会分step记录每一步的梯度数据统计值。
 + step_{step}：这个目录下会存放该step的梯度的方向数据。
@@ -143,28 +150,28 @@ gm.stop()
    - 单卡比对
 
       新建Python脚本，调用grad_tool.grad_comparator的GradComparator.compare函数，传入的前两个参数分别为梯度数据的rank层目录，第三个参数为输出目录。如下所示：
-
-```python
-from grad_tool.grad_comparator import GradComparator
-# 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
-GradComparator.compare("需要对比的rank_id级目录",
-                        "需要对比的rank_id级目录",
-                        "比对结果输出目录",
-                        framework="PyTorch")
-```
+      
+      ```python
+      from grad_tool.grad_comparator import GradComparator
+      # 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
+      GradComparator.compare("需要对比的rank_id级目录",
+                              "需要对比的rank_id级目录",
+                              "比对结果输出目录",
+                              framework="PyTorch")
+      ```
 
    - 多卡比对
 
       新建Python脚本，调用grad_tool.grad_comparator的GradComparator.compare_distributed函数，传入的前两个参数分别为梯度数据的rank层目录，第三个参数为输出目录。如下所示：
-
-```python
-from grad_tool.grad_comparator import GradComparator
-# 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
-GradComparator.compare_distributed("配置文件里写的输出目录",
-                                    "配置文件里写的输出目录",
-                                    "比对结果输出目录",
-                                    framework="PyTorch")
-```
+      
+      ```python
+      from grad_tool.grad_comparator import GradComparator
+      # 默认framework为PyTorch，MindSpore比对时framework设置为MindSpore
+      GradComparator.compare_distributed("配置文件里写的输出目录",
+                                          "配置文件里写的输出目录",
+                                          "比对结果输出目录",
+                                          framework="PyTorch")
+      ```
 
 ### 比对结果
 

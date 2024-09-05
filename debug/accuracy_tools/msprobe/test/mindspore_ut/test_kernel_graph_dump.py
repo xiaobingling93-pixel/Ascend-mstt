@@ -25,7 +25,7 @@ from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class TestKernelGraphDump(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "tensor",
@@ -45,7 +45,7 @@ class TestKernelGraphDump(TestCase):
         self.assertEqual(dumper.dump_json["common_dump_settings"]["file_format"], "bin")
         self.assertEqual(dumper.dump_json["common_dump_settings"]["input_output"], 2)
 
-        with patch("msprobe.mindspore.dump.kernel_graph_dump.make_dump_path_if_not_exists"), \
+        with patch("msprobe.mindspore.dump.kernel_graph_dump.create_directory"), \
              patch("msprobe.mindspore.dump.kernel_graph_dump.FileOpen"), \
              patch("msprobe.mindspore.dump.kernel_graph_dump.json.dump"), \
              patch("msprobe.mindspore.dump.kernel_graph_dump.logger.info"):

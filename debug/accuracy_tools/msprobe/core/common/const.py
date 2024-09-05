@@ -24,6 +24,11 @@ class Const:
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    NONE = None
+    THREE_SEGMENT = 3
+    FOUR_SEGMENT = 4
+    SIX_SEGMENT = 6
+    SEVEN_SEGMENT = 7
 
     # dump mode
     ALL = "all"
@@ -89,11 +94,15 @@ class Const:
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    NPU_LOWERCASE = 'npu'
+    CPU_LOWERCASE = 'cpu'
+    CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
+        "all_gather_into_tensor", "reduce_scatter_tensor"
     ]
 
     CONVERT = {
@@ -145,7 +154,11 @@ class CompareConst:
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
     MAGNITUDE = 0.5
-
+    OP_NAME = "op_name"
+    INPUT_STRUCT = "input_struct"
+    OUTPUT_STRUCT = "output_struct"
+    SUMMARY = "summary"
+    
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
         ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
@@ -207,6 +220,10 @@ class CompareConst:
     RED = "FFFF0000"
     YELLOW = "FFFF00"
     BLUE = "0000FF"
+    
+    # run_ut const
+    MAX_TOKENS = 65536
+    SPECIAL_SPARSE_MOED = 4
 
     # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
@@ -310,6 +327,8 @@ class MsgConst:
     """
     Class for log messages const
     """
+    CLEAR_SYMBOL = "\033[K"
+    LEVEL = ["INFO", "WARNING", "ERROR"]
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
 
