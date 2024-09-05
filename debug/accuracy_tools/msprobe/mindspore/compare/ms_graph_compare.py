@@ -315,6 +315,8 @@ class GraphMSComparator:
             else:
                 if len(split_path) > 4:
                     rank_id = convert_to_int(split_path[-4])
+                if rank_id == -1 and len(split_path) > 3:
+                    rank_id = convert_to_int(split_path[-3])
                 step_id = convert_to_int(split_path[-1])
             return rank_id, step_id
 
