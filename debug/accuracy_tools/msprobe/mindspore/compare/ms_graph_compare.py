@@ -91,7 +91,7 @@ def generate_data_name(data_path):
     statistic_exist = bool(statistic_file_list)
     npy_exist = bool(npy_file_list)
 
-    mapping_dict = []
+    mapping_dict = {}
     if mapping_exist:
         for mapping_file in mapping_file_list:
             with FileOpen(mapping_file, "r") as f:
