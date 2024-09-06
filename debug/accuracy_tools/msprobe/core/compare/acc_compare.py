@@ -2,6 +2,7 @@ import multiprocessing
 import os
 import json
 import pandas as pd
+from tqdm import tqdm
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
@@ -114,12 +115,17 @@ class Comparator:
         last_npu_ops_len = 0
         last_bench_ops_len = 0
 
+        npu_api_nums = len(npu_json_data['data'])
+        progress_bar = tqdm(total=npu_api_nums, desc="NPU API Read Progress")
+        count_npu = 0
+
         while True:
             if not read_err_npu and not read_err_bench:
                 break
             try:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
+                count_npu += 1
                 read_err_npu = True
                 npu_merge_list = self.gen_merge_list(npu_json_data,op_name_npu,stack_json_data,summary_compare,md5_compare)
                 if npu_merge_list:
@@ -134,6 +140,8 @@ class Comparator:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
                 read_err_bench = False
+
+            progress_bar.update(1)
 
             # merge all boolean expressions
             both_empty = not npu_ops_queue and not bench_ops_queue
@@ -249,7 +257,7 @@ class Comparator:
         find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
         if auto_analyze:
-            advisor = Advisor(result_df, output_path)
+            advisor = Advisor(result_df, output_path, suffix)
             advisor.analysis()
     
     def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
