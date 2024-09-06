@@ -20,11 +20,9 @@ class CommonConfig:
     def get_step_from_string(step):
         try:
             borderline = int(step.split('-')[0]), int(step.split('-')[-1])
-        except:
-            logger.error_log_with_exp(
-                "The connector(-) must start and end with decimal numbers.", 
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
-            )
+        except ValueError as e:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   "The connector(-) must start and end with decimal numbers.") from e
         if borderline[0] <= borderline[1]:
             continual_step = list(range(borderline[0], borderline[1] + 1))
         else:
@@ -67,7 +65,8 @@ class CommonConfig:
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
-
+xx = CommonConfig.get_step_from_string('6-10?')
+print(xx)
 class BaseConfig:
     def __init__(self, json_config):
         self.scope = json_config.get('scope')
