@@ -4,7 +4,7 @@ import sys
 from functools import wraps
 from msprobe.core.common.const import MsgConst
 
-LOG_LEVEL = os.environ.get(MsgConst.LOG_LEVEL, "")
+MSPROBE_LOG_LEVEL = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL, "")
 
 
 class BaseLogger:
@@ -37,7 +37,7 @@ class BaseLogger:
 
     @filter_special_chars
     def debug(self, msg):
-        if LOG_LEVEL == MsgConst.LEVEL[3]:
+        if MSPROBE_LOG_LEVEL == MsgConst.LEVEL[3]:
             self._print_log(MsgConst.LEVEL[3], msg)
 
     def on_rank_0(self, func):
