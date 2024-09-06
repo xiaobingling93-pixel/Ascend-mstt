@@ -18,7 +18,13 @@ class CommonConfig:
 
     @staticmethod
     def get_step_from_string(step):
-        borderline = int(step.split('-')[0]), int(step.split('-')[-1])
+        try:
+            borderline = int(step.split('-')[0]), int(step.split('-')[-1])
+        except:
+            logger.error_log_with_exp(
+                "The connector(-) must start and end with decimal numbers.", 
+                MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+            )
         if borderline[0] <= borderline[1]:
             continual_step = list(range(borderline[0], borderline[1] + 1))
         else:
