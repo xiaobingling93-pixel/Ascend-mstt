@@ -1,13 +1,14 @@
 import os
 import copy
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, load_yaml, load_npy
-from msprobe.core.common.file_check import create_directory
+    task_dumppath_get
+from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
+
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None):

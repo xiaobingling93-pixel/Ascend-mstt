@@ -8,7 +8,7 @@ import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
 from msprobe.mindspore import PrecisionDebugger
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)

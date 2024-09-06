@@ -22,8 +22,7 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.utils import write_csv, save_npy_to_txt, load_npy
-from msprobe.core.common.file_check import FileChecker, create_directory
+from msprobe.core.common.file_utils import FileChecker, create_directory, load_npy, save_npy_to_txt, write_csv
 
 
 class Compare:

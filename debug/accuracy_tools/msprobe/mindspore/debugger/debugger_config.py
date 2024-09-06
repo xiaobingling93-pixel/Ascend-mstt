@@ -3,7 +3,7 @@ import os
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 
 
 class DebuggerConfig:

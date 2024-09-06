@@ -2,7 +2,7 @@ import os
 import re
 
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import FileChecker
 from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate

@@ -26,10 +26,9 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.file_check import FileOpen, FileChecker, \
-    change_mode, check_path_before_create, create_directory
+from msprobe.core.common.file_utils import FileOpen, FileChecker, \
+    change_mode, check_path_before_create, create_directory, get_json_contents
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec

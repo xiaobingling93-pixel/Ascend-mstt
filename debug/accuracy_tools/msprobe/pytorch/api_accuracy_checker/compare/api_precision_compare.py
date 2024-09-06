@@ -7,7 +7,7 @@ from collections import namedtuple
 import torch
 import pandas as pd
 
-from msprobe.core.common.utils import write_csv
+from msprobe.core.common.file_utils import write_csv
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
@@ -17,7 +17,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
-from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
+from msprobe.core.common.file_utils import FileChecker, change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst

@@ -14,14 +14,14 @@ except ImportError:
 else:
     is_npu = True
 
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create, load_yaml
+from msprobe.core.common.file_utils import check_path_before_create, check_file_or_directory_path, load_yaml
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, TimeStatistics, \
     DispatchRunParam, DisPatchDataInfo
 from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu,  get_sys_info, DispatchException, COMPARE_LOGO
 from msprobe.pytorch.online_dispatch.compare import Comparator
-from msprobe.core.common.file_check import FileOpen, create_directory
+from msprobe.core.common.file_utils import FileOpen, create_directory
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")

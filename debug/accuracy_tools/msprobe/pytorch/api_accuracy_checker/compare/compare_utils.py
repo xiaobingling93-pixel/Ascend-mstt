@@ -4,7 +4,8 @@ import math
 
 import torch
 
-from msprobe.core.common.utils import CompareException, load_yaml
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
 

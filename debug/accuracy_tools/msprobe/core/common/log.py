@@ -4,6 +4,8 @@ import sys
 from functools import wraps
 from msprobe.core.common.const import MsgConst
 
+MSPROBE_LOG_LEVEL = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL, "")
+
 
 class BaseLogger:
     def __init__(self):
@@ -32,6 +34,11 @@ class BaseLogger:
     @filter_special_chars
     def warning(self, msg):
         self._print_log(MsgConst.LEVEL[1], msg)
+
+    @filter_special_chars
+    def debug(self, msg):
+        if MSPROBE_LOG_LEVEL == MsgConst.LEVEL[3]:
+            self._print_log(MsgConst.LEVEL[3], msg)
 
     def on_rank_0(self, func):
         def func_rank_0(*args, **kwargs):
