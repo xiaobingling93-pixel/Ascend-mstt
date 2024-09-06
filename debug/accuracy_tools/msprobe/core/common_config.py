@@ -65,8 +65,7 @@ class CommonConfig:
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
-xx = CommonConfig.get_step_from_string('6-10?')
-print(xx)
+
 class BaseConfig:
     def __init__(self, json_config):
         self.scope = json_config.get('scope')
