@@ -3,9 +3,10 @@ import os
 from collections import namedtuple
 
 import numpy as np
-from msprobe.core.common.utils import write_csv, get_json_contents, CompareException
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import get_json_contents, write_csv
 import torch
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.const import CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \

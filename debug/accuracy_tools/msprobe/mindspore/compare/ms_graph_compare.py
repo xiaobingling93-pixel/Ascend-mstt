@@ -6,9 +6,9 @@ import os
 import numpy as np
 import pandas as pd
 from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
-from msprobe.core.common.file_check import FileOpen, check_path_before_create, change_mode
+from msprobe.core.common.file_utils import FileOpen, check_path_before_create, change_mode, load_npy
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, load_npy
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
 from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
 from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories

@@ -16,8 +16,7 @@ import os
 import mindspore as ms
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.file_check import path_len_exceeds_limit, check_path_exists
-from msprobe.core.common.utils import save_npy
+from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
 
 

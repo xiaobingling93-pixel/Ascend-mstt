@@ -6,7 +6,7 @@ import numpy as np
 
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.utils import load_npy
+from msprobe.core.common.file_utils import load_npy
 from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np_dtype, api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
