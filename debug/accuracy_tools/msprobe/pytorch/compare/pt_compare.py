@@ -1,12 +1,11 @@
 import os.path
 import torch
-from msprobe.core.common.const import FileCheckConst, Const
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.const import FileCheckConst
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.common.utils import check_configuration_param, task_dumppath_get, check_compare_param, FileChecker
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import check_configuration_param, task_dumppath_get, check_compare_param, CompareException
+from msprobe.core.common.file_utils import FileChecker, create_directory
 from msprobe.pytorch.common.utils import load_pt
 
 

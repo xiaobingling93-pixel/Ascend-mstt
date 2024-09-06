@@ -23,7 +23,7 @@ from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.compare import Compare
 from msprobe.pytorch.parse_tool.lib.visualization import Visualization
 from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 
 class ParseTool:
     def __init__(self):

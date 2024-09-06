@@ -1,5 +1,5 @@
 import json
-from msprobe.core.common.file_check import FileOpen, check_file_type
+from msprobe.core.common.file_utils import FileOpen, check_file_type
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger

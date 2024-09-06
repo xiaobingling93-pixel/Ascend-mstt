@@ -15,20 +15,15 @@
 # limitations under the License.
 """
 import collections
-import fcntl
 import os
 import re
-import shutil
 import subprocess
 import time
 import json
-import csv
 from datetime import datetime, timezone
-import yaml
-import numpy as np
 
-from msprobe.core.common.file_check import FileOpen, FileChecker, change_mode
-from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
 
@@ -164,23 +159,6 @@ def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=F
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
-def check_file_or_directory_path(path, isdir=False):
-    """
-    Function Description:
-        check whether the path is valid
-    Parameter:
-        path: the path to check
-        isdir: the path is dir or file
-    Exception Description:
-        when invalid data throw exception
-    """
-    if isdir:
-        path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
-    else:
-        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
-    path_checker.common_check()
-
-
 def is_starts_with(string, prefix_list):
     return any(string.startswith(prefix) for prefix in prefix_list)
 
@@ -197,23 +175,6 @@ def check_json_file(input_param, npu_json, bench_json, stack_json):
     _check_json(npu_json, input_param.get("npu_json_path"))
     _check_json(bench_json, input_param.get("bench_json_path"))
     _check_json(stack_json, input_param.get("stack_json_path"))
-
-
-def check_file_size(input_file, max_size):
-    try:
-        file_size = os.path.getsize(input_file)
-    except OSError as os_error:
-        logger.error('Failed to open "%s". %s' % (input_file, str(os_error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from os_error
-    if file_size > max_size:
-        logger.error('The size (%d) of %s exceeds (%d) bytes, tools not support.'
-                        % (file_size, input_file, max_size))
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-
-
-def check_file_not_exists(file_path):
-    if os.path.exists(file_path) or os.path.islink(file_path):
-        remove_path(file_path)
 
 
 def check_regex_prefix_format_valid(prefix):
@@ -235,30 +196,6 @@ def check_regex_prefix_format_valid(prefix):
                          f"is {len(prefix)}")
     if not re.match(Const.REGEX_PREFIX_PATTERN, prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
-
-
-def remove_path(path):
-    if not os.path.exists(path):
-        return
-    try:
-        if os.path.islink(path) or os.path.isfile(path):
-            os.remove(path)
-        else:
-            shutil.rmtree(path)
-    except PermissionError as err:
-        logger.error("Failed to delete {}. Please check the permission.".format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR) from err
-
-
-def move_file(src_path, dst_path):
-    check_file_or_directory_path(src_path)
-    check_path_before_create(dst_path)
-    try:
-        shutil.move(src_path, dst_path)
-    except Exception as e:
-        logger.error(f"move file {src_path} to {dst_path} failed")
-        raise RuntimeError(f"move file {src_path} to {dst_path} failed") from e
-    change_mode(dst_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def get_dump_data_path(dump_dir):
@@ -318,16 +255,6 @@ def parse_value_by_comma(value):
             logger.error("please check your input shape.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
     return value_list
-
-
-def get_data_len_by_shape(shape):
-    data_len = 1
-    for item in shape:
-        if item == -1:
-            logger.error("please check your input shape, one dim in shape is -1.")
-            return -1
-        data_len = data_len * item
-    return data_len
 
 
 def add_time_as_suffix(name):
@@ -393,41 +320,6 @@ def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
     logger.info(f"Generate compare script successfully which is {compare_script_path}.")
 
 
-def check_file_valid(file_path):
-    if os.path.islink(file_path):
-        logger.error('The file path {} is a soft link.'.format(file_path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if len(os.path.realpath(file_path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(file_path)) > \
-            Const.FILE_NAME_LENGTH:
-        logger.error('The file path length exceeds limit.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not re.match(Const.FILE_PATTERN, os.path.realpath(file_path)):
-        logger.error('The file path {} contains special characters.'.format(file_path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if os.path.isfile(file_path):
-        file_size = os.path.getsize(file_path)
-        if file_path.endswith(Const.PKL_SUFFIX) and file_size > Const.ONE_GB:
-            logger.error('The file {} size is greater than 1GB.'.format(file_path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-        if file_path.endswith(Const.NUMPY_SUFFIX) and file_size > Const.TEN_GB:
-            logger.error('The file {} size is greater than 10GB.'.format(file_path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def check_path_before_create(path):
-    if len(os.path.realpath(path)) > Const.DIRECTORY_LENGTH or len(os.path.basename(path)) > \
-            Const.FILE_NAME_LENGTH:
-        logger.error('The file path length exceeds limit.')
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not re.match(Const.FILE_PATTERN, os.path.realpath(path)):
-        logger.error('The file path {} contains special characters.'.format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
 def check_inplace_op(prefix):
     if len(prefix) > Const.DISTRIBUTED_PREFIX_LENGTH:
         return False
@@ -491,122 +383,3 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
-
-
-def write_csv(data, filepath, mode="a+"):
-    exist = os.path.exists(filepath)
-    with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-    if not exist:
-        change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-
-def load_npy(filepath, enable_pickle=False):
-    check_file_or_directory_path(filepath)
-    try:
-        npy = np.load(filepath, allow_pickle=enable_pickle)
-    except Exception as e:
-        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
-        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
-    return npy
-
-
-def save_npy(data, filepath):
-    filepath = os.path.realpath(filepath)
-    check_path_before_create(filepath)
-    try:
-        np.save(filepath, data)
-    except Exception as e:
-        logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
-        raise RuntimeError(f"Save numpy file {filepath} failed.") from e
-    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
-
-def save_npy_to_txt(self, data, dst_file='', align=0):
-    if os.path.exists(dst_file):
-        self.log.info("Dst file %s exists, will not save new one.", dst_file)
-        return
-    shape = data.shape
-    data = data.flatten()
-    if align == 0:
-        align = 1 if len(shape) == 0 else shape[-1]
-    elif data.size % align != 0:
-        pad_array = np.zeros((align - data.size % align,))
-        data = np.append(data, pad_array)
-    check_path_before_create(dst_file)
-    try:
-        np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
-    except Exception as e:
-        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
-    change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load json.')
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file content is not a dictionary!')
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
-
-
-def load_yaml(yaml_path):
-    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
-    checked_path = path_checker.common_check()
-    try:
-        with FileOpen(checked_path, "r") as f:
-            yaml_data = yaml.safe_load(f)
-    except Exception as e:
-        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
-        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
-    return yaml_data
-
-
-def save_workbook(workbook, file_path):
-    """
-    保存工作簿到指定的文件路径
-    workbook: 要保存的工作簿对象
-    file_path: 文件保存路径
-    """
-    file_path = os.path.realpath(file_path)
-    check_path_before_create(file_path)
-    try:
-        workbook.save(file_path)
-    except Exception as e:
-        logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
-        raise CompareException(CompareException.WRITE_FILE_ERROR) from e
-    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-
-
-def load_json(json_path):
-    try:
-        with FileOpen(json_path, "r") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            data = json.load(f)
-            fcntl.flock(f, fcntl.LOCK_UN)
-    except Exception as e:
-        logger.error(f'load json file "{os.path.basename(json_path)}" failed.')
-        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
-    return data
-
-
-def save_json(json_path, data, indent=None):
-    json_path = os.path.realpath(json_path)
-    check_path_before_create(json_path)
-    try:
-        with FileOpen(json_path, 'w') as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
-            json.dump(data, f, indent=indent)
-            fcntl.flock(f, fcntl.LOCK_UN)
-    except Exception as e:
-        logger.error(f'Save json file "{os.path.basename(json_path)}" failed.')
-        raise DumpException(DumpException.WRITE_FILE_ERROR) from e
-    change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)

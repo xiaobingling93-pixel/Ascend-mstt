@@ -16,7 +16,7 @@
 """
 
 import os
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 
 
 def get_ops():

@@ -16,7 +16,8 @@
 import os
 import mindspore as ms
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.core.common.utils import Const, load_yaml
+from msprobe.core.common.utils import Const
+from msprobe.core.common.file_utils import load_yaml
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
