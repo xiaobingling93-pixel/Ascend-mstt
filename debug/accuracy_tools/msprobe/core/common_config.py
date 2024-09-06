@@ -8,7 +8,7 @@ class CommonConfig:
         self.task = json_config.get('task')
         self.dump_path = json_config.get('dump_path')
         self.rank = json_config.get('rank')
-        self.step = json_config.get('step')
+        self.step = self.get_real_step(json_config.get('step'))
         self.level = json_config.get('level')
         self.seed = json_config.get('seed')
         self.acl_config = json_config.get('acl_config')
@@ -16,15 +16,37 @@ class CommonConfig:
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()
 
+    @staticmethod
+    def get_step_from_string(step):
+        borderline = int(step.split('-')[0]), int(step.split('-')[-1])
+        if borderline[0] <= borderline[1]:
+            continual_step = list(range(borderline[0], borderline[1] + 1))
+        else:
+            continual_step = list(range(borderline[0], borderline[1] - 1, -1))
+        return continual_step
+
+    def get_real_step(self, step_input):
+        if step_input is not None and not isinstance(step_input, list):
+            logger.error_log_with_exp("step is invalid, it should be a list",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        real_step = []
+        for step in step_input:
+            if not isinstance(step, (int, str)):
+                    raise ValueError(f"step element {step} must be an integer or string.")
+            if isinstance(step, int) and step >= 0:
+                real_step.append(step)
+            elif isinstance(step, str) and '-' in step:
+                continual_step = self.get_step_from_string(step)
+                real_step.extend(continual_step)
+        real_step.sort()
+        return real_step
+    
     def _check_config(self):
         if self.task and self.task not in Const.TASK_LIST:
             logger.error_log_with_exp("task is invalid, it should be one of {}".format(Const.TASK_LIST),
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.rank is not None and not isinstance(self.rank, list):
             logger.error_log_with_exp("rank is invalid, it should be a list",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.step is not None and not isinstance(self.step, list):
-            logger.error_log_with_exp("step is invalid, it should be a list",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.level and self.level not in Const.LEVEL_LIST:
             logger.error_log_with_exp("level is invalid, it should be one of {}".format(Const.LEVEL_LIST),
