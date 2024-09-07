@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-from unittest import TestCase
+from unittest import TestCase, main
 from unittest.mock import patch
 
 from msprobe.core.common.log import logger
@@ -32,7 +32,7 @@ class TestCommonConfig(TestCase):
         self.assertIsNone(common_config.task)
         self.assertIsNone(common_config.dump_path)
         self.assertIsNone(common_config.rank)
-        self.assertIsNone(common_config.step)
+        self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
         self.assertIsNone(common_config.seed)
         self.assertIsNone(common_config.acl_config)
@@ -56,13 +56,13 @@ class TestCommonConfig(TestCase):
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
-        json_config.update({"step": 0})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "step is invalid, it should be a list")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
+        json_config = {"step": "invalid_step"}  # 传入一个非列表的 step
+        with self.assertRaises(MsprobeException) as cm:
+            CommonConfig(json_config)
+        the_exception = cm.exception
+        self.assertEqual(the_exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        self.assertEqual(str(the_exception), "[msprobe] 无效参数：step is invalid, it should be a list")
+        
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
         json_config.update({"step": [0]})
@@ -150,3 +150,5 @@ class TestCommonConfig(TestCase):
                          "data_mode is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
+
+main()
