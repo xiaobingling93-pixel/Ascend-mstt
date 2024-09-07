@@ -56,7 +56,7 @@ class TestCommonConfig(TestCase):
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
-        json_config = {"step": "invalid_step"}  # 传入一个非列表的 step
+        json_config.update({"step": "invalid_step"})
         with self.assertRaises(MsprobeException) as cm:
             CommonConfig(json_config)
         the_exception = cm.exception
