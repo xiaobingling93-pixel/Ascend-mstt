@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-from unittest import TestCase,main
+from unittest import TestCase
 from unittest.mock import patch
 
 from msprobe.core.common.log import logger
@@ -162,4 +162,3 @@ class TestCommonConfig(TestCase):
                          "data_mode is invalid, it should be a list")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-main()
