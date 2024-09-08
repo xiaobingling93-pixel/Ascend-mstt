@@ -4,7 +4,7 @@
 ![python](https://img.shields.io/badge/python-3.8|3.9|3.10-blue)
 ![platform](https://img.shields.io/badge/platform-Linux-yellow)
 
-[**msprobe**](./) 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些子工具侧重不同的训练场景，可以定位模型训练中的精度问题。
+**msprobe** 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些子工具侧重不同的训练场景，可以定位模型训练中的精度问题。
 
 为方便使用，本工具提供了一个统一、简易的程序接口，**PrecisionDebugger**，以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可轻松使用各种功能。
 
@@ -55,9 +55,9 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。
 
-[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)（更新中）
+[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)
 
-[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)（待补充）
+[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)
 
 ### 5 数据解析
 
@@ -67,7 +67,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ### 6 无标杆比对
 
-[PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)（待补充）
+[PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)
 
 [MindSpore 场景的无标杆比对](./docs/16.overflow_check_MindSpore.md)（待补充）
 
@@ -90,7 +90,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 📑 补充材料
 
-[msprobe 标准性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)
+[msprobe 性能基线报告](./docs/S01.report_msprobe_dump_standard_performance_baseline.md)
 
 [无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
 
