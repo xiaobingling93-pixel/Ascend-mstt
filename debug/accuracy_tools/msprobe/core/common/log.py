@@ -10,7 +10,8 @@ class BaseLogger:
         self.rank = None
         self.level = self.get_level()
 
-    def get_level(self):
+    @staticmethod
+    def get_level():
         input_level = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL)
         if input_level in MsgConst.LEVEL_ENUM:
             return int(input_level)
