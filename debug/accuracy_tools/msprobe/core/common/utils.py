@@ -386,11 +386,11 @@ def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
 
 
-def check_op_str_pattern_valid(string, op_name=None, stack_info=False):
+def check_op_str_pattern_valid(string, op_name=None):
     if isinstance(string, str) and re.search(Const.STRING_INVALID_PATTERN, string):
         if not op_name:
             message = "op name contains special characters, please check!"
         else:
-            message = f"{'stack info' if stack_info else 'data'} of {op_name} contains special characters, please check!"
+            message = f"data of {op_name} contains special characters, please check!"
         logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)

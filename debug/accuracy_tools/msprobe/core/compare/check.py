@@ -146,12 +146,3 @@ def valid_key_value(key, value, op_name):
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     else:
         check_op_str_pattern_valid(value, op_name)
-
-
-def check_stack_json_str(stack_info, op_name):
-    if isinstance(stack_info, list):
-        for item in stack_info:
-            check_op_str_pattern_valid(item, op_name, stack_info=True)
-    else:
-        raise TypeError(
-            f"Expected stack_info to be a list, but got {type(stack_info).__name__} for operation '{op_name}'.")
