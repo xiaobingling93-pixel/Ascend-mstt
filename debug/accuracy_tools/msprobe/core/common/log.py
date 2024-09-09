@@ -8,7 +8,14 @@ from msprobe.core.common.const import MsgConst
 class BaseLogger:
     def __init__(self):
         self.rank = None
-        self.level = int(os.environ.get(MsgConst.MSPROBE_LOG_LEVEL, "3"))
+        self.level = self.get_level()
+
+    def get_level(self):
+        input_level = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL)
+        if input_level in MsgConst.LEVEL_ENUM:
+            return int(input_level)
+        else:
+            return 3
 
     def get_rank(self):
         return self.rank
