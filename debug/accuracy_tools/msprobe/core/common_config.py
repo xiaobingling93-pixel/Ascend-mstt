@@ -32,12 +32,13 @@ class CommonConfig:
     def get_real_step(self, step_input):
         if step_input is None:
             return []
-        if step_input is not None and not isinstance(step_input, list):
+        if not isinstance(step_input, list):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "step is invalid, it should be a list")
         real_step = []
         for step in step_input:
             if not isinstance(step, (int, str)):
-                raise ValueError(f"step element {step} must be an integer or string.")
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                       f"step element {step} must be an integer or string.")
             if isinstance(step, int) and step >= 0:
                 real_step.append(step)
             elif isinstance(step, str) and '-' in step:
