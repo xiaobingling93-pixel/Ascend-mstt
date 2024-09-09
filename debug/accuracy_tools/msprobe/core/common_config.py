@@ -20,7 +20,7 @@ class CommonConfig:
     def get_step_from_string(step):
         try:
             borderline = int(step.split('-')[0]), int(step.split('-')[-1])
-        except ValueError as e:
+        except (ValueError, IndexError) as e:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
                                    "The connector(-) must start and end with decimal numbers.") from e
         if borderline[0] <= borderline[1]:
