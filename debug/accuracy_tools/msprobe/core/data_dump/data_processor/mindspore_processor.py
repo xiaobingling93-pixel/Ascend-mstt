@@ -139,7 +139,6 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 
@@ -160,6 +159,8 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_tensor_as_npy(tensor, file_path)
             self.real_overflow_nums += 1
+            if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
+                logger.info(f"[{Const.TOOL_NAME}] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
