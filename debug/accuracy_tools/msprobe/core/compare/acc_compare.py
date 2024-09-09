@@ -58,8 +58,6 @@ class Comparator:
         op_parsed_list = read_op(op_data, op_name)
 
         stack_info = stack_json_data.get(op_name)
-        if stack_info is not None:
-            check_stack_json_str(stack_info, op_name)
         op_parsed_list.append({
             'full_op_name': op_name,
             'full_info': stack_info
