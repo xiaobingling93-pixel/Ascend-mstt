@@ -387,7 +387,7 @@ def convert_tuple(data):
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack_info=False):
-    if isinstance(string, str) and re.match(Const.STRING_INVALID_PATTERN, string):
+    if isinstance(string, str) and re.search(Const.STRING_INVALID_PATTERN, string):
         if not op_name:
             message = "op name contains special characters, please check!"
         else:
