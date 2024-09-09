@@ -117,5 +117,3 @@ class TestDataCollector(unittest.TestCase):
 
             self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {})
-
-unittest.main()
