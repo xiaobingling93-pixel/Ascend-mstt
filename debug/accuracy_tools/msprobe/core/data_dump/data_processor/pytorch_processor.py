@@ -6,7 +6,7 @@ from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
+from msprobe.core.common.file_utils import path_len_exceeds_limit, change_mode
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \

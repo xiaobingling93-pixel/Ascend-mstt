@@ -75,7 +75,7 @@ def online_precision_compare(api_data, device, common_config, api_precision_csv_
 
     try:
         # NPU vs CPU
-        cpu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+        cpu_out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, npu_args, npu_kwargs)
         npu_data_info = UtDataInfo(None, None, npu_out, cpu_out, None, [], None, rank=api_data.rank)
         npu_detail = compare.compare_output(api_full_name, npu_data_info, True)
         npu_data = pd.DataFrame(npu_detail, columns=DETAIL_TEST_ROWS[-1])

@@ -17,14 +17,14 @@
 import unittest
 from unittest.mock import patch
 
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 
 
 class TestDebuggerConfig(unittest.TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_init(self, _):
         json_config = {
             "dump_path": "/absolute_path",
@@ -55,16 +55,3 @@ class TestDebuggerConfig(unittest.TestCase):
         self.assertEqual(str(context.exception),
                          "pert_mode must be improve_precision or empty when handler_type is fix, "
                          f"but got {FreeBenchmarkConst.ADD_NOISE}.")
-
-    @patch("msprobe.mindspore.debugger.debugger_config.os.path.exists", return_value=False)
-    def test__make_dump_path_if_not_exists(self, _):
-        json_config = {"dump_path": "/absolute_path"}
-        common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
-        with patch("msprobe.mindspore.debugger.debugger_config.check_path_before_create") as mock_check_path, \
-                patch("msprobe.mindspore.debugger.debugger_config.Path.mkdir") as mock_mkdir, \
-                patch("msprobe.mindspore.debugger.debugger_config.FileChecker") as mock_checker:
-            DebuggerConfig(common_config, task_config)
-        mock_check_path.assert_called_with(json_config.get("dump_path"))
-        mock_mkdir.assert_called_with(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-        mock_checker.assert_called_with(common_config.dump_path, FileCheckConst.DIR)

@@ -32,7 +32,7 @@ except ImportError:
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.common.utils import get_rank_if_initialized
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
@@ -60,6 +60,7 @@ class Service:
         self.dump_iter_dir = None
         self.start_call = False
         self.check_level_valid()
+        self.should_stop_service = False
 
     @staticmethod
     def check_model_valid(model):
@@ -252,14 +253,19 @@ class Service:
         self.primitive_counters.clear()
 
     def start(self, model=None):
-        self.model = self.check_model_valid(model)
         self.start_call = True
-        logger.info("msprobe: debugger.start() is set successfully")
+        if self.should_stop_service:
+            return
         if self.config.step and self.current_iter > max(self.config.step):
-            self.stop()
-            raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
+            api_register.api_set_ori_func()
+            self.should_stop_service = True
+            logger.info("msprobe: dump has successfully ended")
+            return
         if self.config.step and self.current_iter not in self.config.step:
             return
+        self.model = self.check_model_valid(model)
+
+        logger.info("msprobe: debugger.start() is set successfully")
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -284,6 +290,8 @@ class Service:
                 PIJitCaptureContext.__exit__ = self.empty
 
     def stop(self):
+        if self.should_stop_service:
+            return
         logger.info("msprobe: debugger.stop() is set successfully. "
                     "Please set debugger.start() to turn on the dump switch again. ")
         if not self.start_call:

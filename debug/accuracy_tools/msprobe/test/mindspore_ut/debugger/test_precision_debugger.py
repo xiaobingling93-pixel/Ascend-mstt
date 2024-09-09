@@ -27,7 +27,7 @@ from msprobe.core.common.const import Const
 
 class TestPrecisionDebugger(unittest.TestCase):
 
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_start(self, _):
         class Handler:
             called = False

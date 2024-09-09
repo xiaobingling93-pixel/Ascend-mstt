@@ -157,8 +157,8 @@ class SingleBenchmarkAccuracyCompare:
                     max_rel_idx=max_rel_idx
                 )
                 acc_result.get_result(eb_thd, error_thd)
-            return CompareResultInfo(acc_result, error_thd, eb_thd, None)
-        return None
+        return CompareResultInfo(acc_result, error_thd, eb_thd, None)
+
 
     @classmethod
     @func_log_wrapper()
@@ -191,7 +191,7 @@ class SingleBenchmarkAccuracyCompare:
         zeros = torch.zeros_like(npu_out)
         diff_value = torch.subtract(npu_out, bench_out)
         diff_abs = torch.abs(diff_value)
-        abs_mask_idx = torch.where(torch.abs(bench_out) < benchmark_standard.small_value, ones, zeros)
+        abs_mask_idx = torch.where(torch.abs(bench_out) >= benchmark_standard.small_value, ones, zeros)
         abs_err_idx = torch.where(diff_abs > error_thd, ones, zeros)
         abs_err_idx = abs_err_idx * abs_mask_idx
         abs_err = diff_abs[torch.where(abs_err_idx == 1)]
@@ -354,7 +354,7 @@ def calc_status_details_dict(npu_out, bench_out, high_precision, summary):
 
 
 def calc_status_details_tensor(npu_out, bench_out, high_precision, summary):
-    return single_benchmark_compare(bench_out, npu_out)
+    return single_benchmark_compare(npu_out, bench_out)
 
 
 def calc_status_details_builtin(npu_out, bench_out, summary):

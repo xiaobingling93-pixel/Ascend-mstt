@@ -31,19 +31,21 @@ from msprobe.core.common.utils import (CompareException,
                                        check_dump_mode_valid,
                                        check_summary_mode_valid,
                                        check_summary_only_valid,
-                                       check_file_or_directory_path,
                                        check_compare_param,
                                        check_configuration_param,
                                        is_starts_with,
                                        _check_json,
                                        check_json_file,
-                                       check_file_size,
                                        check_regex_prefix_format_valid,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_check import FileCheckConst
-from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
+from msprobe.core.common.file_utils import (FileCheckConst,
+                                            FileCheckException,
+                                            check_file_size,
+                                            check_file_or_directory_path,
+                                            get_json_contents,
+                                            get_file_content_bytes)
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
@@ -155,7 +157,7 @@ class TestUtils(TestCase):
         file_path = os.path.realpath(__file__)
         dirname = os.path.dirname(file_path)
 
-        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(file_path, isdir=False)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, file_path)
@@ -163,7 +165,7 @@ class TestUtils(TestCase):
         self.assertEqual(TestFileChecker.ability, FileCheckConst.READ_ABLE)
 
         TestFileChecker.checked = False
-        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(dirname, isdir=True)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, dirname)
@@ -215,7 +217,7 @@ class TestUtils(TestCase):
         with self.assertRaises(CompareException) as context:
             check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False, is_print_compare_log=True)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Invalid input parameters which should be only bool type.")
+        mock_error.assert_called_with("Invalid input parameter, False which should be only bool type.")
 
     def test_is_starts_with(self):
         string = "input_slot0"
@@ -260,9 +262,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_file_size(self, mock_error):
         with patch("msprobe.core.common.utils.os.path.getsize", return_value=120):
-            with self.assertRaises(CompareException) as context:
+            with self.assertRaises(FileCheckException) as context:
                 check_file_size("input_file", 100)
-        self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
+        self.assertEqual(context.exception.code, FileCheckException.FILE_TOO_LARGE_ERROR)
         mock_error.assert_called_with("The size (120) of input_file exceeds (100) bytes, tools not support.")
 
     def test_check_regex_prefix_format_valid(self):
@@ -328,12 +330,12 @@ class TestUtils(TestCase):
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
     
-    @patch('msprobe.core.common.utils.get_file_content_bytes')
+    @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
-        with self.assertRaises(CompareException) as ce:
+        with self.assertRaises(FileCheckException) as ce:
             get_json_contents('')
-        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
+        self.assertEqual(ce.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
     def test_get_json_contents_should_return_json_obj(self):
         test_dict = {"key": "value"}

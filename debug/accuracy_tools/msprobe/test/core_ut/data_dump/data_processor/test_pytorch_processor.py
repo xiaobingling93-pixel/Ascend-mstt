@@ -299,7 +299,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.processor.has_overflow)
 
-    @patch('msprobe.core.common.file_check.path_len_exceeds_limit', return_value=False)
+    @patch('msprobe.core.common.file_utils.path_len_exceeds_limit', return_value=False)
     @patch.object(BaseDataProcessor, 'get_save_file_path',
                   return_value=['test_api_name', 'test_api_name.0.forward.input.pt'])
     def test_analyze_tensor(self, mock_path_len_exceeds_limit, _):

@@ -1,4 +1,3 @@
-import os
 import inspect
 import psutil
 import torch
@@ -11,9 +10,7 @@ except ImportError:
 else:
     pta_cpu_device = torch.device("cpu")
 
-from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_check import change_mode
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.const import CompareConst
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -67,19 +64,6 @@ def get_callstack():
             stack_line = [path, str(line), func, code]
         callstack.append(stack_line)
     return callstack
-
-
-def np_save_data(data, file_name, data_path):
-    try:
-        if hasattr(data, "numpy"):
-            data = data.numpy()
-        dump_path = os.path.join(data_path, f'{file_name}.npy')
-        np.save(dump_path, data)
-        change_mode(dump_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    except Exception as e:
-        logger.error("save numpy failed, error: {}".format(e))
-    finally:
-        pass
 
 
 def data_to_cpu(data, deep, data_cpu):

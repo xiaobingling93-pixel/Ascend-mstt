@@ -7,6 +7,7 @@ from msprobe.mindspore.free_benchmark.perturbation.base_perturbation import Base
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.const import Const
 
 
 class ImprovePrecisionPerturbation(BasePerturbation):
@@ -26,7 +27,7 @@ class ImprovePrecisionPerturbation(BasePerturbation):
         args = self.improve_tensor_precision(params.args)
         kwargs = self.improve_tensor_precision(params.kwargs)
         fuzzed_value = args
-        if self.api_name in FreeBenchmarkConst.COMMUNICATION_API_LIST:
+        if self.api_name in Const.COMMUNICATION_API_LIST:
             params.fuzzed_value = fuzzed_value
         if not self.is_fuzzed:
             logger.warning(f"{self.api_name} can not improve precision.")

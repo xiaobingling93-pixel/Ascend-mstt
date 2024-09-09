@@ -3,7 +3,7 @@ import torch
 
 def npu_linear(x, weight, bias):
     output = torch.nn.functional.linear(x, weight, bias)
-    return output.cpu()
+    return output
 
 
 def npu_linear_backward(grad, input_data, weight):
