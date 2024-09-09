@@ -10,17 +10,6 @@ class BaseLogger:
         self.rank = None
         self.level = int(os.environ.get(MsgConst.MSPROBE_LOG_LEVEL, "3"))
 
-    def _print_log(self, level, msg, end='\n'):
-        current_rank = self.get_rank()
-        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        pid = os.getpid()
-        if current_rank is not None:
-            full_msg = f"{current_time} ({pid}) [rank {current_rank}] [{level}] {msg}"
-        else:
-            full_msg = f"{current_time} ({pid}) [{level}] {msg}"
-        print(full_msg, end=end)
-        sys.stdout.flush()
-
     def get_rank(self):
         return self.rank
 
@@ -73,6 +62,17 @@ class BaseLogger:
     def error_log_with_exp(self, msg, exception):
         self.error(msg)
         raise exception
+
+    def _print_log(self, level, msg, end='\n'):
+        current_rank = self.get_rank()
+        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        pid = os.getpid()
+        if current_rank is not None:
+            full_msg = f"{current_time} ({pid}) [rank {current_rank}] [{level}] {msg}"
+        else:
+            full_msg = f"{current_time} ({pid}) [{level}] {msg}"
+        print(full_msg, end=end)
+        sys.stdout.flush()
 
 
 logger = BaseLogger()
