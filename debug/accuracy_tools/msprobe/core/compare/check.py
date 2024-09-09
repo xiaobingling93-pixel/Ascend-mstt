@@ -139,8 +139,10 @@ def check_json_key_value(input_output, op_name):
 
 def valid_key_value(key, value, op_name):
     if key == "shape" and not isinstance(value, (list, tuple)):
+        logger.error(f"shape of input of output of {op_name} is not list or tuple, please check!")
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     elif key == "requires_grad" and not isinstance(value, bool):
+        logger.error(f"requires_grad of input of output of {op_name} is not bool, please check!")
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     else:
         check_op_str_pattern_valid(value, op_name)
