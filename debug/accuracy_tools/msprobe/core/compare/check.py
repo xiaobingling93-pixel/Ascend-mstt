@@ -95,9 +95,9 @@ def fuzzy_check_name(npu_name, bench_name):
 
 
 def check_dump_json_str(op_data, op_name):
-    input_list = op_data.get("input_args", None) if Const.FORWARD in op_name else op_data.get("input", None)
-    input_kwargs = op_data.get("input_kwargs", None)
-    output_list = op_data.get("output", None)
+    input_list = op_data.get(Const.INPUT_ARGS, None) if Const.FORWARD in op_name else op_data.get(Const.INPUT, None)
+    input_kwargs = op_data.get(Const.INPUT_KWARGS, None)
+    output_list = op_data.get(Const.OUTPUT, None)
 
     if input_list:
         for api_input in input_list:
