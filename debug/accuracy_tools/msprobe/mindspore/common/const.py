@@ -1,25 +1,32 @@
 import numpy as np
 import mindspore as ms
 
+from msprobe.core.common.const import Const as CoreCost
+
 
 class Const:
     CELL = "cell"
     API = "api"
     KERNEL = "kernel"
     TOOL_LEVEL_DICT = {
-        "L0": CELL,
-        "L1": API,
-        "L2": KERNEL
+        CoreCost.LEVEL_L0: CELL,
+        CoreCost.LEVEL_L1: API,
+        CoreCost.LEVEL_L2: KERNEL
     }
     PYNATIVE_MODE = "pynative"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
+    JIT_LEVEL = "jit_level"
+    JIT_LEVEL_O0 = "O0"
+    JIT_LEVEL_O1 = "O1"
+    JIT_LEVEL_O2 = "O2"
+    ASCEND_910A = "ascend910"
 
 
 class FreeBenchmarkConst:
     DEFAULT_DEVICE = "npu"
     DEFAULT_STAGE = "forward"
-    DEFAULT_DUMP_LEVEL = "L1"
+    DEFAULT_DUMP_LEVEL = CoreCost.LEVEL_L1
     DEFAULT_PERT_TYPE = "improve_precision"
     DEFAULT_HANDLER_TYPE = "check"
     FIX_HANDLER_MODE = "fix"
@@ -31,7 +38,7 @@ class FreeBenchmarkConst:
     FIX = "fix"
     DEVICE_LIST = ["npu"]
     STAGE_LIST = ["forward"]
-    DUMP_LEVEL_LIST = ["L1"]
+    DUMP_LEVEL_LIST = [CoreCost.LEVEL_L1]
     PERT_TYPE_LIST = [IMPROVE_PRECISION, ADD_NOISE, BIT_NOISE, NO_CHANGE]
     HANDLER_TYPE_LIST = [CHECK, FIX]
     COMMUNICATION_API_LIST = [

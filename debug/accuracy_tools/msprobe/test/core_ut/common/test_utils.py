@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 """
 import os
 import uuid
+import json
 
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
@@ -23,26 +24,27 @@ from unittest.mock import patch, MagicMock, mock_open
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 from msprobe.core.common.utils import (CompareException,
-                                    check_seed_all,
-                                    check_inplace_op,
-                                    make_dump_path_if_not_exists,
-                                    check_mode_valid,
-                                    check_switch_valid,
-                                    check_dump_mode_valid,
-                                    check_summary_mode_valid,
-                                    check_summary_only_valid,
-                                    check_file_or_directory_path,
-                                    check_compare_param,
-                                    check_configuration_param,
-                                    is_starts_with,
-                                    _check_json,
-                                    check_json_file,
-                                    check_file_size,
-                                    check_regex_prefix_format_valid,
-                                    get_dump_data_path,
-                                    task_dumppath_get)
-from msprobe.core.common.file_check import FileCheckConst
+                                       check_seed_all,
+                                       check_inplace_op,
+                                       make_dump_path_if_not_exists,
+                                       check_mode_valid,
+                                       check_switch_valid,
+                                       check_dump_mode_valid,
+                                       check_summary_mode_valid,
+                                       check_summary_only_valid,
+                                       check_file_or_directory_path,
+                                       check_compare_param,
+                                       check_configuration_param,
+                                       is_starts_with,
+                                       _check_json,
+                                       check_json_file,
+                                       check_file_size,
+                                       check_regex_prefix_format_valid,
+                                       get_dump_data_path,
+                                       task_dumppath_get)
 
+from msprobe.core.common.file_check import FileCheckConst
+from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
@@ -189,9 +191,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_path": "npu_path",
-            "bench_path": "bench_path",
-            "stack_path": "stack_path",
+            "npu_json_path": "npu_path",
+            "bench_json_path": "bench_path",
+            "stack_json_path": "stack_path",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
@@ -264,9 +266,9 @@ class TestUtils(TestCase):
     @patch("msprobe.core.common.utils._check_json")
     def test_check_json_file(self, _mock_check_json):
         input_param = {
-            "npu_path": "npu_path",
-            "bench_path": "bench_path",
-            "stack_path": "stack_path"
+            "npu_json_path": "npu_path",
+            "bench_json_path": "bench_path",
+            "stack_json_path": "stack_path"
         }
         check_json_file(input_param, "npu_json", "bench_json", "stack_json")
         self.assertEqual(_mock_check_json.call_args_list[0][0], ("npu_json", "npu_path"))
@@ -307,8 +309,8 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_task_dumppath_get(self, mock_error):
         input_param = {
-            "npu_path": None,
-            "bench_path": "bench_path"
+            "npu_json_path": None,
+            "bench_json_path": "bench_path"
         }
         npu_json = {
             "task": Const.TENSOR,
@@ -321,7 +323,7 @@ class TestUtils(TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
         mock_error.assert_called_with("Please check the json path is valid.")
 
-        input_param["npu_path"] = "npu_path"
+        input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
              patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)
@@ -343,3 +345,27 @@ class TestUtils(TestCase):
                 task_dumppath_get(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
+    
+    @patch('msprobe.core.common.utils.get_file_content_bytes')
+    def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
+        mock_get_file_content_bytes.return_value = 'not a dict'
+        with self.assertRaises(CompareException) as ce:
+            get_json_contents('')
+        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
+
+    def test_get_json_contents_should_return_json_obj(self):
+        test_dict = {"key": "value"}
+        file_name = 'test.json'
+
+        fd = os.open(file_name, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
+            json.dump(test_dict, f)
+        self.assertEqual(get_json_contents(file_name), test_dict)
+        os.remove(file_name)
+
+    def test_get_file_content_bytes(self):
+        fd = os.open('test.txt', os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o644)
+        with os.fdopen(fd, 'w') as f:
+            f.write("Hello, World!")
+        self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
+        os.remove('test.txt')

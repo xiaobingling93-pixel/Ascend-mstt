@@ -33,3 +33,7 @@ class SupportedScopes:
     SYNCBN = "syncbn"
     SYNCHRONIZE_STREAM = "synchronize_stream"
     FREQ_ANALYSIS = "freq_analysis"
+    MEMORY = "memory"
+    STAGE_COMPUTE = "stage_compute"
+    GC_ANALYSIS = "gc_analysis"
+    COMPARISON = "comparison"

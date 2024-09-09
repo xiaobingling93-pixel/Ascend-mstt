@@ -1,6 +1,7 @@
 import os
 
 import mindspore as ms
+from mindspore._c_expression import MSContext
 
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.ms_config import parse_json_config
@@ -31,21 +32,29 @@ class PrecisionDebugger:
             return
         self.initialized = True
         if not config_path:
-            config_path = os.path.join(os.path.dirname(__file__), "../../config/config.json")
+            config_path = os.path.join(os.path.dirname(__file__), "../../config.json")
         common_config, task_config = parse_json_config(config_path)
         self.task = common_config.task
         if self.task == Const.GRAD_PROBE:
             self.gm = GradientMonitor(common_config, task_config)
             return
         self.config = DebuggerConfig(common_config, task_config)
-        
+
         Runtime.step_count = 0
         Runtime.is_running = False
 
     @staticmethod
     def _get_execution_mode():
+        jit_level = ms.context.get_jit_config().get(MsConst.JIT_LEVEL)
+        jit_level = jit_level if jit_level else ms.get_context(MsConst.JIT_LEVEL)
+        if not jit_level:
+            if MSContext.get_instance().get_ascend_soc_version() == MsConst.ASCEND_910A:
+                jit_level = MsConst.JIT_LEVEL_O2
+            else:
+                jit_level = MsConst.JIT_LEVEL_O0
+
         if ms.get_context("mode") == ms.GRAPH_MODE:
-            if ms.context.get_jit_config().get("jit_level") == "O2" or ms.get_context("jit_level") == "O2":
+            if jit_level == MsConst.JIT_LEVEL_O2:
                 return MsConst.GRAPH_GE_MODE
             else:
                 return MsConst.GRAPH_KBYK_MODE
@@ -61,8 +70,7 @@ class PrecisionDebugger:
             return
 
         instance.config.execution_mode = instance._get_execution_mode()
-        if instance.config.execution_mode == MsConst.PYNATIVE_MODE and instance.config.level == MsConst.API and \
-           instance.config.task != Const.FREE_BENCHMARK:
+        if cls._need_service():
             if not instance.service:
                 instance.service = Service(instance.config)
             instance.service.start(target)
@@ -97,7 +105,7 @@ class PrecisionDebugger:
         if instance.service:
             instance.service.step()
         Runtime.step_count += 1
-    
+
     @classmethod
     def monitor(cls, opt):
         instance = cls._instance
@@ -106,3 +114,13 @@ class PrecisionDebugger:
         if instance.task != Const.GRAD_PROBE:
             return
         instance.gm.monitor(opt)
+
+    @classmethod
+    def _need_service(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception("No instance of PrecisionDebugger found.")
+        if instance.config.execution_mode != MsConst.PYNATIVE_MODE:
+            return False
+        else:
+            return instance.config.task != Const.FREE_BENCHMARK and instance.config.level != MsConst.KERNEL

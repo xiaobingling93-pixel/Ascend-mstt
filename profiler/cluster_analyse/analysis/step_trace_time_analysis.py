@@ -19,19 +19,24 @@ from common_func.db_manager import DBManager
 from common_func.constant import Constant
 from common_func.file_manager import FileManager
 from prof_bean.step_trace_time_bean import StepTraceTimeBean
+from cluster_utils.parallel_strategy_calculator import ParallelStrategyCalculator
 
 
 class StepTraceTimeAnalysis:
     CLUSTER_TRACE_TIME_CSV = "cluster_step_trace_time.csv"
     CLUSTER_TRACE_TIME_TABLE = "ClusterStepTraceTime"
+    PROFILER_METADATA_JSON = "profiler_metadata.json"
+    PARALLEL_HEADERS = ["DP Index", "PP Index", "TP Index"]
 
     def __init__(self, param: dict):
         self.collection_path = param.get(Constant.COLLECTION_PATH)
+        self.cluster_analysis_output_path = param.get(Constant.CLUSTER_ANALYSIS_OUTPUT_PATH)
         self.data_map = param.get(Constant.DATA_MAP)
         self.communication_group = param.get(Constant.COMM_DATA_DICT, {}).get(Constant.COMMUNICATION_GROUP)
         self.step_time_dict = {}
         self.step_data_list = []
         self.data_type = param.get(Constant.DATA_TYPE)
+        self.distributed_args = None
 
     @staticmethod
     def get_max_data_row(data_group_list: list):
@@ -48,7 +53,39 @@ class StepTraceTimeAnalysis:
     def run(self):
         self.load_step_trace_time_data()
         self.analyze_step_time()
+        self.partition_ranks_data()
         self.dump_data()
+
+    def partition_ranks_data(self):
+        if not self.distributed_args:
+            return
+
+        calculator = ParallelStrategyCalculator(**self.distributed_args)
+        parallelism_map = calculator.run()
+
+        if len(parallelism_map) > len(self.step_time_dict):
+            missing_rank_ids = [rank_id for rank_id in range(len(parallelism_map))
+                                if rank_id not in self.step_time_dict]
+            print(f"[WARNING] Step trace data length should equal to real rank numbers, "
+                  f"but get step data length = {len(self.step_time_dict)}, real rank numbers = {len(parallelism_map)}, "
+                  f"maybe lost some rank ids = {missing_rank_ids}, please check your profiling data.")
+
+        if len(parallelism_map) < len(self.step_time_dict):
+            print(f"[ERROR] Step trace data length should equal to real rank numbers, "
+                  f"but get step data length = {len(self.step_time_dict)}, real rank numbers = {len(parallelism_map)}, "
+                  f"maybe parallel params in profiler_metadata.json is error, please check your metadata data.")
+            self.distributed_args = None
+            return
+
+        for step_data in self.step_data_list:
+            rank_id = step_data[2]
+            if isinstance(rank_id, int):
+                # type is rank, rank_id is int
+                step_data.extend(list(parallelism_map[rank_id])
+                                 if parallelism_map[rank_id] else ['NA'] * len(self.PARALLEL_HEADERS))
+            else:
+                # type is stage, rank_id is tuple
+                step_data.extend(['NA'] * len(self.PARALLEL_HEADERS))
 
     def dump_data(self):
         if not self.step_data_list:
@@ -56,9 +93,9 @@ class StepTraceTimeAnalysis:
             return
         if self.data_type == Constant.TEXT:
             headers = self.get_headers()
-            FileManager.create_csv_file(self.collection_path, self.step_data_list, self.CLUSTER_TRACE_TIME_CSV, headers)
+            FileManager.create_csv_file(self.cluster_analysis_output_path, self.step_data_list, self.CLUSTER_TRACE_TIME_CSV, headers)
         else:
-            output_path = os.path.join(self.collection_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
+            output_path = os.path.join(self.cluster_analysis_output_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
             result_db = os.path.join(output_path, Constant.DB_CLUSTER_COMMUNICATION_ANALYZER)
             DBManager.create_tables(result_db, self.CLUSTER_TRACE_TIME_TABLE)
             column_len = DBManager.get_table_column_count(result_db, self.CLUSTER_TRACE_TIME_TABLE)
@@ -74,6 +111,10 @@ class StepTraceTimeAnalysis:
 
     def load_step_trace_time_data(self):
         for rank_id, profiling_dir_path in self.data_map.items():
+            metadata_path = os.path.join(profiling_dir_path, self.PROFILER_METADATA_JSON)
+            if not self.distributed_args and os.path.exists(metadata_path):
+                metadata = FileManager.read_json_file(metadata_path)
+                self.distributed_args = metadata.get(Constant.DISTRIBUTED_ARGS, None) if metadata else None
             if self.data_type == Constant.TEXT:
                 step_time_file = os.path.join(profiling_dir_path, Constant.SINGLE_OUTPUT, Constant.STEP_TIME_CSV)
                 if os.path.exists(step_time_file):
@@ -121,6 +162,8 @@ class StepTraceTimeAnalysis:
     def get_headers(self):
         if self.step_time_dict:
             for rank in self.step_time_dict:
-                if self.step_time_dict.get(rank):
+                if self.step_time_dict.get(rank) and self.distributed_args:
+                    return self.step_time_dict[rank][0].all_headers + self.PARALLEL_HEADERS
+                elif self.step_time_dict.get(rank):
                     return self.step_time_dict[rank][0].all_headers
         return []

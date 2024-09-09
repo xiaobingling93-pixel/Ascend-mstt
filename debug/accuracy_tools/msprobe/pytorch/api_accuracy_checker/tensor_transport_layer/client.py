@@ -13,6 +13,7 @@ from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
 
 
 class TCPDataItem:
@@ -43,11 +44,12 @@ class TCPClient:
     RESEND_TIMER_TIME = 5  # 接收ACK超时定时器
     RESEND_PENDING_TIME = 60  # 连续pending时间超过1分钟则放弃该数据
 
-    def __init__(self, host="localhost", port=8000, check_sum=False):
+    def __init__(self, host="localhost", port=8000, check_sum=False, tls_path=None):
         self.send_queue = Queue(self.MAX_SENDING_QUEUE_SIZE)
         self.resend_dict = dict()
         self.host = host
         self.port = port
+        self.tls_path = tls_path
         self.factory = None
         self.sequence_number = 0
         self.signal_exit = False
@@ -86,8 +88,18 @@ class TCPClient:
 
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
-
-        endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
+        if self.tls_path:
+            from OpenSSL import SSL
+            from twisted.internet import ssl
+            client_key = os.path.join(self.tls_path, "client.key")
+            client_crt = os.path.join(self.tls_path, "client.crt")
+            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt, SSL.TLSv1_2_METHOD)
+            client_context_ = client_context_factory.getContext()
+            client_context_.set_cipher_list(cipher_list)
+            client_context_.set_options(SSL.OP_NO_RENEGOTIATION)
+            endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
+        else:
+            endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
         d = endpoint.connect(self.factory)
         d.addCallback(conn_callback)
         d.addErrback(conn_err_callback)
@@ -126,8 +138,11 @@ class TCPClient:
                                     rank=rank,
                                     step=step)
             self.sequence_number += 1
-
-        self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
+        try:
+            self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
+        except Exception as e:
+            logger.error(f"send_queue put send_data timeout, rank: {send_data.rank}, step: {send_data.step},"
+                         f"sequence_number: {send_data.sequence_number}, {str(e)}")
 
     def _send_data(self, data: TCPDataItem):
         self.tcp_manager.send_wrapped_data(data.raw_data,
@@ -294,7 +309,7 @@ class ClientProtocol(protocol.Protocol):
     def connectionLost(self, reason):
         self.signal_exit = True
         self.factory.num_connections -= 1
-        logger.info("Lost connection with server")
+        logger.info(f"Lost connection with server, reason is : {reason}")
 
 
 class MessageClientFactory(protocol.ClientFactory):

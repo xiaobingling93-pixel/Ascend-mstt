@@ -63,6 +63,9 @@ class ProfilingInfo:
         self.RDMA_bandwidth = 0.0
         self.SDMA_bandwidth = 0.0
 
+        # 按group展示通信的卡间等待和传输耗时
+        self.communication_group_time = {}
+
     @property
     def e2e_time_ms(self):
         return self.e2e_time * 10 ** 3
@@ -88,23 +91,36 @@ class ProfilingInfo:
         return (self.communication_not_overlapped - self.wait_time) * 10 ** 3
 
     @property
-    def fa_total_time(self):
-        return sum((self.fa_time_fwd_cube, self.fa_time_fwd_vector, self.fa_time_bwd_cube, self.fa_time_bwd_vector))
+    def fa_fwd_time(self):
+        return self.fa_time_fwd_cube + self.fa_time_fwd_vector
 
     @property
-    def fa_total_num(self):
-        return sum((self.fa_num_fwd_cube, self.fa_num_fwd_vector, self.fa_num_bwd_cube, self.fa_num_bwd_vector))
+    def fa_bwd_time(self):
+        return self.fa_time_bwd_cube + self.fa_time_bwd_vector
 
     @property
-    def conv_total_time(self):
-        return sum(
-            (self.conv_time_fwd_cube, self.conv_time_fwd_vector, self.conv_time_bwd_cube,
-             self.conv_time_bwd_vector))
+    def fa_fwd_num(self):
+        return self.fa_num_fwd_cube + self.fa_num_fwd_vector
 
     @property
-    def conv_total_num(self):
-        return sum((self.conv_num_fwd_cube, self.conv_num_fwd_vector, self.conv_num_bwd_cube,
-                    self.conv_num_bwd_vector))
+    def fa_bwd_num(self):
+        return self.fa_num_bwd_cube + self.fa_num_bwd_vector
+
+    @property
+    def conv_fwd_time(self):
+        return self.conv_time_fwd_cube + self.conv_time_fwd_vector
+
+    @property
+    def conv_bwd_time(self):
+        return self.conv_time_bwd_cube + self.conv_time_bwd_vector
+
+    @property
+    def conv_fwd_num(self):
+        return self.conv_num_fwd_cube + self.conv_num_fwd_vector
+
+    @property
+    def conv_bwd_num(self):
+        return self.conv_num_bwd_cube + self.conv_num_bwd_vector
 
     @property
     def mm_total_time(self):
@@ -186,6 +202,7 @@ class ProfilingInfo:
     @property
     def fa_time_bwd(self):
         return (self.fa_time_bwd_cube + self.fa_time_bwd_vector) / Constant.MILLISECONDS_TO_SECONDS
+
     def calculate_other_time(self):
         self.other_time = max(
             [0, self.compute_time - self.cube_time - self.fa_time_fwd - self.fa_time_bwd -
@@ -277,8 +294,10 @@ class ProfilingInfo:
     def update_comm_not_overlap(self, time: float):
         self.communication_not_overlapped += time
 
-    def update_comm_not_overlap_wait_time(self, time: float):
-        self.wait_time = time
+    def update_communication_group_time(self, time_dict: dict):
+        self.communication_group_time = time_dict
+        for time in time_dict.values():
+            self.wait_time += time.get(Constant.WAIT_TIME, 0)
 
     def set_memory_used(self, memory: float):
         self.memory_used = memory
@@ -317,3 +336,13 @@ class ProfilingInfo:
         self.e2e_time /= Constant.MICROSECONDS_TO_SECONDS
         self.scheduling_time /= Constant.MICROSECONDS_TO_SECONDS
         self.lccl_time /= Constant.MICROSECONDS_TO_SECONDS
+
+    def get_wait_time_by_group(self, group_name: str):
+        return self.communication_group_time.get(group_name, {}).get(Constant.WAIT_TIME, 0) / 10 ** 3
+
+    def get_transmit_time_by_group(self, group_name: str):
+        return self.communication_group_time.get(group_name, {}).get(Constant.TRANSMIT_TIME, 0) / 10 ** 3
+
+    def get_communication_time_by_group(self, group_name: str):
+        return (self.communication_group_time.get(group_name, {}).get(Constant.WAIT_TIME, 0)
+                + self.communication_group_time.get(group_name, {}).get(Constant.TRANSMIT_TIME, 0)) / 10 ** 3

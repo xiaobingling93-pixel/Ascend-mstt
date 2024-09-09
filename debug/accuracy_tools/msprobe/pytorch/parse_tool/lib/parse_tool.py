@@ -23,7 +23,7 @@ from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.compare import Compare
 from msprobe.pytorch.parse_tool.lib.visualization import Visualization
 from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
-
+from msprobe.core.common.utils import create_directory
 
 class ParseTool:
     def __init__(self):
@@ -33,7 +33,7 @@ class ParseTool:
 
     @catch_exception
     def prepare(self):
-        self.util.create_dir(Const.DATA_ROOT_DIR)
+        create_directory(Const.DATA_ROOT_DIR)
 
     @catch_exception
     def do_vector_compare(self, args):
@@ -112,8 +112,8 @@ class ParseTool:
         args = parser.parse_args(argv)
         self.util.check_path_valid(args.my_dump_path)
         self.util.check_path_valid(args.golden_dump_path)
-        self.util.check_path_format(args.my_dump_path, Const.NPY_SUFFIX)
-        self.util.check_path_format(args.golden_dump_path, Const.NPY_SUFFIX)
+        self.util.check_file_path_format(args.my_dump_path, Const.NPY_SUFFIX)
+        self.util.check_file_path_format(args.golden_dump_path, Const.NPY_SUFFIX)
         compare_data_args = namedtuple('compare_data_args', ['my_dump_path', 'golden_dump_path', 'save', 'rtol', 'atol', 'count'])
         compare_data_args.__new__.__defaults__ = (False, 0.001, 0.001, 20)
         res = compare_data_args(args.my_dump_path, args.golden_dump_path, args.save, args.rtol, args.atol, args.count)

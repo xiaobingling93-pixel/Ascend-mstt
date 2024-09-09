@@ -14,16 +14,20 @@
 import setuptools
 
 
-__version__ = '1.0.1'
+__version__ = '1.0.3'
 
 INSTALL_REQUIRED = [
     "wheel",
+    "einops",
     "numpy",
     "pandas >= 1.3.5",
     "pyyaml",
     "rich",
     "tqdm",
-    "openpyxl"
+    "openpyxl",
+    "pyOpenSSL",
+    "twisted",
+    "matplotlib"
 ]
 
 EXCLUDE_PKGS = [

@@ -2,14 +2,14 @@ import os
 import inspect
 import importlib
 
-import yaml
 import mindspore as ms
 from mindspore.communication import comm_func
 
+from msprobe.core.common.utils import load_yaml
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
-from msprobe.core.common.file_check import check_path_length, FileOpen
+from msprobe.core.common.file_check import check_path_length
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.free_benchmark.decorator.decorator_factory import decorate_forward_function
@@ -44,9 +44,9 @@ def get_supported_ops():
     cur_path = os.path.dirname(os.path.realpath(__file__))
     yaml_path = os.path.join(cur_path, "data", "support_wrap_ops.yaml")
 
+    yaml_data = load_yaml(yaml_path)
     for k, v in FreeBenchmarkConst.API_PREFIX_DICT.items():
-        with FileOpen(yaml_path, 'r') as f:
-            ops = yaml.safe_load(f).get(k)
+        ops = yaml_data.get(k)
         if ops:
             ops = [v + i for i in ops]
             supported_ops += ops

@@ -1,6 +1,5 @@
 import smtplib
 from email.mime.text import MIMEText
-import sqlite3
 from datetime import datetime, timedelta
 
 from kj600.database import Database, ExceptionMessage

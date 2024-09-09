@@ -1,6 +1,6 @@
 import logging
 
-from profiler.advisor.dataset.ai_core_freq.ai_core_freq_dataset import AICoreFreqDataset
+from profiler.advisor.dataset.timeline_event_dataset import ComputationAnalysisDataset
 from profiler.advisor.result.result import OptimizeResult
 from profiler.advisor.result.item import OptimizeItem, OptimizeRecord
 from profiler.advisor.config.config import Config
@@ -10,7 +10,6 @@ logger = logging.getLogger()
 
 
 class AICoreFreqChecker:
-    DEFAULT_FREQ = 1800
     DECREASE_FREQ_RATIO = 0.05
     SHOW_TOPK_OPS = 10
     TOTAL_DURATION_INDEX = 2
@@ -27,7 +26,7 @@ class AICoreFreqChecker:
         self.rank_id = None
         self.stage = None
 
-    def check_ai_core_freq(self, event_dataset: AICoreFreqDataset, rank_id=None, stage=None):
+    def check_ai_core_freq(self, event_dataset: ComputationAnalysisDataset, rank_id=None, stage=None):
         """
         :Param event_dataset: dataset of timeline event
         """
@@ -46,7 +45,7 @@ class AICoreFreqChecker:
 
             op_count = op_info.get("count", 0)
             op_total_duration = round(op_info.get("dur", 0), 2)
-            max_freq = max(self.DEFAULT_FREQ, convert_to_float(Config().get_config("aic_frequency")))
+            max_freq = convert_to_float(Config().get_config("aic_frequency"))
 
             decrease_freq_ratio = sum(max_freq - freq for freq in freq_list) / (max_freq * len(freq_list))
             if decrease_freq_ratio >= Config().get_config("frequency_threshold"):
@@ -61,6 +60,8 @@ class AICoreFreqChecker:
             self.decrease_freq_ops.sort(key=
                                         lambda x: (x[self.TOTAL_DURATION_INDEX], x[self.DECREASE_FREQ_RATIO_INDEX]),
                                         reverse=True)
+        if not self.ai_core_freq_issues:
+            return
 
         self.desc = (f"{len(self.decrease_freq_ops)} operators are found during frequency reduction, and the reduction "
                      f"ratio is larger than {self.DECREASE_FREQ_RATIO}.")
@@ -72,22 +73,29 @@ class AICoreFreqChecker:
         """
         make record for what and how to optimize
         """
-        optimization_item = OptimizeItem("AI Core Frequency", self.desc, [self.suggestions])
+        if not self.ai_core_freq_issues:
+            return self.ai_core_freq_issues
+
+        sheet_name = "AI Core Frequency"
+        if self.rank_id is not None:
+            sheet_name = f"rank {self.rank_id} AI Core Frequency".capitalize()
+
+        optimization_item = OptimizeItem(sheet_name, self.desc, [self.suggestions])
         result.add(OptimizeRecord(optimization_item))
 
         self.headers = ["Operator name", "Count", "Total duration(us)", "AI CORE frequency decreased ratio",
                         "Average frequency", "Max frequency", "Min frequency"]
-        if self.rank_id:
-            self.headers = ["Rank id"] + self.headers
-        sub_table_name = "AI Core Frequency" if not self.stage else f"Stage-{self.stage}: AI Core Frequency"
-        result.add_detail(sub_table_name, headers=self.headers)
+        result.add_detail(sheet_name, headers=self.headers)
 
         for row in self.decrease_freq_ops:
-            if self.rank_id:
-                row = [self.rank_id] + row
-            result.add_detail(sub_table_name, detail=row)
+            result.add_detail(sheet_name, detail=row)
+        return True
 
-    def make_render(self, html_render, add_render_list=True):
+    def make_render(self, html_render, add_render_list=True, **kwargs):
+        if not self.ai_core_freq_issues:
+            return self.ai_core_freq_issues
+
+        priority = kwargs.get("priority")
         if self.SHOW_TOPK_OPS:
             self.desc += f" Only show {self.SHOW_TOPK_OPS} operators here, see latest mstt_advisor.xlsx for details."
         return html_render.render_template(key="computation",
@@ -97,4 +105,5 @@ class AICoreFreqChecker:
                                            suggestion=self.suggestions,
                                            headers=self.headers,
                                            data=self.decrease_freq_ops[:self.SHOW_TOPK_OPS],
-                                           add_render_list=add_render_list)
+                                           add_render_list=add_render_list,
+                                           priority_background_color=priority)

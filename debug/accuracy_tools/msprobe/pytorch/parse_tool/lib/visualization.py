@@ -21,6 +21,7 @@ from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.utils import save_npy_to_txt
 
 
 class Visualization:
@@ -43,18 +44,18 @@ class Visualization:
         summary = ['[yellow]%s[/yellow]' % self.util.gen_npy_info_txt(np_data), 'Path: %s' % target_file,
                    "TextFile: %s.txt" % target_file]
         self.util.print_panel(self.util.create_columns([table, "\n".join(summary)]), target_file)
-        self.util.save_npy_to_txt(np_data, target_file + ".txt")
+        save_npy_to_txt(np_data, target_file + ".txt")
 
     def print_npy_data(self, file_name):
         file_name = self.util.path_strip(file_name)
         self.util.check_path_valid(file_name)
-        self.util.check_path_format(file_name, Const.NPY_SUFFIX)
+        self.util.check_file_path_format(file_name, Const.NPY_SUFFIX)
         return self.print_npy_summary(file_name)
 
     def parse_pkl(self, path, api_name):
         path = self.util.path_strip(path)
         self.util.check_path_valid(path)
-        self.util.check_path_format(path, Const.PKL_SUFFIX)
+        self.util.check_file_path_format(path, Const.PKL_SUFFIX)
         self.util.check_str_param(api_name)
         with FileOpen(path, "r") as pkl_handle:
             title_printed = False

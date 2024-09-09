@@ -60,7 +60,6 @@ class GradSaver:
                 _index += 1
 
     def compare_grad_results(self, handler, origin_grad, perturbed_grad, index):
-        # TODO get dtype?
         data_params = DataParams()
         data_params.original_result = origin_grad
         data_params.perturbed_result = perturbed_grad

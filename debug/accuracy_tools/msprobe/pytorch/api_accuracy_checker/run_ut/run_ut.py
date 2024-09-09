@@ -1,7 +1,6 @@
 import argparse
 import os
 import csv
-import re
 import sys
 import time
 import gc
@@ -18,32 +17,35 @@ else:
 import torch
 from tqdm import tqdm
 
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api, UtDataInfo, \
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
-from msprobe.pytorch.api_accuracy_checker.common.utils import get_json_contents, api_info_preprocess, \
-    initialize_save_path, UtDataProcessor
+from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
+    initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from msprobe.pytorch.hook_module.wrap_tensor import TensorOPTemplate
-from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
-from msprobe.pytorch.hook_module.wrap_torch import TorchOPTemplate
-from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
-from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_check import FileOpen, FileChecker, \
-    change_mode, check_file_suffix, check_link, check_path_before_create, create_directory
+    change_mode, check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
+from msprobe.core.common.utils import get_json_contents
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list', 
-                                         'black_list', 'error_data_path'])
+                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
+                                         'black_list', 'error_data_path', 'online_config'])
+
+OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
+
 not_backward_list = ['repeat_interleave']
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 not_raise_dtype_set = {'type_as'}
@@ -68,25 +70,6 @@ tqdm_params = {
     'dynamic_ncols': True,  # 动态调整进度条宽度以适应控制台
     'bar_format': '{l_bar}{bar}| {n}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'  # 自定义进度条输出格式
 }
-
-
-def exec_api(api_type, api_name, args, kwargs):
-    if api_type == "Functional":
-        functional_api = FunctionalOPTemplate(api_name, str, False)
-        out = functional_api.forward(*args, **kwargs)
-    if api_type == "Tensor":
-        tensor_api = TensorOPTemplate(api_name, str, False)
-        out = tensor_api.forward(*args, **kwargs)
-    if api_type == "Torch":
-        torch_api = TorchOPTemplate(api_name, str, False)
-        out = torch_api.forward(*args, **kwargs)
-    if api_type == "Aten":
-        torch_api = AtenOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
-    if api_type == "NPU":
-        torch_api = NpuOPTemplate(api_name, None, False)
-        out = torch_api.forward(*args, **kwargs)
-    return out
 
 
 def deal_detach(arg, to_detach=True):
@@ -140,7 +123,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
                 arg_in = deal_detach(raise_bench_data_dtype(
-                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()     
+                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()
                 temp_arg_in = arg_in * 1
                 arg_in = temp_arg_in.type_as(arg_in)
                 arg_in.retain_grad()
@@ -183,25 +166,50 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
 
 def run_ut(config):
     logger.info("start UT test")
-    logger.info(f"UT task result will be saved in {config.result_csv_path}")
-    logger.info(f"UT task details will be saved in {config.details_csv_path}")
+    if config.online_config.is_online:
+        logger.info(f"UT task result will be saved in {config.result_csv_path}".replace(".csv", "_rank*.csv"))
+        logger.info(f"UT task details will be saved in {config.details_csv_path}".replace(".csv", "_rank*.csv"))
+    else:
+        logger.info(f"UT task result will be saved in {config.result_csv_path}")
+        logger.info(f"UT task details will be saved in {config.details_csv_path}")
+
     if config.save_error_data:
         logger.info(f"UT task error_datas will be saved in {config.error_data_path}")
-    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut)
-    with FileOpen(config.result_csv_path, 'r') as file:
-        csv_reader = csv.reader(file)
-        next(csv_reader)
-        api_name_set = {row[0] for row in csv_reader}
+    compare = Comparator(config.result_csv_path, config.details_csv_path, config.is_continue_run_ut, config=config)
+
+    if config.online_config.is_online:
+        run_api_online(config, compare)
+    else:
+        with FileOpen(config.result_csv_path, 'r') as file:
+            csv_reader = csv.reader(file)
+            next(csv_reader)
+            api_name_set = {row[0] for row in csv_reader}
+        run_api_offline(config, compare, api_name_set)
+    for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
+        change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        change_mode(details_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        logger.info(f"UT task result csv is saved in {result_csv_path}")
+        logger.info(f"UT task details csv is saved in {details_csv_path}")
+    compare.print_pretest_result()
+
+
+def run_api_offline(config, compare, api_name_set):
+    err_column = CompareColumn()
     for _, (api_full_name, api_info_dict) in enumerate(tqdm(config.forward_content.items(), **tqdm_params)):
         if api_full_name in api_name_set:
             continue
-        if is_unsupported_api(api_full_name):  # TODO run_ut does not support to the npu fusion api and distributed api
+        if is_unsupported_api(api_full_name):
             continue
-        [_, api_name, _] = api_full_name.split(Const.SEP)
+        _, api_name = extract_basic_api_segments(api_full_name)
+        if not api_name:
+            err_message = f"API {api_full_name} not support for run ut. SKIP."
+            logger.error(err_message)
+            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+            compare.record_results(result_info)
+            continue
         try:
-            if config.black_list and api_name in config.black_list:
-                continue
-            if config.white_list and api_name not in config.white_list:
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -213,7 +221,6 @@ def run_ut(config):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            err_column = CompareColumn()
             fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
             result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
             compare.record_results(result_info)
@@ -223,9 +230,71 @@ def run_ut(config):
             else:
                 torch.npu.empty_cache()
             gc.collect()
-    change_mode(compare.save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    change_mode(compare.detail_save_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    compare.print_pretest_result()
+
+
+def run_api_online(config, compare):
+    attl = init_attl(config.online_config)
+    dispatcher = ConsumerDispatcher(compare=compare)
+    dispatcher.start(handle_func=run_torch_api_online, config=config)
+
+    def tcp_communication_flow():
+        while True:
+            api_data = attl.recv()
+            if api_data == 'STOP_':
+                continue
+            if api_data == 'KILL_':
+                time.sleep(1)
+                logger.info("==========接收到STOP信号==========")
+                dispatcher.stop()
+                attl.stop_serve()
+                time.sleep(1)
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+            _, api_name = extract_basic_api_segments(api_full_name)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
+            dispatcher.update_consume_queue(api_data)
+
+    def shared_storage_communication_flow():
+        flag_num = -1
+        while True:
+            api_data = attl.download()
+            if api_data == "start":
+                if flag_num == -1:
+                    flag_num += 1
+                flag_num += 1
+            if api_data == "end":
+                flag_num -= 1
+            if flag_num == 0:
+                dispatcher.stop()
+                break
+            if not isinstance(api_data, ApiData):
+                continue
+            api_full_name = api_data.name
+            _, api_name = extract_basic_api_segments(api_full_name)
+            if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                continue
+            dispatcher.update_consume_queue(api_data)
+
+    if config.online_config.nfs_path:
+        shared_storage_communication_flow()
+    else:
+        tcp_communication_flow()
+
+
+def blacklist_and_whitelist_filter(api_name, black_list, white_list):
+    """
+    run api(api_name) if api_name not in black_list and in white_list.
+    If api is both in black_list and black_list, black_list first.
+    return: False for exec api, True for not exec
+    """
+    if black_list and api_name in black_list:
+        return True
+    if white_list and api_name not in white_list:
+        return True
+    return False
 
 
 def is_unsupported_api(api_name):
@@ -251,7 +320,7 @@ def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success
 def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict):
     in_fwd_data_list = []
     backward_message = ''
-    [api_type, api_name, _] = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     in_fwd_data_list.append(args)
     in_fwd_data_list.append(kwargs)
@@ -294,6 +363,20 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
 
+def run_torch_api_online(api_full_name, api_data, backward_content):
+    in_fwd_data_list = []
+    api_type, api_name = extract_basic_api_segments(api_full_name)
+    args, kwargs, out = api_data.args, api_data.kwargs, api_data.result
+    in_fwd_data_list.append(args)
+    in_fwd_data_list.append(kwargs)
+    if kwargs.get("device"):
+        del kwargs["device"]
+
+    device_out = exec_api(api_type, api_name, args, kwargs)
+    device_out = move2device_exec(device_out, "cpu")
+    return UtDataInfo(None, None, out, device_out, None, in_fwd_data_list, None, rank=api_data.rank)
+
+
 def get_api_info(api_info_dict, api_name, real_data_path):
     convert_type, api_info_dict = api_info_preprocess(api_name, api_info_dict)
     need_grad = True
@@ -333,35 +416,21 @@ def initialize_save_error_data(error_data_path):
     return error_data_path
 
 
-def get_validated_result_csv_path(result_csv_path, mode):
-    if mode not in ['result', 'detail']:
-        raise ValueError("The csv mode must be result or detail")
-    result_csv_path_checker = FileChecker(result_csv_path, FileCheckConst.FILE, ability=FileCheckConst.READ_WRITE_ABLE,
-                                          file_type=FileCheckConst.CSV_SUFFIX)
-    validated_result_csv_path = result_csv_path_checker.common_check()
-    if mode == 'result':
-        result_csv_name = os.path.basename(validated_result_csv_path)
-        pattern = r"^accuracy_checking_result_\d{14}\.csv$"
-        if not re.match(pattern, result_csv_name):
-            raise ValueError("When continue run ut, please do not modify the result csv name.")
-    return validated_result_csv_path
-
-
-def get_validated_details_csv_path(validated_result_csv_path):
-    result_csv_name = os.path.basename(validated_result_csv_path)
-    details_csv_name = result_csv_name.replace('result', 'details')
-    details_csv_path = os.path.join(os.path.dirname(validated_result_csv_path), details_csv_name)
-    details_csv_path_checker = FileChecker(details_csv_path, FileCheckConst.FILE,
-                                           ability=FileCheckConst.READ_WRITE_ABLE, file_type=FileCheckConst.CSV_SUFFIX)
-    validated_details_csv_path = details_csv_path_checker.common_check()
-    return validated_details_csv_path
+def init_attl(config):
+    """config: OnlineConfig"""
+    attl = ATTL('gpu', ATTLConfig(is_benchmark_device=True,
+                                  connect_ip=config.host,
+                                  connect_port=config.port,
+                                  nfs_path=config.nfs_path,
+                                  tls_path=config.tls_path))
+    return attl
 
 
 def _run_ut_parser(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", default="", type=str,
-                        help="<Required> The api param tool result file: generate from api param tool, "
+                        help="<Optional> The api param tool result file: generate from api param tool, "
                              "a json file.",
-                        required=True)
+                        required=False)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The ut task result out path.",
                         required=False)
@@ -451,20 +520,26 @@ def run_ut_command(args):
     except Exception as error:
         logger.error(f"Set device id failed. device id is: {args.device_id}")
         raise NotImplementedError from error
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
-    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+
+    # 在线预检场景下，不需要外出输出api信息，forward_content, backward_content, real_data_path设置为None
+    # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
+    forward_content, backward_content, real_data_path = None, None, None
+    if args.api_info_file:
+        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, 
+                                            ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
+        checked_api_info = api_info_file_checker.common_check()
+        forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
+        if args.filter_api:
+            logger.info("Start filtering the api in the forward_input_file.")
+            forward_content = preprocess_forward_content(forward_content)
+            logger.info("Finish filtering the api in the forward_input_file.")
+
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     save_error_data = args.save_error_data
-    forward_content, backward_content, real_data_path = parse_json_info_forward_backward(api_info)
-    if args.filter_api:
-        logger.info("Start filtering the api in the forward_input_file.")
-        forward_content = preprocess_forward_content(forward_content)
-        logger.info("Finish filtering the api in the forward_input_file.")
 
     result_csv_path = os.path.join(out_path, RESULT_FILE_NAME)
     details_csv_path = os.path.join(out_path, DETAILS_FILE_NAME)
@@ -474,33 +549,38 @@ def run_ut_command(args):
     white_list = msCheckerConfig.white_list
     black_list = msCheckerConfig.black_list
     error_data_path = msCheckerConfig.error_data_path
+    is_online = msCheckerConfig.is_online
+    nfs_path = msCheckerConfig.nfs_path
+    host = msCheckerConfig.host
+    port = msCheckerConfig.port
+    rank_list = msCheckerConfig.rank_list
+    tls_path = msCheckerConfig.tls_path
     if args.config_path:
-        _, task_config = parse_json_config(args.config_path, Const.RUN_UT)
+        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        checked_config_path = config_path_checker.common_check()
+        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
         white_list = task_config.white_list
         black_list = task_config.black_list
         error_data_path = task_config.error_data_path
+        is_online = task_config.is_online
+        nfs_path = task_config.nfs_path
+        host = task_config.host
+        port = task_config.port
+        rank_list = task_config.rank_list
+        tls_path = task_config.tls_path
+
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
+    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path)
+                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
+                                online_config)
     run_ut(run_ut_config)
-
-
-class UtDataInfo:
-    def __init__(self, bench_grad, device_grad, device_output, bench_output, grad_in, in_fwd_data_list, 
-                 backward_message, rank=0):
-        self.bench_grad = bench_grad
-        self.device_grad = device_grad
-        self.device_output = device_output
-        self.bench_output = bench_output
-        self.grad_in = grad_in
-        self.in_fwd_data_list = in_fwd_data_list
-        self.backward_message = backward_message
-        self.rank = rank
 
 
 if __name__ == '__main__':

@@ -30,6 +30,8 @@ class CommunicationDataset:
 
     def __init__(self, collection_path, data: dict, **kwargs) -> None:
         self.timeline_dir = collection_path
+        if not self.timeline_dir.endswith("ascend_pt"):
+            return
         self.timeline_data_list = self.get_file_path_from_directory(self.timeline_dir,
                                                                     lambda file: file.endswith(const.COMMUNICATION_JSON))
         self.hccl_dict = defaultdict(list)
@@ -85,7 +87,7 @@ class CommunicationDataset:
             return False
 
         if len(self.timeline_data_list) > 1:
-            logger.warning("Found multiple communication.json in %s, load the file of device 0 for analysis  .",
+            logger.warning("Found multiple communication.json in %s, load the file of device 0 for analysis.",
                            self.timeline_dir)
 
         json_data = self.load_json_data(sorted(self.timeline_data_list)[0])

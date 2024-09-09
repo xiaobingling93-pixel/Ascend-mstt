@@ -1,24 +1,25 @@
+from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.dump.api_kbk_dump import ApiKbkDump
+from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class DumpToolFactory:
     tools = {
-        "cell": {
-            "kbk": None,
-            "graph": None,
-            "pynative": None
+        Const.CELL: {
+            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_GE_MODE: None,
+            Const.PYNATIVE_MODE: None
         },
-        "api": {
-            "kbk": ApiKbkDump,
-            "graph": None,
-            "pynative": None
+        Const.API: {
+            Const.GRAPH_KBYK_MODE: None,
+            Const.GRAPH_GE_MODE: None,
+            Const.PYNATIVE_MODE: None
         },
-        "kernel": {
-            "kbk": None,
-            "graph": KernelGraphDump,
-            "pynative": None
+        Const.KERNEL: {
+            Const.GRAPH_KBYK_MODE: KernelKbykDump,
+            Const.GRAPH_GE_MODE: KernelGraphDump,
+            Const.PYNATIVE_MODE: KernelKbykDump
         }
     }
 
@@ -26,13 +27,9 @@ class DumpToolFactory:
     def create(config: DebuggerConfig):
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
-            raise Exception("valid level is needed.")
-        if config.level == "api":
-            tool = tool.get("kbk")
-        elif config.level == "kernel":
-            tool = tool.get("graph")
-        elif config.level == "cell":
-            raise Exception("Cell dump in not supported now.")
+            raise Exception("Valid level is needed.")
+        tool = tool.get(config.execution_mode)
         if not tool:
-            raise Exception("Data dump in not supported in this mode.")
+            raise Exception(f"Data dump is not supported in {config.execution_mode} mode "
+                            f"when dump level is {config.level}.")
         return tool(config)

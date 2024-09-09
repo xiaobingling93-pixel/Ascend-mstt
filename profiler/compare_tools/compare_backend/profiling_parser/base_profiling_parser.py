@@ -55,7 +55,7 @@ class ProfilingResult:
 
 class BaseProfilingParser(ABC):
 
-    def __init__(self, args: any, path_dict: dict):
+    def __init__(self, args: any, path_dict: dict, step_id: int = Constant.VOID_STEP):
         self._args = args
         self._profiling_type = path_dict.get(Constant.PROFILING_TYPE)
         self._profiling_path = path_dict.get(Constant.PROFILING_PATH)
@@ -80,6 +80,7 @@ class BaseProfilingParser(ABC):
         self._categorize_performance_index = 0
         self._cpu_cube_op = None
         self._bwd_tid = None
+        self._step_id = step_id
 
     @property
     def cpu_cube_op(self):
@@ -120,6 +121,9 @@ class BaseProfilingParser(ABC):
 
     def load_data(self) -> ProfilingResult:
         self._result_data.update_bwd_tid(self._bwd_tid)
+        if self._step_id != Constant.VOID_STEP and self._profiling_type == Constant.GPU:
+            msg = "[WARNING] step id is invalid in GPU data, please use this when comparing between NPU datas."
+            raise RuntimeError(msg)
         self._dispatch_events()
         self._update_kernel_dict()
         self._update_communication_dict()
@@ -132,14 +136,13 @@ class BaseProfilingParser(ABC):
         self._check_result_data()
         return self._result_data
 
-    def categorize_computing_performance_data(self, tk: (TraceEventBean, KernelDetailsBean), flow_dict_new: dict):
+    def categorize_computing_performance_data(self, tk: (TraceEventBean, KernelDetailsBean), flow_start_time):
         if tk.is_page_attention():
             self._result_data.overall_metrics.update_page_attention_info(tk.dur)
             return
         if tk.is_sdma():
             self._result_data.overall_metrics.update_sdma_tensor_move_info(tk.dur)
             return
-        flow_start_time = flow_dict_new.get(tk.start_time)
         if flow_start_time:
             while self._categorize_performance_index < len(self.cpu_cube_op):
                 cur_op = self.cpu_cube_op[self._categorize_performance_index]
@@ -179,7 +182,7 @@ class BaseProfilingParser(ABC):
         判断fa/conv/matmul/vector使用cpu_op
         """
         if cpu_op.is_fa_for_cpu_op():
-            if self._is_backward(cpu_op):
+            if cpu_op.is_bwd_for_cpu_op():
                 if tk.is_cube_kernel_cat():
                     self._result_data.overall_metrics.update_fa_bwd_cube_info(tk.dur)
                 else:
@@ -319,9 +322,10 @@ class BaseProfilingParser(ABC):
             print(f"[WARNING] Can't find any communication op in the file: {self._profiling_path}")
         if self._enable_kernel_compare and not self._result_data.kernel_details:
             if self._profiling_type == Constant.GPU:
-                print(f"[WARNING] kernel compare between GPU data and NPU data is not supported.")
+                print(f"[WARNING] kernel compare only support between NPU data and NPU data.")
             else:
-                print(f"[WARNING] Can't find any kernel details in the file: {self._profiling_path}")
+                print(f"[WARNING] Can't find any valid kernels in the file: {self._profiling_path}. Please "
+                      f"make sure that the profiling data is greater than level0 and aic_metrics=PipeUtilization.")
 
     def _read_trace_event(self):
         try:

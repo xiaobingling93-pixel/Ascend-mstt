@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-import json
 import os
 import re
-import csv
+from collections import namedtuple
 
 import torch
 
@@ -33,15 +32,12 @@ from msprobe.core.common.file_check import FileChecker, FileOpen, change_mode, c
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.utils import CompareException
 
+ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
+                     defaults=['unknown', None, None, None, 0, 0])
+
 
 class DumpException(CompareException):
     pass
-
-
-def write_csv(data, filepath):
-    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
 
 
 def check_object_type(check_object, allow_type):
@@ -57,58 +53,6 @@ def check_object_type(check_object, allow_type):
     if not isinstance(check_object, allow_type):
         logger.error(f"{check_object} not of {allow_type} type")
         raise CompareException(CompareException.INVALID_DATA_ERROR)
-
-
-def check_file_or_directory_path(path, isdir=False):
-    """
-    Function Description:
-        check whether the path is valid
-    Parameter:
-        path: the path to check
-        isdir: the path is dir or file
-    Exception Description:
-        when invalid data throw exception
-    """
-    if isdir:
-        if not os.path.exists(path):
-            logger.error('The path {} is not exist.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-        if not os.path.isdir(path):
-            logger.error('The path {} is not a directory.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-        if not os.access(path, os.W_OK):
-            logger.error(
-                'The path {} does not have permission to write. Please check the path permission'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-    else:
-        if not os.path.isfile(path):
-            logger.error('{} is an invalid file or non-exist.'.format(path))
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-    if not os.access(path, os.R_OK):
-        logger.error(
-            'The path {} does not have permission to read. Please check the path permission'.format(path))
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file %s, content is not a dictionary!' % file_path)
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
 
 
 class SoftlinkCheckException(Exception):
@@ -223,3 +167,56 @@ class UtDataProcessor:
                 self._save_recursive(api_name, value)
         else:
             self.index += 1
+
+
+def extract_basic_api_segments(api_full_name):
+    """
+    Function Description:
+        Extract the name of the API.
+    Parameter:
+        api_full_name: Full name of the API. Example: torch.matmul.0, torch.linalg.inv.0
+    Return:
+        api_type: Type of api. Example: torch, tensor, etc.
+        api_name: Name of api. Example: matmul, linalg.inv, etc.
+    """
+    api_type = None
+    api_parts = api_full_name.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.THREE_SEGMENT:
+        api_type, api_name, _ = api_parts
+    elif api_parts_length == Const.FOUR_SEGMENT:
+        api_type, prefix, api_name, _ = api_parts
+        api_name = Const.SEP.join([prefix, api_name])
+    else:
+        api_name = None
+    return api_type, api_name
+
+
+def extract_detailed_api_segments(full_api_name_with_direction_status):
+    """
+    Function Description:
+        Extract the name of the API.
+    Parameter:
+        full_api_name_with_direction_status: Full name of the API. Example: torch.matmul.0.forward.output.0
+    Return:
+        api_name: Name of api. Example: matmul, mul, etc.
+        full_api_name: Full name of api. Example: torch.matmul.0
+        direction_status: Direction status of api. Example: forward, backward, etc.
+    """
+    api_type = None
+    prefix = None
+    api_name = None
+    direction_status = None
+    api_parts = full_api_name_with_direction_status.split(Const.SEP)
+    api_parts_length = len(api_parts)
+    if api_parts_length == Const.SIX_SEGMENT:
+        api_type, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, api_name, api_order])
+    elif api_parts_length == Const.SEVEN_SEGMENT:
+        api_type, prefix, api_name, api_order, direction_status, _, _ = api_parts
+        full_api_name = Const.SEP.join([api_type, prefix, api_name, api_order])
+        api_name = Const.SEP.join([prefix, api_name])
+    else:
+        full_api_name = None
+    return api_name, full_api_name, direction_status
+    

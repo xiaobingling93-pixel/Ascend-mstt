@@ -1,19 +1,22 @@
+import os.path
 import struct
 import hashlib
 import time
 import io
-
 from threading import Thread
+
 from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
 
 
 class TCPServer:
-    def __init__(self, port, shared_queue, check_sum=False) -> None:
+    def __init__(self, port, shared_queue, check_sum=False, tls_path=None) -> None:
         self.port = port
         self.shared_queue = shared_queue
         self.check_sum = check_sum
+        self.tls_path = tls_path
         self.factory = MessageServerFactory()
         self.reactor_thread = None
 
@@ -23,7 +26,19 @@ class TCPServer:
 
     def start(self):
         self.factory.protocol = self.build_protocol
-        endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
+
+        if self.tls_path:
+            from OpenSSL import SSL
+            from twisted.internet import ssl
+            server_key = os.path.join(self.tls_path, "server.key")
+            server_crt = os.path.join(self.tls_path, "server.crt")
+            server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
+            server_context_ = server_context_factory.getContext()
+            server_context_.set_cipher_list(cipher_list)
+            server_context_.set_options(SSL.OP_NO_RENEGOTIATION)
+            endpoint = endpoints.SSL4ServerEndpoint(reactor, self.port, server_context_factory)
+        else:
+            endpoint = endpoints.TCP4ServerEndpoint(reactor, self.port)
         endpoint.listen(self.factory)
         self.reactor_thread = Thread(target=self.run_reactor, daemon=True)
         self.reactor_thread.start()

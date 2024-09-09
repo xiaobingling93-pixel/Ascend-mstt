@@ -14,6 +14,7 @@
 # ============================================================================
 
 import zlib
+
 import mindspore as ms
 from mindspore import ops
 import numpy as np
@@ -21,9 +22,9 @@ import numpy as np
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode, FileCheckConst
+from msprobe.core.common.file_check import path_len_exceeds_limit
 from msprobe.mindspore.dump.hook_cell.wrap_functional import load_ops_functions
-from msprobe.mindspore.common.utils import convert_bf16_to_fp32
+from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
@@ -49,22 +50,6 @@ class MindsporeDataProcessor(BaseDataProcessor):
     def analyze_dtype_in_kwargs(element):
         return {"type": "mindspore.dtype", "value": str(element)}
 
-    @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-            values = [
-                value if not isinstance(value, ms.Tensor) else value.item()
-                for value in [arg.start, arg.stop, arg.step]
-            ]
-            single_arg.update({"value": values})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
-
     @classmethod
     def get_special_types(cls):
         return super().get_special_types() + cls.mindspore_special_type
@@ -75,16 +60,16 @@ class MindsporeDataProcessor(BaseDataProcessor):
             return tensor_stat
         elif data.dtype == ms.bool_:
             data_np = data.asnumpy()
-            tensor_stat.max = np.max(data_np)
-            tensor_stat.min = np.min(data_np)
+            tensor_stat.max = np.max(data_np).item()
+            tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
             data_abs = np.abs(data.asnumpy())
-            tensor_stat.max = np.max(data_abs)
-            tensor_stat.min = np.min(data_abs)
-            tensor_stat.mean = np.mean(data_abs)
-            tensor_stat.norm = np.linalg.norm(data_abs)
+            tensor_stat.max = np.max(data_abs).item()
+            tensor_stat.min = np.min(data_abs).item()
+            tensor_stat.mean = np.mean(data_abs).item()
+            tensor_stat.norm = np.linalg.norm(data_abs).item()
         else:
             if data.dtype == ms.bfloat16 or not ops.is_floating_point(data):
                 data = data.to(ms.float32)
@@ -106,12 +91,9 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if isinstance(element, ms.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
 
-        if isinstance(element, (bool, int, float, str, slice)):
+        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
-
-    def analyze_element(self, element):
-        return self.recursive_apply_transform(element, self.analyze_single_element)
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
@@ -119,10 +101,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
             'type': 'mindspore.Tensor',
             'dtype': str(tensor.dtype),
             'shape': tensor.shape,
-            'Max': tensor_stat.max,
-            'Min': tensor_stat.min,
-            'Mean': tensor_stat.mean,
-            'Norm': tensor_stat.norm
+            'Max': self.transfer_type(tensor_stat.max),
+            'Min': self.transfer_type(tensor_stat.min),
+            'Mean': self.transfer_type(tensor_stat.mean),
+            'Norm': self.transfer_type(tensor_stat.norm),
         }
         if self.config.summary_mode == Const.MD5:
             tensor_md5 = self.get_md5_for_tensor(tensor)
@@ -139,13 +121,7 @@ class TensorDataProcessor(MindsporeDataProcessor):
         dump_data_name, file_path = self.get_save_file_path(suffix)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        if not path_len_exceeds_limit(file_path):
-            tensor = convert_bf16_to_fp32(tensor)
-            saved_tensor = tensor.asnumpy()
-            np.save(file_path, saved_tensor)
-            change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-        else:
-            logger.warning(f'The file path {file_path} length exceeds limit.')
+        save_tensor_as_npy(tensor, file_path)
         return single_arg
 
 
@@ -155,8 +131,17 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.cached_tensors_and_file_paths = {}
-        self.real_overflow_dump_times = 0
+        self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
+
+    @property
+    def is_terminated(self):
+        if self.overflow_nums == -1:
+            return False
+        if self.real_overflow_nums >= self.overflow_nums:
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
+            return True
+        return False
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -173,19 +158,9 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def maybe_save_overflow_data(self):
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
-                tensor = convert_bf16_to_fp32(tensor)
-                np.save(file_path, tensor.asnumpy())
-                change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            self.real_overflow_dump_times += 1
+                save_tensor_as_npy(tensor, file_path)
+            self.real_overflow_nums += 1
         self.cached_tensors_and_file_paths = {}
-
-    def stop_run(self):
-        if self.overflow_nums == -1:
-            return False
-        if self.real_overflow_dump_times >= self.overflow_nums:
-            logger.warning(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_dump_times}")
-            return True
-        return False
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
         if tensor_json['Max'] is None:

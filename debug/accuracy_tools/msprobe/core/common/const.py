@@ -23,6 +23,10 @@ class Const:
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    THREE_SEGMENT = 3
+    FOUR_SEGMENT = 4
+    SIX_SEGMENT = 6
+    SEVEN_SEGMENT = 7
 
     # dump mode
     ALL = "all"
@@ -64,14 +68,18 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
     MAX_SEED_VALUE = 4294967295  # 2**32 - 1
-    TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark", "run_ut", "grad_probe"]
-    LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"
     TENSOR = "tensor"
     OVERFLOW_CHECK = "overflow_check"
     FREE_BENCHMARK = "free_benchmark"
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
+    TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
+    LEVEL_L0 = "L0"
+    LEVEL_L1 = "L1"
+    LEVEL_L2 = "L2"
+    LEVEL_MIX = "mix"
+    LEVEL_LIST = [LEVEL_L0, LEVEL_L1, LEVEL_L2, LEVEL_MIX]
     ATTR_NAME_PREFIX = "wrap_"
     ATTR_NAME_PREFIX_LEN = len(ATTR_NAME_PREFIX)
     KERNEL_DUMP = "kernel_dump"
@@ -139,6 +147,7 @@ class CompareConst:
     NPU_MD5 = "NPU MD5"
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
+    MAGNITUDE = 0.5
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -176,6 +185,7 @@ class CompareConst:
     WARNING = 'Warning'
     ERROR = 'error'
     SKIP = 'SKIP'
+    N_A = 'N/A'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8
@@ -183,6 +193,7 @@ class CompareConst:
     # accuracy standards
     COS_THRESHOLD = 0.99
     MAX_ABS_ERR_THRESHOLD = 0.001
+    MAX_RELATIVE_ERR_THRESHOLD = 0.001
     COS_MAX_THRESHOLD = 0.9
     MAX_ABS_ERR_MAX_THRESHOLD = 1
     ACCURACY_CHECK_YES = "Yes"
@@ -211,6 +222,19 @@ class CompareConst:
     MAX_RELATIVE_OUT_RED = 0.5
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
+    MS_GRAPH_BASE = {
+        NPU_NAME: None, BENCH_NAME: None, NPU_DTYPE: None, BENCH_DTYPE: None, NPU_SHAPE: None, BENCH_SHAPE: None,
+        NPU_MAX: None, NPU_MIN: None, NPU_MEAN: None, NPU_NORM: None, BENCH_MAX: None, BENCH_MIN: None,
+        BENCH_MEAN: None, BENCH_NORM: None, ACCURACY: '', ERROR_MESSAGE: ''
+    }
+    MS_GRAPH_NPY = {
+        COSINE: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
+        FIVE_THOUSANDTHS_ERR_RATIO: None
+    }
+    MS_GRAPH_STATISTIC = {
+        MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
+        MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
+    }
 
 
 class FileCheckConst:
@@ -257,3 +281,42 @@ class OverflowConst:
     OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
+class MsCompareConst:
+    # api_info field
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+
+    TASK_FIELD = "task"
+    STATISTICS_TASK = "statistics"
+    TENSOR_TASK = "tensor"
+    DUMP_DATA_DIR_FIELD = "dump_data_dir"
+    DATA_FIELD = "data"
+
+    #detail_csv
+    DETAIL_CSV_API_NAME = "API Name"
+    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
+    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
+    DETAIL_CSV_SHAPE = "Shape"
+    DETAIL_CSV_PASS_STATUS = "Status"
+    DETAIL_CSV_MESSAGE = "Message"
+    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
+
+    #result_csv
+    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
+    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
+    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
+
+class MsgConst:
+    """
+    Class for log messages const
+    """
+    SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+
+class GraphMode:
+    NPY_MODE = "NPY_MODE"
+    STATISTIC_MODE = "STATISTIC_MODE"
+    ERROR_MODE = "ERROR_MODE"
