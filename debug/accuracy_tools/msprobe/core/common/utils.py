@@ -156,8 +156,8 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
 
 
 
-def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
-    if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
+    if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool) and isinstance(is_print_compare_log, bool)):
         logger.error("Invalid input parameters which should be only bool type.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 

@@ -187,13 +187,13 @@ class MSComparator(Comparator):
         bench_struct_out = del_bench_dict.get(CompareConst.OUTPUT_STRUCT, [])
         bench_summary = del_bench_dict.get(CompareConst.SUMMARY, [])
         for idx in input_sub_list:  # Fill in the blank value field in the pt dictionary
-            bench_op_name.insert(idx, CompareConst.NAN)
-            bench_struct_in.insert(idx, CompareConst.NAN)
-            bench_summary.insert(idx, CompareConst.NAN)
+            bench_op_name.insert(idx, CompareConst.N_A)
+            bench_struct_in.insert(idx, CompareConst.N_A)
+            bench_summary.insert(idx, CompareConst.N_A)
         for idx in output_sub_list:  # Fill in the blank value field in the pt dictionary
-            bench_op_name.insert(npu_in_len + idx, CompareConst.NAN)
-            bench_struct_out.insert(idx, CompareConst.NAN)
-            bench_summary.insert(npu_in_len + idx, CompareConst.NAN)
+            bench_op_name.insert(npu_in_len + idx, CompareConst.N_A)
+            bench_struct_out.insert(idx, CompareConst.N_A)
+            bench_summary.insert(npu_in_len + idx, CompareConst.N_A)
         del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
         return del_bench_dict
         
@@ -206,7 +206,7 @@ def ms_compare(input_param, output_path, **kwargs):
         cell_mapping = kwargs.get('cell_mapping', None)
         api_mapping = kwargs.get('api_mapping', None)
         summary_compare, md5_compare = task_dumppath_get(input_param)
-        check_configuration_param(stack_mode, auto_analyze, fuzzy_match)
+        check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, summary_compare, md5_compare)
     except (CompareException, FileCheckException) as error:
