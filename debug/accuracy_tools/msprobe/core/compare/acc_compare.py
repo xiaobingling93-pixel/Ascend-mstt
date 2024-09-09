@@ -8,8 +8,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid
 from msprobe.core.common.file_utils import remove_path
-from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
-    check_stack_json_str
+from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
