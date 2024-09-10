@@ -13,10 +13,10 @@ class BaseLogger:
     @staticmethod
     def get_level():
         input_level = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL)
-        if input_level in MsgConst.LEVEL_ENUM:
+        if input_level in MsgConst.LOG_LEVEL_ENUM:
             return int(input_level)
         else:
-            return MsgConst.DEFAULT_LEVEL
+            return MsgConst.LogLevel.INFO.value
 
     def get_rank(self):
         return self.rank
@@ -31,23 +31,23 @@ class BaseLogger:
     
     @filter_special_chars
     def error(self, msg):
-        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[3]):
-            self._print_log(MsgConst.LEVEL[3], msg)
+        if self.level <= MsgConst.LogLevel.ERROR.value:
+            self._print_log(MsgConst.LOG_LEVEL[3], msg)
 
     @filter_special_chars
     def warning(self, msg):
-        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[2]):
-            self._print_log(MsgConst.LEVEL[2], msg)
+        if self.level <= MsgConst.LogLevel.WARNING.value:
+            self._print_log(MsgConst.LOG_LEVEL[2], msg)
 
     @filter_special_chars
     def info(self, msg):
-        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[1]):
-            self._print_log(MsgConst.LEVEL[1], msg)
+        if self.level <= MsgConst.LogLevel.INFO.value:
+            self._print_log(MsgConst.LOG_LEVEL[1], msg)
 
     @filter_special_chars
     def debug(self, msg):
-        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[0]):
-            self._print_log(MsgConst.LEVEL[0], msg)
+        if self.level <= MsgConst.LogLevel.DEBUG.value:
+            self._print_log(MsgConst.LOG_LEVEL[0], msg)
 
     def on_rank_0(self, func):
         def func_rank_0(*args, **kwargs):
