@@ -16,14 +16,13 @@
 import zlib
 
 import mindspore as ms
-from mindspore import ops
+from mindspore import mint, ops
 import numpy as np
 
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
 from msprobe.core.common.file_utils import path_len_exceeds_limit
-from msprobe.mindspore.dump.hook_cell.wrap_functional import load_ops_functions
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
@@ -31,7 +30,6 @@ from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 class MindsporeDataProcessor(BaseDataProcessor):
     mindspore_special_type = tuple([ms.Tensor])
-    ops_func, mint_ops_func, _ = load_ops_functions()
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -74,10 +72,14 @@ class MindsporeDataProcessor(BaseDataProcessor):
             if data.dtype == ms.bfloat16 or not ops.is_floating_point(data):
                 data = data.to(ms.float32)
             api_register.norm_inner_op_set_ori_func()
-            tensor_stat.max = self.mint_ops_func["max"](data).item()
-            tensor_stat.min = self.mint_ops_func["min"](data).item()
-            tensor_stat.mean = self.mint_ops_func["mean"](data).item()
-            tensor_stat.norm = self.ops_func["norm"](data).item()
+            get_max_value = api_register.mint_ops_ori_attr.get("max", mint.max)
+            get_min_value = api_register.mint_ops_ori_attr.get("min", mint.min)
+            get_mean_value = api_register.mint_ops_ori_attr.get("mean", mint.mean)
+            get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
+            tensor_stat.max = get_max_value(data).item()
+            tensor_stat.min = get_min_value(data).item()
+            tensor_stat.mean = get_mean_value(data).item()
+            tensor_stat.norm = get_norm_value(data).item()
             api_register.norm_inner_op_set_hook_func()
         return tensor_stat
 
@@ -139,7 +141,6 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 
@@ -160,6 +161,8 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_tensor_as_npy(tensor, file_path)
             self.real_overflow_nums += 1
+            if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
+                logger.info(f"[{Const.TOOL_NAME}] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):

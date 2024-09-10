@@ -28,6 +28,9 @@ class DataCollector:
         else:
             self.scope = build_scope(None, self.config.scope, self.config.list)
 
+    def __del__(self):
+        self.write_json()
+
     @property
     def dump_data_dir(self):
         return self.data_writer.dump_tensor_data_dir
@@ -89,10 +92,13 @@ class DataCollector:
         if self.config.level == "L2":
             return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        if self.data_processor.is_terminated:
-            self.handle_data(name, data_info, use_buffer=False)
-            raise Exception("[msprobe] exit")
-        self.handle_data(name, data_info)
+        if self.config.framework == Const.MS_FRAMEWORK:
+            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
+        else:
+            if self.data_processor.is_terminated:
+                self.handle_data(name, data_info, flush=True)
+                raise Exception(f"[{Const.TOOL_NAME}] exit")
+            self.handle_data(name, data_info)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -100,10 +106,13 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
-        if self.data_processor.is_terminated:
-            self.handle_data(name, data_info, use_buffer=False)
-            raise Exception("[msprobe] exit")
-        self.handle_data(name, data_info)
+        if self.config.framework == Const.MS_FRAMEWORK:
+            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
+        else:
+            if self.data_processor.is_terminated:
+                self.handle_data(name, data_info, flush=True)
+                raise Exception(f"[{Const.TOOL_NAME}] exit")
+            self.handle_data(name, data_info)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -122,11 +131,12 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
-        if self.config.framework == Const.PT_FRAMEWORK and self.config.level not in DataCollector.level_without_construct:
+        if self.config.framework == Const.PT_FRAMEWORK and \
+           self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
-    def handle_data(self, name, data_info, use_buffer=True):
+    def handle_data(self, name, data_info, flush=False):
         if data_info:
             msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
