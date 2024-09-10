@@ -116,8 +116,7 @@ class Comparator:
         last_bench_ops_len = 0
 
         npu_api_nums = len(npu_json_data['data'])
-        progress_bar = tqdm(total=npu_api_nums, desc="NPU API Read Progress")
-        count_npu = 0
+        progress_bar = tqdm(total=npu_api_nums, desc="NPU API/Module Read Progress")
 
         while True:
             if not read_err_npu and not read_err_bench:
@@ -125,7 +124,6 @@ class Comparator:
             try:
                 last_npu_ops_len = len(npu_ops_queue)
                 op_name_npu = next(ops_npu_iter)
-                count_npu += 1
                 read_err_npu = True
                 npu_merge_list = self.gen_merge_list(npu_json_data,op_name_npu,stack_json_data,summary_compare,md5_compare)
                 if npu_merge_list:
@@ -254,8 +252,12 @@ class Comparator:
 
         if not md5_compare and not summary_compare:
             result_df = self._do_multi_process(input_parma, result_df)
+
+        logger.info("Highlight suspicious API/Module start.")
         find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        logger.info("Highlight suspicious API/Module finish.")
+
         if auto_analyze:
             advisor = Advisor(result_df, output_path, suffix)
             advisor.analysis()
