@@ -14,7 +14,7 @@ from kj600.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
 from kj600.anomaly_inform import AnomalyInformFactory
 from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
 from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from kj600.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst
+from kj600.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
 from kj600.file_check import FileOpen
 
 
@@ -86,6 +86,7 @@ class TrainerMon:
         self.params_have_main_grad = params_have_main_grad
         with FileOpen(config_file_path, 'r') as f:
             self.config = json.load(f)
+        validate_config(self.config)
         self.module_rank_list = self.config.get("module_ranks", [])
         self.eps = self.config.get('eps', 1e-8)
         self.ops = self.config.get('ops', [])

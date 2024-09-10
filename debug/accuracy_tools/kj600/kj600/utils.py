@@ -203,3 +203,9 @@ def change_mode(path, mode):
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
     
+
+def validate_config(config):
+    targets = config.get("targets", {})
+    if not isinstance(targets, dict):
+        raise ValueError('targets in config.json should be a dict')
+    
