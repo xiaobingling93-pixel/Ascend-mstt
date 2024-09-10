@@ -18,11 +18,16 @@ class CommonConfig:
 
     @staticmethod
     def get_step_from_string(step):
-        try:
-            borderline = int(step.split('-')[0]), int(step.split('-')[-1])
-        except (ValueError, IndexError) as e:
+        spilted_step = step.split('-')
+        if len(spilted_step) == 2:
+            try:
+                borderline = int(spilted_step[0]), int(spilted_step[1])
+            except (ValueError, IndexError) as e:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                       "The connector(-) must start and end with decimal numbers.") from e
+        else:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                                   "The connector(-) must start and end with decimal numbers.") from e
+                                   'The string parameter for step only supports formats like "3-5" or "5-3".')
         if borderline[0] <= borderline[1]:
             continual_step = list(range(borderline[0], borderline[1] + 1))
         else:

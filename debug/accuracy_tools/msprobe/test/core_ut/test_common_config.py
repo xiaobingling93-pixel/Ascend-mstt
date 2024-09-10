@@ -64,14 +64,21 @@ class TestCommonConfig(TestCase):
         self.assertEqual(str(the_exception), 
                          f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}step is invalid, it should be a list")
         
-        json_config.update({"step": [0, 1, "4---6?"]})
+        json_config.update({"step": [0, 1, "4-6?"]})
         with self.assertRaises(MsprobeException) as cm:
             CommonConfig(json_config)
         the_exception = cm.exception
         self.assertEqual(str(the_exception), 
                          f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The connector(-) must start and end with decimal numbers.")
         
-        json_config.update({"step": [0, 1, "4---6"]})
+        json_config.update({"step": [0, 1, "4--6"]})
+        with self.assertRaises(MsprobeException) as cm:
+            CommonConfig(json_config)
+        the_exception = cm.exception
+        self.assertEqual(str(the_exception), 
+                         f'{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The string parameter for step only supports formats like "3-5" or "5-3".')
+        
+        json_config.update({"step": [0, 1, "4-6"]})
         common_config = CommonConfig(json_config)
         self.assertEqual(common_config.step, [0, 1, 4, 5, 6])
         
