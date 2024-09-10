@@ -137,12 +137,12 @@ class ApiRegistry:
                     self.npu_distributed_hook_attr[attr_name[5:]] = getattr(wrap_distributed.HOOKDistributedOP,
                                                                             attr_name)
 
-        if torch_version_above_2:
-            self.store_ori_attr(torch.ops.aten, get_aten_ops(), self.aten_ori_attr)
-            wrap_aten.wrap_aten_ops_and_bind(hook)
-            for attr_name in dir(wrap_aten.HOOKAtenOP):
-                if attr_name.startswith(Const.ATTR_NAME_PREFIX):
-                    self.aten_hook_attr[attr_name[5:]] = getattr(wrap_aten.HOOKAtenOP, attr_name)
+        # if torch_version_above_2:
+        #     self.store_ori_attr(torch.ops.aten, get_aten_ops(), self.aten_ori_attr)
+        #     wrap_aten.wrap_aten_ops_and_bind(hook)
+        #     for attr_name in dir(wrap_aten.HOOKAtenOP):
+        #         if attr_name.startswith(Const.ATTR_NAME_PREFIX):
+        #             self.aten_hook_attr[attr_name[5:]] = getattr(wrap_aten.HOOKAtenOP, attr_name)
 
         self.store_ori_attr(torch._VF, get_vf_ops(), self.vf_ori_attr)
         wrap_vf.wrap_vf_ops_and_bind(hook)
