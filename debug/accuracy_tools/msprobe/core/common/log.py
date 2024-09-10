@@ -13,10 +13,10 @@ class BaseLogger:
     @staticmethod
     def get_level():
         input_level = os.environ.get(MsgConst.MSPROBE_LOG_LEVEL)
-        if input_level in MsgConst.LOG_LEVEL_ENUM:
-            return int(input_level)
-        else:
+        if input_level not in MsgConst.LOG_LEVEL_ENUM:
             return MsgConst.LogLevel.INFO.value
+        else:
+            return int(input_level)
 
     def get_rank(self):
         return self.rank
