@@ -74,7 +74,7 @@ class TestDataCollector(unittest.TestCase):
             self.data_collector.handle_data("Tensor.add", {"min": 0})
             msg = "msprobe is collecting data on Tensor.add. "
             mock_update_data.assert_called_with({"min": 0}, msg)
-            
+
             mock_debug.assert_called_with("msg")
             mock_flush.assert_called()
             mock_write_json.assert_not_called()
