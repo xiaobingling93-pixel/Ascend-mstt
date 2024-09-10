@@ -94,19 +94,25 @@ class BaseDataProcessor:
 
     @staticmethod
     def analyze_api_call_stack(name):
+        try:
+            api_stack = inspect.stack()[5:]
+        except Exception as e:
+            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+            api_stack = None
         stack_str = []
-        for (_, path, line, func, code, _) in inspect.stack()[5:]:
-            if not code:
-                continue
-            stack_line = " ".join([
-                "File", ", ".join([
-                    path,
-                    " ".join(["line", str(line)]),
-                    " ".join(["in", func]),
-                    " ".join(["\n", code[0].strip()])
+        if api_stack:
+            for (_, path, line, func, code, _) in api_stack:
+                if not code:
+                    continue
+                stack_line = " ".join([
+                    "File", ", ".join([
+                        path,
+                        " ".join(["line", str(line)]),
+                        " ".join(["in", func]),
+                        " ".join(["\n", code[0].strip()])
+                    ])
                 ])
-            ])
-            stack_str.append(stack_line)
+                stack_str.append(stack_line)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
