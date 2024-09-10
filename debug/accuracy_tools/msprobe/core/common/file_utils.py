@@ -241,7 +241,7 @@ def make_dir(dir_path):
     if os.path.isdir(dir_path):
         return
     try:
-        os.mkdir(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
+        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  f"Failed to create {dir_path}. "

@@ -82,11 +82,11 @@ class TestDataCollector(unittest.TestCase):
             mock_update_data.reset_mock()
             mock_debug.reset_mock()
             mock_flush.reset_mock()
-            self.data_collector.handle_data("Tensor.add", {}, use_buffer=False)
+            self.data_collector.handle_data("Tensor.add", {}, flush=True)
             mock_update_data.assert_not_called()
             mock_debug.assert_not_called()
             mock_write_json.assert_called()
-    
+
     @patch.object(DataCollector, "update_construct")
     @patch.object(DataWriter, "update_stack")
     @patch.object(BaseDataProcessor, "analyze_api_call_stack")
@@ -97,10 +97,15 @@ class TestDataCollector(unittest.TestCase):
              patch.object(StatisticsDataProcessor, "analyze_forward", return_value={}):
             with patch.object(StatisticsDataProcessor, "is_terminated", return_value=True), \
                  self.assertRaises(Exception) as context:
+                self.data_collector.config.framework = Const.PT_FRAMEWORK
                 self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
-            mock_handle_data.assert_called_with("name", {}, use_buffer=False)
-            self.assertEqual(str(context.exception), "[msprobe] exit")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
+                self.assertEqual(str(context.exception), "[msprobe] exit")
+                self.data_collector.config.framework = Const.MS_FRAMEWORK
+                self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
 
+            self.data_collector.config.framework = Const.PT_FRAMEWORK
             self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {})
 
@@ -111,9 +116,14 @@ class TestDataCollector(unittest.TestCase):
              patch.object(StatisticsDataProcessor, "analyze_backward", return_value={}):
             with patch.object(StatisticsDataProcessor, "is_terminated", return_value=True), \
                  self.assertRaises(Exception) as context:
+                self.data_collector.config.framework = Const.PT_FRAMEWORK
                 self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
-            mock_handle_data.assert_called_with("name", {}, use_buffer=False)
-            self.assertEqual(str(context.exception), "[msprobe] exit")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
+                self.assertEqual(str(context.exception), "[msprobe] exit")
+                self.data_collector.config.framework = Const.MS_FRAMEWORK
+                self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
 
+            self.data_collector.config.framework = Const.PT_FRAMEWORK
             self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {})
