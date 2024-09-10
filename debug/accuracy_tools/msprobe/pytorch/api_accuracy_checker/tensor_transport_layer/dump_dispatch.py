@@ -57,16 +57,13 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
 
         res = func(*args, **kwargs)
         cur_rank = get_tensor_rank(args, res)
-        # if cur_rank not in DumpUtil.rank_list:
-        #     return res
         cur_api_number = self.counter.index_dict.setdefault(aten_api, 0)
         api_name = f'Aten{Const.SEP}{aten_api}{Const.SEP}{cur_api_number}'
         logger.info(f"tools is dumping api: {api_name}")
-        # api_data = ApiData(api_name, args, kwargs, res, DumpUtil.call_num, cur_rank)
         api_data = ApiData(api_name, args, kwargs, res, 0, cur_rank)
         if "device" in api_data.kwargs:
             api_data.kwargs.pop("device")
-        if msCheckerConfig.nfs_path:
+        if self.attl.nfs_path:
             self.attl.upload(api_data)
         else:
             self.attl.send(api_data)
@@ -75,19 +72,23 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         return res
 
 
-def dispatch4data(func, attl):
+def dispatch4data(func, attl, status):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        # if not DumpUtil.get_dump_switch() or DumpUtil.phase not in ("backward", "all") or \
-        #         not msCheckerConfig.is_online:
-        #     return func(*args, **kwargs)
-        # DumpUtil.set_dump_switch("OFF")
+        if not status:
+            return func(*args, **kwargs)
         with AccuracyCheckerDispatch(attl):
             res = func(*args, **kwargs)
-            # DumpUtil.set_dump_switch("ON")
             return res
 
     return wrapper
 
-def start_dispatch(attl):
-    torch.autograd.backward = dispatch4data(torch.autograd.backward, attl)
+def run_ut_dispatch(attl, status):
+    """
+    This function called by online_run_ut. It is used to enable or disable dispatch for torch.autograd.backward function.
+
+    Args:
+        attl (ATTL):  online_run_ut class ATTL, which is used to upload or send api data to server.
+        status (bool): True means enable dispatch, False means disable dispatch.
+    """
+    torch.autograd.backward = dispatch4data(torch.autograd.backward, attl, status)
