@@ -8,6 +8,8 @@ import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
 from msprobe.mindspore import PrecisionDebugger
+from msprobe.mindspore.grad_probe.global_context import grad_context
+from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.common.file_utils import FileOpen
 
 file_path = os.path.abspath(__file__)
@@ -16,6 +18,8 @@ config_json_path = os.path.join(directory, "config.json")
 
 def main():
     PrecisionDebugger._instance = None
+    PrecisionDebugger.initialized = False
+    grad_context._setting[GradConst.CURRENT_STEP] = 0
     debugger = PrecisionDebugger(config_json_path)
 
     class SimpleNet(nn.Cell):
@@ -130,7 +134,7 @@ class TestMsGradientMonitor(TestCase):
         self.assertTrue((my_dense_weight_real == my_dense_weight_target).all(), "weight ndarray not same as target")
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
-        target_md5_value = "874174395c56922f86118050e8c93e74"
+        target_md5_value = "a4ad300992cb10965fbc12c2ee19dd37"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
 
     def test_gradient_monitor_L0(self):
@@ -154,5 +158,5 @@ class TestMsGradientMonitor(TestCase):
         main()
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
-        target_md5_value = "874174395c56922f86118050e8c93e74"
+        target_md5_value = "62e137a119c0d1a44623f10049c3f80d"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
