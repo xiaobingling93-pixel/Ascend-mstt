@@ -16,6 +16,7 @@ from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import start_dispatch
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
@@ -88,10 +89,10 @@ class Service:
                 return
 
             if self.config.online_run_ut:
-                if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
-                    return
-                api_data = ApiData(name[:-1], grad_input, {}, grad_output, self.current_iter, self.current_rank)
-                self.attl_send(api_data)
+                # if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
+                #     return
+                # api_data = ApiData(name[:-1], grad_input, {}, grad_output, self.current_iter, self.current_rank)
+                # self.attl_send(api_data)
                 return
 
             if self.data_collector:
@@ -138,6 +139,8 @@ class Service:
             self.first_start = False
         if api_origin:
             api_register.api_modularity()
+        if self.config.online_run_ut:
+            start_dispatch(self.attl)
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2" and not self.config.online_run_ut:
