@@ -45,7 +45,7 @@ class GradientMonitor:
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         save_filepath = os.path.join(save_path, f"{param_name}.npy")
-        save_npy(is_positive.numpy(), save_filepath)
+        save_npy(is_positive.cpu().numpy(), save_filepath)
 
     def monitor(self, model):
         print_rank_0("> parameter names:")
