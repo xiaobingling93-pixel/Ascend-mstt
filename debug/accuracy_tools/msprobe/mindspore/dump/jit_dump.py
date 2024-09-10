@@ -1,9 +1,12 @@
 import os
+
 from mindspore import Tensor
 from mindspore.common.api import _MindsporeFunctionExecutor
 from mindspore._c_expression import PyNativeExecutor_
+
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs
+from msprobe.core.common.const import Const
 
 
 def dump_jit(name, in_feat, out_feat, is_forward):
@@ -18,8 +21,8 @@ def dump_jit(name, in_feat, out_feat, is_forward):
         name_template = "Jit." + result + ".forward"
     else:
         name_template = "Jit." + result + ".backward"
-    JitDump.data_collector.visit_and_clear_overflow_status(name_template)
-    if JitDump.data_collector:
+    if JitDump.need_dump():
+        JitDump.data_collector.visit_and_clear_overflow_status(name_template)
         module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
         JitDump.data_collector.forward_data_collect(name_template, {}, pid, module_input_output)
 
@@ -27,6 +30,7 @@ def dump_jit(name, in_feat, out_feat, is_forward):
 class JitDump(_MindsporeFunctionExecutor):
     dump_config = None
     jit_enable = False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._executor = PyNativeExecutor_.get_instance()
@@ -49,6 +53,14 @@ class JitDump(_MindsporeFunctionExecutor):
     @classmethod
     def set_data_collector(cls, value):
         cls.data_collector = value
+
+    @classmethod
+    def need_dump(cls):
+        if cls.dump_config.task != Const.TENSOR and cls.dump_config.task != Const.STATISTICS:
+            return False
+        if not cls.data_collector or cls.data_collector.data_processor.is_terminated:
+            return False
+        return True
 
     def grad(self, obj, grad, weights, grad_position, *args,  **kwargs):
         if JitDump.jit_enable:
