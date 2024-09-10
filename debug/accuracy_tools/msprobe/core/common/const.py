@@ -328,7 +328,8 @@ class MsgConst:
     """
     MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
     LEVEL_ENUM = ["0", "1", "2", "3", "4"]
-    LEVEL = ["SKIP_PRINT", "ERROR", "WARNING", "INFO", "DEBUG"]
+    DEFAULT_LEVEL = 1
+    LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
 

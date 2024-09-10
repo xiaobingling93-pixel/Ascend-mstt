@@ -16,38 +16,38 @@ class BaseLogger:
         if input_level in MsgConst.LEVEL_ENUM:
             return int(input_level)
         else:
-            return 3
+            return MsgConst.DEFAULT_LEVEL
 
     def get_rank(self):
         return self.rank
 
     def filter_special_chars(func):
         @wraps(func)
-        def func_level(self, msg):
+        def func_level(self, msg, **kwargs):
             for char in MsgConst.SPECIAL_CHAR:
                 msg = msg.replace(char, '_')
-            return func(self, msg)
+            return func(self, msg, **kwargs)
         return func_level
-
+    
     @filter_special_chars
     def error(self, msg):
-        if self.level >= MsgConst.LEVEL.index(MsgConst.LEVEL[1]):
-            self._print_log(MsgConst.LEVEL[1], msg)
+        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[3]):
+            self._print_log(MsgConst.LEVEL[3], msg)
 
     @filter_special_chars
     def warning(self, msg):
-        if self.level >= MsgConst.LEVEL.index(MsgConst.LEVEL[2]):
+        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[2]):
             self._print_log(MsgConst.LEVEL[2], msg)
 
     @filter_special_chars
     def info(self, msg):
-        if self.level >= MsgConst.LEVEL.index(MsgConst.LEVEL[3]):
-            self._print_log(MsgConst.LEVEL[3], msg)
+        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[1]):
+            self._print_log(MsgConst.LEVEL[1], msg)
 
     @filter_special_chars
     def debug(self, msg):
-        if self.level >= MsgConst.LEVEL.index(MsgConst.LEVEL[4]):
-            self._print_log(MsgConst.LEVEL[4], msg)
+        if self.level <= MsgConst.LEVEL.index(MsgConst.LEVEL[0]):
+            self._print_log(MsgConst.LEVEL[0], msg)
 
     def on_rank_0(self, func):
         def func_rank_0(*args, **kwargs):
