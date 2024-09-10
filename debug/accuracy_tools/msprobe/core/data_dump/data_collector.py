@@ -141,7 +141,7 @@ class DataCollector:
             msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
             logger.debug(msg)
-        if flush:
+        if not flush:
             self.data_writer.flush_data_when_buffer_is_full()
         else:
             self.write_json()
