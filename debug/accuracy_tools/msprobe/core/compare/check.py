@@ -99,21 +99,17 @@ def check_dump_json_str(op_data, op_name):
     input_kwargs = op_data.get(Const.INPUT_KWARGS, None)
     output_list = op_data.get(Const.OUTPUT, None)
 
-    if input_list:
-        for api_input in input_list:
-            if api_input:
-                check_json_key_value(api_input, op_name)
-    if input_kwargs:
-        if isinstance(input_kwargs, dict):
-            check_json_key_value(input_kwargs, op_name)
+    args = [input_list, input_kwargs, output_list]
+    for arg in args:
+        if not arg:
+            continue
+        if isinstance(arg, dict):
+            check_json_key_value(arg, op_name)
         else:
-            for api_input_kwargs in input_kwargs:
-                if api_input_kwargs:
-                    check_json_key_value(api_input_kwargs, op_name)
-    if output_list:
-        for api_output in output_list:
-            if api_output:
-                check_json_key_value(api_output, op_name)
+            for ele in arg:
+                if not ele:
+                    continue
+                check_json_key_value(ele, op_name)
 
 
 def check_json_collection(collection, op_name):
