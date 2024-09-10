@@ -104,7 +104,7 @@ class BaseDataProcessor:
             for (_, path, line, func, code, _) in api_stack:
                 if not code:
                     continue
-                stack_line = f"File, {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
+                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
                 stack_str.append(stack_line)
         else:
             stack_str.append(Const.WITHOUT_CALL_STACK)
