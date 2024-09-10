@@ -44,6 +44,7 @@ class CommonConfig:
             elif isinstance(step, str) and '-' in step:
                 continual_step = self.get_step_from_string(step)
                 real_step.extend(continual_step)
+        real_step = list(set(real_step))
         real_step.sort()
         return real_step
     
