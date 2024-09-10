@@ -1,5 +1,6 @@
 import os
 import re
+import torch
 
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import FileChecker
