@@ -47,7 +47,7 @@ class Comparator:
             else:
                 for row in result:
                     del row[-1]
-        result_df = pd.DataFrame(result, columns=header)
+        result_df = pd.DataFrame(result, columns=header, dtype='object')
         return result_df   
     
     @classmethod
