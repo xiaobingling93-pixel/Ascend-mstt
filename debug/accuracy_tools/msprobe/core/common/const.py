@@ -111,6 +111,7 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+    WITHOUT_CALL_STACK = "The call stack retrieval failed."
 
 
 class CompareConst:

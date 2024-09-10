@@ -113,6 +113,8 @@ class BaseDataProcessor:
                     ])
                 ])
                 stack_str.append(stack_line)
+        else:
+            stack_str.append(Const.WITHOUT_CALL_STACK)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
