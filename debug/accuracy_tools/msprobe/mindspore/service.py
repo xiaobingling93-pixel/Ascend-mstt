@@ -123,6 +123,7 @@ class Service:
 
         return wrap_forward_hook, wrap_backward_hook
 
+
     def register_hooks(self):
         primitive_set = set()
         for _, cell in self.model.cells_and_names():
