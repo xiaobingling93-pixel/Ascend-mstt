@@ -2,6 +2,13 @@ import os
 import re
 import torch
 
+try:
+    import torch_npu
+except ImportError:
+    current_device = "cuda"
+else:
+    current_device = "npu"
+
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
