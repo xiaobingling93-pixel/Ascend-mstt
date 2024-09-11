@@ -14,12 +14,12 @@ from msprobe.core.common.file_utils import load_yaml
 
 def singleton(cls):
     _instance = {}
-
-    def inner():
+    
+    def wrapper(*args, **kwargs):
         if cls not in _instance:
-            _instance[cls] = cls()
+            _instance[cls] = cls(*args, **kwargs)
         return _instance[cls]
-    return inner
+    return wrapper
 
 
 @singleton
@@ -42,10 +42,6 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         self.npu_adjust_autogard = []
         self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist', [])
         self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard', [])
-
-    def enable_autogard(self, aten_api):
-        if aten_api in self.npu_adjust_autogard:
-            torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)
 
     def __torch_dispatch__(self, func, types, args=None, kwargs=None):
         func_name_split_list = func.__name__.split(Const.SEP)
@@ -70,6 +66,10 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         self.counter.index_dict[aten_api] += 1
 
         return res
+    
+    def enable_autogard(self, aten_api):
+        if aten_api in self.npu_adjust_autogard:
+            torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)
 
 
 def dispatch4data(func, attl, status):
