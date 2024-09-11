@@ -14,17 +14,13 @@
 # ============================================================================
 import os
 
-
 import mindspore as ms
-import numpy as np
 from mindspore.common.tensor import Tensor
 from mindspore import ops
 
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
-from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
-
 
 class PrimitiveHookService:
     def __init__(self, service_instance):

@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import unittest
+import numpy as np
 from unittest.mock import Mock, patch
 
 from mindspore import nn
@@ -27,6 +28,7 @@ from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from collections import defaultdict
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from mindspore.common.tensor import Tensor
+
 
 class DummyModel(nn.Cell):
     def __init__(self):
