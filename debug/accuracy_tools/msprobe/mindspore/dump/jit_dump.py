@@ -22,7 +22,7 @@ def dump_jit(name, in_feat, out_feat, is_forward):
     else:
         name_template = "Jit." + result + ".backward"
     if JitDump.need_dump():
-        JitDump.data_collector.visit_and_clear_overflow_status(name_template)
+        JitDump.data_collector.update_api_or_module_name(name_template)
         module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
         JitDump.data_collector.forward_data_collect(name_template, {}, pid, module_input_output)
 
