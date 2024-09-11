@@ -137,8 +137,8 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 确保原始函数被调用
         mock_origin_func.assert_called_once()
 
-        # 检查返回值是否正确
-        self.assertTrue(isinstance(result, Tensor))
+        # 检查返回值是否是 Tensor 实例
+        self.assertIsInstance(result, Tensor)
 
         # 确保 HookBackward 被应用
         mock_hook_backward.assert_called()
@@ -159,6 +159,9 @@ class TestPrimitiveHookService(unittest.TestCase):
         with patch.object(self.mock_service_instance.data_collector, 'backward_data_collect') as mock_backward_collect:
             mock_hook_backward.side_effect = lambda x: grad_tensor
             result = wrapped_func(Mock(), input_tensor)
+
+            # 验证结果
+            self.assertTrue(isinstance(result, Tensor))
             mock_backward_collect.assert_called_once()
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
@@ -179,7 +182,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 确保在 switch 关闭时不应用 hook
         mock_origin_func.assert_called_once()
-        self.assertEqual(result, input_tensor)
+        self.assertTrue((result == input_tensor).all())  # 使用 .all() 来比较 Tensor
 
     @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
     def test_wrap_primitive_error_handling(self, mock_hook_backward):
