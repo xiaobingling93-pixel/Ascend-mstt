@@ -1,6 +1,7 @@
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import FileChecker
 
 
 class CommonConfig:
@@ -58,6 +59,9 @@ class CommonConfig:
         if self.task and self.task not in Const.TASK_LIST:
             logger.error_log_with_exp("task is invalid, it should be one of {}".format(Const.TASK_LIST),
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if self.dump_path is not None and not isinstance(self.dump_path, str):
+            logger.error_log_with_exp("dump_path is invalid, it should be a string",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.rank is not None and not isinstance(self.rank, list):
             logger.error_log_with_exp("rank is invalid, it should be a list",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
@@ -73,6 +77,16 @@ class CommonConfig:
         if not isinstance(self.enable_dataloader, bool):
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if self.acl_config:
+            self._check_acl_config()
+
+    def _check_acl_config(self):
+        if not isinstance(self.acl_config, str):
+            logger.error_log_with_exp("acl_config is invalid, it should be a string",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        file_checker = FileChecker(
+            file_path=self.acl_config, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+        file_checker.common_check()
 
 
 class BaseConfig:
