@@ -149,6 +149,9 @@ class TestPrimitiveHookService(unittest.TestCase):
         input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
         grad_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
 
+        # 确保 HookBackward 返回一个可调用对象，该对象返回 Tensor
+        mock_hook_backward.return_value = lambda x: grad_tensor
+        
         # 模拟原始函数
         mock_origin_func = Mock(return_value=input_tensor)
 
