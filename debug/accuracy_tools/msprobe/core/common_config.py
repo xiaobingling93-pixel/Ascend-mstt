@@ -18,20 +18,21 @@ class CommonConfig:
 
     @staticmethod
     def get_step_from_string(step):
-        spilted_step = step.split('-')
-        if len(spilted_step) == 2:
+        splited_step = step.split('-')
+        if len(splited_step) == 2:
             try:
-                borderline = int(spilted_step[0]), int(spilted_step[1])
+                borderline = int(splited_step[0]), int(splited_step[1])
             except (ValueError, IndexError) as e:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                                       "The connector(-) must start and end with decimal numbers.") from e
+                                       "The hyphen(-) must start and end with decimal numbers.") from e
         else:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                                   'The string parameter for step only supports formats like "3-5" or "5-3".')
+                                   f'The string parameter for step only supports formats like "3-5". Now string parameter for step is "{step}".')
         if borderline[0] <= borderline[1]:
             continual_step = list(range(borderline[0], borderline[1] + 1))
         else:
-            continual_step = list(range(borderline[0], borderline[1] - 1, -1))
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f'For the hyphen(-) in step, the left boundary ({borderline[0]}) cannot be greater than the right boundary ({borderline[1]}).')
         return continual_step
 
     def get_real_step(self, step_input):
