@@ -44,8 +44,8 @@ from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.dump.jit_dump import JitDump
 
 class PrimitiveHookService:
-    def __init__(self, data_collector):
-        self.data_collector = data_collector
+    def __init__(self, service_instance):
+        self.service_instance = service_instance
         self.primitive_counters = {}
 
     def wrap_primitive(self, origin_func, primitive_name):
@@ -55,16 +55,16 @@ class PrimitiveHookService:
                 backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
-                        self.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        self.service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
-                        self.data_collector.backward_output_data_collect(
+                        self.service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
                         captured_grads.clear()
                     elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
-                        self.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        self.service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
-                        self.data_collector.backward_input_data_collect(
+                        self.service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
                         captured_grads.clear()
@@ -113,6 +113,9 @@ class PrimitiveHookService:
             current_count = self.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
 
+            if not self.service_instance.switch:
+                return origin_func(*args, **kwargs)
+
             captured_grads_input, captured_grads_output = [], []
 
             try:
@@ -128,15 +131,18 @@ class PrimitiveHookService:
                                 " primitive_name: {}".format(exception, primitive_name)) from exception
 
             forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
-            self.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
-            if self.data_collector:
+            self.service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            if self.service_instance.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
                 try:
-                    self.data_collector.forward_data_collect(forward_primitive_name, instance_self,
+                    self.service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self,
                                                              os.getpid(), module_input_output)
                 except Exception as exception:
                     raise Exception("This is a primitive op dump error during forward data collection: {},"
                                     " primitive_name: {}".format(exception, primitive_name)) from exception
+
+                if self.service_instance.data_collector.if_return_forward_new_output():
+                    out = self.service_instance.data_collector.get_forward_new_output()
 
             try:
                 out = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)

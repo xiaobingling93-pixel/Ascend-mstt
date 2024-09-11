@@ -53,12 +53,11 @@ class Service:
         self.config.level = self.config.level_ori
         self.data_collector = build_data_collector(self.config)
         self.cell_processor = CellProcessor(self.data_collector.scope)
-        self.primitive_hook_service = PrimitiveHookService(self.data_collector)
+        self.primitive_hook_service = PrimitiveHookService(self)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
-        self.primitive_counters = {}
         self.dump_iter_dir = None
         self.start_call = False
         self.check_level_valid()
@@ -140,7 +139,7 @@ class Service:
         self.data_collector.update_iter(self.current_iter)
         HOOKCell.cell_count = defaultdict(int)
         CellProcessor.cell_count = {}
-        self.primitive_counters.clear()
+        self.primitive_hook_service.primitive_counters.clear()
 
     def start(self, model=None):
         self.start_call = True
