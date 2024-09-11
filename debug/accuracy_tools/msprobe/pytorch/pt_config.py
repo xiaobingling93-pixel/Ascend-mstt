@@ -174,17 +174,20 @@ class FreeBenchmarkCheckConfig(BaseConfig):
     def _check_fix_config(self):
         if self.if_preheat:
             logger.error_log_with_exp(
-                f"Preheating is not supported for {HandlerType.FIX} handler type"
+                f"Preheating is not supported for {HandlerType.FIX} handler type",
+                MsprobeException(MsprobeException.INVALID_PARAM_ERROR),
             )
         if self.fuzz_stage not in PytorchFreeBenchmarkConst.FIX_STAGE_LIST:
             logger.error_log_with_exp(
                 f"The fuzz_stage when opening {HandlerType.FIX} handler must be one of "
-                f"{PytorchFreeBenchmarkConst.FIX_STAGE_LIST}"
+                f"{PytorchFreeBenchmarkConst.FIX_STAGE_LIST}",
+                MsprobeException(MsprobeException.INVALID_PARAM_ERROR),
             )
         if self.pert_mode not in PytorchFreeBenchmarkConst.FIX_MODE_LIST:
             logger.error_log_with_exp(
                 f"The pert_mode when opening {HandlerType.FIX} handler must be one of "
-                f"{PytorchFreeBenchmarkConst.FIX_MODE_LIST}"
+                f"{PytorchFreeBenchmarkConst.FIX_MODE_LIST}",
+                MsprobeException(MsprobeException.INVALID_PARAM_ERROR),
             )
 
 class RunUTConfig(BaseConfig):
