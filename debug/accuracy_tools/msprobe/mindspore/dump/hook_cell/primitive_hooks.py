@@ -20,7 +20,6 @@ from collections import defaultdict
 import mindspore as ms
 from mindspore.common.tensor import Tensor
 from mindspore import ops
-from mindspore import nn
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
     pijit_label = True
@@ -28,28 +27,46 @@ except ImportError:
     pijit_label = False
 
 
-from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.scope import BaseScope
-from msprobe.mindspore.common.utils import get_rank_if_initialized
-from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
-from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
-from msprobe.core.common.exceptions import MsprobeException
-from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.mindspore.cell_processor import CellProcessor
-from msprobe.mindspore.dump.jit_dump import JitDump
 
 class PrimitiveHookService:
     def __init__(self, service_instance):
+        """
+        初始化 PrimitiveHookService 并设置服务实例。
+
+        Args:
+            service_instance (Service): 外部的Service类实例，用于访问数据采集器和控制状态。
+        """
         self.service_instance = service_instance
         self.primitive_counters = {}
 
     def wrap_primitive(self, origin_func, primitive_name):
+        """
+        包装原始的 primitive 函数，添加输入和输出的 hook 以捕获前向和后向数据。
+
+        Args:
+            origin_func (callable): 原始的 primitive 函数。
+            primitive_name (str): 原始的 primitive 名称。
+
+        Returns:
+            callable: 包装后的 primitive 函数。
+        """
         def create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type):
+            """
+            创建后向 hook 函数，用于捕获梯度。
+
+            Args:
+                captured_grads (list): 用于保存捕获的梯度。
+                num_tensors (int): 张量数量。
+                updated_primitive_name (str): 更新后的 primitive 名称。
+                hook_type (str): hook 类型 (输入/输出)。
+
+            Returns:
+                callable: 后向 hook 函数。
+            """
             def backward_hook(grad):
                 captured_grads.append(grad)
                 backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
@@ -76,6 +93,17 @@ class PrimitiveHookService:
             return backward_hook
 
         def hook_primitive_inputs(args, captured_grads_input, updated_primitive_name):
+            """
+            针对前向输入添加 hook。
+
+            Args:
+                args (tuple): primitive 输入参数。
+                captured_grads_input (list): 捕获的输入梯度。
+                updated_primitive_name (str): 更新后的 primitive 名称。
+
+            Returns:
+                list: 添加了 hook 的输入。
+            """
             hooked_inputs = []
             num_tensors = sum(isinstance(arg, Tensor) for arg in args)
             input_backward_hook = create_backward_hook(captured_grads_input, num_tensors, updated_primitive_name,
@@ -89,6 +117,17 @@ class PrimitiveHookService:
             return hooked_inputs
 
         def hook_primitive_outputs(out, captured_grads_output, updated_primitive_name):
+            """
+            针对前向输出添加 hook。
+
+            Args:
+                out (Tensor/tuple): primitive 输出。
+                captured_grads_output (list): 捕获的输出梯度。
+                updated_primitive_name (str): 更新后的 primitive 名称。
+
+            Returns:
+                Tensor/tuple: 添加了 hook 的输出。
+            """
             if isinstance(out, tuple):
                 num_output_tensors = sum(isinstance(tensor, Tensor) for tensor in out)
             else:
@@ -109,6 +148,17 @@ class PrimitiveHookService:
             return out
 
         def wrapped_primitive_call(instance_self, *args, **kwargs):
+            """
+            包装后的 primitive 调用函数，添加输入和输出的 hook。
+
+            Args:
+                instance_self (object): primitive 的实例。
+                *args: primitive 输入参数。
+                **kwargs: primitive 关键字参数。
+
+            Returns:
+                Tensor/tuple: primitive 的返回值。
+            """
             self.update_primitive_counters(primitive_name)
             current_count = self.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
