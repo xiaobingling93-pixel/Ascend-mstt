@@ -13,21 +13,11 @@
 # limitations under the License.
 # ============================================================================
 import os
-import copy
-import functools
-from collections import defaultdict
 
 import mindspore as ms
 from mindspore.common.tensor import Tensor
 from mindspore import ops
-try:
-    from mindspore.common._pijit_context import PIJitCaptureContext
-    pijit_label = True
-except ImportError:
-    pijit_label = False
 
-
-from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
