@@ -55,14 +55,14 @@ class PrimitiveHookService:
                 backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
-                        self.service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
                         self.service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
                         captured_grads.clear()
                     elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
-                        self.service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
                         self.service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
@@ -131,7 +131,7 @@ class PrimitiveHookService:
                                 " primitive_name: {}".format(exception, primitive_name)) from exception
 
             forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
-            self.service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
             if self.service_instance.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
                 try:
