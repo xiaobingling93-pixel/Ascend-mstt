@@ -25,6 +25,7 @@ from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from collections import defaultdict
+from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 
 
 class DummyModel(nn.Cell):
