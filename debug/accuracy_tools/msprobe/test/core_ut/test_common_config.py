@@ -69,7 +69,7 @@ class TestCommonConfig(TestCase):
             CommonConfig(json_config)
         the_exception = cm.exception
         self.assertEqual(str(the_exception), 
-                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The connector(-) must start and end with decimal numbers.")
+                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The hyphen(-) must start and end with decimal numbers.")
 
         json_config.update({"step": [0, 1, "3--5"]})
         with self.assertRaises(MsprobeException) as cm:
