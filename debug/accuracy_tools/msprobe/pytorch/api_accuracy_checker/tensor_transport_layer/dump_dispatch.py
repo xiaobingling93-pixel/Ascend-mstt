@@ -14,12 +14,13 @@ from msprobe.core.common.file_utils import load_yaml
 
 def singleton(cls):
     _instance = {}
-    
-    def wrapper(*args, **kwargs):
+
+    @wraps(cls)
+    def inner():
         if cls not in _instance:
-            _instance[cls] = cls(*args, **kwargs)
+            _instance[cls] = cls()
         return _instance[cls]
-    return wrapper
+    return inner
 
 
 @singleton
