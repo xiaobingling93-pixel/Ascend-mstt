@@ -95,7 +95,8 @@ def fuzzy_check_name(npu_name, bench_name):
 
 
 def check_dump_json_str(op_data, op_name):
-    input_list = op_data.get(Const.INPUT_ARGS, None) if Const.FORWARD in op_name else op_data.get(Const.INPUT, None)
+    input_list = op_data.get(Const.INPUT_ARGS, None) if op_data.get(Const.INPUT_ARGS, None) else op_data.get(
+        Const.INPUT, None)
     input_kwargs = op_data.get(Const.INPUT_KWARGS, None)
     output_list = op_data.get(Const.OUTPUT, None)
 
@@ -110,15 +111,6 @@ def check_dump_json_str(op_data, op_name):
                 if not ele:
                     continue
                 check_json_key_value(ele, op_name)
-
-
-def check_json_collection(collection, op_name):
-    if isinstance(collection, dict):
-        check_json_key_value(collection, op_name)
-    else:
-        for item in collection:
-            if item:
-                check_json_key_value(item, op_name)
 
 
 def check_json_key_value(input_output, op_name):
@@ -142,3 +134,12 @@ def valid_key_value(key, value, op_name):
         raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
     else:
         check_op_str_pattern_valid(value, op_name)
+
+
+def check_stack_json_str(stack_info, op_name):
+    if isinstance(stack_info, list):
+        for item in stack_info:
+            check_op_str_pattern_valid(item, op_name, stack=True)
+    else:
+        logger.error(f"Expected stack_info to be a list, but got {type(stack_info).__name__} for '{op_name}'")
+        raise CompareException(CompareException.INVALID_OBJECT_TYPE_ERROR)
