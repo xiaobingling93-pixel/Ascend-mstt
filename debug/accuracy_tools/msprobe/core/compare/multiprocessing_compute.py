@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from functools import partial
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import CompareConst
@@ -29,11 +30,19 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         except OSError as e:
             logger.error("pool terminate failed")
 
+    progress_bar = tqdm(total=len(result_df), desc="api/module item processing", unit="row", ncols=100)
+
+    def update_progress(size, progress_lock):
+        with progress_lock:
+            progress_bar.update(size)
+
     for process_idx, df_chunk in enumerate(df_chunks):
         idx = df_chunk_size * process_idx
+        chunk_size = len(df_chunk)
         result = pool.apply_async(func,
                                   args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
-                                  error_callback=err_call)
+                                  error_callback=err_call,
+                                  callback=lambda _: update_progress(chunk_size, lock))
         results.append(result)
     final_results = [r.get() for r in results]
     pool.close()

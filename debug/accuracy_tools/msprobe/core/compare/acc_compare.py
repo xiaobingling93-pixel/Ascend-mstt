@@ -116,7 +116,7 @@ class Comparator:
         last_bench_ops_len = 0
 
         npu_api_nums = len(npu_json_data['data'])
-        progress_bar = tqdm(total=npu_api_nums, desc="NPU API/Module Read Progress")
+        progress_bar = tqdm(total=npu_api_nums, desc="NPU API/Module Read Progress", unit="item", ncols=100)
 
         while True:
             if not read_err_npu and not read_err_bench:
