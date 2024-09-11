@@ -179,7 +179,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.assertEqual(mock_save.call_args_list[1][0],
                          (tensor2, "tensor2"))
 
-    def test_is_terminated(self):
+    def test_is_terminated(self, mock_info):
         self.data_processor.overflow_nums = -1
         self.assertFalse(self.data_processor.is_terminated)
         self.data_processor.real_overflow_nums = 2
