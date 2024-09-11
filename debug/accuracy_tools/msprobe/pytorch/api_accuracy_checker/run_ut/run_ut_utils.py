@@ -21,7 +21,7 @@ hf_32_standard_api = ["conv1d", "conv2d"]
 not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
 not_raise_dtype_set = {'type_as'}
 
-RAISE_PRECISION = {
+PRECISION_MAPPING = {
     torch.float16: torch.float32,
     torch.bfloat16: torch.float32,
     torch.float32: torch.float64
@@ -101,7 +101,7 @@ def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
     '''
     if api_name in hf_32_standard_api and arg.dtype == torch.float32:
         return arg
-    if raise_dtype is None or arg.dtype not in RAISE_PRECISION or raise_dtype == arg.dtype:
+    if raise_dtype is None or arg.dtype not in PRECISION_MAPPING or raise_dtype == arg.dtype:
         return arg
     return arg.type(raise_dtype)
 
@@ -147,7 +147,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return arg_in
 
     def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
-        if arg_in.dtype in RAISE_PRECISION:
+        if arg_in.dtype in PRECISION_MAPPING:
             return True
         if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
             return True
@@ -166,7 +166,7 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     need_raise_dtypes = recursive_find_dtypes(input_args)
     need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
     if len(need_raise_dtypes) == 1:
-        raise_dtype = RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
+        raise_dtype = PRECISION_MAPPING.get(need_raise_dtypes.pop(), torch.float32)
     elif len(need_raise_dtypes) >= 2:
         raise_dtype = torch.float32
 
