@@ -34,6 +34,19 @@ class Const:
         "mindspore.communication.comm_func.reduce",
         "mindspore.communication.comm_func.reduce_scatter_tensor"
         ]
+    TENSOR_DATA_PREFIX = "Tensor."
+    STUB_TENSOR_DATA_PREFIX = "Tensor."
+    OPS_DATA_PREFIX = "Functional."
+    MINT_DATA_PREFIX = "Mint."
+    MINT_NN_FUNC_DATA_PREFIX = "MintFunctional."
+
+    SUPPORTED_API_LIST_FILE = "support_wrap_ops.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+    SUPPORTED_OPS_LIST_KEY = "ops"
+    SUPPORTED_MINT_LIST_KEY = "mint.ops"
+    SUPPORTED__MINT_NN_FUNC_LIST_KEY = "mint.nn.functional"
+
+    DROPOUT_API_NAME_PREFIX = "dropout"
 
 
 class FreeBenchmarkConst:
