@@ -37,7 +37,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveWrapper
+from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
 from msprobe.core.common.exceptions import MsprobeException
@@ -53,6 +53,7 @@ class Service:
         self.config.level = self.config.level_ori
         self.data_collector = build_data_collector(self.config)
         self.cell_processor = CellProcessor(self.data_collector.scope)
+        self.primitive_hook_service = PrimitiveHookService(self.data_collector)
         self.switch = False
         self.current_iter = 0
         self.first_start = True
@@ -76,20 +77,6 @@ class Service:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
             )
-
-    def wrap_primitive(self, origin_func, primitive_name):
-        """使用 PrimitiveWrapper 来封装 primitive 的调用"""
-        wrapper = PrimitiveWrapper(self, primitive_name)
-        return functools.partial(wrapper.wrapped_primitive_call, origin_func)
-
-    def update_primitive_counters(self, primitive_name):
-        """更新 primitive 计数器"""
-        if primitive_name not in self.primitive_counters:
-            self.primitive_counters[primitive_name] = 0
-        else:
-            self.primitive_counters[primitive_name] += 1
-
-
 
     def build_hook(self, target_type, name):
         def forward_hook(api_or_cell_name, cell, input, output):
@@ -145,7 +132,7 @@ class Service:
 
         for pname, primitive in primitive_set:
             NewPrimitive = type('NewPrimitive', (primitive.__class__,),
-                                {'__call__': self.wrap_primitive(primitive.__call__, pname)})
+                                {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__, pname)})
             primitive.__class__ = NewPrimitive
 
     def step(self):

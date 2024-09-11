@@ -43,92 +43,115 @@ from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.dump.jit_dump import JitDump
 
+class PrimitiveHookService:
+    def __init__(self, data_collector):
+        self.data_collector = data_collector
+        self.primitive_counters = {}
 
-class PrimitiveHook:
-    def __init__(self, service_instance, primitive_name):
-        self.service_instance = service_instance
-        self.primitive_name = primitive_name
-        self.pid = os.getpid()
-
-    def create_backward_hook(self, captured_grads, num_tensors, updated_primitive_name, hook_type):
-        def backward_hook(grad):
-            captured_grads.append(grad)
-            backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
-            if len(captured_grads) == num_tensors:
+    def wrap_primitive(self, origin_func, primitive_name):
+        def create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type):
+            def backward_hook(grad):
+                captured_grads.append(grad)
+                backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
                 try:
-                    if hook_type == Const.INPUT:
-                        self._collect_backward_input_data(backward_primitive_name, captured_grads)
-                    elif hook_type == Const.OUTPUT:
-                        self._collect_backward_output_data(backward_primitive_name, captured_grads)
+                    if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
+                        self.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
+                        self.data_collector.backward_output_data_collect(
+                            backward_primitive_name, self, os.getpid(), new_module_input_output
+                        )
+                        captured_grads.clear()
+                    elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
+                        self.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
+                        self.data_collector.backward_input_data_collect(
+                            backward_primitive_name, self, os.getpid(), new_module_input_output
+                        )
+                        captured_grads.clear()
+
                 except Exception as exception:
-                    raise Exception(f"Primitive backward hook error: {exception}, "
-                                    f"primitive_name: {updated_primitive_name}") from exception
-                captured_grads.clear()
-        return backward_hook
+                    raise Exception(f"This is a primitive op {hook_type}_backward dump error: {exception},"
+                                    f" updated_primitive_name: {updated_primitive_name}") from exception
 
-    def _collect_backward_input_data(self, primitive_name, captured_grads):
-        new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
-        self.service_instance.data_collector.backward_input_data_collect(
-            primitive_name, self.service_instance, self.pid, new_module_input_output)
+            return backward_hook
 
-    def _collect_backward_output_data(self, primitive_name, captured_grads):
-        new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
-        self.service_instance.data_collector.backward_output_data_collect(
-            primitive_name, self.service_instance, self.pid, new_module_input_output)
+        def hook_primitive_inputs(args, captured_grads_input, updated_primitive_name):
+            hooked_inputs = []
+            num_tensors = sum(isinstance(arg, Tensor) for arg in args)
+            input_backward_hook = create_backward_hook(captured_grads_input, num_tensors, updated_primitive_name,
+                                                       Const.INPUT)
+            for _, arg in enumerate(args):
+                if isinstance(arg, Tensor):
+                    arg_hooked = ops.HookBackward(input_backward_hook)(arg)
+                    hooked_inputs.append(arg_hooked)
+                else:
+                    hooked_inputs.append(arg)
+            return hooked_inputs
 
-    def hook_inputs(self, args, captured_grads_input, updated_primitive_name):
-        num_tensors = sum(isinstance(arg, Tensor) for arg in args)
-        input_backward_hook = self.create_backward_hook(captured_grads_input, num_tensors, updated_primitive_name, Const.INPUT)
-        hooked_inputs = [ops.HookBackward(input_backward_hook)(arg) if isinstance(arg, Tensor) else arg for arg in args]
-        return hooked_inputs
+        def hook_primitive_outputs(out, captured_grads_output, updated_primitive_name):
+            if isinstance(out, tuple):
+                num_output_tensors = sum(isinstance(tensor, Tensor) for tensor in out)
+            else:
+                num_output_tensors = 1
+            output_backward_hook = create_backward_hook(captured_grads_output, num_output_tensors,
+                                                        updated_primitive_name, Const.OUTPUT)
 
-    def hook_outputs(self, out, captured_grads_output, updated_primitive_name):
-        if isinstance(out, tuple):
-            num_output_tensors = sum(isinstance(tensor, Tensor) for tensor in out)
+            if isinstance(out, Tensor):
+                return ops.HookBackward(output_backward_hook)(out)
+            elif isinstance(out, tuple):
+                hooked_outputs = []
+                for tensor in out:
+                    if isinstance(tensor, Tensor):
+                        hooked_outputs.append(ops.HookBackward(output_backward_hook)(tensor))
+                    else:
+                        hooked_outputs.append(tensor)
+                return tuple(hooked_outputs)
+            return out
+
+        def wrapped_primitive_call(instance_self, *args, **kwargs):
+            self.update_primitive_counters(primitive_name)
+            current_count = self.primitive_counters.get(primitive_name, 0)
+            updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
+
+            captured_grads_input, captured_grads_output = [], []
+
+            try:
+                hooked_inputs = hook_primitive_inputs(args, captured_grads_input, updated_primitive_name)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during input hooking: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            try:
+                out = origin_func(*hooked_inputs, **kwargs)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during function call: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
+            self.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            if self.data_collector:
+                module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
+                try:
+                    self.data_collector.forward_data_collect(forward_primitive_name, instance_self,
+                                                             os.getpid(), module_input_output)
+                except Exception as exception:
+                    raise Exception("This is a primitive op dump error during forward data collection: {},"
+                                    " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            try:
+                out = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
+            except Exception as exception:
+                raise Exception("This is a primitive op dump error during output hooking: {},"
+                                " primitive_name: {}".format(exception, primitive_name)) from exception
+
+            return out
+
+        return wrapped_primitive_call
+
+    def update_primitive_counters(self, primitive_name):
+        if primitive_name not in self.primitive_counters:
+            self.primitive_counters[primitive_name] = 0
         else:
-            num_output_tensors = 1
-        output_backward_hook = self.create_backward_hook(captured_grads_output, num_output_tensors, updated_primitive_name, Const.OUTPUT)
+            self.primitive_counters[primitive_name] += 1
 
-        if isinstance(out, Tensor):
-            return ops.HookBackward(output_backward_hook)(out)
-        elif isinstance(out, tuple):
-            return tuple(ops.HookBackward(output_backward_hook)(tensor) if isinstance(tensor, Tensor) else tensor for tensor in out)
-        return out
-
-
-class PrimitiveWrapper:
-    def __init__(self, service_instance, primitive_name):
-        self.service_instance = service_instance
-        self.primitive_name = primitive_name
-        self.hook_manager = PrimitiveHook(service_instance, primitive_name)
-
-    def wrapped_primitive_call(self, origin_func, instance_self, *args, **kwargs):
-        # 更新 primitive 调用计数
-        self.service_instance.update_primitive_counters(self.primitive_name)
-        current_count = self.service_instance.primitive_counters.get(self.primitive_name, 0)
-        updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{self.primitive_name}.{current_count}"
-
-        # 检查 dump 开关是否打开
-        if not self.service_instance.switch:
-            return origin_func(*args, **kwargs)
-
-        captured_grads_input, captured_grads_output = [], []
-
-        try:
-            # 钩住输入数据
-            hooked_inputs = self.hook_manager.hook_inputs(args, captured_grads_input, updated_primitive_name)
-            out = origin_func(*hooked_inputs, **kwargs)
-        except Exception as exception:
-            raise Exception(f"Error during primitive call: {exception}, primitive_name: {self.primitive_name}") from exception
-
-        # 前向数据收集
-        forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
-        self.service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
-        if self.service_instance.data_collector:
-            module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
-            self.service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self, os.getpid(), module_input_output)
-
-        # 钩住输出数据
-        out = self.hook_manager.hook_outputs(out, captured_grads_output, updated_primitive_name)
-        return out
 
