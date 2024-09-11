@@ -23,7 +23,6 @@ from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import (BaseDataProcessor, TensorStatInfo,
                                                         ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs)
 from msprobe.core.common.file_utils import path_len_exceeds_limit
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.mindspore.dump.hook_cell.wrap_functional import load_ops_functions
 from msprobe.mindspore.common.utils import convert_bf16_to_fp32, save_tensor_as_npy
 from msprobe.mindspore.common.log import logger
@@ -140,7 +139,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(MsprobeException.OVERFLOW_NUMS_ERROR+str(self.real_overflow_nums))
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 

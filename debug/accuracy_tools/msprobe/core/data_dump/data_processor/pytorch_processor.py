@@ -8,8 +8,7 @@ import numpy as np
 import torch
 from msprobe.core.common.file_utils import path_len_exceeds_limit, change_mode
 from msprobe.core.common.log import logger
-from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.const import Const, OverflowConst
+from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
@@ -180,7 +179,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(MsprobeException.OVERFLOW_NUMS_ERROR+str(self.real_overflow_nums))
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 

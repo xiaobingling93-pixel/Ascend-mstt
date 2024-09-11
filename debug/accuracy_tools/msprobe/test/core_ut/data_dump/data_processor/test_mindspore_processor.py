@@ -22,7 +22,6 @@ import mindspore as ms
 from mindspore import Tensor
 import numpy as np
 
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.mindspore_processor import (
     MindsporeDataProcessor,
@@ -187,7 +186,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.data_processor.real_overflow_nums = 2
         self.data_processor.overflow_nums = 2
         self.assertTrue(self.data_processor.is_terminated)
-        mock_info.assert_called_with(f"{MsprobeException.OVERFLOW_NUMS_ERROR}2")
+        mock_info.assert_called_with("[msprobe] 超过预设溢出次数 当前溢出次数: 2")
         self.data_processor.overflow_nums = 3
         self.assertFalse(self.data_processor.is_terminated)
 
