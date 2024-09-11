@@ -132,6 +132,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
+        self.has_overflow = False
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums

@@ -89,7 +89,7 @@ class Service:
                 module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs,
                                                                  output=output)
 
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
             self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
@@ -103,7 +103,7 @@ class Service:
 
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)

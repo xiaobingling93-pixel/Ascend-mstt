@@ -53,8 +53,8 @@ class DataCollector:
     def get_forward_new_output(self):
         return self.data_processor.get_forward_new_output()
 
-    def visit_and_clear_overflow_status(self, api_or_module_name):
-        self.data_processor.visit_and_clear_overflow_status(api_or_module_name)
+    def update_api_or_module_name(self, api_or_module_name):
+        self.data_processor.update_api_or_module_name(api_or_module_name)
 
     def write_json(self):
         self.data_writer.write_json()
