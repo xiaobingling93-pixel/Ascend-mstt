@@ -21,6 +21,7 @@ from profiler.advisor.result.result import OptimizeResult
 from profiler.advisor.result.item import OptimizeItem, OptimizeRecord
 from profiler.advisor.dataset.cluster.cluster_dataset import ClusterStepTraceTimeDataset
 from profiler.advisor.utils.utils import safe_index_value
+from profiler.advisor.utils.utils import safe_division
 
 logger = logging.getLogger()
 
@@ -45,6 +46,7 @@ class SlowRankAnalyzer(BaseAnalyzer):
         self.bottelneck = ''
         self.suggestion = ''
         self._steps = set()
+        self.format_datas = {}
         if self.step_trace_dict is not None:
             self.format_datas = self.format_details()
 
@@ -61,8 +63,9 @@ class SlowRankAnalyzer(BaseAnalyzer):
 
     def optimize(self, **kwargs):
         if self.step_trace_dict is None:
-            logger.error("slow_rank 分析失败，原因是数据加载失败，请检查你的cluster_analysis_outpu文件夹 \
-                  如不关心这类数据请忽略")
+            logger.error(
+                "Slow rank analysis failed, please ensure file 'step_trace_time.csv' exists in your profiling directory %s",
+                constant.ASCEND_PROFILER_OUTPUT)
             return self.result
         self.process()
         self.make_record()
@@ -136,6 +139,8 @@ class SlowRankAnalyzer(BaseAnalyzer):
 
     def get_global_step_rank(self, dimension):
         global_step_rank = {}
+        if not self.format_datas:
+            return global_step_rank
 
         headers = self.format_datas.get("headers")
 
@@ -150,6 +155,7 @@ class SlowRankAnalyzer(BaseAnalyzer):
 
         if self.compute_max_gap_ratio(data_list, sum(data_list) / len(
                 data_list)) < self.RATIO_THRESHOLD:
+            logger.info("There is no significant difference in computation time among all ranks")
             return global_step_rank
         max_time_index = data_list.index(max_time)
         min_time_index = data_list.index(min_time)
@@ -170,6 +176,8 @@ class SlowRankAnalyzer(BaseAnalyzer):
 
     def get_stage_step_rank(self, dimension):
         stage_step_rank = {}
+        if not self.format_datas:
+            return stage_step_rank
 
         headers = self.format_datas.get("headers")
         dimension_index = safe_index_value(headers, dimension)
@@ -196,8 +204,8 @@ class SlowRankAnalyzer(BaseAnalyzer):
                 tmp_rank_list.append(rank_id)
                 tmp_time_list.append(time)
 
-            if self.compute_max_gap_ratio(tmp_time_list, sum(tmp_time_list) / len(
-                    tmp_time_list)) < self.RATIO_THRESHOLD:
+            if self.compute_max_gap_ratio(tmp_time_list, safe_division(sum(tmp_time_list), len(
+                    tmp_time_list))) < self.RATIO_THRESHOLD:
                 continue
 
             max_time, min_time = max(tmp_time_list), min(tmp_time_list)

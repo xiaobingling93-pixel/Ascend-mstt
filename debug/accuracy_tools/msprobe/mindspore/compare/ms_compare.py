@@ -1,8 +1,9 @@
-import os.path
+import os
+import copy
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, load_yaml, load_npy
-from msprobe.core.common.file_check import create_directory
-from msprobe.core.common.const import Const
+    task_dumppath_get
+from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
@@ -16,7 +17,7 @@ class MSComparator(Comparator):
         self.api_mapping = api_mapping
         self.cross_frame = cell_mapping is not None or api_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
-        self.api_mapping_dict = {}
+        self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
         if api_mapping is not None:
             self.ms_to_pt_mapping = self.load_internal_api()
             
@@ -44,15 +45,18 @@ class MSComparator(Comparator):
         return npu_op_name
 
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        npu_op_name = npu_dict["op_name"].copy()
-        bench_op_name = bench_dict["op_name"].copy()
-   
-        if self.api_mapping is not None:
-            npu_op_name = self.process_api_mapping(npu_op_name, bench_op_name)
+        npu_dict_new, bench_dict_new = copy.deepcopy(npu_dict), copy.deepcopy(bench_dict)  
+        npu_op_name, bench_op_name = npu_dict_new.get(CompareConst.OP_NAME), bench_dict_new.get(CompareConst.OP_NAME)
         if self.cell_mapping is not None:
             npu_op_name = self.process_cell_mapping(npu_op_name)
-
-        struct_match = check_struct_match(npu_dict, bench_dict, cross_frame=self.cross_frame)
+        if self.api_mapping is not None:
+            npu_op_name = self.process_internal_api_mapping(npu_op_name, bench_op_name)
+            if isinstance(self.api_mapping, str):
+                npu_dict_new, bench_dict_new, target_dict = self.transform_user_mapping_api(npu_dict_new, bench_dict_new)
+                if target_dict:
+                    bench_dict = self.reconstitution_bench_dict(npu_dict, copy.deepcopy(bench_dict_new), target_dict)
+                    npu_op_name, bench_op_name = npu_dict_new.get(CompareConst.OP_NAME), bench_dict_new.get(CompareConst.OP_NAME)
+        struct_match = check_struct_match(npu_dict_new, bench_dict_new, cross_frame=self.cross_frame)
         if not fuzzy_match:
             return npu_op_name == bench_op_name and struct_match
         is_match = True
@@ -81,11 +85,12 @@ class MSComparator(Comparator):
             npu_op_name[idx] = npu_op_name[idx].replace(target, para)
         return npu_op_name
     
-    def process_api_mapping(self, npu_op_name, bench_op_name):
+    def process_internal_api_mapping(self, npu_op_name, bench_op_name):
         # get api name & class name from op_name
         # Functional.addcmul.0.forward.input.0
-        ms_api_name = npu_op_name[0].rsplit(Const.SEP, 4)[0]
-        pt_api_name = bench_op_name[0].rsplit(Const.SEP, 4)[0]
+        npu_op_name, bench_op_name = npu_op_name.copy(), bench_op_name.copy()
+        ms_api_name = self.get_api_name(npu_op_name[0].split(Const.SEP))
+        pt_api_name = self.get_api_name(bench_op_name[0].split(Const.SEP))
         class_name = ms_api_name.split(Const.SEP)[0]
         if class_name == "Mint":
             return self.api_replace(npu_op_name, "Mint", "Torch")
@@ -94,9 +99,106 @@ class MSComparator(Comparator):
         elif self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
             return self.api_replace(npu_op_name, ms_api_name, pt_api_name)
         else:
-            return npu_op_name
-        
+            return npu_op_name      
+    
+    def remove_element(self, op_name, struct, summary, idx):
+        del op_name[idx]
+        del struct[idx]
+        del summary[idx]
+    
+    def get_api_name(self, api_list):
+        return api_list[0] + Const.SEP + api_list[1]
+    
+    def transform_user_mapping_api(self, new_npu_dict, new_bench_dict):
+        """
+        Transform user mapping API based on new NPU and benchmark dictionaries.
+        Parameters:
+            new_npu_dict (dict): New NPU operation dictionary.
+            new_bench_dict (dict): New benchmark operation dictionary.
+        Returns:
+            tuple: Updated NPU and benchmark dictionaries, along with the target dictionary.
+        """
+        npu_op_name, bench_op_name = new_npu_dict.get(CompareConst.OP_NAME), new_bench_dict.get(CompareConst.OP_NAME)
+        npu_struct_in, bench_struct_in = new_npu_dict.get(CompareConst.INPUT_STRUCT), new_bench_dict.get(CompareConst.INPUT_STRUCT)
+        npu_struct_out, bench_struct_out = new_npu_dict.get(CompareConst.OUTPUT_STRUCT), new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
+        npu_summary, bench_summary = new_npu_dict.get(CompareConst.SUMMARY), new_bench_dict.get(CompareConst.SUMMARY)
+        npu_in_len, bench_in_len, npu_out_len, bench_out_len  = len(npu_struct_in), len(bench_struct_in), len(npu_struct_out), len(bench_struct_out)
+        ms_api_list, pt_api_list = npu_op_name[0].split(Const.SEP), bench_op_name[0].split(Const.SEP)
+        ms_api_name = self.get_api_name(ms_api_list)
+        pt_api_name = self.get_api_name(pt_api_list)
+        target_dict = {}
+        for api_dict in self.api_mapping_dict:
+            if api_dict.get("pt_api") == pt_api_name and api_dict.get("ms_api") == ms_api_name:
+                ms_user_args_len, pt_user_args_len = len(api_dict.get("ms_args")), len(api_dict.get("pt_args"))
+                ms_user_output_len, pt_user_output_len  = len(api_dict.get("ms_output")), len(api_dict.get("pt_output"))
+                if ms_user_args_len != pt_user_args_len or ms_user_output_len != pt_user_output_len:
+                    logger.warning("The user-defined mapping table is incorrect, make sure that the number of parameters is equal" )
+                    break
+                ms_out_list = api_dict.get("ms_output", [])
+                for idx in reversed(range(npu_out_len)):
+                    if idx not in ms_out_list:
+                        del npu_struct_out[idx]
+                        del npu_summary[idx + npu_in_len]
+                        del npu_op_name[idx + npu_in_len]
+                pt_out_list = api_dict.get("pt_output", [])
+                for idx in reversed(range(bench_out_len)):
+                    if idx not in pt_out_list:
+                        del bench_struct_out[idx]
+                        del bench_summary[idx + bench_in_len]
+                        del bench_op_name[idx + bench_in_len]
+                ms_para_list = api_dict.get("ms_args", []) 
+                for idx in reversed(range(npu_in_len)):
+                    if idx not in ms_para_list:
+                        self.remove_element(npu_op_name, npu_struct_in, npu_summary, idx)
+                pt_para_list = api_dict.get("pt_args", []) 
+                for idx in reversed(range(bench_in_len)):
+                    if idx not in pt_para_list:
+                        self.remove_element(bench_op_name, bench_struct_in, bench_summary, idx)
+                npu_op_name = self.api_replace(npu_op_name, ms_api_name, pt_api_name)
+                npu_op_name = self.para_sequence_update(npu_op_name, bench_op_name)
+                target_dict = api_dict
+                break
+        if target_dict:
+            new_npu_dict.update({CompareConst.OP_NAME: npu_op_name, CompareConst.INPUT_STRUCT: npu_struct_in, CompareConst.OUTPUT_STRUCT: npu_struct_out, CompareConst.SUMMARY: npu_summary})
+            new_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
+        return new_npu_dict, new_bench_dict, target_dict  
+    
+    def para_sequence_update(self, npu_op_name, bench_op_name):
+        for idx, _ in enumerate(npu_op_name):
+            bench_op_name_list = bench_op_name[idx].rsplit(Const.SEP, 1)
+            if len(bench_op_name_list) != 0:
+                npu_op_name[idx] = npu_op_name[idx][:-1] + bench_op_name_list[-1]
+        return npu_op_name
 
+    def reconstitution_bench_dict(self, npu_dict, del_bench_dict, api_dict):
+        ms_user_args_list = api_dict.get("ms_args", [])
+        ms_user_output_list = api_dict.get("ms_output", [])
+        npu_struct_in = npu_dict.get(CompareConst.INPUT_STRUCT)
+        npu_struct_out = npu_dict.get(CompareConst.OUTPUT_STRUCT)
+        npu_in_len = len(npu_struct_in)
+        npu_out_len = len(npu_struct_out)
+        if npu_in_len == len(ms_user_args_list) and npu_out_len == len(ms_user_output_list):
+            return del_bench_dict
+        ms_input_args_list = [i for i in range(npu_in_len)]
+        input_sub_list =list(set(ms_input_args_list) - set(ms_user_args_list))
+        ms_output_args_list = [i for i in range(npu_out_len)]
+        output_sub_list =list(set(ms_output_args_list) - set(ms_user_output_list))
+        bench_op_name = del_bench_dict.get(CompareConst.OP_NAME, [])
+        bench_struct_in = del_bench_dict.get(CompareConst.INPUT_STRUCT, [])
+        bench_struct_out = del_bench_dict.get(CompareConst.OUTPUT_STRUCT, [])
+        bench_summary = del_bench_dict.get(CompareConst.SUMMARY, [])
+        for idx in input_sub_list:  # Fill in the blank value field in the pt dictionary
+            bench_op_name.insert(idx, CompareConst.NAN)
+            bench_struct_in.insert(idx, CompareConst.NAN)
+            bench_summary.insert(idx, CompareConst.NAN)
+        for idx in output_sub_list:  # Fill in the blank value field in the pt dictionary
+            bench_op_name.insert(npu_in_len + idx, CompareConst.NAN)
+            bench_struct_out.insert(idx, CompareConst.NAN)
+            bench_summary.insert(npu_in_len + idx, CompareConst.NAN)
+        del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
+        return del_bench_dict
+        
+        
 def ms_compare(input_param, output_path, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)

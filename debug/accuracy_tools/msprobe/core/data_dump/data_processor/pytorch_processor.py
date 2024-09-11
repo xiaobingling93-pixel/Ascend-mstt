@@ -6,13 +6,13 @@ from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
+from msprobe.core.common.file_utils import path_len_exceeds_limit, change_mode
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.pytorch.common.utils import save_pt
+from msprobe.pytorch.common.utils import save_pt, load_pt
 
 try:
     import torch_npu
@@ -361,7 +361,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         if not KernelDumpDataProcessor.forward_init_status:
             KernelDumpDataProcessor.forward_init_status = True
             output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            grad = torch.load(grad_path).to("npu").requires_grad_()
+            pt = load_pt(grad_path)
+            grad = pt.to("npu").requires_grad_()
             torch_npu.npu.init_dump()
             torch_npu.npu.set_dump(self.config.acl_config)
             torch_npu.npu.synchronize()

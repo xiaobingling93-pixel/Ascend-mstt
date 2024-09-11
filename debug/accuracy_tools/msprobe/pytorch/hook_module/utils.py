@@ -16,7 +16,7 @@
 """
 
 import os
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 
 
 def get_ops():
@@ -26,4 +26,5 @@ def get_ops():
     wrap_functional = ops.get('functional')
     wrap_tensor = ops.get('tensor')
     wrap_torch = ops.get('torch')
-    return set(wrap_functional) | set(wrap_tensor) | set(wrap_torch)
+    wrap_npu_ops = ops.get('torch_npu')
+    return set(wrap_functional) | set(wrap_tensor) | set(wrap_torch) | set(wrap_npu_ops)

@@ -5,11 +5,11 @@ import importlib
 import mindspore as ms
 from mindspore.communication import comm_func
 
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml, check_path_length
 from msprobe.core.common.const import Const
+from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
-from msprobe.core.common.file_check import check_path_length
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.free_benchmark.decorator.decorator_factory import decorate_forward_function
@@ -53,23 +53,23 @@ def get_supported_ops():
 
     _all_functional_ops = []
     ms_ops = dir(ms.ops)
-    ms_ops = [FreeBenchmarkConst.OPS_PREFIX + i for i in ms_ops]
+    ms_ops = [MsConst.OPS_PREFIX + i for i in ms_ops]
     _all_functional_ops += ms_ops
 
     ms_tensor = dir(ms.Tensor)
-    ms_tensor = [FreeBenchmarkConst.Tensor_PREFIX + i for i in ms_tensor]
+    ms_tensor = [MsConst.Tensor_PREFIX + i for i in ms_tensor]
     _all_functional_ops += ms_tensor
 
     ms_mint = dir(ms.mint)
-    ms_mint = [FreeBenchmarkConst.MINT_PREFIX + i for i in ms_mint]
+    ms_mint = [MsConst.MINT_PREFIX + i for i in ms_mint]
     _all_functional_ops += ms_mint
 
     ms_mint_nn_func = dir(ms.mint.nn.functional)
-    ms_mint_nn_func = [FreeBenchmarkConst.MINT_NN_FUNC_PREFIX + i for i in ms_mint_nn_func]
+    ms_mint_nn_func = [MsConst.MINT_NN_FUNC_PREFIX + i for i in ms_mint_nn_func]
     _all_functional_ops += ms_mint_nn_func
 
     ms_communication = dir(comm_func)
-    ms_communication = [FreeBenchmarkConst.COMM_PREFIX + i for i in ms_communication]
+    ms_communication = [MsConst.COMM_PREFIX + i for i in ms_communication]
     _all_functional_ops += ms_communication
 
     return set(supported_ops) & set(_all_functional_ops)

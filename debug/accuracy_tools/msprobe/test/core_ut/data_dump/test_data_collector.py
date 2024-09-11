@@ -25,6 +25,7 @@ from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor
 from msprobe.core.data_dump.data_processor.pytorch_processor import StatisticsDataProcessor
+from msprobe.core.common.const import MsgConst
 
 
 class TestDataCollector(unittest.TestCase):
@@ -74,14 +75,15 @@ class TestDataCollector(unittest.TestCase):
             self.data_collector.handle_data("Tensor.add", {"min": 0})
             msg = "msprobe is collecting data on Tensor.add. "
             mock_update_data.assert_called_with({"min": 0}, msg)
-            mock_info.assert_called_with("msg")
+
+            mock_info.assert_called_with(MsgConst.CLEAR_SYMBOL + "msg", end='\r')
             mock_flush.assert_called()
             mock_write_json.assert_not_called()
 
             mock_update_data.reset_mock()
             mock_info.reset_mock()
             mock_flush.reset_mock()
-            self.data_collector.handle_data("Tensor.add", {}, use_buffer=False)
+            self.data_collector.handle_data("Tensor.add", {}, flush=True)
             mock_update_data.assert_not_called()
             mock_info.assert_not_called()
             mock_write_json.assert_called()
@@ -96,10 +98,15 @@ class TestDataCollector(unittest.TestCase):
              patch.object(StatisticsDataProcessor, "analyze_forward", return_value={}):
             with patch.object(StatisticsDataProcessor, "is_terminated", return_value=True), \
                  self.assertRaises(Exception) as context:
+                self.data_collector.config.framework = Const.PT_FRAMEWORK
                 self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
-            mock_handle_data.assert_called_with("name", {}, use_buffer=False)
-            self.assertEqual(str(context.exception), "[msprobe] exit")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
+                self.assertEqual(str(context.exception), "[msprobe] exit")
+                self.data_collector.config.framework = Const.MS_FRAMEWORK
+                self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
 
+            self.data_collector.config.framework = Const.PT_FRAMEWORK
             self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {})
 
@@ -110,9 +117,14 @@ class TestDataCollector(unittest.TestCase):
              patch.object(StatisticsDataProcessor, "analyze_backward", return_value={}):
             with patch.object(StatisticsDataProcessor, "is_terminated", return_value=True), \
                  self.assertRaises(Exception) as context:
+                self.data_collector.config.framework = Const.PT_FRAMEWORK
                 self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
-            mock_handle_data.assert_called_with("name", {}, use_buffer=False)
-            self.assertEqual(str(context.exception), "[msprobe] exit")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
+                self.assertEqual(str(context.exception), "[msprobe] exit")
+                self.data_collector.config.framework = Const.MS_FRAMEWORK
+                self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")
+                mock_handle_data.assert_called_with("name", {}, flush=True)
 
+            self.data_collector.config.framework = Const.PT_FRAMEWORK
             self.data_collector.backward_data_collect("name", "module", "pid", "module_input_output")
             mock_handle_data.assert_called_with("name", {})

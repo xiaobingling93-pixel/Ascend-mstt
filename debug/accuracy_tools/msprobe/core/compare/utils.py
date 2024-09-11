@@ -3,7 +3,8 @@ import os
 import re
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.utils import CompareException, check_file_or_directory_path, check_regex_prefix_format_valid, logger
+from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
 def extract_json(dirname, stack_json=False):

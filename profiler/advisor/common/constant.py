@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import stat
+
 # timeline
 DEQUEUE = "Dequeue"
 DEQUEUE_SEP = "@"
@@ -37,8 +40,8 @@ MIX_AIC = "MIX_AIC"
 CALL_STACKS = "Call stack"
 INPUT_DIMS = "Input Dims"
 OP_SEP = "-"
-MA_ADVISOR_MAX_PROCESSES = 16
-MA_ADVISOR_ANALYZE_PROCESSES = "MA_ADVISOR_ANALYZE_PROCESSES"
+ADVISOR_MAX_PROCESSES = 8
+ADVISOR_ANALYZE_PROCESSES = "ADVISOR_ANALYZE_PROCESSES"
 TIMELINE_OP_STACKS_DATASET = "timeline_op_stacks_dataset"
 TIMELINE_BACKWARD_NO_STACK = "Backward broadcast, without call stacks in profiling."
 TIMELINE_ACL_TO_NPU_NO_STACK = "Incoming flow is 'acl_to_npu', without call stacks in profiling."
@@ -49,17 +52,7 @@ NO_STACK_REASON_MAP = {
     TIMELINE_BACKWARD_NO_STACK_CODE: "Backward broadcast, without call stacks in profiling.",
     TIMELINE_ACL_TO_NPU_NO_STACK_CODE: "Incoming flow is 'acl_to_npu', without call stacks in profiling."
 }
-TIMELINE_API_DOC_URL = "https://gitee.com/ascend/mstt/blob/master/profiler/advisor/doc/Samples%20of%20Fused%20Operator%20API%20Replacement.md"
 AFFINITY_TRAINING_API = "Affinity training api"
-TIMELINE_WITH_STACK_DOC_URL = "https://www.hiascend.com/document/detail/zh/canncommercial/" \
-                              "70RC1/modeldevpt/ptmigr/AImpug_0067.html"
-PyTorch_AOE_OPERATOR_TUNE_URL = "https://www.hiascend.com/document/detail/zh/canncommercial/" \
-                                "70RC1/devtools/auxiliarydevtool/aoe_16_045.html"
-MSLite_Infer_AOE_OPEATOR_TUNE_URL = "https://www.mindspore.cn/lite/docs/en/master/use/cloud_infer/converter_tool_ascend.html#aoe-auto-tuning"
-ENABLE_COMPILED_TUNE_URL = "https://www.hiascend.com/document/detail/zh/canncommercial/" \
-                           "70RC1/modeldevpt/ptmigr/AImpug_0059.html"
-
-ASCEND_PROFILER_URL = "https://www.hiascend.com/document/detail/zh/canncommercial/70RC1/modeldevpt/ptmigr/AImpug_0067.html"
 TIMELINE_EMPTY_STACKS_PROMPT = "These APIs have no code stack. If parameter 'with_stack=False' while profiling, " \
                                "please refer to {timeline_profiling_doc_url} to set 'with_stack=True'. " \
                                "Otherwise, ignore following affinity APIs due to backward broadcast lack of stack."
@@ -67,24 +60,12 @@ TIMELINE_EMPTY_STACKS_PROMPT = "These APIs have no code stack. If parameter 'wit
 CLUSTER_ANALYSIS = "Cluster analysis"
 SLOW_RANK_TIME_RATIO_THRESHOLD = 0.05
 
-# version_control
-CANN_VERSION_C30 = '6.3.RC2'
-CANN_VERSION_C13 = '7.0.RC1'
-CANN_VERSION_C15 = '7.0.0'
-CANN_VERSION_C17 = '8.0.RC1'
-SUPPORTED_CANN_VERSION = [CANN_VERSION_C30, CANN_VERSION_C13, CANN_VERSION_C15, CANN_VERSION_C17]
-DEFAULT_CANN_VERSION = CANN_VERSION_C17
-ASCEND_PYTORCH_PROFILER = "ascend_pytorch_profiler"
-PROFILER_METADATA = "profiler_metadata.json"
-MSLITE = "mslite"
-MSPROF = "msprof"
-SUPPORTED_PROFILING_TYPE = [ASCEND_PYTORCH_PROFILER, MSLITE, MSPROF]
-DEFAULT_PROFILING_TYPE = ASCEND_PYTORCH_PROFILER
-TORCH_VERSION_1_11_0 = '1.11.0'
-TORCH_VERSION_2_1_0 = '2.1.0'
+CANN_VERSION = "cann_version"
+TORCH_VERSION = "torch_version"
+PROFILING_TYPE = "profiling_type"
+ANALYSIS_DIMENSIONS = "analysis_dimensions"
 
-SUPPORTED_TORCH_VERSION = [TORCH_VERSION_1_11_0, TORCH_VERSION_2_1_0]
-DEFAULT_TORCH_VERSION = TORCH_VERSION_2_1_0
+PROFILER_METADATA = "profiler_metadata.json"
 
 TERMINAL_OUTPUT_HEADERS = ["No.", "Problem", "Description", "Suggestion"]
 SKIP_ANALYZE_PROMPT = "Finish analysis, no optimization suggestions"
@@ -156,3 +137,11 @@ MAX_FILE_SIZE = 10 ** 10
 MAX_NUM_PROCESSES = 4
 DEFAULT_STEP = "-1"
 STEP_RANK_SEP = "_"
+
+
+MAX_READ_LINE_BYTES = 8196 * 1024
+MAX_READ_FILE_BYTES = 64 * 1024 * 1024 * 1024
+MAX_READ_DB_FILE_BYTES = 8 * 1024 * 1024 * 1024
+
+WRITE_MODES = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP
+WRITE_FLAGS = os.O_WRONLY | os.O_CREAT | os.O_TRUNC

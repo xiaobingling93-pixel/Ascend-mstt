@@ -14,8 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
+import csv
+import fcntl
 import os
+import json
 import re
+import shutil
+import yaml
+import numpy as np
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -32,6 +38,7 @@ class FileChecker:
         ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
         file_type(str): The correct file type for file
     """
+
     def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
@@ -187,14 +194,18 @@ def check_path_owner_consistent(path):
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        logger.error('The file path %s contains special characters.' %(path))
+        logger.error('The file path %s contains special characters.' % (path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 def check_file_size(file_path, max_size):
-    file_size = os.path.getsize(file_path)
+    try:
+        file_size = os.path.getsize(file_path)
+    except OSError as os_error:
+        logger.error(f'Failed to open "{file_path}". {str(os_error)}')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from os_error
     if file_size >= max_size:
-        logger.error(f'The size of file path {file_path} exceeds {max_size} bytes.')
+        logger.error(f'The size ({file_size}) of {file_path} exceeds ({max_size}) bytes, tools not support.')
         raise FileCheckException(FileCheckException.FILE_TOO_LARGE_ERROR)
 
 
@@ -224,21 +235,36 @@ def check_path_type(file_path, file_type):
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
+def make_dir(dir_path):
+    dir_path = os.path.realpath(dir_path)
+    check_path_before_create(dir_path)
+    if os.path.isdir(dir_path):
+        return
+    try:
+        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
+    except OSError as ex:
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
+                                 f"Failed to create {dir_path}. "
+                                 f"Please check the path permission or disk space. {str(ex)}") from ex
+    file_check = FileChecker(dir_path, FileCheckConst.DIR)
+    file_check.common_check()
+
+
 def create_directory(dir_path):
     """
     Function Description:
-        creating a directory with specified permissions
+        creating a safe directory with specified permissions
     Parameter:
         dir_path: directory path
     Exception Description:
         when invalid data throw exception
     """
     dir_path = os.path.realpath(dir_path)
-    try:
-        os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-    except OSError as ex:
-        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
-            'Failed to create {}. Please check the path permission or disk space .{}'.format(dir_path, str(ex))) from ex
+    check_path_before_create(dir_path)
+    parent_dir = os.path.dirname(dir_path)
+    if not os.path.isdir(parent_dir):
+        create_directory(parent_dir)
+    make_dir(dir_path)
 
 
 def check_path_before_create(path):
@@ -248,6 +274,23 @@ def check_path_before_create(path):
     if not re.match(FileCheckConst.FILE_PATTERN, os.path.realpath(path)):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
+
+
+def check_file_or_directory_path(path, isdir=False):
+    """
+    Function Description:
+        check whether the path is valid
+    Parameter:
+        path: the path to check
+        isdir: the path is dir or file
+    Exception Description:
+        when invalid data throw exception
+    """
+    if isdir:
+        path_checker = FileChecker(path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
+    else:
+        path_checker = FileChecker(path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)
+    path_checker.common_check()
 
 
 def change_mode(path, mode):
@@ -281,3 +324,155 @@ def check_file_type(path):
     else:
         logger.error('Neither a file nor a directory.')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+
+def load_yaml(yaml_path):
+    path_checker = FileChecker(yaml_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE, FileCheckConst.YAML_SUFFIX)
+    checked_path = path_checker.common_check()
+    try:
+        with FileOpen(checked_path, "r") as f:
+            yaml_data = yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"The yaml file failed to load. Please check the path: {checked_path}.")
+        raise RuntimeError(f"Load yaml file {checked_path} failed.") from e
+    return yaml_data
+
+
+def load_npy(filepath, enable_pickle=False):
+    check_file_or_directory_path(filepath)
+    try:
+        npy = np.load(filepath, allow_pickle=enable_pickle)
+    except Exception as e:
+        logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Load numpy file {filepath} failed.") from e
+    return npy
+
+
+def load_json(json_path):
+    try:
+        with FileOpen(json_path, "r") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            data = json.load(f)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'load json file "{os.path.basename(json_path)}" failed.')
+        raise RuntimeError(f"Load json file {json_path} failed.") from e
+    return data
+
+
+def save_json(json_path, data, indent=None):
+    json_path = os.path.realpath(json_path)
+    check_path_before_create(json_path)
+    try:
+        with FileOpen(json_path, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            json.dump(data, f, indent=indent)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save json file "{os.path.basename(json_path)}" failed.')
+        raise RuntimeError(f"Save json file {json_path} failed.") from e
+    change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def move_file(src_path, dst_path):
+    check_file_or_directory_path(src_path)
+    check_path_before_create(dst_path)
+    try:
+        shutil.move(src_path, dst_path)
+    except Exception as e:
+        logger.error(f"move file {src_path} to {dst_path} failed")
+        raise RuntimeError(f"move file {src_path} to {dst_path} failed") from e
+    change_mode(dst_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_npy(data, filepath):
+    filepath = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        np.save(filepath, data)
+    except Exception as e:
+        logger.error(f"The numpy file failed to save. Please check the path: {filepath}.")
+        raise RuntimeError(f"Save numpy file {filepath} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_npy_to_txt(self, data, dst_file='', align=0):
+    if os.path.exists(dst_file):
+        self.log.info("Dst file %s exists, will not save new one.", dst_file)
+        return
+    shape = data.shape
+    data = data.flatten()
+    if align == 0:
+        align = 1 if len(shape) == 0 else shape[-1]
+    elif data.size % align != 0:
+        pad_array = np.zeros((align - data.size % align,))
+        data = np.append(data, pad_array)
+    check_path_before_create(dst_file)
+    try:
+        np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
+    except Exception as e:
+        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
+    change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_workbook(workbook, file_path):
+    """
+    保存工作簿到指定的文件路径
+    workbook: 要保存的工作簿对象
+    file_path: 文件保存路径
+    """
+    file_path = os.path.realpath(file_path)
+    check_path_before_create(file_path)
+    try:
+        workbook.save(file_path)
+    except Exception as e:
+        logger.error(f'Save result file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save result file {file_path} failed.") from e
+    change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def write_csv(data, filepath, mode="a+"):
+    file_path = os.path.realpath(filepath)
+    check_path_before_create(filepath)
+    try:
+        with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def remove_path(path):
+    if not os.path.exists(path):
+        return
+    try:
+        if os.path.islink(path) or os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+    except PermissionError as err:
+        logger.error("Failed to delete {}. Please check the permission.".format(path))
+        raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR) from err
+    except Exception as e:
+        logger.error("Failed to delete {}. Please check.".format(path))
+        raise RuntimeError(f"Delete {path} failed.") from e
+
+
+def get_json_contents(file_path):
+    ops = get_file_content_bytes(file_path)
+    try:
+        json_obj = json.loads(ops)
+    except ValueError as error:
+        logger.error('Failed to load json.')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR) from error
+    if not isinstance(json_obj, dict):
+        logger.error('Json file content is not a dictionary!')
+        raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+    return json_obj
+
+
+def get_file_content_bytes(file):
+    with FileOpen(file, 'rb') as file_handle:
+        return file_handle.read()

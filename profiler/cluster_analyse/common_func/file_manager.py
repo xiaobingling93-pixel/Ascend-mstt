@@ -73,10 +73,10 @@ class FileManager:
             raise RuntimeError(f"The file({base_name}) size exceeds the preset max value.")
 
         try:
-            with open(file_path, "r") as yaml_file:
+            with open(file_path, "r", encoding="utf-8") as yaml_file:
                 result_data = yaml.safe_load(yaml_file)
         except Exception as e:
-            raise RuntimeError(f"Failed to read the file: {base_name}") from e
+            raise RuntimeError(f"Failed to read the file: {base_name}, reason is {str(e)}") from e
         return result_data
 
     @classmethod
@@ -90,8 +90,8 @@ class FileManager:
         PathManager.check_path_writeable(output_path)
         try:
             with os.fdopen(
-                os.open(output_file, os.O_WRONLY | os.O_CREAT, cls.DATA_FILE_AUTHORITY),
-                'w', newline=""
+                    os.open(output_file, os.O_WRONLY | os.O_CREAT, cls.DATA_FILE_AUTHORITY),
+                    'w', newline=""
             ) as file:
                 writer = csv.writer(file)
                 if headers:
@@ -101,16 +101,20 @@ class FileManager:
             raise RuntimeError(f"Can't create file: {base_name}") from e
 
     @classmethod
-    def create_json_file(cls, profiler_path: str, data: dict, file_name: str) -> None:
+    def create_json_file(cls, profiler_path: str, data: dict, file_name: str, common_flag: bool = False) -> None:
         if not data:
             return
-        output_path = os.path.join(profiler_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
-        output_file = os.path.join(output_path, file_name)
+        if not common_flag:
+            output_path = os.path.join(profiler_path, Constant.CLUSTER_ANALYSIS_OUTPUT)
+            output_file = os.path.join(output_path, file_name)
+            PathManager.check_path_writeable(output_path)
+        else:
+            output_file = os.path.join(profiler_path, file_name)
+            PathManager.check_path_writeable(profiler_path)
         base_name = os.path.basename(output_file)
-        PathManager.check_path_writeable(output_path)
         try:
             with os.fdopen(
-                os.open(output_file, os.O_WRONLY | os.O_CREAT, cls.DATA_FILE_AUTHORITY), 'w'
+                    os.open(output_file, os.O_WRONLY | os.O_CREAT, cls.DATA_FILE_AUTHORITY), 'w'
             ) as file:
                 file.write(json.dumps(data))
         except Exception as e:

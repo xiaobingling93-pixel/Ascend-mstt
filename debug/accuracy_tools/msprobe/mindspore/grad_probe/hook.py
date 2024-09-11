@@ -9,9 +9,9 @@ from mindspore.common.parameter import Parameter
 from mindspore.common.initializer import initializer
 
 from msprobe.core.grad_probe.constant import GradConst
-from msprobe.core.common.log import logger
+from msprobe.mindspore.common.log import logger
 
-from msprobe.core.common.utils import write_csv, remove_path
+from msprobe.core.common.file_utils import remove_path, write_csv, create_directory
 from msprobe.mindspore.grad_probe.global_context import grad_context
 from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id
 from msprobe.mindspore.grad_probe.grad_analyzer import csv_generator
@@ -64,6 +64,7 @@ def hook_pynative_optimizer(opt, hook_input):
         gradients, = input
         cur_step = grad_context.get_context(GradConst.CURRENT_STEP)
         if grad_context.step_need_dump(cur_step) and grad_context.rank_need_dump(hook_input.rank_id):
+            create_directory(hook_input.save_dir)
             output_lines = []
             for index, grad_value in enumerate(gradients):
                 param_name = hook_input.g_names[index]
@@ -78,6 +79,7 @@ def hook_pynative_optimizer(opt, hook_input):
             dummy_csv_input = CsvInput(None, None, hook_input.bounds)
             output_lines.insert(0, GradStatCsv.get_csv_header(level_adapted, dummy_csv_input))
             write_csv(output_lines, output_csv_path)
+            logger.info(f"write grad data to {output_csv_path}")
         grad_context.update_step()
 
     opt.register_forward_pre_hook(hook_fn)

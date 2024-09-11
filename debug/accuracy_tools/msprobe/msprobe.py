@@ -64,7 +64,7 @@ def main():
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
     elif is_mindspore_available:
-        from msprobe.mindspore.api_accuracy_checker.main import add_api_accuracy_checker_argument
+        from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
 
     if len(sys.argv) == 1:
@@ -96,8 +96,6 @@ def main():
             logger.error("MindSpore does not exist, please install MindSpore library")
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
-            if isinstance(args.api_mapping, str):
-                logger.warning("User defined mapping tables are not supported in the current version")
             compare_cli(args)
         elif sys.argv[3] == "run_ut":
             from msprobe.mindspore.api_accuracy_checker.main import api_checker_main

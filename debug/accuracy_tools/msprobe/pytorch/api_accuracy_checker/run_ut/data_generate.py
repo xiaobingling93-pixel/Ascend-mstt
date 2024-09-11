@@ -23,8 +23,9 @@ import numpy
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type, get_full_data_path, \
     CompareException
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import FileChecker, load_npy
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import load_pt
 from msprobe.core.common.const import Const, FileCheckConst
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
@@ -76,6 +77,8 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
         data = info.get('value')
         if info.get("type") == "slice":
             data = slice(*data)
+        if info.get("type") == "ellipsis":
+            data = ...
     return data
 
 
@@ -94,9 +97,9 @@ def gen_real_tensor(data_path, convert_type):
         error_info = f"The file: {data_path} is not a pt or numpy file."
         raise CompareException(CompareException.INVALID_FILE_ERROR, error_info)
     if data_path.endswith('.pt'):
-        data = torch.load(data_path, map_location=torch.device('cpu'))
+        data = load_pt(data_path, to_cpu=True)
     else:
-        data_np = numpy.load(data_path)
+        data_np = load_npy(data_path)
         data = torch.from_numpy(data_np)
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]

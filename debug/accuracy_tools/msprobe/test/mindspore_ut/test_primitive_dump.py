@@ -37,7 +37,7 @@ class DummyModel(nn.Cell):
 
 
 class TestService(unittest.TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def setUp(self, _):
         json_config = {
             "task": "statistics",

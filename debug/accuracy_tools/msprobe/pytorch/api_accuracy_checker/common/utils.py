@@ -28,8 +28,9 @@ else:
     IS_GPU = False
 
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileChecker, FileOpen, change_mode, create_directory
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.pytorch.common.utils import save_pt
+from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.const import Const
 from msprobe.core.common.utils import CompareException
 
 ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'rank'],
@@ -95,31 +96,17 @@ def cross_entropy_process(api_info_dict):
     Return api_info_dict:
         api_info_dict: Processed argument of the API.
     """
-    if 'args' in api_info_dict and len(api_info_dict['args']) > 1 and 'Min' in api_info_dict['args'][1]:
-        if api_info_dict['args'][1]['Min'] <= 0:
+    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 and 'Min' in api_info_dict['input_args'][1]:
+        if api_info_dict['input_args'][1]['Min'] <= 0:
             # The second argument in cross_entropy should be -100 or not less than 0
-            api_info_dict['args'][1]['Min'] = 0
+            api_info_dict['input_args'][1]['Min'] = 0
     return api_info_dict
 
 
 def initialize_save_path(save_path, dir_name):
     data_path = os.path.join(save_path, dir_name)
-    if os.path.exists(data_path):
-        logger.warning(f"{data_path} already exists, it will be overwritten")
-    else:
-        os.mkdir(data_path, mode=FileCheckConst.DATA_DIR_AUTHORITY)
-    data_path_checker = FileChecker(data_path, FileCheckConst.DIR)
-    data_path_checker.common_check()
+    create_directory(data_path)
     return data_path
-
-
-def write_pt(file_path, tensor):
-    if os.path.exists(file_path):
-        raise ValueError(f"File {file_path} already exists")
-    torch.save(tensor, file_path)
-    full_path = os.path.realpath(file_path)
-    change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    return full_path
 
 
 def get_real_data_path(file_path):
@@ -155,7 +142,12 @@ class UtDataProcessor:
             api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
             file_path = os.path.join(self.save_path, f'{api_args}.pt')
-            write_pt(file_path, element.contiguous().cpu().detach())
+            try:
+                tensor = element.contiguous().detach().cpu()
+            except Exception as err:
+                logger.error(f"Failed to transfer tensor to cpu for {api_args}")
+                raise DumpException(DumpException.INVALID_DATA_ERROR) from err
+            save_pt(tensor, file_path)
             self.index += 1
         elif element is None or isinstance(element, (bool, int, float, str, slice)):
             self.index += 1

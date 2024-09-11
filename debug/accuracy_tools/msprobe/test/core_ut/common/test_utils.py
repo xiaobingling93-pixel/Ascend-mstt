@@ -26,25 +26,26 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.utils import (CompareException,
                                        check_seed_all,
                                        check_inplace_op,
-                                       make_dump_path_if_not_exists,
                                        check_mode_valid,
                                        check_switch_valid,
                                        check_dump_mode_valid,
                                        check_summary_mode_valid,
                                        check_summary_only_valid,
-                                       check_file_or_directory_path,
                                        check_compare_param,
                                        check_configuration_param,
                                        is_starts_with,
                                        _check_json,
                                        check_json_file,
-                                       check_file_size,
                                        check_regex_prefix_format_valid,
                                        get_dump_data_path,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_check import FileCheckConst
-from msprobe.core.common.utils import get_json_contents, get_file_content_bytes
+from msprobe.core.common.file_utils import (FileCheckConst,
+                                            FileCheckException,
+                                            check_file_size,
+                                            check_file_or_directory_path,
+                                            get_json_contents,
+                                            get_file_content_bytes)
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
@@ -80,23 +81,6 @@ class TestUtils(TestCase):
         self.assertFalse(check_inplace_op(test_prefix_2))
         test_prefix_3 = "Torch.sum.0.backward.output.0"
         self.assertFalse(check_inplace_op(test_prefix_3))
-
-    @patch.object(logger, "error")
-    def test_make_dump_path_if_not_exists(self, mock_error):
-        file_path = os.path.realpath(__file__)
-        dirname = os.path.dirname(file_path) + str(uuid.uuid4())
-
-        def test_mkdir(self, **kwargs):
-            raise OSError
-
-        if not os.path.exists(dirname):
-            with patch("msprobe.core.common.utils.Path.mkdir", new=test_mkdir):
-                with self.assertRaises(CompareException) as context:
-                    make_dump_path_if_not_exists(dirname)
-                self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-
-        make_dump_path_if_not_exists(file_path)
-        mock_error.assert_called_with(f"{file_path} already exists and is not a directory.")
 
     def test_check_mode_valid(self):
         with self.assertRaises(ValueError) as context:
@@ -173,7 +157,7 @@ class TestUtils(TestCase):
         file_path = os.path.realpath(__file__)
         dirname = os.path.dirname(file_path)
 
-        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(file_path, isdir=False)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, file_path)
@@ -181,7 +165,7 @@ class TestUtils(TestCase):
         self.assertEqual(TestFileChecker.ability, FileCheckConst.READ_ABLE)
 
         TestFileChecker.checked = False
-        with patch("msprobe.core.common.utils.FileChecker", new=TestFileChecker):
+        with patch("msprobe.core.common.file_utils.FileChecker", new=TestFileChecker):
             check_file_or_directory_path(dirname, isdir=True)
         self.assertTrue(TestFileChecker.checked)
         self.assertEqual(TestFileChecker.file_path, dirname)
@@ -278,9 +262,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_file_size(self, mock_error):
         with patch("msprobe.core.common.utils.os.path.getsize", return_value=120):
-            with self.assertRaises(CompareException) as context:
+            with self.assertRaises(FileCheckException) as context:
                 check_file_size("input_file", 100)
-        self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
+        self.assertEqual(context.exception.code, FileCheckException.FILE_TOO_LARGE_ERROR)
         mock_error.assert_called_with("The size (120) of input_file exceeds (100) bytes, tools not support.")
 
     def test_check_regex_prefix_format_valid(self):
@@ -346,12 +330,12 @@ class TestUtils(TestCase):
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
     
-    @patch('msprobe.core.common.utils.get_file_content_bytes')
+    @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
-        with self.assertRaises(CompareException) as ce:
+        with self.assertRaises(FileCheckException) as ce:
             get_json_contents('')
-        self.assertEqual(ce.exception.code, CompareException.INVALID_FILE_ERROR)
+        self.assertEqual(ce.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
     def test_get_json_contents_should_return_json_obj(self):
         test_dict = {"key": "value"}

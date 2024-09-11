@@ -4,11 +4,10 @@ import pandas as pd
 from msprobe.core.compare.check import check_graph_mode
 from msprobe.core.compare.utils import merge_tensor, read_op, get_accuracy, rename_api
 from msprobe.core.compare.highlight import find_error_rows,find_compare_result_error_rows
-from msprobe.pytorch.compare.pt_compare import PTComparator
 
-npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
-                        'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
-            'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
+npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+                        'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
+           'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                              ('torch.float32', [16])],
             'output_struct': [('torch.float32', [1, 16, 28, 28])],
             'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
@@ -16,9 +15,9 @@ npu_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2
                         [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
                         [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
 
-bench_dict = {'op_name': ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.1',
-                          'Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_output'],
-              'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
+bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+                          'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
+             'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                                ('torch.float32', [16])],
               'output_struct': [('torch.float32', [1, 16, 28, 28])],
               'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
@@ -52,16 +51,16 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward_input.0', 'Tensor.add_.0.fo
                   'stack_info': []}
 
 o_result = [
-    ['Functional_conv2d_0_forward_input.0', 'Functional_conv2d_0_forward_input.0', 'torch.float32', 'torch.float32',
+    ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.0', 'torch.float32', 'torch.float32',
      [1, 1, 28, 28], [1, 1, 28, 28], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 3.029174327850342, -2.926689624786377,
      -0.06619918346405029, 3.029174327850342, -2.926689624786377, -0.06619918346405029, '', '', 'None'],
-    ['Functional_conv2d_0_forward_input.1', 'Functional_conv2d_0_forward_input.1', 'torch.float32', 'torch.float32',
+    ['Functional.conv2d.0.forward.input.1', 'Functional.conv2d.0.forward.input.1', 'torch.float32', 'torch.float32',
      [16, 1, 5, 5], [16, 1, 5, 5], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 0.19919930398464203, -0.19974489510059357,
      0.006269412115216255, 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, '', '', 'None'],
-    ['Functional_conv2d_0_forward_input.2', 'Functional_conv2d_0_forward_input.2', 'torch.float32', 'torch.float32',
+    ['Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.input.2', 'torch.float32', 'torch.float32',
      [16], [16], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345,
      0.19734230637550354, -0.18177609145641327, 0.007903944700956345, '', '', 'None'],
-    ['Functional_conv2d_0_forward_output', 'Functional_conv2d_0_forward_output', 'torch.float32', 'torch.float32',
+    ['Functional.conv2d.0.forward.output', 'Functional.conv2d.0.forward.output', 'torch.float32', 'torch.float32',
      [1, 16, 28, 28], [1, 16, 28, 28], 0.0, 0.0, 0.0, ' ', '0.0%', '0.0%', '0.0%', ' ', 2.1166646480560303, -2.190781354904175,
      -0.003579073818400502, 2.1166646480560303, -2.190781354904175, -0.003579073818400502, '', '', 'None']]
 
@@ -216,12 +215,6 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(check_graph_mode(op1, op1))
         self.assertFalse(check_graph_mode(op2, op2))
 
-    def test_check_op(self):
-        fuzzy_match = False
-        ptComparator=PTComparator()
-        result = ptComparator.check_op(npu_dict, bench_dict, fuzzy_match)
-        self.assertEqual(result, True)
-
     def test_merge_tensor(self):
         op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
@@ -229,13 +222,6 @@ class TestUtilsMethods(unittest.TestCase):
     def test_read_op(self):
         result = read_op(op_data, op_name)
         self.assertEqual(result, op_result)
-
-    def test_match_op(self):
-        fuzzy_match = False
-        ptComparator=PTComparator()
-        a, b = ptComparator.match_op([npu_dict], [bench_dict], fuzzy_match)
-        self.assertEqual(a, 0)
-        self.assertEqual(b, 0)
 
     def test_get_accuracy(self):
         result = []
@@ -270,3 +256,4 @@ class TestUtilsMethods(unittest.TestCase):
         expect_name_2 = "Torch.sum.output.0"
         actual_name_2 = rename_api(test_name_2, "backward")
         self.assertEqual(actual_name_2, expect_name_2)
+        

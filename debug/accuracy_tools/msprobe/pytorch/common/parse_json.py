@@ -1,7 +1,7 @@
 import json
 
 from msprobe.core.common.exceptions import ParseJsonException
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 
 
 def parse_json_info_forward_backward(json_path):

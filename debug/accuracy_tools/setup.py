@@ -14,18 +14,18 @@
 import setuptools
 
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 INSTALL_REQUIRED = [
     "wheel",
     "einops",
-    "numpy",
-    "pandas >= 1.3.5",
+    "numpy < 2.0",
+    "pandas >= 1.3.5, < 2.1",
     "pyyaml",
     "rich",
     "tqdm",
     "openpyxl",
-    "pyOpenSSL",
+    "pyopenssl",
     "twisted",
     "matplotlib"
 ]

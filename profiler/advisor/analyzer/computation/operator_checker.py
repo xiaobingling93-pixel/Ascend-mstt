@@ -4,18 +4,19 @@ from textwrap import fill
 from typing import List
 
 from profiler.advisor.common import constant
+from profiler.advisor.common.enum_params_parser import EnumParamsParser
 from profiler.advisor.common.version_control import VersionControl
 from profiler.advisor.config.config import Config
 from profiler.advisor.dataset.profiling.info_collection import OpInfo
 from profiler.advisor.dataset.profiling.profiling_dataset import ProfilingDataset
 from profiler.advisor.result.item import OptimizeItem, StatisticsItem, OptimizeRecord
-from profiler.advisor.utils.utils import safe_division
+from profiler.advisor.utils.utils import safe_division, convert_to_float
 
 logger = logging.getLogger()
 
 
 class OperatorChecker(VersionControl):
-    _SUPPORT_VERSIONS = constant.SUPPORTED_CANN_VERSION
+    _SUPPORT_VERSIONS = EnumParamsParser().get_options(constant.CANN_VERSION)
     _MAX_TUNE_OP_NUM = constant.OPERATOR_OUT_TOPK
     _MIN_TASK_DURATION = 0
     _MIN_TASK_DURATION_RATIO = 1.0
@@ -34,11 +35,11 @@ class OperatorChecker(VersionControl):
     MSLite_OPERATOR_TUNE_SUGGESTION = f"Optimize operator by AOE in mindspore lite framework, such as:\n" \
                                       f"converter_lite --fmk=ONNX --optimize=ascend_oriented --saveType=MINDIR " \
                                       f"--modelFile=$user_model.onnx --outputFile=user_model --configFile=./config.txt\n"
-    _tune_op_list: List[str] = []
 
     def __init__(self, cann_version: str):
         self.cann_version = cann_version
         self._op_list: List[OpInfo] = []
+        self._tune_op_list: List[str] = []
 
     @staticmethod
     def get_ratio(op_info: OpInfo, attr: str) -> float:
@@ -56,7 +57,7 @@ class OperatorChecker(VersionControl):
         :return: checker name
         """
         return cls._PROBLEM
-        
+
     def check(self, profiling_data: ProfilingDataset) -> bool:
         """
         check if any operator need optimize
@@ -138,7 +139,11 @@ class OperatorChecker(VersionControl):
         return True
 
     def is_dynamic_shape(self, profiling_database: ProfilingDataset) -> bool:
-        less_than_cann800_list = [constant.CANN_VERSION_C30, constant.CANN_VERSION_C13, constant.CANN_VERSION_C15]
+        cann800_major_version = 8
+        less_than_cann800_list = EnumParamsParser().get_options(
+            constant.CANN_VERSION,
+            filter_func=lambda x: convert_to_float(x.split(".")[0]) < cann800_major_version
+        )
         # CANN 8.0.RC1 之前从 ge_info 中获取 op_state 属性，进行动态 shape 逻辑判断
         if self.cann_version in less_than_cann800_list:
             if hasattr(profiling_database, "ge_info"):
@@ -150,7 +155,7 @@ class OperatorChecker(VersionControl):
                 logger.warning(
                     "Skip dynamic shape check because of not containing ge_info.db file in host filefloder.\n"
                     "To enable dynamic shape check, please try to set data_simplification=False in experimental_config.\n"
-                    "More details please refer to link : %s", constant.ASCEND_PROFILER_URL)
+                    "More details please refer to link : %s", Config().ascend_profiler_url)
         else:
             # CANN 8.0.RC1 之后 op_state 属性从 op_summary 文件中获取
             if hasattr(profiling_database, "op_summary"):
@@ -159,8 +164,8 @@ class OperatorChecker(VersionControl):
                     return True
             else:
                 logger.warning(
-                        "Skip dynamic shape check because of not containing op_summary.csv file in current filefloder."
-                    )
+                    "Skip dynamic shape check because of not containing op_summary.csv file in current filefloder."
+                )
         return False
 
     def format_operator_result(self, record, limit):
@@ -176,14 +181,14 @@ class OperatorChecker(VersionControl):
             release_suggestion = copy.deepcopy(suggestion)
             if release_suggestion == OperatorChecker.PyTorch_OPERATOR_TUNE_SUGGESTION:
                 release_suggestion += \
-                    (f"for details please refer to link : <a href={constant.PyTorch_AOE_OPERATOR_TUNE_URL}>LINK</a>")
+                    (f"for details please refer to link : <a href={Config().pytorch_aoe_operator_tune_url}>LINK</a>")
             elif release_suggestion == OperatorChecker.MSLite_OPERATOR_TUNE_SUGGESTION:
                 release_suggestion += \
                     (f"\nThe config file for MSLite AOE usage is as follows:\n" \
                      f"[ascend_context]\n" \
                      f"aoe_mode=\"operator tuning\"\n" \
                      f"--tune_ops_file={Config().tune_ops_file}\n"
-                     f"\nFor details please refer to link : <a href={constant.MSLite_Infer_AOE_OPEATOR_TUNE_URL}>LINK</a>")
+                     f"\nFor details please refer to link : <a href={Config().mslite_infer_aoe_operator_tune_url}>LINK</a>")
             release_suggestion_list.append(release_suggestion.replace('\n', '<br>'))
         format_result = {"record": record.__dict__,
                          "suggestion": fill('<br> '.join(release_suggestion_list), width=200),
@@ -282,7 +287,7 @@ class OperatorChecker(VersionControl):
             logger.warning(self.SKIP_CHECK_MSG, self._CHECKER, "op summary")
             return False
         return True
-    
+
     def get_details(self) -> list:
         """
         get details of operator to be optimized
@@ -305,7 +310,7 @@ class OperatorChecker(VersionControl):
         return details
 
     def format_suggestion_content(self, profiling_data: ProfilingDataset) -> None:
-        if profiling_data.PROF_TYPE == constant.ASCEND_PYTORCH_PROFILER:
+        if profiling_data.PROF_TYPE == EnumParamsParser().profiling_type.ascend_pytorch_profiler:
             self._SUGGESTION.append(self.PyTorch_OPERATOR_TUNE_SUGGESTION)
-        elif profiling_data.PROF_TYPE == constant.MSLITE:
+        elif profiling_data.PROF_TYPE == EnumParamsParser.profiling_type.mslite:
             self._SUGGESTION.append(self.MSLite_OPERATOR_TUNE_SUGGESTION)

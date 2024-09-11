@@ -22,8 +22,7 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.utils import create_directory, write_csv, save_npy_to_txt
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import FileChecker, create_directory, load_npy, save_npy_to_txt, write_csv
 
 
 class Compare:
@@ -86,17 +85,8 @@ class Compare:
         if left is None or right is None:
             raise ParseException("invalid input or output")
         if self.util.check_path_valid(left) and self.util.check_path_valid(right):
-            try:
-                left_data = np.load(left)
-                right_data = np.load(right)
-            except UnicodeError as e:
-                self.log.error("%s %s" % ("UnicodeError", str(e)))
-                self.log.warning("Please check the npy file")
-                raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
-            except IOError:
-                self.log.error("Failed to load npy %s or %s." % (left, right))
-                raise ParseException(ParseException.PARSE_LOAD_NPY_ERROR) from e
-
+            left_data = load_npy(left)
+            right_data = load_npy(right)
         # save to txt
         if save_txt:
             save_npy_to_txt(left_data, left + ".txt")
@@ -160,10 +150,9 @@ class Compare:
         return res
 
     def compare_npy(self, file, bench_file, output_path):
-        if self.util.check_path_valid(file):
-            data = np.load(file)
-        if self.util.check_path_valid(bench_file):
-            bench_data = np.load(bench_file)
+        if self.util.check_path_valid(file) and self.util.check_path_valid(bench_file):
+            data = load_npy(file)
+            bench_data = load_npy(bench_file)
         shape, dtype = data.shape, data.dtype
         bench_shape, bench_dtype = bench_data.shape, bench_data.dtype
         filename = os.path.basename(file)

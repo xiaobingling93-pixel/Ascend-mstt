@@ -21,7 +21,7 @@ import torch
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -34,6 +34,11 @@ except ImportError:
     is_gpu = True
 else:
     is_gpu = False
+
+
+cuda_func_mapping = {
+    "npu_fusion_attention" : "gpu_fusion_attention"
+}
 
 
 def get_npu_ops():
@@ -52,10 +57,11 @@ class HOOKNpuOP(object):
 
 class NpuOPTemplate(HOOKModule):
 
-    def __init__(self, op_name, hook, need_hook=True):
+    def __init__(self, op_name, hook, need_hook=True, device=Const.CPU_LOWERCASE):
         self.op_name_ = op_name
         self.prefix_op_name_ = "NPU" + Const.SEP + str(op_name) + Const.SEP
         self.need_hook = need_hook
+        self.device = device
         if need_hook:
             super().__init__(hook)
 
@@ -64,7 +70,10 @@ class NpuOPTemplate(HOOKModule):
         if not self.need_hook:
             if self.op_name_ not in npu_custom_functions:
                 raise Exception(f'There is not bench function {self.op_name_}')
-            return npu_custom_functions[self.op_name_](*args, **kwargs)
+            if self.device == Const.CUDA_LOWERCASE:
+                self.op_name_ = cuda_func_mapping.get(self.op_name_, self.op_name_)
+            if self.device in [Const.CUDA_LOWERCASE, Const.CPU_LOWERCASE]:
+                return npu_custom_functions[self.op_name_](*args, **kwargs)
         if torch_without_guard_version:
             return getattr(torch.ops.npu, str(self.op_name_))(*args, **kwargs)
         else:

@@ -3,7 +3,7 @@ import os
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.log import logger
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
@@ -246,7 +246,8 @@ class GradToolConfig(BaseConfig):
         super().__init__(json_config)
         self.grad_level = json_config.get("grad_level", "L1")
         self.param_list = json_config.get("param_list", [])
-        self.bounds = json_config.get("bounds", [])
+        self.bounds = json_config.get("bounds", [-1, 0, 1])
+        self._check_config()
     
     def _check_config(self):
         if self.grad_level not in level_adp.keys():

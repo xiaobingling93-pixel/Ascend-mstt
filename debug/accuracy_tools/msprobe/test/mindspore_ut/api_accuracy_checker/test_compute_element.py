@@ -79,7 +79,7 @@ class TestComputeElement(unittest.TestCase):
             "shape":[2, 3],
             "Max": 3.0,
             "Min": 1.0,
-            "data_name": "input.npy"
+            "data_name": "2_3_input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         self.assertTrue((compute_element.get_parameter(get_origin=True) == self.ms_tensor).all())
@@ -94,7 +94,7 @@ class TestComputeElement(unittest.TestCase):
             "shape":[2, 3],
             "Max": 3.0,
             "Min": 1.0,
-            "data_name": "input.npy"
+            "data_name": "2_3_input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         parameter = compute_element.get_parameter(get_origin=True)
@@ -112,7 +112,7 @@ class TestComputeElement(unittest.TestCase):
                 "shape":[2, 3],
                 "Max": 3.0,
                 "Min": 1.0,
-                "data_name": "input.npy"
+                "data_name": "2_3_input.npy"
             },
             {
                 "type": "mindspore.Tensor",
@@ -120,7 +120,7 @@ class TestComputeElement(unittest.TestCase):
                 "shape":[2, 3],
                 "Max": 3.0,
                 "Min": 1.0,
-                "data_name": "input.npy"
+                "data_name": "2_3_input.npy"
             },
         ]
         compute_element = ComputeElement(compute_element_info=compute_element_info)
