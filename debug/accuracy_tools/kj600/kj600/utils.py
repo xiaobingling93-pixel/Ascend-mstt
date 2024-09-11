@@ -5,6 +5,8 @@ import re
 from functools import wraps
 from torch import distributed as dist
 
+from kj600.const import Const
+
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
@@ -202,9 +204,36 @@ def change_mode(path, mode):
     except PermissionError as ex:
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
-    
+
+def validate_ops(ops):
+    if not isinstance(ops, list):
+        raise Exception("ops should be a list")
+    if not ops:
+        raise Exception(f"specify ops to calculate metrics. Optional ops: {Const.OP_LIST}")
+
+    valid_ops = []
+    for op in ops:
+        if op not in Const.OP_LIST:
+            raise Exception(f"op {op} is not supported. Optional ops: {Const.OP_LIST}")
+        else:
+            valid_ops.append(op)
+    return valid_ops
+
+def validate_ranks(ranks):
+    world_size = dist.get_world_size()
+    if not isinstance(ranks, list):
+        raise Exception("module_ranks should be a list")
+    for rank in ranks:
+        if not isinstance(rank, int):
+            raise Exception("element in module_ranks should be a int, get {type(rank)}")
+        if rank < 0 or rank >= world_size:
+            print_warn_log(f"rank {rank} should be in rang [0, {world_size}]")
 
 def validate_config(config):
+    config['ops'] = validate_ops(config.get('ops', []))
+    ranks = config.get("module_ranks", [])
+    validate_ranks(ranks)
+
     targets = config.get("targets", {})
     if not isinstance(targets, dict):
         raise ValueError('targets in config.json should be a dict')
