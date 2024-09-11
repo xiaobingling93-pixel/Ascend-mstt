@@ -30,7 +30,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         except OSError as e:
             logger.error("pool terminate failed")
 
-    progress_bar = tqdm(total=len(result_df), desc="api/module item processing", unit="row", ncols=100)
+    progress_bar = tqdm(total=len(result_df), desc="API/Module Item Compare Process", unit="row", ncols=100)
 
     def update_progress(size, progress_lock):
         with progress_lock:
