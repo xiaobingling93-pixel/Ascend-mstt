@@ -14,6 +14,7 @@
 # ============================================================================
 import os
 
+
 import mindspore as ms
 import numpy as np
 from mindspore.common.tensor import Tensor
