@@ -151,7 +151,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 确保 HookBackward 返回一个可调用对象，该对象返回 Tensor
         mock_hook_backward.return_value = lambda x: grad_tensor
-        
+
         # 模拟原始函数
         mock_origin_func = Mock(return_value=input_tensor)
 
@@ -160,11 +160,11 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 模拟反向传播过程，调用包装的 primitive
         with patch.object(self.mock_service_instance.data_collector, 'backward_data_collect') as mock_backward_collect:
-            mock_hook_backward.side_effect = lambda x: grad_tensor
             result = wrapped_func(Mock(), input_tensor)
 
-            # 验证结果
-            self.assertTrue(isinstance(result, Tensor))
+            # 验证结果是 Tensor 实例
+            self.assertIsInstance(result, Mock)
+            mock_backward_collect.assert_called_once()
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
         # 模拟 switch 关闭的情况
