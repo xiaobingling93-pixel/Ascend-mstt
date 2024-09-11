@@ -24,12 +24,6 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
 
 class PrimitiveHookService:
     def __init__(self, service_instance):
-        """
-        初始化 PrimitiveHookService 并设置服务实例。
-
-        Args:
-            service_instance (Service): 外部的Service类实例，用于访问数据采集器和控制状态。
-        """
         self.service_instance = service_instance
         self.primitive_counters = {}
 
@@ -199,5 +193,3 @@ class PrimitiveHookService:
             self.primitive_counters[primitive_name] = 0
         else:
             self.primitive_counters[primitive_name] += 1
-
-
