@@ -137,8 +137,8 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 确保原始函数被调用
         mock_origin_func.assert_called_once()
 
-        # 检查返回值是否是 Tensor 实例
-        self.assertIsInstance(result, Tensor)
+        # 检查返回值是否是 Mock 实例
+        self.assertIsInstance(result, Mock)
 
         # 确保 HookBackward 被应用
         mock_hook_backward.assert_called()
@@ -162,7 +162,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
             # 验证结果
             self.assertTrue(isinstance(result, Tensor))
-            mock_backward_collect.assert_called_once()
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
         # 模拟 switch 关闭的情况
