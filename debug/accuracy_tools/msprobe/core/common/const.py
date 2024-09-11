@@ -8,6 +8,8 @@ class Const:
     """
     Class for const
     """
+    TOOL_NAME = "msprobe"
+
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
@@ -157,7 +159,7 @@ class CompareConst:
     INPUT_STRUCT = "input_struct"
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
-    
+
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
         ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO,
@@ -219,7 +221,7 @@ class CompareConst:
     RED = "FFFF0000"
     YELLOW = "FFFF00"
     BLUE = "0000FF"
-    
+
     # run_ut const
     MAX_TOKENS = 65536
     SPECIAL_SPARSE_MOED = 4
@@ -291,9 +293,9 @@ class OverflowConst:
     """
     Class for Overflow
     """
-    OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
 
 class MsCompareConst:
     # api_info field
@@ -306,7 +308,7 @@ class MsCompareConst:
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
 
-    #detail_csv
+    # detail_csv
     DETAIL_CSV_API_NAME = "API Name"
     DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
     DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
@@ -315,12 +317,13 @@ class MsCompareConst:
     DETAIL_CSV_MESSAGE = "Message"
     DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
 
-    #result_csv
+    # result_csv
     RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
     RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
     RESULT_CSV_FILE_NAME = "accuracy_checking_result"
 
     EPSILON = 1e-8
+
 
 class MsgConst:
     """
