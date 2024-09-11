@@ -40,15 +40,15 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         self.counter = counter
         self.aten_ops_blacklist = []
         self.npu_adjust_autogard = []
-        self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+        self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist', [])
+        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard', [])
 
     def enable_autogard(self, aten_api):
         if aten_api in self.npu_adjust_autogard:
             torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)
 
     def __torch_dispatch__(self, func, types, args=None, kwargs=None):
-        func_name_split_list = func.__name__.split(".")
+        func_name_split_list = func.__name__.split(Const.SEP)
         aten_api = func_name_split_list[0]
         self.enable_autogard(aten_api)
         if aten_api in self.aten_ops_blacklist:
@@ -58,7 +58,7 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
         res = func(*args, **kwargs)
         cur_rank = get_tensor_rank(args, res)
         cur_api_number = self.counter.index_dict.setdefault(aten_api, 0)
-        api_name = f'Aten{Const.SEP}{aten_api}{Const.SEP}{cur_api_number}'
+        api_name = f'{Const.ATEN}{Const.SEP}{aten_api}{Const.SEP}{cur_api_number}'
         logger.info(f"tools is dumping api: {api_name}")
         api_data = ApiData(api_name, args, kwargs, res, 0, cur_rank)
         if "device" in api_data.kwargs:
