@@ -98,3 +98,98 @@ class TestService(unittest.TestCase):
             initial_iter = self.service.current_iter
             self.service.step()
             mock_update_iter.assert_called_once_with(initial_iter + 1)
+
+
+class TestPrimitiveHookService(unittest.TestCase):
+    def setUp(self):
+        # 模拟一个 service_instance 和 data_collector
+        self.mock_service_instance = Mock()
+        self.mock_service_instance.switch = True
+        self.mock_service_instance.data_collector = Mock()
+
+        # 初始化 PrimitiveHookService
+        self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
+
+    def test_update_primitive_counters(self):
+        primitive_name = "MatMul"
+        self.primitive_hook_service.update_primitive_counters(primitive_name)
+        self.assertEqual(self.primitive_hook_service.primitive_counters[primitive_name], 0)
+        self.primitive_hook_service.update_primitive_counters(primitive_name)
+        self.assertEqual(self.primitive_hook_service.primitive_counters[primitive_name], 1)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_forward_hook(self, mock_hook_backward):
+        # 模拟一个 Tensor 输入
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        # 模拟原始函数
+        mock_origin_func = Mock(return_value=input_tensor)
+
+        # 包装原始 primitive
+        wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+        # 调用包装后的 primitive
+        result = wrapped_func(Mock(), input_tensor)
+
+        # 确保原始函数被调用
+        mock_origin_func.assert_called_once()
+
+        # 检查返回值是否正确
+        self.assertTrue(isinstance(result, Tensor))
+
+        # 确保 HookBackward 被应用
+        mock_hook_backward.assert_called()
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_backward_hook(self, mock_hook_backward):
+        # 模拟 Tensor 输入和输出
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+        grad_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        # 模拟原始函数
+        mock_origin_func = Mock(return_value=input_tensor)
+
+        # 包装 primitive
+        wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+        # 模拟反向传播过程，调用包装的 primitive
+        with patch.object(self.mock_service_instance.data_collector, 'backward_data_collect') as mock_backward_collect:
+            mock_hook_backward.side_effect = lambda x: grad_tensor
+            result = wrapped_func(Mock(), input_tensor)
+            mock_backward_collect.assert_called_once()
+
+    def test_wrap_primitive_no_hook_when_switch_off(self):
+        # 模拟 switch 关闭的情况
+        self.mock_service_instance.switch = False
+
+        # 模拟 Tensor 输入
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        # 模拟原始函数
+        mock_origin_func = Mock(return_value=input_tensor)
+
+        # 包装 primitive
+        wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+        # 调用包装后的 primitive
+        result = wrapped_func(Mock(), input_tensor)
+
+        # 确保在 switch 关闭时不应用 hook
+        mock_origin_func.assert_called_once()
+        self.assertEqual(result, input_tensor)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_error_handling(self, mock_hook_backward):
+        # 模拟 Tensor 输入
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        # 模拟抛出异常的原始函数
+        mock_origin_func = Mock(side_effect=Exception("Mocked exception"))
+
+        # 包装 primitive
+        wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+        # 验证是否正确捕获异常
+        with self.assertRaises(Exception) as context:
+            wrapped_func(Mock(), input_tensor)
+        self.assertIn("Mocked exception", str(context.exception))
