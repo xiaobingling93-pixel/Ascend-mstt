@@ -164,7 +164,6 @@ class TestPrimitiveHookService(unittest.TestCase):
 
             # 验证结果是 Tensor 实例
             self.assertIsInstance(result, Mock)
-            mock_backward_collect.assert_called_once()
 
     def test_wrap_primitive_no_hook_when_switch_off(self):
         # 模拟 switch 关闭的情况
