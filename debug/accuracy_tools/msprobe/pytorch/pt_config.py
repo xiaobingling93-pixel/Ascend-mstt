@@ -96,98 +96,114 @@ class FreeBenchmarkCheckConfig(BaseConfig):
 
     def _check_pert_mode(self):
         if self.pert_mode not in PytorchFreeBenchmarkConst.PERTURBATION_MODE_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"pert_mode is invalid, it should be one of"
-                f" {PytorchFreeBenchmarkConst.PERTURBATION_MODE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "pert_mode"),
+                f" {PytorchFreeBenchmarkConst.PERTURBATION_MODE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_fuzz_device(self):
         if self.fuzz_device not in PytorchFreeBenchmarkConst.DEVICE_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"fuzz_device is invalid, it should be one of"
-                f" {PytorchFreeBenchmarkConst.DEVICE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "fuzz_device"),
+                f" {PytorchFreeBenchmarkConst.DEVICE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
         if (self.fuzz_device == DeviceType.CPU) ^ (
             self.pert_mode in PytorchFreeBenchmarkConst.CPU_MODE_LIST
         ):
-            logger.error_log_with_exp(
+            msg = (
                 f"You neet to and can only set fuzz_device as {DeviceType.CPU} "
-                f"when pert_mode in {PytorchFreeBenchmarkConst.CPU_MODE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "fuzz_device"),
+                f"when pert_mode in {PytorchFreeBenchmarkConst.CPU_MODE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_handler_type(self):
         if self.handler_type not in PytorchFreeBenchmarkConst.HANDLER_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"handler_type is invalid, it should be one of"
-                f" {PytorchFreeBenchmarkConst.HANDLER_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "handler_type"),
+                f" {PytorchFreeBenchmarkConst.HANDLER_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_fuzz_stage(self):
         if self.fuzz_stage not in PytorchFreeBenchmarkConst.FUZZ_STAGE_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"fuzz_stage is invalid, it should be one of"
-                f" {PytorchFreeBenchmarkConst.FUZZ_STAGE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "fuzz_stage"),
+                f" {PytorchFreeBenchmarkConst.FUZZ_STAGE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_fuzz_level(self):
         if self.fuzz_level not in PytorchFreeBenchmarkConst.FUZZ_LEVEL_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"fuzz_level is invalid, it should be one of"
-                f" {PytorchFreeBenchmarkConst.FUZZ_LEVEL_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "fuzz_level"),
+                f" {PytorchFreeBenchmarkConst.FUZZ_LEVEL_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_if_preheat(self):
         if not isinstance(self.if_preheat, bool):
+            msg = "if_preheat is invalid, it should be a boolean"
             logger.error_log_with_exp(
-                f"if_preheat is invalid, it should be a boolean",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "if_preheat"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_preheat_config(self):
         if not isinstance(self.preheat_step, int):
+            msg = "preheat_step is invalid, it should be an integer"
             logger.error_log_with_exp(
-                f"preheat_step is invalid, it should be an integer",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "preheat_step"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
-        if self.preheat_step < 1:
+        if self.preheat_step <= 0:
+            msg = "preheat_step must be greater than 0"
             logger.error_log_with_exp(
-                "preheat_step must be greater than 0",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "preheat_step"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
         if not isinstance(self.max_sample, int):
+            msg = "max_sample is invalid, it should be an integer"
             logger.error_log_with_exp(
-                f"max_sample is invalid, it should be an integer",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "max_sample"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
-        if self.max_sample < 1:
+        if self.max_sample <= 0:
+            msg = "max_sample must be greater than 0"
             logger.error_log_with_exp(
-                "max_sample must be greater than 0",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "max_sample"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
     def _check_fix_config(self):
         if self.if_preheat:
+            msg = f"Preheating is not supported for {HandlerType.FIX} handler type"
             logger.error_log_with_exp(
-                f"Preheating is not supported for {HandlerType.FIX} handler type",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "if_preheat"),
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
         if self.fuzz_stage not in PytorchFreeBenchmarkConst.FIX_STAGE_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"The fuzz_stage when opening {HandlerType.FIX} handler must be one of "
-                f"{PytorchFreeBenchmarkConst.FIX_STAGE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "fuzz_stage"),
+                f"{PytorchFreeBenchmarkConst.FIX_STAGE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
         if self.pert_mode not in PytorchFreeBenchmarkConst.FIX_MODE_LIST:
-            logger.error_log_with_exp(
+            msg = (
                 f"The pert_mode when opening {HandlerType.FIX} handler must be one of "
-                f"{PytorchFreeBenchmarkConst.FIX_MODE_LIST}",
-                MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "pert_mode"),
+                f"{PytorchFreeBenchmarkConst.FIX_MODE_LIST}"
+            )
+            logger.error_log_with_exp(
+                msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
 
 class RunUTConfig(BaseConfig):
