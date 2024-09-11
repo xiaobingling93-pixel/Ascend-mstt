@@ -79,7 +79,6 @@ class BaseDataProcessor:
         self.stack_info_struct = {}
         self.current_api_or_module_name = None
         self.api_data_category = None
-        self.has_overflow = False
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
@@ -202,10 +201,9 @@ class BaseDataProcessor:
     def update_iter(self, current_iter):
         self.current_iter = current_iter
 
-    def visit_and_clear_overflow_status(self, api_or_module_name):
+    def update_api_or_module_name(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
-            self.has_overflow = False
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """

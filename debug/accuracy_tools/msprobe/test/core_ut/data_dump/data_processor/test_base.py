@@ -142,10 +142,8 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.processor.update_iter(5)
         self.assertEqual(self.processor.current_iter, 5)
 
-    def test_visit_and_clear_overflow_status(self):
-        self.processor.has_overflow = True
-        self.processor.visit_and_clear_overflow_status("new_api")
-        self.assertFalse(self.processor.has_overflow)
+    def test_update_api_or_module_name(self):
+        self.processor.update_api_or_module_name("new_api")
         self.assertEqual(self.processor.current_api_or_module_name, "new_api")
 
     def test_is_dump_for_data_mode(self):
