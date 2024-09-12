@@ -53,7 +53,7 @@ class PrimitiveHookService:
             """
             def backward_hook(grad):
                 captured_grads.append(grad)
-                backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
+                backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
@@ -145,7 +145,7 @@ class PrimitiveHookService:
             """
             self.update_primitive_counters(primitive_name)
             current_count = self.primitive_counters.get(primitive_name, 0)
-            updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
+            updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}{Const.SEP}{primitive_name}{Const.SEP}{current_count}"
 
             if not self.service_instance.switch:
                 return origin_func(*args, **kwargs)
@@ -164,7 +164,7 @@ class PrimitiveHookService:
                 raise Exception("This is a primitive op dump error during function call: {},"
                                 " primitive_name: {}".format(exception, primitive_name)) from exception
 
-            forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
+            forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
             self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
             if self.service_instance.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
