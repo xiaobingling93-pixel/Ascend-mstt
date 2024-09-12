@@ -110,6 +110,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 创建一个临时目录作为 dump_path
         self.temp_dir = tempfile.TemporaryDirectory()
         dump_path = self.temp_dir.name
+        print(f"临时目录路径: {self.temp_dir.name}")  # 打印临时目录路径
         json_config = {
             "task": "statistics",
             "dump_path": dump_path,
@@ -135,6 +136,9 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
 
+    def tearDown(self):
+        # 测试结束时删除临时目录
+        self.temp_dir.cleanup()
 
     def test_update_primitive_counters_multiple(self):
         # 测试更新 primitive 计数器的功能，增加多个不同名称的测试
