@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 
 from mindspore import nn
 
+import tempfile
 from msprobe.core.common.utils import Const
 from msprobe.mindspore.service import Service
 from msprobe.core.common.exceptions import MsprobeException
@@ -106,9 +107,12 @@ class TestService(unittest.TestCase):
 
 class TestPrimitiveHookService(unittest.TestCase):
     def setUp(self):
+        # 创建一个临时目录作为 dump_path
+        self.temp_dir = tempfile.TemporaryDirectory()
+        dump_path = self.temp_dir.name
         json_config = {
             "task": "statistics",
-            "dump_path": "/absolute_path",
+            "dump_path": dump_path,
             "rank": [],
             "step": [0, 2],
             "level": "L1"
