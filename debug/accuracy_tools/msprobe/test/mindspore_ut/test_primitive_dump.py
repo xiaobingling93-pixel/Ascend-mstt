@@ -126,7 +126,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         self.mock_service_instance = Mock()
         self.mock_service_instance.switch = True
         self.mock_service_instance.data_collector = Mock()
-        self.mock_service_instance.data_collector.dumpdir = "/absolute_path"
+        self.mock_service_instance.data_collector.dump_file_path = "/absolute_path"
 
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
