@@ -91,7 +91,7 @@ def generate_data_name(data_path):
     statistic_exist = bool(statistic_file_list)
     npy_exist = bool(npy_file_list)
 
-    mapping_dict = []
+    mapping_dict = {}
     if mapping_exist:
         for mapping_file in mapping_file_list:
             with FileOpen(mapping_file, "r") as f:
@@ -315,6 +315,8 @@ class GraphMSComparator:
             else:
                 if len(split_path) > 4:
                     rank_id = convert_to_int(split_path[-4])
+                if rank_id == -1 and len(split_path) > 3:
+                    rank_id = convert_to_int(split_path[-3])
                 step_id = convert_to_int(split_path[-1])
             return rank_id, step_id
 
