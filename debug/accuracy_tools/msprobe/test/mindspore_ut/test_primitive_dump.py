@@ -110,7 +110,6 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 创建一个临时目录作为 dump_path
         self.temp_dir = tempfile.TemporaryDirectory()
         dump_path = self.temp_dir.name
-        print(f"临时目录路径: {self.temp_dir.name}")  # 打印临时目录路径
         json_config = {
             "task": "statistics",
             "dump_path": dump_path,
