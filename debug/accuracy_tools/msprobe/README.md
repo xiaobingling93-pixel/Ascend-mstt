@@ -1,6 +1,6 @@
 # 📖 msprobe 使用手册
 
-![version](https://img.shields.io/badge/version-1.0.3-blueviolet)
+![version](https://img.shields.io/badge/version-1.0.4-blueviolet)
 ![python](https://img.shields.io/badge/python-3.8|3.9|3.10-blue)
 ![platform](https://img.shields.io/badge/platform-Linux-yellow)
 
@@ -79,14 +79,19 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 🌟 新版本特性
 
-【精度预检】
-- 落盘数据小。
-- 支持随机生成模式和真实数据模式。
-- 单 API 测试，排除整网中的累计误差问题。
+【数据采集】
+- 支持 config.json 中的 step 可以传入范围；
+- 优化了 MindSpore 场景的 step 机制，step 结束后训练继续运行。
 
-【梯度检测】
-- 使用便捷，无需在训练流程里插入代码。
-- 可以精准定位问题出现的 step。
+【精度预检】
+- 在 PyTorch 场景，支持部分 NPU 融合算子预检。
+
+【精度比对】
+- 解决了使用 MindSpore 需要安装 PyTorch 的问题。
+
+【无标杆比对】
+- 补充在 PyTorch 场景的性能基线报告；
+- 支持 MindSpore 场景的 change_value 扰动模式。
 
 ## 📑 补充材料
 
