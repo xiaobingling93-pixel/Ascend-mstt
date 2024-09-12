@@ -113,6 +113,125 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
 
+
+    def test_update_primitive_counters_multiple(self):
+        # 测试更新 primitive 计数器的功能，增加多个不同名称的测试
+        primitive_names = ["MatMul", "Conv2D", "ReLU", "Softmax"]
+
+        for name in primitive_names:
+            for i in range(3):
+                self.primitive_hook_service.update_primitive_counters(name)
+                self.assertEqual(self.primitive_hook_service.primitive_counters[name], i)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_forward_hook_various_inputs(self, mock_hook_backward):
+        # 测试不同形状和大小的 Tensor 输入
+        input_tensors = [
+            Tensor(np.random.randn(2, 2).astype(np.float32)),
+            Tensor(np.random.randn(4, 4).astype(np.float32)),
+            Tensor(np.random.randn(10, 10).astype(np.float32)),
+        ]
+
+        for input_tensor in input_tensors:
+            mock_origin_func = Mock(return_value=input_tensor)
+            wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+            result = wrapped_func(Mock(), input_tensor)
+
+            mock_origin_func.assert_called_once()
+            mock_hook_backward.assert_called()
+            self.assertIsInstance(result, Tensor)
+
+    def test_wrap_primitive_no_hook_with_invalid_input(self):
+        # 测试在 switch 关闭时传入无效输入时的行为
+        self.mock_service_instance.switch = False
+
+        invalid_inputs = [None, "invalid_tensor", 123]
+
+        for invalid_input in invalid_inputs:
+            mock_origin_func = Mock(return_value=invalid_input)
+            wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+            result = wrapped_func(Mock(), invalid_input)
+            mock_origin_func.assert_called_once()
+            self.assertEqual(result, invalid_input)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_with_multiple_hooks(self, mock_hook_backward):
+        # 测试多个钩子函数同时应用的行为
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        # 模拟多个 primitive
+        primitive_names = ["MatMul", "Add", "Sub"]
+
+        for name in primitive_names:
+            mock_origin_func = Mock(return_value=input_tensor)
+            wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, name)
+            result = wrapped_func(Mock(), input_tensor)
+
+            mock_origin_func.assert_called_once()
+            mock_hook_backward.assert_called()
+            self.assertIsInstance(result, Tensor)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_with_exception_handling_multiple(self, mock_hook_backward):
+        # 模拟多个异常情况并确保它们被正确捕获
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        exception_messages = ["Invalid operation", "Null reference", "Type error"]
+
+        for exception_message in exception_messages:
+            mock_origin_func = Mock(side_effect=Exception(exception_message))
+            wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "MatMul")
+
+            with self.assertRaises(Exception) as context:
+                wrapped_func(Mock(), input_tensor)
+            self.assertIn(exception_message, str(context.exception))
+
+    def test_create_backward_hook_multiple(self):
+        # 测试创建多个 backward 钩子并模拟不同数量的梯度捕获
+        captured_grads_sets = [[Mock()], [Mock(), Mock()], [Mock(), Mock(), Mock()]]
+
+        for captured_grads in captured_grads_sets:
+            updated_primitive_name = "MatMul.Backward"
+            num_tensors = len(captured_grads)
+            hook = self.primitive_hook_service.wrap_primitive(Mock(), "MatMul")
+
+            backward_hook = hook(Mock(), captured_grads, updated_primitive_name, Const.INPUT)
+            self.assertIsNotNone(backward_hook)
+
+            # 模拟捕获梯度
+            for grad in captured_grads:
+                backward_hook(grad)
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_wrap_primitive_forward_and_backward_hooks(self, mock_hook_backward):
+        # 模拟前向和后向钩子在同一个 primitive 中的行为
+        input_tensor = Tensor(np.random.randn(2, 2).astype(np.float32))
+
+        mock_origin_func = Mock(return_value=input_tensor)
+        wrapped_func = self.primitive_hook_service.wrap_primitive(mock_origin_func, "Conv2D")
+
+        result = wrapped_func(Mock(), input_tensor)
+
+        # 确保前向和后向 hook 均被调用
+        mock_origin_func.assert_called_once()
+        mock_hook_backward.assert_called()
+
+        self.assertIsInstance(result, Tensor)
+
+    def test_update_primitive_counters_different_names(self):
+        # 测试不同 primitive 名称的计数器更新
+        primitive_names = ["MatMul", "Add", "Sub", "Mul", "Conv2D"]
+
+        for name in primitive_names:
+            for i in range(5):
+                self.primitive_hook_service.update_primitive_counters(name)
+                self.assertEqual(self.primitive_hook_service.primitive_counters[name], i)
+
+
+
+
     def test_update_primitive_counters(self):
         primitive_name = "MatMul"
         self.primitive_hook_service.update_primitive_counters(primitive_name)
@@ -200,3 +319,23 @@ class TestPrimitiveHookService(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             wrapped_func(Mock(), input_tensor)
         self.assertIn("Mocked exception", str(context.exception))
+
+    @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
+    def test_create_backward_hook(self, mock_hook_backward):
+        # 测试 create_backward_hook 的功能
+        captured_grads = []
+        updated_primitive_name = "MatMul.Backward"
+        num_tensors = 2
+
+        # 创建 backward hook
+        backward_hook = self.primitive_hook_service.wrap_primitive(Mock(), "MatMul")
+        hook = backward_hook(Mock(), captured_grads, updated_primitive_name, Const.INPUT)
+
+        # 确保 hook 被创建并可调用
+        self.assertIsNotNone(hook)
+
+        # 调用 hook 模拟捕获梯度
+        hook(Mock())
+
+        # 验证捕获到的梯度
+        mock_hook_backward.assert_called_once()
