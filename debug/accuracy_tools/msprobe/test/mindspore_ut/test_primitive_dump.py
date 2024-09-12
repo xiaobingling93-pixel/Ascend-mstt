@@ -130,7 +130,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         self.mock_service_instance = Service(config)
         self.mock_service_instance.switch = True
         self.mock_service_instance.data_collector = Mock()
-        # self.mock_service_instance.data_collector.dump_file_path = json_config["dump_path"]
+        self.mock_service_instance.data_collector.dump_file_path = json_config["dump_path"]
 
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
