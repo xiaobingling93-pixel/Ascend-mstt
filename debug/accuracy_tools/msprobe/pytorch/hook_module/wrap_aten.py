@@ -50,6 +50,8 @@ class AtenOPTemplate(HOOKModule):
     def __init__(self, op, hook, need_hook=True):
         if isinstance(op, torch._ops.OpOverloadPacket):
             op_name_ = op._qualified_op_name.split("::")[-1]
+        elif isinstance(op, str):
+            op_name_ = str(op)
         else:
             op_name_ = op.name().split("::")[-1]
             overload_name = op._overloadname

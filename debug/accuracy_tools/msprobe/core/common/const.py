@@ -99,6 +99,7 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+    ATEN = "Aten"
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
