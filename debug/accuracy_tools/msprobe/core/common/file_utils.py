@@ -187,7 +187,7 @@ def check_other_user_writable(path):
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
-    if file_owner != os.getuid():
+    if file_owner != os.getuid() and os.getuid() != 0:
         logger.error('The file path %s may be insecure because is does not belong to you.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
