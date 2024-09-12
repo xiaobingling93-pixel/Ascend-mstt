@@ -25,15 +25,15 @@ class DebuggerConfig:
         self.framework = Const.PT_FRAMEWORK
 
         if self.task == Const.FREE_BENCHMARK:
-            self.fuzz_device = task_config.fuzz_device if task_config.fuzz_device else 'npu'
-            self.handler_type = task_config.handler_type if task_config.handler_type else 'check'
-            self.pert_mode = task_config.pert_mode if task_config.pert_mode else 'improve_precision'
-            self.fuzz_level = task_config.fuzz_level if task_config.fuzz_level else 'L1'
-            self.fuzz_stage = task_config.fuzz_stage if task_config.fuzz_stage else 'forward'
+            self.fuzz_device = task_config.fuzz_device
+            self.handler_type = task_config.handler_type
+            self.pert_mode = task_config.pert_mode
+            self.fuzz_level = task_config.fuzz_level
+            self.fuzz_stage = task_config.fuzz_stage
             self.preheat_config = {
-                "if_preheat": task_config.if_preheat if task_config.if_preheat is not None else True, 
-                "preheat_step": task_config.preheat_step if task_config.preheat_step else 15, 
-                "max_sample": task_config.max_sample if task_config.max_sample else 20, 
+                "if_preheat": task_config.if_preheat, 
+                "preheat_step": task_config.preheat_step, 
+                "max_sample": task_config.max_sample
             }
 
         self.online_run_ut = False
