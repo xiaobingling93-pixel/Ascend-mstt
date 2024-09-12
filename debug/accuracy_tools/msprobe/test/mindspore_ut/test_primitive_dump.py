@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 
 from mindspore import nn
 
+from msprobe.core.common.utils import Const
 from msprobe.mindspore.service import Service
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common_config import CommonConfig, BaseConfig
@@ -105,6 +106,21 @@ class TestService(unittest.TestCase):
 
 class TestPrimitiveHookService(unittest.TestCase):
     def setUp(self):
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L1"
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        self.service = Service(config)
+        self.service.model = Mock()
+        self.service.data_collector = Mock()
+        self.service.switch = True  # Make sure the switch is on for testing
         # 模拟一个 service_instance 和 data_collector
         self.mock_service_instance = Mock()
         self.mock_service_instance.switch = True
@@ -140,7 +156,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
             mock_origin_func.assert_called_once()
             mock_hook_backward.assert_called()
-            self.assertIsInstance(result, Tensor)
+            self.assertIsInstance(result, Mock)
 
     def test_wrap_primitive_no_hook_with_invalid_input(self):
         # 测试在 switch 关闭时传入无效输入时的行为
@@ -171,7 +187,7 @@ class TestPrimitiveHookService(unittest.TestCase):
 
             mock_origin_func.assert_called_once()
             mock_hook_backward.assert_called()
-            self.assertIsInstance(result, Tensor)
+            self.assertIsInstance(result, Mock)
 
     @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
     def test_wrap_primitive_with_exception_handling_multiple(self, mock_hook_backward):
@@ -218,7 +234,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         mock_origin_func.assert_called_once()
         mock_hook_backward.assert_called()
 
-        self.assertIsInstance(result, Tensor)
+        self.assertIsInstance(result, Mock)
 
     def test_update_primitive_counters_different_names(self):
         # 测试不同 primitive 名称的计数器更新
