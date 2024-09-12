@@ -106,12 +106,27 @@ class TestService(unittest.TestCase):
 
 class TestPrimitiveHookService(unittest.TestCase):
     def setUp(self):
-        
-        
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L1"
+        }
+
+        # common_config = CommonConfig(json_config)
+        # task_config = BaseConfig(json_config)
+        # config = DebuggerConfig(common_config, task_config)
+        # self.service = Service(config)
+        # self.service.model = Mock()
+        # self.service.data_collector = Mock()
+        # self.service.switch = True  # Make sure the switch is on for testing
+
         # 模拟一个 service_instance 和 data_collector
         self.mock_service_instance = Mock()
         self.mock_service_instance.switch = True
         self.mock_service_instance.data_collector = Mock()
+        self.mock_service_instance.data_collector.dumpdir = "/absolute_path"
 
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
@@ -339,6 +354,3 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 调用 hook 模拟捕获梯度
         hook(Mock())
-
-        # # 验证捕获到的梯度
-        # mock_hook_backward.assert_called_once()
