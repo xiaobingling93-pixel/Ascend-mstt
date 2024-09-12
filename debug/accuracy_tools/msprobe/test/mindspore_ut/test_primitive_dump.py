@@ -114,19 +114,19 @@ class TestPrimitiveHookService(unittest.TestCase):
             "level": "L1"
         }
 
-        # common_config = CommonConfig(json_config)
-        # task_config = BaseConfig(json_config)
-        # config = DebuggerConfig(common_config, task_config)
-        # self.service = Service(config)
-        # self.service.model = Mock()
-        # self.service.data_collector = Mock()
-        # self.service.switch = True  # Make sure the switch is on for testing
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        self.service = Service(config)
+        self.service.model = Mock()
+        self.service.data_collector = Mock()
+        self.service.switch = True  # Make sure the switch is on for testing
 
         # 模拟一个 service_instance 和 data_collector
-        self.mock_service_instance = Mock()
+        self.mock_service_instance = Service(config)
         self.mock_service_instance.switch = True
         self.mock_service_instance.data_collector = Mock()
-        self.mock_service_instance.data_collector.dump_file_path = "/absolute_path"
+        # self.mock_service_instance.data_collector.dump_file_path = json_config["dump_path"]
 
         # 初始化 PrimitiveHookService
         self.primitive_hook_service = PrimitiveHookService(self.mock_service_instance)
