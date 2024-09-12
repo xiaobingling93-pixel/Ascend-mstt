@@ -2,7 +2,7 @@ import os
 import threading
 from typing import Dict, Union, Tuple
 
-from msprobe.core.grad_probe.utils import check_str
+from msprobe.core.grad_probe.utils import check_str, check_bounds_element
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.file_utils import create_directory, check_path_before_create
@@ -38,9 +38,7 @@ class GlobalContext:
             raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
 
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
-        def bounds_check(bound):
-            return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
-        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int), element_check=bounds_check)
+        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int), element_check=check_bounds_element)
         self._set_input_list(config_dict, GradConst.STEP, int)
         self._set_input_list(config_dict, GradConst.RANK, int)
 

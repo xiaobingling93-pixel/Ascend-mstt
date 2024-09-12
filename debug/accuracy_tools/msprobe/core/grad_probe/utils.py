@@ -20,12 +20,22 @@ def check_numeral_list_ascend(lst):
 def check_param(param_name):
     if not re.match(GradConst.PARAM_VALID_PATTERN, param_name):
         raise RuntimeError("The parameter name contains special characters.")
-    
+
 
 def check_str(string, variable_name):
     if not isinstance(string, str):
         raise ValueError(f'The variable: "{variable_name}" is not a string.')
-    
+
+def check_bounds_element(bound):
+    return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
+
+def check_bounds(bounds):
+    if any(not isinstance(item, (int, float)) for item in bounds):
+        raise Exception("bounds list should only contain int or float numbers")
+    if any(not check_bounds_element(item) for item in bounds):
+        raise Exception("element in bounds list should be in int64 range")
+    if bounds != sorted(bounds):
+        raise Exception("bounds list should be ascending")
 
 class ListCache(list):
     threshold = 1000
@@ -50,7 +60,7 @@ class ListCache(list):
         list.append(self, data)
         if len(self) >= ListCache.threshold:
             self.flush()
-    
+
     def set_output_file(self, output_file):
         self._output_file = output_file
 
