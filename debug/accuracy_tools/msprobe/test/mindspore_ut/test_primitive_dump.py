@@ -106,21 +106,8 @@ class TestService(unittest.TestCase):
 
 class TestPrimitiveHookService(unittest.TestCase):
     def setUp(self):
-        json_config = {
-            "task": "statistics",
-            "dump_path": "/absolute_path",
-            "rank": [],
-            "step": [0, 2],
-            "level": "L1"
-        }
-
-        common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
-        config = DebuggerConfig(common_config, task_config)
-        self.service = Service(config)
-        self.service.model = Mock()
-        self.service.data_collector = Mock()
-        self.service.switch = True  # Make sure the switch is on for testing
+        
+        
         # 模拟一个 service_instance 和 data_collector
         self.mock_service_instance = Mock()
         self.mock_service_instance.switch = True
