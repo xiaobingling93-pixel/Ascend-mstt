@@ -79,7 +79,6 @@ class BaseDataProcessor:
         self.stack_info_struct = {}
         self.current_api_or_module_name = None
         self.api_data_category = None
-        self.has_overflow = False
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
@@ -94,19 +93,20 @@ class BaseDataProcessor:
 
     @staticmethod
     def analyze_api_call_stack(name):
+        try:
+            api_stack = inspect.stack()[5:]
+        except Exception as e:
+            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+            api_stack = None
         stack_str = []
-        for (_, path, line, func, code, _) in inspect.stack()[5:]:
-            if not code:
-                continue
-            stack_line = " ".join([
-                "File", ", ".join([
-                    path,
-                    " ".join(["line", str(line)]),
-                    " ".join(["in", func]),
-                    " ".join(["\n", code[0].strip()])
-                ])
-            ])
-            stack_str.append(stack_line)
+        if api_stack:
+            for (_, path, line, func, code, _) in api_stack:
+                if not code:
+                    continue
+                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
+                stack_str.append(stack_line)
+        else:
+            stack_str.append(Const.WITHOUT_CALL_STACK)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
@@ -202,10 +202,9 @@ class BaseDataProcessor:
     def update_iter(self, current_iter):
         self.current_iter = current_iter
 
-    def visit_and_clear_overflow_status(self, api_or_module_name):
+    def update_api_or_module_name(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
-            self.has_overflow = False
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """

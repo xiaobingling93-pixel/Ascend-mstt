@@ -347,7 +347,6 @@ ops:
   - linspace
   - logspace
   - one_hot
-  - arange
   - range
   - heaviside
   - bernoulli
@@ -726,7 +725,6 @@ tensor:
   - trace
   - swapaxes
   - tile
-  - to
   - topk
   - tril
   - tensor_split
@@ -760,7 +758,6 @@ mint.ops:
   - all
   - any
   - any_ex
-  - arange
   - argmax
   - avg_pool2d
   - baddbmm

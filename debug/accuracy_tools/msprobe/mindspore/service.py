@@ -78,29 +78,31 @@ class Service:
 
     def build_hook(self, target_type, name):
         def forward_hook(api_or_cell_name, cell, input, output):
+            if not self.should_excute_hook():
+                return None
+
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
-            if not self.switch:
-                return None
-            if self.data_collector:
-                if target_type == BaseScope.Module_Type_Module:
-                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs={}, output=output)
-                else:
-                    module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs, output=output)
-                self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
-                if self.data_collector.if_return_forward_new_output():
-                    return self.data_collector.get_forward_new_output()
-                if target_type == BaseScope.Module_Type_API:
-                    del cell.input_kwargs
+                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs={}, output=output)
+            else:
+                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs,
+                                                                 output=output)
+
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
+            self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
+            if self.data_collector.if_return_forward_new_output():
+                return self.data_collector.get_forward_new_output()
+            if target_type == BaseScope.Module_Type_API:
+                del cell.input_kwargs
             return output
 
         def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
+            if not self.should_excute_hook():
+                return
+
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
-            self.data_collector.visit_and_clear_overflow_status(api_or_cell_name)
-            if not self.switch:
-                return
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
@@ -129,14 +131,14 @@ class Service:
                 backward_primitive_name = f"{updated_primitive_name}.{Const.BACKWARD}"
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
-                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
                         service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, service_instance, os.getpid(), new_module_input_output
                         )
                         captured_grads.clear()
                     elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
-                        service_instance.data_collector.visit_and_clear_overflow_status(backward_primitive_name)
+                        service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
                         service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, service_instance, os.getpid(), new_module_input_output
@@ -205,7 +207,7 @@ class Service:
                                 " primitive_name: {}".format(exception, primitive_name)) from exception
 
             forward_primitive_name = f"{updated_primitive_name}.{Const.FORWARD}"
-            service_instance.data_collector.visit_and_clear_overflow_status(forward_primitive_name)
+            service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
             if service_instance.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
                 try:
@@ -256,16 +258,20 @@ class Service:
         self.start_call = True
         if self.should_stop_service:
             return
-        if self.config.step and self.current_iter > max(self.config.step):
+        if self.need_end_service():
             api_register.api_set_ori_func()
             self.should_stop_service = True
-            logger.info("msprobe: dump has successfully ended")
+            self.switch = False
+            logger.info("************************************************")
+            logger.info(f"*          {Const.TOOL_NAME} ends successfully.          *")
+            logger.info("************************************************")
             return
         if self.config.step and self.current_iter not in self.config.step:
             return
         self.model = self.check_model_valid(model)
 
-        logger.info("msprobe: debugger.start() is set successfully")
+        logger.info(f"{Const.TOOL_NAME}: debugger.start() is set successfully")
+
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -275,27 +281,28 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
+            if self.config.level == "L1":
+                JitDump.set_config(self.config)
+                JitDump.set_data_collector(self.data_collector)
+                ms.common.api._MindsporeFunctionExecutor = JitDump
+                ms.common.api._PyNativeExecutor.grad = JitDump.grad
+                if pijit_label:
+                    PIJitCaptureContext.__enter__ = self.empty
+                    PIJitCaptureContext.__exit__ = self.empty
             self.first_start = False
+
         self.switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
-        if self.config.level == "L1":
-            JitDump.set_config(self.config)
-            JitDump.set_data_collector(self.data_collector)
-            ms.common.api._MindsporeFunctionExecutor =  JitDump
-            ms.common.api._PyNativeExecutor.grad =  JitDump.grad
-            if pijit_label:
-                PIJitCaptureContext.__enter__ = self.empty
-                PIJitCaptureContext.__exit__ = self.empty
 
     def stop(self):
         if self.should_stop_service:
             return
-        logger.info("msprobe: debugger.stop() is set successfully. "
+        logger.info(f"{Const.TOOL_NAME}: debugger.stop() is set successfully. "
                     "Please set debugger.start() to turn on the dump switch again. ")
         if not self.start_call:
-            logger.error("msprobe: debugger.start() is not set in the current scope.")
+            logger.error(f"{Const.TOOL_NAME}: debugger.start() is not set in the current scope.")
             raise Exception("debugger.start() is not set in the current scope.")
         if self.config.step and self.current_iter not in self.config.step:
             return
@@ -304,6 +311,20 @@ class Service:
         self.switch = False
         self.start_call = False
         self.data_collector.write_json()
+
+    def need_end_service(self):
+        if self.config.step and self.current_iter > max(self.config.step):
+            return True
+        if self.data_collector and self.data_collector.data_processor.is_terminated:
+            return True
+        return False
+
+    def should_excute_hook(self):
+        if not self.switch:
+            return False
+        if not self.data_collector or self.data_collector.data_processor.is_terminated:
+            return False
+        return True
 
     def create_dirs(self):
         create_directory(self.config.dump_path)
@@ -322,7 +343,7 @@ class Service:
         construct_file_path = os.path.join(dump_dir, "construct.json")
         self.data_collector.update_dump_paths(
             dump_file_path, stack_file_path, construct_file_path, dump_data_dir, None)
-        
+
     def empty(self, *args, **kwargs):
         pass
 
@@ -336,7 +357,8 @@ class Service:
 
         if self.config.level == "L0":
             if not self.model:
-                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "The current level is L0, the model cannot be None")
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                       "The current level is L0, the model cannot be None")
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue
