@@ -188,9 +188,14 @@ class TrainerMon:
     def hook_modules(self, model:torch.nn.Module, grad_acc_steps):
         # fwd=0, bkd=1
         # targets is module name list like ["xx.xxx1", "xxx.xxx2"] which can be obtained when first run. 
+        if not isinstance(model, torch.nn.Module):
+            raise TypeError("model should be a nn.Module")
+        if not isinstance(grad_acc_steps, int):
+            raise TypeError("grad_acc_steps should be int")
         print_rank_0("> module names:")
         for name, _ in model.named_modules():
             print_rank_0(f"\t{name}")
+
         self.micro_batch_number = grad_acc_steps
 
         if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
