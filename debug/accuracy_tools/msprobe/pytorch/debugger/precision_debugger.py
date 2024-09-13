@@ -65,10 +65,11 @@ class PrecisionDebugger:
     @classmethod
     def start(cls):
         instance = cls._instance
-        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
-            return
         if not instance:
             raise Exception("No instance of PrecisionDebugger found.")
+
+        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
+            return
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
@@ -85,10 +86,11 @@ class PrecisionDebugger:
     @classmethod
     def stop(cls):
         instance = cls._instance
-        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
-            return
         if not instance:
             raise Exception("PrecisionDebugger instance is not created.")
+
+        if instance.task in PrecisionDebugger.tasks_not_need_debugger:
+            return
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, stop() skipped.")
         else:
@@ -96,10 +98,11 @@ class PrecisionDebugger:
 
     @classmethod
     def step(cls):
-        if cls._instance.task in PrecisionDebugger.tasks_not_need_debugger:
-            return
         if not cls._instance:
             raise Exception("PrecisionDebugger instance is not created.")
+
+        if cls._instance.task in PrecisionDebugger.tasks_not_need_debugger:
+            return
         cls._instance.service.step()
 
     @classmethod

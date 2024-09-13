@@ -78,7 +78,7 @@ class DataCollector:
             return
         logger.info(f"API {name} is inplace.")
         data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
-        self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -92,13 +92,7 @@ class DataCollector:
         if self.config.level == "L2":
             return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        if self.config.framework == Const.MS_FRAMEWORK:
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        else:
-            if self.data_processor.is_terminated:
-                self.handle_data(name, data_info, flush=True)
-                raise Exception(f"[{Const.TOOL_NAME}] exit")
-            self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -106,13 +100,7 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
-        if self.config.framework == Const.MS_FRAMEWORK:
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        else:
-            if self.data_processor.is_terminated:
-                self.handle_data(name, data_info, flush=True)
-                raise Exception(f"[{Const.TOOL_NAME}] exit")
-            self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
