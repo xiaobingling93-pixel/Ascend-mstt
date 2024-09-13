@@ -30,12 +30,15 @@ def check_bounds_element(bound):
     return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
 
 def check_bounds(bounds):
-    if any(not isinstance(item, (int, float)) for item in bounds):
-        raise Exception("bounds list should only contain int or float numbers")
-    if any(not check_bounds_element(item) for item in bounds):
-        raise Exception("element in bounds list should be in int64 range")
-    if bounds != sorted(bounds):
-        raise Exception("bounds list should be ascending")
+    prev = GradConst.BOUNDS_MINIMUM - 1
+    for element in bounds:
+        if not isinstance(element, (int, float)):
+            raise Exception("bounds element is not int or float")
+        if not check_bounds_element(element):
+            raise Exception("bounds element is out of int64 range")
+        if prev >= element:
+            raise Exception("bounds list is not ascending")
+        prev = element
 
 class ListCache(list):
     threshold = 1000
