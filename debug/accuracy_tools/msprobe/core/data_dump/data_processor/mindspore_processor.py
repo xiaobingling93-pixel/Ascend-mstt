@@ -142,6 +142,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
+            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 

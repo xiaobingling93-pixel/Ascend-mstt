@@ -46,8 +46,7 @@ class DebuggerConfig:
             self.port = task_config.port if task_config.port else -1
 
         self.check()
-        if self.step:
-            self.step.sort()
+
         if self.level == "L2":
             if not self.scope or not isinstance(self.scope, list) or len(self.scope) != 1:
                 raise ValueError("scope must be configured as a list with one api name")
@@ -71,7 +70,6 @@ class DebuggerConfig:
     def check(self):
         self.check_kwargs()
         self._check_rank()
-        self._check_step()
         return True
 
     def check_model(self, model):
@@ -87,9 +85,3 @@ class DebuggerConfig:
                     raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
             else:
                 logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
-
-    def _check_step(self):
-        if self.step:
-            for s in self.step:
-                if not isinstance(s, int) or s < 0:
-                    raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")
