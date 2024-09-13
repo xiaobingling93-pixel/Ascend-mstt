@@ -92,7 +92,7 @@ class PrimitiveHookService:
             num_tensors = sum(isinstance(arg, Tensor) for arg in args)
             input_backward_hook = create_backward_hook(captured_grads_input, num_tensors, updated_primitive_name,
                                                        Const.INPUT)
-            for _, arg in enumerate(args):
+            for arg in args:
                 if isinstance(arg, Tensor):
                     arg_hooked = ops.HookBackward(input_backward_hook)(arg)
                     hooked_inputs.append(arg_hooked)
