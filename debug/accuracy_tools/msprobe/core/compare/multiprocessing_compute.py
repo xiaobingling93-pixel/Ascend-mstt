@@ -42,7 +42,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
         result = pool.apply_async(func,
                                   args=(idx, op_name_mapping_dict, df_chunk, lock, input_parma),
                                   error_callback=err_call,
-                                  callback=lambda _: update_progress(chunk_size, lock))
+                                  callback=update_progress(chunk_size, lock))
         results.append(result)
     final_results = [r.get() for r in results]
     pool.close()
