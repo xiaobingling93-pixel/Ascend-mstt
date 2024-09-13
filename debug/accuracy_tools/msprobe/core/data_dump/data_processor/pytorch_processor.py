@@ -153,7 +153,7 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        saved_tensor = tensor.contiguous().detach()
+        saved_tensor = tensor.clone().contiguous().detach()
         save_pt(saved_tensor, file_path)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
