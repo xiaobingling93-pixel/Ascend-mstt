@@ -225,7 +225,7 @@ def validate_ranks(ranks):
         raise TypeError("module_ranks should be a list")
     for rank in ranks:
         if not isinstance(rank, int):
-            raise TypeError("element in module_ranks should be a int, get {type(rank)}")
+            raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
         if rank < 0 or rank >= world_size:
             print_warn_log(f"rank {rank} is beyond world size [0, {world_size-1}] and will be ignored")
 
