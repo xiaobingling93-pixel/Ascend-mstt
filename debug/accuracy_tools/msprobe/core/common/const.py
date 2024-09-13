@@ -14,6 +14,8 @@ class Const:
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    STRING_INVALID_PATTERN = r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]"
+    STACK_STRING_BLACKLIST = r"[=+\-&\\@]"
     COMMA = ","
     FLOAT_EPSILON = np.finfo(float).eps
     OFF = 'OFF'
@@ -30,6 +32,7 @@ class Const:
     FOUR_SEGMENT = 4
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
+    MAX_DEPTH = 10
 
     # dump mode
     ALL = "all"

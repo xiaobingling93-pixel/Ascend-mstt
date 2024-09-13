@@ -57,6 +57,8 @@ class CompareException(Exception):
     INVALID_SUMMARY_MODE = 19
     INVALID_TASK_ERROR = 20
     DETACH_ERROR = 21
+    INVALID_OBJECT_TYPE_ERROR = 22
+    INVALID_CHAR_ERROR = 23
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -383,3 +385,20 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
+
+
+def check_op_str_pattern_valid(string, op_name=None, stack=False):
+    if isinstance(string, str) and is_invalid_pattern(string, stack):
+        if stack:
+            message = f"stack info of {op_name} contains special characters, please check!"
+        elif not op_name:
+            message = f"{string} contains special characters, please check!"
+        else:
+            message = f"data info of {op_name} contains special characters, please check!"
+        logger.error(message)
+        raise CompareException(CompareException.INVALID_CHAR_ERROR)
+
+
+def is_invalid_pattern(string, stack):
+    pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
+    return re.match(pattern, string) if stack else re.search(pattern, string)
