@@ -331,9 +331,18 @@ class MsgConst:
     """
     Class for log messages const
     """
-    CLEAR_SYMBOL = "\033[K"
     MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
-    LEVEL = ["INFO", "WARNING", "ERROR", "DEBUG"]
+    LOG_LEVEL_ENUM = ["0", "1", "2", "3", "4"]
+    LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
+    class LogLevel:
+        class DEBUG:
+            value = 0
+        class INFO:
+            value = 1
+        class WARNING:
+            value = 2
+        class ERROR:
+            value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
 
