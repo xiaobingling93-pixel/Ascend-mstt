@@ -2,7 +2,7 @@ import os
 import threading
 from typing import Dict, Union, Tuple
 
-from msprobe.core.grad_probe.utils import check_str
+from msprobe.core.grad_probe.utils import check_str, check_bounds_element
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
 from msprobe.core.common.file_utils import create_directory, check_path_before_create
@@ -38,7 +38,7 @@ class GlobalContext:
             raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
 
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
-        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int))
+        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int), element_check=check_bounds_element)
         self._set_input_list(config_dict, GradConst.STEP, int)
         self._set_input_list(config_dict, GradConst.RANK, int)
 
@@ -82,13 +82,16 @@ class GlobalContext:
         return type_str
 
     def _set_input_list(self, config_dict: Dict, name: str,
-                        dtype: Union[int, str, float, Tuple[int, str, float]]):
+                        dtype: Union[int, str, float, Tuple[int, str, float]], element_check=None):
         value = config_dict.get(name)
         type_str = self._get_type_str(dtype)
         if value and isinstance(value, list):
             for val in value:
                 if not isinstance(val, dtype):
                     logger.warning(f"Invalid {name} which must be None or list of {type_str}")
+                    return
+                if element_check and not element_check(val):
+                    logger.warning(f"Given {name} violates some rules.")
                     return
             self._setting[name] = value
         else:
