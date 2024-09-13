@@ -152,11 +152,12 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
         check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
-
-def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
-    if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
-        logger.error("Invalid input parameters which should be only bool type.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
+    arg_list = [stack_mode, auto_analyze, fuzzy_match, is_print_compare_log]
+    for arg in arg_list:
+        if not isinstance(arg, bool):
+            logger.error(f"Invalid input parameter, {arg} which should be only bool type.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
 def is_starts_with(string, prefix_list):
