@@ -13,8 +13,8 @@ class MsprobeException(CodedException):
     OVERFLOW_NUMS_ERROR = 1
 
     err_strs = {
-        INVALID_PARAM_ERROR: "[msprobe] 无效参数： ",
-        OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数:"
+        INVALID_PARAM_ERROR: "[msprobe] 无效参数：",
+        OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数："
     }
 
 

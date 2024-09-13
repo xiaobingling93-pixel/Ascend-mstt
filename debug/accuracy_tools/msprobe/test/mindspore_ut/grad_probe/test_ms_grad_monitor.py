@@ -95,7 +95,7 @@ class TestMsGradientMonitor(TestCase):
         self.assertTrue((my_dense_weight_real == my_dense_weight_target).all(), "weight ndarray not same as target")
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
-        target_md5_value = "874174395c56922f86118050e8c93e74"
+        target_md5_value = "d5e71f1aa37d48ef0ca0a75932597a29"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
 
 

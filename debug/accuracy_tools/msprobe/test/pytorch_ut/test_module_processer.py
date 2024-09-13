@@ -1,14 +1,15 @@
 import unittest
-from msprobe.pytorch.module_processer import ModuleProcesser
-from msprobe.pytorch.common.utils import Const
 
 import torch
+from msprobe.pytorch.common.utils import Const
+from msprobe.pytorch.module_processer import ModuleProcesser
+
 
 class TestModuleProcesser(unittest.TestCase):
     def test_filter_tensor_and_tuple(self):
         def func(nope, x):
             return x * 2
-        
+
         result_1 = ModuleProcesser.filter_tensor_and_tuple(func)(None, torch.tensor([1]))
         self.assertEqual(result_1, torch.tensor([2]))
 
@@ -18,11 +19,11 @@ class TestModuleProcesser(unittest.TestCase):
     def test_clone_return_value_and_test_clone_if_tensor(self):
         def func(x):
             return x
-        
+
         input = torch.tensor([1])
         input_tuple = (torch.tensor([1]), torch.tensor([2]))
         input_list = [torch.tensor([1]), torch.tensor([2])]
-        input_dict = {"A":torch.tensor([1]), "B":torch.tensor([2])}
+        input_dict = {"A": torch.tensor([1]), "B": torch.tensor([2])}
 
         result = ModuleProcesser.clone_return_value(func)(input)
         result[0] = 2
@@ -40,7 +41,6 @@ class TestModuleProcesser(unittest.TestCase):
         result_dict["A"][0] = 2
         self.assertNotEqual(result_dict, input_dict)
 
-        
     def test_node_hook(self):
         empty_list = []
         test = ModuleProcesser(None)
@@ -49,11 +49,12 @@ class TestModuleProcesser(unittest.TestCase):
         end_hook = test.node_hook("test", "stop")
         self.assertIsNotNone(end_hook)
 
-        class A():
+        class A:
             pass
+
         pre_hook(A, None, None)
         self.assertIn("test", test.module_count)
-        self.assertFalse(test.module_stack==empty_list)
+        self.assertFalse(test.module_stack == empty_list)
 
     def test_module_count_func(self):
         test = ModuleProcesser(None)

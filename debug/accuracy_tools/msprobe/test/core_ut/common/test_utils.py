@@ -215,9 +215,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_configuration_param(self, mock_error):
         with self.assertRaises(CompareException) as context:
-            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False)
+            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False, is_print_compare_log=True)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Invalid input parameters which should be only bool type.")
+        mock_error.assert_called_with("Invalid input parameter, False which should be only bool type.")
 
     def test_is_starts_with(self):
         string = "input_slot0"

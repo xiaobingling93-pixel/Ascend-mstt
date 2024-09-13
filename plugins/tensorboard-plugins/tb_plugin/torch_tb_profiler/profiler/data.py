@@ -31,7 +31,7 @@ from configparser import ConfigParser
 
 from .op_tree import OpTreeBuilder
 from .. import io, utils
-from ..consts import InputFilesType, MAX_FILE_SIZE, INPUT_FILE_LIST
+from ..consts import InputFilesType, INPUT_FILE_LIST
 from ..utils import href
 from . import trace
 from .communication import analyze_communication_nodes
@@ -169,15 +169,8 @@ class RunProfileData(object):
         has_communication_overlap = False
         has_communication_wait_ops = False
 
-        def _check_file_size_valid(filepath):
-            if io.stat(filepath).length > MAX_FILE_SIZE:
-                logger.warning(
-                    f'File "{filepath}" exceeds the maximum limit size of 500MB and will be skipped.')
-                return False
-            return True
-
         for file in io.listdir(path):
-            if utils.is_npu_trace_path(file) and _check_file_size_valid(io.join(path, file)):
+            if utils.is_npu_trace_path(file) and io.check_file_valid(io.join(path, file)):
                 has_trace = True
                 trace_file = io.join(path, file)
                 trace_path, trace_json = RunProfileData._preprocess_file(trace_file, cache_dir, 'Ascend')
@@ -199,7 +192,7 @@ class RunProfileData(object):
             profile.profiler_start_ts = 0
 
         for file in io.listdir(path):
-            if str(file) in INPUT_FILE_LIST and _check_file_size_valid(io.join(path, file)):
+            if str(file) in INPUT_FILE_LIST and io.check_file_valid(io.join(path, file)):
                 if InputFilesType(file) == InputFilesType.KERNEL_DETAILS_CSV:
                     has_kernel = True
                     profile.kernel_file_path = io.join(path, file)
