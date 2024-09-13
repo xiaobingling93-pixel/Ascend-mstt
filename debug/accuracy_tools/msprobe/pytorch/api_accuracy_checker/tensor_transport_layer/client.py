@@ -14,6 +14,9 @@ from twisted.protocols.basic import FileSender
 from msprobe.pytorch.common.utils import logger
 
 
+MAX_SENDING_QUEUE_SIZE = 20
+
+
 class TCPDataItem:
     def __init__(self, data,
                  sequence_number: int,
@@ -29,7 +32,6 @@ class TCPDataItem:
 
 
 class TCPClient:
-    MAX_SENDING_QUEUE_SIZE = 20
     ACK_SUCCESS = b"OK___"
     ACK_ERROR = b"ERROR"
     ACK_BUSY = b"BUSY_"
@@ -37,13 +39,13 @@ class TCPClient:
     ACK_STOP_CONFIRM = b"OVER_"
     ACK_KILL_PROCESS = b"KILL_"
 
-    QUEUE_PENDING_TIME = 600  # 队列10分钟都处于阻塞状态，则终止sending进程
+    QUEUE_PENDING_TIME = 60
     RESEND_RETRY_TIMES = 2  # 最大重传数
     RESEND_TIMER_TIME = 5  # 接收ACK超时定时器
     RESEND_PENDING_TIME = 60  # 连续pending时间超过1分钟则放弃该数据
 
     def __init__(self, host="localhost", port=8000, check_sum=False, tls_path=None):
-        self.send_queue = Queue(self.MAX_SENDING_QUEUE_SIZE)
+        self.send_queue = Queue(MAX_SENDING_QUEUE_SIZE)
         self.resend_dict = dict()
         self.host = host
         self.port = port
@@ -107,7 +109,7 @@ class TCPClient:
             if not self.tls_path:
                 self.add_to_sending_queue(data)
             else:
-                for _ in range(self.MAX_SENDING_QUEUE_SIZE):
+                for _ in range(MAX_SENDING_QUEUE_SIZE):
                     self.add_to_sending_queue(data)
             time.sleep(2)
 
@@ -138,7 +140,7 @@ class TCPClient:
                                     step=step)
             self.sequence_number += 1
         try:
-            self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME / 10)
+            self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
         except Exception as e:
             logger.error(f"send_queue put send_data timeout, rank: {send_data.rank}, step: {send_data.step},"
                          f"sequence_number: {send_data.sequence_number}, send_queue size: {self.send_queue.qsize()},"
@@ -159,7 +161,7 @@ class TCPClient:
             while self.send_queue.qsize() > 0:
                 if self._ready_to_exit():
                     break
-                if len(self.resend_dict) < self.MAX_SENDING_QUEUE_SIZE:
+                if len(self.resend_dict) < MAX_SENDING_QUEUE_SIZE:
                     data_obj = self.send_queue.get()
                     resend_key = str(data_obj.sequence_number) + "_" + str(data_obj.rank) + "_" + str(data_obj.step)
                     logger.debug(f"get {resend_key} from send_queue, and send to server.")
@@ -303,7 +305,7 @@ class ClientProtocol(protocol.Protocol):
         if self.tls:
             self.send_buffer += data
             self.buffer_cnt += 1
-            if self.buffer_cnt >= 20:
+            if self.buffer_cnt >= MAX_SENDING_QUEUE_SIZE:
                 d = self.file_sender.beginFileTransfer(io.BytesIO(self.send_buffer), self.transport)
                 self.send_buffer = b""
                 self.buffer_cnt = 0
