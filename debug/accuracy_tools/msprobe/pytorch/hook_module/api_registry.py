@@ -107,7 +107,14 @@ class ApiRegistry:
         if not is_gpu:
             self.set_api_attr(torch_npu, self.torch_npu_ori_attr)
 
-    def initialize_hook(self, hook):
+    def initialize_hook(self, hook, online_run_ut=False):
+        """
+        initialize_hook
+        Args:
+            hook (_type_): initialize_hook
+            online_run_ut (bool): default False, whether online run_ut or not.
+                If online_run_ut is True, the hook will not wrap the aten ops.
+        """
         self.store_ori_attr(torch.Tensor, get_tensor_ops(), self.tensor_ori_attr)
         wrap_tensor.wrap_tensor_ops_and_bind(hook)
         for attr_name in dir(wrap_tensor.HOOKTensor):
@@ -137,7 +144,7 @@ class ApiRegistry:
                     self.npu_distributed_hook_attr[attr_name[5:]] = getattr(wrap_distributed.HOOKDistributedOP,
                                                                             attr_name)
 
-        if torch_version_above_2:
+        if torch_version_above_2 and not online_run_ut:
             self.store_ori_attr(torch.ops.aten, get_aten_ops(), self.aten_ori_attr)
             wrap_aten.wrap_aten_ops_and_bind(hook)
             for attr_name in dir(wrap_aten.HOOKAtenOP):

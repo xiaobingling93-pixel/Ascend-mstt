@@ -11,8 +11,9 @@ def run_ut():
     ut_path = cur_dir
     cov_dir = os.path.dirname(cur_dir)
     report_dir = os.path.join(cur_dir, "report")
+    cov_config_path = os.path.join(cur_dir, ".coveragerc")
     final_xml_path = os.path.join(report_dir, "final.xml")
-    cov_report_path = os.path.join(report_dir, "coverage.xml")
+    html_cov_report = os.path.join(report_dir, "htmlcov")
 
     if os.path.exists(report_dir):
         shutil.rmtree(report_dir)
@@ -22,9 +23,10 @@ def run_ut():
                      "python3", "-m", "pytest",
                      ut_path,
                      f"--junitxml={final_xml_path}",
+                     f"--cov-config={cov_config_path}",
                      f"--cov={cov_dir}",
                      "--cov-branch",
-                     f"--cov-report=xml:{cov_report_path}",
+                     f"--cov-report=html:{html_cov_report}",
                  ]
 
     try:

@@ -55,9 +55,9 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 溢出检测与解析是在执行精度数据 dump 时，判断是否存在输入正常但输出存在溢出的 API，从而判断是否为正常溢出。对应 config.json 中的 overflow_check。
 
-[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)（更新中）
+[PyTorch 场景的溢出检测与解析](./docs/12.overflow_check_PyTorch.md)
 
-[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)（待补充）
+[MindSpore 场景的溢出检测与解析](./docs/13.overflow_check_MindSpore.md)
 
 ### 5 数据解析
 

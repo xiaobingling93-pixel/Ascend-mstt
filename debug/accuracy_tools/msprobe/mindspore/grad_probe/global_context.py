@@ -1,6 +1,6 @@
 import os
 import threading
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 from msprobe.core.grad_probe.utils import check_str
 from msprobe.core.grad_probe.constant import GradConst
@@ -18,7 +18,7 @@ class GlobalContext:
         GradConst.STEP: None,
         GradConst.RANK: None,
         GradConst.CURRENT_STEP: 0,
-        GradConst.BOUNDS: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10],
+        GradConst.BOUNDS: [-1, 0, 1],
         GradConst.OUTPUT_PATH: None
     }
 
@@ -38,7 +38,7 @@ class GlobalContext:
             raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
 
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
-        self._set_input_list(config_dict, GradConst.BOUNDS, float)
+        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int))
         self._set_input_list(config_dict, GradConst.STEP, int)
         self._set_input_list(config_dict, GradConst.RANK, int)
 
@@ -70,14 +70,21 @@ class GlobalContext:
         dump_rank_list = self.get_context(GradConst.RANK)
         return (not dump_rank_list) or (rank in dump_rank_list)
 
-    def _set_input_list(self, config_dict: Dict, name: str, dtype: Union[int, str, float]):
-        value = config_dict.get(name)
+    def _get_type_str(self, dtype: Union[int, str, float, Tuple[int, str, float]]):
+        if isinstance(dtype, tuple):
+            return "/".join([self._get_type_str(element) for element in dtype])
         if dtype == int:
             type_str = "integer"
         elif dtype == float:
             type_str = "float"
         else:
             type_str = "string"
+        return type_str
+
+    def _set_input_list(self, config_dict: Dict, name: str,
+                        dtype: Union[int, str, float, Tuple[int, str, float]]):
+        value = config_dict.get(name)
+        type_str = self._get_type_str(dtype)
         if value and isinstance(value, list):
             for val in value:
                 if not isinstance(val, dtype):
