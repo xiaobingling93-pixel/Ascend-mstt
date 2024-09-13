@@ -6,11 +6,10 @@ if int(torch.__version__.split('.')[0]) >= 2:
     from torch.optim.optimizer import register_optimizer_step_pre_hook
 from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
-from msprobe.core.grad_probe.constant import GradConst, level_adp
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.grad_probe.constant import level_adp
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import remove_path, write_csv, save_npy
-from msprobe.pytorch.common.utils import  get_rank_id, print_rank_0, save_pt
+from msprobe.core.common.file_utils import remove_path, save_npy, write_csv, create_directory
+from msprobe.pytorch.common.utils import get_rank_id, print_rank_0
 
 
 class GradientMonitor:
@@ -46,7 +45,7 @@ class GradientMonitor:
         param_grad = grad.clone().detach()
         is_positive = param_grad > 0
         save_filepath = os.path.join(save_path, f"{param_name}.npy")
-        save_npy(is_positive.numpy(), save_filepath)
+        save_npy(is_positive.cpu().numpy(), save_filepath)
 
     def monitor(self, model):
         print_rank_0("> parameter names:")

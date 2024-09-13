@@ -3,7 +3,7 @@ import copy
 import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
-from msprobe.core.common.utils import get_json_contents
+from msprobe.core.common.file_utils import get_json_contents
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 
 base_dir = os.path.dirname(os.path.realpath(__file__))

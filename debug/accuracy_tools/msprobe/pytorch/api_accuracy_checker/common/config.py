@@ -1,7 +1,5 @@
 import os
-import yaml
-from msprobe.core.common.utils import check_file_or_directory_path
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml, check_file_or_directory_path
 from msprobe.pytorch.pt_config import RunUTConfig
 
 
@@ -35,8 +33,8 @@ class Config:
             raise ValueError(f"{key} must be one of {validators.keys()}")
         if not isinstance(value, validators.get(key)):
             raise ValueError(f"{key} must be {validators[key].__name__} type")
-        if key == 'precision' and value < 0:
-            raise ValueError("precision must be greater than 0")
+        if key == 'precision' and (value < 0 or value > 20):
+            raise ValueError("precision must be greater than or equal to 0 and less than 21")
         if key == 'white_list':
             RunUTConfig.check_filter_list_config(key, value)
         if key == 'black_list':

@@ -21,7 +21,7 @@ import torch
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import load_yaml
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_grad_functions
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -50,6 +50,8 @@ class AtenOPTemplate(HOOKModule):
     def __init__(self, op, hook, need_hook=True):
         if isinstance(op, torch._ops.OpOverloadPacket):
             op_name_ = op._qualified_op_name.split("::")[-1]
+        elif isinstance(op, str):
+            op_name_ = str(op)
         else:
             op_name_ = op.name().split("::")[-1]
             overload_name = op._overloadname

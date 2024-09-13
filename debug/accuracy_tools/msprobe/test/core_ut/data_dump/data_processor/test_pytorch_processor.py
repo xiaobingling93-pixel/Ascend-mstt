@@ -14,8 +14,6 @@ from msprobe.core.data_dump.data_processor.pytorch_processor import (
     OverflowCheckDataProcessor
 )
 
-from msprobe.core.common.const import Const, OverflowConst
-
 
 class TestPytorchDataProcessor(unittest.TestCase):
 
@@ -207,11 +205,13 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.config.overflow_nums = 1
         self.data_writer = MagicMock()
         self.processor = OverflowCheckDataProcessor(self.config, self.data_writer)
+        self.processor.support_inf_nan = True
+        self.processor.has_overflow = False
         self.current_api_or_module_name = "test_api_name"
         self.api_data_category = "input"
         sys.modules['torch_npu'] = Mock()
         sys.modules['torch_npu.npu'] = Mock()
-        sys.modules['torch_npu._C'] = Mock()
+        sys.modules['torch_npu.npu.utils'] = Mock()
 
     def test_is_terminated(self):
         self.processor.overflow_nums = -1
@@ -224,25 +224,21 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.processor.real_overflow_nums = 1
         self.assertFalse(self.processor.is_terminated)
 
-    @patch('os.getenv', return_value=Const.ENV_ENABLE)
-    def test_overflow_debug_mode_enable(self, mock_getenv):
-        result = self.processor.overflow_debug_mode_enable()
-        self.assertTrue(result)
-        mock_getenv.assert_called_once_with(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
-
     def test_analyze_pre_forward_inplace(self):
-        module_input_output = ModuleForwardInputsOutputs(args=(1, 2), kwargs=None, output=None)
-        self.processor.analyze_pre_forward_inplace(None, module_input_output)
-        self.assertTrue(self.processor.forward_inplace_inputs == module_input_output)
-        self.assertFalse(self.processor.forward_inplace_inputs is module_input_output)
+        with patch.object(BaseDataProcessor, "analyze_pre_forward_inplace", return_value={"name": 1}):
+            api_info = self.processor.analyze_pre_forward_inplace("name", "module_input_output")
+            self.assertEqual(self.processor.cached_inplace_api_info, {"name": 1})
+            self.assertIsNone(api_info)
 
     def test_analyze_forward_inplace(self):
-        with patch.object(OverflowCheckDataProcessor, "analyze_forward"):
-            module_input_output = ModuleForwardInputsOutputs(args=(1, 2), kwargs={"k1": 3, "k2": 4}, output=None)
-            self.processor.forward_inplace_inputs = module_input_output
-            self.processor.analyze_forward_inplace("name", module_input_output)
-            self.assertIsNone(self.processor.forward_inplace_inputs)
-            self.assertEqual(module_input_output.output, (1, 2, 3, 4))
+        def func(_):
+            self.processor.has_overflow = True
+
+        with patch.object(BaseDataProcessor, "analyze_forward_inplace", return_value={"name": {"output": 2}}), \
+                patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
+                self.processor.cached_inplace_api_info = {"name": {"intput": 1}}
+                api_info = self.processor.analyze_forward_inplace("name", "module_input_output")
+                self.assertEqual(api_info, {"name": {"intput": 1, "output": 2}})
 
     def test_analyze_forward(self):
         def func(_):
@@ -274,19 +270,25 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
             self.assertTrue(self.processor.has_overflow)
             self.assertEqual(api_info, {"min", 0})
 
-    @patch('torch.save')
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.save_pt')
     def test_handle_overflow(self, mock_save):
         self.processor.has_overflow = True
         self.processor.real_overflow_nums = 0
-        self.processor.is_support_inf_nan = True
         self.processor.cached_tensors_and_file_paths = {'dump_path': torch.tensor([1.0, 2.0, 3.0])}
         self.processor.handle_overflow()
         mock_save.assert_called_once()
+        self.processor.has_overflow = True
         self.processor.handle_overflow()
         self.assertEqual(self.processor.real_overflow_nums, 2)
 
-    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu', return_value=True)
-    def test_analyze_maybe_overflow_tensor(self, _):
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu')
+    def test_is_support_inf_nan_gpu(self, mock_gpu_device):
+        self.processor.support_inf_nan = None
+        mock_gpu_device.return_value = True
+        self.processor._is_support_inf_nan()
+        self.assertTrue(self.processor.support_inf_nan)
+
+    def test_analyze_maybe_overflow_tensor(self):
         tensor_json = {'Max': None, 'Min': None}
         self.processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertFalse(self.processor.has_overflow)
@@ -299,7 +301,7 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.processor._analyze_maybe_overflow_tensor(tensor_json)
         self.assertTrue(self.processor.has_overflow)
 
-    @patch('msprobe.core.common.file_check.path_len_exceeds_limit', return_value=False)
+    @patch('msprobe.core.common.file_utils.path_len_exceeds_limit', return_value=False)
     @patch.object(BaseDataProcessor, 'get_save_file_path',
                   return_value=['test_api_name', 'test_api_name.0.forward.input.pt'])
     def test_analyze_tensor(self, mock_path_len_exceeds_limit, _):

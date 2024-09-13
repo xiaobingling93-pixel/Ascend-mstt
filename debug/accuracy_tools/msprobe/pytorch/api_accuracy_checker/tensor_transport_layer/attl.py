@@ -12,7 +12,7 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.pytorch.common.utils import logger
-from msprobe.core.common.utils import remove_path
+from msprobe.core.common.file_utils import remove_path
 from msprobe.pytorch.common.utils import save_api_data, load_api_data, save_pt, load_pt
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
@@ -41,6 +41,7 @@ class ATTL:
         self.message_end = False
         self.kill_progress = False
         self.check_attl_config()
+        self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
         elif self.session_config.is_benchmark_device:

@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver
 

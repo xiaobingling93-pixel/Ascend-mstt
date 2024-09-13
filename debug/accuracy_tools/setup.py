@@ -14,7 +14,7 @@
 import setuptools
 
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 INSTALL_REQUIRED = [
     "wheel",

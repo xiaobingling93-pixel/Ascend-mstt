@@ -8,7 +8,9 @@ import mindspore
 from mindspore import nn, Tensor
 from mindspore.nn import SGD
 from msprobe.mindspore import PrecisionDebugger
-from msprobe.core.common.file_check import FileOpen
+from msprobe.mindspore.grad_probe.global_context import grad_context
+from msprobe.core.grad_probe.constant import GradConst
+from msprobe.core.common.file_utils import FileOpen
 
 file_path = os.path.abspath(__file__)
 directory = os.path.dirname(file_path)
@@ -16,6 +18,8 @@ config_json_path = os.path.join(directory, "config.json")
 
 def main():
     PrecisionDebugger._instance = None
+    PrecisionDebugger.initialized = False
+    grad_context._setting[GradConst.CURRENT_STEP] = 0
     debugger = PrecisionDebugger(config_json_path)
 
     class SimpleNet(nn.Cell):
@@ -56,8 +60,12 @@ def get_hash(file_path):
 
 
 class TestMsGradientMonitor(TestCase):
-    def test_gradient_monitor(self):
+    def test_gradient_monitor_L2(self):
         gradient_output_path = os.path.join(directory, "gradient_output")
+        if os.path.isfile(config_json_path):
+            os.remove(config_json_path)
+        if os.path.isdir(gradient_output_path):
+            shutil.rmtree(gradient_output_path)
         config_dict = {
             "task": "grad_probe",
             "dump_path": gradient_output_path,
@@ -87,8 +95,68 @@ class TestMsGradientMonitor(TestCase):
         self.assertTrue((my_dense_weight_real == my_dense_weight_target).all(), "weight ndarray not same as target")
 
         real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
-        target_md5_value = "874174395c56922f86118050e8c93e74"
+        target_md5_value = "d5e71f1aa37d48ef0ca0a75932597a29"
         self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
 
-        os.remove(config_json_path)
-        shutil.rmtree(gradient_output_path)
+
+    def test_gradient_monitor_L1(self):
+        gradient_output_path = os.path.join(directory, "gradient_output")
+        if os.path.isfile(config_json_path):
+            os.remove(config_json_path)
+        if os.path.isdir(gradient_output_path):
+            shutil.rmtree(gradient_output_path)
+        config_dict = {
+            "task": "grad_probe",
+            "dump_path": gradient_output_path,
+            "rank": [],
+            "step": [1],
+            "grad_probe": {
+                "grad_level": "L1",
+                "param_list": []
+            }
+        }
+        save_dict_as_json(config_dict, config_json_path)
+
+        main()
+
+        my_dense_bias_path = os.path.join(gradient_output_path, "rank0", "step1", "my_dense.bias.npy")
+        self.assertTrue(os.path.isfile(my_dense_bias_path), "bias npy file not found")
+        my_dense_bias_real = np.load(my_dense_bias_path)
+        my_dense_bias_target = np.arange(5).reshape(5) > 0
+
+        self.assertTrue((my_dense_bias_real == my_dense_bias_target).all(), "bias ndarray not same as target")
+
+        my_dense_weight_path = os.path.join(gradient_output_path, "rank0", "step1", "my_dense.weight.npy")
+        self.assertTrue(os.path.isfile(my_dense_weight_path), "weight npy file not found")
+        my_dense_weight_real = np.load(my_dense_weight_path)
+        my_dense_weight_target = np.arange(5*16).reshape((5, 16)) > 0
+
+        self.assertTrue((my_dense_weight_real == my_dense_weight_target).all(), "weight ndarray not same as target")
+
+        real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
+        target_md5_value = "a4ad300992cb10965fbc12c2ee19dd37"
+        self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")
+
+    def test_gradient_monitor_L0(self):
+        gradient_output_path = os.path.join(directory, "gradient_output")
+        if os.path.isfile(config_json_path):
+            os.remove(config_json_path)
+        if os.path.isdir(gradient_output_path):
+            shutil.rmtree(gradient_output_path)
+        config_dict = {
+            "task": "grad_probe",
+            "dump_path": gradient_output_path,
+            "rank": [],
+            "step": [1],
+            "grad_probe": {
+                "grad_level": "L0",
+                "param_list": []
+            }
+        }
+        save_dict_as_json(config_dict, config_json_path)
+
+        main()
+
+        real_md5_value = get_hash(os.path.join(gradient_output_path, "rank0", "grad_summary_1.csv"))
+        target_md5_value = "62e137a119c0d1a44623f10049c3f80d"
+        self.assertEqual(real_md5_value, target_md5_value, "hash value of grad_summary_1.csv is not same as target")

@@ -1,4 +1,3 @@
-import os
 import inspect
 import psutil
 import torch
@@ -59,10 +58,7 @@ INT_TYPE = [np.int32, np.int64]
 def get_callstack():
     callstack = []
     for (_, path, line, func, code, _) in inspect.stack()[2:]:
-        if code:
-            stack_line = [path, str(line), func, code[0].strip() if code else code]
-        else:
-            stack_line = [path, str(line), func, code]
+        stack_line = [path, str(line), func, code[0].strip() if code else code]
         callstack.append(stack_line)
     return callstack
 

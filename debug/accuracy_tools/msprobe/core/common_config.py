@@ -1,6 +1,7 @@
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import FileChecker
 
 
 class CommonConfig:
@@ -8,7 +9,7 @@ class CommonConfig:
         self.task = json_config.get('task')
         self.dump_path = json_config.get('dump_path')
         self.rank = json_config.get('rank')
-        self.step = json_config.get('step')
+        self.step = self.get_real_step(json_config.get('step'))
         self.level = json_config.get('level')
         self.seed = json_config.get('seed')
         self.acl_config = json_config.get('acl_config')
@@ -16,15 +17,53 @@ class CommonConfig:
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()
 
+    @staticmethod
+    def get_step_from_string(step):
+        splited_step = step.split('-')
+        if len(splited_step) == 2:
+            try:
+                borderline = int(splited_step[0]), int(splited_step[1])
+            except (ValueError, IndexError) as e:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                       "The hyphen(-) must start and end with decimal numbers.") from e
+        else:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f'The string parameter for step only supports formats like "3-5". Now string parameter for step is "{step}".')
+        if borderline[0] <= borderline[1]:
+            continual_step = list(range(borderline[0], borderline[1] + 1))
+        else:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f'For the hyphen(-) in step, the left boundary ({borderline[0]}) cannot be greater than the right boundary ({borderline[1]}).')
+        return continual_step
+
+    def get_real_step(self, step_input):
+        if step_input is None:
+            return []
+        if not isinstance(step_input, list):
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, "step is invalid, it should be a list")
+        real_step = []
+        for step in step_input:
+            if not isinstance(step, (int, str)):
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                       f"step element {step} must be an integer or string.")
+            if isinstance(step, int) and step >= 0:
+                real_step.append(step)
+            elif isinstance(step, str) and '-' in step:
+                continual_step = self.get_step_from_string(step)
+                real_step.extend(continual_step)
+        real_step = list(set(real_step))
+        real_step.sort()
+        return real_step
+    
     def _check_config(self):
         if self.task and self.task not in Const.TASK_LIST:
             logger.error_log_with_exp("task is invalid, it should be one of {}".format(Const.TASK_LIST),
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if self.dump_path is not None and not isinstance(self.dump_path, str):
+            logger.error_log_with_exp("dump_path is invalid, it should be a string",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.rank is not None and not isinstance(self.rank, list):
             logger.error_log_with_exp("rank is invalid, it should be a list",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.step is not None and not isinstance(self.step, list):
-            logger.error_log_with_exp("step is invalid, it should be a list",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.level and self.level not in Const.LEVEL_LIST:
             logger.error_log_with_exp("level is invalid, it should be one of {}".format(Const.LEVEL_LIST),
@@ -38,6 +77,16 @@ class CommonConfig:
         if not isinstance(self.enable_dataloader, bool):
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        if self.acl_config:
+            self._check_acl_config()
+
+    def _check_acl_config(self):
+        if not isinstance(self.acl_config, str):
+            logger.error_log_with_exp("acl_config is invalid, it should be a string",
+                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        file_checker = FileChecker(
+            file_path=self.acl_config, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+        file_checker.common_check()
 
 
 class BaseConfig:

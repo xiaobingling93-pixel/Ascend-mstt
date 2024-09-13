@@ -1,7 +1,7 @@
 import json
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger

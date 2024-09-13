@@ -1,10 +1,10 @@
 import os
 import csv
 
-from msprobe.core.common.file_check import change_mode, FileOpen
+from msprobe.core.common.file_utils import change_mode, FileOpen
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.utils import load_json, save_json, remove_path
+from msprobe.core.common.file_utils import remove_path, load_json, save_json
 
 
 class DataWriter:
@@ -91,6 +91,9 @@ class DataWriter:
         save_json(file_path, self.cache_construct, indent=1)
 
     def write_json(self):
-        self.write_data_json(self.dump_file_path)
-        self.write_stack_info_json(self.stack_file_path)
-        self.write_construct_info_json(self.construct_file_path)
+        if self.cache_data.get(Const.DATA):
+            self.write_data_json(self.dump_file_path)
+        if self.cache_stack:
+            self.write_stack_info_json(self.stack_file_path)
+        if self.cache_construct:
+            self.write_construct_info_json(self.construct_file_path)

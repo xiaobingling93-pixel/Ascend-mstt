@@ -2,14 +2,15 @@ import multiprocessing
 import os
 import json
 import pandas as pd
-from msprobe.core.common.file_check import FileOpen
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_file_not_exists
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException
+from msprobe.core.common.file_utils import remove_path
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.utils import read_op, merge_tensor, CompareException, get_un_match_accuracy, get_accuracy
+from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
@@ -234,7 +235,7 @@ class Comparator:
         logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
         file_name = add_time_with_xlsx("compare_result" + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
-        check_file_not_exists(file_path)
+        remove_path(file_path)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         
         with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \

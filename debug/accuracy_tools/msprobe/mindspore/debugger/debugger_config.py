@@ -3,7 +3,7 @@ import os
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory
 
 
 class DebuggerConfig:
@@ -52,15 +52,9 @@ class DebuggerConfig:
         if not self.check_mode:
             self.check_mode = "all"
         self._check_rank()
-        self._check_step()
         return True
 
     def _check_rank(self):
         for rank_id in self.rank:
             if not isinstance(rank_id, int) or rank_id < 0:
                 raise ValueError(f"rank {self.rank} must be a positive integer.")
-
-    def _check_step(self):
-        for s in self.step:
-            if not isinstance(s, int) or s < 0:
-                raise ValueError(f"step element {s} must be a positive integer.")
