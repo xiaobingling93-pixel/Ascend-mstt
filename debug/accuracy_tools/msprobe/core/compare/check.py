@@ -113,14 +113,16 @@ def check_dump_json_str(op_data, op_name):
                 check_json_key_value(ele, op_name)
 
 
-def check_json_key_value(input_output, op_name):
+def check_json_key_value(input_output, op_name, depth=0):
+    if depth > Const.MAX_DEPTH:
+        return
     if isinstance(input_output, list):
         for item in input_output:
-            check_json_key_value(item, op_name)
+            check_json_key_value(item, op_name, depth+1)
     elif isinstance(input_output, dict):
         for key, value in input_output.items():
             if isinstance(value, dict):
-                check_json_key_value(value, op_name)
+                check_json_key_value(value, op_name, depth+1)
             else:
                 valid_key_value(key, value, op_name)
 
