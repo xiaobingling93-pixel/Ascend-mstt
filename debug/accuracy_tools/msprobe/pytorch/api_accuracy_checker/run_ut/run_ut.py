@@ -33,6 +33,7 @@ from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -46,14 +47,7 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
 OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
 
 not_backward_list = ['repeat_interleave']
-not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
-not_raise_dtype_set = {'type_as'}
 
-RAISE_PRECISION = {
-    torch.float16: torch.float32,
-    torch.bfloat16: torch.float32,
-    torch.float32: torch.float64
-}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -69,98 +63,6 @@ tqdm_params = {
     'dynamic_ncols': True,  # 动态调整进度条宽度以适应控制台
     'bar_format': '{l_bar}{bar}| {n}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'  # 自定义进度条输出格式
 }
-
-
-def deal_detach(arg, to_detach=True):
-    return arg.detach() if to_detach else arg
-
-
-def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
-    '''
-    将标杆数据的dtype转换为raise_dtype
-    输入：
-        api_name：api名称
-        arg：标杆输入
-        raise_dtype：需要转换的dtype
-    输出： 
-        arg: 转换dtype的标杆输入
-    '''
-    if api_name in hf_32_standard_api and arg.dtype == torch.float32:
-        return arg
-    if raise_dtype is None or arg.dtype not in RAISE_PRECISION or raise_dtype == arg.dtype:
-        return arg
-    return arg.type(raise_dtype)
-
-
-def generate_device_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_device(arg_in, to_detach):
-        if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
-        elif isinstance(arg_in, torch.Tensor):
-            if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(arg_in.clone(), to_detach).to(current_device).requires_grad_()
-                temp_arg_in = arg_in * 1
-                arg_in = temp_arg_in.type_as(arg_in)
-                arg_in.retain_grad()
-                return arg_in
-            else:
-                return deal_detach(arg_in.clone(), to_detach).to(current_device)
-        else:
-            return arg_in
-
-    is_detach = api_name not in not_detach_set
-    device_args = recursive_arg_to_device(input_args, is_detach)
-    device_kwargs = \
-        {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
-    return device_args, device_kwargs
-
-
-def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
-        if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
-        elif isinstance(arg_in, torch.Tensor):
-            if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(raise_bench_data_dtype(
-                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()
-                temp_arg_in = arg_in * 1
-                arg_in = temp_arg_in.type_as(arg_in)
-                arg_in.retain_grad()
-                return arg_in
-            else:
-                return deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
-        else:
-            return arg_in
-
-    def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
-        if arg_in.dtype in RAISE_PRECISION:
-            return True
-        if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
-            return True
-        return False
-
-    def recursive_find_dtypes(arg_in, kwargs=None, check_kwargs=False):
-        if isinstance(arg_in, (list, tuple)):
-            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs) for arg in arg_in))
-        elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
-            return set([arg_in.dtype])
-        elif isinstance(arg_in, dict) and check_kwargs:
-            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True) for v in arg_in.values()))
-        return set()
-
-    raise_dtype = None
-    need_raise_dtypes = recursive_find_dtypes(input_args)
-    need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
-    if len(need_raise_dtypes) == 1:
-        raise_dtype = RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
-    elif len(need_raise_dtypes) >= 2:
-        raise_dtype = torch.float32
-
-    raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
-    is_detach = api_name not in not_detach_set
-    cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
-    return cpu_args, cpu_kwargs
 
 
 def run_ut(config):

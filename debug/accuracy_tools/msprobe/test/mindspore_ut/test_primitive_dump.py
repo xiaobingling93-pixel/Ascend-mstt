@@ -69,7 +69,7 @@ class TestService(unittest.TestCase):
             self.service.check_model_valid(model)
 
         # For the purpose of the test, let's also verify the expected exception message
-        expected_message = "[msprobe] 无效参数： model 参数必须是 mindspore.nn.Cell 类型。"
+        expected_message = f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}model 参数必须是 mindspore.nn.Cell 类型。"
         self.assertEqual(str(context.exception), expected_message)
 
     def test_update_primitive_counters(self):

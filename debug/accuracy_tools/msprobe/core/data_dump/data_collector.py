@@ -3,7 +3,7 @@ import os
 from msprobe.core.data_dump.scope import build_scope, ListScope
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
 
 
@@ -140,7 +140,7 @@ class DataCollector:
         if data_info:
             msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
-            logger.info(MsgConst.CLEAR_SYMBOL + msg, end='\r')
+            logger.debug(msg)
         if not flush:
             self.data_writer.flush_data_when_buffer_is_full()
         else:
