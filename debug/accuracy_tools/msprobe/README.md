@@ -80,7 +80,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 ## 🌟 新版本特性
 
 【数据采集】
-- 支持 config.json 中的 step 可以传入范围；
+- 支持 config.json 中的 step 传入范围；
 - 优化了 MindSpore 场景的 step 机制，step 结束后训练继续运行。
 
 【精度预检】
