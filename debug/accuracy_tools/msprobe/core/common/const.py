@@ -30,7 +30,7 @@ class Const:
     FOUR_SEGMENT = 4
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
-    MAX_DEPTH = 5
+    MAX_DEPTH = 10
 
     # dump mode
     ALL = "all"
