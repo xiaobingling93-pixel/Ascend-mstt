@@ -29,10 +29,11 @@ class Advisor:
     Class for generate advisor
     """
 
-    def __init__(self, input_data, out_path=""):
+    def __init__(self, input_data, out_path="", suffix=""):
         self.input_data = input_data
         self.out_path = os.path.realpath(out_path)
         self.file_type = None
+        self.suffix = suffix
 
     @staticmethod
     def deterministic_advisor(message, node_name):
@@ -103,7 +104,7 @@ class Advisor:
         else:
             result = self.gen_advisor_result(failing_data)
         message_list = result.print_advisor_log()
-        result.gen_summary_file(self.out_path, message_list)
+        result.gen_summary_file(self.out_path, message_list, suffix=self.suffix)
 
     def _parse_input_data(self):
         data_columns = self.input_data.columns.values
