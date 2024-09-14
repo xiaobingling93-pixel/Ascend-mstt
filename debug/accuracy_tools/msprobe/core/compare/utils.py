@@ -402,6 +402,10 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
         if all_mode_bool:
             op_dict["data_name"].append(tensor['data_name'])
+            data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
+            if data_name != "-1":
+                op_dict["op_name"][-1] = data_name
+            
 
     if not op_dict["kwargs_struct"]:
         del op_dict["kwargs_struct"]

@@ -41,6 +41,7 @@ class ATTL:
         self.message_end = False
         self.kill_progress = False
         self.check_attl_config()
+        self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
         elif self.session_config.is_benchmark_device:

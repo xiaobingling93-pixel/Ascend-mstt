@@ -33,6 +33,10 @@ class GradConst:
     # direction suffix
     DIR_SUFFIX = "dir.npy"
 
+    # bounds safety
+    BOUNDS_MINIMUM = -2**63
+    BOUNDS_MAXIMUM = 2**63 - 1
+
     # file safty
     DATA_DIR_AUTHORITY = 0o750
     DATA_FILE_AUTHORITY = 0o640

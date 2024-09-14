@@ -57,7 +57,8 @@ class CompareException(Exception):
     INVALID_SUMMARY_MODE = 19
     INVALID_TASK_ERROR = 20
     DETACH_ERROR = 21
-
+    INVALID_OBJECT_TYPE_ERROR = 22
+    INVALID_CHAR_ERROR = 23
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -152,11 +153,12 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
         check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
-
-def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False):
-    if not (isinstance(stack_mode, bool) and isinstance(auto_analyze, bool) and isinstance(fuzzy_match, bool)):
-        logger.error("Invalid input parameters which should be only bool type.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=False, is_print_compare_log=True):
+    arg_list = [stack_mode, auto_analyze, fuzzy_match, is_print_compare_log]
+    for arg in arg_list:
+        if not isinstance(arg, bool):
+            logger.error(f"Invalid input parameter, {arg} which should be only bool type.")
+            raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
 
 def is_starts_with(string, prefix_list):
@@ -383,3 +385,20 @@ def get_header_index(header_name, summary_compare=False):
 
 def convert_tuple(data):
     return data if isinstance(data, tuple) else (data, )
+
+
+def check_op_str_pattern_valid(string, op_name=None, stack=False):
+    if isinstance(string, str) and is_invalid_pattern(string, stack):
+        if stack:
+            message = f"stack info of {op_name} contains special characters, please check!"
+        elif not op_name:
+            message = f"{string} contains special characters, please check!"
+        else:
+            message = f"data info of {op_name} contains special characters, please check!"
+        logger.error(message)
+        raise CompareException(CompareException.INVALID_CHAR_ERROR)
+
+
+def is_invalid_pattern(string, stack):
+    pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
+    return re.match(pattern, string) if stack else re.search(pattern, string)

@@ -1,12 +1,6 @@
 aten_ops_blacklist:
-  - max_pool2d_with_indices
-  - detach
-  - allreduce_
-  - max
-  - npu_rotary_mul
-  - split_with_sizes
-  - npu_dtype_cast  
-  - add_
+  - npu_binary_cross_entropy_with_logits_backward
+  - npu_ciou_backward
   - _cudnn_rnn
   - _local_scalar_dense
   - _pin_memory
@@ -48,6 +42,17 @@ aten_ops_blacklist:
   - zero_
   - zeros
   - zeros_like
+  - _record_function_enter_new
+  - _record_function_exit
+  - broadcast_
+  - allreduce_
+  - npu_clear_float_status
+  - npu_format_cast
+  - npu_dtype_cast
+  - npu_dtype_cast_backward
+  - _allgather_base_
+  - _reduce_scatter_base_
+  - is_same_size
 
 npu_adjust_autogard:
   - adaptive_avg_pool2d
