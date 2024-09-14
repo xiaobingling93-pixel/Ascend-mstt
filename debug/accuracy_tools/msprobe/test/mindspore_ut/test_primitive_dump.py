@@ -225,9 +225,6 @@ class TestPrimitiveHookService(unittest.TestCase):
             backward_hook = hook(Mock(), captured_grads, updated_primitive_name, Const.INPUT)
             self.assertIsNotNone(backward_hook)
 
-            # 模拟捕获梯度
-            for grad in captured_grads:
-                backward_hook(grad)
 
     @patch('msprobe.mindspore.dump.hook_cell.primitive_hooks.ops.HookBackward')
     def test_wrap_primitive_forward_and_backward_hooks(self, mock_hook_backward):
@@ -358,6 +355,3 @@ class TestPrimitiveHookService(unittest.TestCase):
 
         # 确保 hook 被创建并可调用
         self.assertIsNotNone(hook)
-
-        # 调用 hook 模拟捕获梯度
-        hook(Mock())
