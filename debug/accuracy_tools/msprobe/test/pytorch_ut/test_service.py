@@ -55,3 +55,42 @@ class TestService(unittest.TestCase):
                 patch("msprobe.core.data_dump.data_collector.DataCollector.update_dump_paths"):
             self.service.create_dirs()
         self.assertEqual(self.service.dump_iter_dir, "./ut_dump/step0")
+
+    def test_need_end_service(self):
+        self.service.should_stop_service = True
+        self.assertTrue(self.service.need_stop_service())
+
+        self.service.should_stop_service = False
+        self.service.config.step = [1, 3]
+        self.service.current_iter = 1
+        self.assertFalse(self.service.need_stop_service())
+
+        self.service.current_iter = 2
+        self.assertTrue(self.service.need_stop_service())
+
+        self.service.current_iter = 4
+        self.service.config.level = "L0"
+        self.service.config.online_run_ut = False
+        self.assertTrue(self.service.need_stop_service())
+        self.assertFalse(self.service.switch)
+        self.assertTrue(self.service.should_stop_service)
+
+    def test_should_execute_hook(self):
+        self.service.switch = True
+        self.service.data_collector = None
+        self.assertTrue(self.service.should_execute_hook())
+
+        self.service.switch = False
+        self.assertFalse(self.service.should_execute_hook())
+
+        class DataProcessor:
+            def __init__(self):
+                self.is_terminated = True
+
+        class DataCollector:
+            def __init__(self):
+                self.data_processor = DataProcessor()
+
+        self.service.switch = True
+        self.service.data_collector = DataCollector()
+        self.assertFalse(self.service.should_execute_hook())

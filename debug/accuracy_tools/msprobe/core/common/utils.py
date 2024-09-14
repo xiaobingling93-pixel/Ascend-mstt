@@ -402,3 +402,10 @@ def check_op_str_pattern_valid(string, op_name=None, stack=False):
 def is_invalid_pattern(string, stack):
     pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
     return re.match(pattern, string) if stack else re.search(pattern, string)
+
+
+def print_tools_ends_info():
+    total_len = len(Const.TOOL_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
+    logger.info('*' * total_len)
+    logger.info(f"*{Const.TOOL_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
+    logger.info('*' * total_len)
