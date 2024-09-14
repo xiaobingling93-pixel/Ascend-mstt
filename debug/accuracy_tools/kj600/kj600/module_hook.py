@@ -190,7 +190,7 @@ class TrainerMon:
         # targets is module name list like ["xx.xxx1", "xxx.xxx2"] which can be obtained when first run. 
         if not isinstance(model, torch.nn.Module):
             raise TypeError("model should be a nn.Module")
-        if not isinstance(grad_acc_steps, int):
+        if not isinstance(grad_acc_steps, int) or isinstance(grad_acc_steps, bool):
             raise TypeError("grad_acc_steps should be int")
         print_rank_0("> module names:")
         for name, _ in model.named_modules():
