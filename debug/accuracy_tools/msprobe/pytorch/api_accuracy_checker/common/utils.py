@@ -211,4 +211,20 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     else:
         full_api_name = None
     return api_name, full_api_name, direction_status
-    
+
+
+def get_attribute(module_name, attribute_name):
+    '''
+    Function Description:
+        Get the attribute of the module.
+    Parameter:
+        module_name: Name of the module.
+        attribute_name: Name of the attribute.
+    '''
+    try:
+        module = __import__(module_name, fromlist=[attribute_name])
+        attribute = getattr(module, attribute_name)
+        return attribute
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
+        return None
