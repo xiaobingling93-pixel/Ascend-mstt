@@ -22,7 +22,7 @@ import numpy
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type, get_full_data_path, \
-    CompareException, get_attribute
+    CompareException, get_module_and_atttribute_name, get_attribute
 from msprobe.core.common.file_utils import FileChecker, load_npy
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
@@ -68,7 +68,7 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
             raise Exception("{} is not supported now".format(data_type))
         data = info.get("value")
         try:
-            module_name, attribute_name = data_type.split(Const.SEP)
+            module_name, attribute_name = get_module_and_atttribute_name(data_type)
             data = get_attribute(module_name, attribute_name)(data)
         except Exception as err:
             logger.error("Failed to convert the type to numpy: %s" % str(err))
@@ -105,7 +105,7 @@ def gen_real_tensor(data_path, convert_type):
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]
         dist_dtype = Const.CONVERT.get(convert_type)[1]
-        module_name, attribute_name = dist_dtype.split(Const.SEP)
+        module_name, attribute_name = get_module_and_atttribute_name(dist_dtype)
         if str(data.dtype) == ori_dtype:
             data = data.type(get_attribute(module_name, attribute_name))
     return data
@@ -166,7 +166,7 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             data_dtype = Const.CONVERT.get(convert_type)[1]
     low, low_origin = low_info[0], low_info[1]
     high, high_origin = high_info[0], high_info[1]
-    module_name, attribute_name = data_dtype.split(Const.SEP)
+    module_name, attribute_name = get_module_and_atttribute_name(data_dtype)
     dtype = get_attribute(module_name, attribute_name)
     if data_dtype in FLOAT_TYPE: 
         if math.isnan(high):
@@ -292,7 +292,7 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
 
 def gen_torch_kwargs(kwargs_params, key, value):
     if value.get('type') != "torch.device":
-        module_name, attribute_name = value.get('value').split(Const.SEP)
+        module_name, attribute_name = get_module_and_atttribute_name(value.get('value'))
         kwargs_params[key] = get_attribute(module_name, attribute_name)
 
 

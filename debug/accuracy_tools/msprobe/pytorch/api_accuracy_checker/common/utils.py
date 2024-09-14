@@ -213,6 +213,23 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     return api_name, full_api_name, direction_status
 
 
+def get_module_and_atttribute_name(attribute):
+    '''
+    Function Description:
+        Get the module and attribute name.
+    Parameter:
+        name: Attribute of a module. Example: torch.float16
+    Return:
+        module_name: Name of the module. Example: torch.
+        attribute_name: Name of the attribute. Example: float16.
+    '''
+    try:
+        module_name, attribute_name = attribute.split(Const.SEP)
+    except CompareException(CompareException.INVALID_DATA_ERROR):
+        logger.error(f"Failed to get module and attribute name from {attribute}")
+    return module_name, attribute_name
+
+
 def get_attribute(module_name, attribute_name):
     '''
     Function Description:
