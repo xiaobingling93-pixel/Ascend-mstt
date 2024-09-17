@@ -15,7 +15,6 @@
 # limitations under the License.
 """
 import os
-import uuid
 import json
 
 from unittest import TestCase
@@ -38,7 +37,9 @@ from msprobe.core.common.utils import (CompareException,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
                                        get_dump_data_path,
-                                       task_dumppath_get)
+                                       task_dumppath_get, 
+                                       get_real_step_or_rank, 
+                                       get_step_or_rank_from_string)
 
 from msprobe.core.common.file_utils import (FileCheckConst,
                                             FileCheckException,
@@ -46,6 +47,8 @@ from msprobe.core.common.file_utils import (FileCheckConst,
                                             check_file_or_directory_path,
                                             get_json_contents,
                                             get_file_content_bytes)
+from msprobe.core.common.exceptions import MsprobeException
+
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
@@ -353,3 +356,37 @@ class TestUtils(TestCase):
             f.write("Hello, World!")
         self.assertEqual(get_file_content_bytes('test.txt'), b"Hello, World!")
         os.remove('test.txt')
+
+
+    def test_get_real_step_or_rank(self):
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([], "invalid_obj")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        result = get_real_step_or_rank(None, "step")
+        self.assertEqual(result, [])
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank("not_a_list", "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([1, 2, 3.5], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        result = get_real_step_or_rank([1, 10, 50], "step")
+        self.assertEqual(result, [1, 10, 50])
+
+    def test_get_step_or_rank_from_string(self):
+        with self.assertRaises(MsprobeException) as context:
+            get_step_or_rank_from_string("1-4-5", "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_step_or_rank_from_string("!-,", "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_step_or_rank_from_string("5-3", "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_step_or_rank_from_string("5-100000000000000", "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        result = get_real_step_or_rank(["1-5", 10], "rank")
+        self.assertEqual(result, [1, 2, 3, 4, 5, 10])
+        result = get_real_step_or_rank([10, "1-3", 3], "step")
+        self.assertEqual(result, [1, 2, 3, 10])

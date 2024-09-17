@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 
 
 device = collections.namedtuple('device', ['type', 'index'])
@@ -409,3 +410,49 @@ def print_tools_ends_info():
     logger.info('*' * total_len)
     logger.info(f"*{Const.TOOL_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
     logger.info('*' * total_len)
+
+
+def get_step_or_rank_from_string(step_or_rank, obj):
+    splited = step_or_rank.split('-')
+    if len(splited) == 2:
+        try:
+            borderlines = int(splited[0]), int(splited[1])
+        except (ValueError, IndexError) as e:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   "The hyphen(-) must start and end with decimal numbers.") from e
+    else:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f'The string parameter for {obj} only supports formats like "3-5". Now string parameter for {obj} is "{step_or_rank}".')
+    if all(Const.STEP_RANK_MAXIMUM_RANGE[0] <= b <= Const.STEP_RANK_MAXIMUM_RANGE[1] for b in borderlines):
+        if borderlines[0] <= borderlines[1]:
+            continual_step_or_rank = list(range(borderlines[0], borderlines[1] + 1))
+        else:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f'For the hyphen(-) in {obj}, the left boundary ({borderlines[0]}) cannot be greater than the right boundary ({borderlines[1]}).')
+    else:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f"The boundaries must fall within the range of [{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
+    return continual_step_or_rank
+
+
+def get_real_step_or_rank(step_or_rank_input, obj):
+    if obj not in Const.STEP_RANK:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f"Only support parsing {Const.STEP_RANK}, the current parsing object is {obj}.")
+    if step_or_rank_input is None:
+        return []
+    if not isinstance(step_or_rank_input, list):
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
+    real_step_or_rank = []
+    for element in step_or_rank_input:
+        if not isinstance(element, (int, str)):
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"{obj} element {element} must be an integer or string.")
+        if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
+            real_step_or_rank.append(element)
+        elif isinstance(element, str) and '-' in element:
+            continual_step_or_rank = get_step_or_rank_from_string(element, obj)
+            real_step_or_rank.extend(continual_step_or_rank)
+    real_step_or_rank = list(set(real_step_or_rank))
+    real_step_or_rank.sort()
+    return real_step_or_rank

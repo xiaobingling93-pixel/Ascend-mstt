@@ -121,6 +121,10 @@ class Const:
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    
+    STEP_RANK = ["step", "rank"]
+    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+
 
 class CompareConst:
     """
