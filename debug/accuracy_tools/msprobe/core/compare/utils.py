@@ -106,7 +106,7 @@ def read_op(op_data, op_name):
 def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
     if depth > Const.MAX_DEPTH:
         logger.error(f"parse of api/module of {op_name} exceeds the recursion limit.")
-        return
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     if item_list is None:
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
