@@ -6,6 +6,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
 
 
@@ -39,7 +40,7 @@ class PrecisionDebugger:
                 self.gm = GradientMonitor(common_config, task_config)
                 return
             if step:
-                common_config.step = step
+                common_config.step = get_real_step_or_rank(step, "step")
             self.config = DebuggerConfig(
                 common_config, task_config, task, dump_path, level
             )
