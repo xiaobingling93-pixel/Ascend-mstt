@@ -16,7 +16,7 @@ class CommonConfig:
         self.acl_config = json_config.get('acl_config')
         self.is_deterministic = json_config.get('is_deterministic', False)
         self.enable_dataloader = json_config.get('enable_dataloader', False)
-        self._check_config()   
+        self._check_config()
 
     def _check_config(self):
         if self.task and self.task not in Const.TASK_LIST:
