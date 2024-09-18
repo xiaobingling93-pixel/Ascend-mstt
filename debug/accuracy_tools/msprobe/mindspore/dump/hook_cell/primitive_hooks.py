@@ -22,6 +22,7 @@ from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
 
+
 class PrimitiveHookService:
     def __init__(self, service_instance):
         self.service_instance = service_instance
