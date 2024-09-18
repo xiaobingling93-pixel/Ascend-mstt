@@ -245,7 +245,6 @@ def get_attribute(module_name, attribute_name):
     try:
         module = importlib.import_module(module_name)
         attribute = getattr(module, attribute_name)
-        return attribute
     except (ImportError, AttributeError) as e:
         logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
-        return Const.NONE
+    return attribute
