@@ -239,6 +239,9 @@ def get_attribute(module_name, attribute_name):
         module_name: Name of the module.
         attribute_name: Name of the attribute.
     '''
+    if module_name not in Const.MODULE_WHITE_LIST:
+        logger.error(f"Module {module_name} is not in white list")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
     try:
         module = importlib.import_module(module_name)
         attribute = getattr(module, attribute_name)
