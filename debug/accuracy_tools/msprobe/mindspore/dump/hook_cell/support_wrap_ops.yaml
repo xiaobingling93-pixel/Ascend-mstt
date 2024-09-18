@@ -185,6 +185,7 @@ ops:
   - float_power
   - fmod
   - frac
+  - flash_attention_score
   - gcd
   - hypot
   - igamma
