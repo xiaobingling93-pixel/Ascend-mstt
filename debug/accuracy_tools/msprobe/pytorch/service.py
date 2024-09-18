@@ -42,7 +42,22 @@ class Service:
     def forward_backward_dump_end():
         logger.info_on_rank_0("Data needed ends here.")
         api_register.api_originality()
-
+    
+    @staticmethod
+    def is_registered_backward_hook(model):
+        if hasattr(model, '_backward_hooks') and \
+            len(model._backward_hooks) > 0 and \
+                model._is_full_backward_hook is False:
+                    return True
+        return False
+    
+    def check_register_full_backward_hook(self, model, backward_hook):
+        if self.is_registered_backward_hook(model):
+            model._backward_hooks.clear()
+            model._is_full_backward_hook = None
+            logger.warning("Found regular backward hooks. Removing them and switching to full backward hooks.")
+        model.register_full_backward_hook(backward_hook)
+        
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
             if not self.should_execute_hook():
@@ -222,10 +237,10 @@ class Service:
                 if torch_version_above_or_equal_2:
                     module.register_forward_hook(forward_hook, with_kwargs=True)
                 else:
-                    module.register_full_backward_hook(
-                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    self.check_register_full_backward_hook(module, 
+                                                           self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
                     module.register_forward_hook(forward_hook_torch_version_below_2)
-                module.register_full_backward_hook(backward_hook)
+                self.check_register_full_backward_hook(module, backward_hook)
 
                 module.register_forward_pre_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
@@ -234,8 +249,7 @@ class Service:
                 if torch_version_above_or_equal_2:
                     module.register_full_backward_pre_hook(
                         self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                    module.register_full_backward_hook(
-                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    self.check_register_full_backward_hook(module, self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API),
