@@ -22,7 +22,7 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_utils import FileChecker, create_directory, load_npy, save_npy_to_txt, write_csv
+from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv
 
 
 class Compare:
@@ -241,8 +241,7 @@ class Compare:
     def convert_api_dir_to_npy(self, dump_dir, param, output_dir, msaccucmp_path):
         dump_dir = self.util.path_strip(dump_dir)
         for root, _, files in os.walk(dump_dir, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
+            self.util.check_path_valid(root)
             for file in files:
                 file_path = os.path.join(root, file)
                 file_name = os.path.basename(file_path)
