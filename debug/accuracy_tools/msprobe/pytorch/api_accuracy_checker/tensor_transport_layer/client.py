@@ -4,7 +4,6 @@ import struct
 import time
 import os
 import signal
-import sys
 from queue import Queue
 from threading import Thread
 from typing import Union
@@ -13,7 +12,9 @@ from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
+
+
+MAX_SENDING_QUEUE_SIZE = 20
 
 
 class TCPDataItem:
@@ -31,7 +32,6 @@ class TCPDataItem:
 
 
 class TCPClient:
-    MAX_SENDING_QUEUE_SIZE = 20
     ACK_SUCCESS = b"OK___"
     ACK_ERROR = b"ERROR"
     ACK_BUSY = b"BUSY_"
@@ -39,13 +39,13 @@ class TCPClient:
     ACK_STOP_CONFIRM = b"OVER_"
     ACK_KILL_PROCESS = b"KILL_"
 
-    QUEUE_PENDING_TIME = 600  # 队列10分钟都处于阻塞状态，则终止sending进程
+    QUEUE_PENDING_TIME = 60
     RESEND_RETRY_TIMES = 2  # 最大重传数
     RESEND_TIMER_TIME = 5  # 接收ACK超时定时器
     RESEND_PENDING_TIME = 60  # 连续pending时间超过1分钟则放弃该数据
 
     def __init__(self, host="localhost", port=8000, check_sum=False, tls_path=None):
-        self.send_queue = Queue(self.MAX_SENDING_QUEUE_SIZE)
+        self.send_queue = Queue(MAX_SENDING_QUEUE_SIZE)
         self.resend_dict = dict()
         self.host = host
         self.port = port
@@ -55,7 +55,8 @@ class TCPClient:
         self.signal_exit = False
         self.tcp_manager = ClientProtocol(ack_queue_size=100,
                                           chunk_size=655360,
-                                          check_sum=check_sum)
+                                          check_sum=check_sum,
+                                          tls=self.tls_path)
         self.send_thread = Thread(target=self._sending_queue_data)
         self.send_thread.setDaemon(True)
         self.send_thread.start()
@@ -89,14 +90,10 @@ class TCPClient:
         self.factory = MessageClientFactory()
         self.factory.protocol = cur_protocol
         if self.tls_path:
-            from OpenSSL import SSL
             from twisted.internet import ssl
             client_key = os.path.join(self.tls_path, "client.key")
             client_crt = os.path.join(self.tls_path, "client.crt")
-            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt, SSL.TLSv1_2_METHOD)
-            client_context_ = client_context_factory.getContext()
-            client_context_.set_cipher_list(cipher_list)
-            client_context_.set_options(SSL.OP_NO_RENEGOTIATION)
+            client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt)
             endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
         else:
             endpoint = endpoints.TCP4ClientEndpoint(reactor, self.host, self.port)
@@ -109,7 +106,11 @@ class TCPClient:
 
     def send_after_queue_empty(self, data):
         while not self._ready_to_exit():
-            self.add_to_sending_queue(data)
+            if not self.tls_path:
+                self.add_to_sending_queue(data)
+            else:
+                for _ in range(MAX_SENDING_QUEUE_SIZE):
+                    self.add_to_sending_queue(data)
             time.sleep(2)
 
     def check_client_alive(self):
@@ -142,7 +143,8 @@ class TCPClient:
             self.send_queue.put(send_data, block=True, timeout=self.QUEUE_PENDING_TIME)
         except Exception as e:
             logger.error(f"send_queue put send_data timeout, rank: {send_data.rank}, step: {send_data.step},"
-                         f"sequence_number: {send_data.sequence_number}, {str(e)}")
+                         f"sequence_number: {send_data.sequence_number}, send_queue size: {self.send_queue.qsize()},"
+                         f"{str(e)}")
 
     def _send_data(self, data: TCPDataItem):
         self.tcp_manager.send_wrapped_data(data.raw_data,
@@ -159,10 +161,11 @@ class TCPClient:
             while self.send_queue.qsize() > 0:
                 if self._ready_to_exit():
                     break
-                if len(self.resend_dict) < self.MAX_SENDING_QUEUE_SIZE:
+                if len(self.resend_dict) < MAX_SENDING_QUEUE_SIZE:
                     data_obj = self.send_queue.get()
-                    self._send_data(data_obj)
                     resend_key = str(data_obj.sequence_number) + "_" + str(data_obj.rank) + "_" + str(data_obj.step)
+                    logger.debug(f"get {resend_key} from send_queue, and send to server.")
+                    self._send_data(data_obj)
                     if resend_key not in self.resend_dict.keys():
                         # Send data for the first time
                         self.resend_dict[resend_key] = data_obj
@@ -233,7 +236,7 @@ class TCPClient:
 class ClientProtocol(protocol.Protocol):
     TIMEOUT = 60 * 10
 
-    def __init__(self, ack_queue_size=100, chunk_size=65536, check_sum=False):
+    def __init__(self, ack_queue_size=100, chunk_size=65536, check_sum=False, tls=None):
         self.buffer = io.BytesIO()
         self.is_connected = False
         self.check_sum = check_sum
@@ -244,6 +247,11 @@ class ClientProtocol(protocol.Protocol):
         self.signal_exit = False
         self.defer = None
         self.kill_process = False
+        self.ack = None
+
+        self.tls = tls
+        self.send_buffer = b""
+        self.buffer_cnt = 0
 
     def dataReceived(self, data):
         if self.timeout_call.active():
@@ -255,9 +263,11 @@ class ClientProtocol(protocol.Protocol):
         while True:
             if len(self.buffer.getvalue()) >= 29:  # 5 + 8 * 3
                 ack = self.buffer.read(5)
+                self.ack = ack
                 seq_number = struct.unpack('!Q', self.buffer.read(8))[0]
                 rank = struct.unpack('!Q', self.buffer.read(8))[0]
                 step = struct.unpack('!Q', self.buffer.read(8))[0]
+                logger.debug(f"receive 流水号: {seq_number}; RANK: {rank}; STEP: {step}; ACK: {ack}")
                 if ack == b"KILL_":
                     self.kill_process = True
                     logger.debug(f"接收到KILL信号, PID {os.getpid()}")
@@ -276,20 +286,33 @@ class ClientProtocol(protocol.Protocol):
     def send_wrapped_data(self, data, sequence_number: int = 0, rank: int = 0, step: int = 0):
         length = len(data)
         md5_hash = hashlib.md5(data).hexdigest() if self.check_sum else ""
+        data_meaasge = length.to_bytes(8, byteorder='big') + \
+                       sequence_number.to_bytes(8, byteorder='big') + \
+                       rank.to_bytes(8, byteorder='big') + \
+                       step.to_bytes(8, byteorder='big') + \
+                       md5_hash.encode() + \
+                       data
+        logger.debug(f"send 流水号: {sequence_number}; RANK: {rank}; STEP: {step}; LENGTH: {length}")
+
         while True:
             if self.defer is None or self.defer.called:
-                self.defer = self.send_large_data(
-                    length.to_bytes(8, byteorder='big') +
-                    sequence_number.to_bytes(8, byteorder='big') +
-                    rank.to_bytes(8, byteorder='big') +
-                    step.to_bytes(8, byteorder='big') +
-                    md5_hash.encode() +
-                    data)
+                self.defer = self.send_large_data(data_meaasge)
                 break
             time.sleep(0.01)
 
     def send_large_data(self, data):
-        d = self.file_sender.beginFileTransfer(io.BytesIO(data), self.transport)
+
+        if self.tls:
+            self.send_buffer += data
+            self.buffer_cnt += 1
+            if self.buffer_cnt >= MAX_SENDING_QUEUE_SIZE:
+                d = self.file_sender.beginFileTransfer(io.BytesIO(self.send_buffer), self.transport)
+                self.send_buffer = b""
+                self.buffer_cnt = 0
+            else:
+                d = None
+        else:
+            d = self.file_sender.beginFileTransfer(io.BytesIO(data), self.transport)
         return d
 
     def connection_timeout(self):
