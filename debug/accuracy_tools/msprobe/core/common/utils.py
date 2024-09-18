@@ -74,67 +74,6 @@ class DumpException(CompareException):
     pass
 
 
-def check_mode_valid(mode, scope=None, api_list=None):
-    if scope is None:
-        scope = []
-    if api_list is None:
-        api_list = []
-    if not isinstance(scope, list):
-        raise ValueError("scope param set invalid, it's must be a list.")
-    if not isinstance(api_list, list):
-        raise ValueError("api_list param set invalid, it's must be a list.")
-    mode_check = {
-        Const.ALL: lambda: None,
-        Const.RANGE: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end].") if len(scope) != 2 else None,
-        Const.LIST: lambda:  ValueError("set_dump_switch, scope param set invalid, it's should not be an empty list.") if len(scope) == 0 else None,
-        Const.STACK: lambda:  ValueError("set_dump_switch, scope param set invalid, it's must be [start, end] or [].") if len(scope) > 2 else None,
-        Const.ACL: lambda:  ValueError("set_dump_switch, scope param set invalid, only one api name is supported in acl mode.") if len(scope) != 1 else None,
-        Const.API_LIST: lambda:  ValueError("Current dump mode is 'api_list', but the content of api_list parameter is empty or valid.") if len(api_list) < 1 else None,
-        Const.API_STACK: lambda: None,
-    }
-    if mode not in Const.DUMP_MODE:
-        msg = "Current mode '%s' is not supported. Please use the field in %s" % \
-              (mode, Const.DUMP_MODE)
-        raise CompareException(CompareException.INVALID_DUMP_MODE, msg)
-
-    if mode_check.get(mode)() is not None:
-        raise mode_check.get(mode)()
-
-
-def check_switch_valid(switch):
-    if switch not in ["ON", "OFF"]:
-        logger.error("Please set switch with 'ON' or 'OFF'.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-
-
-def check_dump_mode_valid(dump_mode):
-    if not isinstance(dump_mode, list):
-        logger.warning("Please set dump_mode as a list.")
-        dump_mode = [dump_mode]
-    if not all(mode in ["all", "forward", "backward", "input", "output"] for mode in dump_mode):
-        raise ValueError("Please set dump_mode as a list containing one or more of the following: 'all', 'forward', 'backward', 'input', 'output'.")
-    if 'input' not in dump_mode and 'output' not in dump_mode:
-        dump_mode.extend(['input', 'output'])
-    if 'forward' not in dump_mode and 'backward' not in dump_mode:
-        dump_mode.extend(['forward', 'backward'])
-    if 'all' in dump_mode or set(["forward", "backward", "input", "output"]).issubset(set(dump_mode)):
-        return ["forward", "backward", "input", "output"]
-    return dump_mode
-
-
-def check_summary_mode_valid(summary_mode):
-    if summary_mode not in Const.SUMMARY_MODE:
-        msg = "The summary_mode is not valid"
-        raise CompareException(CompareException.INVALID_SUMMARY_MODE, msg)
-
-
-def check_summary_only_valid(summary_only):
-    if not isinstance(summary_only, bool):
-        logger.error("Params summary_only only support True or False.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    return summary_only
-
-
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
@@ -163,10 +102,6 @@ def check_configuration_param(stack_mode=False, auto_analyze=True, fuzzy_match=F
         if not isinstance(arg, bool):
             logger.error(f"Invalid input parameter, {arg} which should be only bool type.")
             raise CompareException(CompareException.INVALID_PARAM_ERROR)
-
-
-def is_starts_with(string, prefix_list):
-    return any(string.startswith(prefix) for prefix in prefix_list)
 
 
 def _check_json(json_file_handle, file_name):
@@ -225,22 +160,6 @@ def execute_command(cmd):
         raise CompareException(CompareException.INVALID_DATA_ERROR)
 
 
-def parse_value_by_comma(value):
-    """
-    parse value by comma, like '1,2,4,8'
-    """
-    value_list = []
-    value_str_list = value.split(Const.COMMA)
-    for value_str in value_str_list:
-        value_str = value_str.strip()
-        if value_str.isdigit() or value_str == '-1':
-            value_list.append(int(value_str))
-        else:
-            logger.error("please check your input shape.")
-            raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    return value_list
-
-
 def add_time_as_suffix(name):
     return '{}_{}.csv'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
@@ -255,62 +174,6 @@ def get_time():
 
 def format_value(value):
     return float('{:.12f}'.format(value))
-
-
-def check_seed_all(seed, mode):
-    if isinstance(seed, int):
-        if seed < 0 or seed > Const.MAX_SEED_VALUE:
-            logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
-            raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    else:
-        logger.error(f"Seed must be integer.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    if not isinstance(mode, bool):
-        logger.error(f"seed_all mode must be bool.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
-
-
-def get_process_rank(model):
-    logger.info("Rank id is not provided. Trying to get the rank id of the model.")
-    try:
-        local_device = next(model.parameters()).device
-    except StopIteration:
-        logger.warning('There is no parameter in the model. Fail to get rank id.')
-        return 0, False
-    if local_device.type == 'cpu':
-        logger.warning("Warning: the debugger is unable to get the rank id. "
-            "This may cause the dumpped data to be corrupted in the "
-            "case of distributed training. (You may ignore this if you are using only one card.) "
-            "Transfer the model to npu or gpu before register_hook() to avoid this warning.")
-        return 0, False
-    else:
-        return local_device.index, True
-
-
-def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
-    template_path = os.path.join(os.path.dirname(__file__), "compare_script.template")
-    pkl_dir = os.path.dirname(pkl_file_path)
-    compare_script_path = os.path.join(pkl_dir, "compare_data.py")
-    is_api_stack = "True" if dump_switch_mode == Const.API_STACK else "False"
-
-    try:
-        with FileOpen(template_path, 'r') as ftemp, \
-           os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
-            code_temp = ftemp.read()
-            fout.write(code_temp % (pkl_file_path, dump_path, is_api_stack))
-    except OSError as e:
-        logger.error(f"Failed to open file. Please check file {template_path} or path {pkl_dir}.")
-        raise CompareException(CompareException.OPEN_FILE_ERROR) from e
-
-    logger.info(f"Generate compare script successfully which is {compare_script_path}.")
-
-
-def check_inplace_op(prefix):
-    if len(prefix) > Const.DISTRIBUTED_PREFIX_LENGTH:
-        return False
-    match_op = re.findall(r"Distributed\.(.+?)\.\d", prefix)
-    op_name = match_op[0] if match_op else None
-    return op_name in Const.INPLACE_LIST
 
 
 def md5_find(data):
