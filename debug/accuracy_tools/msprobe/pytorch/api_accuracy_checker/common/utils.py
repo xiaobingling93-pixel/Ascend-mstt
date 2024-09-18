@@ -137,7 +137,10 @@ class UtDataProcessor:
         self.index = 0
         self._save_recursive(api_name, element)
 
-    def _save_recursive(self, api_name, element):
+    def _save_recursive(self, api_name, element, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"Maximum depth of {Const.MAX_DEPTH} exceeded for {api_name}")
+            raise DumpException(DumpException.RECURSION_LIMIT_ERROR)
         if isinstance(element, torch.Tensor):
             api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
@@ -153,10 +156,10 @@ class UtDataProcessor:
             self.index += 1
         elif isinstance(element, (list, tuple)):
             for item in element:
-                self._save_recursive(api_name, item)
+                self._save_recursive(api_name, item, depth=depth+1)
         elif isinstance(element, dict):
             for value in element.values():
-                self._save_recursive(api_name, value)
+                self._save_recursive(api_name, value, depth=depth+1)
         else:
             self.index += 1
 

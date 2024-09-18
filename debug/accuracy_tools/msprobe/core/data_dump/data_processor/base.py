@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
 import numpy as np
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple
+from msprobe.core.common.utils import convert_tuple, CompareException
 from msprobe.core.common.const import Const
 
 
@@ -168,7 +168,10 @@ class BaseDataProcessor:
         return cls.special_type
 
     @classmethod
-    def recursive_apply_transform(cls, args, transform):
+    def recursive_apply_transform(cls, args, transform, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive transform is reached, {depth}.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
             return arg_transform
@@ -176,14 +179,14 @@ class BaseDataProcessor:
             result_list = []
             for i, arg in enumerate(args):
                 cls._recursive_key_stack.append(str(i))
-                result_list.append(cls.recursive_apply_transform(arg, transform))
+                result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth+1))
                 cls._recursive_key_stack.pop()
             return type(args)(result_list)
         elif isinstance(args, dict):
             result_dict = {}
             for k, arg in args.items():
                 cls._recursive_key_stack.append(str(k))
-                result_dict[k] = cls.recursive_apply_transform(arg, transform)
+                result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth+1)
                 cls._recursive_key_stack.pop()
             return result_dict
         elif args is not None:

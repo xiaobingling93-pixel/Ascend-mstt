@@ -59,6 +59,7 @@ class CompareException(Exception):
     DETACH_ERROR = 21
     INVALID_OBJECT_TYPE_ERROR = 22
     INVALID_CHAR_ERROR = 23
+    RECURSION_LIMIT_ERROR = 24
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -211,9 +212,13 @@ def get_dump_data_path(dump_dir):
     """
     dump_data_path = None
     file_is_exist = False
-
+    cur_depth = 0
     check_file_or_directory_path(dump_dir, True)
     for dir_path, _, files in os.walk(dump_dir):
+        if cur_depth > Const.MAX_DEPTH:
+            logger.error("The depth of dump data directory is too deep, please check the dump data directory.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+        cur_depth += 1
         if len(files) != 0:
             dump_data_path = dir_path
             file_is_exist = True
