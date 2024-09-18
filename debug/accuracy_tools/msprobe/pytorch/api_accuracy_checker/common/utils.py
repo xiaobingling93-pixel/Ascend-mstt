@@ -17,6 +17,7 @@
 import os
 import re
 from collections import namedtuple
+import importlib
 
 import torch
 
@@ -239,9 +240,8 @@ def get_attribute(module_name, attribute_name):
         attribute_name: Name of the attribute.
     '''
     try:
-        module = __import__(module_name, fromlist=[attribute_name])
+        module = importlib.import_module(module_name)
         attribute = getattr(module, attribute_name)
         return attribute
     except (ImportError, AttributeError) as e:
         logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
-        return None
