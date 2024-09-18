@@ -29,10 +29,10 @@ class PrimitiveHookService:
 
     def wrap_primitive(self, origin_func, primitive_name):
         """
-        包装原始的 primitive 函数，添加输入和输出的 hook 以捕获前向和后向数据。
+        包装原始的 primitive 函数，添加输入和输出的 hook 以捕获前向和反向数据。
 
         Args:
-            origin_func (callable): 原始的 primitive 函数。
+            origin_func (callable): 原始 的 primitive 函数。
             primitive_name (str): 原始的 primitive 名称。
 
         Returns:
@@ -40,7 +40,7 @@ class PrimitiveHookService:
         """
         def create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type):
             """
-            创建后向 hook 函数，用于捕获梯度。
+            创建反向 hook 函数，用于捕获梯度。
 
             Args:
                 captured_grads (list): 用于保存捕获的梯度。
@@ -49,11 +49,13 @@ class PrimitiveHookService:
                 hook_type (str): hook 类型 (输入/输出)。
 
             Returns:
-                callable: 后向 hook 函数。
+                callable: 反向 hook 函数。
             """
             def backward_hook(grad):
+
                 captured_grads.append(grad)
                 backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
+
                 try:
                     if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
