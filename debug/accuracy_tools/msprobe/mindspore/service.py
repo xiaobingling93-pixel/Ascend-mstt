@@ -53,6 +53,7 @@ class Service:
         self.data_collector = build_data_collector(self.config)
         self.cell_processor = CellProcessor(self.data_collector.scope)
         self.switch = False
+        self.primitive_switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
@@ -189,7 +190,7 @@ class Service:
             current_count = service_instance.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
 
-            if not service_instance.switch:
+            if not service_instance.primitive_switch:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []
@@ -262,6 +263,7 @@ class Service:
             api_register.api_set_ori_func()
             self.should_stop_service = True
             self.switch = False
+            self.primitive_switch = False
             logger.info("************************************************")
             logger.info(f"*          {Const.TOOL_NAME} ends successfully.          *")
             logger.info("************************************************")
@@ -291,10 +293,30 @@ class Service:
                     PIJitCaptureContext.__exit__ = self.empty
             self.first_start = False
 
+        api_register.api_set_hook_func()
         self.switch = True
+        self.primitive_switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+
+    def forward_backward_dump_end(self):
+        if self.should_stop_service:
+            return
+        logger.info(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() is set successfully. ")
+        if not self.start_call:
+            logger.error(f"{Const.TOOL_NAME}: debugger.start() is not set in the current scope.")
+            raise Exception("debugger.start() is not set in the current scope.")
+        if not self.switch:
+            logger.info(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() should be called between "
+                        "debugger.start() and debugger.stop() ")
+            raise Exception("debugger.stop() is already called. ")
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+        if self.config.rank and self.current_rank not in self.config.rank:
+            return
+        self.primitive_switch = False
+        api_register.api_set_ori_func()
 
     def stop(self):
         if self.should_stop_service:
@@ -309,6 +331,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        self.primitive_switch = False
         self.start_call = False
         self.data_collector.write_json()
 
