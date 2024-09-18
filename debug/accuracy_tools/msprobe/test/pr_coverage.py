@@ -15,7 +15,7 @@ def get_diff_added_lines():
     for line in diff_output.splitlines():
         if line.startswith("+++ b/"):  # 新文件名
             current_file = line[6:]
-            if "test/" in current_file or current_file.startswith("test_"):
+            if "test/" in current_file or current_file.startswith("test_") or current_file.endswith(".md"):
                 print(f"Ignoring test file: {current_file}")
                 current_file = None  # 置空当前文件，避免处理后续内容
                 continue
@@ -86,7 +86,6 @@ def calculate_coverage(added_lines, covered_lines):
     total_added = 0
     total_covered = 0
     total_annotation = 0
-    # prtint("")
 
     for filename, lines in added_lines.items():
         # 去掉路径的前缀，只比较末尾部分的路径
