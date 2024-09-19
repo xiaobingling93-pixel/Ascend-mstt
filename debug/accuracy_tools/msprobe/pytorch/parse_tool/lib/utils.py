@@ -183,7 +183,7 @@ class Util:
         if not cmd:
             self.log.error("Commond is None")
             return -1
-        self.log.info("[RUN CMD]: %s", cmd)
+        self.log.info("[RUN CMD]: %s" % cmd)
         cmd = cmd.split(" ")
         complete_process = subprocess.run(cmd, shell=False)
         return complete_process.returncode
@@ -205,7 +205,7 @@ class Util:
         result = subprocess.run(
             [self.python, target_file, "--help"], stdout=subprocess.PIPE, shell=False)
         if result.returncode == 0:
-            self.log.info("Check [%s] success.", target_file)
+            self.log.info("Check [%s] success." % (target_file))
         else:
             self.log.error("Check msaccucmp failed in dir %s" % target_file)
             self.log.error("Please specify a valid msaccucmp.py path or install the cann package")
@@ -314,3 +314,8 @@ class Util:
         dir1_count = self.get_subdir_count(dir1)
         dir2_count = self.get_subdir_count(dir2)
         return dir1_count == dir2_count
+
+    def check_positive(self, value):
+        if value <= 0.0:
+            self.log.error("Invalid value. It must be greater than 0.")
+            raise ParseException(ParseException.PARSE_INVALID_DATA_ERROR)

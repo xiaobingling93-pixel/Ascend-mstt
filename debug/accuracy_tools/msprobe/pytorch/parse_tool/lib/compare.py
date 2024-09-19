@@ -49,10 +49,10 @@ class Compare:
         dump_file = self.util.path_strip(dump_file)
         file_name = ""
         if os.path.isfile(dump_file):
-            self.log.info("Covert file is: %s", dump_file)
+            self.log.info("Covert file is: %s" % dump_file)
             file_name = os.path.basename(dump_file)
         elif os.path.isdir(dump_file):
-            self.log.info("Convert all files in path: %s", dump_file)
+            self.log.info("Convert all files in path: %s" % dump_file)
             file_name = ""
         output = output if output else Const.DUMP_CONVERT_DIR
         convert = self.convert(dump_file, data_format, output, msaccucmp_path)
@@ -114,11 +114,11 @@ class Compare:
         shape_left = data_left.shape
         shape_right = data_right.shape
         if shape_left != shape_right:
-            self.log.warning("Data shape not equal: %s vs %s", data_left.shape, data_right.shape)
+            self.log.warning("Data shape not equal: %s vs %s" % (data_left.shape, data_right.shape))
         data_left = data_left.reshape(-1)
         data_right = data_right.reshape(-1)
         if data_left.shape[0] != data_right.shape[0]:
-            self.log.warning("Data size not equal: %s vs %s", data_left.shape, data_right.shape)
+            self.log.warning("Data size not equal: %s vs %s" % (data_left.shape, data_right.shape))
             if data_left.shape[0] < data_right.shape[0]:
                 data_left = np.pad(data_left, (0, data_right.shape[0] - data_left.shape[0]), 'constant')
             else:
@@ -160,7 +160,7 @@ class Compare:
         if shape != bench_shape or dtype != bench_dtype:
             self.log.error(
                 "Shape or dtype between two npy files is inconsistent. Please check the two files."
-                "File 1: %s, file 2: %s", file, bench_file)
+                "File 1: %s, file 2: %s" % (file, bench_file))
             self.util.deal_with_dir_or_file_inconsistency(output_path)
             return
         md5_consistency = False
@@ -236,7 +236,7 @@ class Compare:
             golden_subdir_path = os.path.join(golden_dump_dir, golden_subdir_name)
             self.compare_timestamp_directory(my_subdir_path, golden_subdir_path, output_path)
         self.util.change_filemode_safe(output_path)
-        self.log.info("Compare result is saved in : %s", output_path)
+        self.log.info("Compare result is saved in : %s" % (output_path))
 
     def convert_api_dir_to_npy(self, dump_dir, param, output_dir, msaccucmp_path):
         dump_dir = self.util.path_strip(dump_dir)
