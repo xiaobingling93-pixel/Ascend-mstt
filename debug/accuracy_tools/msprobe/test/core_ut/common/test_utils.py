@@ -37,7 +37,6 @@ from msprobe.core.common.utils import (CompareException,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
-                                       get_dump_data_path,
                                        task_dumppath_get)
 
 from msprobe.core.common.file_utils import (FileCheckConst,
@@ -279,16 +278,6 @@ class TestUtils(TestCase):
             check_regex_prefix_format_valid(prefix)
         self.assertEqual(str(context.exception), f"prefix contains invalid characters, "
                          f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
-
-    @patch("msprobe.core.common.utils.check_file_or_directory_path")
-    def test_get_dump_data_path(self, mock_check_file_or_directory_path):
-        file_path = os.path.realpath(__file__)
-        dirname = os.path.dirname(file_path)
-
-        dump_data_path, file_is_exist = get_dump_data_path(dirname)
-        self.assertEqual(mock_check_file_or_directory_path.call_args[0], (dirname, True))
-        self.assertEqual(dump_data_path, dirname)
-        self.assertTrue(file_is_exist)
 
     @patch.object(logger, "error")
     def test_task_dumppath_get(self, mock_error):
