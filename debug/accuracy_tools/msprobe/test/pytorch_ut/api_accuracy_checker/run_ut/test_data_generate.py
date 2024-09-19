@@ -32,7 +32,8 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(kwargs_params, {'dim': -1})
 
     def test_gen_args(self):
-        args_result = gen_args(api_info_dict.get('input_args'), "conv2d")
+        func_options = {}
+        args_result = gen_args(api_info_dict.get('input_args'), "conv2d", func_options)
         max_diff = abs(args_result[0].max() - max_value)
         min_diff = abs(args_result[0].min() - min_value)
         self.assertEqual(len(args_result), 2)
