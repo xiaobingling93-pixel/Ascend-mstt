@@ -159,6 +159,7 @@ class Service:
 
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
+        self.data_collector.data_writer.reset_cache()
 
     def need_stop_service(self):
         if self.should_stop_service:

@@ -130,7 +130,7 @@ class DataCollector:
             msg = self.update_data(data_info, msg)
             logger.debug(msg)
         if not flush:
-            self.data_writer.flush_data_when_buffer_is_full()
+            self.data_writer.flush_data_periodically()
         else:
             self.write_json()
 

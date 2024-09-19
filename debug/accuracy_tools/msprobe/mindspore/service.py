@@ -253,6 +253,7 @@ class Service:
         HOOKCell.cell_count = defaultdict(int)
         CellProcessor.cell_count = {}
         self.primitive_counters.clear()
+        self.data_collector.data_writer.reset_cache()
 
     def start(self, model=None):
         self.start_call = True

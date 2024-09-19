@@ -1,24 +1,21 @@
-import os
 import csv
+import os
 
-from msprobe.core.common.file_utils import change_mode, FileOpen
-from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_utils import remove_path, load_json, save_json
+from msprobe.core.common.file_utils import change_mode, FileOpen, save_json
+from msprobe.core.common.log import logger
 
 
 class DataWriter:
 
-    def __init__(self, init_json=None) -> None:
-        self.dump_count = 0
-        self.init_json = init_json
-        self.dump_file_path = None  # os.path.join(dump_dir, DataWriter.dump_json_name)
-        self.stack_file_path = None  # os.path.join(dump_dir, DataWriter.stack_json_name)
-        self.construct_file_path = None  # os.path.join(dump_dir, DataWriter.construct_json_name)
+    def __init__(self) -> None:
+        self.dump_file_path = None
+        self.stack_file_path = None
+        self.construct_file_path = None
         self.free_benchmark_file_path = None
         self.dump_tensor_data_dir = None
-        self.buffer_size = 1000
-        self.cache_data = {Const.DATA: {}}
+        self.flush_size = 1000
+        self.cache_data = {}
         self.cache_stack = {}
         self.cache_construct = {}
 
@@ -37,18 +34,22 @@ class DataWriter:
         if is_new_file:
             change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
+    def reset_cache(self):
+        self.cache_data = {}
+        self.cache_stack = {}
+        self.cache_construct = {}
+
     def initialize_json_file(self, **kwargs):
-        kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
-        save_json(self.dump_file_path, kwargs, indent=1)
+        if not self.cache_data:
+            kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
+            self.cache_data = kwargs
+            save_json(self.dump_file_path, self.cache_data, indent=1)
+        if not self.cache_stack:
+            save_json(self.stack_file_path, self.cache_stack, indent=1)
+        if not self.cache_construct:
+            save_json(self.construct_file_path, self.cache_construct, indent=1)
 
-        empty_dict = {}
-        remove_path(self.stack_file_path)
-        save_json(self.stack_file_path, empty_dict, indent=1)
-
-        remove_path(self.construct_file_path)
-        save_json(self.construct_file_path, empty_dict, indent=1)
-
-    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir, 
+    def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir,
                           free_benchmark_file_path):
         self.dump_file_path = dump_file_path
         self.stack_file_path = stack_file_path
@@ -56,16 +57,25 @@ class DataWriter:
         self.dump_tensor_data_dir = dump_data_dir
         self.free_benchmark_file_path = free_benchmark_file_path
 
-    def update_data(self, new_data):
-        key = next(iter(new_data.keys()))  # assert len(new_data.keys()) == 1
-        if key in self.cache_data[Const.DATA]:
-            self.cache_data[Const.DATA][key].update(new_data[key])
-        else:
-            self.cache_data[Const.DATA].update(new_data)
+    def flush_data_periodically(self):
+        dump_data = self.cache_data.get(Const.DATA)
+        if dump_data and isinstance(dump_data, dict) and len(dump_data) % self.flush_size == 0:
+            self.write_json()
 
-    def flush_data_when_buffer_is_full(self):
-        if len(self.cache_data[Const.DATA]) >= self.buffer_size:
-            self.write_data_json(self.dump_file_path)
+    def update_data(self, new_data):
+        if not isinstance(new_data, dict) or len(new_data.keys()) != 1:
+            logger.warning(f"The data info({new_data}) should be a dict with only one outer key.")
+            return
+        dump_data = self.cache_data.get(Const.DATA)
+        if not isinstance(dump_data, dict):
+            logger.warning(f"The dump data({dump_data}) should be a dict.")
+            return
+
+        key = next(iter(new_data.keys()))
+        if key in dump_data:
+            dump_data.get(key).update(new_data.get(key))
+        else:
+            dump_data.update(new_data)
 
     def update_stack(self, new_data):
         self.cache_stack.update(new_data)
@@ -75,14 +85,7 @@ class DataWriter:
 
     def write_data_json(self, file_path):
         logger.info(f"dump.json is at {os.path.dirname(os.path.dirname(file_path))}. ")
-        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-            data_to_write = load_json(file_path)
-        else:
-            self.init_json['data_path'] = self.dump_tensor_data_dir
-            data_to_write = self.init_json
-        data_to_write[Const.DATA].update(self.cache_data[Const.DATA])
-        save_json(file_path, data_to_write, indent=1)
-        self.cache_data[Const.DATA].clear()
+        save_json(file_path, self.cache_data, indent=1)
 
     def write_stack_info_json(self, file_path):
         save_json(file_path, self.cache_stack, indent=1)
@@ -91,7 +94,7 @@ class DataWriter:
         save_json(file_path, self.cache_construct, indent=1)
 
     def write_json(self):
-        if self.cache_data.get(Const.DATA):
+        if self.cache_data:
             self.write_data_json(self.dump_file_path)
         if self.cache_stack:
             self.write_stack_info_json(self.stack_file_path)
