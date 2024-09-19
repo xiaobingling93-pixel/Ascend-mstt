@@ -72,7 +72,7 @@ class TCPClient:
         client_key = os.path.join(self.tls_path, "client.key")
         client_crt = os.path.join(self.tls_path, "client.crt")
         if not os.path.exists(client_key):
-            raise Exception(f"server_key: {client_key} is not exists.")
+            raise Exception(f"client_key: {client_key} is not exists.")
         if not os.path.exists(client_crt):
             raise Exception(f"client_crt: {client_crt} is not exists.")
         return client_key, client_crt
