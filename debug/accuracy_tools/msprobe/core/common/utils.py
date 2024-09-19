@@ -136,8 +136,11 @@ def check_summary_only_valid(summary_only):
 
 
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
-    if not (isinstance(input_param, dict) and isinstance(output_path, str)):
-        logger.error("Invalid input parameters")
+    if not isinstance(input_param, dict):
+        logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    if not isinstance(output_path, str):
+        logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
     check_file_or_directory_path(input_param.get("npu_json_path"), False)
@@ -295,8 +298,9 @@ def generate_compare_script(dump_path, pkl_file_path, dump_switch_mode):
            os.fdopen(os.open(compare_script_path, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as fout:
             code_temp = ftemp.read()
             fout.write(code_temp % (pkl_file_path, dump_path, is_api_stack))
-    except OSError:
+    except OSError as e:
         logger.error(f"Failed to open file. Please check file {template_path} or path {pkl_dir}.")
+        raise CompareException(CompareException.OPEN_FILE_ERROR) from e
 
     logger.info(f"Generate compare script successfully which is {compare_script_path}.")
 
