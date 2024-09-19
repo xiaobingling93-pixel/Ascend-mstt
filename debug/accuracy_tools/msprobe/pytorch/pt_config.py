@@ -1,9 +1,8 @@
-import json
 import os
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import FileOpen, load_json
 from msprobe.core.common.log import logger
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
@@ -304,10 +303,9 @@ def parse_json_config(json_file_path, task):
     if not json_file_path:
         config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         json_file_path = os.path.join(config_dir, "config.json")
-    with FileOpen(json_file_path, 'r') as file:
-        json_config = json.load(file)
+    json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
-    if task and task in Const.TASK_LIST:
+    if task:
         task_config = parse_task_config(task, json_config)
     else:
         task_config = parse_task_config(common_config.task, json_config)
