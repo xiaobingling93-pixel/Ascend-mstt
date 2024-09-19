@@ -22,7 +22,7 @@ import numpy
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import hf_32_standard_api
 from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type, get_full_data_path, \
-    CompareException
+    CompareException, get_module_and_atttribute_name, get_attribute
 from msprobe.core.common.file_utils import FileChecker, load_npy
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
@@ -68,7 +68,8 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
             raise Exception("{} is not supported now".format(data_type))
         data = info.get("value")
         try:
-            data = eval(data_type)(data)
+            module_name, attribute_name = get_module_and_atttribute_name(data_type)
+            data = get_attribute(module_name, attribute_name)(data)
         except Exception as err:
             logger.error("Failed to convert the type to numpy: %s" % str(err))
     elif data_type == "torch.Size":
@@ -104,8 +105,9 @@ def gen_real_tensor(data_path, convert_type):
     if convert_type:
         ori_dtype = Const.CONVERT.get(convert_type)[0]
         dist_dtype = Const.CONVERT.get(convert_type)[1]
+        module_name, attribute_name = get_module_and_atttribute_name(dist_dtype)
         if str(data.dtype) == ori_dtype:
-            data = data.type(eval(dist_dtype))
+            data = data.type(get_attribute(module_name, attribute_name))
     return data
 
 
@@ -164,17 +166,19 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             data_dtype = Const.CONVERT.get(convert_type)[1]
     low, low_origin = low_info[0], low_info[1]
     high, high_origin = high_info[0], high_info[1]
-    if data_dtype in FLOAT_TYPE:
+    module_name, attribute_name = get_module_and_atttribute_name(data_dtype)
+    dtype = get_attribute(module_name, attribute_name)
+    if data_dtype in FLOAT_TYPE: 
         if math.isnan(high):
-            tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=eval(data_dtype))
+            tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=dtype)
             return tensor
         #high_origin为新版json中的属性，只有当high_origin不为None,且high为inf或-inf时，原tensor全为inf或-inf
         if high_origin and high in [float('inf'), float('-inf')]:
-            tensor = torch._C._VariableFunctionsClass.full(shape, high, dtype=eval(data_dtype))
+            tensor = torch._C._VariableFunctionsClass.full(shape, high, dtype=dtype)
             tensor[-1] = low
             return tensor
         low_scale, high_scale = low, high
-        dtype_finfo = torch.finfo(eval(data_dtype))
+        dtype_finfo = torch.finfo(dtype)
         #适配老版json high和low为inf或-inf的情况，取dtype的最大值或最小值进行放缩
         if high == float('inf'):
             high_scale = dtype_finfo.max
@@ -186,11 +190,11 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
             low_scale = dtype_finfo.min
 
         scale = high_scale - low_scale
-        rand01 = torch.rand(shape, dtype=eval(data_dtype))
+        rand01 = torch.rand(shape, dtype=dtype)
         tensor = rand01 * scale + low_scale
     elif 'int' in data_dtype or 'long' in data_dtype:
         low, high = int(low), int(high)
-        tensor = torch.randint(low, high + 1, shape, dtype=eval(data_dtype))
+        tensor = torch.randint(low, high + 1, shape, dtype=dtype)
     else:
         logger.error('Dtype is not supported: ' + data_dtype)
         raise NotImplementedError()
@@ -233,7 +237,7 @@ def gen_bool_tensor(low, high, shape):
     return data
 
 
-def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
+def gen_args(args_info, api_name, func_options):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, for API forward running
@@ -246,9 +250,20 @@ def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_p
     """
     check_object_type(args_info, list)
     args_result = []
+    
+    need_grad = func_options.get('need_grad', True)
+    convert_type = func_options.get('convert_type', None)
+    real_data_path = func_options.get('real_data_path', None)
+    depth = func_options.get('depth', 0)
+
+    if depth > Const.MAX_DEPTH:
+        logger.error("The depth of args is too large, please check the input args.")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+    
     for arg in args_info:
         if isinstance(arg, (list, tuple)):
-            data = gen_args(arg, api_name, need_grad, convert_type, real_data_path)
+            func_options['depth'] = depth + 1
+            data = gen_args(arg, api_name, func_options)
         elif isinstance(arg, dict):
             data = gen_data(arg, api_name, need_grad, convert_type, real_data_path)
         elif arg is None:
@@ -288,7 +303,8 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
 
 def gen_torch_kwargs(kwargs_params, key, value):
     if value.get('type') != "torch.device":
-        kwargs_params[key] = eval(value.get('value'))
+        module_name, attribute_name = get_module_and_atttribute_name(value.get('value'))
+        kwargs_params[key] = get_attribute(module_name, attribute_name)
 
 
 def gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path=None):
@@ -327,8 +343,14 @@ def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_d
         error_info = f"convert_type params not support {convert_type}."
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     kwargs_params = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+    func_options = {
+        'need_grad': need_grad,
+        'convert_type': convert_type,
+        'real_data_path': real_data_path,
+        'depth': 0
+    }
     if api_info.get("input_args"):
-        args_params = gen_args(api_info.get("input_args"), api_name, need_grad, convert_type, real_data_path)
+        args_params = gen_args(api_info.get("input_args"), api_name, func_options)
     else:
         logger.warning(f'Warning: No args in {api_info} ')
         args_params = []

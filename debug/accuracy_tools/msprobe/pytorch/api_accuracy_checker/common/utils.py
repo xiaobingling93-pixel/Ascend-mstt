@@ -17,6 +17,7 @@
 import os
 import re
 from collections import namedtuple
+import importlib
 
 import torch
 
@@ -137,7 +138,10 @@ class UtDataProcessor:
         self.index = 0
         self._save_recursive(api_name, element)
 
-    def _save_recursive(self, api_name, element):
+    def _save_recursive(self, api_name, element, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"Maximum depth of {Const.MAX_DEPTH} exceeded for {api_name}")
+            raise DumpException(DumpException.RECURSION_LIMIT_ERROR)
         if isinstance(element, torch.Tensor):
             api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
@@ -153,10 +157,10 @@ class UtDataProcessor:
             self.index += 1
         elif isinstance(element, (list, tuple)):
             for item in element:
-                self._save_recursive(api_name, item)
+                self._save_recursive(api_name, item, depth=depth+1)
         elif isinstance(element, dict):
             for value in element.values():
-                self._save_recursive(api_name, value)
+                self._save_recursive(api_name, value, depth=depth+1)
         else:
             self.index += 1
 
@@ -211,4 +215,39 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     else:
         full_api_name = None
     return api_name, full_api_name, direction_status
-    
+
+
+def get_module_and_atttribute_name(attribute):
+    '''
+    Function Description:
+        Get the module and attribute name.
+    Parameter:
+        name: Attribute of a module. Example: torch.float16
+    Return:
+        module_name: Name of the module. Example: torch.
+        attribute_name: Name of the attribute. Example: float16.
+    '''
+    try:
+        module_name, attribute_name = attribute.split(Const.SEP)
+    except CompareException(CompareException.INVALID_DATA_ERROR):
+        logger.error(f"Failed to get module and attribute name from {attribute}")
+    return module_name, attribute_name
+
+
+def get_attribute(module_name, attribute_name):
+    '''
+    Function Description:
+        Get the attribute of the module.
+    Parameter:
+        module_name: Name of the module.
+        attribute_name: Name of the attribute.
+    '''
+    if module_name not in Const.MODULE_WHITE_LIST:
+        logger.error(f"Module {module_name} is not in white list")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    try:
+        module = importlib.import_module(module_name)
+        attribute = getattr(module, attribute_name)
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
+    return attribute

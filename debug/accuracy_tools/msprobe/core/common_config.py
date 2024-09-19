@@ -108,13 +108,19 @@ class BaseConfig:
         self.preheat_step = json_config.get("preheat_step")
         self.max_sample = json_config.get("max_sample")
 
+    @staticmethod
+    def _check_str_list_config(config_item, config_name):
+        if config_item is not None:
+            if not isinstance(config_item, list):
+                logger.error_log_with_exp(f"{config_name} is invalid, it should be a list[str]",
+                                          MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+            for name in config_item:
+                if not isinstance(name, str):
+                    logger.error_log_with_exp(f"{config_name} is invalid, it should be a list[str]",
+                                              MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+
     def check_config(self):
-        if self.scope is not None and not isinstance(self.scope, list):
-            logger.error_log_with_exp("scope is invalid, it should be a list",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.list is not None and not isinstance(self.list, list):
-            logger.error_log_with_exp("list is invalid, it should be a list",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.data_mode is not None and not isinstance(self.data_mode, list):
-            logger.error_log_with_exp("data_mode is invalid, it should be a list",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+        self._check_str_list_config(self.scope, "scope")
+        self._check_str_list_config(self.list, "list")
+        self._check_str_list_config(self.data_mode, "data_mode")
+        self._check_str_list_config(self.backward_input, "backward_input")
