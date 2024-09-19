@@ -14,10 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-<<<<<<< HEAD
-import os
-=======
->>>>>>> upstream/master
 import json
 import os
 from unittest import TestCase
@@ -32,6 +28,7 @@ from msprobe.core.common.file_utils import (FileCheckConst,
                                             get_file_content_bytes)
 from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
                                        check_seed_all,
                                        check_inplace_op,
@@ -46,24 +43,10 @@ from msprobe.core.common.utils import (CompareException,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
-<<<<<<< HEAD
-                                       get_dump_data_path,
                                        task_dumppath_get, 
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string)
 
-from msprobe.core.common.file_utils import (FileCheckConst,
-                                            FileCheckException,
-                                            check_file_size,
-                                            check_file_or_directory_path,
-                                            get_json_contents,
-                                            get_file_content_bytes)
-from msprobe.core.common.exceptions import MsprobeException
-
-=======
-                                       task_dumppath_get)
-
->>>>>>> upstream/master
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
