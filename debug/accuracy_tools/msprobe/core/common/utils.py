@@ -136,12 +136,10 @@ def check_summary_only_valid(summary_only):
 
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
     if not isinstance(input_param, dict):
-        logger.error(f"Invalid input parameter 'input_param', "
-                     f"the expected type is a dict, but in reality it is {type(input_param)}.")
+        logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if not isinstance(output_path, str):
-        logger.error(f"Invalid input parameter 'output_path', "
-                     f"the expected type is a string, but in reality it is {type(output_path)}.")
+        logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
     check_file_or_directory_path(input_param.get("npu_json_path"), False)

@@ -199,7 +199,7 @@ class TestUtils(TestCase):
             check_compare_param("npu_path", "output_path")
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameter 'input_param', "
-                                      "the expected type is a dict, but in reality it is <class 'str'>.")
+                                      "the expected type dict but got <class 'str'>.")
 
         mock_check_file_or_directory_path = MagicMock()
         mock_check_json_file = MagicMock()
