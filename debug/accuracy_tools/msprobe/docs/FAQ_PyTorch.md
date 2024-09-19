@@ -174,7 +174,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
 12. 采集 Megatron 数据时报错，ValueError(Only support fusion of gelu and swiglu)。
     
-    答：用户可将 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 和 `-silu` 注释掉，跳过采集该 API 数据。
+    答：可将 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 和 `-silu` 注释掉，跳过采集该 API 数据。
 
 13. 添加 msprobe 工具后触发与 AsStrided 算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 
