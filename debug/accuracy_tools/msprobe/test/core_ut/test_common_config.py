@@ -111,7 +111,7 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "scope is invalid, it should be a list")
+                         "scope is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
@@ -120,7 +120,7 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "list is invalid, it should be a list")
+                         "list is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
@@ -130,6 +130,13 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "data_mode is invalid, it should be a list")
+                         "data_mode is invalid, it should be a list[str]")
+        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
+
+        json_config.update({"data_mode": ["all"]})
+        json_config.update({"backward_input": [1, 2]})
+        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
+                         "data_mode is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))

@@ -1,13 +1,19 @@
+from collections import namedtuple
+
 import torch
-from torch.utils.data import dataloader
-from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
-from msprobe.pytorch.service import Service
-from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.pt_config import parse_json_config
+from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
+from msprobe.pytorch.pt_config import parse_json_config
+from msprobe.pytorch.service import Service
+from torch.utils.data import dataloader
+
+ConfigParameters = namedtuple("ConfigParameters", ["config_path", "task",
+                                                   "dump_path", "level", "model"])
 
 
 class PrecisionDebugger:
@@ -31,9 +37,16 @@ class PrecisionDebugger:
         step=None,
     ):
         if not hasattr(self, "initialized"):
+            config_params = ConfigParameters(config_path,
+                                             task,
+                                             dump_path,
+                                             level,
+                                             model)
+            self.check_input_params(config_params)
+
             self.api_origin = False
             self.initialized = True
-            self.model = self.check_model_valid(model)
+            self.model = model
             common_config, task_config = parse_json_config(config_path, task)
             self.task = common_config.task
             if self.task == Const.GRAD_PROBE:
@@ -56,12 +69,36 @@ class PrecisionDebugger:
         return self._instance
 
     @staticmethod
-    def check_model_valid(model):
-        if not model or isinstance(model, torch.nn.Module):
-            return model
-        raise MsprobeException(
-            MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是torch.nn.Module类型。"
-        )
+    def check_input_params(args):
+        if args.config_path is not None:
+            if not isinstance(args.config_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string"
+                )
+            file_checker = FileChecker(
+                file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+            file_checker.common_check()
+
+        if args.task is not None and args.task not in Const.TASK_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}"
+            )
+
+        if args.dump_path is not None:
+            if not isinstance(args.dump_path, str):
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string"
+                )
+
+        if args.level is not None and args.level not in Const.LEVEL_LIST:
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}"
+            )
+
+        if args.model is not None and not isinstance(args.model, torch.nn.Module):
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module"
+            )
 
     @classmethod
     def start(cls):

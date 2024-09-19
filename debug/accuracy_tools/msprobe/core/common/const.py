@@ -103,6 +103,7 @@ class Const:
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
     ATEN = "Aten"
+    MODULE_WHITE_LIST = ["torch", "numpy"]
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",

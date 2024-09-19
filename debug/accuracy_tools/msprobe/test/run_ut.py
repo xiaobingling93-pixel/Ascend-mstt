@@ -14,6 +14,7 @@ def run_ut():
     cov_config_path = os.path.join(cur_dir, ".coveragerc")
     final_xml_path = os.path.join(report_dir, "final.xml")
     html_cov_report = os.path.join(report_dir, "htmlcov")
+    xml_cov_report = os.path.join(report_dir, "coverage.xml")
 
     if os.path.exists(report_dir):
         shutil.rmtree(report_dir)
@@ -27,6 +28,7 @@ def run_ut():
                      f"--cov={cov_dir}",
                      "--cov-branch",
                      f"--cov-report=html:{html_cov_report}",
+                     f"--cov-report=xml:{xml_cov_report}",
                  ]
 
     try:
