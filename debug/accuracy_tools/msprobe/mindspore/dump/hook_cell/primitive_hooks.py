@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 import os
 
 import mindspore as ms
@@ -25,8 +26,8 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
 
 class PrimitiveHookService:
     def __init__(self, service_instance):
-        self.service_instance = service_instance
         self.primitive_counters = {}
+        self.service_instance = service_instance
 
     def wrap_primitive(self, origin_func, primitive_name):
         """
