@@ -305,8 +305,8 @@ class Service:
             logger.error(f"{Const.TOOL_NAME}: debugger.start() is not set in the current scope.")
             raise Exception("debugger.start() is not set in the current scope.")
         if not self.switch:
-            logger.info(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() should be called between "
-                        "debugger.start() and debugger.stop() ")
+            logger.error(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() should be called between "
+                         "debugger.start() and debugger.stop() ")
             raise Exception("debugger.stop() is already called. ")
         if self.config.step and self.current_iter not in self.config.step:
             return
