@@ -430,7 +430,9 @@ def _compare_parser(parser):
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
                         help="<optional> The api mapping file path.", required=False)
-    
+    parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
+                        help="<optional> The data mapping file path.", required=False)
+
 
 
     

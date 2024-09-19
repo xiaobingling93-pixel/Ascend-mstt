@@ -177,7 +177,137 @@ class Comparator:
                 
         result_df = self.make_result_table(result, md5_compare, summary_compare, stack_mode)
         return result_df
-    
+
+    def merge_data(self, json_data, stack_json_data, summary_compare, md5_compare):
+        ops_all = {}
+        for op_name in json_data.get('data', {}):
+            merge_list = self.gen_merge_list(json_data, op_name, stack_json_data, summary_compare,
+                                             md5_compare)
+            if merge_list:
+                input_index, kwarg_index, output_index = 0, 0, 0
+                for index, input_or_output in enumerate(merge_list['op_name']):
+                    data_name = merge_list.get('data_name')
+                    data_name = data_name[index] if data_name else None
+                    if Const.INPUT in input_or_output:
+                        ops_all[input_or_output] = {'struct': merge_list.get('input_struct')[input_index],
+                                                    'summary': merge_list.get('summary')[index],
+                                                    'data_name': data_name,
+                                                    'stack_info': merge_list.get('stack_info')}
+                        input_index += 1
+
+                    elif 'kwarg' in input_or_output:
+                        ops_all[input_or_output] = {'struct': merge_list.get('kwargs_struct')[kwarg_index],
+                                                    'summary': merge_list.get('summary')[index],
+                                                    'data_name': data_name,
+                                                    'stack_info': merge_list.get('stack_info')}
+                        kwarg_index += 1
+
+                    elif Const.OUTPUT in input_or_output:
+                        ops_all[input_or_output] = {'struct': merge_list.get('output_struct')[output_index],
+                                                    'summary': merge_list.get('summary')[index],
+                                                    'data_name': data_name,
+                                                    'stack_info': merge_list.get('stack_info')}
+                        output_index += 1
+        return ops_all
+
+    def get_accuracy(self, npu_ops_all, bench_ops_all, summary_compare, md5_compare):
+        result = []
+        for ms_op_name, bench_op_name in self.data_mapping_dict.items():
+            if ms_op_name in npu_ops_all and bench_op_name in bench_ops_all:
+
+                err_msg = ""
+                npu_stack_info = npu_ops_all.get(ms_op_name).get("stack_info", None)
+                bench_stack_info = bench_ops_all.get(bench_op_name).get("stack_info", None)
+                has_stack = npu_stack_info and bench_stack_info
+
+                if md5_compare:
+                    result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
+                                   bench_ops_all.get(bench_op_name).get('struct')[0],
+                                   npu_ops_all.get(ms_op_name).get('struct')[1],
+                                   bench_ops_all.get(bench_op_name).get('struct')[1],
+                                   npu_ops_all.get(ms_op_name).get('struct')[2],
+                                   bench_ops_all.get(bench_op_name).get('struct')[2],
+                                   CompareConst.PASS if npu_ops_all.get(ms_op_name).get('struct')[2]
+                                                        == bench_ops_all.get(bench_op_name).get('struct')[2]
+                                   else CompareConst.DIFF]
+                    if has_stack:
+                        result_item.extend(npu_stack_info)
+                    else:
+                        result_item.append(CompareConst.NONE)
+                    result.append(result_item)
+                    continue
+
+                if summary_compare:
+                    result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
+                                   bench_ops_all.get(bench_op_name).get('struct')[0],
+                                   npu_ops_all.get(ms_op_name).get('struct')[1],
+                                   bench_ops_all.get(bench_op_name).get('struct')[1],
+                                   " ", " ", " ", " ", " ", " ", " ", " "]
+                else:
+                    result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
+                                   bench_ops_all.get(bench_op_name).get('struct')[0],
+                                   npu_ops_all.get(ms_op_name).get('struct')[1],
+                                   bench_ops_all.get(bench_op_name).get('struct')[1],
+                                   " ", " ", " ", " ", " "]
+
+                npu_summary_data = npu_ops_all.get(ms_op_name).get("summary")
+                result_item.extend(npu_summary_data)
+                bench_summary_data = bench_ops_all.get(bench_op_name).get("summary")
+                result_item.extend(bench_summary_data)
+
+                if summary_compare:
+                    start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
+                    warning_flag = False
+                    for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
+                        if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
+                            diff = npu_val - bench_val
+                            if bench_val != 0:
+                                relative = str(abs((diff / bench_val) * 100)) + '%'
+                            else:
+                                relative = "N/A"
+                            result_item[start_idx + i] = diff
+                            result_item[start_idx + i + 4] = relative
+                            magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
+                            if magnitude_diff > 0.5:
+                                warning_flag = True
+                        else:
+                            result_item[start_idx + i] = CompareConst.NONE
+                    accuracy_check = CompareConst.WARNING if warning_flag else ""
+                    err_msg += "Need double check api accuracy." if warning_flag else ""
+                    for i in range(start_idx, len(result_item)):
+                        if str(result_item[i]) in ('inf', '-inf', 'nan'):
+                            result_item[i] = f'{result_item[i]}\t'
+                result_item.append(accuracy_check if summary_compare else CompareConst.ACCURACY_CHECK_YES)
+                result_item.append(err_msg)
+                if has_stack:
+                    result_item.extend(npu_stack_info)
+                else:
+                    result_item.append(CompareConst.NONE)
+
+                if not (summary_compare or md5_compare):
+                    result_item.append(npu_ops_all.get(ms_op_name).get("data_name", None))
+
+                result.append(result_item)
+            elif ms_op_name not in npu_ops_all:
+                logger.warning(f'Can not find mindspore op name : `{ms_op_name}` in mindspore dump json file.')
+            elif bench_op_name not in npu_ops_all:
+                logger.warning(f'Can not find bench op name : `{bench_op_name}` in bench dump json file.')
+
+        return result
+
+    def compare_process_custom(self, file_handles, stack_mode, summary_compare=False, md5_compare=False):
+        npu_json_handle, bench_json_handle, stack_json_handle = file_handles
+        npu_json_data = json.load(npu_json_handle)
+        bench_json_data = json.load(bench_json_handle)
+        stack_json_data = json.load(stack_json_handle)
+
+        npu_ops_all = self.merge_data(npu_json_data, stack_json_data, summary_compare, md5_compare)
+        bench_ops_all = self.merge_data(bench_json_data, stack_json_data, summary_compare, md5_compare)
+
+        result = self.get_accuracy(npu_ops_all, bench_ops_all, summary_compare, md5_compare)
+        result_df = self.make_result_table(result, md5_compare, summary_compare, stack_mode)
+        return result_df
+
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
         npu_bench_name_list = op_name_mapping_dict[npu_op_name]
         data_name = npu_bench_name_list[1]
@@ -255,8 +385,16 @@ class Comparator:
         with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
                 FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
                 FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-            result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
-                                        summary_compare, md5_compare)
+            if self.data_mapping:
+                result_df = self.compare_process_custom([npu_json, bench_json, stack_json], stack_mode,
+                                                        summary_compare, md5_compare)
+            else:
+                result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
+                                                 summary_compare, md5_compare)
+
+        if not result_df.values.tolist():
+            logger.warning("Can`t match any op.")
+            return
 
         if not md5_compare and not summary_compare:
             result_df = self._do_multi_process(input_parma, result_df)
