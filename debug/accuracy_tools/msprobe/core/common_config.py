@@ -9,8 +9,8 @@ class CommonConfig:
     def __init__(self, json_config):
         self.task = json_config.get('task')
         self.dump_path = json_config.get('dump_path')
-        self.rank = get_real_step_or_rank(json_config.get('rank'), Const.STEP_RANK[1])
-        self.step = get_real_step_or_rank(json_config.get('step'), Const.STEP_RANK[0])
+        self.rank = get_real_step_or_rank(json_config.get('rank'), Const.RANK)
+        self.step = get_real_step_or_rank(json_config.get('step'), Const.STEP)
         self.level = json_config.get('level')
         self.seed = json_config.get('seed')
         self.acl_config = json_config.get('acl_config')

@@ -436,9 +436,9 @@ def get_step_or_rank_from_string(step_or_rank, obj):
 
 
 def get_real_step_or_rank(step_or_rank_input, obj):
-    if obj not in Const.STEP_RANK:
+    if obj not in [Const.STEP, Const.RANK]:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                               f"Only support parsing {Const.STEP_RANK}, the current parsing object is {obj}.")
+                               f"Only support parsing {[Const.STEP, Const.RANK]}, the current parsing object is {obj}.")
     if step_or_rank_input is None:
         return []
     if not isinstance(step_or_rank_input, list):
