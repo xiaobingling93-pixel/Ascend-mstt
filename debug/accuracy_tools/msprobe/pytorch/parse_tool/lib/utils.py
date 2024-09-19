@@ -71,7 +71,7 @@ class Util:
         check_path_executable(path)
 
     @staticmethod
-    def get_subdir_count(self, directory):
+    def get_subdir_count(directory):
         subdir_count = 0
         path_checker = FileChecker(directory)
         path_checker.common_check()
@@ -81,7 +81,7 @@ class Util:
         return subdir_count
 
     @staticmethod
-    def get_subfiles_count(self, directory):
+    def get_subfiles_count(directory):
         file_count = 0
         for root, _, files in os.walk(directory, topdown=True):
             path_checker = FileChecker(root)
@@ -95,7 +95,7 @@ class Util:
         return file_count
 
     @staticmethod
-    def get_sorted_subdirectories_names(self, directory):
+    def get_sorted_subdirectories_names(directory):
         subdirectories = []
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -104,7 +104,7 @@ class Util:
         return sorted(subdirectories)
 
     @staticmethod
-    def get_sorted_files_names(self, directory):
+    def get_sorted_files_names(directory):
         files = []
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -113,7 +113,7 @@ class Util:
         return sorted(files)
 
     @staticmethod
-    def check_npy_files_valid_in_dir(self, dir_path):
+    def check_npy_files_valid_in_dir(dir_path):
         for file_name in os.listdir(dir_path):
             file_path = os.path.join(dir_path, file_name)
             check_file_or_directory_path(file_path)
@@ -123,18 +123,18 @@ class Util:
         return True
 
     @staticmethod
-    def get_md5_for_numpy(self, obj):
+    def get_md5_for_numpy(obj):
         np_bytes = obj.tobytes()
         md5_hash = hashlib.md5(np_bytes)
         return md5_hash.hexdigest()
 
     @staticmethod
-    def deal_with_dir_or_file_inconsistency(self, output_path):
+    def deal_with_dir_or_file_inconsistency(output_path):
         remove_path(output_path)
         raise ParseException("Inconsistent directory structure or file.")
 
     @staticmethod
-    def deal_with_value_if_has_zero(self, data):
+    def deal_with_value_if_has_zero(data):
         if data.dtype in Const.FLOAT_TYPE:
             zero_mask = (data == 0)
             # 给0的地方加上eps防止除0
@@ -147,7 +147,7 @@ class Util:
         return data
     
     @staticmethod
-    def dir_contains_only(self, path, endfix):
+    def dir_contains_only(path, endfix):
         for root, _, files in os.walk(path, topdown=True):
             path_checker = FileChecker(root)
             path_checker.common_check()
@@ -162,11 +162,11 @@ class Util:
         return True
     
     @staticmethod
-    def localtime_str(self):
+    def localtime_str():
         return time.strftime("%Y%m%d%H%M%S", time.localtime())
     
     @staticmethod
-    def change_filemode_safe(self, path):
+    def change_filemode_safe(path):
         change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
     @staticmethod
