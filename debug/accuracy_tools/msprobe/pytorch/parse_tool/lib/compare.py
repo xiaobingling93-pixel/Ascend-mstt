@@ -62,7 +62,7 @@ class Compare:
             summary_txt = ["SrcFile: %s" % dump_file]
             for convert_file in convert_files.values():
                 summary_txt.append(" - %s" % convert_file.file_name)
-            self.log.info("Transfer result is saved in : %s", os.path.realpath(output))
+            self.log.info("Transfer result is saved in : %s" % os.path.realpath(output))
             self.util.print_panel("\n".join(summary_txt))
 
     def convert(self, dump_file, data_format, output, msaccucmp_path):
