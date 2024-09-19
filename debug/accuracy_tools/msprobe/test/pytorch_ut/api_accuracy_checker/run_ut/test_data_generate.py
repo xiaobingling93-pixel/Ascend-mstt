@@ -57,10 +57,10 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(kwargs_params, {'dim': -1})
 
     def test_gen_kwargs_2(self):
-        k_dict = {"inplace": {"type": "bool", "value": "False"}}
+        k_dict = {"dtype": {"type": "torch.dtype", "value": "torch.float16"}}
         for key, value in k_dict.items():
             gen_torch_kwargs(k_dict, key, value)
-        self.assertEqual(k_dict, {'inplace': False})
+        self.assertEqual(k_dict, {'dtype': torch.float16})
 
     def test_gen_random_tensor(self):
         data = gen_random_tensor(api_info_dict.get('input_args')[0], None)

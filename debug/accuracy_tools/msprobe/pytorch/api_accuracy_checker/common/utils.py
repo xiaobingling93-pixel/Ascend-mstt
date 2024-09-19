@@ -17,6 +17,7 @@
 import os
 import re
 from collections import namedtuple
+import importlib
 
 import torch
 
@@ -211,4 +212,39 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     else:
         full_api_name = None
     return api_name, full_api_name, direction_status
-    
+
+
+def get_module_and_atttribute_name(attribute):
+    '''
+    Function Description:
+        Get the module and attribute name.
+    Parameter:
+        name: Attribute of a module. Example: torch.float16
+    Return:
+        module_name: Name of the module. Example: torch.
+        attribute_name: Name of the attribute. Example: float16.
+    '''
+    try:
+        module_name, attribute_name = attribute.split(Const.SEP)
+    except CompareException(CompareException.INVALID_DATA_ERROR):
+        logger.error(f"Failed to get module and attribute name from {attribute}")
+    return module_name, attribute_name
+
+
+def get_attribute(module_name, attribute_name):
+    '''
+    Function Description:
+        Get the attribute of the module.
+    Parameter:
+        module_name: Name of the module.
+        attribute_name: Name of the attribute.
+    '''
+    if module_name not in Const.MODULE_WHITE_LIST:
+        logger.error(f"Module {module_name} is not in white list")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    try:
+        module = importlib.import_module(module_name)
+        attribute = getattr(module, attribute_name)
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
+    return attribute
