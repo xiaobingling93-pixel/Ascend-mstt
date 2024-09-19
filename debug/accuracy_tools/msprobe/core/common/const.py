@@ -125,6 +125,7 @@ class Const:
     
     STEP = "step"
     RANK = "rank"
+    HYPHEN = "-"
     STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
 
 

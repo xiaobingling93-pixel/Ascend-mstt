@@ -392,7 +392,7 @@ def print_tools_ends_info():
 
 
 def get_step_or_rank_from_string(step_or_rank, obj):
-    splited = step_or_rank.split('-')
+    splited = step_or_rank.split(Const.HYPHEN)
     if len(splited) == 2:
         try:
             borderlines = int(splited[0]), int(splited[1])
@@ -429,7 +429,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
             real_step_or_rank.append(element)
-        elif isinstance(element, str) and '-' in element:
+        elif isinstance(element, str) and Const.HYPHEN in element:
             continual_step_or_rank = get_step_or_rank_from_string(element, obj)
             real_step_or_rank.extend(continual_step_or_rank)
     real_step_or_rank = list(set(real_step_or_rank))
