@@ -193,9 +193,6 @@ class Const:
 
     MAX_SEED_VALUE = 2**32 - 1
 
-    INPLACE_LIST = ["broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-                    "_reduce_scatter_base", "_all_gather_base", "all_to_all_single"]
-
     TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
     STATISTICS = "statistics"

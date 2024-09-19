@@ -14,15 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-import os
-import uuid
 import json
-
+import os
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
 
-from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import (FileCheckConst,
+                                            FileCheckException,
+                                            check_file_size,
+                                            check_file_or_directory_path,
+                                            get_json_contents,
+                                            get_file_content_bytes)
+from msprobe.core.common.inplace_op_checker import InplaceOpChecker
+from msprobe.core.common.log import logger
 from msprobe.core.common.utils import (CompareException,
                                        check_seed_all,
                                        check_inplace_op,
@@ -39,12 +44,6 @@ from msprobe.core.common.utils import (CompareException,
                                        check_regex_prefix_format_valid,
                                        task_dumppath_get)
 
-from msprobe.core.common.file_utils import (FileCheckConst,
-                                            FileCheckException,
-                                            check_file_size,
-                                            check_file_or_directory_path,
-                                            get_json_contents,
-                                            get_file_content_bytes)
 
 class TestUtils(TestCase):
     @patch.object(logger, "error")
@@ -80,6 +79,33 @@ class TestUtils(TestCase):
         self.assertFalse(check_inplace_op(test_prefix_2))
         test_prefix_3 = "Torch.sum.0.backward.output.0"
         self.assertFalse(check_inplace_op(test_prefix_3))
+
+    def test_load_inplace_ops(self):
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['functional'])
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['tensor'])
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['torch'])
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['distributed'])
+
+    def test_check_inplace_ops(self):
+        test_api_case_1 = '_all_gather_base'
+        test_cate_case_1 = 'distributed'
+        self.assertTrue(InplaceOpChecker.check(test_api_case_1, test_cate_case_1))
+
+    def test_reload_inplace_ops_and_check(self):
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
+        # set to none
+        InplaceOpChecker.INPLACE_OPS_DICT = None
+
+        # test reload
+        test_api_1 = '_all_gather_base'
+        test_cate_1 = 'distributed'
+        self.assertTrue(InplaceOpChecker.check(test_api_1, test_cate_1))
+        test_api_2 = 'not_inplace_api'
+        test_cate_2 = 'tensor'
+        self.assertFalse(InplaceOpChecker.check(test_api_2, test_cate_2))
+        # assert not none
+        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
 
     def test_check_mode_valid(self):
         with self.assertRaises(ValueError) as context:
@@ -202,8 +228,8 @@ class TestUtils(TestCase):
         mock_check_file_or_directory_path = MagicMock()
         mock_check_json_file = MagicMock()
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
-             patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
+                patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
+                patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
             check_compare_param(params, "output_path")
             check_compare_param(params, "output_path", summary_compare=False, md5_compare=True)
         for i in range(len(call_args)):
@@ -214,7 +240,8 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_configuration_param(self, mock_error):
         with self.assertRaises(CompareException) as context:
-            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False, is_print_compare_log=True)
+            check_configuration_param(stack_mode="False", auto_analyze=True, fuzzy_match=False,
+                                      is_print_compare_log=True)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameter, False which should be only bool type.")
 
@@ -271,13 +298,13 @@ class TestUtils(TestCase):
         with self.assertRaises(ValueError) as context:
             check_regex_prefix_format_valid(prefix)
         self.assertEqual(str(context.exception), f"Maximum length of prefix is {Const.REGEX_PREFIX_MAX_LENGTH}, "
-                         f"while current length is {len(prefix)}")
+                                                 f"while current length is {len(prefix)}")
 
         prefix = "(prefix)"
         with self.assertRaises(ValueError) as context:
             check_regex_prefix_format_valid(prefix)
         self.assertEqual(str(context.exception), f"prefix contains invalid characters, "
-                         f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
+                                                 f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
     @patch.object(logger, "error")
     def test_task_dumppath_get(self, mock_error):
@@ -298,27 +325,27 @@ class TestUtils(TestCase):
 
         input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("msprobe.core.common.utils.json.load", return_value=npu_json):
+                patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)
         self.assertFalse(summary_compare)
         self.assertFalse(md5_compare)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("msprobe.core.common.utils.json.load", return_value=npu_json), \
-             patch("msprobe.core.common.utils.md5_find", return_value=True):
+                patch("msprobe.core.common.utils.json.load", return_value=npu_json), \
+                patch("msprobe.core.common.utils.md5_find", return_value=True):
             summary_compare, md5_compare = task_dumppath_get(input_param)
         self.assertFalse(summary_compare)
         self.assertTrue(md5_compare)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-             patch("msprobe.core.common.utils.json.load", return_value=npu_json):
+                patch("msprobe.core.common.utils.json.load", return_value=npu_json):
             with self.assertRaises(CompareException) as context:
                 task_dumppath_get(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
             mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
-    
+
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
         mock_get_file_content_bytes.return_value = 'not a dict'
