@@ -18,6 +18,8 @@ import mindspore as ms
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
+from msprobe.core.common.const import Const
+from msprobe.core.common.utils import CompareException
 
 
 def get_rank_if_initialized():
@@ -53,12 +55,15 @@ def list_lowest_level_directories(root_dir):
     check_path_exists(root_dir)
     lowest_level_dirs = []
 
-    def recurse_dirs(current_dir):
+    def recurse_dirs(current_dir, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f'The directory {current_dir} has more than {Const.MAX_DEPTH} levels.')
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         for entry in os.listdir(current_dir):
             full_path = os.path.join(current_dir, entry)
             if os.path.isdir(full_path):
                 if any(os.path.isdir(os.path.join(full_path, subentry)) for subentry in os.listdir(full_path)):
-                    recurse_dirs(full_path)
+                    recurse_dirs(full_path, depth=depth+1)
                 else:
                     lowest_level_dirs.append(full_path)
 

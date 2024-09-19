@@ -59,6 +59,7 @@ class CompareException(Exception):
     DETACH_ERROR = 21
     INVALID_OBJECT_TYPE_ERROR = 22
     INVALID_CHAR_ERROR = 23
+    RECURSION_LIMIT_ERROR = 24
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -198,28 +199,6 @@ def check_regex_prefix_format_valid(prefix):
                          f"is {len(prefix)}")
     if not re.match(Const.REGEX_PREFIX_PATTERN, prefix):
         raise ValueError(f"prefix contains invalid characters, prefix pattern {Const.REGEX_PREFIX_PATTERN}")
-
-
-def get_dump_data_path(dump_dir):
-    """
-    Function Description:
-        traverse directories and obtain the absolute path of dump data
-    Parameter:
-        dump_dir: dump data directory
-    Return Value:
-        dump data path,file is exist or file is not exist
-    """
-    dump_data_path = None
-    file_is_exist = False
-
-    check_file_or_directory_path(dump_dir, True)
-    for dir_path, _, files in os.walk(dump_dir):
-        if len(files) != 0:
-            dump_data_path = dir_path
-            file_is_exist = True
-            break
-        dump_data_path = dir_path
-    return dump_data_path, file_is_exist
 
 
 def execute_command(cmd):

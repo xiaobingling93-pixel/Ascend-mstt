@@ -237,7 +237,7 @@ def gen_bool_tensor(low, high, shape):
     return data
 
 
-def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
+def gen_args(args_info, api_name, func_options):
     """
     Function Description:
         Based on API basic information, generate input parameters: args, for API forward running
@@ -250,9 +250,20 @@ def gen_args(args_info, api_name, need_grad=True, convert_type=None, real_data_p
     """
     check_object_type(args_info, list)
     args_result = []
+    
+    need_grad = func_options.get('need_grad', True)
+    convert_type = func_options.get('convert_type', None)
+    real_data_path = func_options.get('real_data_path', None)
+    depth = func_options.get('depth', 0)
+
+    if depth > Const.MAX_DEPTH:
+        logger.error("The depth of args is too large, please check the input args.")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+    
     for arg in args_info:
         if isinstance(arg, (list, tuple)):
-            data = gen_args(arg, api_name, need_grad, convert_type, real_data_path)
+            func_options['depth'] = depth + 1
+            data = gen_args(arg, api_name, func_options)
         elif isinstance(arg, dict):
             data = gen_data(arg, api_name, need_grad, convert_type, real_data_path)
         elif arg is None:
@@ -332,8 +343,14 @@ def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_d
         error_info = f"convert_type params not support {convert_type}."
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     kwargs_params = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+    func_options = {
+        'need_grad': need_grad,
+        'convert_type': convert_type,
+        'real_data_path': real_data_path,
+        'depth': 0
+    }
     if api_info.get("input_args"):
-        args_params = gen_args(api_info.get("input_args"), api_name, need_grad, convert_type, real_data_path)
+        args_params = gen_args(api_info.get("input_args"), api_name, func_options)
     else:
         logger.warning(f'Warning: No args in {api_info} ')
         args_params = []
