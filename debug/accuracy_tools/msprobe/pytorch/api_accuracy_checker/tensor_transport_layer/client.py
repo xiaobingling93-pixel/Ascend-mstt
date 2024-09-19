@@ -133,8 +133,6 @@ class TCPClient:
             if not self.check_client_alive():
                 break
             time.sleep(1)
-        while not self.tcp_manager.kill_process:
-            time.sleep(1)
 
     def add_to_sending_queue(self, data: Union[bytes, TCPDataItem], rank: int = 0, step: int = 0):
         if self._ready_to_exit():
