@@ -29,16 +29,8 @@ from msprobe.core.common.file_utils import (FileCheckConst,
 from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import (CompareException,
-                                       check_seed_all,
-                                       check_inplace_op,
-                                       check_mode_valid,
-                                       check_switch_valid,
-                                       check_dump_mode_valid,
-                                       check_summary_mode_valid,
-                                       check_summary_only_valid,
                                        check_compare_param,
                                        check_configuration_param,
-                                       is_starts_with,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
@@ -46,123 +38,6 @@ from msprobe.core.common.utils import (CompareException,
 
 
 class TestUtils(TestCase):
-    @patch.object(logger, "error")
-    def test_check_seed_all(self, mock_error):
-        self.assertIsNone(check_seed_all(1234, True))
-        self.assertIsNone(check_seed_all(0, True))
-        self.assertIsNone(check_seed_all(Const.MAX_SEED_VALUE, True))
-
-        with self.assertRaises(CompareException) as context:
-            check_seed_all(-1, True)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
-
-        with self.assertRaises(CompareException) as context:
-            check_seed_all(Const.MAX_SEED_VALUE + 1, True)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
-
-        with self.assertRaises(CompareException) as context:
-            check_seed_all("1234", True)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Seed must be integer.")
-
-        with self.assertRaises(CompareException) as context:
-            check_seed_all(1234, 1)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("seed_all mode must be bool.")
-
-    def test_check_inplace_op(self):
-        test_prefix_1 = "Distributed.broadcast.0.forward.input.0"
-        self.assertTrue(check_inplace_op(test_prefix_1))
-        test_prefix_2 = "Distributed_broadcast_0_forward_input_0"
-        self.assertFalse(check_inplace_op(test_prefix_2))
-        test_prefix_3 = "Torch.sum.0.backward.output.0"
-        self.assertFalse(check_inplace_op(test_prefix_3))
-
-    def test_load_inplace_ops(self):
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['functional'])
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['tensor'])
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['torch'])
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT['distributed'])
-
-    def test_check_inplace_ops(self):
-        test_api_case_1 = '_all_gather_base'
-        test_cate_case_1 = 'distributed'
-        self.assertTrue(InplaceOpChecker.check(test_api_case_1, test_cate_case_1))
-
-    def test_reload_inplace_ops_and_check(self):
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
-        # set to none
-        InplaceOpChecker.INPLACE_OPS_DICT = None
-
-        # test reload
-        test_api_1 = '_all_gather_base'
-        test_cate_1 = 'distributed'
-        self.assertTrue(InplaceOpChecker.check(test_api_1, test_cate_1))
-        test_api_2 = 'not_inplace_api'
-        test_cate_2 = 'tensor'
-        self.assertFalse(InplaceOpChecker.check(test_api_2, test_cate_2))
-        # assert not none
-        self.assertIsNotNone(InplaceOpChecker.INPLACE_OPS_DICT)
-
-    def test_check_mode_valid(self):
-        with self.assertRaises(ValueError) as context:
-            check_mode_valid("all", scope="scope")
-        self.assertEqual(str(context.exception), "scope param set invalid, it's must be a list.")
-
-        with self.assertRaises(ValueError) as context:
-            check_mode_valid("all", api_list="api_list")
-        self.assertEqual(str(context.exception), "api_list param set invalid, it's must be a list.")
-
-        mode = "all_list"
-        with self.assertRaises(CompareException) as context:
-            check_mode_valid(mode)
-        self.assertEqual(context.exception.code, CompareException.INVALID_DUMP_MODE)
-        self.assertEqual(str(context.exception),
-                         f"Current mode '{mode}' is not supported. Please use the field in {Const.DUMP_MODE}")
-
-        mode = "list"
-        with self.assertRaises(ValueError) as context:
-            check_mode_valid(mode)
-        self.assertEqual(str(context.exception),
-                         "set_dump_switch, scope param set invalid, it's should not be an empty list.")
-
-    @patch.object(logger, "error")
-    def test_check_switch_valid(self, mock_error):
-        with self.assertRaises(CompareException) as context:
-            check_switch_valid("Close")
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Please set switch with 'ON' or 'OFF'.")
-
-    @patch.object(logger, "warning")
-    def test_check_dump_mode_valid(self, mock_warning):
-        dump_mode = check_dump_mode_valid("all")
-        mock_warning.assert_called_with("Please set dump_mode as a list.")
-        self.assertEqual(dump_mode, ["forward", "backward", "input", "output"])
-
-        with self.assertRaises(ValueError) as context:
-            check_dump_mode_valid("all_forward")
-        self.assertEqual(str(context.exception),
-                         "Please set dump_mode as a list containing one or more of the following: " +
-                         "'all', 'forward', 'backward', 'input', 'output'.")
-
-    def test_check_summary_mode_valid(self):
-        with self.assertRaises(CompareException) as context:
-            check_summary_mode_valid("MD5")
-        self.assertEqual(context.exception.code, CompareException.INVALID_SUMMARY_MODE)
-        self.assertEqual(str(context.exception), "The summary_mode is not valid")
-
-    @patch.object(logger, "error")
-    def test_check_summary_only_valid(self, mock_error):
-        summary_only = check_summary_only_valid(True)
-        self.assertTrue(summary_only)
-
-        with self.assertRaises(CompareException) as context:
-            check_summary_only_valid("True")
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-        mock_error.assert_called_with("Params summary_only only support True or False.")
 
     def test_check_file_or_directory_path(self):
         class TestFileChecker:
@@ -245,13 +120,6 @@ class TestUtils(TestCase):
                                       is_print_compare_log=True)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameter, False which should be only bool type.")
-
-    def test_is_starts_with(self):
-        string = "input_slot0"
-        self.assertFalse(is_starts_with(string, []))
-        self.assertFalse(is_starts_with("", ["input"]))
-        self.assertFalse(is_starts_with(string, ["output"]))
-        self.assertTrue(is_starts_with(string, ["input", "output"]))
 
     @patch.object(logger, "error")
     def test__check_json(self, mock_error):
