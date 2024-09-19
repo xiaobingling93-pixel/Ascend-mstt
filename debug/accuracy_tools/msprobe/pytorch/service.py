@@ -44,19 +44,19 @@ class Service:
         api_register.api_originality()
     
     @staticmethod
-    def is_registered_backward_hook(model):
-        if hasattr(model, '_backward_hooks') and \
-            len(model._backward_hooks) > 0 and \
-                model._is_full_backward_hook is False:
+    def is_registered_backward_hook(module):
+        if hasattr(module, '_backward_hooks') and \
+            len(module._backward_hooks) > 0 and \
+                module._is_full_backward_hook is False:
                     return True
         return False
     
-    def check_register_full_backward_hook(self, model, backward_hook):
-        if self.is_registered_backward_hook(model):
-            model._backward_hooks.clear()
-            model._is_full_backward_hook = None
+    def check_register_full_backward_hook(self, module, backward_hook):
+        if self.is_registered_backward_hook(module):
+            module._backward_hooks.clear()
+            module._is_full_backward_hook = None
             logger.warning("Found regular backward hooks. Removing them and switching to full backward hooks.")
-        model.register_full_backward_hook(backward_hook)
+        module.register_full_backward_hook(backward_hook)
         
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
