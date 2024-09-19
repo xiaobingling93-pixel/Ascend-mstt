@@ -79,4 +79,3 @@ class TestPtConfig(TestCase):
             self.assertEqual(result.white_list, ["conv2d"])
             self.assertEqual(result.black_list, ["matmul"])
             self.assertEqual(result.error_data_path, '/home/dump_path')
-            mocked_exists.assert_called_once_with('/home/dump_path')

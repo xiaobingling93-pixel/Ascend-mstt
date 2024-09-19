@@ -22,7 +22,7 @@ class TensorConfig(BaseConfig):
         self.nfs_path = json_config.get("nfs_path", "")
         self.host = json_config.get("host", "")
         self.port = json_config.get("port", -1)
-        self.tls_path = json_config.get("tls_path", "")
+        self.tls_path = json_config.get("tls_path", "./")
         self.check_config()
         self._check_file_format()
         self._check_tls_path_config()
@@ -32,13 +32,8 @@ class TensorConfig(BaseConfig):
             raise Exception("file_format is invalid")
 
     def _check_tls_path_config(self):
-        if self.tls_path:
-            if not os.path.exists(self.tls_path):
-                raise Exception("tls_path: %s does not exist" % self.tls_path)
-            if not os.path.exists(os.path.join(self.tls_path, "client.key")):
-                raise Exception("tls_path does not contain client.key")
-            if not os.path.exists(os.path.join(self.tls_path, "client.crt")):
-                raise Exception("tls_path does not contain client.crt")
+        if self.tls_path and not os.path.exists(self.tls_path):
+            raise Exception("tls_path: %s does not exist" % self.tls_path)
 
 
 class StatisticsConfig(BaseConfig):
@@ -218,7 +213,7 @@ class RunUTConfig(BaseConfig):
         self.host = json_config.get("host", "")
         self.port = json_config.get("port", -1)
         self.rank_list = json_config.get("rank_list", Const.DEFAULT_LIST)
-        self.tls_path = json_config.get("tls_path", "")
+        self.tls_path = json_config.get("tls_path", "./")
         self.check_run_ut_config()
 
     @classmethod
@@ -243,13 +238,8 @@ class RunUTConfig(BaseConfig):
 
     @classmethod
     def check_tls_path_config(cls, tls_path):
-        if tls_path:
-            if not os.path.exists(tls_path):
-                raise Exception("tls_path: %s does not exist" % tls_path)
-            if not os.path.exists(os.path.join(tls_path, "server.key")):
-                raise Exception("tls_path does not contain server.key")
-            if not os.path.exists(os.path.join(tls_path, "server.crt")):
-                raise Exception("tls_path does not contain server.crt")
+        if tls_path and not os.path.exists(tls_path):
+            raise Exception("tls_path: %s does not exist" % tls_path)
 
     def check_run_ut_config(self):
         RunUTConfig.check_filter_list_config(Const.WHITE_LIST, self.white_list)
