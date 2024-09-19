@@ -28,7 +28,7 @@ from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_utils import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_utils import FileChecker, check_file_or_directory_path, remove_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type
 from msprobe.pytorch.common.log import logger
 
 
@@ -73,8 +73,7 @@ class Util:
     @staticmethod
     def get_subdir_count(directory):
         subdir_count = 0
-        path_checker = FileChecker(directory)
-        path_checker.common_check()
+        check_file_or_directory_path(directory, isdir=True)
         for _, dirs, _ in os.walk(directory):
             subdir_count += len(dirs)
             break
@@ -84,8 +83,7 @@ class Util:
     def get_subfiles_count(directory):
         file_count = 0
         for root, _, files in os.walk(directory, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
+            check_file_or_directory_path(root, isdir=True)
             file_count += len(files)
             path_depth = root.count(os.sep)
             if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
@@ -149,8 +147,7 @@ class Util:
     @staticmethod
     def dir_contains_only(path, endfix):
         for root, _, files in os.walk(path, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
+            check_file_or_directory_path(root, isdir=True)
             for file in files:
                 if not file.endswith(endfix):
                     return False
@@ -244,8 +241,11 @@ class Util:
 
     def check_path_valid(self, path):
         path = self.path_strip(path)
-        path_checker = FileChecker(path)
-        path_checker.common_check()
+        if not path or not os.path.exists(path):
+            self.log.error("The path %s does not exist." % path)
+            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
+        isdir = check_file_type(path) == FileCheckConst.DIR
+        check_file_or_directory_path(path, isdir=isdir)
         return True
 
     def check_files_in_path(self, path):
@@ -274,8 +274,7 @@ class Util:
         file_list = {}
         re_pattern = re.compile(pattern)
         for dir_path, _, file_names in os.walk(path, topdown=True):
-            path_checker = FileChecker(dir)
-            path_checker.common_check()
+            check_file_or_directory_path(dir_path, isdir=True)
             for name in file_names:
                 match = re_pattern.match(name)
                 if not match:
