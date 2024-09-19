@@ -11,16 +11,25 @@ from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 
 
 class MSComparator(Comparator):
-    def __init__(self, cell_mapping=None, api_mapping=None):
+    def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
         self.api_mapping = api_mapping
-        self.cross_frame = cell_mapping is not None or api_mapping is not None
+        self.data_mapping = data_mapping
+        self.cross_frame = cell_mapping is not None or api_mapping is not None or data_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
         self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
         if api_mapping is not None:
             self.ms_to_pt_mapping = self.load_internal_api()
-            
+
+        if isinstance(self.data_mapping, str) or self.data_mapping is None:
+            self.data_mapping_dict = self.load_mapping_file(self.data_mapping)
+        elif isinstance(self.data_mapping, dict):
+            self.data_mapping_dict = self.data_mapping
+        else:
+            raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
+                            f"{type(self.data_mapping)}")
+
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         yaml_path = os.path.join(cur_path,"ms_to_pt_api.yaml")
@@ -72,7 +81,7 @@ class MSComparator(Comparator):
         if load_pt_file:
             import torch
             from msprobe.pytorch.common.utils import load_pt
-            data_value = load_pt(data_path).detach()
+            data_value = load_pt(data_path, True).detach()
             if data_value.dtype == torch.bfloat16:
                 data_value = data_value.to(torch.float32)
             data_value = data_value.numpy()
@@ -206,6 +215,7 @@ def ms_compare(input_param, output_path, **kwargs):
         fuzzy_match = kwargs.get('fuzzy_match', False)
         cell_mapping = kwargs.get('cell_mapping', None)
         api_mapping = kwargs.get('api_mapping', None)
+        data_mapping = kwargs.get('data_mapping', None)
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
@@ -213,7 +223,7 @@ def ms_compare(input_param, output_path, **kwargs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    ms_comparator = MSComparator(cell_mapping, api_mapping)
+    ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)

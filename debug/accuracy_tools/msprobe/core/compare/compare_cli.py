@@ -23,8 +23,11 @@ def compare_cli(args):
         input_param["bench_json_path"] = input_param.pop("bench_path")
         input_param["stack_json_path"] = input_param.pop("stack_path")
         if frame_name == Const.PT_FRAMEWORK:
+            kwargs = {
+                "data_mapping": args.data_mapping
+            }
             compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=auto_analyze,
-                    fuzzy_match=args.fuzzy_match)
+                    fuzzy_match=args.fuzzy_match, **kwargs)
         else:
             kwargs = {
                 "stack_mode": args.stack_mode,
@@ -32,6 +35,7 @@ def compare_cli(args):
                 "fuzzy_match": args.fuzzy_match,
                 "cell_mapping": args.cell_mapping,
                 "api_mapping": args.api_mapping,
+                "data_mapping": args.data_mapping
             }
 
             ms_compare(input_param, args.output_path, **kwargs)
