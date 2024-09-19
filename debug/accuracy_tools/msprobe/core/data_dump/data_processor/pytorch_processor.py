@@ -219,7 +219,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
                 save_pt(tensor, file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
-                logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
+                logger.warning(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
                             f"current overflow times: {self.real_overflow_nums}.")
         self.cached_tensors_and_file_paths = {}
 
