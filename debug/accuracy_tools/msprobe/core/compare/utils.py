@@ -103,7 +103,10 @@ def read_op(op_data, op_name):
     return op_parsed_list
 
 
-def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
+def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
+    if depth > Const.MAX_DEPTH:
+        logger.error(f"parse of api/module of {op_name} exceeds the recursion limit.")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     if item_list is None:
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
@@ -125,7 +128,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
     if isinstance(item, dict):
         if 'type' not in item:
             for kwarg in item:
-                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None)
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth+1)
                 item_list += kwarg_parsed_list
                 kwarg_parsed_list.clear()
         elif 'dtype' in item:
@@ -171,7 +174,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True):
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
         for j, item_spec in enumerate(item):
-            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False)
+            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth+1)
     return item_list
 
 
