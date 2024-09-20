@@ -9,6 +9,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 from msprobe.mindspore.compare.modify_mapping import modify_mapping_with_stack
+from msprobe.mindspore.compare.layer_mapping import get_layer_mapping
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
@@ -227,9 +228,12 @@ def ms_compare(input_param, output_path, **kwargs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-
-    pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
-    ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
+    if layer_mapping:
+        mapping = load_yaml(layer_mapping)
+        ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
+        pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
+        layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
+        print("layer mapping is ", layer_mapping)
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
