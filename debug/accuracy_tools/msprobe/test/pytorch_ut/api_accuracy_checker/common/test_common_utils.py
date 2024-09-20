@@ -92,6 +92,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_full_data_path(self):
         real_data_path = 'get_full_data_path'
+        real_data_path = os.path.realpath(real_data_path)
         data_path = 'test_data'
         full_data_path = get_full_data_path(data_path, real_data_path)
         self.assertEqual(full_data_path, os.path.join(real_data_path, data_path))
