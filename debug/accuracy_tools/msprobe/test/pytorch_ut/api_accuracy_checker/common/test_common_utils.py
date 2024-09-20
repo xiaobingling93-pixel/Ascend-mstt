@@ -38,6 +38,27 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(isinstance(context.exception, DumpException))
         self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
+    def test_save_recursive_non_tensor_types(self):
+        api_name = "test_api"
+        non_tensor_types = [None, True, 42, 3.14, "test", slice(0, 10)]
+        for non_tensor in non_tensor_types:
+            self.processor.save_tensors_in_element(api_name, non_tensor)
+            self.assertEqual(self.processor.index, len(non_tensor_types))
+
+    def test_save_recursive_list_and_tuple(self):
+        api_name = "test_api"
+        list_element = [torch.randn(10, 10) for _ in range(5)]
+        tuple_element = tuple(list_element)
+        self.processor.save_tensors_in_element(api_name, list_element)
+        self.processor.save_tensors_in_element(api_name, tuple_element)
+        self.assertEqual(self.processor.index, 10)
+
+    def test_save_recursive_dict(self):
+        api_name = "test_api"
+        dict_element = {i: torch.randn(10, 10) for i in range(5)}
+        self.processor.save_tensors_in_element(api_name, dict_element)
+        self.assertEqual(self.processor.index, 5)
+
     def test_check_need_convert(self):
         self.assertEqual(check_need_convert('cross_entropy'), 'int32_to_int64')
         self.assertIsNone(check_need_convert('linear'))
