@@ -90,7 +90,6 @@ class TCPClient:
             time.sleep(1)
             reactor.stop()
             logger.error(f"Failed to connected {self.host} {self.port}. Reason is {failure.getErrorMessage()}")
-            raise ConnectionError(f"Failed to connect to {self.host}.")
 
         def cur_protocol():
             return self.tcp_manager
