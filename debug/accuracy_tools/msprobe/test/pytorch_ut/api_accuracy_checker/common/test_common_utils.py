@@ -16,11 +16,11 @@ class TestUtils(unittest.TestCase):
         create_directory(self.save_path)
         self.processor = UtDataProcessor(self.save_path)
         
-    def tearDown(self):
-        # 测试完成后删除临时目录
-        for filename in os.listdir(self.save_path):
-            os.remove(os.path.join(self.save_path, filename))
-        os.rmdir(self.save_path)
+    # def tearDown(self):
+    #     # 测试完成后删除临时目录
+    #     for filename in os.listdir(self.save_path):
+    #         os.remove(os.path.join(self.save_path, filename))
+    #     os.rmdir(self.save_path)
         
     def test_save_tensors_in_elementr(self):
         # 测试保存张量
@@ -73,10 +73,15 @@ class TestUtils(unittest.TestCase):
 
     def test_api_info_preprocess_cross_entropy_positive(self):
         api_name = 'cross_entropy'
-        api_info = {'args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': 1}]}
+        api_info = {'input_args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': 1}]}
         convert_type, processed_api_info = api_info_preprocess(api_name, api_info.copy())
         self.assertEqual(convert_type, 'int32_to_int64')
         self.assertEqual(processed_api_info, api_info)
+        
+    def test_cross_entropy(self):
+        api_info = {'input_args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': -1}]}
+        processed_api_info = cross_entropy_process(api_info.copy())
+        self.assertEqual(processed_api_info, {'input_args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': 0}]})
         
     def test_extract_basic_api_segments(self):
         api_full_name = 'torch.matmul.0'
@@ -124,7 +129,7 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             get_module_and_atttribute_name(attribute)
         self.assertTrue(isinstance(context.exception, CompareException))
-        self.assertEqual(context.exception.error_code, CompareException.INVALID_DATA_ERROR)
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
         
     def test_get_attribute(self):
         module_name = 'torch'
@@ -137,7 +142,7 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(CompareException) as context:
             get_attribute(module_name, attribute_name)
         self.assertTrue(isinstance(context.exception, CompareException))
-        self.assertEqual(context.exception.error_code, CompareException.INVALID_DATA_ERROR)
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
         
         module_name = "torch"
         attribute_name = "float128"
