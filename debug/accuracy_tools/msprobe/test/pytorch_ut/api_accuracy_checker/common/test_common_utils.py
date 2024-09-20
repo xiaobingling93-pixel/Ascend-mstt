@@ -2,13 +2,41 @@
 import json
 import csv
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from msprobe.pytorch.api_accuracy_checker.common.utils import *
 from msprobe.core.common.file_utils import write_csv
 
 
 class TestUtils(unittest.TestCase):
+    
+    def setUp(self):
+        # 创建一个临时目录用于保存测试文件
+        self.save_path = "temp_save_path"
+        create_directory(self.save_path)
+        self.processor = UtDataProcessor(self.save_path)
+        
+    def tearDown(self):
+        # 测试完成后删除临时目录
+        for filename in os.listdir(self.save_path):
+            os.remove(os.path.join(self.save_path, filename))
+        os.rmdir(self.save_path)
+        
+    def test_save_tensors_in_elementr(self):
+        # 测试保存张量
+        api_name = "test_api"
+        tensor = torch.randn(10, 10)
+        self.processor.save_tensors_in_element(api_name, tensor)
+        file_path = os.path.join(self.save_path, f'{api_name}0.pt')
+        self.assertTrue(os.path.exists(file_path))
+    
+    @patch('logging.Logger.error')
+    def test_recursion_limit_error(self, mock_log_error):
+        tensor = torch.randn(10, 10)
+        self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
+                                                    [tensor, [tensor, [tensor, [tensor]]]]]]]]]]], 0)
+        mock_log_error.assert_called_once()
+        self.assertIn(DumpException.RECURSION_LIMIT_ERROR, str(mock_log_error.call_args))
 
     def test_write_csv(self):
         test_file_name = 'test.csv'
