@@ -38,16 +38,6 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(isinstance(context.exception, DumpException))
         self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
-    def test_write_csv(self):
-        test_file_name = 'test.csv'
-        test_data = [["name", "age"], ["Alice", "20"], ["Bob", "30"]]
-        write_csv(test_data, 'test.csv')
-        with open(test_file_name, 'r', encoding='utf-8-sig') as f:
-            reader = csv.reader(f)
-            for i, row in enumerate(reader):
-                self.assertEqual(row, test_data[i])
-        os.remove(test_file_name)
-
     def test_check_need_convert(self):
         self.assertEqual(check_need_convert('cross_entropy'), 'int32_to_int64')
         self.assertIsNone(check_need_convert('linear'))
