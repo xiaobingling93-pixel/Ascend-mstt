@@ -126,7 +126,6 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(attribute_name, 'float32')
         
         attribute = 'torch'
-        module_name, attribute_name = get_module_and_atttribute_name(attribute)
         with self.assertRaises(CompareException) as context:
             get_module_and_atttribute_name(attribute)
         self.assertTrue(isinstance(context.exception, CompareException))
