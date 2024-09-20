@@ -123,7 +123,7 @@ class Service:
 
         return wrap_forward_hook, wrap_backward_hook
 
-    def register_hooks(self):
+    def register_primitive_hooks(self):
         primitive_set = set()
         for _, cell in self.model.cells_and_names():
             for pname, primitive in cell._primitives.items():
@@ -240,7 +240,7 @@ class Service:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
             if self.model and (self.config.task == "statistics" or self.config.task == "tensor"):
-                self.register_hooks()
+                self.register_primitive_hooks()
 
         if self.config.level == "L0":
             if not self.model:
