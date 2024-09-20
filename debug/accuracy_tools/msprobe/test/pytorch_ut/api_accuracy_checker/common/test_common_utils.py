@@ -147,6 +147,8 @@ class TestUtils(unittest.TestCase):
         
         module_name = "torch"
         attribute_name = "float128"
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(CompareException) as context:
             get_attribute(module_name, attribute_name)
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.code, CompareException.INVALID_ATTRIBUTE_ERROR)
         

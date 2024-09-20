@@ -60,6 +60,7 @@ class CompareException(Exception):
     INVALID_OBJECT_TYPE_ERROR = 22
     INVALID_CHAR_ERROR = 23
     RECURSION_LIMIT_ERROR = 24
+    INVALID_ATTRIBUTE_ERROR = 25
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
