@@ -396,9 +396,9 @@ def save_npy(data, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def save_npy_to_txt(self, data, dst_file='', align=0):
+def save_npy_to_txt(data, dst_file='', align=0):
     if os.path.exists(dst_file):
-        self.log.info("Dst file %s exists, will not save new one.", dst_file)
+        logger.info("Dst file %s exists, will not save new one." % dst_file)
         return
     shape = data.shape
     data = data.flatten()
@@ -411,7 +411,7 @@ def save_npy_to_txt(self, data, dst_file='', align=0):
     try:
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
     except Exception as e:
-        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
+        logger.error("An unexpected error occurred: %s when savetxt to %s" % (str(e), dst_file))
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
