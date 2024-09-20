@@ -27,7 +27,7 @@ class TestUtils(unittest.TestCase):
         api_name = "test_api"
         tensor = torch.randn(10, 10)
         self.processor.save_tensors_in_element(api_name, tensor)
-        file_path = os.path.join(self.save_path, f'{api_name}0.pt')
+        file_path = os.path.join(self.save_path, f'{api_name}.0.pt')
         self.assertTrue(os.path.exists(file_path))
     
     @patch('logging.Logger.error')
