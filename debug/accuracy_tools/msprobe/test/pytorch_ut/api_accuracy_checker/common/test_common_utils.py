@@ -30,7 +30,6 @@ class TestUtils(unittest.TestCase):
         file_path = os.path.join(self.save_path, f'{api_name}.0.pt')
         self.assertTrue(os.path.exists(file_path))
     
-    @patch('logging.Logger.error')
     def test_recursion_limit_error(self):
         tensor = torch.randn(10, 10)
         with self.assertRaises(DumpException) as context:
@@ -43,7 +42,7 @@ class TestUtils(unittest.TestCase):
         test_file_name = 'test.csv'
         test_data = [["name", "age"], ["Alice", "20"], ["Bob", "30"]]
         write_csv(test_data, 'test.csv')
-        with open(self.test_file_name, 'r', encoding='utf-8-sig') as f:
+        with open(test_file_name, 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
             for i, row in enumerate(reader):
                 self.assertEqual(row, test_data[i])
@@ -92,12 +91,10 @@ class TestUtils(unittest.TestCase):
         os.rmdir(data_path)
 
     def test_get_full_data_path(self):
-        data_path = 'get_full_data_path'
-        data_path = create_directory(data_path)
-        real_data_path = 'test_data'
+        real_data_path = 'get_full_data_path'
+        data_path = 'test_data'
         full_data_path = get_full_data_path(data_path, real_data_path)
-        self.assertEqual(full_data_path, os.path.join(data_path, real_data_path))
-        os.rmdir(full_data_path)
+        self.assertEqual(full_data_path, os.path.join(real_data_path, data_path))
     
     def test_get_full_data_path_with_empty_data_path(self):
         data_path = None
