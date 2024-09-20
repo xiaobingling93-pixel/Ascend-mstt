@@ -239,7 +239,7 @@ class Service:
         if self.config.level == "L1":
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
-            if self.model and (self.config.task == "statistics" or self.config.task == "tensor"):
+            if self.model and self.config.task in Const.DUMP_DATA_COLLECTION_LIST:
                 self.register_primitive_hooks()
 
         if self.config.level == "L0":
