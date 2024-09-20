@@ -215,7 +215,7 @@ def sort_by_execution_sequence(npu_data, bench_data, mapping_list, flag):
     def generate_execution_sequence(data):
         sequence_map = {}
         for index, item in enumerate(data.keys()):
-            if item.find(flag) != -1:
+            if flag in item:
                 item_split = item.split(".")
                 item_name = ".".join(item_split[0:-2])
                 item_index = item_split[-1]
@@ -241,19 +241,19 @@ def generate_kernel_data(map_value, data, flag):
         return [], []
     inputs_name = []
     outputs_name = []
+    map_split = map_value.split(".")
+    map_name = ".".join(map_split[0:-1])
+    map_index = map_split[-1]
     for key, value in data.items():
-        map_split = map_value.split(".")
-        map_name = ".".join(map_split[0:-1])
-        map_index = map_split[-1]
-        if (key.find(flag) != -1 and key.find(map_name) != -1 and
-                (key.split(".")[-1] == map_index or key.split(".")[-2] == map_index)):
+        if key.find(flag) != -1 and key.find(map_name) != -1:
+            if key.split(".")[-1] != map_index and key.split(".")[-2] != map_index :
+                continue
             input_args = value.get('input_args', {})
             output_args = value.get('output', {})
             for i in range(len(input_args)):
                 inputs_name.append(f"{key}.input.{i}")
             for i in range(len(output_args)):
                 outputs_name.append(f"{key}.output.{i}")
-            continue
     return inputs_name, outputs_name
 
 
@@ -313,6 +313,7 @@ def ms_compare(input_param, output_path, **kwargs):
         pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
         layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
         print("layer mapping is ", layer_mapping)
+        data_mapping = generate_file_mapping(input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
