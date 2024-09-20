@@ -40,18 +40,17 @@ class TestUtils(unittest.TestCase):
 
     def test_save_recursive_non_tensor_types(self):
         api_name = "test_api"
-        non_tensor_types = [None, True, 42, 3.14, "test", slice(0, 10)]
+        non_tensor_types = [None, [True, [42, [3.14, ["test", [slice(0, 10)]]]]]]
         for non_tensor in non_tensor_types:
             self.processor.save_tensors_in_element(api_name, non_tensor)
-            self.assertEqual(self.processor.index, len(non_tensor_types))
+            self.assertEqual(self.processor.index, 6)
 
-    def test_save_recursive_list_and_tuple(self):
+    def test_save_recursive_list_or_tuple(self):
         api_name = "test_api"
-        list_element = [torch.randn(10, 10) for _ in range(5)]
-        tuple_element = tuple(list_element)
+        tensor = torch.randn(10, 10)
+        list_element = [tensor, [tensor, [tensor, [tensor, [tensor, [tensor]]]]]]
         self.processor.save_tensors_in_element(api_name, list_element)
-        self.processor.save_tensors_in_element(api_name, tuple_element)
-        self.assertEqual(self.processor.index, 10)
+        self.assertEqual(self.processor.index, 6)
 
     def test_save_recursive_dict(self):
         api_name = "test_api"
