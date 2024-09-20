@@ -84,3 +84,35 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(api_name, None)
         self.assertEqual(full_api_name, None)
         self.assertEqual(direction_status, None)
+        
+    def test_get_module_and_atttribute_name(self):
+        attribute = 'torch.float32'
+        module_name, attribute_name = get_module_and_atttribute_name(attribute)
+        self.assertEqual(module_name, 'torch')
+        self.assertEqual(attribute_name, 'float32')
+        
+        attribute = 'torch'
+        module_name, attribute_name = get_module_and_atttribute_name(attribute)
+        with self.assertRaises(CompareException) as context:
+            get_module_and_atttribute_name(attribute)
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.error_code, CompareException.INVALID_DATA_ERROR)
+        
+    def test_get_attribute(self):
+        module_name = 'torch'
+        attribute_name = 'float32'
+        attribute = get_attribute(module_name, attribute_name)
+        self.assertEqual(attribute, torch.float32)
+
+        module_name = 'json'
+        attribute_name = 'loads'
+        with self.assertRaises(CompareException) as context:
+            get_attribute(module_name, attribute_name)
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.error_code, CompareException.INVALID_DATA_ERROR)
+        
+        module_name = "torch"
+        attribute_name = "float128"
+        with self.assertRaises(AttributeError):
+            get_attribute(module_name, attribute_name)
+        
