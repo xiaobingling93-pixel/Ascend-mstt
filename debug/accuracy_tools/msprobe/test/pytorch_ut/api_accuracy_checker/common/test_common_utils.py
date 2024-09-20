@@ -2,7 +2,7 @@
 import json
 import csv
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from msprobe.pytorch.api_accuracy_checker.common.utils import *
 from msprobe.core.common.file_utils import write_csv
@@ -13,6 +13,10 @@ class TestUtils(unittest.TestCase):
     def setUp(self):
         # 创建一个临时目录用于保存测试文件
         self.save_path = "temp_save_path"
+        self.test_dir_name = 'test_dir'
+        self.initialize_save_path = 'initialize_save_path'
+        self.test_file_name = 'test.csv'
+        self.data_path = 'get_full_data_path'
         create_directory(self.save_path)
         self.processor = UtDataProcessor(self.save_path)
         
@@ -21,6 +25,10 @@ class TestUtils(unittest.TestCase):
         for filename in os.listdir(self.save_path):
             os.remove(os.path.join(self.save_path, filename))
         os.rmdir(self.save_path)
+        os.rmdir(self.test_dir_name)
+        os.rmdir(self.initialize_save_path)
+        os.remove(self.test_file_name)
+        os.rmdir(self.data_path)
         
     def test_save_tensors_in_elementr(self):
         # 测试保存张量
@@ -31,7 +39,7 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(os.path.exists(file_path))
     
     @patch('logging.Logger.error')
-    def test_recursion_limit_error(self, mock_log_error):
+    def test_recursion_limit_error(self):
         tensor = torch.randn(10, 10)
         with self.assertRaises(DumpException) as context:
             self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
@@ -40,14 +48,12 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
     def test_write_csv(self):
-        test_file_name = 'test.csv'
         test_data = [["name", "age"], ["Alice", "20"], ["Bob", "30"]]
         write_csv(test_data, 'test.csv')
-        with open(test_file_name, 'r', encoding='utf-8-sig') as f:
+        with open(self.test_file_name, 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
             for i, row in enumerate(reader):
                 self.assertEqual(row, test_data[i])
-        os.remove(test_file_name)
 
     def test_check_need_convert(self):
         self.assertEqual(check_need_convert('cross_entropy'), 'int32_to_int64')
@@ -58,12 +64,16 @@ class TestUtils(unittest.TestCase):
             check_object_type(123, int)
         except Exception as e:
             self.fail(f"check_object_type raised exception {e}")
+    
+    def test_check_object_type_error(self):
+        with self.assertRaises(CompareException) as context:
+            check_object_type(123, str)
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
 
     def test_create_directory(self):
-        test_dir_name = 'test_dir'
-        create_directory(test_dir_name)
-        self.assertTrue(os.path.exists(test_dir_name))
-        os.rmdir(test_dir_name)
+        create_directory(self.test_dir_name)
+        self.assertTrue(os.path.exists(self.test_dir_name))
 
     def test_api_info_preprocess_no_conversion_needed(self):
         api_name = 'linear'
@@ -83,7 +93,23 @@ class TestUtils(unittest.TestCase):
         api_info = {'input_args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': -1}]}
         processed_api_info = cross_entropy_process(api_info.copy())
         self.assertEqual(processed_api_info, {'input_args': [{'Name': 'logit'}, {'Name': 'labels', 'Min': 0}]})
-        
+    
+    def test_initialize_save_path(self):
+        initialize_save_path(self.initialize_save_path)
+        self.assertTrue(os.path.exists(self.initialize_save_path))
+
+    def test_get_full_data_path(self):
+        initialize_save_path(self.data_path)
+        real_data_path = 'test_data'
+        full_data_path = get_full_data_path(self.data_path, real_data_path)
+        self.assertEqual(full_data_path, os.path.join(self.data_path, real_data_path))
+    
+    def test_get_full_data_path_with_empty_data_path(self):
+        data_path = None
+        real_data_path = None
+        full_data_path = get_full_data_path(data_path, real_data_path)
+        self.assertEqual(full_data_path, None)
+    
     def test_extract_basic_api_segments(self):
         api_full_name = 'torch.matmul.0'
         api_type, api_name = extract_basic_api_segments(api_full_name)
