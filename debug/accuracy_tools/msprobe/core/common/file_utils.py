@@ -338,10 +338,10 @@ def load_yaml(yaml_path):
     return yaml_data
 
 
-def load_npy(filepath, enable_pickle=False):
+def load_npy(filepath):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath, allow_pickle=enable_pickle)
+        npy = np.load(filepath)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
