@@ -16,11 +16,11 @@ class TestUtils(unittest.TestCase):
         create_directory(self.save_path)
         self.processor = UtDataProcessor(self.save_path)
         
-    # def tearDown(self):
-    #     # 测试完成后删除临时目录
-    #     for filename in os.listdir(self.save_path):
-    #         os.remove(os.path.join(self.save_path, filename))
-    #     os.rmdir(self.save_path)
+    def tearDown(self):
+        # 测试完成后删除临时目录
+        for filename in os.listdir(self.save_path):
+            os.remove(os.path.join(self.save_path, filename))
+        os.rmdir(self.save_path)
         
     def test_save_tensors_in_elementr(self):
         # 测试保存张量
@@ -33,10 +33,11 @@ class TestUtils(unittest.TestCase):
     @patch('logging.Logger.error')
     def test_recursion_limit_error(self, mock_log_error):
         tensor = torch.randn(10, 10)
-        self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
-                                                    [tensor, [tensor, [tensor, [tensor]]]]]]]]]]], 0)
-        mock_log_error.assert_called_once()
-        self.assertIn(DumpException.RECURSION_LIMIT_ERROR, str(mock_log_error.call_args))
+        with self.assertRaises(DumpException) as context:
+            self.processor._save_recursive("test_api", [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, [tensor, 
+                                                        [tensor, [tensor, [tensor, [tensor]]]]]]]]]]], 0)
+        self.assertTrue(isinstance(context.exception, DumpException))
+        self.assertEqual(context.exception.code, DumpException.RECURSION_LIMIT_ERROR)
 
     def test_write_csv(self):
         test_file_name = 'test.csv'

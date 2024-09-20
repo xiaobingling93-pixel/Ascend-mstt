@@ -217,8 +217,9 @@ def get_module_and_atttribute_name(attribute):
     '''
     try:
         module_name, attribute_name = attribute.split(Const.SEP)
-    except CompareException(CompareException.INVALID_DATA_ERROR):
+    except ValueError:
         logger.error(f"Failed to get module and attribute name from {attribute}")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
     return module_name, attribute_name
 
 
