@@ -6,7 +6,7 @@
 
 **msprobe** 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些功能侧重不同的训练场景，可以定位模型训练中的精度问题。
 
-为方便使用，本工具提供了统一、简易的程序接口：**PrecisionDebugger**。以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可轻松使用各种功能。
+为方便使用，本工具提供了统一、简易的程序接口：**PrecisionDebugger**。以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可以轻松使用各种功能。
 
 ```python
 from msprobe.pytorch import PrecisionDebugger
