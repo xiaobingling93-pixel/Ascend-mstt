@@ -188,6 +188,38 @@ def md5_find(data):
     return False
 
 
+def struct_json_get(input_param, framework):
+    if framework == Const.PT_FRAMEWORK:
+        prefix = "bench"
+    elif framework == Const.MS_FRAMEWORK:
+        prefix = "npu"
+    else:
+        logger.error("Error framework found.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    frame_json_path = input_param.get(f"{prefix}_json_path", None)
+    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
+    if not frame_json_path:
+        logger.error(f"Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+    stack_json = os.path.join(frame_json_path, "stack.json")
+    construct_json = os.path.join(frame_json_path, "construct.json")
+
+    if not stack_json and not construct_json:
+        logger.info("stack_json_path and constrcut_json_path not set.")
+        return {}, {}
+    if not stack_json or not construct_json:
+        logger.error("stack or construct json path not set, please check")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+    with FileOpen(stack_json, 'r') as stack_f:
+        stack = json.load(stack_f)
+    with FileOpen(construct_json, 'r') as construct_f:
+        construct = json.load(construct_f)
+    return stack, construct
+
+
 def task_dumppath_get(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)

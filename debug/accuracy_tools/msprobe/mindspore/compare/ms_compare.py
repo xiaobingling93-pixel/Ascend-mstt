@@ -1,14 +1,14 @@
 import os
 import copy
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get
+    task_dumppath_get, struct_json_get
 from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
-
+from msprobe.mindspore.compare.modify_mapping import modify_mapping_with_stack
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
@@ -216,6 +216,10 @@ def ms_compare(input_param, output_path, **kwargs):
         cell_mapping = kwargs.get('cell_mapping', None)
         api_mapping = kwargs.get('api_mapping', None)
         data_mapping = kwargs.get('data_mapping', None)
+        layer_mapping = kwargs.get('layer_mapping', None)
+
+        pt_stack, pt_construct = struct_json_get(input_param, Const.PT_FRAMEWORK)
+        ms_stack, ms_construct = struct_json_get(input_param, Const.MS_FRAMEWORK)
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
@@ -223,6 +227,9 @@ def ms_compare(input_param, output_path, **kwargs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
+
+    pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
+    ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,

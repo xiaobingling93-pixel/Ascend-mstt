@@ -102,6 +102,12 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+
+    # struct json param
+    ORIGIN_DATA = "origin_data"
+    SCOPE = "scope"
+    STACK = "stack"
+
     ATEN = "Aten"
     MODULE_WHITE_LIST = ["torch", "numpy"]
 

@@ -408,7 +408,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
-            
+
 
     if not op_dict["kwargs_struct"]:
         del op_dict["kwargs_struct"]
@@ -429,11 +429,8 @@ def _compare_parser(parser):
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
-                        help="<optional> The api mapping file path.", required=False)
+                        help="<optional> The api mapping file path.", required=False)    
     parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
                         help="<optional> The data mapping file path.", required=False)
-
-
-
-    
-    
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+                        help="<optional> The layer mapping file path.", required=False)
