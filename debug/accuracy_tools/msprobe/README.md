@@ -91,7 +91,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 📑 补充材料
 
-[无标杆工具场景验证和性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
+[无标杆比对功能在 PyTorch 场景的性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
 
 ## ❗ 免责声明
 
