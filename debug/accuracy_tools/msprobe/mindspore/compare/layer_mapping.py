@@ -7,7 +7,7 @@ class Trie:
         self.call_count_list = []
         self.children = {}
         self.has_data = has_data
-        self.type = None
+        self.node_type = None
 
     def __repr__(self):
         return (f"Node(type_name={self.type_name}, "
@@ -38,7 +38,7 @@ class Trie:
         node.type_name = type_name
         node.has_data = True
         node.call_count_list.append(call_count)
-        node.type = word_type
+        node.node_type = word_type
 
 
 def dfs_traverse_and_collect_names(node, path="", result=None):
@@ -65,8 +65,8 @@ def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_pat
     type_name = node.type_name
     if node.has_data:
         for count in node.call_count_list:
-            origin_name = f"{path}.{count}" if node.type == "Cell" else f"{path}.{type_name}.{count}"
-            mapping_name = f"{mapping_path}.{count}" if node.type == "Cell" else f"{mapping_path}.{type_name}.{count}"
+            origin_name = f"{path}.{count}" if node.node_type == "Cell" else f"{path}.{type_name}.{count}"
+            mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
             result[origin_name] = mapping_name
 
     name_mapping = mapping.get(type_name, {})
