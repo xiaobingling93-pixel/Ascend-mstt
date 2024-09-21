@@ -1,15 +1,15 @@
 # 📖 msprobe 使用手册
 
 ![version](https://img.shields.io/badge/version-1.0.4-blueviolet)
-![python](https://img.shields.io/badge/python-3.7~3.11-blue)
+![python](https://img.shields.io/badge/python-3.8|3.9|3.10-blue)
 ![platform](https://img.shields.io/badge/platform-Linux-yellow)
 
-**msprobe** 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些功能侧重不同的训练场景，可以定位模型训练中的精度问题。
+**msprobe** 是 MindStudio Training Tools 工具链下精度调试部分的工具包。主要包括精度预检、溢出检测和精度比对等功能，目前适配 [PyTorch](https://pytorch.org/) 和 [MindSpore](https://www.mindspore.cn/) 框架。这些子工具侧重不同的训练场景，可以定位模型训练中的精度问题。
 
 为方便使用，本工具提供了统一、简易的程序接口：**PrecisionDebugger**。以 PyTorch 框架为例，通过以下示例模板和 **config.json** 可以轻松使用各种功能。
 
 ```python
-from msprobe.pytorch import PrecisionDebugger
+from msprobe.pytorch import PrecisionDebugger  
 
 debugger = PrecisionDebugger(config_path='./config.json')
 ...
@@ -89,7 +89,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)
 
-## 🌟 当前版本特性
+## 🌟 新版本特性
 
 若查看历史版本特性，请点击[安装](./docs/01.installation.md)。
 
