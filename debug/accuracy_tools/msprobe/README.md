@@ -49,7 +49,7 @@ msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 
 
 ### 2 精度预检
 
-精度预检旨在扫描昇腾 NPU 上训练模型中的所有 API，并给出精度情况的诊断和分析。对应 config.json 中的 task 为 run_ut。
+精度预检旨在昇腾 NPU 上扫描训练模型中的所有 API 进行 API 复现，给出精度情况的诊断和分析。对应 config.json 中的 task 为 run_ut。
 
 PyTorch 场景的[离线预检](./docs/07.accuracy_checker_PyTorch.md)和[在线预检](./docs/08.accuracy_checker_online_PyTorch.md)
 
@@ -96,7 +96,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 【数据采集】
 - 支持 config.json 中的 step 传入范围；
 - 优化了指定 step 的机制，指定 step 结束后工具不再采集数据，但训练会继续运行。工具结束运行后，日志提示信息如下：
-    ```shell
+    ```bash
     ****************************************
     *      msprobe ends successfully.      *
     ****************************************
@@ -118,7 +118,6 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 [无标杆比对功能在 PyTorch 场景的性能基线报告](./docs/S02.report_free_benchmarking_validation_performance_baseline.md)
 
 ## ❗ 免责声明
-
 本工具建议执行用户与安装用户保持一致，如果您要使用 root 执行，请自行关注 root 高权限触及的安全风险。
 
 ## ❓ FAQ
