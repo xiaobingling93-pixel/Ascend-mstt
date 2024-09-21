@@ -24,14 +24,22 @@ class TCPServer:
     def run_reactor():
         reactor.run(installSignalHandlers=False)
 
+    def check_tls_path(self):
+        server_key = os.path.join(self.tls_path, "server.key")
+        server_crt = os.path.join(self.tls_path, "server.crt")
+        if not os.path.exists(server_key):
+            raise Exception(f"server_key: {server_key} is not exists.")
+        if not os.path.exists(server_crt):
+            raise Exception(f"server_crt: {server_crt} is not exists.")
+        return server_key, server_crt
+
     def start(self):
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
             from OpenSSL import SSL
             from twisted.internet import ssl
-            server_key = os.path.join(self.tls_path, "server.key")
-            server_crt = os.path.join(self.tls_path, "server.crt")
+            server_key, server_crt = self.check_tls_path()
             server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
             server_context_ = server_context_factory.getContext()
             server_context_.set_cipher_list(cipher_list)

@@ -9,8 +9,10 @@ except ImportError:
 else:
     current_device = "npu"
 
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.file_utils import FileChecker
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate
 from msprobe.pytorch.hook_module.wrap_functional import FunctionalOPTemplate
 from msprobe.pytorch.hook_module.wrap_npu_custom import NpuOPTemplate
@@ -107,9 +109,12 @@ def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
 
 
 def generate_device_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_device(arg_in, to_detach):
+    def recursive_arg_to_device(arg_in, to_detach, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error("The depth of arg_in is too large, please check the arg_in.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
+            return type(arg_in)(recursive_arg_to_device(arg, to_detach, depth=depth+1) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
                 arg_in = deal_detach(arg_in.clone(), to_detach).to(current_device).requires_grad_()
@@ -130,9 +135,12 @@ def generate_device_params(input_args, input_kwargs, need_backward, api_name):
 
 
 def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
+    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error("The depth of arg_in is too large, please check the arg_in.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
+            return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype, depth=depth+1) for arg in arg_in)
         elif isinstance(arg_in, torch.Tensor):
             if need_backward and arg_in.requires_grad:
                 arg_in = deal_detach(raise_bench_data_dtype(
@@ -153,13 +161,16 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             return True
         return False
 
-    def recursive_find_dtypes(arg_in, kwargs=None, check_kwargs=False):
+    def recursive_find_dtypes(arg_in, kwargs=None, check_kwargs=False, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error("The depth of arg_in is too large, please check the arg_in.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(arg_in, (list, tuple)):
-            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs) for arg in arg_in))
+            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs, depth=depth+1) for arg in arg_in))
         elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
             return set([arg_in.dtype])
         elif isinstance(arg_in, dict) and check_kwargs:
-            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True) for v in arg_in.values()))
+            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True, depth=depth+1) for v in arg_in.values()))
         return set()
 
     raise_dtype = None

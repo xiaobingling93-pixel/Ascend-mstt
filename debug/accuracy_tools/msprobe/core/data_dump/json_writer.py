@@ -39,14 +39,14 @@ class DataWriter:
 
     def initialize_json_file(self, **kwargs):
         kwargs.update({"dump_data_dir": self.dump_tensor_data_dir, Const.DATA: {}})
-        save_json(self.dump_file_path, kwargs)
+        save_json(self.dump_file_path, kwargs, indent=1)
 
         empty_dict = {}
         remove_path(self.stack_file_path)
-        save_json(self.stack_file_path, empty_dict)
+        save_json(self.stack_file_path, empty_dict, indent=1)
 
         remove_path(self.construct_file_path)
-        save_json(self.construct_file_path, empty_dict)
+        save_json(self.construct_file_path, empty_dict, indent=1)
 
     def update_dump_paths(self, dump_file_path, stack_file_path, construct_file_path, dump_data_dir, 
                           free_benchmark_file_path):

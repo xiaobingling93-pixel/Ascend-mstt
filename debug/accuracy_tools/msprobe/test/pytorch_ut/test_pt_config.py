@@ -24,15 +24,13 @@ class TestPtConfig(TestCase):
             }
         }
         with patch("msprobe.pytorch.pt_config.os.path.join", return_value="/path/config.json"), \
-                patch("msprobe.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
-                patch("msprobe.pytorch.pt_config.json.load", return_value=mock_json_data):
+                patch("msprobe.pytorch.pt_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config(None, None)
         self.assertEqual(common_config.task, Const.STATISTICS)
         self.assertEqual(task_config.data_mode, ["all"])
 
         with patch("msprobe.pytorch.pt_config.os.path.join", return_value="/path/config.json"), \
-                patch("msprobe.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
-                patch("msprobe.pytorch.pt_config.json.load", return_value=mock_json_data):
+                patch("msprobe.pytorch.pt_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config(None, Const.TENSOR)
         self.assertEqual(common_config.task, Const.STATISTICS)
         self.assertEqual(task_config.file_format, "npy")
@@ -81,4 +79,3 @@ class TestPtConfig(TestCase):
             self.assertEqual(result.white_list, ["conv2d"])
             self.assertEqual(result.black_list, ["matmul"])
             self.assertEqual(result.error_data_path, '/home/dump_path')
-            mocked_exists.assert_called_once_with('/home/dump_path')

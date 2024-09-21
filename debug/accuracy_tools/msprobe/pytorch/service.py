@@ -6,6 +6,7 @@ import torch
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.utils import print_tools_ends_info
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
@@ -17,6 +18,7 @@ from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
+
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
@@ -33,6 +35,7 @@ class Service:
         self.first_start = True
         self.current_rank = None
         self.dump_iter_dir = None
+        self.should_stop_service = False
         self.attl = None
 
     @staticmethod
@@ -42,12 +45,13 @@ class Service:
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
+            if not self.should_execute_hook():
+                return args, kwargs
+
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
-            if not self.switch:
-                return args, kwargs
             if self.config.online_run_ut:
                 return None, None
             if self.data_collector:
@@ -56,12 +60,12 @@ class Service:
             return args, kwargs
 
         def forward_hook(api_or_module_name, module, args, kwargs, output):
+            if not self.should_execute_hook():
+                return None
+
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.update_api_or_module_name(api_or_module_name)
-
-            if not self.switch:
-                return None
 
             if self.config.online_run_ut:
                 if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
@@ -81,12 +85,12 @@ class Service:
             return forward_hook(api_or_module_name, module, args, {}, output)
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
+            if not self.should_execute_hook():
+                return
+
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
             self.data_collector.update_api_or_module_name(api_or_module_name)
-
-            if not self.switch:
-                return
 
             if self.config.online_run_ut:
                 return
@@ -102,26 +106,15 @@ class Service:
         pre_forward_hook_fn = functools.partial(pre_hook, forward_name_template)
         forward_hook_fn = functools.partial(forward_hook, forward_name_template)
         backward_hook_fn = functools.partial(backward_hook, backward_name_template)
-        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2, forward_name_template)
+        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2,
+                                                                  forward_name_template)
         return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
-    def step(self):
-        self.current_iter += 1
-        self.data_collector.update_iter(self.current_iter)
-
-        ModuleProcesser.reset_module_stats()
-        HOOKModule.reset_module_stats()
-
     def start(self, model, api_origin=False):
-        self.model = model
-        if self.config.step and self.current_iter > max(self.config.step):
-            if self.config.online_run_ut:
-                # send stop signal if online_run_ut
-                self.attl_stop()
-            self.stop()
-            raise Exception("msprobe: exit after iteration {}".format(max(self.config.step)))
-        if self.config.step and self.current_iter not in self.config.step:
+        if self.need_stop_service():
             return
+
+        self.model = model
         if self.first_start:
             try:
                 self.current_rank = get_rank_if_initialized()
@@ -144,6 +137,8 @@ class Service:
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
     def stop(self):
+        if self.should_stop_service:
+            return
         if self.config.level == "L2":
             return
         if self.config.step and self.current_iter not in self.config.step:
@@ -155,6 +150,41 @@ class Service:
             run_ut_dispatch(self.attl, False)
             return
         self.data_collector.write_json()
+
+    def step(self):
+        if self.should_stop_service:
+            return
+        self.current_iter += 1
+        self.data_collector.update_iter(self.current_iter)
+
+        ModuleProcesser.reset_module_stats()
+        HOOKModule.reset_module_stats()
+
+    def need_stop_service(self):
+        if self.should_stop_service:
+            return True
+        end_service = self.config.step and self.current_iter > max(self.config.step) or \
+                        self.data_collector and self.data_collector.data_processor.is_terminated
+        if end_service:
+            if self.config.online_run_ut:
+                # send stop signal if online_run_ut
+                self.attl_stop()
+            if self.config.level in [Const.LEVEL_L1, Const.LEVEL_L2, Const.LEVEL_MIX]:
+                api_register.api_originality()
+            self.switch = False
+            self.should_stop_service = True
+            print_tools_ends_info()
+            return True
+        if self.config.step and self.current_iter not in self.config.step:
+            return True
+        return False
+
+    def should_execute_hook(self):
+        if not self.switch:
+            return False
+        if self.data_collector and self.data_collector.data_processor.is_terminated:
+            return False
+        return True
 
     def create_dirs(self):
         create_directory(self.config.dump_path)
@@ -208,7 +238,8 @@ class Service:
                         self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
-            api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API), self.config.online_run_ut)
+            api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API),
+                                         self.config.online_run_ut)
             api_register.api_modularity()
 
         if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:

@@ -34,7 +34,7 @@ from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.common.utils import get_rank_if_initialized
 from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.log import logger
-from msprobe.core.common.utils import Const
+from msprobe.core.common.utils import Const, print_tools_ends_info
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
@@ -267,6 +267,7 @@ class Service:
             logger.info("************************************************")
             logger.info(f"*          {Const.TOOL_NAME} ends successfully.          *")
             logger.info("************************************************")
+            print_tools_ends_info()
             return
         if self.config.step and self.current_iter not in self.config.step:
             return
@@ -299,6 +300,7 @@ class Service:
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+        JitDump.jit_dump_switch = True
 
     def forward_backward_dump_end(self):
         if self.should_stop_service:
@@ -334,6 +336,7 @@ class Service:
         self.primitive_switch = False
         self.start_call = False
         self.data_collector.write_json()
+        JitDump.jit_dump_switch = False
 
     def need_end_service(self):
         if self.config.step and self.current_iter > max(self.config.step):

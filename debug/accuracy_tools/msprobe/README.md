@@ -76,7 +76,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)
 
-[MindSpore 场景的无标杆比对](./docs/16.overflow_check_MindSpore.md)（待补充）
+[MindSpore 场景的无标杆比对](./docs/16.free_benchmarking_MindSpore.md)
 
 ### 7 梯度状态监测
 
@@ -88,7 +88,13 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 【数据采集】
 - 支持 config.json 中的 step 传入范围；
-- 优化了 MindSpore 场景的 step 机制，step 结束后训练继续运行。
+- 优化了指定 step 的机制，指定 step 结束后工具不再采集数据，但训练会继续运行。工具结束运行后，日志提示信息如下：
+    ```bash
+    ****************************************
+    *      msprobe ends successfully.      *
+    ****************************************
+    ```
+    注：在多卡场景，每张卡进程训练到指定 step 之后都会打印一次上述信息。
 
 【精度预检】
 - 在 PyTorch 场景，支持部分 NPU 融合算子预检。

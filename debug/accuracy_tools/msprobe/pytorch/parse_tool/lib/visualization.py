@@ -28,7 +28,7 @@ class Visualization:
         self.util = Util()
 
     def print_npy_summary(self, target_file):
-        np_data = load_npy(target_file, enable_pickle=True)
+        np_data = load_npy(target_file)
         table = self.util.create_table('', ['Index', 'Data'])
         flatten_data = np_data.flatten()
         tablesize = 8

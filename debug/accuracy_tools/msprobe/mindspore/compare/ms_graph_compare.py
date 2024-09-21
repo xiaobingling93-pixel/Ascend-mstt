@@ -65,8 +65,9 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
 
     for data in statistic_data_list:
         compare_key = f"{data[1]}.{data[2]}.{data[3]}.{data[5]}"
+        op_name = f"{compare_key} {statistic_file_path}"
         timestamp = int(data[4])
-        result_data = [statistic_file_path, compare_key, timestamp]
+        result_data = [op_name, compare_key, timestamp]
         for key in header_index.keys():
             if header_index[key] is None:
                 result_data.append(np.nan)
