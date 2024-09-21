@@ -264,9 +264,6 @@ class Service:
             self.should_stop_service = True
             self.switch = False
             self.primitive_switch = False
-            logger.info("************************************************")
-            logger.info(f"*          {Const.TOOL_NAME} ends successfully.          *")
-            logger.info("************************************************")
             print_tools_ends_info()
             return
         if self.config.step and self.current_iter not in self.config.step:
