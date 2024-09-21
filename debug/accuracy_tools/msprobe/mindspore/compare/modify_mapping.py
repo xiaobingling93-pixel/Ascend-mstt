@@ -1,6 +1,3 @@
-import os
-import json
-
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 
@@ -12,7 +9,7 @@ def modify_mapping_with_stack(stack, construct):
     # 是否是mindspore的数据结构
     is_ms = any("Cell" in ii for ii in construct)
     # 调整后的mapping结构
-    final_pres =  {}
+    final_pres = {}
     # 查看归属关系
     for key in construct:
         key_components = key.split('.')
@@ -47,7 +44,7 @@ def modify_mapping_with_stack(stack, construct):
             # {name}.Class.count_number.X ward Or {name}.Class.count_number.X ward.ele_number
             parent_idx = -4 if not parent[-4].isdigit() else -5
 
-            parent_name = parent[parent_idx] 
+            parent_name = parent[parent_idx]
             if parent_name.endswith('s'):
                 parent_name = parent_name[:-1]
             # {name}.count_number.X ward
@@ -79,15 +76,16 @@ def modify_mapping_with_stack(stack, construct):
                     continue
                 in_func_name = func_ele.split()[1]
                 res_list.append(in_func_name)
-            
+
             # 反转res_list并生成final_name
             reversed_list = res_list[::-1]
             # 组合逻辑：parent的节点名（到节点名字为止）加上调用栈名[reversed_list]加上原来key重复key的节点名[key_components[1:-2] + key_components[-3:]]
-            final_res_key = '.'.join(parent[:parent_idx + 1] + reversed_list + key_components[1:-2] + key_components[-3:])
+            final_res_key = '.'.join(parent[:parent_idx + 1] + reversed_list +
+                                     key_components[1:-2] + key_components[-3:])
             final_res_key = final_res_key.strip(".forward").strip(".backward")
         else:
             final_res_key = '.'.join(key_components[:-2] + [key_components[-1]])
             reversed_list = []
-        final_pres[final_res_key] = {Const.ORIGIN_DATA:key, Const.SCOPE: construct[key], Const.STACK: '.'.join(reversed_list) if reversed_list else None}
+        final_pres[final_res_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: construct[key],
+                                     Const.STACK: '.'.join(reversed_list) if reversed_list else None}
     return final_pres
-        

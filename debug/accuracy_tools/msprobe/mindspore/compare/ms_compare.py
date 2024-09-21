@@ -312,7 +312,6 @@ def ms_compare(input_param, output_path, **kwargs):
         ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
         pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
         layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
-        print("layer mapping is ", layer_mapping)
         data_mapping = generate_file_mapping(input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,

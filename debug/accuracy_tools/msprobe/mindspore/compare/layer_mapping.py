@@ -1,5 +1,6 @@
 import re
 
+
 class Trie:
     def __init__(self, type_name=None, has_data=False):
         self.type_name = type_name
@@ -37,7 +38,8 @@ class Trie:
         node.type_name = type_name
         node.has_data = True
         node.call_count_list.append(call_count)
-        node.word_type = word_type
+        node.type = word_type
+
 
 def dfs_traverse_and_collect_names(node, path="", result=None):
     if result is None:
@@ -63,8 +65,8 @@ def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_pat
     type_name = node.type_name
     if node.has_data:
         for count in node.call_count_list:
-            origin_name =  f"{path}.{count}" if node.word_type == "Cell" else f"{path}.{type_name}.{count}"
-            mapping_name = f"{mapping_path}.{count}" if node.word_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
+            origin_name = f"{path}.{count}" if node.type == "Cell" else f"{path}.{type_name}.{count}"
+            mapping_name = f"{mapping_path}.{count}" if node.type == "Cell" else f"{mapping_path}.{type_name}.{count}"
             result[origin_name] = mapping_name
 
     name_mapping = mapping.get(type_name, {})
@@ -79,13 +81,6 @@ def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_pat
     return result
 
 
-def print_tree(node, level=0):
-    indent = ' ' * (level * 2)
-    for key, child in node.children.items():
-        print(f"{indent}{key}: {child}")
-        print_tree(child, level + 1)
-
-
 def get_mapping_list(ms_tree, mapping):
     ms_pt_mapping = dfs_traverse_and_collect_converted_names(ms_tree, mapping=mapping)
     mapping_list = []
@@ -93,6 +88,7 @@ def get_mapping_list(ms_tree, mapping):
         pt_name = re.sub(r"^Cell", "Module", pt_name)
         mapping_list.append((ms_name, pt_name))
     return mapping_list
+
 
 def get_prefix_mapping(scope_list):
     """layer name to layer name.class_name"""
