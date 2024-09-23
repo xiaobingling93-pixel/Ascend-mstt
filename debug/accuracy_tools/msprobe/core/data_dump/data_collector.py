@@ -14,14 +14,13 @@ def build_data_collector(config):
 class DataCollector:
     multi_output_apis = ["_sort_", "npu_flash_attention"]
     tasks_need_tensor_data = [Const.OVERFLOW_CHECK, Const.TENSOR, Const.FREE_BENCHMARK]
-    level_without_construct = ["L1", "L2"]
+    level_without_construct = [Const.LEVEL_L1, Const.LEVEL_L2]
 
     def __init__(self, config):
         self.config = config
         self.data_writer = DataWriter()
         self.data_processor = DataProcessorFactory.create_processor(self.config, self.data_writer)
-        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework) \
-            if self.config.framework == Const.PT_FRAMEWORK else None
+        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
         if self.config.task == Const.FREE_BENCHMARK:
             self.scope = build_scope(ListScope, self.config.scope, self.config.list)
@@ -119,8 +118,7 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
-        if self.config.framework == Const.PT_FRAMEWORK and \
-           self.config.level not in DataCollector.level_without_construct:
+        if self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
