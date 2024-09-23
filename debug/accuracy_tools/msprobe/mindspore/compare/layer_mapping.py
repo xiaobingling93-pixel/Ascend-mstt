@@ -48,37 +48,41 @@ class Trie:
         node.node_type = word_type
 
 
-def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_path="", result=None, max_depth=100):
-    if max_depth < 0:
-        logger.error("The converted data depth is too large, please check the data")
-        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+class DFSConverter:
+    def __init__(self, max_depth=100):
+        self.max_depth = max_depth
+        self.result = {}
 
-    if result is None:
-        result = {}
-    if node is None:
-        return result
+    def traverse_and_collect(self, node, mapping, path="", mapping_path=""):
+        if self.max_depth < 0:
+            logger.error("The converted data depth is too large, please check the data")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
 
-    type_name = node.type_name
-    if node.has_data:
-        for count in node.call_count_list:
-            origin_name = f"{path}.{count}" if node.node_type == "Cell" else f"{path}.{type_name}.{count}"
-            mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
-            result[origin_name] = mapping_name
+        if node is None:
+            return self.result
 
-    name_mapping = mapping.get(type_name, {})
+        type_name = node.type_name
+        if node.has_data:
+            for count in node.call_count_list:
+                origin_name = f"{path}.{count}" if node.node_type == "Cell" else f"{path}.{type_name}.{count}"
+                mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
+                self.result[origin_name] = mapping_name
 
-    for child_name, child_node in node.children.items():
-        new_path = f"{path}.{child_name}" if path else child_name
-        converted_name = name_mapping.get(child_name, child_name)
-        new_mapping_path = f"{mapping_path}.{converted_name}" if mapping_path else converted_name
-        dfs_traverse_and_collect_converted_names(
-            child_node, mapping, new_path, new_mapping_path, result, max_depth=max_depth-1)
+        name_mapping = mapping.get(type_name, {})
 
-    return result
+        for child_name, child_node in node.children.items():
+            new_path = f"{path}.{child_name}" if path else child_name
+            converted_name = name_mapping.get(child_name, child_name)
+            new_mapping_path = f"{mapping_path}.{converted_name}" if mapping_path else converted_name
+            self.max_depth -= 1
+            self.traverse_and_collect(child_node, mapping, new_path, new_mapping_path)
+
+        return self.result
 
 
 def get_mapping_list(ms_tree, mapping):
-    ms_pt_mapping = dfs_traverse_and_collect_converted_names(ms_tree, mapping=mapping)
+    dfs_converter = DFSConverter()
+    ms_pt_mapping = dfs_converter.traverse_and_collect(ms_tree, mapping=mapping)
     mapping_list = []
     for ms_name, pt_name in ms_pt_mapping.items():
         pt_name = re.sub(r"^Cell", "Module", pt_name)
