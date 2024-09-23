@@ -1,5 +1,6 @@
 import os
 import copy
+import sys
 from itertools import zip_longest
 
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
@@ -229,8 +230,8 @@ def sort_by_execution_sequence(npu_data, bench_data, mapping_list, flag):
     bench_map = generate_execution_sequence(bench_data)
 
     def sort_by_map(item):
-        first_key = npu_map.get(item[0], 0xffff)
-        second_key = bench_map.get(item[1], 0xffff)
+        first_key = npu_map.get(item[0], sys.maxsize)
+        second_key = bench_map.get(item[1], sys.maxsize)
         return first_key, second_key
 
     return sorted(mapping_list, key=sort_by_map)
@@ -266,7 +267,7 @@ def generate_file_mapping(npu_json_path, bench_json_path, mapping_list):
     bench_data = load_json(bench_json_path).get("data", {})
 
     forward_data = []
-    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, "forward")
+    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, Const.FORWARD)
     for map_value in mapping_list:
         npu_forward_inputs, npu_backward_outputs = generate_kernel_data(map_value[0], npu_data, "forward")
         bench_forward_inputs, bench_backward_outputs = generate_kernel_data(map_value[1], bench_data, "forward")
@@ -276,7 +277,7 @@ def generate_file_mapping(npu_json_path, bench_json_path, mapping_list):
         forward_data.extend(outputs_zip)
 
     backward_data = []
-    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, "backward")
+    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, Const.BACKWARD)
     for map_value in mapping_list:
         npu_forward_inputs, npu_backward_outputs = generate_kernel_data(map_value[0], npu_data, "backward")
         bench_forward_inputs, bench_backward_outputs = generate_kernel_data(map_value[1], bench_data, "backward")
