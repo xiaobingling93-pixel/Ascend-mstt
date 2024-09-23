@@ -217,9 +217,9 @@ def get_module_and_atttribute_name(attribute):
     '''
     try:
         module_name, attribute_name = attribute.split(Const.SEP)
-    except ValueError:
+    except ValueError as e:
         logger.error(f"Failed to get module and attribute name from {attribute}")
-        raise CompareException(CompareException.INVALID_DATA_ERROR)
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     return module_name, attribute_name
 
 
@@ -240,5 +240,5 @@ def get_attribute(module_name, attribute_name):
         attribute = getattr(module, attribute_name)
     except (ImportError, AttributeError) as e:
         logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
-        raise CompareException(CompareException.INVALID_ATTRIBUTE_ERROR)
+        raise CompareException(CompareException.INVALID_ATTRIBUTE_ERROR) from e
     return attribute
