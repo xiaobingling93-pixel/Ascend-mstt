@@ -145,11 +145,11 @@ class Comparator:
                 return n_index, len(bench_queue) - 1
         return -1, -1
     
-    def compare_process(self, file_handles, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
-        npu_json_handle, bench_json_handle, stack_json_handle = file_handles
-        npu_json_data = json.load(npu_json_handle)
-        bench_json_data = json.load(bench_json_handle)
-        stack_json_data = json.load(stack_json_handle)
+    def compare_process(self, file_lists, stack_mode, fuzzy_match, summary_compare=False, md5_compare=False):
+        npu_json_path, bench_json_path, stack_json_path = file_lists
+        npu_json_data = load_json(npu_json_path)
+        bench_json_data = load_json(bench_json_path)
+        stack_json_data = load_json(stack_json_path)
 
         if fuzzy_match:
             logger.warning("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
@@ -292,11 +292,11 @@ class Comparator:
                 logger.warning(f'Can not find bench op name : `{bench_op_name}` in bench dump json file.')
         return result
 
-    def compare_process_custom(self, file_handles, stack_mode, summary_compare=False, md5_compare=False):
-        npu_json_handle, bench_json_handle, stack_json_handle = file_handles
-        npu_json_data = load_json(npu_json_handle)
-        bench_json_data = load_json(bench_json_handle)
-        stack_json_data = load_json(stack_json_handle)
+    def compare_process_custom(self, file_lists, stack_mode, summary_compare=False, md5_compare=False):
+        npu_json_path, bench_json_path, stack_json_path = file_lists
+        npu_json_data = load_json(npu_json_path)
+        bench_json_data = load_json(bench_json_path)
+        stack_json_data = load_json(stack_json_path)
 
         npu_ops_all = self.merge_data(npu_json_data, stack_json_data, summary_compare, md5_compare)
         bench_ops_all = self.merge_data(bench_json_data, stack_json_data, summary_compare, md5_compare)
@@ -378,16 +378,16 @@ class Comparator:
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         remove_path(file_path)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        
-        with FileOpen(input_parma.get("npu_json_path"), "r") as npu_json, \
-                FileOpen(input_parma.get("bench_json_path"), "r") as bench_json, \
-                FileOpen(input_parma.get("stack_json_path"), "r") as stack_json:
-            if self.data_mapping:
-                result_df = self.compare_process_custom([npu_json, bench_json, stack_json], stack_mode,
-                                                        summary_compare, md5_compare)
-            else:
-                result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
-                                                 summary_compare, md5_compare)
+
+        npu_json = input_parma.get("npu_json_path")
+        bench_json = input_parma.get("bench_json_path")
+        stack_json = input_parma.get("stack_json_path")
+        if self.data_mapping:
+            result_df = self.compare_process_custom([npu_json, bench_json, stack_json], stack_mode,
+                                                    summary_compare, md5_compare)
+        else:
+            result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match,
+                                             summary_compare, md5_compare)
 
         if not result_df.values.tolist():
             logger.warning("Can`t match any op.")
