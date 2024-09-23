@@ -53,7 +53,7 @@ def modify_mapping_with_stack(stack, construct):
     final_pres = {}
     # 查看归属关系
     for key in construct:
-        key_components = key.split('.')
+        key_components = key.split(Const.SEP)
         # 名称如果非标准开头，转为标准开头
         if not key.startswith(("Module", "Cell")):
             code_list = stack.get(key, None)
@@ -68,19 +68,19 @@ def modify_mapping_with_stack(stack, construct):
                     key_components[0] = "Cell" if is_ms else "Module"
                     # 重复该节点的名字作为类型 如add.add add在-3位置
                     duplicated_components = get_duplicated_name(key_components)
-                    modified_key = '.'.join(duplicated_components)
+                    modified_key = Const.SEP.join(duplicated_components)
                 else:
                     modified_key = key
                 modified_key = modified_key.replace(".forward", "").replace(".backward", "")
                 final_pres[modified_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: None, Const.STACK: None}
                 continue
 
-            parent = construct[key].split('.')
+            parent = construct[key].split(Const.SEP)
             if len(parent) < 4:
                 logger.warning(f"Parent name in construct.json is not valid")
                 continue
             # {name}.Class.count_number.X ward Or {name}.Class.count_number.X ward.ele_number
-            parent_idx = -4 if not parent[-4].isdigit() else -5
+            parent_idx = Const.NAME_FIRST_POSSIBLE_INDEX if not parent[Const.NAME_FIRST_POSSIBLE_INDEX].isdigit() else Const.NAME_SECOND_POSSIBLE_INDEX
 
             parent_name = parent[parent_idx]
             if parent_name.endswith('s'):
@@ -96,12 +96,12 @@ def modify_mapping_with_stack(stack, construct):
             func_stack_list = find_stack_func_list(regard_scope)
 
             # 组合逻辑：parent的节点名（到节点名字为止）加上调用栈名[reversed_list]加上原来key重复key的节点名[key_components[1:-2] + key_components[-3:]]
-            final_res_key = '.'.join(parent[:parent_idx + 1] + reversed_list +
+            final_res_key = Const.SEP.join(parent[:parent_idx + 1] + reversed_list +
                                      key_components[1:Const.CONSTRUCT_NAME_INDEX + 1] + key_components[Const.CONSTRUCT_NAME_INDEX:])
             final_res_key = final_res_key.strip(".forward").strip(".backward")
         else:
-            final_res_key = '.'.join(key_components[:-2] + [key_components[-1]])
+            final_res_key = Const.SEP.join(key_components[:-2] + [key_components[-1]])
             reversed_list = []
         final_pres[final_res_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: construct[key],
-                                     Const.STACK: '.'.join(reversed_list) if reversed_list else None}
+                                     Const.STACK: Const.SEP.join(reversed_list) if reversed_list else None}
     return final_pres
