@@ -18,7 +18,7 @@ def compare_cli(args):
     else:
         from msprobe.mindspore.compare.ms_compare import ms_compare
         from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed, ms_graph_compare
-    if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
+    if (check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE) or args.layer_mapping:
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
         input_param["stack_json_path"] = input_param.pop("stack_path")
@@ -35,7 +35,8 @@ def compare_cli(args):
                 "fuzzy_match": args.fuzzy_match,
                 "cell_mapping": args.cell_mapping,
                 "api_mapping": args.api_mapping,
-                "data_mapping": args.data_mapping
+                "data_mapping": args.data_mapping,
+                "layer_mapping": args.layer_mapping
             }
 
             ms_compare(input_param, args.output_path, **kwargs)

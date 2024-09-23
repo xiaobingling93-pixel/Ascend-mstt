@@ -1,14 +1,17 @@
 import os
 import copy
+from itertools import zip_longest
+
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get
-from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy
+    task_dumppath_get, struct_json_get
+from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
-
+from msprobe.mindspore.compare.modify_mapping import modify_mapping_with_stack
+from msprobe.mindspore.compare.layer_mapping import get_layer_mapping
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
@@ -207,7 +210,84 @@ class MSComparator(Comparator):
         del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
         return del_bench_dict
         
-        
+
+def sort_by_execution_sequence(npu_data, bench_data, mapping_list, flag):
+    def generate_execution_sequence(data):
+        sequence_map = {}
+        for index, item in enumerate(data.keys()):
+            if flag in item:
+                item_split = item.split(".")
+                item_name = ".".join(item_split[0:-2])
+                item_index = item_split[-1]
+                if item_index == 'forward' or item_index == 'backward':
+                    item_index = item_split[-2]
+                item_key = f"{item_name}.{item_index}"
+                sequence_map[item_key] = index
+        return sequence_map
+
+    npu_map = generate_execution_sequence(npu_data)
+    bench_map = generate_execution_sequence(bench_data)
+
+    def sort_by_map(item):
+        first_key = npu_map.get(item[0], 0xffff)
+        second_key = bench_map.get(item[1], 0xffff)
+        return first_key, second_key
+
+    return sorted(mapping_list, key=sort_by_map)
+
+
+def generate_kernel_data(map_value, data, flag):
+    if not map_value:
+        return [], []
+    inputs_name = []
+    outputs_name = []
+    map_split = map_value.split(".")
+    map_name = ".".join(map_split[0:-1])
+    map_index = map_split[-1]
+    for key, value in data.items():
+        if key.find(flag) != -1 and key.find(map_name) != -1:
+            if key.split(".")[-1] != map_index and key.split(".")[-2] != map_index :
+                continue
+            input_args = value.get('input_args', {})
+            output_args = value.get('output', {})
+            for i in range(len(input_args)):
+                inputs_name.append(f"{key}.input.{i}")
+            for i in range(len(output_args)):
+                outputs_name.append(f"{key}.output.{i}")
+    return inputs_name, outputs_name
+
+
+def generate_file_mapping(npu_json_path, bench_json_path, mapping_list):
+
+    npu_data = load_json(npu_json_path).get("data", {})
+    bench_data = load_json(bench_json_path).get("data", {})
+
+    forward_data = []
+    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, "forward")
+    for map_value in mapping_list:
+        npu_forward_inputs, npu_backward_outputs = generate_kernel_data(map_value[0], npu_data, "forward")
+        bench_forward_inputs, bench_backward_outputs = generate_kernel_data(map_value[1], bench_data, "forward")
+        inputs_zip = list(zip_longest(npu_forward_inputs, bench_forward_inputs))
+        outputs_zip = list(zip_longest(npu_backward_outputs, bench_backward_outputs))
+        forward_data.extend(inputs_zip)
+        forward_data.extend(outputs_zip)
+
+    backward_data = []
+    mapping_list = sort_by_execution_sequence(npu_data, bench_data, mapping_list, "backward")
+    for map_value in mapping_list:
+        npu_forward_inputs, npu_backward_outputs = generate_kernel_data(map_value[0], npu_data, "backward")
+        bench_forward_inputs, bench_backward_outputs = generate_kernel_data(map_value[1], bench_data, "backward")
+        inputs_zip = list(zip_longest(npu_forward_inputs, bench_forward_inputs))
+        outputs_zip = list(zip_longest(npu_backward_outputs, bench_backward_outputs))
+        backward_data.extend(inputs_zip)
+        backward_data.extend(outputs_zip)
+
+    kernel_data = forward_data + backward_data
+    result = {key: value for key, value in kernel_data if key is not None}
+
+    return result
+
+
 def ms_compare(input_param, output_path, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
@@ -216,6 +296,10 @@ def ms_compare(input_param, output_path, **kwargs):
         cell_mapping = kwargs.get('cell_mapping', None)
         api_mapping = kwargs.get('api_mapping', None)
         data_mapping = kwargs.get('data_mapping', None)
+        layer_mapping = kwargs.get('layer_mapping', None)
+
+        pt_stack, pt_construct = struct_json_get(input_param, Const.PT_FRAMEWORK)
+        ms_stack, ms_construct = struct_json_get(input_param, Const.MS_FRAMEWORK)
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
@@ -223,6 +307,12 @@ def ms_compare(input_param, output_path, **kwargs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
+    if layer_mapping:
+        mapping = load_yaml(layer_mapping)
+        ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
+        pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
+        layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
+        data_mapping = generate_file_mapping(input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,

@@ -296,6 +296,7 @@ class Service:
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
+        JitDump.jit_dump_switch = True
 
     def forward_backward_dump_end(self):
         if self.should_stop_service:
@@ -331,6 +332,7 @@ class Service:
         self.primitive_switch = False
         self.start_call = False
         self.data_collector.write_json()
+        JitDump.jit_dump_switch = False
 
     def need_end_service(self):
         if self.config.step and self.current_iter > max(self.config.step):
