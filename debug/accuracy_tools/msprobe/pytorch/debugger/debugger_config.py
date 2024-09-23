@@ -56,7 +56,6 @@ class DebuggerConfig:
                 for index, scope_spec in enumerate(self.scope):
                     self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
-        seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:

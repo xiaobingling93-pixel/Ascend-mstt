@@ -104,7 +104,11 @@ def get_rank_if_initialized():
         raise DistributedNotInitializedError("torch distributed environment is not initialized")
 
 
-def seed_all(seed=1234, mode=False):
+def seed_all(mode, seed=1234):
+    if not isinstance(mode, bool):
+        raise ValueError(f"Invalid input parameter 'mode', the expected type bool but got {type(mode)}.")
+    if not isinstance(seed, int):
+        raise ValueError(f"Invalid input parameter 'seed', the expected type int but got {type(seed)}.")
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
     np.random.seed(seed)
