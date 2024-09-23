@@ -41,9 +41,9 @@ class TestApiPrecisionCompare(unittest.TestCase):
         
         self.api_name = "test_api"
         self.npu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
-                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', 'MEAN_ULP_ERR': '0.1', 'ULP_ERR_PROPORTION': '0.05'}
+                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'}
         self.gpu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
-                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', 'MEAN_ULP_ERR': '0.2', 'ULP_ERR_PROPORTION': '0.06'}
+                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
         self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
         self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
 
@@ -82,9 +82,11 @@ class TestApiPrecisionCompare(unittest.TestCase):
 
     def test_write_detail_csv(self):
         content = [1, 2, 3]
-        save_path = "path/temp.csv"
-        write_detail_csv(content, save_path)
-        self.assertTrue(os.path.exists(save_path))
+        save_path = "path/"
+        create_directory(save_path)
+        details_csv_path = os.path.join(save_path, "details.csv")
+        write_detail_csv(content, details_csv_path)
+        self.assertTrue(os.path.exists(details_csv_path))
         # os.rmdir(save_path)
         
     def test_ulp_standard(self):
