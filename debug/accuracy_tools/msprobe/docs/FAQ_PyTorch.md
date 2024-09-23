@@ -52,13 +52,13 @@
    | `__matmul__`    | 矩阵乘法         |
    | `__mod__`       | %                |
    | `__mul__`       | *                |
-   | `__nonzero__`   | 同`__bool__`     |
+   | `__nonzero__`   | 同 `__bool__`     |
    | `__or__`        | \|               |
    | `__radd__`      | +（反向）        |
    | `__rmul__`      | *（反向）        |
    | `__rshift__`    | >>               |
    | `__sub__`       | -                |
-   | `__truediv__`   | 同`__div__`      |
+   | `__truediv__`   | 同 `__div__`      |
    | `__xor__`       | ^                |
 
 # 2 精度比对工具
@@ -168,9 +168,9 @@ def npu_forward_fused_softmax(self, input_, mask):
 
     答：注释工具目录 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中 `Tensor: ` 下的 `- __getitem__`，工具会跳过采集该 API。如果是需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-11. 添加 msprobe 工具后 F.gelu 触发 ValueError 报错：`activation_func must be F.gelu`等。
+11. 添加 msprobe 工具后 F.gelu 触发 ValueError 报错：`activation_func must be F.gelu` 等。以及采集 Megatron 数据时报错：`ValueError(Only support fusion of gelu and swiglu)`。
 
-    答：注释工具目录 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中 `functional: ` 下的 `-gelu`，工具会跳过采集该 API。如果需要采集关键位置 api 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+    答：这一类问题是因为工具本身封装了 torch 算子，所以校验算子名时会报错。注释 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 或者 `-silu`，工具会跳过采集该 API。如果需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
 12. 添加 msprobe 工具后触发与 AsStrided 算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 

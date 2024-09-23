@@ -10,7 +10,7 @@ from msprobe.core.common.const import CompareConst, FileCheckConst
 from msprobe.core.common.file_utils import FileOpen, change_mode
 from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 
 ELEMENT_NUM_THRESHOLD = 100
 ZERO_NUM_THRESHOLD = 0.1
@@ -139,12 +139,13 @@ class Saver:
         if self.stack_info:
             test_rows[0].append(self.COLUMN_STACK_INFO)
 
-        name = test_result.api_name
+        check_op_str_pattern_valid(test_result.api_name)
         df_row = [test_result.api_name, test_result.is_fwd_success, test_result.is_bwd_success]
         if test_result.is_fwd_success == "SKIP" or test_result.is_bwd_success == "SKIP":
             df_row.append(test_result.fwd_compare_alg_results)
         if self.stack_info:
-            stack_info = "\n".join(self.stack_info[name])
+            check_op_str_pattern_valid(self.stack_info[test_result.api_name])
+            stack_info = "\n".join(self.stack_info[test_result.api_name])
             df_row.append(stack_info)
         test_rows.append(df_row)
         write_csv(test_rows, self.save_path)
