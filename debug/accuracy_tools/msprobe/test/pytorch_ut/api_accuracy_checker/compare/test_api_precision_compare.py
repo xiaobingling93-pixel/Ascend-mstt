@@ -38,6 +38,14 @@ class TestApiPrecisionCompare(unittest.TestCase):
             'MEAN_REL_ERR': ['0.1', '0.1'],
             'EB': ['0.1', '0.1']
         })
+        
+        self.api_name = "test_api"
+        self.npu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
+                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', 'MEAN_ULP_ERR': '0.1', 'ULP_ERR_PROPORTION': '0.05'}
+        self.gpu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
+                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', 'MEAN_ULP_ERR': '0.2', 'ULP_ERR_PROPORTION': '0.06'}
+        self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
+        self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
 
     def test_benchmark_standard_calc_ratio(self):
         column_name = "TEST_COLUMN"
@@ -52,7 +60,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.assertEqual(result[0], default_value)
 
         result = BenchmarkStandard._calc_ratio(column_name, 'nan', '0', default_value)
-        self.assertEqual(result[0], float("nan"))
+        self.assertTrue(math.isnan(result[0]))
 
     def test_check_csv_columns(self):
         with self.assertRaises(Exception):
@@ -74,26 +82,20 @@ class TestApiPrecisionCompare(unittest.TestCase):
 
     def test_write_detail_csv(self):
         content = [1, 2, 3]
-        save_path = "path/temp_csv"
+        save_path = "path/temp.csv"
         write_detail_csv(content, save_path)
         self.assertTrue(os.path.exists(save_path))
-        os.rmdir(save_path)
+        # os.rmdir(save_path)
         
     def test_ulp_standard(self):
         # 测试 ULPStandard 函数
-        npu_precision = {'MEAN_ULP_ERR': '0.1', 'ULP_ERR_PROPORTION': '0.05'}
-        gpu_precision = {'MEAN_ULP_ERR': '0.2', 'ULP_ERR_PROPORTION': '0.06'}
-        ulp_standard = ULPStandard('test_api', npu_precision, gpu_precision)
-        ulp_standard.get_result()
-        self.assertEqual(ulp_standard.ulp_err_status, CompareConst.PASS)
+        self.ulp_standard.get_result()
+        self.assertEqual(self.ulp_standard.ulp_err_status, CompareConst.PASS)
 
     def test_benchmark_standard(self):
         # 测试 BenchmarkStandard 函数
-        npu_precision = {'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.02'}
-        gpu_precision = {'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.02'}
-        benchmark_standard = BenchmarkStandard('test_api', npu_precision, gpu_precision)
-        benchmark_standard.get_result()
-        self.assertEqual(benchmark_standard.final_result, CompareConst.PASS)
+        self.benchmark_standard.get_result()
+        self.assertEqual(self.benchmark_standard.final_result, CompareConst.PASS)
 
 
 if __name__ == '__main__':
