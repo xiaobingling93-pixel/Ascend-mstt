@@ -40,14 +40,21 @@ class TestApiPrecisionCompare(unittest.TestCase):
         })
         
         self.api_name = "test_api"
-        self.npu_precision = {ApiPrecisionCompareColumn.ERROR_RATE: '0', ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', 
-                              ApiPrecisionCompareColumn.RMSE: '0.1', ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', 
-                              ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', ApiPrecisionCompareColumn.EB: '0.1', 
-                              ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'}
-        self.gpu_precision = {ApiPrecisionCompareColumn.ERROR_RATE: '0', ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', 
-                              ApiPrecisionCompareColumn.RMSE: '0.1', ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', 
-                              ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', ApiPrecisionCompareColumn.EB: '0.1', 
-                              ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
+        self.npu_precision = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0', ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0', ApiPrecisionCompareColumn.ERROR_RATE: '0', 
+            ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', ApiPrecisionCompareColumn.RMSE: '0.1', 
+            ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', 
+            ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', 
+            ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'
+            }
+        self.gpu_precision = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0', ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0', ApiPrecisionCompareColumn.ERROR_RATE: '0', 
+            ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', ApiPrecisionCompareColumn.RMSE: '0.1', 
+            ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', 
+            ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', 
+            ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
         
         self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
         self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
@@ -85,6 +92,12 @@ class TestApiPrecisionCompare(unittest.TestCase):
         result = get_api_checker_result([CompareConst.PASS, CompareConst.PASS])
         self.assertEqual(result, CompareConst.PASS)
 
+        result = get_api_checker_result([])
+        self.assertEqual(result, CompareConst.SPACE)
+
+        result = get_api_checker_result([CompareConst.SKIP])
+        self.assertEqual(result, CompareConst.SKIP)
+
     def test_write_detail_csv(self):
         content = [1, 2, 3]
         save_path = "path/"
@@ -92,18 +105,53 @@ class TestApiPrecisionCompare(unittest.TestCase):
         details_csv_path = os.path.join(save_path, "details.csv")
         write_detail_csv(content, details_csv_path)
         self.assertTrue(os.path.exists(details_csv_path))
-        # os.rmdir(save_path)
+        os.rmdir(save_path)
         
     def test_ulp_standard(self):
-        # 测试 ULPStandard 函数
         self.ulp_standard.get_result()
         self.assertEqual(self.ulp_standard.ulp_err_status, CompareConst.PASS)
 
+        self.assertEqual(self.ulp_standard._get_ulp_status(torch.float32), CompareConst.PASS)
+
     def test_benchmark_standard(self):
-        # 测试 BenchmarkStandard 函数
         self.benchmark_standard.get_result()
         self.assertEqual(self.benchmark_standard.final_result, CompareConst.PASS)
 
+        column_list = self.benchmark_standard.to_column_value()
+        expect_column_list = [1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass']
+        self.assertEqual(column_list, expect_column_list)
+        
+    def test_get_absolute_threshold_result_pass(self):
+        row_npu = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0',
+            ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0'
+        }
+        result = get_absolute_threshold_result(row_npu)
+        self.assertEqual(result['inf_nan_error_ratio'], 0.0)
+        self.assertEqual(result['inf_nan_result'], CompareConst.PASS)
+        self.assertEqual(result['rel_err_ratio'], 0.0)
+        self.assertEqual(result['rel_err_result'], CompareConst.PASS)
+        self.assertEqual(result['abs_err_ratio'], 0.0)
+        self.assertEqual(result['abs_err_result'], CompareConst.PASS)
+        self.assertEqual(result['absolute_threshold_result'], CompareConst.PASS)
+
+    def test_get_absolute_threshold_result_error(self):
+        row_npu = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0',
+            ApiPrecisionCompareColumn.REL_ERR_RATIO: '0.1',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0'
+        }
+        result = get_absolute_threshold_result(row_npu)
+        self.assertEqual(result['inf_nan_error_ratio'], 0.0)
+        self.assertEqual(result['inf_nan_result'], CompareConst.PASS)
+        self.assertEqual(result['rel_err_ratio'], 0.1)
+        self.assertEqual(result['rel_err_result'], CompareConst.ERROR)
+        self.assertEqual(result['abs_err_ratio'], 0.0)
+        self.assertEqual(result['abs_err_result'], CompareConst.PASS)
+        self.assertEqual(result['absolute_threshold_result'], CompareConst.ERROR)
+        
+    
 
 if __name__ == '__main__':
     unittest.main()
