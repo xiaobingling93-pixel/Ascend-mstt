@@ -12,7 +12,6 @@ class TestRotaryMul(unittest.TestCase):
         r1 = torch.tensor([[5.0, 6.0], [7.0, 8.0]])
         r2 = torch.tensor([[9.0, 10.0], [11.0, 12.0]])
         out = npu_rotary_mul(x, r1, r2)
-        out.backward(out)
         expected_out = torch.tensor([[5.0 * 1.0 + 9.0 * (-2.0), 6.0 * 2.0 + 10.0 * 1.0],
                                      [7.0 * 3.0 + 11.0 * (-4.0), 8.0 * 4.0 + 12.0 * 3.0]])
         self.assertTrue(torch.allclose(out, expected_out, atol=1e-6))

@@ -12,24 +12,27 @@ class TestNpuFusionAttention(unittest.TestCase):
         self.S1 = 4
         self.S2 = 4
         self.D = 64
-        self.query = torch.randn(self.B, self.N1, self.S1, self.D)
-        self.key = torch.randn(self.B, self.N2, self.S2, self.D)
-        self.value = torch.randn(self.B, self.N2, self.S2, self.D)
+        self.query = torch.randn(self.B, self.S1, self.N1, self.D)
+        self.key = torch.randn(self.B, self.S2, self.N2, self.D)
+        self.value = torch.randn(self.B, self.S2, self.N2, self.D)
         self.atten_mask = torch.randn(self.B, 1, self.S1, self.S2)
 
     def test_basic_forward(self):
         # 基本前向传播测试
         out, _, _ = npu_fusion_attention(self.query, self.key, self.value, head_num=self.N1, input_layout="BSND")
-        self.assertEqual(out.shape, (self.B, self.N1, self.S1, self.D))
+        self.assertEqual(out.shape, (self.B, self.S1, self.N1, self.D))
 
     def test_basic_backward(self):
         # 基本反向传播测试
-        dx = torch.randn(self.B, self.N1, self.S1, self.D)
-        out, _, _ = npu_fusion_attention_grad(dx, self.query, self.key, self.value, head_num=self.N1, input_layout="BSND")
-        self.assertEqual(out[0].shape, (self.B, self.N1, self.S1, self.D))  # 检查dq形状
+        dx = torch.randn(self.B, self.S1, self.N1, self.D)
+        out, _, _ = npu_fusion_attention_grad(dx, self.query, self.key, self.value, self.N1, "BSND")
+        self.assertEqual(out.shape, (self.B,  self.S1, self.N1, self.D))  # 检查dq形状
 
     def test_different_input_layout(self):
         # 不同输入布局测试
+        self.query = torch.randn(self.B, self.S1, self.N1*self.D)
+        self.key = torch.randn(self.B, self.S2, self.N2*self.D)
+        self.value = torch.randn(self.B, self.S2, self.N2*self.D)
         out, _, _ = npu_fusion_attention(self.query, self.key, self.value, head_num=self.N1, input_layout="BSH")
         self.assertEqual(out.shape, (self.B, self.S1, self.N1 * self.D))
 
