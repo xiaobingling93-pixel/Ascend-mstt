@@ -22,7 +22,7 @@ class TestUtils(unittest.TestCase):
             os.remove(os.path.join(self.save_path, filename))
         os.rmdir(self.save_path)
         
-    def test_save_tensors_in_elementr(self):
+    def test_save_tensors_in_element(self):
         # 测试保存张量
         api_name = "test_api"
         tensor = torch.randn(10, 10)
