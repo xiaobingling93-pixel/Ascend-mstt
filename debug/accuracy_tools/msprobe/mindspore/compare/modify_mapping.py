@@ -9,6 +9,7 @@ def find_regard_scope(lines, start_sign, end_sign):
             start_pos = idx
         elif parent_name in ii:
             end_pos = idx
+    return start_pos, end_pos
 
 
 def find_stack_func_list(lines):
