@@ -1,3 +1,4 @@
+# coding=utf-8
 import unittest
 from msprobe.core.compare.utils import rename_api, read_op, op_item_parse, resolve_api_special_parameters, \
     get_accuracy, get_un_match_accuracy, merge_tensor
