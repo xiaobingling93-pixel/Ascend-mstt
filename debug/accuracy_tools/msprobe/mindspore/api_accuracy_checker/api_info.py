@@ -3,9 +3,16 @@ from msprobe.core.common.const import Const
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.mindspore.common.log import logger
+from msprobe.core.common.utils import is_invalid_pattern
 
 class ApiInfo:
     def __init__(self, api_name):
+        if not isinstance(api_name, str):
+            err_msg = "ApiInfo.__init__ failed: api_name is not a string"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
+        if is_invalid_pattern(api_name, stack=False):
+            err_msg = "ApiInfo.__init__ failed: api_name contain illegal character"
+            logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
         self.api_name = api_name
         self.forward_info = None
         self.backward_info = None
