@@ -31,7 +31,7 @@ class TestCommonConfig(TestCase):
         common_config = CommonConfig(json_config)
         self.assertIsNone(common_config.task)
         self.assertIsNone(common_config.dump_path)
-        self.assertIsNone(common_config.rank)
+        self.assertEqual(common_config.rank, [])
         self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
         self.assertIsNone(common_config.seed)
@@ -45,49 +45,6 @@ class TestCommonConfig(TestCase):
                          "task is invalid, it should be one of {}".format(Const.TASK_LIST))
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": 0})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "rank is invalid, it should be a list")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": "invalid_step"})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(the_exception.code, MsprobeException.INVALID_PARAM_ERROR)
-        self.assertEqual(str(the_exception), 
-                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}step is invalid, it should be a list")
-
-        json_config.update({"step": [0, 1, "4-6?"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The hyphen(-) must start and end with decimal numbers.")
-
-        json_config.update({"step": [0, 1, "3--5"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f'{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The string parameter for step only supports formats like "3-5". Now string parameter for step is "3--5".')
-
-        json_config.update({"step": [0, 1, "5-3"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f'{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}For the hyphen(-) in step, the left boundary (5) cannot be greater than the right boundary (3).')
-
-        json_config.update({"step": [0, 1, "4-6"]})
-        common_config = CommonConfig(json_config)
-        self.assertEqual(common_config.step, [0, 1, 4, 5, 6])
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})

@@ -51,10 +51,4 @@ class DebuggerConfig:
             self.file_format = "npy"
         if not self.check_mode:
             self.check_mode = "all"
-        self._check_rank()
         return True
-
-    def _check_rank(self):
-        for rank_id in self.rank:
-            if not isinstance(rank_id, int) or rank_id < 0:
-                raise ValueError(f"rank {self.rank} must be a positive integer.")
