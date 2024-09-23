@@ -180,7 +180,9 @@ class TestAlgorithmMethods(unittest.TestCase):
         exponent_num = parameters.get('exponent_num')[0]
         ulp_err = alg.get_ulp_err(self.bench_data, self.device_data, torch.float16)
         data_type = np.float32
-        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data.astype(data_type)) * np.exp2(-eb + exponent_num)
+        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data).astype(data_type) * np.exp2(-eb + exponent_num)
+        print(ulp_err)
+        print(expected_ulp_err)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
         
         parameters = ULP_PARAMETERS.get(torch.float32)
@@ -191,7 +193,7 @@ class TestAlgorithmMethods(unittest.TestCase):
         exponent_num = parameters.get('exponent_num')[0]
         ulp_err = alg.get_ulp_err(self.bench_data_fp32, self.device_data_fp32, torch.float32)
         data_type = np.float64
-        expected_ulp_err = (self.device_data_fp32.astype(data_type) - self.bench_data_fp32.astype(data_type)) * np.exp2(-eb + exponent_num)
+        expected_ulp_err = (self.device_data_fp32.astype(data_type) - self.bench_data_fp32).astype(data_type) * np.exp2(-eb + exponent_num)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
 
     def test_calc_ulp_err(self):
@@ -204,5 +206,5 @@ class TestAlgorithmMethods(unittest.TestCase):
         exponent_num = parameters.get('exponent_num')[0]
         data_type = np.float32
         ulp_err = alg.calc_ulp_err(self.bench_data, self.device_data, eb, exponent_num, data_type)
-        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data.astype(data_type)) * np.exp2(-eb + exponent_num)
+        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data).astype(data_type) * np.exp2(-eb + exponent_num)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
