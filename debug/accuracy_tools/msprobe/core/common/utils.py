@@ -168,6 +168,10 @@ def add_time_with_xlsx(name):
     return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
+def add_time_with_yaml(name):
+    return '{}_{}.yaml'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
 def get_time():
     return datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
 
