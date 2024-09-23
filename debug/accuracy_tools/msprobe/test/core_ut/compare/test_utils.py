@@ -2,6 +2,7 @@ import unittest
 from msprobe.core.compare.utils import rename_api, read_op, op_item_parse, resolve_api_special_parameters, \
     get_accuracy, get_un_match_accuracy, merge_tensor
 
+
 # test_read_op
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
@@ -54,9 +55,9 @@ o_result_parse = [
 # test_resolve_api_special_parameters
 data_dict = {
     "last_hidden_state":
-        {"type": "tensor.Tensor", "dtype": "torch.bfloat16"},
+        {"type": "torch.Tensor", "dtype": "torch.bfloat16"},
     "loss":
-        {"type": "tensor.Tensor", "dtype": "torch.float32"}
+        {"type": "torch.Tensor", "dtype": "torch.float32"}
 }
 
 full_op_name = "Tensor.add_0.0.forward.input.0"
@@ -110,21 +111,21 @@ o_result_unmatch_1 = [
     ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'None'],
     ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A', 'None'],
     ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'None'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'None']
+    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'None']
 ]
 
 o_result_unmatch_2 = [
-    ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None'],
-    ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None'],
-    ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None']
+    ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None'],
+    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None']
 ]
 
 o_result_unmatch_3 = [
-    ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None', '-1'],
-    ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None', '-1'],
-    ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None', '-1'],
-    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched', 'None', '-1']
+    ['Functional.conv2d.0.forward.input.0', 'N/A', 'torch.float32', 'N/A', [1, 1, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 3.029174327850342, -2.926689624786377, -0.06619918346405029, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.input.1', 'N/A', 'torch.float32', 'N/A', [16, 1, 5, 5], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19919930398464203, -0.19974489510059357, 0.006269412115216255, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.input.2', 'N/A', 'torch.float32', 'N/A', [16], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 0.19734230637550354, -0.18177609145641327, 0.007903944700956345, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1'],
+    ['Functional.conv2d.0.forward.output', 'N/A', 'torch.float32', 'N/A', [1, 16, 28, 28], 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 2.1166646480560303, -2.190781354904175, -0.003579073818400502, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'No bench data matched.', 'None', '-1']
 ]
 
 
