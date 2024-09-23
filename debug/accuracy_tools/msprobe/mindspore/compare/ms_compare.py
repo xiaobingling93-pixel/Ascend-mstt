@@ -3,8 +3,8 @@ import copy
 from itertools import zip_longest
 
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, struct_json_get
-from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json
+    task_dumppath_get, struct_json_get, add_time_with_yaml
+from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json, save_yaml
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -246,9 +246,12 @@ def generate_kernel_data(map_value, data, flag):
     map_index = map_split[-1]
     for key, value in data.items():
         if key.find(flag) != -1 and key.find(map_name) != -1:
-            if key.split(".")[-1] != map_index and key.split(".")[-2] != map_index :
+            if key.split('.')[-1] != map_index and key.split('.')[-2] != map_index :
                 continue
-            input_args = value.get('input_args', {})
+            if flag == 'forward':
+                input_args = value.get('input_args', {})
+            else:
+                input_args = value.get('input', {})
             output_args = value.get('output', {})
             for i in range(len(input_args)):
                 inputs_name.append(f"{key}.input.{i}")
@@ -313,6 +316,11 @@ def ms_compare(input_param, output_path, **kwargs):
         pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
         layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
         data_mapping = generate_file_mapping(input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
+
+        data_mapping_name = add_time_with_yaml(f"data_mapping")
+        data_mapping_path = os.path.join(os.path.realpath(output_path), f"{data_mapping_name}")
+        save_yaml(data_mapping_path, data_mapping)
+
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,

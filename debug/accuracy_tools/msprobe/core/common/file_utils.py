@@ -374,6 +374,20 @@ def save_json(json_path, data, indent=None):
     change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def save_yaml(yaml_path, data):
+    yaml_path = os.path.realpath(yaml_path)
+    check_path_before_create(yaml_path)
+    try:
+        with FileOpen(yaml_path, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            yaml.dump(data, f, sort_keys=False)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save yaml file "{os.path.basename(yaml_path)}" failed.')
+        raise RuntimeError(f"Save yaml file {yaml_path} failed.") from e
+    change_mode(yaml_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def move_file(src_path, dst_path):
     check_file_or_directory_path(src_path)
     check_path_before_create(dst_path)
