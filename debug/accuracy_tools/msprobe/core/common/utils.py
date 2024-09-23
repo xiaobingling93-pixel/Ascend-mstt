@@ -22,7 +22,7 @@ import time
 import json
 from datetime import datetime, timezone
 
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
@@ -211,16 +211,14 @@ def struct_json_get(input_param, framework):
     construct_json = os.path.join(frame_json_path, "construct.json")
 
     if not stack_json and not construct_json:
-        logger.info("stack_json_path and constrcut_json_path not set.")
+        logger.info("stack_json_path and constrcut_json_path not found.")
         return {}, {}
     if not stack_json or not construct_json:
-        logger.error("stack or construct json path not set, please check")
+        logger.error("stack or construct json path not found, please check")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
-    with FileOpen(stack_json, 'r') as stack_f:
-        stack = json.load(stack_f)
-    with FileOpen(construct_json, 'r') as construct_f:
-        construct = json.load(construct_f)
+    stack = load_json(stack_json)
+    construct = load_json(construct_json)
     return stack, construct
 
 

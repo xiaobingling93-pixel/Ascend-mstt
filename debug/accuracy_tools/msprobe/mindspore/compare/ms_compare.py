@@ -112,7 +112,7 @@ class MSComparator(Comparator):
         elif self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
             return self.api_replace(npu_op_name, ms_api_name, pt_api_name)
         else:
-            return npu_op_name      
+            return npu_op_name
     
     def remove_element(self, op_name, struct, summary, idx):
         del op_name[idx]
