@@ -40,10 +40,15 @@ class TestApiPrecisionCompare(unittest.TestCase):
         })
         
         self.api_name = "test_api"
-        self.npu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
-                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'}
-        self.gpu_precision = {'ERROR_RATE': '0', 'SMALL_VALUE_ERROR_RATE': '0.01', 'RMSE': '0.1', 'MAX_REL_ERR': '0.1',
-                              'MEAN_REL_ERR': '0.1', 'EB': '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
+        self.npu_precision = {ApiPrecisionCompareColumn.ERROR_RATE: '0', ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', 
+                              ApiPrecisionCompareColumn.RMSE: '0.1', ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', 
+                              ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', ApiPrecisionCompareColumn.EB: '0.1', 
+                              ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'}
+        self.gpu_precision = {ApiPrecisionCompareColumn.ERROR_RATE: '0', ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', 
+                              ApiPrecisionCompareColumn.RMSE: '0.1', ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', 
+                              ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', ApiPrecisionCompareColumn.EB: '0.1', 
+                              ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
+        
         self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
         self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
 
