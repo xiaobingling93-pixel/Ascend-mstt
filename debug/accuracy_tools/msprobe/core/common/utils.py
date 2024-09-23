@@ -202,11 +202,10 @@ def struct_json_get(input_param, framework):
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
     frame_json_path = input_param.get(f"{prefix}_json_path", None)
-    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
     if not frame_json_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-
+    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
     stack_json = os.path.join(frame_json_path, "stack.json")
     construct_json = os.path.join(frame_json_path, "construct.json")
 
