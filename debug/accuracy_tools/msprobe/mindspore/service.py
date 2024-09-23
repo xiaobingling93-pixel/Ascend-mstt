@@ -72,7 +72,7 @@ class Service:
         )
 
     def check_level_valid(self):
-        if self.config.level == "L2":
+        if self.config.level == Const.LEVEL_L2:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
             )
@@ -252,8 +252,9 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         HOOKCell.cell_count = defaultdict(int)
-        CellProcessor.cell_count = {}
+        CellProcessor.reset_cell_stats()
         self.primitive_counters.clear()
+        self.data_collector.data_writer.reset_cache()
 
     def start(self, model=None):
         self.start_call = True
@@ -263,6 +264,7 @@ class Service:
             api_register.api_set_ori_func()
             self.should_stop_service = True
             self.switch = False
+            self.primitive_switch = False
             print_tools_ends_info()
             return
         if self.config.step and self.current_iter not in self.config.step:
@@ -280,7 +282,7 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
-            if self.config.level == "L1":
+            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
                 ms.common.api._MindsporeFunctionExecutor = JitDump
@@ -371,16 +373,16 @@ class Service:
 
     def register_hook_new(self):
         logger.info("The {} hook function is successfully mounted to the model.".format(self.config.task))
-        if self.config.level == "L1":
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
             if self.model:
                 self.register_hooks()
 
-        if self.config.level == "L0":
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                       "The current level is L0, the model cannot be None")
+                                       f"The current level is {self.config.level}, the model cannot be None")
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue

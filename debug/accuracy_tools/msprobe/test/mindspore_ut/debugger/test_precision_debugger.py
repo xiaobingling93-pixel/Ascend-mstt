@@ -29,6 +29,7 @@ class TestPrecisionDebugger(unittest.TestCase):
 
     @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_start(self, _):
+        PrecisionDebugger._instance = None
         class Handler:
             called = False
 

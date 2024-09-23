@@ -1,14 +1,18 @@
 import csv
-import json
 import os
 import unittest
-from pathlib import Path
+from unittest.mock import patch
 
-from msprobe.core.common.file_utils import FileOpen, remove_path
+from msprobe.core.common.file_utils import FileOpen, remove_path, load_json
 from msprobe.core.data_dump.json_writer import DataWriter
 
 
 class TestDataWriter(unittest.TestCase):
+    def setUp(self):
+        self.data_writer = DataWriter()
+        self.data_content = {"task": "tensor", "level": "L1", "data": {"Tensor.add": 1}}
+        self.cur_path = os.path.dirname(os.path.realpath(__file__))
+
     def test_write_data_to_csv(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         file_path = os.path.join(cur_path, "test.csv")
@@ -36,140 +40,109 @@ class TestDataWriter(unittest.TestCase):
 
         remove_path(file_path)
 
+    def test_reset_cache(self):
+        self.data_writer.cache_data={"data": 1}
+        self.data_writer.cache_stack={"stack": 2}
+        self.data_writer.cache_construct={"construct": 3}
+        self.data_writer.reset_cache()
+        self.assertEqual(self.data_writer.cache_data, {})
+        self.assertEqual(self.data_writer.cache_stack, {})
+        self.assertEqual(self.data_writer.cache_construct, {})
+
     def test_initialize_json_file(self):
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        dump_tensor_data_dir = os.path.join(cur_path, "dump_tensor_data.json")
-        dump_file_path = os.path.join(cur_path, "dump_file.json")
-        stack_file_path = os.path.join(cur_path, "stack_file.json")
-        construct_file_path = os.path.join(cur_path, "construct_file.json")
-        if not os.path.exists(stack_file_path):
-            Path(stack_file_path).touch()
-        if not os.path.exists(construct_file_path):
-            Path(construct_file_path).touch()
+        self.data_writer.dump_tensor_data_dir = "./dump_tensor_data"
+        self.data_writer.dump_file_path = os.path.join(self.cur_path, "dump.json")
+        self.data_writer.stack_file_path = os.path.join(self.cur_path, "stack.json")
+        self.data_writer.construct_file_path = os.path.join(self.cur_path, "construct.json")
 
-        test = DataWriter()
-        test.stack_file_path = stack_file_path
-        test.dump_file_path = dump_file_path
-        test.dump_tensor_data_dir = dump_tensor_data_dir
-        test.construct_file_path = construct_file_path
+        self.data_writer.initialize_json_file(task="tensor", level="L1")
+        load_data = load_json(self.data_writer.dump_file_path)
+        expected = {"task": "tensor", "level": "L1", "dump_data_dir": "./dump_tensor_data", "data": {}}
+        self.assertEqual(load_data, expected)
 
-        test.initialize_json_file()
+        expected = {}
+        load_data = load_json(self.data_writer.stack_file_path)
+        self.assertEqual(load_data, expected)
 
-        with FileOpen(dump_file_path, "r") as f:
-            load_data = json.load(f)
-        result = {"dump_data_dir": dump_tensor_data_dir, "data": {}}
-        self.assertEqual(result, load_data)
-        is_exist_1 = os.path.exists(test.stack_file_path)
-        self.assertTrue(is_exist_1)
-        os.access(test.stack_file_path, os.R_OK)
-        os.access(test.stack_file_path, os.W_OK)
-        is_exist_2 = os.path.exists(test.construct_file_path)
-        self.assertTrue(is_exist_2)
-        os.access(test.construct_file_path, os.R_OK)
-        os.access(test.construct_file_path, os.W_OK)
+        load_data = load_json(self.data_writer.construct_file_path)
+        self.assertEqual(load_data, expected)
 
-        os.remove(construct_file_path)
-        os.remove(stack_file_path)
-        os.remove(dump_file_path)
+        remove_path(self.data_writer.dump_file_path)
+        remove_path(self.data_writer.stack_file_path)
+        remove_path(self.data_writer.construct_file_path)
 
     def test_update_dump_paths(self):
-        test = DataWriter()
-        self.assertIsNone(test.dump_file_path)
+        self.assertIsNone(self.data_writer.dump_file_path)
+        test_path = os.path.join(self.cur_path, "test1.json")
 
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        test_path = os.path.join(cur_path, "test1.json")
+        self.data_writer.update_dump_paths(test_path, test_path, test_path, test_path, test_path)
+        self.assertTrue(self.data_writer.dump_file_path == test_path)
+        self.assertTrue(self.data_writer.stack_file_path == test_path)
+        self.assertTrue(self.data_writer.construct_file_path == test_path)
+        self.assertTrue(self.data_writer.dump_tensor_data_dir == test_path)
+        self.assertTrue(self.data_writer.free_benchmark_file_path == test_path)
 
-        test.update_dump_paths(test_path, test_path, test_path, test_path, test_path)
-        self.assertTrue(test.dump_file_path == test_path)
-        self.assertTrue(test.stack_file_path == test_path)
-        self.assertTrue(test.construct_file_path == test_path)
-        self.assertTrue(test.dump_tensor_data_dir == test_path)
-        self.assertTrue(test.free_benchmark_file_path == test_path)
+    @patch.object(DataWriter, "write_json")
+    def test_flush_data_periodically(self, mock_write_json):
+        self.data_writer.cache_data["data"] = {"Tensor.add": 1, "Tensor.mul": 2}
+        self.data_writer.flush_size = 2
+        self.data_writer.flush_data_periodically()
+        mock_write_json.assert_called_once()
 
     def test_update_data(self):
-        data = {"A": "1", "B": "2", "C": {"D": "2"}}
-        test = DataWriter()
-        test.cache_data["data"]["test_1"] = True
-        test.cache_data["data"]["test_2"] = False
+        self.data_writer.cache_data["data"] = {}
 
-        test.update_data(data)
-        self.assertEqual(test.cache_data["data"]["A"], "1")
+        new_data = {"Tensor.mul1": {"input": 1}}
+        expected = {"data": {"Tensor.mul1": {"input": 1}}}
+        self.data_writer.update_data(new_data)
+        self.assertEqual(self.data_writer.cache_data, expected)
 
-        new_data = {"C": {"F": 3}}
-        test.update_data(new_data)
-        self.assertEqual(test.cache_data["data"]["C"]["F"], 3)
+        new_data = {"Tensor.mul1": {"output": 2}}
+        expected = {"data": {"Tensor.mul1": {"input": 1, "output": 2}}}
+        self.data_writer.update_data(new_data)
+        self.assertEqual(self.data_writer.cache_data, expected)
 
-    def test_flush_data_when_buffer_is_full_and_test_write_data_json(self):
-        data = {"A": "1", "B": "2", "data": {}}
-        test = DataWriter()
-        test.buffer_size = 1
-        test.cache_data["data"] = {"A": "1", "B": "2", "C": "3"}
-
-        self.assertTrue(len(test.cache_data["data"]) >= test.buffer_size)
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        dump_tensor_data_dir = os.path.join(cur_path, "dump_tensor_data.json")
-        dump_file_path = os.path.join(cur_path, "dump_file.json")
-
-        test.dump_file_path = dump_file_path
-        test.dump_tensor_data_dir = dump_tensor_data_dir
-
-        with FileOpen(dump_file_path, "w") as f:
-            dump_data = json.dumps(data)
-            f.write(dump_data)
-
-        test.flush_data_when_buffer_is_full()
-
-        with FileOpen(dump_file_path, "r") as f:
-            new_data = json.load(f)
-
-        data.update({"data": {"A": "1", "B": "2", "C": "3"}})
-        self.assertEqual(new_data, data)
-
-        self.assertTrue(test.cache_data["data"] == {})
-        os.remove(dump_file_path)
+        new_data = {"Tensor.mul2": 2, "Tensor.mul3": 3}
+        self.data_writer.update_data(new_data)
+        self.assertEqual(self.data_writer.cache_data, expected)
 
     def test_update_stack(self):
-        data = {"A": "1", "B": "2", "data": {}}
-        test = DataWriter()
-        test.update_stack(data)
-        self.assertEqual(test.cache_stack, data)
+        self.data_writer.update_stack(self.data_content)
+        self.assertEqual(self.data_writer.cache_stack, self.data_content)
 
     def test_update_construct(self):
-        data = {"A": "1", "B": "2", "data": {}}
-        test = DataWriter()
-        test.update_construct(data)
-        self.assertEqual(test.cache_construct, data)
+        self.data_writer.update_construct(self.data_content)
+        self.assertEqual(self.data_writer.cache_construct, self.data_content)
+
+    def test_write_data_json(self):
+        self.data_writer.cache_data = self.data_content
+        file_path = os.path.join(self.cur_path, "dump.json")
+        self.data_writer.write_data_json(file_path)
+        load_result = load_json(file_path)
+
+        try:
+            self.assertEqual(load_result, self.data_content)
+        finally:
+            os.remove(file_path)
 
     def test_write_stack_info_json(self):
-        test = DataWriter()
-        data = {"A": "1", "B": "2", "data": {}}
-        test.cache_stack = data
+        self.data_writer.cache_stack = self.data_content
+        file_path = os.path.join(self.cur_path, "stack.json")
+        self.data_writer.write_stack_info_json(file_path)
+        load_result = load_json(file_path)
 
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(cur_path, "dump.json")
-
-        test.write_stack_info_json(file_path)
-
-        with FileOpen(file_path, "r") as f:
-            load_result = json.load(f)
         try:
-            self.assertEqual(load_result, data)
+            self.assertEqual(load_result, self.data_content)
         finally:
             os.remove(file_path)
 
     def test_write_construct_info_json(self):
-        test = DataWriter()
-        data = {"A": "1", "B": "2", "data": {}}
-        test.cache_construct = data
+        self.data_writer.cache_construct = self.data_content
+        file_path = os.path.join(self.cur_path, "construct.json")
+        self.data_writer.write_construct_info_json(file_path)
+        load_result = load_json(file_path)
 
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        file_path = os.path.join(cur_path, "dump.json")
-
-        test.write_construct_info_json(file_path)
-
-        with FileOpen(file_path, "r") as f:
-            load_result = json.load(f)
         try:
-            self.assertEqual(load_result, data)
+            self.assertEqual(load_result, self.data_content)
         finally:
             os.remove(file_path)

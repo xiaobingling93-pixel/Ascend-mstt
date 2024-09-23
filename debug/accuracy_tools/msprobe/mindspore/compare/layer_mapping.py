@@ -1,5 +1,8 @@
 import re
 
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException
+
 
 class Trie:
     def __init__(self, type_name=None, has_data=False):
@@ -15,6 +18,9 @@ class Trie:
 
     def insert(self, word, word_type="func"):
         parts = word.split('.')
+        if len(parts) < 2:
+            logger.error('result dataframe elements can not be access.')
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
         """
         xxx, node_name, type_name, execute_num
         etc: Cell.network_with_loss.language_model.encoder.layers.1.attention.out_proj.RowParallelLinear.1
@@ -41,22 +47,11 @@ class Trie:
         node.node_type = word_type
 
 
-def dfs_traverse_and_collect_names(node, path="", result=None):
-    if result is None:
-        result = []
+def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_path="", result=None, max_depth=100):
+    if max_depth < 0:
+        logger.error("The converted data depth is too large, please check the data")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
 
-    if node.has_data:
-        for count in node.call_count_list:
-            result.append(f"{path}.{node.type_name}.{count}")
-
-    for child_name, child_node in node.children.items():
-        new_path = f"{path}.{child_name}" if path else child_name
-        dfs_traverse_and_collect_names(child_node, new_path, result)
-
-    return result
-
-
-def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_path="", result=None):
     if result is None:
         result = {}
     if node is None:
@@ -76,7 +71,7 @@ def dfs_traverse_and_collect_converted_names(node, mapping, path="", mapping_pat
         converted_name = name_mapping.get(child_name, child_name)
         new_mapping_path = f"{mapping_path}.{converted_name}" if mapping_path else converted_name
         dfs_traverse_and_collect_converted_names(
-            child_node, mapping, new_path, new_mapping_path, result)
+            child_node, mapping, new_path, new_mapping_path, result, max_depth=max_depth-1)
 
     return result
 
@@ -98,6 +93,9 @@ def get_prefix_mapping(scope_list):
         if not origin_data.startswith(("Cell", "Module")):
             continue
         name_list = name.split('.')
+        if len(name_list) < 2:
+            logger.error('result dataframe elements can not be access.')
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
         prefix_name_list = name_list[:-2] + [name_list[-1]]
         prefix_name = '.'.join(prefix_name_list)
         layer_mapping[prefix_name] = name
@@ -105,11 +103,9 @@ def get_prefix_mapping(scope_list):
 
 
 def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
-
     # 1. get layer prefix to full name mapping
     # ect: Cell.network_with_loss.language_model.embedding.3 : Cell.network_with_loss.language_model.embedding.Embedding.3
     ms_prefix2fullname = get_prefix_mapping(ms_scope_list)
-
     # 2. build trie tree
     ms_tree = Trie(type_name="Cell")
     for k, r in ms_scope_list.items():
@@ -117,7 +113,6 @@ def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
         data_type = origin_data_name.split('.')[0]
         ms_tree.insert(k, data_type)
     msname2ptname = get_mapping_list(ms_tree, mapping)
-
     # 3. get pt layer prefix to full name mapping
     # ect: Module.network_with_loss.language_model.embedding.3 : Module.network_with_loss.language_model.embedding.Embedding.3
     pt_prefix2fullname = get_prefix_mapping(pt_scope_list)
