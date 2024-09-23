@@ -22,7 +22,7 @@ import time
 import json
 from datetime import datetime, timezone
 
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
@@ -169,6 +169,10 @@ def add_time_with_xlsx(name):
     return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
+def add_time_with_yaml(name):
+    return '{}_{}.yaml'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
 def get_time():
     return datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
 
@@ -187,6 +191,35 @@ def md5_find(data):
             elif 'md5' in data[key_op][api_info]:
                 return True
     return False
+
+
+def struct_json_get(input_param, framework):
+    if framework == Const.PT_FRAMEWORK:
+        prefix = "bench"
+    elif framework == Const.MS_FRAMEWORK:
+        prefix = "npu"
+    else:
+        logger.error("Error framework found.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    frame_json_path = input_param.get(f"{prefix}_json_path", None)
+    if not frame_json_path:
+        logger.error(f"Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
+    stack_json = os.path.join(frame_json_path, "stack.json")
+    construct_json = os.path.join(frame_json_path, "construct.json")
+
+    if not stack_json and not construct_json:
+        logger.info("stack_json_path and constrcut_json_path not found.")
+        return {}, {}
+    if not stack_json or not construct_json:
+        logger.error("stack or construct json path not found, please check")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+    stack = load_json(stack_json)
+    construct = load_json(construct_json)
+    return stack, construct
 
 
 def task_dumppath_get(input_param):
