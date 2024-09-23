@@ -215,19 +215,6 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(check_graph_mode(op1, op1))
         self.assertFalse(check_graph_mode(op2, op2))
 
-    # def test_merge_tensor(self):
-    #     op_dict = merge_tensor(tensor_list, True, False)
-    #     self.assertEqual(op_dict, result_op_dict)
-
-    # def test_read_op(self):
-    #     result = read_op(op_data, op_name)
-    #     self.assertEqual(result, op_result)
-
-    # def test_get_accuracy(self):
-    #     result = []
-    #     get_accuracy(result, npu_dict, bench_dict, highlight_dict)
-    #     self.assertEqual(result, o_result)
-
     def test_get_accuracy_graph_mode(self):
         result = []
         get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
@@ -245,15 +232,3 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         find_compare_result_error_rows(result_df, highlight_dict, False, False)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
-
-    # def test_rename_api(self):
-    #     test_name_1 = "Distributed.broadcast.0.forward.input.0"
-    #     expect_name_1 = "Distributed.broadcast.input.0"
-    #     actual_name_1 = rename_api(test_name_1, "forward")
-    #     self.assertEqual(actual_name_1, expect_name_1)
-    #
-    #     test_name_2 = "Torch.sum.0.backward.output.0"
-    #     expect_name_2 = "Torch.sum.output.0"
-    #     actual_name_2 = rename_api(test_name_2, "backward")
-    #     self.assertEqual(actual_name_2, expect_name_2)
-        
