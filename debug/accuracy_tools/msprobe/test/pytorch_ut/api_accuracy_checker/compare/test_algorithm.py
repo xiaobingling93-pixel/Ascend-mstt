@@ -117,7 +117,7 @@ class TestAlgorithmMethods(unittest.TestCase):
         thresholding = 0.01
         ratio, bool_result = alg.get_rel_err_ratio(rel_err, thresholding)
         self.assertEqual(ratio, 1)
-        self.assertFalse(bool_result)
+        self.assertTrue(bool_result)
 
     def test_get_rel_err_ratio_thousandth(self):
         b_value = np.array([1.0, 2.0, 3.0])
@@ -179,7 +179,8 @@ class TestAlgorithmMethods(unittest.TestCase):
         eb = np.maximum(eb, min_eb)
         exponent_num = parameters.get('exponent_num')[0]
         ulp_err = alg.get_ulp_err(self.bench_data, self.device_data, torch.float16)
-        expected_ulp_err = (self.device_data.float() - self.bench_data.float()) * np.exp2(-eb + exponent_num)
+        data_type = np.float32
+        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data.astype(data_type)) * np.exp2(-eb + exponent_num)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
         
         parameters = ULP_PARAMETERS.get(torch.float32)
@@ -189,7 +190,8 @@ class TestAlgorithmMethods(unittest.TestCase):
         eb = np.maximum(eb, min_eb)
         exponent_num = parameters.get('exponent_num')[0]
         ulp_err = alg.get_ulp_err(self.bench_data_fp32, self.device_data_fp32, torch.float32)
-        expected_ulp_err = (self.device_data_fp32.float() - self.bench_data_fp32.float()) * np.exp2(-eb + exponent_num)
+        data_type = np.float64
+        expected_ulp_err = (self.device_data_fp32.astype(data_type) - self.bench_data_fp32.astype(data_type)) * np.exp2(-eb + exponent_num)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
 
     def test_calc_ulp_err(self):
@@ -200,6 +202,7 @@ class TestAlgorithmMethods(unittest.TestCase):
         eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
         eb = np.maximum(eb, min_eb)
         exponent_num = parameters.get('exponent_num')[0]
-        ulp_err = alg.calc_ulp_err(self.bench_data, self.device_data, eb, exponent_num, np.float32)
-        expected_ulp_err = (self.device_data.float() - self.bench_data.float()) * np.exp2(-eb + exponent_num)
+        data_type = np.float32
+        ulp_err = alg.calc_ulp_err(self.bench_data, self.device_data, eb, exponent_num, data_type)
+        expected_ulp_err = (self.device_data.astype(data_type) - self.bench_data.astype(data_type)) * np.exp2(-eb + exponent_num)
         self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
