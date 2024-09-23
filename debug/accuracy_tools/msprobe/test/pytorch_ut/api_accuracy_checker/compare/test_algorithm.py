@@ -1,8 +1,11 @@
 import unittest
 
+import torch
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.compare import algorithm as alg
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
+from msprobe.core.common.const import CompareConst
 
 
 class TestAlgorithmMethods(unittest.TestCase):
@@ -10,6 +13,8 @@ class TestAlgorithmMethods(unittest.TestCase):
     def setUp(self):
         self.bench_data = np.array([1.0, 1.0, 9.0], dtype=np.float16)
         self.device_data = np.array([5.0, 2.0, 1.0], dtype=np.float16)
+        self.bench_data_fp32 = np.array([1.0, 1.0, 9.0], dtype=np.float32)
+        self.device_data_fp32 = np.array([5.0, 2.0, 1.0], dtype=np.float32)
         self.abs_err = np.abs(self.device_data - self.bench_data)
         self.rel_err_origin = np.abs(self.abs_err / self.bench_data)
         eps = np.finfo(self.bench_data.dtype).eps
@@ -21,6 +26,54 @@ class TestAlgorithmMethods(unittest.TestCase):
         cpu_output = np.array([1.0, 2.0, 3.0])
         npu_output = np.array([1.0, 2.0, 3.0])
         self.assertEqual(alg.cosine_sim(cpu_output, npu_output), (1.0, True, ''))
+
+    def test_cosine_sim_shape_mismatch(self):
+        bench_output = np.array([1, 2, 3])
+        device_output = np.array([4, 5])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertEqual(cos, -1)
+        self.assertFalse(success)
+        self.assertIn("Shape of device and bench outputs don't match", msg)
+
+    def test_cosine_sim_scalar_value(self):
+        bench_output = np.array([1])
+        device_output = np.array([1])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertEqual(cos, CompareConst.SPACE)
+        self.assertTrue(success)
+        self.assertIn("All the data in device dump data is scalar", msg)
+
+    def test_cosine_sim_all_zeros(self):
+        bench_output = np.array([0, 0, 0])
+        device_output = np.array([0, 0, 0])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertEqual(cos, CompareConst.SPACE)
+        self.assertTrue(success)
+        self.assertIn("All the data in device and bench outputs are zero", msg)
+
+    def test_cosine_sim_device_all_zeros(self):
+        bench_output = np.array([0, 1, 0])
+        device_output = np.array([0, 0, 0])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertEqual(cos, CompareConst.SPACE)
+        self.assertFalse(success)
+        self.assertIn("All the data is zero in device dump data", msg)
+
+    def test_cosine_sim_bench_all_zeros(self):
+        bench_output = np.array([0, 0, 0])
+        device_output = np.array([0, 1, 0])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertEqual(cos, CompareConst.SPACE)
+        self.assertFalse(success)
+        self.assertIn("All the data is zero in bench dump data", msg)
+
+    def test_nan_values(self):
+        bench_output = np.array([1, 2, np.nan])
+        device_output = np.array([1, 2, 3])
+        cos, success, msg = alg.cosine_sim(bench_output, device_output)
+        self.assertTrue(np.isnan(cos))
+        self.assertFalse(success)
+        self.assertIn("Dump data has NaN when comparing with Cosine Similarity", msg)
 
     def test_get_rmse(self):
         inf_nan_mask = [False, False, False]
@@ -58,6 +111,13 @@ class TestAlgorithmMethods(unittest.TestCase):
 
     def test_get_mean_rel_err(self):
         self.assertAlmostEqual(alg.get_mean_rel_err(self.rel_err), 1.961, 3)
+
+    def test_get_rel_err_ratio_with_empty_array(self):
+        rel_err = np.array([])
+        thresholding = 0.01
+        ratio, bool_result = alg.get_rel_err_ratio(rel_err, thresholding)
+        self.assertEqual(ratio, 1)
+        self.assertFalse(bool_result)
 
     def test_get_rel_err_ratio_thousandth(self):
         b_value = np.array([1.0, 2.0, 3.0])
@@ -110,3 +170,36 @@ class TestAlgorithmMethods(unittest.TestCase):
         print(normal_value_mask)
         print(self.rel_err)
         self.assertEqual(alg.check_norm_value(normal_value_mask, self.rel_err, 0.001), 1)
+
+    def test_get_ulp_err(self):
+        parameters = ULP_PARAMETERS.get(torch.float16)
+        min_eb = parameters.get('min_eb')[0]
+        abs_bench = np.abs(self.bench_data)
+        eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
+        eb = np.maximum(eb, min_eb)
+        exponent_num = parameters.get('exponent_num')[0]
+        ulp_err = alg.get_ulp_err(self.bench_data, self.device_data, torch.float16)
+        expected_ulp_err = (self.device_data.float() - self.bench_data.float()) * np.exp2(-eb + exponent_num)
+        self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
+        
+        parameters = ULP_PARAMETERS.get(torch.float32)
+        min_eb = parameters.get('min_eb')[0]
+        abs_bench = np.abs(self.bench_data_fp32)
+        eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
+        eb = np.maximum(eb, min_eb)
+        exponent_num = parameters.get('exponent_num')[0]
+        ulp_err = alg.get_ulp_err(self.bench_data_fp32, self.device_data_fp32, torch.float32)
+        expected_ulp_err = (self.device_data_fp32.float() - self.bench_data_fp32.float()) * np.exp2(-eb + exponent_num)
+        self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
+
+    def test_calc_ulp_err(self):
+        # 测试 calc_ulp_err 函数的计算是否正确
+        parameters = ULP_PARAMETERS.get(torch.float16)
+        min_eb = parameters.get('min_eb')[0]
+        abs_bench = np.abs(self.bench_data)
+        eb = np.where(abs_bench == 0, 0, np.floor(np.log2(abs_bench)))
+        eb = np.maximum(eb, min_eb)
+        exponent_num = parameters.get('exponent_num')[0]
+        ulp_err = alg.calc_ulp_err(self.bench_data, self.device_data, eb, exponent_num, np.float32)
+        expected_ulp_err = (self.device_data.float() - self.bench_data.float()) * np.exp2(-eb + exponent_num)
+        self.assertTrue(np.allclose(ulp_err, expected_ulp_err))
