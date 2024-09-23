@@ -83,6 +83,16 @@ class PrecisionDebugger:
         Runtime.is_running = True
 
     @classmethod
+    def forward_backward_dump_end(cls):
+        instance = cls._instance
+        if not instance:
+            raise Exception("PrecisionDebugger instance is not created.")
+        if instance.task in PrecisionDebugger.task_not_need_service:
+            return
+        if instance.service:
+            instance.service.forward_backward_dump_end()
+
+    @classmethod
     def stop(cls):
         instance = cls._instance
         if not instance:
