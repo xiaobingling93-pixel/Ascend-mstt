@@ -25,7 +25,7 @@ class Comparator:
         pass
 
     @staticmethod
-    def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, has_stack, stack_info):
+    def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
         result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
                        bench_ops_all.get(bench_op_name).get('struct')[0],
                        npu_ops_all.get(ms_op_name).get('struct')[1],
@@ -35,8 +35,8 @@ class Comparator:
                        CompareConst.PASS if npu_ops_all.get(ms_op_name).get('struct')[2]
                                             == bench_ops_all.get(bench_op_name).get('struct')[2]
                        else CompareConst.DIFF]
-        if has_stack:
-            result_item.extend(stack_info)
+        if args[0]:
+            result_item.extend(args[1])
         else:
             result_item.append(CompareConst.NONE)
         return result_item
