@@ -105,6 +105,8 @@ class TestApiPrecisionCompare(unittest.TestCase):
         details_csv_path = os.path.join(save_path, "details.csv")
         write_detail_csv(content, details_csv_path)
         self.assertTrue(os.path.exists(details_csv_path))
+        for filename in os.listdir(save_path):
+            os.remove(os.path.join(save_path, filename))
         os.rmdir(save_path)
         
     def test_ulp_standard(self):
@@ -150,8 +152,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.assertEqual(result['abs_err_ratio'], 0.0)
         self.assertEqual(result['abs_err_result'], CompareConst.PASS)
         self.assertEqual(result['absolute_threshold_result'], CompareConst.ERROR)
-        
-    
+
 
 if __name__ == '__main__':
     unittest.main()
