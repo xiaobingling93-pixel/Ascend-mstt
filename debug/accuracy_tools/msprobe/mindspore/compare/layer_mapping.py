@@ -1,5 +1,6 @@
 import re
 
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 
@@ -17,7 +18,7 @@ class Trie:
                 f"has_data={self.has_data}, call number={len(self.call_count_list)})")
 
     def insert(self, word, word_type="func"):
-        parts = word.split('.')
+        parts = word.split(Const.SEP)
         if len(parts) < 2:
             logger.error('result dataframe elements can not be access.')
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
@@ -92,12 +93,12 @@ def get_prefix_mapping(scope_list):
         origin_data = v.get("origin_data")
         if not origin_data.startswith(("Cell", "Module")):
             continue
-        name_list = name.split('.')
+        name_list = name.split(Const.SEP)
         if len(name_list) < 2:
             logger.error('result dataframe elements can not be access.')
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
         prefix_name_list = name_list[:-2] + [name_list[-1]]
-        prefix_name = '.'.join(prefix_name_list)
+        prefix_name = Const.SEP.join(prefix_name_list)
         layer_mapping[prefix_name] = name
     return layer_mapping
 
@@ -110,7 +111,7 @@ def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
     ms_tree = Trie(type_name="Cell")
     for k, r in ms_scope_list.items():
         origin_data_name = r.get('origin_data')
-        data_type = origin_data_name.split('.')[0]
+        data_type = origin_data_name.split(Const.SEP)[0]
         ms_tree.insert(k, data_type)
     msname2ptname = get_mapping_list(ms_tree, mapping)
     # 3. get pt layer prefix to full name mapping
@@ -129,11 +130,11 @@ def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
         elif final_ms_name in ms_scope_list:
             final_ms_name = ms_scope_list.get(ms_name)['origin_data']
             # remove forward/backward
-            final_ms_name = '.'.join(final_ms_name.split('.')[:-1])
+            final_ms_name = Const.SEP.join(final_ms_name.split(Const.SEP)[:-1])
             final_pt_name = pt_scope_list.get(pt_name, None)
             if final_pt_name:
                 final_pt_name = final_pt_name['origin_data']
-                final_pt_name = '.'.join(final_pt_name.split('.')[:-1])
+                final_pt_name = Const.SEP.join(final_pt_name.split(Const.SEP)[:-1])
         else:
             continue
         final_mapping.append((final_ms_name, final_pt_name))

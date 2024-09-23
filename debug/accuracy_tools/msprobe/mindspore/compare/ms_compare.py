@@ -217,8 +217,8 @@ def sort_by_execution_sequence(npu_data, bench_data, mapping_list, flag):
         sequence_map = {}
         for index, item in enumerate(data.keys()):
             if flag in item:
-                item_split = item.split(".")
-                item_name = ".".join(item_split[0:-2])
+                item_split = item.split(Const.SEP)
+                item_name = Const.SEP.join(item_split[0:-2])
                 item_index = item_split[-1]
                 if item_index == 'forward' or item_index == 'backward':
                     item_index = item_split[-2]
@@ -242,12 +242,12 @@ def generate_kernel_data(map_value, data, flag):
         return [], []
     inputs_name = []
     outputs_name = []
-    map_split = map_value.split(".")
-    map_name = ".".join(map_split[0:-1])
+    map_split = map_value.split(Const.SEP)
+    map_name = Const.SEP.join(map_split[0:-1])
     map_index = map_split[-1]
     for key, value in data.items():
         if key.find(flag) != -1 and key.find(map_name) != -1:
-            if key.split('.')[-1] != map_index and key.split('.')[-2] != map_index :
+            if key.split(Const.SEP)[-1] != map_index and key.split(Const.SEP)[-2] != map_index :
                 continue
             if flag == 'forward':
                 input_args = value.get('input_args', {})
