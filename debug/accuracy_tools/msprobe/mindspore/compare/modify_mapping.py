@@ -39,7 +39,7 @@ def get_duplicated_name(components):
         logger.warning("key in construct.json is shorter than 3 parts or not name valid.")
     else:
         # 重复name，如Functional.add.add.X ward
-        duplicated_components = components[:CONSTRUCT_NAME_INDEX + 1] + components[CONSTRUCT_NAME_INDEX:]
+        duplicated_components = components[:Const.CONSTRUCT_NAME_INDEX + 1] + components[Const.CONSTRUCT_NAME_INDEX:]
     return duplicated_components
 
 
