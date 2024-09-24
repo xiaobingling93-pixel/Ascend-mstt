@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Copyright (C) 2023-2024. Huawei Technologies Co., Ltd. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 from msprobe.core.common.const import CompareConst
 
 
@@ -12,11 +29,11 @@ class CompareColumn:
         self.rel_err_thousandth = CompareConst.SPACE
         self.rel_err_ten_thousandth = CompareConst.SPACE
         self.error_rate = CompareConst.SPACE
-        self.EB = CompareConst.SPACE
-        self.RMSE = CompareConst.SPACE
+        self.eb = CompareConst.SPACE
+        self.rmse = CompareConst.SPACE
         self.small_value_err_ratio = CompareConst.SPACE
-        self.Max_rel_error = CompareConst.SPACE
-        self.Mean_rel_error = CompareConst.SPACE
+        self.max_rel_error = CompareConst.SPACE
+        self.mean_rel_error = CompareConst.SPACE
         self.inf_nan_error_ratio = CompareConst.SPACE
         self.rel_err_ratio = CompareConst.SPACE
         self.abs_err_ratio = CompareConst.SPACE
@@ -26,8 +43,8 @@ class CompareColumn:
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
-                self.rel_err_thousandth, self.rel_err_ten_thousandth, self.error_rate, self.EB, self.RMSE, 
-                self.small_value_err_ratio, self.Max_rel_error, self.Mean_rel_error, self.inf_nan_error_ratio, 
+                self.rel_err_thousandth, self.rel_err_ten_thousandth, self.error_rate, self.eb, self.rmse, 
+                self.small_value_err_ratio, self.max_rel_error, self.mean_rel_error, self.inf_nan_error_ratio, 
                 self.rel_err_ratio, self.abs_err_ratio, self.max_ulp_error, self.mean_ulp_error, 
                 self.ulp_error_proportion, is_pass, message]
 

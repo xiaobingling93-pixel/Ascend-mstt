@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+Copyright (C) 2023-2024. Huawei Technologies Co., Ltd. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
 
 import os
@@ -26,15 +26,24 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import check_object_type,
 from msprobe.core.common.file_utils import FileChecker, load_npy
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
-FLOAT_TYPE = ['torch.float32', 'torch.float', 'torch.float64', 'torch.double', 'torch.float16',
-              'torch.half', 'torch.bfloat16']
-NUMPY_TYPE = ["numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
-              "numpy.uint64", "numpy.float16", "numpy.float32", "numpy.float64", "numpy.float128", "numpy.complex64", 
-              "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"]
+FLOAT_TYPE = [
+            'torch.float32', 
+            'torch.float', 
+            'torch.float64', 
+            'torch.double', 
+            'torch.float16',
+            'torch.half', 
+            'torch.bfloat16'
+            ]
+NUMPY_TYPE = [
+            "numpy.int8", "numpy.int16", "numpy.int32", "numpy.int64", "numpy.uint8", "numpy.uint16", "numpy.uint32",
+            "numpy.uint64", "numpy.float16", "numpy.float32", "numpy.float64", "numpy.float128", "numpy.complex64", 
+            "numpy.complex128", "numpy.complex256", "numpy.bool_", "numpy.string_", "numpy.bytes_", "numpy.unicode_"
+            ]
 
 
 def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
@@ -170,23 +179,23 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     dtype = get_attribute(module_name, attribute_name)
     if data_dtype in FLOAT_TYPE: 
         if math.isnan(high):
-            tensor = torch._C._VariableFunctionsClass.full(shape, float('nan'), dtype=dtype)
+            tensor = torch.full(shape, float('nan'), dtype=dtype)
             return tensor
         #high_origin为新版json中的属性，只有当high_origin不为None,且high为inf或-inf时，原tensor全为inf或-inf
-        if high_origin and high in [float('inf'), float('-inf')]:
-            tensor = torch._C._VariableFunctionsClass.full(shape, high, dtype=dtype)
+        if high_origin and high in [float(CompareConst.INF), float(CompareConst.NEG_INF)]:
+            tensor = torch.full(shape, high, dtype=dtype)
             tensor[-1] = low
             return tensor
         low_scale, high_scale = low, high
         dtype_finfo = torch.finfo(dtype)
         #适配老版json high和low为inf或-inf的情况，取dtype的最大值或最小值进行放缩
-        if high == float('inf'):
+        if high == float(CompareConst.INF):
             high_scale = dtype_finfo.max
-        elif high == float('-inf'):
+        elif high == float(CompareConst.NEG_INF):
             high_scale = dtype_finfo.min
-        if low == float('inf'):
+        if low == float(CompareConst.INF):
             low_scale = dtype_finfo.max
-        elif low == float('-inf'):
+        elif low == float(CompareConst.NEG_INF):
             low_scale = dtype_finfo.min
 
         scale = high_scale - low_scale
@@ -212,9 +221,9 @@ def gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type):
     else:
         tmp_tensor[0] = low
         tmp_tensor[-1] = high
-        if high_origin in [float('inf'), float('-inf')]:
+        if high_origin in [float(CompareConst.INF), float(CompareConst.NEG_INF)]:
             tmp_tensor[-1] = high_origin
-        if low_origin in [float('inf'), float('-inf')]:
+        if low_origin in [float(CompareConst.INF), float(CompareConst.NEG_INF)]:
             tmp_tensor[0] = low_origin
     data = tmp_tensor.reshape(shape)
     return data

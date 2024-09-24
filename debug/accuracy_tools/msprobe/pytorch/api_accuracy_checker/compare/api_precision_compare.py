@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Copyright (C) 2023-2024. Huawei Technologies Co., Ltd. All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import argparse
 import math
 import os
@@ -23,12 +40,12 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
-BenchmarkInf_Nan_Consistency = namedtuple('BenchmarkInf_Nan_Consistency', ['small_value_inf_nan_consistency', 
+BenchmarkInfNanConsistency = namedtuple('BenchmarkInfNanConsistency', ['small_value_inf_nan_consistency', 
                                                                            'rmse_inf_nan_consistency', 
                                                                            'max_rel_inf_nan_consistency', 
                                                                            'mean_rel_inf_nan_consistency', 
                                                                            'eb_inf_nan_consistency'])
-unsupported_message = 'This data type does not support benchmark compare.'
+UNSUPPORTED_MESSAGE = 'This data type does not support benchmark compare.'
 
 DEFAULT_THRESHOLD = 1
 
@@ -154,11 +171,11 @@ class BenchmarkStandard(Standard):
         self.rmse_status = self._get_status(self.rmse_ratio, 'rmse') if rmse_inf_nan_consistency \
             else CompareConst.ERROR
         self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency \
-            else CompareConst.ERROR
+        self.max_rel_err_status = self._get_status(
+             self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency else CompareConst.ERROR
         self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency \
-            else CompareConst.ERROR
+        self.mean_rel_err_status = self._get_status(
+            self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency else CompareConst.ERROR
         self.check_result_list.append(self.mean_rel_err_status)
         self.eb_status = self._get_status(self.eb_ratio, 'eb')
         if CompareConst.ERROR in self.check_result_list:
@@ -187,7 +204,8 @@ class BenchmarkStandard(Standard):
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
         self.compare_message += max_rel_message
-        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
+        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(
+                                        ApiPrecisionCompareColumn.MEAN_REL_ERR,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
         self.compare_message += mean_rel_message
@@ -196,8 +214,9 @@ class BenchmarkStandard(Standard):
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
         self.compare_message += eb_message
         
-        return BenchmarkInf_Nan_Consistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
-                                            max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency, eb_inf_nan_consistency)
+        return BenchmarkInfNanConsistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
+                                          max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency,
+                                          eb_inf_nan_consistency)
 
 
 class ULPStandard(Standard):
@@ -292,8 +311,10 @@ def api_precision_compare(config):
 
 def online_api_precision_compare(online_config):
     rank = online_config.rank
-    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
-    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
+    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace(
+                    "_rank*.csv", f"_rank{rank}.csv")
+    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace(
+                    "_rank*.csv", f"_rank{rank}.csv")
     detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
     result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
     if not os.path.exists(result_csv_path):
@@ -328,7 +349,7 @@ def analyse_csv(npu_data, gpu_data, config):
             compare_column.compare_result = CompareConst.SKIP
             compare_column.compare_message = err_message
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
-            write_csv([[full_api_name_with_direction_status, CompareConst.SKIP, CompareConst.SKIP,  err_message]], 
+            write_csv([[full_api_name_with_direction_status, CompareConst.SKIP, CompareConst.SKIP, err_message]], 
                       config.result_csv_path)
             continue
         if row_gpu.empty:
@@ -355,7 +376,7 @@ def analyse_csv(npu_data, gpu_data, config):
 
         if last_api_name is not None and api_full_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
-                message = unsupported_message
+                message = UNSUPPORTED_MESSAGE
                 write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
                 print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
                 forward_status, backward_status = [], []
@@ -385,7 +406,7 @@ def analyse_csv(npu_data, gpu_data, config):
 
     if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
-            message = unsupported_message
+            message = UNSUPPORTED_MESSAGE
             write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
             print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
         else:
