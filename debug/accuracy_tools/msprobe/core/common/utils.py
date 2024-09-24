@@ -206,9 +206,10 @@ def struct_json_get(input_param, framework):
     if not frame_json_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
-    stack_json = os.path.join(frame_json_path, "stack.json")
-    construct_json = os.path.join(frame_json_path, "construct.json")
+    directory = os.path.dirname(frame_json_path)
+
+    stack_json = os.path.join(directory, "stack.json")
+    construct_json = os.path.join(directory, "construct.json")
 
     if not stack_json and not construct_json:
         logger.info("stack_json_path and constrcut_json_path not found.")
