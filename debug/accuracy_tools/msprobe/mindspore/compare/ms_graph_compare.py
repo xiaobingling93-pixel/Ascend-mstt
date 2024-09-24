@@ -1,3 +1,17 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import copy
 import csv
 import glob
@@ -47,8 +61,10 @@ def npy_data_read(data_path, npy_file_list, mapping_dict):
 def statistic_data_read(statistic_file_list, statistic_file_path):
     data_list = []
     statistic_data_list = []
-    header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
-                    'Avg Value': None, 'L2Norm Value': None}
+    header_index = {
+        'Data Type': None, 'Shape': None, 'Max Value': None, 
+        'Min Value': None,'Avg Value': None, 'L2Norm Value': None
+    }
     for statistic_file in statistic_file_list:
         with FileOpen(statistic_file, "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
@@ -252,8 +268,8 @@ class GraphMSComparator:
             return [], ''
 
         # generate file name
-        npu_mode = 'ERROR_MODE'
-        bench_mode = 'ERROR_MODE'
+        npu_mode = GraphMode.ERROR_MODE
+        bench_mode = GraphMode.ERROR_MODE
         npu_data_list = []
         bench_data_list = []
         for npu_data_path in npu_data_path_list:
@@ -263,7 +279,7 @@ class GraphMSComparator:
             bench_mode, data_list = generate_data_name(bench_data_path)
             bench_data_list.extend(data_list)
 
-        if npu_mode == "ERROR_MODE" or bench_mode == "ERROR_MODE":
+        if npu_mode == GraphMode.ERROR_MODE or bench_mode == GraphMode.ERROR_MODE:
             logger.warning(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
             return [], ''
         if npu_mode != bench_mode:
@@ -289,8 +305,10 @@ class GraphMSComparator:
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
             npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(np.float32)
 
-            bench_float_type = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
-                                CompareConst.BENCH_NORM]
+            bench_float_type = [
+                CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, 
+                CompareConst.BENCH_MEAN,CompareConst.BENCH_NORM
+            ]
             bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(np.float32)
 
         npu_data_df['Local Index'] = npu_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
