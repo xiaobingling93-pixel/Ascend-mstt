@@ -70,7 +70,7 @@ class TestDataCollector(unittest.TestCase):
         with patch.object(DataCollector, "update_data", return_value="msg") as mock_update_data, \
              patch.object(DataCollector, "write_json") as mock_write_json, \
              patch("msprobe.core.data_dump.data_collector.logger.debug") as mock_debug, \
-             patch("msprobe.core.data_dump.json_writer.DataWriter.flush_data_when_buffer_is_full") as mock_flush:
+             patch("msprobe.core.data_dump.json_writer.DataWriter.flush_data_periodically") as mock_flush:
             self.data_collector.handle_data("Tensor.add", {"min": 0})
             msg = "msprobe is collecting data on Tensor.add. "
             mock_update_data.assert_called_with({"min": 0}, msg)

@@ -1,4 +1,3 @@
-from msprobe.pytorch.common.log import logger
 from msprobe.core.common.const import Const
 
 
@@ -65,7 +64,6 @@ class DebuggerConfig:
 
     def check(self):
         self.check_kwargs()
-        self._check_rank()
         return True
 
     def check_model(self, model):
@@ -73,11 +71,3 @@ class DebuggerConfig:
             raise Exception(
                 f"For level {self.level}, PrecisionDebugger must receive a model argument."
             )
-
-    def _check_rank(self):
-        if self.rank:
-            for rank_id in self.rank:
-                if not isinstance(rank_id, int) or rank_id < 0:
-                    raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
-            else:
-                logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
