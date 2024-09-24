@@ -41,7 +41,7 @@ class TestHookModule(unittest.TestCase):
         def hook(prefix):
             return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
         HOOKModule.prefix_op_name_ = "123"
-        input = 2
+        input = 1
         test = HOOKModule(hook)
 
         def temp_forward(*input, **kwargs):
