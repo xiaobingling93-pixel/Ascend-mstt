@@ -49,12 +49,13 @@ class Trie:
 
 
 class DFSConverter:
-    def __init__(self, max_depth=100):
+    def __init__(self, mapping, max_depth=100):
+        self.mapping = mapping
         self.max_depth = max_depth
         self.result = {}
 
-    def traverse_and_collect(self, node, mapping, path="", mapping_path=""):
-        if self.max_depth < 0:
+    def traverse_and_collect(self, node, path="", mapping_path="", depth=0):
+        if depth > self.max_depth:
             logger.error("The converted data depth is too large, please check the data")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
 
@@ -68,21 +69,20 @@ class DFSConverter:
                 mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
                 self.result[origin_name] = mapping_name
 
-        name_mapping = mapping.get(type_name, {})
+        name_mapping = self.mapping.get(type_name, {})
 
         for child_name, child_node in node.children.items():
             new_path = f"{path}.{child_name}" if path else child_name
             converted_name = name_mapping.get(child_name, child_name)
             new_mapping_path = f"{mapping_path}.{converted_name}" if mapping_path else converted_name
-            self.max_depth -= 1
-            self.traverse_and_collect(child_node, mapping, new_path, new_mapping_path)
+            self.traverse_and_collect(child_node, new_path, new_mapping_path, depth+1)
 
         return self.result
 
 
 def get_mapping_list(ms_tree, mapping):
-    dfs_converter = DFSConverter()
-    ms_pt_mapping = dfs_converter.traverse_and_collect(ms_tree, mapping=mapping)
+    dfs_converter = DFSConverter(mapping)
+    ms_pt_mapping = dfs_converter.traverse_and_collect(ms_tree)
     mapping_list = []
     for ms_name, pt_name in ms_pt_mapping.items():
         pt_name = re.sub(r"^Cell", "Module", pt_name)

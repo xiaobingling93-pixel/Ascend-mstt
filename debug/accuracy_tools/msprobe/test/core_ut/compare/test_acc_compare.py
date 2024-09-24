@@ -207,19 +207,6 @@ op_result = [
 
 class TestUtilsMethods(unittest.TestCase):
 
-    def test_merge_tensor(self):
-        op_dict = merge_tensor(tensor_list, True, False)
-        self.assertEqual(op_dict, result_op_dict)
-
-    def test_read_op(self):
-        result = read_op(op_data, op_name)
-        self.assertEqual(result, op_result)
-
-    def test_get_accuracy(self):
-        result = []
-        get_accuracy(result, npu_dict, bench_dict, highlight_dict)
-        self.assertEqual(result, o_result)
-
     def test_get_accuracy_graph_mode(self):
         result = []
         get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)

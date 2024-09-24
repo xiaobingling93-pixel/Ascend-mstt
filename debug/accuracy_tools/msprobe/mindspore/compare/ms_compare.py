@@ -302,8 +302,6 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
 
-        pt_stack, pt_construct = struct_json_get(input_param, Const.PT_FRAMEWORK)
-        ms_stack, ms_construct = struct_json_get(input_param, Const.MS_FRAMEWORK)
         summary_compare, md5_compare = task_dumppath_get(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
@@ -312,6 +310,8 @@ def ms_compare(input_param, output_path, **kwargs):
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
     if layer_mapping:
+        pt_stack, pt_construct = struct_json_get(input_param, Const.PT_FRAMEWORK)
+        ms_stack, ms_construct = struct_json_get(input_param, Const.MS_FRAMEWORK)
         mapping = load_yaml(layer_mapping)
         ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
         pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
