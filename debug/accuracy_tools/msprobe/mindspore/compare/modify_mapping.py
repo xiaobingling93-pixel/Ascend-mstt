@@ -5,9 +5,9 @@ def find_regard_scope(lines, start_sign, end_sign):
     # 找出 start_pos 和 end_pos
     start_pos = end_pos = -1
     for idx, ii in enumerate(lines):
-        if func_name in ii:
+        if start_sign in ii:
             start_pos = idx
-        elif parent_name in ii:
+        elif end_sign in ii:
             end_pos = idx
     return start_pos, end_pos
 
