@@ -207,14 +207,6 @@ op_result = [
 
 class TestUtilsMethods(unittest.TestCase):
 
-    def test_check_graph_mode(self):
-        op1 = "Aten"
-        op2 = "torch"
-        self.assertTrue(check_graph_mode(op1, op2))
-        self.assertTrue(check_graph_mode(op2, op1))
-        self.assertFalse(check_graph_mode(op1, op1))
-        self.assertFalse(check_graph_mode(op2, op2))
-
     def test_merge_tensor(self):
         op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
