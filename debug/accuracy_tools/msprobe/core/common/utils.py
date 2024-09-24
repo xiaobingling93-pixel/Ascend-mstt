@@ -268,20 +268,20 @@ def convert_tuple(data):
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
-    if isinstance(string, str) and is_invalid_pattern(string, stack):
+    if isinstance(string, str) and is_invalid_pattern(string):
         if stack:
-            message = f"stack info of {op_name} contains special characters, please check!"
+            message = f"stack info of api contains special characters, please check!"
         elif not op_name:
-            message = f"{string} contains special characters, please check!"
+            message = f"api name contains special characters, please check!"
         else:
             message = f"data info of {op_name} contains special characters, please check!"
         logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)
 
 
-def is_invalid_pattern(string, stack):
-    pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
-    return re.match(pattern, string) if stack else re.search(pattern, string)
+def is_invalid_pattern(string):
+    pattern = Const.STRING_BLACKLIST
+    return re.search(pattern, string)
 
 
 def print_tools_ends_info():
