@@ -28,6 +28,7 @@ class TestNpuFusionAttention(unittest.TestCase):
         # 基本前向传播测试
         self.query = torch.randn(self.B, self.N1, self.S1, self.D)
         self.key = torch.randn(self.B, self.N2, self.S2, self.D)
+        self.value = torch.randn(self.B, self.N2, self.S2, self.D)
         out, _, _ = npu_fusion_attention(self.query, self.key, self.value, head_num=self.N1, input_layout="BNSD")
         self.assertEqual(out.shape, (self.B, self.N1, self.S1, self.D))
 
