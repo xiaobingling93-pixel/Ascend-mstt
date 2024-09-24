@@ -100,7 +100,7 @@ class CSV_max(CsvItem):
 
 
 @register_csv_item(GradConst.MIN)
-class CSV_max(CsvItem):
+class CSV_min(CsvItem):
     def generate_csv_header(csv_header_input):
         return ["min"]
 
@@ -110,7 +110,7 @@ class CSV_max(CsvItem):
 
 
 @register_csv_item(GradConst.NORM)
-class CSV_max(CsvItem):
+class CSV_norm(CsvItem):
     def generate_csv_header(csv_header_input):
         return ["norm"]
 
