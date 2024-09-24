@@ -25,15 +25,19 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
     x_shape = x.shape
     h = x.float()
     grad = dy_tensor.float()
-    condition_1 = (((r1_shape[0] == 1 and x_shape[0] != 1) or (r1_shape[0] == 1 and x_shape[0] == 1)) and
-                   ((r1_shape[2] == 1 and x_shape[2] != 1) or (r1_shape[2] == 1 and x_shape[2] == 1)) and
-                   (r1_shape[1] == x_shape[1]) and (r1_shape[3] == x_shape[3]))
-    condition_2 = (((r1_shape[0] == 1 and x_shape[0] != 1) or (r1_shape[0] == 1 and x_shape[0] == 1)) and
-                   ((r1_shape[1] == 1 and x_shape[1] != 1) or (r1_shape[1] == 1 and x_shape[1] == 1)) and
-                   (r1_shape[2] == x_shape[2]) and (r1_shape[3] == x_shape[3]))
-    condition_3 = (((r1_shape[2] == 1 and x_shape[2] != 1) or (r1_shape[2] == 1 and x_shape[2] == 1)) and
-                   ((r1_shape[1] == 1 and x_shape[1] != 1) or (r1_shape[1] == 1 and x_shape[1] == 1)) and
-                   (r1_shape[0] == x_shape[0]) and (r1_shape[3] == x_shape[3]))
+    condition_1 = (r1_shape[0] == 1
+                   and r1_shape[1] == x_shape[1]
+                   and r1_shape[2] == 1
+                   and r1_shape[3] == x_shape[3])
+    condition_2 = (r1_shape[0] == 1
+                   and r1_shape[1] == 1
+                   and r1_shape[2] == x_shape[2]
+                   and r1_shape[3] == x_shape[3])
+    condition_3 = (r1_shape[0] == x_shape[0]
+                   and r1_shape[1] == 1
+                   and r1_shape[2] == 1
+                   and r1_shape[3] == x_shape[3])
+
     if condition_1:
         for i in range(x_shape[0]):
             for j in range(x_shape[2]):

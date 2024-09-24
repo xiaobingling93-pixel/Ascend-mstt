@@ -19,16 +19,8 @@ class TestRotaryMul(unittest.TestCase):
     def test_npu_rotary_mul_backward(self):
         dy_tensor = torch.randn(2, 2, 2, 2)
         x = torch.randn(2, 2, 2, 2)
-        r1 = torch.randn(2, 2, 2, 2)
-        r2 = torch.randn(2, 2, 2, 2)
 
         # test condition_1
-        x_grad, r1_grad, r2_grad = npu_rotary_mul_backward(dy_tensor, x, r1, r2)
-        self.assertTrue(x_grad.shape, x.shape)
-        self.assertTrue(r1_grad.shape, r1.shape)
-        self.assertTrue(r2_grad.shape, r2.shape)
-
-        # test condition_2
         r1 = torch.randn(1, 2, 1, 2)
         r2 = torch.randn(1, 2, 1, 2)
         x_grad, r1_grad, r2_grad = npu_rotary_mul_backward(dy_tensor, x, r1, r2)
@@ -36,9 +28,17 @@ class TestRotaryMul(unittest.TestCase):
         self.assertTrue(r1_grad.shape, r1.shape)
         self.assertTrue(r2_grad.shape, r2.shape)
 
+        # test condition_2
+        r1 = torch.randn(1, 1, 2, 2)
+        r2 = torch.randn(1, 1, 2, 2)
+        x_grad, r1_grad, r2_grad = npu_rotary_mul_backward(dy_tensor, x, r1, r2)
+        self.assertTrue(x_grad.shape, x.shape)
+        self.assertTrue(r1_grad.shape, r1.shape)
+        self.assertTrue(r2_grad.shape, r2.shape)
+
         # test condition_3
-        r1 = torch.randn(2, 1, 2, 2)
-        r2 = torch.randn(2, 1, 2, 2)
+        r1 = torch.randn(2, 1, 1, 2)
+        r2 = torch.randn(2, 1, 1, 2)
         x_grad, r1_grad, r2_grad = npu_rotary_mul_backward(dy_tensor, x, r1, r2)
         self.assertTrue(x_grad.shape, x.shape)
         self.assertTrue(r1_grad.shape, r1.shape)
