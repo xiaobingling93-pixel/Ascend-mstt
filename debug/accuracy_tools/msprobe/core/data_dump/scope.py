@@ -33,6 +33,7 @@ def build_range_scope_according_to_scope_name(scope, api_list):
 class BaseScope(ABC):
     Module_Type_Module = "Module"
     Module_Type_API = "api"
+    module_type = ["Module", "Cell"]
 
     def __init__(self, scope, api_list):
         scope, api_list = self.rectify_args(scope, api_list)
@@ -123,10 +124,10 @@ class APIRangeScope(RangeScope):
         if not self.scope:
             return True
         scope_start_type = self.scope[0].split(Const.SEP)[0]
-        if scope_start_type == BaseScope.Module_Type_Module:
+        if scope_start_type in BaseScope.module_type:
             return False
         scope_stop_type = self.scope[1].split(Const.SEP)[0]
-        if scope_stop_type == BaseScope.Module_Type_Module:
+        if scope_stop_type in BaseScope.module_type:
             return False
         return True
 
@@ -155,8 +156,8 @@ class ModuleRangeScope(RangeScope):
             return True
         scope_start_type = self.scope[0].split(Const.SEP)[0]
         scope_stop_type = self.scope[1].split(Const.SEP)[0]
-        if scope_start_type == BaseScope.Module_Type_Module and \
-                scope_stop_type == BaseScope.Module_Type_Module:
+        if scope_start_type in BaseScope.module_type and \
+                scope_stop_type in BaseScope.module_type:
             return True
         return False
 

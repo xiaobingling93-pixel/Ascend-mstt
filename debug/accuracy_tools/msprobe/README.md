@@ -76,7 +76,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 场景的无标杆比对](./docs/15.free_benchmarking_PyTorch.md)
 
-[MindSpore 场景的无标杆比对](./docs/16.overflow_check_MindSpore.md)（待补充）
+[MindSpore 场景的无标杆比对](./docs/16.free_benchmarking_MindSpore.md)
 
 ### 7 梯度状态监测
 

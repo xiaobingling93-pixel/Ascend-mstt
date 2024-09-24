@@ -102,8 +102,24 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+
+    # struct json param
+    ORIGIN_DATA = "origin_data"
+    SCOPE = "scope"
+    STACK = "stack"
+
     ATEN = "Aten"
     MODULE_WHITE_LIST = ["torch", "numpy"]
+
+    FUNC_SKIP_LIST = ["construct", "__call__"]
+
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+
+    STACK_FILE_INDEX = 0
+
+    STACK_FUNC_INDEX = 1
+
+    CONSTRUCT_NAME_INDEX = -3
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
@@ -122,6 +138,12 @@ class Const:
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    
+    STEP = "step"
+    RANK = "rank"
+    HYPHEN = "-"
+    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+
 
 class CompareConst:
     """

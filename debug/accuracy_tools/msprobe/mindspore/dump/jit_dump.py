@@ -30,6 +30,7 @@ def dump_jit(name, in_feat, out_feat, is_forward):
 class JitDump(_MindsporeFunctionExecutor):
     dump_config = None
     jit_enable = False
+    jit_dump_switch = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -38,11 +39,12 @@ class JitDump(_MindsporeFunctionExecutor):
     def __call__(self, *args, **kwargs):
         api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
-        if isinstance(args[0], Tensor):
-            dump_jit({}, args, out, True)
-        else:
-            dump_jit(args[0], args[1:], out, True)
-        JitDump.jit_enable = True
+        if JitDump.jit_dump_switch is True:
+            if isinstance(args[0], Tensor):
+                dump_jit({}, args, out, True)
+            else:
+                dump_jit(args[0], args[1:], out, True)
+            JitDump.jit_enable = True
         api_register.api_set_hook_func()
         return out
 
