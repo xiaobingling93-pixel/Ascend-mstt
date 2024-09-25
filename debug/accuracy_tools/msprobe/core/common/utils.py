@@ -270,7 +270,7 @@ def convert_tuple(data):
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
     if isinstance(string, str) and is_invalid_pattern(string):
         if stack:
-            message = f"stack info of api contains special characters, please check!"
+            message = f"stack info of {op_name} contains special characters, please check!"
         elif not op_name:
             message = f"api name contains special characters, please check!"
         else:
