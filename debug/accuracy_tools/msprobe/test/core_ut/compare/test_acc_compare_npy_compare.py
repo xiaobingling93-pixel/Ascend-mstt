@@ -34,7 +34,7 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 2, 3, 4])
         error_flag = True
         a, b, c = get_error_type(n_value, b_value, error_flag)
-        self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value) and c == True)
+        self.assertTrue(a == CompareConst.READ_NONE and b == CompareConst.READ_NONE and c == True)
 
     def test_get_error_type_2(self):
         n_value = np.array([1, 2, np.inf, 4])
@@ -96,7 +96,7 @@ class TestUtilsMethods(unittest.TestCase):
         result_4 = get_error_message(n_value_4, b_value, op_name, error_flag)
         self.assertEqual(result_4, 'Shape of NPU and bench Tensor do not match. Skipped.')
 
-        n_value_5 = CompareConst.SHAPE_UNMATCH
+        n_value_5 = CompareConst.NAN
         result_5 = get_error_message(n_value_5, b_value, op_name, error_flag)
         self.assertEqual(result_5, 'The position of inf or nan in NPU and bench Tensor do not match.')
 
