@@ -321,6 +321,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:
