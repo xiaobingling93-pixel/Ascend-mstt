@@ -184,8 +184,8 @@ class TestPrecisionDebugger(unittest.TestCase):
         mock_debugger_instance.start.assert_called_once()
         self.assertTrue(mock_debugger_instance.enable_dataloader)
 
-
-    if os.path.exists("./dump_path/"):
-        shutil.rmtree("./dump_path/")
-    if os.path.exists("./grad_output/"):
-        shutil.rmtree("./grad_output/")
+    def remove_test_dirs():
+        if os.path.exists("./dump_path/"):
+            shutil.rmtree("./dump_path/")
+        if os.path.exists("./grad_output/"):
+            shutil.rmtree("./grad_output/")
