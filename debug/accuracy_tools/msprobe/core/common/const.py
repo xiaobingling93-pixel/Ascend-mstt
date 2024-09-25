@@ -121,6 +121,10 @@ class Const:
 
     CONSTRUCT_NAME_INDEX = -3
 
+    NAME_FIRST_POSSIBLE_INDEX = -4
+
+    NAME_SECOND_POSSIBLE_INDEX = -5
+
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
@@ -317,6 +321,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:

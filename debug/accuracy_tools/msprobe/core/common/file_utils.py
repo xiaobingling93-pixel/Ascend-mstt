@@ -22,6 +22,7 @@ import re
 import shutil
 import yaml
 import numpy as np
+import pandas as pd
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -445,7 +446,25 @@ def save_workbook(workbook, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def write_csv(data, filepath, mode="a+"):
+def write_csv(data, filepath, mode="a+", malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True  
+        try:
+            # -1.00 or +1.00 should be consdiered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+    
+    if malicious_check:
+        for row in data:
+            for cell in row:
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed " \
+                                       f"to be written into the csv: {filepath}.")
+
     file_path = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
@@ -456,6 +475,16 @@ def write_csv(data, filepath, mode="a+"):
         logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
         raise RuntimeError(f"Save csv file {file_path} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def read_csv(filepath):
+    check_file_or_directory_path(filepath)
+    try:
+        csv_data = pd.read_csv(filepath)
+    except Exception as e:
+        logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Read csv file {filepath} failed.") from e
+    return csv_data
 
 
 def remove_path(path):

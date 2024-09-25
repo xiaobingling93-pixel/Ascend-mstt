@@ -27,7 +27,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileOpen, FileChecker, \
-    change_mode, check_path_before_create, create_directory, get_json_contents
+    change_mode, check_path_before_create, create_directory, get_json_contents, read_csv
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -81,10 +81,8 @@ def run_ut(config):
     if config.online_config.is_online:
         run_api_online(config, compare)
     else:
-        with FileOpen(config.result_csv_path, 'r') as file:
-            csv_reader = csv.reader(file)
-            next(csv_reader)
-            api_name_set = {row[0] for row in csv_reader}
+        csv_df = read_csv(config.result_csv_path)
+        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
