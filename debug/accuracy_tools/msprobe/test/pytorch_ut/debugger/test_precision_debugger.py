@@ -183,8 +183,8 @@ class TestPrecisionDebugger(unittest.TestCase):
         mock_debugger_instance.step.assert_not_called()
         mock_debugger_instance.start.assert_called_once()
         self.assertTrue(mock_debugger_instance.enable_dataloader)
-
-    def remove_test_dirs():
+    
+    def tearDown(self):
         if os.path.exists("./dump_path/"):
             shutil.rmtree("./dump_path/")
         if os.path.exists("./grad_output/"):
