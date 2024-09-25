@@ -49,7 +49,7 @@ def get_npu_ops():
 class HOOKNpuOP(object):
     pass
 
-
+ 
 class NpuOPTemplate(HOOKModule):
 
     def __init__(self, op_name, hook, need_hook=True, device=Const.CPU_LOWERCASE):
