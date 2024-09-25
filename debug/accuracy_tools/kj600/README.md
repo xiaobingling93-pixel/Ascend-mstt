@@ -76,7 +76,7 @@ pip install .
 |"module_ranks"| 可选 |用于在分布式训练场景中希望控制在哪些rank开启module监控。如果不填，则默认在所有rank开启。|
 |"ur_distribution"|  可选 |若为true则会统计adam优化器指定模块（targets中指定）参数的update和ratio向量的数值分布，并展示在heatmap里，默认为false。依赖histc算子， 需要CANN8.0.rc2以上版本， 否则会有严重的性能问题。 |
 |"xy_distribution"|  可选 | 若为true则会监控指定module（targets中指定）的输入输出张量。 默认为false。|
-| "forward_only" | 可选 | 若为true，则在开启xy_distribution时，仅监控"input"和"output"，忽略"input_grad"和"output_grad"。默认为false。 |
+| "forward_only" | 可选 | 若为true，则在开启xy_distribution时，仅监控"input"和"output"，忽略"input_grad"和"output_grad"。默认为false, 同时监控激活值及其梯度。 |
 |"mv_distribution"|  可选 | 若为true则会监控指定模块中的参数的优化器状态， 默认为false。需要在TrainerMon构造函数正确指定opt_ty. 目前只支持megatron的混合精度优化器以及megatron的分布式优化器。 Deepspeed的分布式优化器实现暂不支持。 |
 |"wg_distribution"|  可选 | 若为true则会监控指定模块的参数梯度， 默认为false。 |
 |"mg_distribution"|  可选 | 若为true则会监控指定模块梯度与adam一阶动量的方向一致性， 默认为false。 |
