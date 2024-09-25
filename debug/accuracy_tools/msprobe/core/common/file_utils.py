@@ -22,6 +22,7 @@ import re
 import shutil
 import yaml
 import numpy as np
+import pandas as pd
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -456,6 +457,16 @@ def write_csv(data, filepath, mode="a+"):
         logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
         raise RuntimeError(f"Save csv file {file_path} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def read_csv(filepath):
+    check_file_or_directory_path(filepath)
+    try:
+        csv_data = pd.read_csv(filepath)
+    except Exception as e:
+        logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Read csv file {filepath} failed.") from e
+    return csv_data
 
 
 def remove_path(path):
