@@ -34,9 +34,7 @@ class TestCommonConfig(TestCase):
         self.assertEqual(common_config.rank, [])
         self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
-        self.assertIsNone(common_config.seed)
         self.assertIsNone(common_config.acl_config)
-        self.assertFalse(common_config.is_deterministic)
         self.assertFalse(common_config.enable_dataloader)
 
         json_config.update({"task": "md5"})
@@ -60,31 +58,6 @@ class TestCommonConfig(TestCase):
         json_config.update({"rank": [0]})
         json_config.update({"step": [0]})
         json_config.update({"level": "L0"})
-        json_config.update({"seed": "1234"})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "seed is invalid, it should be an integer")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": [0]})
-        json_config.update({"level": "L0"})
-        json_config.update({"seed": 1234})
-        json_config.update({"is_deterministic": "ENABLE"})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "is_deterministic is invalid, it should be a boolean")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": [0]})
-        json_config.update({"level": "L0"})
-        json_config.update({"seed": 1234})
-        json_config.update({"is_deterministic": True})
         json_config.update({"enable_dataloader": "ENABLE"})
         CommonConfig(json_config)
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
