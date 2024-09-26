@@ -7,7 +7,7 @@ from collections import namedtuple
 import torch
 import pandas as pd
 
-from msprobe.core.common.file_utils import write_csv
+from msprobe.core.common.file_utils import write_csv, read_csv
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
@@ -269,12 +269,12 @@ def api_precision_compare(config):
     logger.info(f"Compare task result will be saved in {config.result_csv_path}")
     logger.info(f"Compare task detail will be saved in {config.details_csv_path}")
     try:
-        npu_data = pd.read_csv(config.npu_csv_path)
+        npu_data = read_csv(config.npu_csv_path)
     except Exception as err:
         logger.error(f"Open npu csv Error: %s" % str(err))
     check_csv_columns(npu_data.columns, "npu_csv")
     try:
-        gpu_data = pd.read_csv(config.gpu_csv_path)
+        gpu_data = read_csv(config.gpu_csv_path)
     except Exception as err:
         logger.error(f"Open gpu csv Error: %s" % str(err))
     check_csv_columns(gpu_data.columns, "gpu_csv")

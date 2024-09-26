@@ -12,9 +12,7 @@ class CommonConfig:
         self.rank = get_real_step_or_rank(json_config.get('rank'), Const.RANK)
         self.step = get_real_step_or_rank(json_config.get('step'), Const.STEP)
         self.level = json_config.get('level')
-        self.seed = json_config.get('seed')
         self.acl_config = json_config.get('acl_config')
-        self.is_deterministic = json_config.get('is_deterministic', False)
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()
 
@@ -27,12 +25,6 @@ class CommonConfig:
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if self.level and self.level not in Const.LEVEL_LIST:
             logger.error_log_with_exp("level is invalid, it should be one of {}".format(Const.LEVEL_LIST),
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.seed is not None and not isinstance(self.seed, int):
-            logger.error_log_with_exp("seed is invalid, it should be an integer",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if not isinstance(self.is_deterministic, bool):
-            logger.error_log_with_exp("is_deterministic is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
         if not isinstance(self.enable_dataloader, bool):
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
