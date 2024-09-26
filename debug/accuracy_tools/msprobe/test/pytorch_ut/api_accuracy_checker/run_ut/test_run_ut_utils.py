@@ -66,25 +66,25 @@ class TestRunUtUtils(unittest.TestCase):
     def test_exec_api_functional_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Functional", api_name, None, args)
+        result = exec_api("Functional", api_name, None, args, kwargs=None)
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_tensor_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Tensor", api_name, None, args)
+        result = exec_api("Tensor", api_name, None, args, kwargs=None)
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_torch_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Torch", api_name, None, args)
+        result = exec_api("Torch", api_name, None, args, kwargs=None)
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_aten_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Aten", api_name, None, args)
+        result = exec_api("Aten", api_name, None, args, kwargs=None)
         self.assertEqual(result, torch.tensor(3))
 
     def test_raise_bench_data_dtype_dtype_unchanged(self):
