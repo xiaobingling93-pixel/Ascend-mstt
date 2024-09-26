@@ -17,7 +17,7 @@ o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.i
            'torch.float32', 'torch.float32', [2, 2], [2, 2],
            'None', 'None', 'None', 'None', 'None',
            1, 1, 1, 1, 1, 1, 1, 1,
-           'None', 'No bench data matched', '-1']]
+           'None', 'No bench data matched.', '-1']]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
