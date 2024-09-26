@@ -7,9 +7,38 @@ class TestModifyMapping(unittest.TestCase):
     def setUp(self):
         # 这里可以设置常量和初始化
         self.lines = [
-            "file1.py, func_a, other_info",
-            "file2.py, func_b, other_info",
-            "file3.py, func_c, other_info"
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 507, \
+            in _run_construct, \n output = self._run_forward_hook(inputs, output)", 
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+            in __call__, \n return self._run_construct(*args, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, \
+            in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 92, \
+            in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindformers/transformer/utils.py, line 38, \
+            in attn_mask_add, \n attention_scores = ops.add(",
+            "File /home/user/envs/python3.9/site-packages/mindformers/transformer/scale_mask_softmax.py, line 65, \
+            in construct, \n masked_input = self.mask_func(x, mask) if mask is not None else x",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2460, \
+            in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 498, \
+            in _run_construct, \n output = self._backward_hook_construct(*outputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+            in __call__, \n return self._run_construct(*args, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindformers/transformer/transformer.py, line 533, \
+            in construct, \n attention_output = self.attention(norm_output, attention_mask, rotary_pos_emb)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
+            in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2460, \
+            in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 498, \
+            in _run_construct, \n output = self._backward_hook_construct(*outputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+            in __call__, \n return self._run_construct(*args, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindformers/transformer/transformer.py, line 533, \
+            in construct, \n attention_output = self.attention(norm_output, attention_mask, rotary_pos_emb)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
+            in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)"
         ]
         self.pt_construct = {
             "Functional.max_pool2d.0.forward": "Module.pool1.MaxPool2d.forward.0",
@@ -158,37 +187,48 @@ class TestModifyMapping(unittest.TestCase):
         }
 
     def test_find_regard_scope(self):
-        start_sign = "func_a"
-        end_sign = "func_c"
+        start_sign = "add"
+        end_sign = "attention"
         start_pos, end_pos = find_regard_scope(self.lines, start_sign, end_sign)
-        self.assertEqual(start_pos, 0)
-        self.assertEqual(end_pos, -1)
+        self.assertEqual(start_pos, 4)
+        self.assertEqual(end_pos, 9)
 
     def test_find_stack_func_list(self):
         result = find_stack_func_list(self.lines)
-        self.assertEqual(result, ['func_a', 'func_b', 'func_c'])
+        self.assertEqual(result, ['attn_mask_add'])
 
     def test_get_duplicated_name(self):
-        components = ["Module", "Func", "Name"]
+        components = ["Module", "max_pool2d", "0", "forward"]
         duplicated_name = get_duplicated_name(components)
-        self.assertEqual(duplicated_name, ["Module", "Func", "Name", "Func", "Name"])
+        self.assertEqual(duplicated_name, ["Module", "max_pool2d", "max_pool2d", "0", "forward"])
 
     def test_modify_mapping_with_stack_when_pt_valid_then_pass(self):
         result = modify_mapping_with_stack(self.pt_stack, self.pt_construct)
-        print(result)
         expected_result = {
-            "Cell.SomeFunc": {
-                "origin_data": "Cell.SomeFunc",
-                "scope": "Cell.SomeFunc.Parent",
+            "Module.pool1.max_pool2d.max_pool2d.0": {
+                "origin_data": "Functional.max_pool2d.0.forward",
+                "scope": "Module.pool1.MaxPool2d.forward.0",
                 "stack": None
             },
-            "Module.FuncName": {
-                "origin_data": "Module.FuncName",
-                "scope": "Module.FuncName.Parent",
-                "stack": "line1,line2,line3"
+            "Module.conv2.conv2d.conv2d.1": {
+                "origin_data": "Module.conv1.Conv2d.backward.1",
+                "scope": None,
+                "stack": None
+            },
+            "Module.fc3.linear.linear.5": {
+                "origin_data": "Functional.linear.5.backward",
+                "scope": "Module.fc3.Linear.backward.1",
+                "stack": None
+            },
+            "Module.conv1.Conv2d.1": {
+                "origin_data": "Module.conv1.Conv2d.1",
+                "scope": "Module.fc3.Linear.backward.1",
+                "stack": None
             }
         }
-        self.assertIn("Cell.SomeFunc", result)
-        self.assertIn("Module.FuncName", result)
-        self.assertEqual(result["Module.FuncName"]["origin_data"], "Module.FuncName")
-        self.assertEqual(result["Cell.SomeFunc"]["origin_data"], "Cell.SomeFunc")
+        self.assertIn("Module.pool1.max_pool2d.max_pool2d.0", result)
+        self.assertIn("Module.conv2.conv2d.conv2d.1", result)
+        self.assertIn("Module.fc3.linear.linear.5", result)
+        self.assertIn("Module.conv1.Conv2d.1", result)
+        self.assertEqual(result["Module.pool1.max_pool2d.max_pool2d.0"]["origin_data"], "Functional.max_pool2d.0.forward")
+        self.assertEqual(result["Module.conv1.Conv2d.1"]["origin_data"], "Module.conv1.Conv2d.backward.1")

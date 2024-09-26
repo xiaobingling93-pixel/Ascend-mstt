@@ -77,9 +77,9 @@ def modify_mapping_with_stack(stack, construct):
             parent_idx = Const.NAME_FIRST_POSSIBLE_INDEX if not \
             parent[Const.NAME_FIRST_POSSIBLE_INDEX].isdigit() else Const.NAME_SECOND_POSSIBLE_INDEX
             parent_name = parent[parent_idx]
+
             if code_list:
                 # {name}.Class.count_number.X ward Or {name}.Class.count_number.X ward.ele_number
-
                 if parent_name.endswith('s'):
                     parent_name = parent_name[:-1]
                 if len(key_components) < 3:
