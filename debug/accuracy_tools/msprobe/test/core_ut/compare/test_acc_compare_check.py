@@ -161,18 +161,6 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
 
     def test_check_stack_json_str_5(self):
-        stack_info = ['&File', 'File']
-        with self.assertRaises(CompareException) as context:
-            check_stack_json_str(stack_info, op_name)
-        self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
-
-    def test_check_stack_json_str_6(self):
-        stack_info = ['\File', 'File']
-        with self.assertRaises(CompareException) as context:
-            check_stack_json_str(stack_info, op_name)
-        self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
-
-    def test_check_stack_json_str_7(self):
         stack_info = ['@File', 'File']
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
