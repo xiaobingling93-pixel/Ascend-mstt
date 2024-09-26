@@ -14,8 +14,7 @@ class Const:
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
-    STRING_INVALID_PATTERN = r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]"
-    STACK_STRING_BLACKLIST = r"[=+\-&\\@]"
+    STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
     FLOAT_EPSILON = np.finfo(float).eps
     OFF = 'OFF'
@@ -120,6 +119,10 @@ class Const:
     STACK_FUNC_INDEX = 1
 
     CONSTRUCT_NAME_INDEX = -3
+
+    NAME_FIRST_POSSIBLE_INDEX = -4
+
+    NAME_SECOND_POSSIBLE_INDEX = -5
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
@@ -317,6 +320,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:

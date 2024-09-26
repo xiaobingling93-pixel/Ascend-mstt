@@ -17,9 +17,10 @@ from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if torch_version_above_or_equal_2:
+    from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
@@ -143,7 +144,7 @@ class Service:
             self.first_start = False
         if api_origin:
             api_register.api_modularity()
-        if self.config.online_run_ut:
+        if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True)
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
@@ -161,7 +162,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
-        if self.config.online_run_ut:
+        if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False)
             return
         self.data_collector.write_json()

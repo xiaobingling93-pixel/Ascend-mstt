@@ -206,9 +206,10 @@ def struct_json_get(input_param, framework):
     if not frame_json_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    input_param[f"{prefix}_json_path"] = os.path.join(frame_json_path, "dump.json")
-    stack_json = os.path.join(frame_json_path, "stack.json")
-    construct_json = os.path.join(frame_json_path, "construct.json")
+    directory = os.path.dirname(frame_json_path)
+    check_file_or_directory_path(directory, True)
+    stack_json = os.path.join(directory, "stack.json")
+    construct_json = os.path.join(directory, "construct.json")
 
     if not stack_json and not construct_json:
         logger.info("stack_json_path and constrcut_json_path not found.")
@@ -268,20 +269,20 @@ def convert_tuple(data):
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
-    if isinstance(string, str) and is_invalid_pattern(string, stack):
+    if isinstance(string, str) and is_invalid_pattern(string):
         if stack:
             message = f"stack info of {op_name} contains special characters, please check!"
         elif not op_name:
-            message = f"{string} contains special characters, please check!"
+            message = f"api name contains special characters, please check!"
         else:
             message = f"data info of {op_name} contains special characters, please check!"
         logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)
 
 
-def is_invalid_pattern(string, stack):
-    pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
-    return re.match(pattern, string) if stack else re.search(pattern, string)
+def is_invalid_pattern(string):
+    pattern = Const.STRING_BLACKLIST
+    return re.search(pattern, string)
 
 
 def print_tools_ends_info():
