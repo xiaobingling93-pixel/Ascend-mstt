@@ -123,4 +123,3 @@ class TestCompare(unittest.TestCase):
                                                                              npu_output.numpy(),
                                                                              compare_column, npu_output.dtype)
         self.assertEqual(status, "pass")
-unittest.main()
