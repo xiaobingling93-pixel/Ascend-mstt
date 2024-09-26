@@ -752,172 +752,619 @@ tensor:
   - sum
 
 mint.ops:
+  - linalg.norm
+  - linalg.vector_norm
+  - linalg.matrix_norm
+  - linalg.diagonal
+  - linalg.det
+  - linalg.slogdet
+  - linalg.cond
+  - linalg.matrix_rank
+  - linalg.qr
+  - linalg.lu
+  - linalg.lu_factor
+  - linalg.svd
+  - linalg.svdvals
+  - linalg.solve
+  - linalg.lstsq
+  - linalg.inv
+  - linalg.pinv
+  - linalg.matrix_exp
+  - linalg.matrix_power
+  - linalg.cross
+  - linalg.matmul
+  - linalg.vecdot
+  - linalg.multi_dot
+  - linalg.householder_product
+  - linalg.tensorsolve
+  - linalg.vander
+  - linalg.cholesky_ex
+  - linalg.inv_ex
+  - linalg.solve_ex
+  - linalg.lu_factor_ex
+  - linalg.ldl_factor
+  - linalg.ldl_factor_ex
+  - _adaptive_avg_pool2d
+  - _add_relu
+  - _add_relu_
+  - _aminmax
+  - _batch_norm_impl_index
+  - _convolution
+  - _foreach_norm
+  - _softmax_backward_data
   - abs
-  - absolute_import
+  - abs_
+  - absolute
+  - acos
+  - acos_
+  - acosh
+  - acosh_
+  - adaptive_avg_pool1d
+  - adaptive_max_pool1d
   - add
-  - add_ex
+  - addbmm
+  - addcdiv
+  - addcmul
+  - addmm
+  - addmv
+  - addmv_
+  - addr
+  - amax
+  - affine_grid_generator
+  - align_tensors
   - all
+  - alpha_dropout
+  - amin
+  - alpha_dropout_
+  - angle
   - any
-  - any_ex
+  - arange
+  - arccos
+  - arccos_
+  - arccosh
+  - arccosh_
+  - arcsin
+  - arcsin_
+  - arcsinh
+  - arcsinh_
+  - arctan
+  - arctan_
+  - arctanh
+  - arctanh_
   - argmax
-  - avg_pool2d
+  - argmin
+  - argsort
+  - asin
+  - asin_
+  - asinh
+  - asinh_
+  - atan
+  - atan2
+  - atan_
+  - atanh
+  - atanh_
+  - atleast_1d
+  - atleast_2d
+  - atleast_3d
+  - avg_pool1d
   - baddbmm
-  - baddbmm_ex
-  - batch_norm
+  - bartlett_window
+  - batch_norm_backward_elemt
+  - batch_norm_backward_reduce
+  - batch_norm_elemt
+  - batch_norm_gather_stats
+  - batch_norm_gather_stats_with_counts
+  - bernoulli
+  - batch_norm_stats
+  - batch_norm_update_stats
+  - bilinear
+  - bincount
+  - binomial
   - binary_cross_entropy_with_logits
   - bitwise_and
+  - bitwise_not
   - bitwise_or
   - bitwise_xor
+  - blackman_window
+  - block_diag
   - bmm
+  - broadcast_tensors
   - broadcast_to
+  - bucketize
+  - cartesian_prod
   - cat
-  - cat_ex
+  - cdist
   - ceil
+  - ceil_
+  - celu
+  - celu_
+  - chain_matmul
+  - channel_shuffle
+  - cholesky
+  - cholesky_inverse
+  - cholesky_solve
+  - choose_qparams_optimized
   - chunk
   - clamp
+  - clamp_
+  - clamp_max
+  - clamp_max_
+  - clamp_min
+  - clamp_min_
+  - clip
+  - clip_
+  - clone
+  - column_stack
+  - combinations
+  - concat
+  - concatenate
+  - constant_pad_nd
+  - conv1d
   - conv2d
+  - conv3d
+  - conv_tbc
+  - conv_transpose1d
   - conv_transpose2d
+  - conv_transpose3d
   - cos
+  - convolution
+  - copysign
+  - cos_
+  - cosh
+  - cosh_
+  - cosine_embedding_loss
+  - cosine_similarity
+  - count_nonzero
+  - cov
   - cross
+  - ctc_loss
   - cummax
   - cummin
+  - cumprod
   - cumsum
+  - deg2rad
+  - deg2rad_
+  - det
+  - diag
+  - diag_embed
+  - diff
+  - diagflat
+  - diagonal
+  - digamma
+  - dist
   - div
   - divide
+  - dot
   - dropout
+  - dropout_
+  - dsmm
+  - dstack
+  - eig
+  - einsum
   - embedding
+  - embedding_bag
+  - embedding_renorm_
   - eq
+  - equal
   - erf
+  - erf_
+  - erfc
+  - erfc_
   - erfinv
   - exp
+  - exp2
+  - exp2_
+  - exp_
+  - expm1
+  - expm1_
+  - eye
+  - feature_dropout
+  - feature_alpha_dropout
+  - feature_alpha_dropout_
+  - feature_dropout_
+  - fix
+  - fill_
+  - fix_
   - flatten
   - flip
-  - flip_ex
-  - fold
+  - fliplr
+  - flipud
+  - float_power
+  - floor
+  - floor_
+  - floor_divide
+  - fmax
+  - fmin
+  - fmod
+  - frac
+  - frac_
   - full
-  - functional
+  - frobenius_norm
+  - full_like
   - gather
-  - gelu
+  - gcd
+  - gcd_
+  - ge
+  - geqrf
+  - ger
   - greater
-  - grid_sample
+  - greater_equal
+  - grid_sampler
+  - grid_sampler_2d
   - group_norm
+  - grid_sampler_3d
+  - gru
+  - gru_cell
   - gt
+  - hamming_window
+  - hann_window
+  - hardshrink
+  - heaviside
+  - hinge_embedding_loss
+  - histc
+  - hsmm
+  - hspmm
+  - hstack
+  - hypot
+  - igamma
+  - igammac
+  - index_add
+  - index_copy
+  - inner
+  - index_fill
+  - index_put
+  - index_put_
   - index_select
-  - interpolate
+  - instance_norm
+  - inverse
   - isclose
   - isfinite
+  - isinf
+  - isnan
+  - isneginf
+  - isposinf
+  - istft
+  - kaiser_window
+  - kl_div
+  - kron
+  - kthvalue
   - layer_norm
+  - lcm
+  - lcm_
+  - ldexp
+  - ldexp_
   - le
-  - leaky_relu
+  - lerp
   - less
   - less_equal
-  - linear
+  - lgamma
   - linspace
   - log
+  - log10
+  - log10_
+  - log1p
+  - log1p_
+  - log2
+  - log2_
+  - log_softmax
+  - log_
+  - logaddexp
+  - logaddexp2
+  - logcumsumexp
+  - logdet
   - logical_and
   - logical_not
   - logical_or
+  - logical_xor
+  - logit
+  - logit_
+  - logspace
+  - logsumexp
+  - lstm
+  - lstm_cell
+  - lstsq
   - lt
+  - lu_solve
+  - lu_unpack
+  - masked_fill
+  - margin_ranking_loss
+  - masked_scatter
   - masked_select
+  - matrix_exp
   - matmul
+  - matrix_power
+  - matrix_rank
   - max
+  - max_pool1d
   - max_pool2d
+  - max_pool1d_with_indices
+  - max_pool3d
   - maximum
   - mean
-  - mean_ex
+  - median
   - min
   - minimum
+  - mm
+  - mode
+  - moveaxis
+  - movedim
+  - msort
   - mul
+  - multinomial
+  - multiply
+  - mv
+  - mvlgamma
+  - nan_to_num
+  - nan_to_num_
+  - nanmedian
+  - nansum
+  - narrow
+  - native_batch_norm
+  - native_group_norm
+  - narrow_copy
+  - native_layer_norm
+  - native_norm
   - ne
   - neg
   - negative
-  - nn
+  - neg_
+  - negative_
+  - nextafter
   - nonzero
+  - norm
+  - norm_except_dim
   - normal
-  - one_hot
-  - ones
-  - ones_ex
+  - not_equal
+  - nuclear_norm
   - ones_like
-  - pad
+  - outer
+  - pairwise_distance
+  - pdist
   - permute
-  - permute_ex
+  - pinverse
+  - pixel_shuffle
+  - pixel_unshuffle
+  - poisson
+  - poisson_nll_loss
+  - polar
+  - polygamma
   - pow
+  - prelu
   - prod
+  - qr
+  - quantile
+  - rad2deg
+  - rad2deg_
+  - range
+  - ravel
+  - real
   - reciprocal
   - relu
+  - reciprocal_
+  - relu_
   - remainder
+  - renorm
   - repeat_interleave
+  - reshape
+  - resize_as_
+  - roll
+  - rot90
+  - round
+  - round_
+  - rrelu
+  - rrelu_
   - rsqrt
+  - row_stack
+  - rsqrt_
+  - rsub
+  - saddmm
+  - scalar_tensor
   - scatter
+  - select
   - scatter_add
   - searchsorted
+  - selu
+  - selu_
+  - sgn
   - sigmoid
-  - silu
+  - sigmoid_
+  - sign
+  - signbit
   - sin
+  - sin_
+  - sinc
+  - sinc_
+  - sinh
+  - sinh_
+  - slogdet
+  - smm
   - softmax
-  - softplus
+  - solve
   - sort
-  - split
-  - sqrt
-  - sqrt_ex
+  - sparse_coo_tensor
   - square
+  - split
+  - split_with_sizes
+  - spmm
+  - sqrt
+  - sqrt_
+  - square_
+  - squeeze
+  - sspaddmm
   - stack
+  - std
+  - std_mean
+  - stft
   - sub
-  - sub_ex
+  - subtract
   - sum
+  - svd
+  - swapaxes
+  - swapdims
+  - symeig
+  - t
+  - take
+  - take_along_dim
+  - tan
+  - tan_
   - tanh
+  - tanh_
+  - tensordot
+  - tensor_split
+  - threshold
+  - threshold_
   - tile
   - topk
+  - transpose
+  - trapz
+  - triangular_solve
   - tril
+  - tril_indices
+  - triplet_margin_loss
   - triu
-  - unfold
-  - unique
-  - where
+  - triu_indices
+  - true_divide
+  - trunc
+  - trunc_
+  - unique_consecutive
   - xlogy
-  - zeros
-  - zeros_ex
+  - unbind
+  - unsafe_chunk
+  - unsafe_split
+  - vander
+  - var
+  - vdot
+  - unsafe_split_with_sizes
+  - unsqueeze
+  - var_mean
+  - vstack
+  - where
+  - xlogy_
+  - unique
   - zeros_like
-
-mint.nn:
-  - Dropout
-  - Embedding
-  - Fold
-  - LayerNorm
-  - Linear
-  - MaxPool2d
-  - Unfold
-  - Upsample
+  - zeros
+  - ones
 
 mint.nn.functional:
-  - absolute_import
-  - avg_pool2d
-  - batch_norm
-  - batch_norm_ex
-  - bce_with_logits
-  - binary_cross_entropy_with_logits
+  - conv1d
+  - conv2d
+  - conv3d
+  - conv_transpose1d
   - conv_transpose2d
-  - dense
-  - dropout
-  - embedding
-  - fold
-  - gelu
-  - grid_sample
-  - group_norm
-  - interpolate
-  - layer_norm
-  - leaky_relu
-  - linear
+  - conv_transpose3d
+  - conv_tbc
+  - avg_pool1d
+  - avg_pool2d
+  - avg_pool3d
+  - fractional_max_pool2d_with_indices
+  - fractional_max_pool2d
+  - fractional_max_pool3d_with_indices
+  - fractional_max_pool3d
+  - max_pool1d_with_indices
+  - max_pool1d
+  - max_pool2d_with_indices
   - max_pool2d
-  - max_pool2d_ex
-  - normal
-  - one_hot
-  - one_hot_ext
-  - pad
+  - max_pool3d_with_indices
+  - max_pool3d
+  - max_unpool1d
+  - max_unpool2d
+  - max_unpool3d
+  - lp_pool2d
+  - lp_pool1d
+  - adaptive_max_pool1d_with_indices
+  - adaptive_max_pool1d
+  - adaptive_max_pool2d_with_indices
+  - adaptive_max_pool2d
+  - adaptive_max_pool3d_with_indices
+  - adaptive_max_pool3d
+  - adaptive_avg_pool1d
+  - adaptive_avg_pool2d
+  - adaptive_avg_pool3d
+  - dropout
+  - alpha_dropout
+  - dropout2d
+  - dropout3d
+  - feature_alpha_dropout
+  - threshold
+  - threshold_
   - relu
-  - sigmoid
-  - silu
-  - softmax
-  - softmax_ex
+  - relu_
+  - glu
+  - hardtanh
+  - hardtanh_
+  - relu6
+  - elu
+  - elu_
+  - selu
+  - selu_
+  - celu
+  - celu_
+  - leaky_relu
+  - leaky_relu_
+  - prelu
+  - rrelu
+  - rrelu_
+  - logsigmoid
+  - gelu
+  - hardshrink
+  - tanhshrink
+  - softsign
   - softplus
+  - softmin
+  - softmax
+  - gumbel_softmax
+  - log_softmax
+  - softshrink
   - tanh
+  - sigmoid
+  - hardsigmoid
+  - linear
+  - bilinear
+  - silu
+  - hardswish
+  - embedding
+  - embedding_bag
+  - batch_norm
+  - instance_norm
+  - layer_norm
+  - group_norm
+  - local_response_norm
+  - ctc_loss
+  - nll_loss
+  - poisson_nll_loss
+  - gaussian_nll_loss
+  - kl_div
+  - cross_entropy
+  - binary_cross_entropy
+  - binary_cross_entropy_with_logits
+  - smooth_l1_loss
+  - l1_loss
+  - mse_loss
+  - margin_ranking_loss
+  - hinge_embedding_loss
+  - multilabel_margin_loss
+  - soft_margin_loss
+  - multilabel_soft_margin_loss
+  - cosine_embedding_loss
+  - multi_margin_loss
+  - pixel_shuffle
+  - pixel_unshuffle
+  - channel_shuffle
+  - upsample
+  - interpolate
+  - upsample_nearest
+  - upsample_bilinear
+  - grid_sample
+  - affine_grid
+  - pad
+  - pairwise_distance
+  - pdist
+  - cosine_similarity
+  - one_hot
+  - triplet_margin_loss
+  - triplet_margin_with_distance_loss
+  - normalize
   - unfold
+  - fold
+  - multi_head_attention_forward
+  - scaled_dot_product_attention
