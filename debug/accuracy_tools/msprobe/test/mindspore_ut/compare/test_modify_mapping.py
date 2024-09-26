@@ -44,7 +44,8 @@ class TestModifyMapping(unittest.TestCase):
             "Functional.max_pool2d.0.forward": "Module.pool1.MaxPool2d.forward.0",
             "Funtional.conv2d.1.forward": "Module.conv2.Conv2d.forward.0",
             "Functional.linear.5.backward": "Module.fc3.Linear.backward.1",
-            "Module.conv1.Conv2d.backward.1": None
+            "Module.conv1.Conv2d.backward.1": None,
+            "Functional.conv2d.2.forward": None
         }
         self.ms_construct = {
             "Functional.add.0.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
@@ -222,6 +223,11 @@ class TestModifyMapping(unittest.TestCase):
             },
             "Module.conv1.Conv2d.1": {
                 "origin_data": "Module.conv1.Conv2d.backward.1",
+                "scope": None,
+                "stack": None
+            },
+            "Module.conv2d.conv2d.2": {
+                "origin_data": "Functional.conv2d.2.forward",
                 "scope": None,
                 "stack": None
             }
