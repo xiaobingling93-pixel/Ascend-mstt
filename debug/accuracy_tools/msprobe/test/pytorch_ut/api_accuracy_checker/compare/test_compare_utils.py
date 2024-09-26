@@ -88,7 +88,7 @@ class TestCompareUtils(unittest.TestCase):
     def test_convert_str_to_float_wiht_whitespace_string(self):
         with self.assertRaises(CompareException) as context:
             convert_str_to_float('    ')
-        self.assertEqual(context.exception.error_code, CompareException.INVALID_DATA_ERROR)
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
         
     def test_handle_infinity_both_inf_same_sign(self):
         result, consistent, message = handle_infinity(float('inf'), float('inf'), 'test_column')
