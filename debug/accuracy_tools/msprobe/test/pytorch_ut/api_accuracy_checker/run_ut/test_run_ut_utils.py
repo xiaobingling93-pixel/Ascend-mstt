@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import torch
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import *
-from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.file_utils import create_directory, write_csv
 
 
 class TestRunUtUtils(unittest.TestCase):
@@ -17,6 +17,10 @@ class TestRunUtUtils(unittest.TestCase):
         self.result_csv_path = os.path.join(self.save_path, self.result_file_name)
         self.details_csv_path = os.path.join(self.save_path, self.detail_file_name)
         self.invalid_csv_path = os.path.join(self.save_path, self.invalid_file_name)
+        content = [["api_name", "metric_name", "metric_value", "metric_unit"]]
+        write_csv(content, self.result_csv_path)
+        write_csv(content, self.details_csv_path)
+        write_csv(content, self.invalid_csv_path)
         
     def tearDown(self):
         for filename in os.listdir(self.save_path):
@@ -50,25 +54,25 @@ class TestRunUtUtils(unittest.TestCase):
     def test_exec_api_functional_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Functional", api_name, None, args, kwargs=None)
+        result = exec_api("Functional", api_name, None, args, kwargs={})
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_tensor_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Tensor", api_name, None, args, kwargs=None)
+        result = exec_api("Tensor", api_name, None, args, kwargs={})
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_torch_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Torch", api_name, None, args, kwargs=None)
+        result = exec_api("Torch", api_name, None, args, kwargs={})
         self.assertEqual(result, torch.tensor(3))
 
     def test_exec_api_aten_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
-        result = exec_api("Aten", api_name, None, args, kwargs=None)
+        result = exec_api("Aten", api_name, None, args, kwargs={})
         self.assertEqual(result, torch.tensor(3))
 
     def test_raise_bench_data_dtype_dtype_unchanged(self):
