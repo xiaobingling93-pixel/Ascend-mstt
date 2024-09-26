@@ -9,6 +9,7 @@ def find_regard_scope(lines, start_sign, end_sign):
             start_pos = idx
         elif end_sign in ii:
             end_pos = idx
+            break
     return start_pos, end_pos
 
 
@@ -25,7 +26,7 @@ def find_stack_func_list(lines):
         if any(ii in func_ele for ii in Const.FUNC_SKIP_LIST):
             continue
 
-        in_func_name = func_ele.split()[Const.STACK_FUNC_INDEX]
+        in_func_name = func_ele.split()[Const.STACK_FUNC_ELE_INDEX]
 
         res_list.append(in_func_name)
     # 反转res_list并生成final_res
@@ -76,9 +77,9 @@ def modify_mapping_with_stack(stack, construct):
             parent_idx = Const.NAME_FIRST_POSSIBLE_INDEX if not \
             parent[Const.NAME_FIRST_POSSIBLE_INDEX].isdigit() else Const.NAME_SECOND_POSSIBLE_INDEX
             parent_name = parent[parent_idx]
+
             if code_list:
                 # {name}.Class.count_number.X ward Or {name}.Class.count_number.X ward.ele_number
-
                 if parent_name.endswith('s'):
                     parent_name = parent_name[:-1]
                 if len(key_components) < 3:
