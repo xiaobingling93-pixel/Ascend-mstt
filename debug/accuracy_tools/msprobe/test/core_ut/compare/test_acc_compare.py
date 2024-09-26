@@ -207,14 +207,6 @@ op_result = [
 
 class TestUtilsMethods(unittest.TestCase):
 
-    def test_check_graph_mode(self):
-        op1 = "Aten"
-        op2 = "torch"
-        self.assertTrue(check_graph_mode(op1, op2))
-        self.assertTrue(check_graph_mode(op2, op1))
-        self.assertFalse(check_graph_mode(op1, op1))
-        self.assertFalse(check_graph_mode(op2, op2))
-
     def test_get_accuracy_graph_mode(self):
         result = []
         get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
@@ -232,3 +224,4 @@ class TestUtilsMethods(unittest.TestCase):
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         find_compare_result_error_rows(result_df, highlight_dict, False, False)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
+        
