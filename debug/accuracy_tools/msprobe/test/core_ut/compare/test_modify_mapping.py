@@ -19,7 +19,8 @@ class TestModifyMapping(unittest.TestCase):
         }
         self.ms_construct = {
             "Functional.add.0.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
-            "Tensor.reshape.2.forward": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0"
+            "Tensor.reshape.2.forward": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0",
+            "Functional.add.4.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0"
         }
         self.ms_stack = {
             "Functional.add.0.forward": [
@@ -31,8 +32,10 @@ class TestModifyMapping(unittest.TestCase):
                 in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
                 "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 92, \
                 in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)"
-                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/utils.py, line 38, in attn_mask_add, \n attention_scores = ops.add(",
-                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/scale_mask_softmax.py, line 65, in construct, \n masked_input = self.mask_func(x, mask) if mask is not None else x",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/utils.py, line 38, \
+                in attn_mask_add, \n attention_scores = ops.add(",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/scale_mask_softmax.py, line 65, \
+                in construct, \n masked_input = self.mask_func(x, mask) if mask is not None else x",
                 "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2460, \
                 in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
                 "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 498, \
@@ -76,6 +79,40 @@ class TestModifyMapping(unittest.TestCase):
                 "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
                 in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)"
             ],
+            "Functional.add.4.forward": [
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 507, \
+                in _run_construct, \n output = self._run_forward_hook(inputs, output)", 
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+                in __call__, \n return self._run_construct(*args, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, \
+                in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 92, \
+                in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/utils.py, line 38, \
+                in attn_mask_add, \n attention_scores = ops.add(",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/scale_mask_softmax.py, line 65, \
+                in construct, \n masked_input = self.mask_func(x, mask) if mask is not None else x",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2460, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 498, \
+                in _run_construct, \n output = self._backward_hook_construct(*outputs, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+                in __call__, \n return self._run_construct(*args, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/transformer.py, line 533, \
+                in construct, \n attention_output = self.attention(norm_output, attention_mask, rotary_pos_emb)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
+                in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2460, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 498, \
+                in _run_construct, \n output = self._backward_hook_construct(*outputs, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 745, \
+                in __call__, \n return self._run_construct(*args, **kwargs)",
+                "File /home/user/envs/python3.9/site-packages/mindformers/transformer/transformer.py, line 533, \
+                in construct, \n attention_output = self.attention(norm_output, attention_mask, rotary_pos_emb)",
+                "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
+                in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)"
+            ]
         }
         self.pt_stack = {
             "Functional.max_pool2d.0.forward": [
