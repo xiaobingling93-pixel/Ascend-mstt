@@ -22,10 +22,10 @@ class TestRunUtUtils(unittest.TestCase):
         write_csv(content, self.details_csv_path)
         write_csv(content, self.invalid_csv_path)
         
-    def tearDown(self):
-        for filename in os.listdir(self.save_path):
-            os.remove(os.path.join(self.save_path, filename))
-        os.rmdir(self.save_path)
+    # def tearDown(self):
+    #     for filename in os.listdir(self.save_path):
+    #         os.remove(os.path.join(self.save_path, filename))
+    #     os.rmdir(self.save_path)
 
     def test_get_validated_result_csv_patht_valid_mode(self):
         validated_path = get_validated_result_csv_path(self.result_csv_path, 'result')
