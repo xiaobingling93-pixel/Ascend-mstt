@@ -13,9 +13,9 @@ class TestModifyMapping(unittest.TestCase):
         ]
         self.pt_construct = {
             "Functional.max_pool2d.0.forward": "Module.pool1.MaxPool2d.forward.0",
-            "Funtional.conv2d.1.forward": "Module.con2.Conv2d.forward.0",
+            "Funtional.conv2d.1.forward": "Module.conv2.Conv2d.forward.0",
             "Functional.linear.5.backward": "Module.fc3.Linear.backward.1",
-            "Module.conv1.Conv2d.backward.1": null
+            "Module.conv1.Conv2d.backward.1": None
         }
         self.ms_construct = {
             "Functional.add.0.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",

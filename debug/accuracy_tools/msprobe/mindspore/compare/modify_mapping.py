@@ -96,12 +96,12 @@ def modify_mapping_with_stack(stack, construct):
             func_stack_list = find_stack_func_list(regard_scope)
 
             # 组合逻辑：parent的节点名（到节点名字为止）加上调用栈名[reversed_list]加上原来key重复key的节点名[key_components[1:-2] + key_components[-3:]]
-            final_res_key = Const.SEP.join(parent[:parent_idx + 1] + reversed_list +
+            final_res_key = Const.SEP.join(parent[:parent_idx + 1] + func_stack_list +
                                      key_components[1:Const.CONSTRUCT_NAME_INDEX + 1] + key_components[Const.CONSTRUCT_NAME_INDEX:])
             final_res_key = final_res_key.strip(".forward").strip(".backward")
         else:
             final_res_key = Const.SEP.join(key_components[:-2] + [key_components[-1]])
-            reversed_list = []
+            func_stack_list = []
         final_pres[final_res_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: construct[key],
-                                     Const.STACK: Const.SEP.join(reversed_list) if reversed_list else None}
+                                     Const.STACK: Const.SEP.join(func_stack_list) if func_stack_list else None}
     return final_pres
