@@ -25,7 +25,7 @@ import torch.utils.hooks as full_hooks
 from msprobe.core.common.const import Const
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
- 
+
 class HOOKModule(nn.Module):
     module_count = {}
     inner_stop_hook = {}

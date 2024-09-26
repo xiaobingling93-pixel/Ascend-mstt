@@ -28,7 +28,7 @@ from msprobe.pytorch.function_factory import npu_custom_functions
 try:
     import torch_npu
 except ImportError:
-    logger.warning("Failing to import torch_npu.")
+    logger.info("Failing to import torch_npu.")
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -49,7 +49,7 @@ def get_npu_ops():
 class HOOKNpuOP(object):
     pass
 
- 
+
 class NpuOPTemplate(HOOKModule):
 
     def __init__(self, op_name, hook, need_hook=True, device=Const.CPU_LOWERCASE):
