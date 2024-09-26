@@ -54,7 +54,7 @@ class TestRunUtUtils(unittest.TestCase):
 
     def test_exec_api_functional_api(self):
         api_name = "sigmoid"
-        args = (torch.tensor(1))
+        args = (torch.tensor([1]))
         result = exec_api("Functional", api_name, None, args, kwargs={})
         self.assertAlmostEqual(result, torch.tensor(0.7311))
 
