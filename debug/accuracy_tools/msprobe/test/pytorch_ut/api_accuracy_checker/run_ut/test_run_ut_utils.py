@@ -9,8 +9,9 @@ from msprobe.core.common.file_utils import create_directory, write_csv
 class TestRunUtUtils(unittest.TestCase):
     
     def setUp(self):
-        self.save_path = "temp_save_path"
-        create_directory(self.save_path)
+        save_path = "temp_save_path"
+        create_directory(save_path)
+        self.save_path = os.path.realpath(save_path)
         self.result_file_name = "accuracy_checking_result_12345678901234.csv"
         self.detail_file_name = "accuracy_checking_details_12345678901234.csv"
         self.invalid_file_name = "invalid_file_name.csv"
@@ -22,10 +23,10 @@ class TestRunUtUtils(unittest.TestCase):
         write_csv(content, self.details_csv_path)
         write_csv(content, self.invalid_csv_path)
         
-    # def tearDown(self):
-    #     for filename in os.listdir(self.save_path):
-    #         os.remove(os.path.join(self.save_path, filename))
-    #     os.rmdir(self.save_path)
+    def tearDown(self):
+        for filename in os.listdir(self.save_path):
+            os.remove(os.path.join(self.save_path, filename))
+        os.rmdir(self.save_path)
 
     def test_get_validated_result_csv_patht_valid_mode(self):
         validated_path = get_validated_result_csv_path(self.result_csv_path, 'result')
@@ -52,10 +53,10 @@ class TestRunUtUtils(unittest.TestCase):
         self.assertEqual(validated_details_csv_path, self.details_csv_path)
 
     def test_exec_api_functional_api(self):
-        api_name = "add"
-        args = (torch.tensor(1), torch.tensor(2))
+        api_name = "sigmoid"
+        args = (torch.tensor(1))
         result = exec_api("Functional", api_name, None, args, kwargs={})
-        self.assertEqual(result, torch.tensor(3))
+        self.assertAlmostEqual(result, torch.tensor(0.7311))
 
     def test_exec_api_tensor_api(self):
         api_name = "add"
