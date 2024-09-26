@@ -18,11 +18,11 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.core.common.const import Const, MsgConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.debugger.precision_debugger import PrecisionDebugger
 from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.common.const import Const as MsConst
-from msprobe.core.common.const import Const
 
 
 class TestPrecisionDebugger(unittest.TestCase):
@@ -95,10 +95,10 @@ class TestPrecisionDebugger(unittest.TestCase):
         PrecisionDebugger._instance = None
         with self.assertRaises(Exception) as context:
             PrecisionDebugger.stop()
-        self.assertEqual(str(context.exception), "PrecisionDebugger instance is not created.")
+        self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
         with self.assertRaises(Exception) as context:
             PrecisionDebugger.step()
-        self.assertEqual(str(context.exception), "PrecisionDebugger instance is not created.")
+        self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
         PrecisionDebugger._instance = MockPrecisionDebugger()
         Runtime.is_running = True
         PrecisionDebugger.stop()
