@@ -121,7 +121,7 @@ def calculate_coverage(added_lines, covered_lines):
     print(f"Total annotation lines: {total_annotation}")
     print(f"Total covered lines: {total_covered}")
 
-    coverage_rate = (total_covered / (total_added - total_annotation) * 100) if total_added > 0 else 0
+    coverage_rate = (total_covered / (total_added - total_annotation) * 100) if (total_added - total_annotation) > 0 else 0
     return coverage_rate
 
 
