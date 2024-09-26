@@ -1,14 +1,29 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.pytorch.free_benchmark import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType, PerturbationMode
-from msprobe.pytorch.free_benchmark.perturbed_layers.npu.improve_precision import (
-    ImprovePrecisionLayer,
-)
 from msprobe.pytorch.free_benchmark.perturbed_layers.npu.add_noise import AddNoiseLayer
 from msprobe.pytorch.free_benchmark.perturbed_layers.npu.bit_noise import BitNoiseLayer
-from msprobe.pytorch.free_benchmark.perturbed_layers.npu.no_change import NoChangeLayer
 from msprobe.pytorch.free_benchmark.perturbed_layers.npu.change_value import (
     ChangeValueLayer,
 )
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.improve_precision import (
+    ImprovePrecisionLayer,
+)
+from msprobe.pytorch.free_benchmark.perturbed_layers.npu.no_change import NoChangeLayer
 from msprobe.pytorch.free_benchmark.perturbed_layers.run_cpu import CpuLayer
 
 
