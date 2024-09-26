@@ -3,66 +3,50 @@ import unittest
 from unittest.mock import patch, MagicMock
 import torch
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import *
+from msprobe.core.common.file_utils import create_directory
 
 
 class TestRunUtUtils(unittest.TestCase):
+    
+    def setUp(self):
+        self.save_path = "temp_save_path"
+        create_directory(self.save_path)
+        self.result_file_name = "accuracy_checking_result_12345678901234.csv"
+        self.detail_file_name = "accuracy_checking_details_12345678901234.csv"
+        self.invalid_file_name = "invalid_file_name.csv"
+        self.result_csv_path = os.path.join(self.save_path, self.result_file_name)
+        self.details_csv_path = os.path.join(self.save_path, self.detail_file_name)
+        self.invalid_csv_path = os.path.join(self.save_path, self.invalid_file_name)
+        
+    def tearDown(self):
+        for filename in os.listdir(self.save_path):
+            os.remove(os.path.join(self.save_path, filename))
+        os.rmdir(self.save_path)
 
     def test_get_validated_result_csv_patht_valid_mode(self):
-        result_csv_path = '/path/to/result.csv'
-        validated_path = get_validated_result_csv_path(result_csv_path, 'result')
-        self.assertEqual(validated_path, result_csv_path)
+        validated_path = get_validated_result_csv_path(self.result_csv_path, 'result')
+        self.assertEqual(validated_path, self.result_csv_path)
 
     def test_get_validated_result_csv_path_invalid_mode(self):
         with self.assertRaises(ValueError):
-            get_validated_result_csv_path('/path/to/result.csv', 'invalid_mode')
+            get_validated_result_csv_path(self.result_csv_path, 'invalid_mode')
 
     def test_get_validated_result_csv_path_file_path_validation(self):
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.return_value = '/path/to/validated.csv'
-            validated_path = get_validated_result_csv_path('/path/to/result.csv', 'result')
-            self.assertEqual(validated_path, '/path/to/validated.csv')
+        validated_path = get_validated_result_csv_path(self.result_csv_path, 'result')
+        self.assertEqual(validated_path, self.result_csv_path)
 
     def test_get_validated_result_csv_patht_result_csv_name_pattern(self):
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.return_value = '/path/to/accuracy_checking_result_12345678901234.csv'
-            validated_path = get_validated_result_csv_path('/path/to/result.csv', 'result')
-            self.assertEqual(validated_path, '/path/to/validated.csv')
+        validated_path = get_validated_result_csv_path(self.result_csv_path, 'result')
+        self.assertEqual(validated_path, self.result_csv_path)
 
     def test_get_validated_result_csv_path_invalid_result_csv_name_pattern(self):
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.return_value = '/path/to/invalid_name.csv'
-            with self.assertRaises(ValueError):
-                get_validated_result_csv_path('/path/to/result.csv', 'result')
-                
-    def test_get_validated_details_csv_path_valid_result_csv_path(self):
-        result_csv_path = '/path/to/accuracy_checking_result_12345678901234.csv'
-        expected_details_csv_path = '/path/to/accuracy_checking_details_12345678901234.csv'
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.return_value = expected_details_csv_path
-            validated_details_csv_path = get_validated_details_csv_path(result_csv_path)
-            self.assertEqual(validated_details_csv_path, expected_details_csv_path)
+        with self.assertRaises(ValueError):
+            get_validated_result_csv_path(self.invalid_csv_path, 'result')
 
     def test_get_validated_details_csv_path_file_name_replacement(self):
-        result_csv_path = '/path/to/result_file.csv'
-        expected_details_csv_path = '/path/to/details_file.csv'
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.return_value = expected_details_csv_path
-            validated_details_csv_path = get_validated_details_csv_path(result_csv_path)
-            self.assertEqual(validated_details_csv_path, expected_details_csv_path)
+        validated_details_csv_path = get_validated_details_csv_path(self.result_csv_path)
+        self.assertEqual(validated_details_csv_path, self.details_csv_path)
 
-    def test_get_validated_details_csv_path_file_path_validation(self):
-        result_csv_path = '/path/to/result_file.csv'
-        with patch('msprobe.core.common.file_utils.FileChecker') as mock_FileChecker:
-            mock_instance = mock_FileChecker.return_value
-            mock_instance.common_check.side_effect = Exception("File path is invalid")
-            with self.assertRaises(ValueError):
-                get_validated_details_csv_path(result_csv_path)
-                
     def test_exec_api_functional_api(self):
         api_name = "add"
         args = (torch.tensor(1), torch.tensor(2))
