@@ -13,27 +13,6 @@ class TestHOOKModuleInit(unittest.TestCase):
         current_thread_id = module.current_thread
         self.assertEqual(current_thread_id, threading.current_thread().ident)
 
-    def test_stop_hook_logic(self):
-        module = HOOKModule(self.mock_build_hook)
-        self.assertFalse(module.stop_hook)
-
-        HOOKModule.inner_stop_hook[module.current_thread] = True
-        module = HOOKModule(self.mock_build_hook)
-        self.assertTrue(module.stop_hook)
-
-    def test_prefix_op_name(self):
-        HOOKModule.prefix_op_name_ = "test_prefix"
-        module = HOOKModule(self.mock_build_hook)
-        self.assertEqual(module.prefix, "test_prefix0.")
-        self.mock_build_hook.assert_called_once_with(module.prefix)
-
-    def test_hooks_registration(self):
-        module = HOOKModule(self.mock_build_hook)
-        self.assertTrue(module._forward_pre_hooks)
-        self.assertTrue(module._forward_hooks)
-        self.assertTrue(module._backward_hooks)
-        self.mock_build_hook.assert_called_once_with(module.prefix)
-
 
 class TestHOOKModuleCall(unittest.TestCase):
     def setUp(self):

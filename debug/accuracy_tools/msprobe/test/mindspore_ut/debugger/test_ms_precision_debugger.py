@@ -74,7 +74,7 @@ class TestPrecisionDebugger(unittest.TestCase):
         PrecisionDebugger._instance = None
         with self.assertRaises(Exception) as context:
             debugger.start()
-        self.assertEqual(str(context.exception), "No instance of PrecisionDebugger found.")
+        self.assertEqual(str(context.exception), MsgConst.NOT_CREATED_INSTANCE)
 
         with patch("msprobe.mindspore.debugger.precision_debugger.parse_json_config", new=mock_parse_json_config), \
              patch.object(PrecisionDebugger, "_get_execution_mode", new=mock_get_mode), \
