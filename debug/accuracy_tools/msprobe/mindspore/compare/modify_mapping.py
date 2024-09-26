@@ -102,6 +102,6 @@ def modify_mapping_with_stack(stack, construct):
         else:
             final_res_key = Const.SEP.join(key_components[:-2] + [key_components[-1]])
             func_stack_list = []
-        final_pres[final_res_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: parent_node,
+        final_pres[final_res_key] = {Const.ORIGIN_DATA: key, Const.SCOPE: construct[key],
                                      Const.STACK: Const.SEP.join(func_stack_list) if func_stack_list else None}
     return final_pres
