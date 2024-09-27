@@ -277,6 +277,16 @@ class TestUtils(TestCase):
         result = get_real_step_or_rank([10, "1-3", 3], "step")
         self.assertEqual(result, [1, 2, 3, 10])
 
+    def test_struct_json_get_invalid_framework_then_fail(self):
+        input_param = {
+            "bench_json_path": "./",
+            "npu_json_path": "./"
+        }
+        framework = "Invalid Framework"
+        with self.assertRaises(CompareException) as context:
+            stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+
     def test_struct_json_get_pt_invalid_path_then_fail(self):
         input_param = {
             "bench_json_path": None
