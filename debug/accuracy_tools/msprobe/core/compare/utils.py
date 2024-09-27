@@ -66,7 +66,7 @@ def rename_api(npu_name, process):
 
 
 def read_op(op_data, op_name):
-    op_parsed_list = Const.DEFAULT_LIST
+    op_parsed_list = []
     if Const.FORWARD in op_name:
         if Const.INPUT_ARGS in op_data:
             input_item = op_data[Const.INPUT_ARGS]
