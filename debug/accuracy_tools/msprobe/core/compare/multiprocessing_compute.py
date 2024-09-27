@@ -51,7 +51,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
 
 
 def _ms_graph_handle_multi_process(func, result_df, mode):
-    process_num = int((multiprocessing.cpu_count() + 1) // 2)
+    process_num = int((multiprocessing.cpu_count() + 1) // 4)
     df_chunk_size = len(result_df) // process_num
     if df_chunk_size > 0:
         df_chunks = [result_df.iloc[i:i + df_chunk_size] for i in range(0, len(result_df), df_chunk_size)]
