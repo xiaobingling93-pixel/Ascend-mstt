@@ -453,3 +453,13 @@ class TestUtilsMethods(unittest.TestCase):
         input_param = {}
         result = Comparator()._do_multi_process(input_param, result_df)
         self.assertTrue(result.equals(o_result))
+
+    def test_compare_by_op(self):
+        from msprobe.pytorch.compare.pt_compare import PTComparator
+        npu_op_name = 'Functional.linear.0.forward.input.0'
+        bench_op_name = 'N/A'
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
+        input_param = {}
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
+        
