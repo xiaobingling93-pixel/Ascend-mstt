@@ -211,13 +211,6 @@ def struct_json_get(input_param, framework):
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
 
-    if not stack_json and not construct_json:
-        logger.info("stack_json_path and constrcut_json_path not found.")
-        return {}, {}
-    if not stack_json or not construct_json:
-        logger.error("stack or construct json path not found, please check")
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
-
     stack = load_json(stack_json)
     construct = load_json(construct_json)
     return stack, construct

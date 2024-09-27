@@ -116,7 +116,9 @@ class Const:
 
     STACK_FILE_INDEX = 0
 
-    STACK_FUNC_INDEX = 1
+    STACK_FUNC_INDEX = 2
+
+    STACK_FUNC_ELE_INDEX = 1
 
     CONSTRUCT_NAME_INDEX = -3
 

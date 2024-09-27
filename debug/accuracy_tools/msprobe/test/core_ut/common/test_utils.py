@@ -276,3 +276,73 @@ class TestUtils(TestCase):
         self.assertEqual(result, [1, 2, 3, 4, 5, 10])
         result = get_real_step_or_rank([10, "1-3", 3], "step")
         self.assertEqual(result, [1, 2, 3, 10])
+
+    def test_struct_json_get_invalid_framework_then_fail(self):
+        input_param = {
+            "bench_json_path": "./",
+            "npu_json_path": "./"
+        }
+        framework = "Invalid Framework"
+        with self.assertRaises(CompareException) as context:
+            stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
+
+    def test_struct_json_get_pt_invalid_path_then_fail(self):
+        input_param = {
+            "bench_json_path": None
+        }
+        framework = Const.PT_FRAMEWORK
+        with self.assertRaises(CompareException) as context:
+            stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+
+    def test_struct_json_get_ms_invalid_path_then_fail(self):
+        input_param = {
+            "npu_json_path": None
+        }
+        framework = Const.MS_FRAMEWORK
+        with self.assertRaises(CompareException) as context:
+            stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+
+    @patch('msprobe.core.common.utils.load_json')
+    def test_struct_json_get_pt_framework_valid_paths_then_pass(self, mock_load_json):
+        def load_json_side_effect(path):
+            if path.endswith("stack.json"):
+                return {'stack_key': 'stack_value'}
+            elif path.endswith("construct.json"):
+                return {'construct_key': 'construct_value'}
+            else:
+                raise FileNotFoundError
+        # 设置框架为PT_FRAMEWORK
+        input_param = {}
+        framework = Const.PT_FRAMEWORK
+        prefix = 'bench'
+        frame_json_path = './dump.json'
+        input_param[f'{prefix}_json_path'] = frame_json_path
+        mock_load_json.side_effect = load_json_side_effect
+
+        stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(stack, {'stack_key': 'stack_value'})
+        self.assertEqual(construct, {'construct_key': 'construct_value'})
+
+    @patch('msprobe.core.common.utils.load_json')
+    def test_struct_json_get_ms_framework_valid_paths_then_pass(self, mock_load_json):
+        def load_json_side_effect(path):
+            if path.endswith("stack.json"):
+                return {'stack_key': 'stack_value'}
+            elif path.endswith("construct.json"):
+                return {'construct_key': 'construct_value'}
+            else:
+                raise FileNotFoundError
+        # 设置框架为PT_FRAMEWORK
+        input_param = {}
+        framework = Const.MS_FRAMEWORK
+        prefix = 'npu'
+        frame_json_path = './dump.json'
+        input_param[f'{prefix}_json_path'] = frame_json_path
+        mock_load_json.side_effect = load_json_side_effect
+
+        stack, construct = struct_json_get(input_param, framework)
+        self.assertEqual(stack, {'stack_key': 'stack_value'})
+        self.assertEqual(construct, {'construct_key': 'construct_value'})
