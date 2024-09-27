@@ -30,12 +30,11 @@ class HOOKModule(nn.Module):
     module_count = {}
     inner_stop_hook = {}
 
-    def __init__(self, build_hook):
+    def __init__(self, build_hook) -> None:
         super(HOOKModule, self).__init__()
         self.has_overflow = False
         self.prefix = ""
         self.current_thread = threading.current_thread().ident
-
         if self.current_thread not in HOOKModule.inner_stop_hook:
             HOOKModule.inner_stop_hook[self.current_thread] = False
         self.stop_hook = HOOKModule.inner_stop_hook.get(self.current_thread, False)
@@ -43,11 +42,13 @@ class HOOKModule(nn.Module):
         if not self.stop_hook:
             if hasattr(self, "prefix_op_name_"):
                 self.prefix = self.prefix_op_name_
+
             if self.prefix not in HOOKModule.module_count:
-                HOOKModule.module_count[self.prefix] = 0
+                HOOKModule.module_count[self.prefix] = 1
+                self.prefix += '0' + Const.SEP
             else:
                 HOOKModule.module_count[self.prefix] += 1
-            self.prefix += str(HOOKModule.module_count[self.prefix]) + Const.SEP
+                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
             forward_pre_hook, forward_hook, backward_hook, _ = build_hook(self.prefix)
             if torch_version_above_or_equal_2:
                 self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
@@ -55,7 +56,7 @@ class HOOKModule(nn.Module):
             else:
                 self.register_forward_pre_hook(forward_pre_hook)
                 self.register_forward_hook(forward_hook)
-            self.register_full_backward_hook(backward_hook)
+            self.register_backward_hook(backward_hook)
 
     def __call__(self, *input, **kwargs):
         changed = False
