@@ -329,3 +329,16 @@ def get_real_step_or_rank(step_or_rank_input, obj):
     real_step_or_rank = list(set(real_step_or_rank))
     real_step_or_rank.sort()
     return real_step_or_rank
+
+
+def check_seed_all(seed, mode):
+    if isinstance(seed, int):
+        if seed < 0 or seed > Const.MAX_SEED_VALUE:
+            logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    else:
+        logger.error("Seed must be integer.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not isinstance(mode, bool):
+        logger.error("seed_all mode must be bool.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
