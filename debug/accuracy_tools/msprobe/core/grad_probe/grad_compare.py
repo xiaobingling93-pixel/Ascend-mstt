@@ -2,12 +2,11 @@ import os
 from typing import List
 
 from tqdm import tqdm
-import pandas as pd
 import matplotlib.pyplot as plt
 
 from msprobe.core.common.file_utils import create_directory, check_path_before_create, check_file_or_directory_path
 from msprobe.core.common.log import logger
-from msprobe.core.common.file_utils import remove_path, load_npy, write_csv
+from msprobe.core.common.file_utils import remove_path, load_npy, write_csv, read_csv
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.grad_probe.utils import plt_savefig
 
@@ -21,7 +20,7 @@ class GradComparator:
                 continue
             if not os.path.exists(os.path.join(path2, summary_file)):
                 continue
-            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
+            summary_csv = read_csv(os.path.join(path1, summary_file))
             return summary_csv["param_name"]
         raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
     

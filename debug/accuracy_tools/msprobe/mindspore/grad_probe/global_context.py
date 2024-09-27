@@ -31,7 +31,7 @@ class GlobalContext:
 
     def init_context(self, config_dict: Dict):
         level = config_dict.get(GradConst.LEVEL)
-        check_str(level, variable_name = "level in yaml")
+        check_str(level, variable_name="level in yaml")
         if level in GradConst.SUPPORTED_LEVEL:
             self._setting[GradConst.LEVEL] = config_dict.get(GradConst.LEVEL)
         else:
@@ -43,7 +43,7 @@ class GlobalContext:
         self._set_input_list(config_dict, GradConst.RANK, int)
 
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
-        check_str(output_path, variable_name = "output_path in yaml")
+        check_str(output_path, variable_name="output_path in yaml")
         try:
             check_path_before_create(output_path)
         except RuntimeError as err:

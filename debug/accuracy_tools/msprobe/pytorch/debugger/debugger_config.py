@@ -1,5 +1,3 @@
-from msprobe.pytorch.common import seed_all
-from msprobe.pytorch.common.log import logger
 from msprobe.core.common.const import Const
 
 
@@ -10,8 +8,6 @@ class DebuggerConfig:
         self.rank = common_config.rank if common_config.rank else []
         self.step = common_config.step if common_config.step else []
         self.level = level or common_config.level or "L1"
-        self.seed = common_config.seed if common_config.seed else 1234
-        self.is_deterministic = common_config.is_deterministic
         self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
@@ -57,7 +53,6 @@ class DebuggerConfig:
                 for index, scope_spec in enumerate(self.scope):
                     self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
-        seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
@@ -69,7 +64,6 @@ class DebuggerConfig:
 
     def check(self):
         self.check_kwargs()
-        self._check_rank()
         return True
 
     def check_model(self, model):
@@ -77,11 +71,3 @@ class DebuggerConfig:
             raise Exception(
                 f"For level {self.level}, PrecisionDebugger must receive a model argument."
             )
-
-    def _check_rank(self):
-        if self.rank:
-            for rank_id in self.rank:
-                if not isinstance(rank_id, int) or rank_id < 0:
-                    raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
-            else:
-                logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")

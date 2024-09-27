@@ -53,6 +53,7 @@ class Service:
         self.data_collector = build_data_collector(self.config)
         self.cell_processor = CellProcessor(self.data_collector.scope)
         self.switch = False
+        self.primitive_switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
@@ -71,7 +72,7 @@ class Service:
         )
 
     def check_level_valid(self):
-        if self.config.level == "L2":
+        if self.config.level == Const.LEVEL_L2:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
             )
@@ -189,7 +190,7 @@ class Service:
             current_count = service_instance.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}.{primitive_name}.{current_count}"
 
-            if not service_instance.switch:
+            if not service_instance.primitive_switch:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []
@@ -251,8 +252,9 @@ class Service:
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         HOOKCell.cell_count = defaultdict(int)
-        CellProcessor.cell_count = {}
+        CellProcessor.reset_cell_stats()
         self.primitive_counters.clear()
+        self.data_collector.data_writer.reset_cache()
 
     def start(self, model=None):
         self.start_call = True
@@ -262,6 +264,7 @@ class Service:
             api_register.api_set_ori_func()
             self.should_stop_service = True
             self.switch = False
+            self.primitive_switch = False
             print_tools_ends_info()
             return
         if self.config.step and self.current_iter not in self.config.step:
@@ -279,7 +282,7 @@ class Service:
             if self.config.rank and self.current_rank not in self.config.rank:
                 return
             self.register_hook_new()
-            if self.config.level == "L1":
+            if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
                 JitDump.set_config(self.config)
                 JitDump.set_data_collector(self.data_collector)
                 ms.common.api._MindsporeFunctionExecutor = JitDump
@@ -289,11 +292,31 @@ class Service:
                     PIJitCaptureContext.__exit__ = self.empty
             self.first_start = False
 
+        api_register.api_set_hook_func()
         self.switch = True
+        self.primitive_switch = True
         logger.info(f"Dump switch is turned on at step {self.current_iter}. ")
         self.create_dirs()
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
         JitDump.jit_dump_switch = True
+
+    def forward_backward_dump_end(self):
+        if self.should_stop_service:
+            return
+        logger.info(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() is set successfully. ")
+        if not self.start_call:
+            logger.error(f"{Const.TOOL_NAME}: debugger.start() is not set in the current scope.")
+            raise Exception("debugger.start() is not set in the current scope.")
+        if not self.switch:
+            logger.error(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() should be called between "
+                         "debugger.start() and debugger.stop() ")
+            raise Exception("debugger.stop() is already called. ")
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+        if self.config.rank and self.current_rank not in self.config.rank:
+            return
+        self.primitive_switch = False
+        api_register.api_set_ori_func()
 
     def stop(self):
         if self.should_stop_service:
@@ -308,6 +331,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        self.primitive_switch = False
         self.start_call = False
         self.data_collector.write_json()
         JitDump.jit_dump_switch = False
@@ -349,16 +373,16 @@ class Service:
 
     def register_hook_new(self):
         logger.info("The {} hook function is successfully mounted to the model.".format(self.config.task))
-        if self.config.level == "L1":
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API))
             api_register.api_set_hook_func()
             if self.model:
                 self.register_hooks()
 
-        if self.config.level == "L0":
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0]:
             if not self.model:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                       "The current level is L0, the model cannot be None")
+                                       f"The current level is {self.config.level}, the model cannot be None")
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue
