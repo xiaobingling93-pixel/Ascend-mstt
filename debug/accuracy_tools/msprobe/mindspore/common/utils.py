@@ -18,11 +18,11 @@ import random
 
 import mindspore as ms
 
-from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
+from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, check_seed_all
 
 
 def get_rank_if_initialized():
@@ -81,19 +81,6 @@ def seed_all(seed=1234, mode=False):
     random.seed(seed)
     ms.set_context(deterministic="ON" if mode else "OFF")
     os.environ['HCCL_DETERMINISTIC'] = str(mode)
-
-
-def check_seed_all(seed, mode):
-    if isinstance(seed, int):
-        if seed < 0 or seed > Const.MAX_SEED_VALUE:
-            logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
-    else:
-        logger.error("Seed must be integer.")
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
-    if not isinstance(mode, bool):
-        logger.error("seed_all mode must be bool.")
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 
 class MsprobeStep(ms.train.Callback):
