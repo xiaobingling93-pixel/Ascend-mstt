@@ -4,8 +4,7 @@ import pandas as pd
 import os
 import shutil
 import json
-from msprobe.core.compare.check import check_graph_mode
-from msprobe.core.compare.utils import merge_tensor, read_op, get_accuracy, rename_api
+from msprobe.core.compare.utils import get_accuracy
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.const import CompareConst
