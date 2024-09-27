@@ -12,6 +12,26 @@ npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2
                         [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
                         [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
 
+npu_dict_MintFunctional = {'op_name': ['MintFunctional.conv2d.0.forward.input.0', 'MintFunctional.conv2d.0.forward.input.1',
+                        'MintFunctional.conv2d.0.forward.input.2', 'MintFunctional.conv2d.0.forward.output'],
+           'input_struct': [('Float32', [1, 1, 28, 28]), ('Float32', [16, 1, 5, 5]),
+                             ('Float32', [16])],
+            'output_struct': [('Float32', [1, 16, 28, 28])],
+            'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
+                        [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
+                        [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
+                        [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
+
+npu_dict_Mint = {'op_name': ['Mint.conv2d.0.forward.input.0', 'Mint.conv2d.0.forward.input.1',
+                        'Mint.conv2d.0.forward.input.2', 'Mint.conv2d.0.forward.output'],
+           'input_struct': [('Float32', [1, 1, 28, 28]), ('Float32', [16, 1, 5, 5]),
+                             ('Float32', [16])],
+            'output_struct': [('Float32', [1, 16, 28, 28])],
+            'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
+                        [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
+                        [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
+                        [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
+
 bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                           'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
              'input_struct': [('Float32', [1, 1, 28, 28]), ('Float32', [16, 1, 5, 5]),
@@ -22,6 +42,14 @@ bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.con
                           [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
                           [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
 
+npu_op_name = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+                          'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output']
+
+npu_op_name_Mint = ['Mint.conv2d.0.forward.input.0', 'Mint.conv2d.0.forward.input.1',
+                          'Mint.conv2d.0.forward.input.2', 'Mint.conv2d.0.forward.output']
+
+bench_op_name = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+                          'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output']
 
 data_mapping = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0'}
 
@@ -119,3 +147,34 @@ class TestUtilsMethods(unittest.TestCase):
                            '0.1560711038523707%', 4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625,
                            4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None]]
         self.assertListEqual(result, result_correct)
+        
+    def test_get_api_name(self):
+        ms_comparator = MSComparator()
+        api_list = ["Functional", "conv2d", "0", "forward", "input", "0"]
+        ms_api_name = ms_comparator.get_api_name(api_list)
+        self.assertEqual(ms_api_name, "Functional.conv2d")
+        
+    def test_process_internal_api_mapping(self):
+        ms_comparator = MSComparator()
+        npu_op_name_trans = ms_comparator.process_internal_api_mapping(npu_op_name, bench_op_name)
+        self.assertEqual(npu_op_name_trans, bench_op_name)
+        
+    def test_process_internal_api_mapping_2(self):
+        ms_comparator = MSComparator()
+        npu_op_name_trans = ms_comparator.process_internal_api_mapping(npu_dict_MintFunctional, bench_op_name)
+        self.assertEqual(npu_op_name_trans, bench_op_name)
+        
+    def test_api_replace(self):
+        ms_comparator = MSComparator()
+        target = "Mint"
+        para = "Functional"
+        result = ms_comparator.api_replace(npu_op_name_Mint, target, para)
+        self.assertEqual(result, bench_dict)
+        
+        
+        
+        
+        
+        
+        
+        
