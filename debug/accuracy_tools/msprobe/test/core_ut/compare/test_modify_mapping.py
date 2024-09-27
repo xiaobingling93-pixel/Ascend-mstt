@@ -60,7 +60,7 @@ class TestModifyMapping(unittest.TestCase):
                 "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, \
                 in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
                 "File /home/user/envs/python3.9/site-packages/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 92, \
-                in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)"
+                in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
                 "File /home/user/envs/python3.9/site-packages/mindformers/transformer/utils.py, line 38, \
                 in attn_mask_add, \n attention_scores = ops.add(",
                 "File /home/user/envs/python3.9/site-packages/mindformers/transformer/scale_mask_softmax.py, line 65, \
@@ -236,30 +236,29 @@ class TestModifyMapping(unittest.TestCase):
     def test_modify_mapping_with_stack_when_ms_valid_then_pass(self):
         result = modify_mapping_with_stack(self.ms_stack, self.ms_construct)
         expected_result = {
-            "Module.pool1.max_pool2d.max_pool2d.0": {
-                "origin_data": "Functional.max_pool2d.0.forward",
-                "scope": "Module.pool1.MaxPool2d.forward.0",
+            "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.0": {
+                "origin_data": "Functional.add.0.forward",
+                "scope": "Cell.transformer_layers.0.attention.core_attention.\
+                scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "stack": "attn_mask_add"
+            },
+            "Cell.transformer_layers.0.attention.reshape.reshape.2": {
+                "origin_data": "Tensor.reshape.2.forward",
+                "scope": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0",
                 "stack": None
             },
-            "Module.conv2.conv2d.conv2d.1": {
-                "origin_data": "Module.conv1.Conv2d.backward.1",
-                "scope": None,
-                "stack": None
-            },
-            "Module.fc3.linear.linear.5": {
-                "origin_data": "Functional.linear.5.backward",
-                "scope": "Module.fc3.Linear.backward.1",
-                "stack": None
-            },
-            "Module.conv1.Conv2d.1": {
-                "origin_data": "Module.conv1.Conv2d.1",
-                "scope": "Module.fc3.Linear.backward.1",
-                "stack": None
+            "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.4": {
+                "origin_data": "Functional.add.4.forward",
+                "scope": "Cell.transformer_layers.0.attention.core_attention.\
+                scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "stack": "attn_mask_add"
             }
         }
-        self.assertIn("Module.pool1.max_pool2d.max_pool2d.0", result)
-        self.assertIn("Module.conv2.conv2d.conv2d.1", result)
-        self.assertIn("Module.fc3.linear.linear.5", result)
-        self.assertIn("Module.conv1.Conv2d.1", result)
-        self.assertEqual(result["Module.pool1.max_pool2d.max_pool2d.0"]["origin_data"], "Functional.max_pool2d.0.forward")
-        self.assertEqual(result["Module.conv1.Conv2d.1"]["origin_data"], "Module.conv1.Conv2d.backward.1")
+        self.assertIn("Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.0", result)
+        self.assertIn("Cell.transformer_layers.0.attention.reshape.reshape.2", result)
+        self.assertIn("Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.4", result)
+        self.assertEqual(result["Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.0"]["origin_data"], "Functional.add.0.forward")
+        self.assertEqual(result["Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.0"]["scope"], "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0")
+        self.assertEqual(result["Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add.add.0"]["stack"], "attn_mask_add")
+        self.assertEqual(result["Cell.transformer_layers.0.attention.reshape.reshape.2"]["origin_data"], "Tensor.reshape.2.forward")
+        self.assertEqual(result["Cell.transformer_layers.0.attention.reshape.reshape.2"]["scope"], "Cell.transformer_layers.0.attention.ParallelAttention.forward.0")
