@@ -232,3 +232,34 @@ class TestModifyMapping(unittest.TestCase):
         self.assertIn("Module.conv1.Conv2d.1", result)
         self.assertEqual(result["Module.pool1.max_pool2d.max_pool2d.0"]["origin_data"], "Functional.max_pool2d.0.forward")
         self.assertEqual(result["Module.conv1.Conv2d.1"]["origin_data"], "Module.conv1.Conv2d.backward.1")
+
+    def test_modify_mapping_with_stack_when_ms_valid_then_pass(self):
+        result = modify_mapping_with_stack(self.ms_stack, self.ms_construct)
+        expected_result = {
+            "Module.pool1.max_pool2d.max_pool2d.0": {
+                "origin_data": "Functional.max_pool2d.0.forward",
+                "scope": "Module.pool1.MaxPool2d.forward.0",
+                "stack": None
+            },
+            "Module.conv2.conv2d.conv2d.1": {
+                "origin_data": "Module.conv1.Conv2d.backward.1",
+                "scope": None,
+                "stack": None
+            },
+            "Module.fc3.linear.linear.5": {
+                "origin_data": "Functional.linear.5.backward",
+                "scope": "Module.fc3.Linear.backward.1",
+                "stack": None
+            },
+            "Module.conv1.Conv2d.1": {
+                "origin_data": "Module.conv1.Conv2d.1",
+                "scope": "Module.fc3.Linear.backward.1",
+                "stack": None
+            }
+        }
+        self.assertIn("Module.pool1.max_pool2d.max_pool2d.0", result)
+        self.assertIn("Module.conv2.conv2d.conv2d.1", result)
+        self.assertIn("Module.fc3.linear.linear.5", result)
+        self.assertIn("Module.conv1.Conv2d.1", result)
+        self.assertEqual(result["Module.pool1.max_pool2d.max_pool2d.0"]["origin_data"], "Functional.max_pool2d.0.forward")
+        self.assertEqual(result["Module.conv1.Conv2d.1"]["origin_data"], "Module.conv1.Conv2d.backward.1")
