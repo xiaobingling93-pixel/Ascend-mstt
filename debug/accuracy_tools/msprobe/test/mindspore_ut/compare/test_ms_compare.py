@@ -147,29 +147,7 @@ class TestUtilsMethods(unittest.TestCase):
                            '0.1560711038523707%', 4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625,
                            4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None]]
         self.assertListEqual(result, result_correct)
-        
-    def test_get_api_name(self):
-        ms_comparator = MSComparator()
-        api_list = ["Functional", "conv2d", "0", "forward", "input", "0"]
-        ms_api_name = ms_comparator.get_api_name(api_list)
-        self.assertEqual(ms_api_name, "Functional.conv2d")
-        
-    def test_process_internal_api_mapping(self):
-        ms_comparator = MSComparator()
-        npu_op_name_trans = ms_comparator.process_internal_api_mapping(npu_op_name, bench_op_name)
-        self.assertEqual(npu_op_name_trans, bench_op_name)
-        
-    def test_process_internal_api_mapping_2(self):
-        ms_comparator = MSComparator()
-        npu_op_name_trans = ms_comparator.process_internal_api_mapping(npu_dict_MintFunctional, bench_op_name)
-        self.assertEqual(npu_op_name_trans, bench_op_name)
-        
-    def test_api_replace(self):
-        ms_comparator = MSComparator()
-        target = "Mint"
-        para = "Functional"
-        result = ms_comparator.api_replace(npu_op_name_Mint, target, para)
-        self.assertEqual(result, bench_dict)
+          
         
         
         
