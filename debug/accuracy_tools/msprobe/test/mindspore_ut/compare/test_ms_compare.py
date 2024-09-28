@@ -147,12 +147,3 @@ class TestUtilsMethods(unittest.TestCase):
                            '0.1560711038523707%', 4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625,
                            4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None]]
         self.assertListEqual(result, result_correct)
-          
-        
-        
-        
-        
-        
-        
-        
-        
