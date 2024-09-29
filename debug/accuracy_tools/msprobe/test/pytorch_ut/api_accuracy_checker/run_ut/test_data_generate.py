@@ -250,7 +250,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         
         shape = (0, 0)
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(torch.equal(tensor, torch.tensor([], size=(0, 0))))
+        self.assertEqual(tensor.numel(), 0)
 
     def test_gen_bool_tensor(self):
         info = {"type": "torch.Tensor", "dtype": "torch.bool", "shape": [1, 1, 160, 256], "Max": 1, "Min": 0,
