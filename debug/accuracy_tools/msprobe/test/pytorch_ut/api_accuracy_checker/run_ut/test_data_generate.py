@@ -99,8 +99,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'type': 'torch.Size', 'value': (2, 3)}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=False, convert_type=None)
-        print(data)
-        self.assertEqual(data, torch.Size(2, 3))
+        self.assertEqual(data, torch.Size([2, 3]))
         
         info = {'type': 'slice', 'value': [1, 10, 2]}
         api_name = "test_api"
@@ -144,7 +143,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         expect_return_value = torch.tensor([[True, False]])
         data = gen_random_tensor(info, convert_type=None)
         self.assertEqual(data.dtype, torch.bool)
-        self.assertEqual(data, expect_return_value)
+        self.assertTrue(torch.equal(data, expect_return_value))
 
     def test_gen_random_tensor(self):
         data = gen_random_tensor(api_info_dict.get('input_args')[0], None)
@@ -188,8 +187,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         
         kwargs_item_value = [{'type': 'torch.Size', 'value': (2, 3)}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
-        print(result)
-        self.assertEqual(result[0], torch.Size(2, 3))
+        self.assertEqual(result[0], [torch.Size([2, 3])])
         
         kwargs_item_value = [{'type': 'str', 'value': 'hello'}, {'type': 'int', 'value': 42}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
@@ -246,23 +244,23 @@ class TestDataGenerateMethods(unittest.TestCase):
         data_dtype = 'torch.float32'
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         print(tensor)
-        self.assertTrue(tensor.max == float('inf'))
-        self.assertTrue(tensor.min == float('-inf'))
+        self.assertTrue(tensor.max() == float('inf'))
+        self.assertTrue(tensor.min() == float('-inf'))
 
         low_info = [float('inf'), float('inf')]
         high_info = [float('inf'), float('inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max) and math.isnan(tensor.min))
+        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
         
         low_info = [float('-inf'), float('-inf')]
         high_info = [float('-inf'), float('-inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max) and math.isnan(tensor.min))
+        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
 
         low_info = [float('nan'), float('nan')]
         high_info = [float('nan'), float('nan')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max) and math.isnan(tensor.min))
+        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
         
         shape = 0
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
@@ -280,7 +278,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         low, high = 1, 0
         shape = (1, 2)
         data = gen_bool_tensor(low, high, shape)
-        self.assertTrue(torch.all_close(data, torch.tensor([[False, True]])))
+        self.assertTrue(torch.equal(data, torch.tensor([[False, True]])))
 
     def test_gen_api_params(self):
         api_info = {"input_args": [], "input_kwargs": {}}
@@ -292,6 +290,7 @@ class TestDataGenerateMethods(unittest.TestCase):
             gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         
+        convert_type = None
         api_info = {"input_args": None, "input_kwargs": {}}
         with patch('msprobe.pytorch.common.log.logger.warning') as mock_logger:
             result_args, result_kwargs = gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
