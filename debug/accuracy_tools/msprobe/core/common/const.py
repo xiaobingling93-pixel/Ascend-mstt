@@ -116,7 +116,9 @@ class Const:
 
     STACK_FILE_INDEX = 0
 
-    STACK_FUNC_INDEX = 1
+    STACK_FUNC_INDEX = 2
+
+    STACK_FUNC_ELE_INDEX = 1
 
     CONSTRUCT_NAME_INDEX = -3
 
@@ -376,6 +378,8 @@ class MsgConst:
         class ERROR:
             value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+    NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
 
 
 class GraphMode:

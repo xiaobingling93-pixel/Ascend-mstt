@@ -1,4 +1,16 @@
-# 1 精度预检工具
+
+
+# 1 数据采集
+
+1. dump.json中API或Module统计信息里出现null或None值的原因是什么？
+
+   dump.json里出现null或None值的可能性较多，常见的场景有：
+
+   - 输入或者输出参数本身是一个None值。
+   - 输入参数或输出参数类型当前工具不支持，会有日志打印提醒。
+   - 输入或者输出tensor的dtype为bool时，Mean和Norm等字段为null。
+
+# 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
 
@@ -61,11 +73,11 @@
    | `__truediv__`   | 同 `__div__`      |
    | `__xor__`       | ^                |
 
-# 2 精度比对工具
+# 3 精度比对(PyTorch)
 
-## 2.1 工具使用
+## 3.1 工具使用
 
-### 2.1.1 dump 指定融合算子
+### 3.1.1 dump 指定融合算子
 
 数据采集当前支持融合算子的输入输出，需要在 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 中添加，比如以下代码段调用的 softmax 融合算子。
 
@@ -83,7 +95,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
 （npu_scaled_masked_softmax 融合算子工具已支持 dump，本例仅供参考）。
 
-## 2.2 常见问题
+## 3.2 常见问题
 
 1. 在同一个目录多次执行 dump 会冲突吗？
 
@@ -97,7 +109,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
     答：torch 版本和硬件差异属于正常情况。
 
-## 2.3 异常情况
+## 3.3 异常情况
 
 1. HCCL 报错： error code: EI0006。
 

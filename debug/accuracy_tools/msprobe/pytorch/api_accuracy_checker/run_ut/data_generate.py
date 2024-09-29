@@ -120,8 +120,12 @@ def gen_random_tensor(info, convert_type):
         convert_type: convert ori_type to dist_type flag.
     """
     check_object_type(info, dict)
-    low, high = info.get('Min'), info.get('Max')
-    low_origin, high_origin = info.get('Min_origin'), info.get('Max_origin')
+
+    low_origin = info.get('Min')
+    low = info.get('Min_except_inf_nan', low_origin)
+    high_origin = info.get('Max')
+    high = info.get('Max_except_inf_nan', high_origin)
+    
     low_info = [low, low_origin]
     high_info = [high, high_origin]
     data_dtype = info.get('dtype')
