@@ -92,6 +92,23 @@ class ApiAccuracyChecker:
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
         return output_list
 
+    @staticmethod
+    def prepare_api_input_aggregation(api_info, forward_or_backward):
+        '''
+        Args:
+            api_info: ApiInfo
+            forward_or_backward: str
+        Returns:
+            ApiInputAggregation
+        '''
+        forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
+        kwargs = api_info.get_kwargs()
+        if forward_or_backward == Const.FORWARD:
+            gradient_inputs = None
+        else:
+            gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
+        return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
+
     def parse(self, api_info_path):
         with FileOpen(api_info_path, "r") as f:
             api_info_dict = json.load(f)
@@ -133,9 +150,12 @@ class ApiAccuracyChecker:
             if not api_info.check_forward_info():
                 logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check")
                 continue
-            forward_inputs = api_info.get_compute_element_list(Const.FORWARD, Const.INPUT)
-            kwargs = api_info.get_kwargs()
-            forward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, None)
+            try:
+                forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
+            except Exception as e:
+                logger.warning(f"exception occurs when getting inputs for {api_name_str} forward api. "
+                               f"skip forward and backward check. detailed exception information: {e}")
+                continue
             forward_output_list = None
             try:
                 forward_output_list = \
@@ -148,8 +168,12 @@ class ApiAccuracyChecker:
             if not api_info.check_backward_info():
                 logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check")
                 continue
-            gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
-            backward_inputs_aggregation = ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
+            try:
+                backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
+            except Exception as e:
+                logger.warning(f"exception occurs when getting inputs for {api_name_str} backward api. "
+                               f"skip backward check. detailed exception information: {e}")
+                continue
             backward_output_list = None
             try:
                 backward_output_list = \
