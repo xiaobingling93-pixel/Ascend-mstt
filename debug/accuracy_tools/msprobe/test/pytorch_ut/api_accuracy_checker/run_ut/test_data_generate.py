@@ -24,7 +24,7 @@ min_value = -1.444359375
 class TestDataGenerateMethods(unittest.TestCase):
     
     def setUp(self):
-        tensor = torch.tensor(1.0, dtype=torch.float64)
+        tensor = torch.tensor(1.0, dtype=torch.int32)
         save_path = "temp_save_path"
         create_directory(save_path)
         self.save_path = os.path.realpath(save_path)
@@ -95,7 +95,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'type': 'numpy.float64', 'value': 3.14}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=False, convert_type=None)
-        self.assertIsInstance(data, np.ndarray)
+        self.assertIsInstance(data, 3.14)
 
     def test_gen_data_special_data_types(self):
         info = {'type': 'torch.Size', 'value': (2, 3)}
@@ -114,21 +114,14 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(data, ...)
         
     def test_gen_real_tensor_load_pt(self):
-        with patch('msprobe.pytorch.common.utils.load_pt') as mock_load_pt:
-            mock_load_pt.return_value = torch.tensor(1.0)
-            data_path = self.tensor_path 
-            data = gen_real_tensor(data_path, convert_type=None)
-            self.assertTrue(mock_load_pt.called)
-            self.assertIsInstance(data, torch.Tensor)
+        data_path = self.tensor_path 
+        data = gen_real_tensor(data_path, convert_type=None)
+        self.assertIsInstance(data, torch.Tensor)
 
     def test_load_npy_file(self):
-        with patch('msprobe.core.common.file_utils.load_npy') as mock_load_npy:
-            mock_npy_data = np.array([1.0])
-            mock_load_npy.return_value = mock_npy_data
-            data_path = self.npy_path
-            data = gen_real_tensor(data_path, convert_type=None)
-            self.assertTrue(mock_load_npy.called)
-            self.assertIsInstance(data, torch.Tensor)
+        data_path = self.npy_path
+        data = gen_real_tensor(data_path, convert_type=None)
+        self.assertIsInstance(data, torch.Tensor)
 
     def test_gen_real_tensor_unsupported_file_format(self):
         data_path = self.txt_path
@@ -137,17 +130,9 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
 
     def test_gen_real_tensor_data_type_conversion(self):
-        with patch('msprobe.pytorch.api_accuracy_checker.common.utils.get_module_and_atttribute_name') \
-            as mock_get_module_and_attribute_name:
-            with patch('msprobe.pytorch.api_accuracy_checker.common.utils.get_attribute') as mock_get_attribute:
-                mock_get_module_and_attribute_name.return_value = ('torch', 'float32')
-                mock_get_attribute.return_value = torch.float32
-                data_path = self.tensor_path 
-                with patch('msprobe.pytorch.common.utils.load_pt') as mock_load_pt:
-                    mock_tensor = torch.tensor(1.0, dtype=torch.float64)
-                    mock_load_pt.return_value = mock_tensor
-                    data = gen_real_tensor(data_path, convert_type='float32')
-                    self.assertEqual(data.dtype, torch.float32)
+        data_path = self.tensor_path 
+        data = gen_real_tensor(data_path, convert_type='int32_to_int64')
+        self.assertEqual(data.dtype, torch.int64)
 
     def test_gen_random_tensor_invalid_boundaries(self):
         info = {'Min': 'a', 'Max': 'b', 'dtype': 'torch.float32', 'shape': (2, 3)}
@@ -156,7 +141,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
 
     def test_gen_random_tensor_gen_bool_tensor(self):
-        info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (2, 3)}
+        info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (2)}
         expect_return_value = torch.tensor([True, False])
         data = gen_random_tensor(info, convert_type=None)
         self.assertEqual(data.dtype, torch.bool)
