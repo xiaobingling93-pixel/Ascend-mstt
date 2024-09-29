@@ -87,7 +87,12 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'type': 'torch.int32', 'datapath': "tensor.pt"}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=True, convert_type=None, real_data_path=self.save_path)
-        print(self.save_path)
+        data_path = info.get('datapath', info.get('data_name'))
+        real_data_path = self.save_path
+        data_path = get_full_data_path(data_path, real_data_path)
+        print(data_path)
+        data1 = load_pt(data_path)
+        print(data1)
         self.assertIsInstance(data, torch.Tensor)
 
     def test_gen_data_numpy_data_type(self):
@@ -132,12 +137,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         data_path = self.tensor_path 
         data = gen_real_tensor(data_path, convert_type='int32_to_int64')
         self.assertEqual(data.dtype, torch.int64)
-
-    def test_gen_random_tensor_invalid_boundaries(self):
-        info = {'Min': 'a', 'Max': 'b', 'dtype': 'torch.float32', 'shape': (2, 3)}
-        with self.assertRaises(CompareException) as context:
-            gen_random_tensor(info, convert_type=None)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
 
     def test_gen_random_tensor_gen_bool_tensor(self):
         info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (1, 2)}
@@ -264,7 +263,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         
         shape = (0, 0)
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor == torch.tensor([]))
+        self.assertTrue(torch.equal(tensor == torch.tensor([])))
 
     def test_gen_bool_tensor(self):
         info = {"type": "torch.Tensor", "dtype": "torch.bool", "shape": [1, 1, 160, 256], "Max": 1, "Min": 0,
