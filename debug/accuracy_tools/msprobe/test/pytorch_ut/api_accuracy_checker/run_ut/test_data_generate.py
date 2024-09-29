@@ -282,6 +282,12 @@ class TestDataGenerateMethods(unittest.TestCase):
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(tensor.max() == float('inf'))
         self.assertTrue(tensor.min() == float('-inf'))
+        
+        low_info = [float('inf'), float('inf')]
+        high_info = [float('inf'), float('inf')]
+        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
+        self.assertTrue(tensor.max() == float('inf'))
+        self.assertTrue(tensor.min() == float('inf'))
 
         low_info = [1, float('inf')]
         high_info = [2, float('inf')]
