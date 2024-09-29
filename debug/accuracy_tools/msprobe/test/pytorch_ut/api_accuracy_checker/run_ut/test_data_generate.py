@@ -84,7 +84,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(data.shape, torch.Size([2048, 2, 1, 256]))
         
     def test_gen_data_gen_real_data(self):
-        info = {'type': 'torch.float32', 'datapath': self.tensor_path}
+        info = {'type': 'torch.int32', 'datapath': self.tensor_path}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=True, convert_type=None)
         self.assertIsInstance(data, torch.Tensor)
@@ -93,12 +93,13 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'type': 'numpy.float64', 'value': 3.14}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=False, convert_type=None)
-        self.assertIsInstance(data, 3.14)
+        self.assertEqual(data, 3.14)
 
     def test_gen_data_special_data_types(self):
         info = {'type': 'torch.Size', 'value': (2, 3)}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=False, convert_type=None)
+        print(data)
         self.assertEqual(data, torch.Size(2, 3))
         
         info = {'type': 'slice', 'value': [1, 10, 2]}
@@ -139,8 +140,8 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
 
     def test_gen_random_tensor_gen_bool_tensor(self):
-        info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (2)}
-        expect_return_value = torch.tensor([True, False])
+        info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (1, 2)}
+        expect_return_value = torch.tensor([[True, False]])
         data = gen_random_tensor(info, convert_type=None)
         self.assertEqual(data.dtype, torch.bool)
         self.assertEqual(data, expect_return_value)
@@ -163,7 +164,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         input_int = numpy.left_shift(input_int, 12)
         input_fp32 = input_int.view(numpy.float32)
         input_hf32 = torch.from_numpy(input_fp32)
-        self.assertTrue(torch.allclose(fp32_to_hf32_to_fp32(input_tensor), input_hf32), atol=1e-4)
+        self.assertTrue(torch.allclose(fp32_to_hf32_to_fp32(input_tensor), input_hf32, atol=1e-4))
 
     def test_gen_kwargs(self):
         api_info = copy.deepcopy(api_info_dict)
@@ -187,6 +188,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         
         kwargs_item_value = [{'type': 'torch.Size', 'value': (2, 3)}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
+        print(result)
         self.assertEqual(result[0], torch.Size(2, 3))
         
         kwargs_item_value = [{'type': 'str', 'value': 'hello'}, {'type': 'int', 'value': 42}]
@@ -243,6 +245,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         shape = (3, 3)
         data_dtype = 'torch.float32'
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
+        print(tensor)
         self.assertTrue(tensor.max == float('inf'))
         self.assertTrue(tensor.min == float('-inf'))
 
