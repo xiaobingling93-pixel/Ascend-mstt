@@ -255,6 +255,7 @@ class Service:
         CellProcessor.reset_cell_stats()
         self.primitive_counters.clear()
         self.data_collector.data_writer.reset_cache()
+        JitDump.jit_count = defaultdict(int)
 
     def start(self, model=None):
         self.start_call = True

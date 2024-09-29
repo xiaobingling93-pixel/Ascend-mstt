@@ -20,6 +20,7 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
