@@ -455,9 +455,9 @@ def run_ut_command(args):
         checked_api_info = api_info_file_checker.common_check()
         forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
         if args.filter_api:
-            logger.info("Start filtering the api in the forward_input_file.")
+            logger.info("Start filtering the api in the api_info_file.")
             forward_content = preprocess_forward_content(forward_content)
-            logger.info("Finish filtering the api in the forward_input_file.")
+            logger.info("Finish filtering the api in the api_info_file.")
 
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)
