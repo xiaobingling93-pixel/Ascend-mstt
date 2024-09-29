@@ -80,7 +80,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
     def test_print_test_success_forward_failure(self):
         with patch('msprobe.pytorch.common.log.logger.info') as mock_info:
             api_full_name = "test_api"
-            forward_result = CompareConst.FAIL
+            forward_result = CompareConst.ERROR
             backward_result = CompareConst.PASS
             print_test_success(api_full_name, forward_result, backward_result)
             mock_info.assert_called_once_with(f"running api_full_name {api_full_name} compare, "
@@ -91,7 +91,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         with patch('msprobe.pytorch.common.log.logger.info') as mock_info:
             api_full_name = "test_api"
             forward_result = CompareConst.PASS
-            backward_result = CompareConst.FAIL
+            backward_result = CompareConst.ERROR
             print_test_success(api_full_name, forward_result, backward_result)
             mock_info.assert_called_once_with(f"running api_full_name {api_full_name} compare, "
                                               f"is_fwd_success: True, "
