@@ -30,10 +30,12 @@ from msprobe.pytorch.hook_module.api_registry import api_register
 class TestModuleDump(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        PrecisionDebugger._instance = None
         api_register.api_originality()
 
     @classmethod
     def tearDownClass(cls):
+        PrecisionDebugger._instance = None
         api_register.api_originality()
 
     def setUp(self):
