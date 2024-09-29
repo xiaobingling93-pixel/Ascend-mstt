@@ -110,18 +110,6 @@ def initialize_save_path(save_path, dir_name):
     return data_path
 
 
-def get_real_data_path(file_path):
-    targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
-    pattern = re.compile(r'({})'.format('|'.join(targets)))
-    match = pattern.search(file_path)
-    if match:
-        target_index = match.start()
-        target_path = file_path[target_index:]
-        return target_path
-    else:
-        raise DumpException(DumpException.INVALID_PATH_ERROR)
-
-
 def get_full_data_path(data_path, real_data_path):
     if not data_path:
         return data_path
@@ -229,8 +217,9 @@ def get_module_and_atttribute_name(attribute):
     '''
     try:
         module_name, attribute_name = attribute.split(Const.SEP)
-    except CompareException(CompareException.INVALID_DATA_ERROR):
+    except ValueError as e:
         logger.error(f"Failed to get module and attribute name from {attribute}")
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
     return module_name, attribute_name
 
 
@@ -242,6 +231,7 @@ def get_attribute(module_name, attribute_name):
         module_name: Name of the module.
         attribute_name: Name of the attribute.
     '''
+    attribute = None
     if module_name not in Const.MODULE_WHITE_LIST:
         logger.error(f"Module {module_name} is not in white list")
         raise CompareException(CompareException.INVALID_DATA_ERROR)
@@ -250,4 +240,5 @@ def get_attribute(module_name, attribute_name):
         attribute = getattr(module, attribute_name)
     except (ImportError, AttributeError) as e:
         logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
+        raise CompareException(CompareException.INVALID_ATTRIBUTE_ERROR) from e
     return attribute
