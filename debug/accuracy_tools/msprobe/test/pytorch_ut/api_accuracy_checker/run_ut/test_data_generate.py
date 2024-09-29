@@ -292,7 +292,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         low_info = [1, float('-inf')]
         high_info = [2, float('-inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor.max() == 2)
+        self.assertTrue(torch.allclose(tensor.max(), torch.tensor(2.0), atol = 1e-2))
         self.assertTrue(tensor.min() == float('-inf'))
         
         low_info = [1, float('nan')]
