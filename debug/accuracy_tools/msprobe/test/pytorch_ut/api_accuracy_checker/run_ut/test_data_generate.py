@@ -7,7 +7,8 @@ import math
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import *
-from msprobe.core.common.file_utils import get_json_contents
+from msprobe.core.common.file_utils import get_json_contents, create_directory
+from msprobe.pytorch.common.utils import save_pt
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 forward_file = os.path.join(base_dir, "forward.json")
@@ -21,6 +22,24 @@ min_value = -1.444359375
 
 
 class TestDataGenerateMethods(unittest.TestCase):
+    
+    def setUp(self):
+        tensor = torch.tensor(1.0, dtype=torch.float64)
+        save_path = "temp_save_path"
+        create_directory(save_path)
+        self.save_path = os.path.realpath(save_path)
+        self.tensor_path = os.path.join(self.save_path, "tensor.pt")
+        save_pt(tensor, self.tensor_path)
+        self.npy_path = os.path.join(self.save_path, "npy.npy")
+        np.save(self.npy_path, np.array(1.0))
+        self.txt_path = os.path.join(self.save_path, "txt.txt")
+        with open(self.txt_path, 'w') as f:
+            f.write("1.0")
+
+    # def tearDown(self):
+    #     os.remove(self.tensor_path)
+    #     os.rmdir(self.save_path)
+    
     def test_gen_api_params(self):
         api_info = copy.deepcopy(api_info_dict)
         args_params, kwargs_params = gen_api_params(api_info, "conv2d", True, None, None)
@@ -97,7 +116,7 @@ class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_real_tensor_load_pt(self):
         with patch('msprobe.pytorch.common.utils.load_pt') as mock_load_pt:
             mock_load_pt.return_value = torch.tensor(1.0)
-            data_path = '/path/to/data.pt'
+            data_path = self.tensor_path 
             data = gen_real_tensor(data_path, convert_type=None)
             self.assertTrue(mock_load_pt.called)
             self.assertIsInstance(data, torch.Tensor)
@@ -106,13 +125,13 @@ class TestDataGenerateMethods(unittest.TestCase):
         with patch('msprobe.core.common.file_utils.load_npy') as mock_load_npy:
             mock_npy_data = np.array([1.0])
             mock_load_npy.return_value = mock_npy_data
-            data_path = '/path/to/data.npy'
+            data_path = self.npy_path
             data = gen_real_tensor(data_path, convert_type=None)
             self.assertTrue(mock_load_npy.called)
             self.assertIsInstance(data, torch.Tensor)
 
     def test_gen_real_tensor_unsupported_file_format(self):
-        data_path = '/path/to/data.txt'
+        data_path = self.txt_path
         with self.assertRaises(CompareException) as context:
             gen_real_tensor(data_path, convert_type=None)
         self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
@@ -123,7 +142,7 @@ class TestDataGenerateMethods(unittest.TestCase):
             with patch('msprobe.pytorch.api_accuracy_checker.common.utils.get_attribute') as mock_get_attribute:
                 mock_get_module_and_attribute_name.return_value = ('torch', 'float32')
                 mock_get_attribute.return_value = torch.float32
-                data_path = '/path/to/data.pt'
+                data_path = self.tensor_path 
                 with patch('msprobe.pytorch.common.utils.load_pt') as mock_load_pt:
                     mock_tensor = torch.tensor(1.0, dtype=torch.float64)
                     mock_load_pt.return_value = mock_tensor
@@ -138,11 +157,10 @@ class TestDataGenerateMethods(unittest.TestCase):
 
     def test_gen_random_tensor_gen_bool_tensor(self):
         info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (2, 3)}
-        with patch('your_module.gen_bool_tensor') as mock_gen_bool:
-            mock_gen_bool.return_value = torch.tensor([True, False])
-            data = gen_random_tensor(info, convert_type=None)
-            self.assertTrue(mock_gen_bool.called)
-            self.assertEqual(data.dtype, torch.bool)
+        expect_return_value = torch.tensor([True, False])
+        data = gen_random_tensor(info, convert_type=None)
+        self.assertEqual(data.dtype, torch.bool)
+        self.assertEqual(data, expect_return_value)
 
     def test_gen_random_tensor(self):
         data = gen_random_tensor(api_info_dict.get('input_args')[0], None)
@@ -180,11 +198,11 @@ class TestDataGenerateMethods(unittest.TestCase):
         api_name = "test_api"
         convert_type = None
         real_data_path = None
-        with patch('msprobe.pytorch.api_accuracy_checker.run_ut.data_generate.gen_data') as mock_gen_data:
-            mock_gen_data.side_effect = [torch.tensor(1.0), torch.tensor(2)]
-            result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
-            self.assertIsInstance(result[0], torch.Tensor)
-            self.assertIsInstance(result[1], torch.Tensor)
+        expect_return_value = [torch.tensor(1.0), torch.tensor(2)]
+        result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
+        self.assertIsInstance(result[0], torch.Tensor)
+        self.assertIsInstance(result[1], torch.Tensor)
+        self.assertEqual(result, expect_return_value)
         
         kwargs_item_value = [{'type': 'torch.Size', 'value': (2, 3)}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
