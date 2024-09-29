@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 import re
 from collections import namedtuple
@@ -97,7 +98,8 @@ def cross_entropy_process(api_info_dict):
     Return api_info_dict:
         api_info_dict: Processed argument of the API.
     """
-    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 and 'Min' in api_info_dict['input_args'][1]:
+    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 \
+        and 'Min' in api_info_dict['input_args'][1]:
         if api_info_dict['input_args'][1]['Min'] <= 0:
             # The second argument in cross_entropy should be -100 or not less than 0
             api_info_dict['input_args'][1]['Min'] = 0
