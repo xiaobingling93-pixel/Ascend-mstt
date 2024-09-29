@@ -89,12 +89,25 @@ class TestDataGenerateMethods(unittest.TestCase):
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=True, convert_type=None, real_data_path=self.save_path)
         self.assertIsInstance(data, torch.Tensor)
+    
+    def test_gen_data_fp32_to_hf32_to_fp32(self):
+        info = {'Min': 0, 'Max': 1, 'dtype': "torch.float32", 'shape': (1, 2)}
+        api_name = "conv2d"
+        input_tensor = gen_random_tensor(info, convert_type=None)
+        origin_result = gen_data(info, api_name, False, None)
+        expect_result = fp32_to_hf32_to_fp32(input_tensor)
+        self.assertTrue(torch.allclose(origin_result, expect_result, atol=1e-4))
 
     def test_gen_data_numpy_data_type(self):
         info = {'type': 'numpy.float64', 'value': 3.14}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=False, convert_type=None)
         self.assertEqual(data, 3.14)
+        
+        info = {'Min': 0, 'Max': 1, 'dtype': 'numpy.unknown', 'shape': (2, 3)}
+        with self.assertRaises(Exception) as context:
+            data = gen_data(info, api_name, need_grad=False, convert_type=None)
+        self.assertIn("numpy.unknown is not supported now", str(context.exception))
 
     def test_gen_data_special_data_types(self):
         info = {'type': 'torch.Size', 'value': (2, 3)}
@@ -168,6 +181,38 @@ class TestDataGenerateMethods(unittest.TestCase):
         for key, value in k_dict.items():
             gen_torch_kwargs(k_dict, key, value)
         self.assertEqual(k_dict, {'dtype': torch.float16})
+        
+    def test_gen_kwargs_gen_list_kwargs(self):
+        api_info = {"input_kwargs": {"key": [1, 2, 3]}}
+        api_name = "test_api"
+        convert_type = None
+        real_data_path = None
+        kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+        self.assertEqual(kwargs["key"], [1, 2, 3])
+        
+    def test_gen_kwargs_none_kwargs(self):
+        api_info = {"input_kwargs": {"key": None}}
+        api_name = "test_api"
+        convert_type = None
+        real_data_path = None
+        kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+        self.assertIsNone(kwargs["key"])
+
+    def test_gen_kwargs_tensor_kwargs(self):
+        api_info = {"input_kwargs": {"key": {"type": "torch.float32"}}}
+        api_name = "test_api"
+        convert_type = None
+        real_data_path = None
+        kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+        self.assertIsInstance(kwargs["key"], torch.Tensor)
+        
+    def test_torch_kwargs(self):
+        api_info = {"input_kwargs": {"key": {"type": "torch.Size"}}}
+        api_name = "test_api"
+        convert_type = None
+        real_data_path = None
+        kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
+        self.assertEqual(kwargs["key"], torch.Size(2, 3))
 
     def test_gen_list_kwargs(self):
         kwargs_item_value = [{'type': 'torch.float32', 'value': 1.0}, {'type': 'torch.int32', 'value': 2}]
@@ -181,6 +226,10 @@ class TestDataGenerateMethods(unittest.TestCase):
         kwargs_item_value = [{'type': 'torch.Size', 'value': (2, 3)}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
         self.assertEqual(result[0], torch.Size([2, 3]))
+        
+        kwargs_item_value = [{'type': 'torch.Tensor', 'Min': 0, 'Max': 1, 'dtype': "torch.float16", 'shape': (1, 2)}]
+        result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
+        self.assertIsInstance(result[0], torch.Tensor)
         
         kwargs_item_value = [{'type': 'str', 'value': 'hello'}, {'type': 'int', 'value': 42}]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
@@ -231,26 +280,37 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertTrue(tensor.max() == float('inf'))
         self.assertTrue(tensor.min() == float('-inf'))
 
-        low_info = [float('inf'), float('inf')]
-        high_info = [float('inf'), float('inf')]
+        low_info = [1, float('inf')]
+        high_info = [2, float('inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(tensor.max() == float('inf'))
         self.assertTrue(tensor.min() == float('inf'))
         
-        low_info = [float('-inf'), float('-inf')]
-        high_info = [float('-inf'), float('-inf')]
+        low_info = [1, float('-inf')]
+        high_info = [2, float('-inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(tensor.max() == float('-inf'))
         self.assertTrue(tensor.min() == float('-inf'))
+        
+        low_info = [1, float('nan')]
+        high_info = [2, float('nan')]
+        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
+        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
 
         low_info = [float('nan'), float('nan')]
         high_info = [float('nan'), float('nan')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
-        
+
         shape = (0, 0)
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertEqual(tensor.numel(), 0)
+        
+        shape = (1, 2)
+        low_info = [2, float('nan')]
+        high_info = [2, float('nan')]
+        tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
+        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
 
     def test_gen_bool_tensor(self):
         info = {"type": "torch.Tensor", "dtype": "torch.bool", "shape": [1, 1, 160, 256], "Max": 1, "Min": 0,
