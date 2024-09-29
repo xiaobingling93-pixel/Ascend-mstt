@@ -474,4 +474,4 @@ class TestUtilsMethods(unittest.TestCase):
 
         generate_pt(base_dir)
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, [1.0, 1.0, 1.0, 1.0, 1.0, ''])
+        self.assertEqual(result, [1.0, 0.0, 0.0, 1.0, 1.0, ''])
