@@ -199,8 +199,8 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertIsNone(kwargs["key"])
 
     def test_gen_kwargs_tensor_kwargs(self):
-        api_info = {"input_kwargs": {"key": {"type": "torch.float32", 'Min': 0, 'Max': 1, 
-                                             'dtype': "torch.bool", 'shape': (1, 2)}}}
+        api_info = {"input_kwargs": {"key": {"type": "torch.Tensor", 'Min': 0, 'Max': 1, 
+                                             'dtype': "torch.float16", 'shape': (1, 2)}}}
         api_name = "test_api"
         convert_type = None
         real_data_path = None
@@ -215,7 +215,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         real_data_path = None
         kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
         print(kwargs['key'])
-        self.assertEqual(kwargs["key"], torch.Size(2, 3))
+        self.assertEqual(kwargs["key"], (2, 3))
 
     def test_gen_list_kwargs(self):
         kwargs_item_value = [{'type': 'torch.float32', 'value': 1.0}, {'type': 'torch.int32', 'value': 2}]
@@ -287,6 +287,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         high_info = [2, float('inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(tensor.max() == float('inf'))
+        print(tensor.min())
         self.assertTrue(tensor.min() == 1)
         
         low_info = [1, float('-inf')]
