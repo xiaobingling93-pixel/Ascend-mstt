@@ -36,7 +36,7 @@ class TestExchangeValuePerturbation(unittest.TestCase):
         perturbation.is_fuzzed = False
         original_tensor = Tensor([[1.0, 2.0, 3.0]])
         original_cache_tensor = Tensor([[1.0, 2.0, 3.0]])
-        target_tensor = Tensor([[1.0, 2.0, 3.0]])
+        target_tensor = Tensor([[3.0, 2.0, 1.0]])
         final_tensor = perturbation.exchange_value(original_tensor)
         self.assertTrue((original_tensor == original_cache_tensor).all())
         self.assertTrue((final_tensor == target_tensor).all())
