@@ -379,6 +379,8 @@ class MsgConst:
             value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
+    NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
+
 
 class GraphMode:
     NPY_MODE = "NPY_MODE"

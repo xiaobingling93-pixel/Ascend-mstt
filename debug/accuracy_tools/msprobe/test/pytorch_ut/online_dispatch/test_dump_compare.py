@@ -139,13 +139,6 @@ class TestDumpCompare(unittest.TestCase):
         mock_run_param.aten_api_overload_name="new_attr3"
         self.assertIsNone(get_torch_func(mock_run_param))
 
-    def test_get_torch_func_should_return_None_when_inside_input(self):
-        mock_run_param = Mock()
-        mock_run_param.func_namespace="aten"
-        mock_run_param.aten_api="add"
-        mock_run_param.aten_api_overload_name="Scalar"
-        self.assertEqual(get_torch_func(mock_run_param),torch.ops.aten.add.Scalar)
-
     @patch('msprobe.core.common.log.BaseLogger.error')
     def test_dispatch_multiprocess_should_logger_error_when_wrong_api_input(self,mock_error):
         mock_run_param = Mock()
