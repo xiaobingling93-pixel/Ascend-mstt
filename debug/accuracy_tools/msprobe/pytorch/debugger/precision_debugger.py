@@ -57,7 +57,6 @@ class PrecisionDebugger:
             self.config = DebuggerConfig(
                 common_config, task_config, task, dump_path, level
             )
-            self.config.check_model(self.model)
             self.service = Service(self.config)
             self.enable_dataloader = self.config.enable_dataloader
             if self.enable_dataloader:
@@ -96,12 +95,13 @@ class PrecisionDebugger:
                 MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")
 
     @classmethod
-    def start(cls):
+    def start(cls, model=None):
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
+        instance.config.check_model(instance, model)
         if instance.enable_dataloader:
             logger.warning_on_rank_0("DataLoader is enabled, start() skipped.")
         else:
