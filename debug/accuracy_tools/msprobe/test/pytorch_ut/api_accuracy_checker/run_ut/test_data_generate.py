@@ -87,6 +87,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'type': 'torch.int32', 'datapath': "tensor.pt"}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=True, convert_type=None, real_data_path=self.save_path)
+        print(self.save_path)
         self.assertIsInstance(data, torch.Tensor)
 
     def test_gen_data_numpy_data_type(self):
@@ -261,7 +262,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
         
-        shape = 0
+        shape = (0, 0)
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
         self.assertTrue(tensor == torch.tensor([]))
 
