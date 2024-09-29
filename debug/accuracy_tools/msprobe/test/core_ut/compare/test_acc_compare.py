@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import shutil
 import json
+import torch
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.acc_compare import Comparator
@@ -214,7 +215,6 @@ base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_c
 
 
 def generate_dump_json(base_dir):
-    os.makedirs(base_dir, exist_ok=True)
     data_path = os.path.join(base_dir, 'dump.json')
     data = {
         'task': 'statistics',
@@ -242,24 +242,24 @@ def generate_dump_json(base_dir):
 
 
 def generate_stack_json(base_dir):
-    os.makedirs(base_dir, exist_ok=True)
     data_path = os.path.join(base_dir, 'stack.json')
     data = {'Functional.linear.0.forward': ['File']}
     with open(data_path, 'w') as json_file:
         json.dump(data, json_file)
 
 
+def generate_pt(base_dir):
+    data_path = os.path.join(base_dir, 'Functional.linear.0.forward.input.0.pt')
+    data = torch.Tensor([1, 2, 3, 4])
+    torch.save(data, data_path)
+
 
 class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
-        self.npu_json_dir = base_dir
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
-        os.makedirs(self.npu_json_dir, mode=0o750, exist_ok=True)
 
     def tearDown(self):
-        if os.path.exists(self.npu_json_dir):
-            shutil.rmtree(self.npu_json_dir)
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
 
@@ -454,10 +454,24 @@ class TestUtilsMethods(unittest.TestCase):
         result = Comparator()._do_multi_process(input_param, result_df)
         self.assertTrue(result.equals(o_result))
 
-    def test_compare_by_op(self):
+    def test_compare_by_op_1(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
         bench_op_name = 'N/A'
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
+
+    def test_compare_by_op_2(self):
+        npu_op_name = 'Functional.linear.0.forward.input.0'
+        bench_op_name = 'Functional.linear.0.forward.input.0'
+        pt_name = 'Functional.linear.0.forward.input.0.pt'
+        pt_path = os.path.join(base_dir, pt_name)
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
+        input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', f'Dump file: {pt_path} not found.'])
+
+        generate_pt(base_dir)
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+        self.assertEqual(result, [1.0, 1.0, 1.0, 1.0, 1.0, ''])
