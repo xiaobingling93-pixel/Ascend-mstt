@@ -84,10 +84,9 @@ class TestDataGenerateMethods(unittest.TestCase):
     #     self.assertEqual(data.shape, torch.Size([2048, 2, 1, 256]))
         
     def test_gen_data_gen_real_data(self):
-        info = {'type': 'torch.int32', 'datapath': "tensor.pt"}
+        info = {'type': 'torch.Tensor', 'datapath': "tensor.pt"}
         api_name = "test_api"
         data = gen_data(info, api_name, need_grad=True, convert_type=None, real_data_path=self.save_path)
-        data_path = info.get('datapath', info.get('data_name'))
         self.assertIsInstance(data, torch.Tensor)
 
     # def test_gen_data_numpy_data_type(self):
@@ -250,6 +249,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         
         shape = (0, 0)
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
+        print(tensor)
         self.assertTrue(torch.equal(tensor, torch.tensor([])))
 
     # def test_gen_bool_tensor(self):
