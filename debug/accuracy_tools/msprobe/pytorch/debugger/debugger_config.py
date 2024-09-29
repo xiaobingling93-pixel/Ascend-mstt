@@ -1,5 +1,3 @@
-from msprobe.pytorch.common import seed_all
-from msprobe.pytorch.common.log import logger
 from msprobe.core.common.const import Const
 
 
@@ -10,8 +8,6 @@ class DebuggerConfig:
         self.rank = common_config.rank if common_config.rank else []
         self.step = common_config.step if common_config.step else []
         self.level = level or common_config.level or "L1"
-        self.seed = common_config.seed if common_config.seed else 1234
-        self.is_deterministic = common_config.is_deterministic
         self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
@@ -25,15 +21,15 @@ class DebuggerConfig:
         self.framework = Const.PT_FRAMEWORK
 
         if self.task == Const.FREE_BENCHMARK:
-            self.fuzz_device = task_config.fuzz_device if task_config.fuzz_device else 'npu'
-            self.handler_type = task_config.handler_type if task_config.handler_type else 'check'
-            self.pert_mode = task_config.pert_mode if task_config.pert_mode else 'improve_precision'
-            self.fuzz_level = task_config.fuzz_level if task_config.fuzz_level else 'L1'
-            self.fuzz_stage = task_config.fuzz_stage if task_config.fuzz_stage else 'forward'
+            self.fuzz_device = task_config.fuzz_device
+            self.handler_type = task_config.handler_type
+            self.pert_mode = task_config.pert_mode
+            self.fuzz_level = task_config.fuzz_level
+            self.fuzz_stage = task_config.fuzz_stage
             self.preheat_config = {
-                "if_preheat": task_config.if_preheat if task_config.if_preheat is not None else True, 
-                "preheat_step": task_config.preheat_step if task_config.preheat_step else 15, 
-                "max_sample": task_config.max_sample if task_config.max_sample else 20, 
+                "if_preheat": task_config.if_preheat, 
+                "preheat_step": task_config.preheat_step, 
+                "max_sample": task_config.max_sample
             }
 
         self.online_run_ut = False
@@ -46,8 +42,7 @@ class DebuggerConfig:
             self.port = task_config.port if task_config.port else -1
 
         self.check()
-        if self.step:
-            self.step.sort()
+
         if self.level == "L2":
             if not self.scope or not isinstance(self.scope, list) or len(self.scope) != 1:
                 raise ValueError("scope must be configured as a list with one api name")
@@ -58,7 +53,6 @@ class DebuggerConfig:
                 for index, scope_spec in enumerate(self.scope):
                     self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
-        seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
@@ -70,8 +64,6 @@ class DebuggerConfig:
 
     def check(self):
         self.check_kwargs()
-        self._check_rank()
-        self._check_step()
         return True
 
     def check_model(self, model):
@@ -79,17 +71,3 @@ class DebuggerConfig:
             raise Exception(
                 f"For level {self.level}, PrecisionDebugger must receive a model argument."
             )
-
-    def _check_rank(self):
-        if self.rank:
-            for rank_id in self.rank:
-                if not isinstance(rank_id, int) or rank_id < 0:
-                    raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
-            else:
-                logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
-
-    def _check_step(self):
-        if self.step:
-            for s in self.step:
-                if not isinstance(s, int) or s < 0:
-                    raise ValueError(f"step element {s} must be an integer and greater than or equal to 0.")

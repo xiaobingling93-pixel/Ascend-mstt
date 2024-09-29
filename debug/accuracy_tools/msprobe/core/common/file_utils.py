@@ -22,6 +22,7 @@ import re
 import shutil
 import yaml
 import numpy as np
+import pandas as pd
 
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -187,7 +188,7 @@ def check_other_user_writable(path):
 
 def check_path_owner_consistent(path):
     file_owner = os.stat(path).st_uid
-    if file_owner != os.getuid():
+    if file_owner != os.getuid() and os.getuid() != 0:
         logger.error('The file path %s may be insecure because is does not belong to you.' % path)
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
@@ -338,10 +339,10 @@ def load_yaml(yaml_path):
     return yaml_data
 
 
-def load_npy(filepath, enable_pickle=False):
+def load_npy(filepath):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath, allow_pickle=enable_pickle)
+        npy = np.load(filepath)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
@@ -374,6 +375,20 @@ def save_json(json_path, data, indent=None):
     change_mode(json_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def save_yaml(yaml_path, data):
+    yaml_path = os.path.realpath(yaml_path)
+    check_path_before_create(yaml_path)
+    try:
+        with FileOpen(yaml_path, 'w') as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            yaml.dump(data, f, sort_keys=False)
+            fcntl.flock(f, fcntl.LOCK_UN)
+    except Exception as e:
+        logger.error(f'Save yaml file "{os.path.basename(yaml_path)}" failed.')
+        raise RuntimeError(f"Save yaml file {yaml_path} failed.") from e
+    change_mode(yaml_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def move_file(src_path, dst_path):
     check_file_or_directory_path(src_path)
     check_path_before_create(dst_path)
@@ -396,9 +411,9 @@ def save_npy(data, filepath):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def save_npy_to_txt(self, data, dst_file='', align=0):
+def save_npy_to_txt(data, dst_file='', align=0):
     if os.path.exists(dst_file):
-        self.log.info("Dst file %s exists, will not save new one.", dst_file)
+        logger.info("Dst file %s exists, will not save new one." % dst_file)
         return
     shape = data.shape
     data = data.flatten()
@@ -411,7 +426,7 @@ def save_npy_to_txt(self, data, dst_file='', align=0):
     try:
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
     except Exception as e:
-        self.log.error("An unexpected error occurred: %s when savetxt to %s" % (str(e)), dst_file)
+        logger.error("An unexpected error occurred: %s when savetxt to %s" % (str(e), dst_file))
     change_mode(dst_file, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
@@ -431,7 +446,25 @@ def save_workbook(workbook, file_path):
     change_mode(file_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def write_csv(data, filepath, mode="a+"):
+def write_csv(data, filepath, mode="a+", malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True  
+        try:
+            # -1.00 or +1.00 should be consdiered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+    
+    if malicious_check:
+        for row in data:
+            for cell in row:
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed " \
+                                       f"to be written into the csv: {filepath}.")
+
     file_path = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
@@ -442,6 +475,16 @@ def write_csv(data, filepath, mode="a+"):
         logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
         raise RuntimeError(f"Save csv file {file_path} failed.") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def read_csv(filepath):
+    check_file_or_directory_path(filepath)
+    try:
+        csv_data = pd.read_csv(filepath)
+    except Exception as e:
+        logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
+        raise RuntimeError(f"Read csv file {filepath} failed.") from e
+    return csv_data
 
 
 def remove_path(path):

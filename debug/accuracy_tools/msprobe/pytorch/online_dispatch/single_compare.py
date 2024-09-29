@@ -329,20 +329,20 @@ def single_benchmark_compare(npu_out: torch.Tensor, bench_out: torch.Tensor, hig
     return result, details
 
 
-def calc_status_details_list_tuple(npu_out, bench_out, high_precision, summary):
+def calc_status_details_list_tuple(npu_out, bench_out, summary):
     status, details = [], []
     if len(bench_out) != len(npu_out):
         summary.result = False
         summary.failed_info = "bench and npu output structure is different."
         return False, summary.to_column_value()
     for b_out_i, n_out_i in zip(bench_out, npu_out):
-        status_i, details_i = single_benchmark_compare_wrap(n_out_i, b_out_i, high_precision)
+        status_i, details_i = single_benchmark_compare_wrap(n_out_i, b_out_i)
         status.append(status_i)
         details.append(details_i)
     return status, details
 
 
-def calc_status_details_dict(npu_out, bench_out, high_precision, summary):
+def calc_status_details_dict(npu_out, bench_out, summary):
     b_keys, n_keys = set(bench_out.keys()), set(npu_out.keys())
     if b_keys != n_keys:
         summary.result = False
@@ -353,7 +353,7 @@ def calc_status_details_dict(npu_out, bench_out, high_precision, summary):
         return status, details
 
 
-def calc_status_details_tensor(npu_out, bench_out, high_precision, summary):
+def calc_status_details_tensor(npu_out, bench_out, summary):
     return single_benchmark_compare(npu_out, bench_out)
 
 
@@ -365,13 +365,13 @@ def calc_status_details_builtin(npu_out, bench_out, summary):
     return status, summary.to_column_value()
 
 
-def calc_status_details_none(npu_out, bench_out, high_precision, summary):
+def calc_status_details_none(npu_out, bench_out, summary):
     summary.result = True
     summary.failed_info = "Output is None."
     return True, summary.to_column_value()
 
 
-def single_benchmark_compare_wrap(npu_output: torch.Tensor, bench_output: torch.Tensor, high_precision=True):
+def single_benchmark_compare_wrap(npu_output: torch.Tensor, bench_output: torch.Tensor):
     type_method_dict = {
         (list, tuple): calc_status_details_list_tuple,
         dict: calc_status_details_dict,
@@ -384,7 +384,7 @@ def single_benchmark_compare_wrap(npu_output: torch.Tensor, bench_output: torch.
     bench_summary = SingleBenchSummary(result)
     for type1, func in type_method_dict.items():
         if isinstance(bench_output, type1):
-            return func(npu_output, bench_output, high_precision, bench_summary)
+            return func(npu_output, bench_output, bench_summary)
 
     bench_summary.result = True
     bench_summary.failed_info = "Unexpected output type: {}".format(type(bench_output))

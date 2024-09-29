@@ -23,6 +23,7 @@ from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
+from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -50,7 +51,7 @@ class DistributedOPTemplate(HOOKModule):
         self.op_name_ = op_name
         self.prefix_op_name_ = "Distributed" + Const.SEP + str(op_name) + Const.SEP
         super().__init__(build_hook)
-        if not self.stop_hook and self.op_name_ in Const.INPLACE_LIST:
+        if not self.stop_hook and InplaceOpChecker.check(self.op_name_, InplaceOpChecker.OP_DISTRIBUTED):
             self.op_is_inplace = True
 
     @torch_device_guard

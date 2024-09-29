@@ -29,7 +29,6 @@ class TestMsConfig(unittest.TestCase):
             "rank": [],
             "step": [],
             "level": "L1",
-            "seed": 1234,
             "statistics": {
                 "scope": [],
                 "list": [],

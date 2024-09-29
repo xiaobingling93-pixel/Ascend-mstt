@@ -7,10 +7,10 @@ from collections import namedtuple
 from rich.table import Table
 from rich.console import Console
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode
+from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv
 from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 
 ELEMENT_NUM_THRESHOLD = 100
 ZERO_NUM_THRESHOLD = 0.1
@@ -107,19 +107,17 @@ class Saver:
 
     def get_statistics_from_result_csv(self):
         checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.NA, CompareConst.SKIP]
-        with FileOpen(self.save_path, 'r') as file:
-            reader = csv.reader(file)
-            result_csv_rows = [row for row in reader]
+        data = read_csv(self.save_path)
         result_csv_name = os.path.basename(self.save_path)
-        for item in result_csv_rows[1:]:
-            if not isinstance(item, list) or len(item) < 3:
+        for _, row in data.iterrows():
+            if len(row) < 3:
                 raise ValueError("The number of columns in %s is incorrect" % result_csv_name)
-            if not all(item[i] and item[i].upper() in checklist for i in (1, 2)):
+            if not all(row[i] and row[i].upper() in checklist for i in (1, 2)):
                 raise ValueError(
                     "The value in the 2nd or 3rd column of %s is wrong, it must be TRUE, FALSE, SKIP or N/A"
                     % result_csv_name)
-            column1 = item[1].upper()
-            column2 = item[2].upper()
+            column1 = row[1].upper()
+            column2 = row[2].upper()
             if column1 == CompareConst.SKIP:
                 continue
             self.test_result_cnt["total_num"] += 1
@@ -139,12 +137,13 @@ class Saver:
         if self.stack_info:
             test_rows[0].append(self.COLUMN_STACK_INFO)
 
-        name = test_result.api_name
+        check_op_str_pattern_valid(test_result.api_name)
         df_row = [test_result.api_name, test_result.is_fwd_success, test_result.is_bwd_success]
         if test_result.is_fwd_success == "SKIP" or test_result.is_bwd_success == "SKIP":
             df_row.append(test_result.fwd_compare_alg_results)
         if self.stack_info:
-            stack_info = "\n".join(self.stack_info[name])
+            check_op_str_pattern_valid(self.stack_info[test_result.api_name])
+            stack_info = "\n".join(self.stack_info[test_result.api_name])
             df_row.append(stack_info)
         test_rows.append(df_row)
         write_csv(test_rows, self.save_path)

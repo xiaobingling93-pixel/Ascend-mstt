@@ -3,7 +3,7 @@ import os
 from msprobe.core.data_dump.scope import build_scope, ListScope
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, MsgConst
+from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.factory import DataProcessorFactory
 
 
@@ -14,14 +14,13 @@ def build_data_collector(config):
 class DataCollector:
     multi_output_apis = ["_sort_", "npu_flash_attention"]
     tasks_need_tensor_data = [Const.OVERFLOW_CHECK, Const.TENSOR, Const.FREE_BENCHMARK]
-    level_without_construct = ["L1", "L2"]
+    level_without_construct = [Const.LEVEL_L1, Const.LEVEL_L2]
 
     def __init__(self, config):
         self.config = config
         self.data_writer = DataWriter()
         self.data_processor = DataProcessorFactory.create_processor(self.config, self.data_writer)
-        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework) \
-            if self.config.framework == Const.PT_FRAMEWORK else None
+        self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
         if self.config.task == Const.FREE_BENCHMARK:
             self.scope = build_scope(ListScope, self.config.scope, self.config.list)
@@ -78,7 +77,7 @@ class DataCollector:
             return
         logger.info(f"API {name} is inplace.")
         data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
-        self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -92,13 +91,7 @@ class DataCollector:
         if self.config.level == "L2":
             return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
-        if self.config.framework == Const.MS_FRAMEWORK:
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        else:
-            if self.data_processor.is_terminated:
-                self.handle_data(name, data_info, flush=True)
-                raise Exception(f"[{Const.TOOL_NAME}] exit")
-            self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -106,13 +99,7 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
-        if self.config.framework == Const.MS_FRAMEWORK:
-            self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
-        else:
-            if self.data_processor.is_terminated:
-                self.handle_data(name, data_info, flush=True)
-                raise Exception(f"[{Const.TOOL_NAME}] exit")
-            self.handle_data(name, data_info)
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
@@ -131,8 +118,7 @@ class DataCollector:
         self.handle_data(name, data_info)
 
     def update_construct(self, name):
-        if self.config.framework == Const.PT_FRAMEWORK and \
-           self.config.level not in DataCollector.level_without_construct:
+        if self.config.level not in DataCollector.level_without_construct:
             self.data_writer.update_construct({name: self.module_processor.api_parent_node})
             self.data_writer.update_construct(self.module_processor.module_node)
 
@@ -140,9 +126,9 @@ class DataCollector:
         if data_info:
             msg = f"msprobe is collecting data on {name}. "
             msg = self.update_data(data_info, msg)
-            logger.info(MsgConst.CLEAR_SYMBOL + msg, end='\r')
+            logger.debug(msg)
         if not flush:
-            self.data_writer.flush_data_when_buffer_is_full()
+            self.data_writer.flush_data_periodically()
         else:
             self.write_json()
 

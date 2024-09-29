@@ -69,13 +69,16 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.mean = np.mean(data_abs).item()
             tensor_stat.norm = np.linalg.norm(data_abs).item()
         else:
-            if data.dtype == ms.bfloat16 or not ops.is_floating_point(data):
+            if not ops.is_floating_point(data):
                 data = data.to(ms.float32)
             api_register.norm_inner_op_set_ori_func()
             get_max_value = api_register.mint_ops_ori_attr.get("max", mint.max)
             get_min_value = api_register.mint_ops_ori_attr.get("min", mint.min)
             get_mean_value = api_register.mint_ops_ori_attr.get("mean", mint.mean)
-            get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
+            if hasattr(mint, "norm"):
+                get_norm_value = api_register.mint_ops_ori_attr.get("norm", mint.norm)
+            else:
+                get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
             tensor_stat.max = get_max_value(data).item()
             tensor_stat.min = get_min_value(data).item()
             tensor_stat.mean = get_mean_value(data).item()
@@ -163,7 +166,8 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
                 save_tensor_as_npy(tensor, file_path)
             self.real_overflow_nums += 1
             if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
-                logger.info(f"[{Const.TOOL_NAME}] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
+                logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
+                            f"current overflow times: {self.real_overflow_nums}.")
         self.cached_tensors_and_file_paths = {}
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):

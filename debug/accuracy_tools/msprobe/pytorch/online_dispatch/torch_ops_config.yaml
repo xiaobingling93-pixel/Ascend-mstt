@@ -1,4 +1,12 @@
 aten_ops_blacklist:
+  - max_pool2d_with_indices
+  - detach
+  - allreduce_
+  - max
+  - npu_rotary_mul
+  - split_with_sizes
+  - npu_dtype_cast  
+  - add_
   - _cudnn_rnn
   - _local_scalar_dense
   - _pin_memory

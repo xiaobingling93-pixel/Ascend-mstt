@@ -41,6 +41,7 @@ class ATTL:
         self.message_end = False
         self.kill_progress = False
         self.check_attl_config()
+        self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
         elif self.session_config.is_benchmark_device:
@@ -77,6 +78,11 @@ class ATTL:
         """
         npu major in 'send' (client)
         """
+
+        # if tcp connection lost,
+        if self.socket_manager.signal_exit:
+            raise ConnectionError(f"Failed to connect to {self.session_config.connect_ip}.")
+
         # know receiver receive and go next
         if isinstance(buffer, ApiData):
             buffer = move2target_device(buffer, torch.device('cpu'))

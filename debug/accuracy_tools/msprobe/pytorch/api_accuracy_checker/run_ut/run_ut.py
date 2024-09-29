@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import os
 import csv
@@ -17,7 +34,7 @@ else:
 import torch
 from tqdm import tqdm
 
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api, UtDataInfo, \
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, hf_32_standard_api, UtDataInfo, \
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
@@ -27,12 +44,13 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileOpen, FileChecker, \
-    change_mode, check_path_before_create, create_directory, get_json_contents
+    change_mode, check_path_before_create, create_directory, get_json_contents, read_csv
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
 
 
 current_time = time.strftime("%Y%m%d%H%M%S")
@@ -46,14 +64,7 @@ RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 
 OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
 
 not_backward_list = ['repeat_interleave']
-not_detach_set = {'resize_', 'resize_as_', 'set_', 'transpose_', 't_', 'squeeze_', 'unsqueeze_'}
-not_raise_dtype_set = {'type_as'}
 
-RAISE_PRECISION = {
-    torch.float16: torch.float32,
-    torch.bfloat16: torch.float32,
-    torch.float32: torch.float64
-}
 
 tqdm_params = {
     'smoothing': 0,  # 平滑进度条的预计剩余时间，取值范围0到1
@@ -69,98 +80,6 @@ tqdm_params = {
     'dynamic_ncols': True,  # 动态调整进度条宽度以适应控制台
     'bar_format': '{l_bar}{bar}| {n}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]'  # 自定义进度条输出格式
 }
-
-
-def deal_detach(arg, to_detach=True):
-    return arg.detach() if to_detach else arg
-
-
-def raise_bench_data_dtype(api_name, arg, raise_dtype=None):
-    '''
-    将标杆数据的dtype转换为raise_dtype
-    输入：
-        api_name：api名称
-        arg：标杆输入
-        raise_dtype：需要转换的dtype
-    输出： 
-        arg: 转换dtype的标杆输入
-    '''
-    if api_name in hf_32_standard_api and arg.dtype == torch.float32:
-        return arg
-    if raise_dtype is None or arg.dtype not in RAISE_PRECISION or raise_dtype == arg.dtype:
-        return arg
-    return arg.type(raise_dtype)
-
-
-def generate_device_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_device(arg_in, to_detach):
-        if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_device(arg, to_detach) for arg in arg_in)
-        elif isinstance(arg_in, torch.Tensor):
-            if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(arg_in.clone(), to_detach).to(current_device).requires_grad_()
-                temp_arg_in = arg_in * 1
-                arg_in = temp_arg_in.type_as(arg_in)
-                arg_in.retain_grad()
-                return arg_in
-            else:
-                return deal_detach(arg_in.clone(), to_detach).to(current_device)
-        else:
-            return arg_in
-
-    is_detach = api_name not in not_detach_set
-    device_args = recursive_arg_to_device(input_args, is_detach)
-    device_kwargs = \
-        {key: recursive_arg_to_device(value, key != "out" and is_detach) for key, value in input_kwargs.items()}
-    return device_args, device_kwargs
-
-
-def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
-    def recursive_arg_to_cpu(arg_in, to_detach, raise_dtype=None):
-        if isinstance(arg_in, (list, tuple)):
-            return type(arg_in)(recursive_arg_to_cpu(arg, to_detach, raise_dtype=raise_dtype) for arg in arg_in)
-        elif isinstance(arg_in, torch.Tensor):
-            if need_backward and arg_in.requires_grad:
-                arg_in = deal_detach(raise_bench_data_dtype(
-                                     api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach).requires_grad_()
-                temp_arg_in = arg_in * 1
-                arg_in = temp_arg_in.type_as(arg_in)
-                arg_in.retain_grad()
-                return arg_in
-            else:
-                return deal_detach(raise_bench_data_dtype(api_name, arg_in.clone(), raise_dtype=raise_dtype), to_detach)
-        else:
-            return arg_in
-
-    def is_tensor_with_raise_precision(arg_in, check_kwargs=False):
-        if arg_in.dtype in RAISE_PRECISION:
-            return True
-        if check_kwargs and arg_in.dtype in [torch.half, torch.bfloat16]:
-            return True
-        return False
-
-    def recursive_find_dtypes(arg_in, kwargs=None, check_kwargs=False):
-        if isinstance(arg_in, (list, tuple)):
-            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs) for arg in arg_in))
-        elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
-            return set([arg_in.dtype])
-        elif isinstance(arg_in, dict) and check_kwargs:
-            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True) for v in arg_in.values()))
-        return set()
-
-    raise_dtype = None
-    need_raise_dtypes = recursive_find_dtypes(input_args)
-    need_raise_dtypes.update(recursive_find_dtypes(input_kwargs, check_kwargs=True))
-    if len(need_raise_dtypes) == 1:
-        raise_dtype = RAISE_PRECISION.get(need_raise_dtypes.pop(), torch.float32)
-    elif len(need_raise_dtypes) >= 2:
-        raise_dtype = torch.float32
-
-    raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
-    is_detach = api_name not in not_detach_set
-    cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
-    return cpu_args, cpu_kwargs
 
 
 def run_ut(config):
@@ -179,10 +98,8 @@ def run_ut(config):
     if config.online_config.is_online:
         run_api_online(config, compare)
     else:
-        with FileOpen(config.result_csv_path, 'r') as file:
-            csv_reader = csv.reader(file)
-            next(csv_reader)
-            api_name_set = {row[0] for row in csv_reader}
+        csv_df = read_csv(config.result_csv_path)
+        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -327,12 +244,12 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
     if not need_grad:
-        logger.warning("%s %s" % (api_full_name, Backward_Message.UNSUPPORT_BACKWARD_MESSAGE))
-        backward_message += Backward_Message.UNSUPPORT_BACKWARD_MESSAGE
+        logger.warning("%s %s" % (api_full_name, BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE))
+        backward_message += BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        logger.warning("%s %s" % (api_full_name, Backward_Message.NO_BACKWARD_RESULT_MESSAGE))
-        backward_message += Backward_Message.NO_BACKWARD_RESULT_MESSAGE
+        logger.warning("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
+        backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
@@ -353,13 +270,16 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     if need_backward:
         if need_to_backward(grad_index, out):
             backward_args = backward_content[api_full_name].get("input")
-            grad = gen_args(backward_args, api_name, real_data_path=real_data_path)[0]
+            func_options = {
+                'real_data_path': real_data_path
+            }
+            grad = gen_args(backward_args, api_name, func_options)[0]
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
             device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
         else:
-            backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
+            backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
         out = out[0]
         device_out = device_out[0]
@@ -416,7 +336,7 @@ def initialize_save_error_data(error_data_path):
     error_data_path_checker = FileChecker(error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
     error_data_path = error_data_path_checker.common_check()
-    error_data_path =initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
+    error_data_path = initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
     return error_data_path
 
 
@@ -477,7 +397,8 @@ def preprocess_forward_content(forward_content):
         if key not in arg_cache:
             filtered_new_args = [
                 {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
-                for arg in value['input_args'] if isinstance(arg, dict)
+                for arg in value['input_args']
+                if isinstance(arg, dict)
             ]
             arg_cache[key] = (filtered_new_args, value['input_kwargs'])
 
@@ -529,8 +450,8 @@ def run_ut_command(args):
     # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
     forward_content, backward_content, real_data_path = None, None, None
     if args.api_info_file:
-        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, 
-                                            ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
+        api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
         checked_api_info = api_info_file_checker.common_check()
         forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
         if args.filter_api:

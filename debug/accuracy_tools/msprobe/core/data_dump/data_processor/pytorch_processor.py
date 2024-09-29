@@ -153,7 +153,7 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        saved_tensor = tensor.contiguous().detach()
+        saved_tensor = tensor.clone().contiguous().detach()
         save_pt(saved_tensor, file_path)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
@@ -178,7 +178,6 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 
@@ -219,6 +218,9 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_pt(tensor, file_path)
             self.real_overflow_nums += 1
+            if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
+                logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
+                            f"current overflow times: {self.real_overflow_nums}.")
         self.cached_tensors_and_file_paths = {}
 
     def _is_support_inf_nan(self):

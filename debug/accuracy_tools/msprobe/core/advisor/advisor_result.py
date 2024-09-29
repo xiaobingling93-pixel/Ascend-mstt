@@ -34,8 +34,8 @@ class AdvisorResult:
         self.advisor_message = message
 
     @staticmethod
-    def gen_summary_file(out_path, message_list):
-        file_name = 'advisor_{}.txt'.format(time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+    def gen_summary_file(out_path, message_list, suffix):
+        file_name = 'advisor{}_{}.txt'.format(suffix, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
         result_file = os.path.join(out_path, file_name)
         try:
             with FileOpen(result_file, 'w+') as output_file:

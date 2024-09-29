@@ -1,13 +1,13 @@
 """
 advisor config
 """
-from profiler.advisor.utils.utils import Timer
 
 import logging
 import os
-from configparser import ConfigParser
 
+from profiler.advisor.utils.utils import Timer
 from profiler.advisor.utils.utils import singleton
+from profiler.prof_common.utils import SafeConfigReader
 
 logger = logging.getLogger()
 
@@ -21,15 +21,27 @@ class Config:
 
     _CONFIG_DIR_NAME = "config"
     _CONFIG_FILE_NAME = "config.ini"
+    _REQUIRED_SECTIONS = {
+        'LOG': ['console_logging_level'],
+        'ANALYSE': ['analysis_result_file', 'tune_ops_file'],
+        'THRESHOLD': ['operator_bound_ratio', 'frequency_threshold'],
+        'RULE-BUCKET': ['cn-north-9', 'cn-southwest-2', 'cn-north-7'],
+        'URL': [
+            'timeline_api_doc_url', 'timeline_with_stack_doc_url',
+            'pytorch_aoe_operator_tune_url', 'mslite_infer_aoe_operator_tune_url',
+            'enable_compiled_tune_url', 'ascend_profiler_url'
+        ]
+    }
 
     def __init__(self) -> None:
-        config = ConfigParser(allow_no_value=True)
         self._work_path = os.getcwd()  # pwd
         self._root_path = os.path.abspath(os.path.join(__file__, "../../"))
-        config.read(os.path.join(self._root_path, self._CONFIG_DIR_NAME, self._CONFIG_FILE_NAME))
-        self.config = config
+        self.config_reader = SafeConfigReader(os.path.join(self._root_path, self._CONFIG_DIR_NAME,
+                                                           self._CONFIG_FILE_NAME))
+        self.config_reader.validate(self._REQUIRED_SECTIONS)
+        self.config = self.config_reader.get_config()
         # ANALYSE
-        self._analysis_result_file = self._normalize_path(config.get("ANALYSE", "analysis_result_file"))
+        self._analysis_result_file = self._normalize_path(self.config.get("ANALYSE", "analysis_result_file"))
         self._tune_ops_file = os.path.abspath(
             os.path.join(self._work_path, f"operator_tuning_file_{Timer().strftime}.cfg"))
         self.log_path = None
@@ -155,3 +167,5 @@ class Config:
     def remove_log(self):
         if self.log_path and os.path.isdir(self.log_path) and not os.listdir(self.log_path):
             os.rmdir(self.log_path)
+
+
