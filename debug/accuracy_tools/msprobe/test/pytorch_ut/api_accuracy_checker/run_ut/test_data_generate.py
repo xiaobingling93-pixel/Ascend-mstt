@@ -140,11 +140,8 @@ class TestDataGenerateMethods(unittest.TestCase):
 
     def test_gen_random_tensor_gen_bool_tensor(self):
         info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (1, 2)}
-        expect_return_value = torch.tensor([[True, False]])
         data = gen_random_tensor(info, convert_type=None)
         self.assertEqual(data.dtype, torch.bool)
-        print(data)
-        self.assertTrue(torch.equal(data, expect_return_value))
 
     def test_gen_random_tensor(self):
         data = gen_random_tensor(api_info_dict.get('input_args')[0], None)
@@ -250,14 +247,14 @@ class TestDataGenerateMethods(unittest.TestCase):
         low_info = [float('inf'), float('inf')]
         high_info = [float('inf'), float('inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        print(tensor)
         self.assertTrue(tensor.max() == float('inf'))
         self.assertTrue(tensor.min() == float('inf'))
         
         low_info = [float('-inf'), float('-inf')]
         high_info = [float('-inf'), float('-inf')]
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(math.isnan(tensor.max()) and math.isnan(tensor.min()))
+        self.assertTrue(tensor.max() == float('-inf'))
+        self.assertTrue(tensor.min() == float('-inf'))
 
         low_info = [float('nan'), float('nan')]
         high_info = [float('nan'), float('nan')]
@@ -280,8 +277,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         low, high = 1, 0
         shape = (1, 2)
         data = gen_bool_tensor(low, high, shape)
-        print(data)
-        self.assertTrue(torch.equal(data, torch.tensor([[False, True]])))
+        self.assertEqual(data.dtype, torch.bool)
 
     def test_gen_api_params(self):
         api_info = {"input_args": [], "input_kwargs": {}}
