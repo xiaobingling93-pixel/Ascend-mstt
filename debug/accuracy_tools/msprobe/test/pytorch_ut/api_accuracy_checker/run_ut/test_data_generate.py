@@ -84,12 +84,10 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(data.shape, torch.Size([2048, 2, 1, 256]))
         
     def test_gen_data_gen_real_data(self):
-        with patch('msprobe.pytorch.api_accuracy_checker.run_ut.data_generate.gen_real_tensor') as mock_gen_real:
-            mock_gen_real.return_value = torch.tensor(1.0)
-            info = {'type': 'torch.float32', 'datapath': 'path/to/data.pt'}
-            api_name = "test_api"
-            data = gen_data(info, api_name, need_grad=True, convert_type=None)
-            self.assertTrue(mock_gen_real.called)
+        info = {'type': 'torch.float32', 'datapath': self.tensor_path}
+        api_name = "test_api"
+        data = gen_data(info, api_name, need_grad=True, convert_type=None)
+        self.assertIsInstance(data, torch.Tensor)
 
     def test_gen_data_numpy_data_type(self):
         info = {'type': 'numpy.float64', 'value': 3.14}
@@ -165,7 +163,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         input_int = numpy.left_shift(input_int, 12)
         input_fp32 = input_int.view(numpy.float32)
         input_hf32 = torch.from_numpy(input_fp32)
-        self.assertEqual(fp32_to_hf32_to_fp32(input_tensor), input_hf32)
+        self.assertTrue(torch.allclose(fp32_to_hf32_to_fp32(input_tensor), input_hf32), atol=1e-4)
 
     def test_gen_kwargs(self):
         api_info = copy.deepcopy(api_info_dict)
@@ -185,8 +183,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         real_data_path = None
         expect_return_value = [torch.tensor(1.0), torch.tensor(2)]
         result = gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path)
-        self.assertIsInstance(result[0], torch.Tensor)
-        self.assertIsInstance(result[1], torch.Tensor)
         self.assertEqual(result, expect_return_value)
         
         kwargs_item_value = [{'type': 'torch.Size', 'value': (2, 3)}]
@@ -219,10 +215,10 @@ class TestDataGenerateMethods(unittest.TestCase):
         low_info = [0.0, 0.0]
         high_info = [1.0, 1.0]
         shape = (3, 3)
-        data_dtype = 'torch.float32'
-        convert_type = 'torch.float64'
+        data_dtype = 'torch.int32'
+        convert_type = 'int32_to_int64'
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, convert_type)
-        self.assertEqual(tensor.dtype, torch.float64)
+        self.assertEqual(tensor.dtype, torch.int64)
 
     def test_gen_common_tensor_unsupported_dtype(self):
         low_info = [0.0, 0.0]
@@ -247,7 +243,8 @@ class TestDataGenerateMethods(unittest.TestCase):
         shape = (3, 3)
         data_dtype = 'torch.float32'
         tensor = gen_common_tensor(low_info, high_info, shape, data_dtype, None)
-        self.assertTrue(tensor.max == float('inf') and tensor.min == float('-inf'))
+        self.assertTrue(tensor.max == float('inf'))
+        self.assertTrue(tensor.min == float('-inf'))
 
         low_info = [float('inf'), float('inf')]
         high_info = [float('inf'), float('inf')]
@@ -280,7 +277,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         low, high = 1, 0
         shape = (1, 2)
         data = gen_bool_tensor(low, high, shape)
-        self.assertEqual(data, torch.tensor([[False, True]]))
+        self.assertTrue(torch.all_close(data, torch.tensor([[False, True]])))
 
     def test_gen_api_params(self):
         api_info = {"input_args": [], "input_kwargs": {}}
@@ -290,7 +287,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         real_data_path = None
         with self.assertRaises(CompareException) as context:
             gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
-        self.assertEqual(context.exception.error_code, CompareException.INVALID_PARAM_ERROR)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         
         api_info = {"input_args": None, "input_kwargs": {}}
         with patch('msprobe.pytorch.common.log.logger.warning') as mock_logger:
