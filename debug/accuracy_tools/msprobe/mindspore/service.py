@@ -55,6 +55,7 @@ class Service:
         self.cell_processor = CellProcessor(self.data_collector.scope)
         self.primitive_hook_service = PrimitiveHookService(self)
         self.switch = False
+        self.primitive_switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
@@ -149,6 +150,7 @@ class Service:
             api_register.api_set_ori_func()
             self.should_stop_service = True
             self.switch = False
+            self.primitive_switch = False
             logger.info("************************************************")
             logger.info(f"*          {Const.TOOL_NAME} ends successfully.          *")
             logger.info("************************************************")

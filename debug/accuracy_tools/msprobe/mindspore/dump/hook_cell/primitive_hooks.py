@@ -151,7 +151,7 @@ class PrimitiveHookService:
             current_count = self.primitive_counters.get(primitive_name, 0)
             updated_primitive_name = f"{Const.PRIMITIVE_PREFIX}{Const.SEP}{primitive_name}{Const.SEP}{current_count}"
 
-            if not self.service_instance.switch:
+            if not self.service_instance.primitive_switch:
                 return origin_func(*args, **kwargs)
 
             captured_grads_input, captured_grads_output = [], []
