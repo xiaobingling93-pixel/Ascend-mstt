@@ -8,6 +8,7 @@ from msprobe.core.compare.utils import get_accuracy
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.const import CompareConst
+from msprobe.pytorch.compare.pt_compare import PTComparator
 
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
@@ -397,7 +398,6 @@ class TestUtilsMethods(unittest.TestCase):
     # test_match_op in test_pt_compare.py
 
     def test_compare_process(self):
-        from msprobe.pytorch.compare.pt_compare import PTComparator
         generate_dump_json(base_dir)
         generate_stack_json(base_dir)
         file_lists = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'stack.json')]
@@ -455,11 +455,9 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(result.equals(o_result))
 
     def test_compare_by_op(self):
-        from msprobe.pytorch.compare.pt_compare import PTComparator
         npu_op_name = 'Functional.linear.0.forward.input.0'
         bench_op_name = 'N/A'
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
         self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
-        
