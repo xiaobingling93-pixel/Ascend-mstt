@@ -60,7 +60,8 @@ class TestUtils(unittest.TestCase):
     def test_make_unequal_row(self):
         api_name = "api_name"
         params = HandlerParams()
-        params.original_result = (Tensor([1.0, 5.0], dtype=ms.float16), Tensor([1.0, 5.0], dtype=ms.float16))
+        params.original_result = (Tensor([1.0, 5.0], dtype=ms.float32), Tensor([1.0, 5.0], dtype=ms.float32))
+        params.fuzzed_result = (Tensor([1.1, 5.0], dtype=ms.float32), Tensor([1.1, 5.0], dtype=ms.float32))
         target_row = UnequalRow(
             rank=Runtime.rank_id if Runtime.rank_id != -1 else None,
             api_name=api_name,
