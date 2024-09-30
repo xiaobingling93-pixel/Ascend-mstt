@@ -1,11 +1,27 @@
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
+import os
 from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
+
 import numpy as np
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, CompareException
-from msprobe.core.common.const import Const
 
 
 @dataclass
@@ -69,8 +85,11 @@ class TensorStatInfo:
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
-                    bool, int, float, str, slice, type(Ellipsis))
+    special_type = (
+        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
+        bool, int, float, str, slice,
+        type(Ellipsis)
+    )
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -86,7 +105,7 @@ class BaseDataProcessor:
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
-    
+
     @property
     def is_terminated(self):
         return False
@@ -179,14 +198,14 @@ class BaseDataProcessor:
             result_list = []
             for i, arg in enumerate(args):
                 cls._recursive_key_stack.append(str(i))
-                result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth+1))
+                result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
                 cls._recursive_key_stack.pop()
             return type(args)(result_list)
         elif isinstance(args, dict):
             result_dict = {}
             for k, arg in args.items():
                 cls._recursive_key_stack.append(str(k))
-                result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth+1)
+                result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
                 cls._recursive_key_stack.pop()
             return result_dict
         elif args is not None:
@@ -226,7 +245,7 @@ class BaseDataProcessor:
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
-    
+
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
 
