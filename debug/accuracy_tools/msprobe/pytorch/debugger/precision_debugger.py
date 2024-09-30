@@ -1,9 +1,10 @@
 from collections import namedtuple
 
 import torch
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import Const, FileCheckConst, MsgConst
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import FileChecker
+from msprobe.core.common.utils import get_real_step_or_rank
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.debugger.debugger_config import DebuggerConfig
 from msprobe.pytorch.grad_probe.grad_monitor import GradientMonitor
@@ -47,12 +48,12 @@ class PrecisionDebugger:
             self.initialized = True
             self.model = model
             common_config, task_config = parse_json_config(config_path, task)
-            self.task = common_config.task
+            self.task = task if task else common_config.task
             if self.task == Const.GRAD_PROBE:
                 self.gm = GradientMonitor(common_config, task_config)
                 return
             if step:
-                common_config.step = step
+                common_config.step = get_real_step_or_rank(step, Const.STEP)
             self.config = DebuggerConfig(
                 common_config, task_config, task, dump_path, level
             )
@@ -72,39 +73,33 @@ class PrecisionDebugger:
         if args.config_path is not None:
             if not isinstance(args.config_path, str):
                 raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string"
-                )
+                    MsprobeException.INVALID_PARAM_ERROR, f"config_path must be a string")
             file_checker = FileChecker(
                 file_path=args.config_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
             file_checker.common_check()
 
         if args.task is not None and args.task not in Const.TASK_LIST:
             raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}"
-            )
+                MsprobeException.INVALID_PARAM_ERROR, f"task must be one of {Const.TASK_LIST}")
 
         if args.dump_path is not None:
             if not isinstance(args.dump_path, str):
                 raise MsprobeException(
-                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string"
-                )
+                    MsprobeException.INVALID_PARAM_ERROR, f"dump_path must be a string")
 
         if args.level is not None and args.level not in Const.LEVEL_LIST:
             raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}"
-            )
+                MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
 
         if args.model is not None and not isinstance(args.model, torch.nn.Module):
             raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module"
-            )
+                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")
 
     @classmethod
     def start(cls):
         instance = cls._instance
         if not instance:
-            raise Exception("No instance of PrecisionDebugger found.")
-
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
         if instance.enable_dataloader:
@@ -124,8 +119,7 @@ class PrecisionDebugger:
     def stop(cls):
         instance = cls._instance
         if not instance:
-            raise Exception("PrecisionDebugger instance is not created.")
-
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
         if instance.enable_dataloader:
@@ -136,8 +130,7 @@ class PrecisionDebugger:
     @classmethod
     def step(cls):
         if not cls._instance:
-            raise Exception("PrecisionDebugger instance is not created.")
-
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if cls._instance.task in PrecisionDebugger.tasks_not_need_debugger:
             return
         cls._instance.service.step()
@@ -145,7 +138,7 @@ class PrecisionDebugger:
     @classmethod
     def monitor(cls, model):
         if not cls._instance:
-            raise Exception("PrecisionDebugger instance is not created.")
+            raise Exception(MsgConst.NOT_CREATED_INSTANCE)
         if cls._instance.task != Const.GRAD_PROBE:
             return
         cls._instance.gm.monitor(model)

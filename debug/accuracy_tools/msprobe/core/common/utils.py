@@ -22,9 +22,10 @@ import time
 import json
 from datetime import datetime, timezone
 
-from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path)
+from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
+from msprobe.core.common.exceptions import MsprobeException
 
 
 device = collections.namedtuple('device', ['type', 'index'])
@@ -60,6 +61,7 @@ class CompareException(Exception):
     INVALID_OBJECT_TYPE_ERROR = 22
     INVALID_CHAR_ERROR = 23
     RECURSION_LIMIT_ERROR = 24
+    INVALID_ATTRIBUTE_ERROR = 25
 
     def __init__(self, code, error_info: str = ""):
         super(CompareException, self).__init__()
@@ -168,6 +170,10 @@ def add_time_with_xlsx(name):
     return '{}_{}.xlsx'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
 
 
+def add_time_with_yaml(name):
+    return '{}_{}.yaml'.format(name, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+
+
 def get_time():
     return datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
 
@@ -186,6 +192,29 @@ def md5_find(data):
             elif 'md5' in data[key_op][api_info]:
                 return True
     return False
+
+
+def struct_json_get(input_param, framework):
+    if framework == Const.PT_FRAMEWORK:
+        prefix = "bench"
+    elif framework == Const.MS_FRAMEWORK:
+        prefix = "npu"
+    else:
+        logger.error("Error framework found.")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    frame_json_path = input_param.get(f"{prefix}_json_path", None)
+    if not frame_json_path:
+        logger.error(f"Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    directory = os.path.dirname(frame_json_path)
+    check_file_or_directory_path(directory, True)
+    stack_json = os.path.join(directory, "stack.json")
+    construct_json = os.path.join(directory, "construct.json")
+
+    stack = load_json(stack_json)
+    construct = load_json(construct_json)
+    return stack, construct
 
 
 def task_dumppath_get(input_param):
@@ -234,20 +263,20 @@ def convert_tuple(data):
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
-    if isinstance(string, str) and is_invalid_pattern(string, stack):
+    if isinstance(string, str) and is_invalid_pattern(string):
         if stack:
             message = f"stack info of {op_name} contains special characters, please check!"
         elif not op_name:
-            message = f"{string} contains special characters, please check!"
+            message = f"api name contains special characters, please check!"
         else:
             message = f"data info of {op_name} contains special characters, please check!"
         logger.error(message)
         raise CompareException(CompareException.INVALID_CHAR_ERROR)
 
 
-def is_invalid_pattern(string, stack):
-    pattern = Const.STACK_STRING_BLACKLIST if stack else Const.STRING_INVALID_PATTERN
-    return re.match(pattern, string) if stack else re.search(pattern, string)
+def is_invalid_pattern(string):
+    pattern = Const.STRING_BLACKLIST
+    return re.search(pattern, string)
 
 
 def print_tools_ends_info():
@@ -255,3 +284,62 @@ def print_tools_ends_info():
     logger.info('*' * total_len)
     logger.info(f"*{Const.TOOL_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
     logger.info('*' * total_len)
+
+
+def get_step_or_rank_from_string(step_or_rank, obj):
+    splited = step_or_rank.split(Const.HYPHEN)
+    if len(splited) == 2:
+        try:
+            borderlines = int(splited[0]), int(splited[1])
+        except (ValueError, IndexError) as e:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   "The hyphen(-) must start and end with decimal numbers.") from e
+    else:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f'The string parameter for {obj} only supports formats like "3-5". Now string parameter for {obj} is "{step_or_rank}".')
+    if all(Const.STEP_RANK_MAXIMUM_RANGE[0] <= b <= Const.STEP_RANK_MAXIMUM_RANGE[1] for b in borderlines):
+        if borderlines[0] <= borderlines[1]:
+            continual_step_or_rank = list(range(borderlines[0], borderlines[1] + 1))
+        else:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f'For the hyphen(-) in {obj}, the left boundary ({borderlines[0]}) cannot be greater than the right boundary ({borderlines[1]}).')
+    else:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f"The boundaries must fall within the range of [{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
+    return continual_step_or_rank
+
+
+def get_real_step_or_rank(step_or_rank_input, obj):
+    if obj not in [Const.STEP, Const.RANK]:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                               f"Only support parsing {[Const.STEP, Const.RANK]}, the current parsing object is {obj}.")
+    if step_or_rank_input is None:
+        return []
+    if not isinstance(step_or_rank_input, list):
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
+    real_step_or_rank = []
+    for element in step_or_rank_input:
+        if not isinstance(element, (int, str)):
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"{obj} element {element} must be an integer or string.")
+        if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
+            real_step_or_rank.append(element)
+        elif isinstance(element, str) and Const.HYPHEN in element:
+            continual_step_or_rank = get_step_or_rank_from_string(element, obj)
+            real_step_or_rank.extend(continual_step_or_rank)
+    real_step_or_rank = list(set(real_step_or_rank))
+    real_step_or_rank.sort()
+    return real_step_or_rank
+
+
+def check_seed_all(seed, mode):
+    if isinstance(seed, int):
+        if seed < 0 or seed > Const.MAX_SEED_VALUE:
+            logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    else:
+        logger.error("Seed must be integer.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not isinstance(mode, bool):
+        logger.error("seed_all mode must be bool.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)

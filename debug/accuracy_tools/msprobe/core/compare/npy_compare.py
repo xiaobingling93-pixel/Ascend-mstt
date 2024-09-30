@@ -78,10 +78,8 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
 
 def npy_data_check(n_value, b_value):
     error_message = ""
-    if n_value is None or b_value is None:
-        error_message += "Dump file not found.\n"
-    if n_value == "" or b_value == "":
-        error_message += "Dump file not found.\n"
+    if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
+        error_message += "Dump file is not ndarray.\n"
 
     # 检查 n_value 和 b_value 是否为空
     if not error_message and (n_value.size == 0 or b_value.size == 0):
@@ -97,7 +95,8 @@ def npy_data_check(n_value, b_value):
 
     if not error_message:
         n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有 nan/inf 数据
-        if CompareConst.NAN in (n_value, b_value):
+        # handle_inf_nan 会返回'Nan'或ndarray类型，使用类型判断是否存在无法处理的nan/inf数据
+        if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
             error_message += "The position of inf or nan in NPU and bench Tensor do not match.\n"
     if error_message == "":
         error_flag = False

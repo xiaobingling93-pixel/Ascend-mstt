@@ -14,8 +14,7 @@ class Const:
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
-    STRING_INVALID_PATTERN = r"[^_A-Za-z0-9\"'><=\[\])(,}{: /.~-]"
-    STACK_STRING_BLACKLIST = r"[=+\-&\\@]"
+    STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
     FLOAT_EPSILON = np.finfo(float).eps
     OFF = 'OFF'
@@ -102,8 +101,30 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+
+    # struct json param
+    ORIGIN_DATA = "origin_data"
+    SCOPE = "scope"
+    STACK = "stack"
+
     ATEN = "Aten"
     MODULE_WHITE_LIST = ["torch", "numpy"]
+
+    FUNC_SKIP_LIST = ["construct", "__call__"]
+
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+
+    STACK_FILE_INDEX = 0
+
+    STACK_FUNC_INDEX = 2
+
+    STACK_FUNC_ELE_INDEX = 1
+
+    CONSTRUCT_NAME_INDEX = -3
+
+    NAME_FIRST_POSSIBLE_INDEX = -4
+
+    NAME_SECOND_POSSIBLE_INDEX = -5
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
@@ -122,6 +143,12 @@ class Const:
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    
+    STEP = "step"
+    RANK = "rank"
+    HYPHEN = "-"
+    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+
 
 class CompareConst:
     """
@@ -205,6 +232,8 @@ class CompareConst:
     ERROR = 'error'
     SKIP = 'SKIP'
     N_A = 'N/A'
+    INF = 'inf'
+    NEG_INF = '-inf'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8
@@ -295,6 +324,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:
@@ -350,6 +380,8 @@ class MsgConst:
         class ERROR:
             value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+    NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
 
 
 class GraphMode:
