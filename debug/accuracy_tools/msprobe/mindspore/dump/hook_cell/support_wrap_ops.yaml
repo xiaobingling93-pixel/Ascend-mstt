@@ -877,16 +877,60 @@ mint.ops:
   - zeros
   - zeros_ex
   - zeros_like
-
-mint.nn:
-  - Dropout
-  - Embedding
-  - Fold
-  - LayerNorm
-  - Linear
-  - MaxPool2d
-  - Unfold
-  - Upsample
+  - inverse
+  - select
+  - item
+  - unsqueeze
+  - median
+  - floor
+  - histc
+  - special
+  - arctan2
+  - sign
+  - concat
+  - atanh
+  - greater_equal
+  - eye
+  - fix
+  - argmin
+  - asinh
+  - atan
+  - nan_to_num
+  - tan
+  - round
+  - cosh
+  - norm
+  - roll
+  - log1p
+  - reshape
+  - arccos
+  - outer
+  - arcsin
+  - rand_like
+  - acosh
+  - multinomial
+  - logical_xor
+  - acos
+  - linalg
+  - sinc
+  - arcsinh
+  - asin
+  - narrow
+  - arctanh
+  - trace
+  - erfc
+  - bernoulli
+  - expm1
+  - logaddexp
+  - sinh
+  - arccosh
+  - atan2
+  - rand
+  - arange
+  - trunc
+  - arctan
+  - swapaxes
+  - transpose
 
 mint.nn.functional:
   - absolute_import
@@ -921,6 +965,21 @@ mint.nn.functional:
   - softplus
   - tanh
   - unfold
+  - mse_loss
+  - adaptive_avg_pool1d
+  - binary_cross_entropy
+  - adaptive_avg_pool2d
+  - hardsigmoid
+  - selu
+  - softshrink
+  - prelu
+  - logsigmoid
+  - hardswish
+  - mish
+  - log_softmax
+  - hardshrink
+  - l1_loss
+  - elu
 
 communication.comm_func:
   - all_reduce
