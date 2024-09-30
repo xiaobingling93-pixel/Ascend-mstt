@@ -93,7 +93,7 @@ class ApiAccuracyChecker:
         return output_list
 
     @staticmethod
-    def prepare_api_input_aggregation(api_info, forward_or_backward):
+    def prepare_api_input_aggregation(api_info, forward_or_backward=Const.FORWARD):
         '''
         Args:
             api_info: ApiInfo
@@ -148,39 +148,39 @@ class ApiAccuracyChecker:
     def run_and_compare(self):
         for api_name_str, api_info in self.api_infos.items():
             if not api_info.check_forward_info():
-                logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check")
+                logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
                 continue
             try:
                 forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
             except Exception as e:
                 logger.warning(f"exception occurs when getting inputs for {api_name_str} forward api. "
-                               f"skip forward and backward check. detailed exception information: {e}")
+                               f"skip forward and backward check. detailed exception information: {e}.")
                 continue
             forward_output_list = None
             try:
                 forward_output_list = \
                     self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
             except Exception as e:
-                logger.warning(f"exception occurs when running and comparing {api_name_str} forward api"
-                               f"detailed exception information: {e}")
+                logger.warning(f"exception occurs when running and comparing {api_name_str} forward api. "
+                               f"detailed exception information: {e}.")
             self.record(forward_output_list)
 
             if not api_info.check_backward_info():
-                logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check")
+                logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
                 continue
             try:
                 backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
             except Exception as e:
                 logger.warning(f"exception occurs when getting inputs for {api_name_str} backward api. "
-                               f"skip backward check. detailed exception information: {e}")
+                               f"skip backward check. detailed exception information: {e}.")
                 continue
             backward_output_list = None
             try:
                 backward_output_list = \
                     self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
             except Exception as e:
-                logger.warning(f"exception occurs when running and comparing {api_name_str} backward api"
-                               f"detailed exception information: {e}")
+                logger.warning(f"exception occurs when running and comparing {api_name_str} backward api. "
+                               f"detailed exception information: {e}.")
             self.record(backward_output_list)
 
     def record(self, output_list):
