@@ -1,4 +1,5 @@
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
 
 
 class DebuggerConfig:
@@ -56,11 +57,14 @@ class DebuggerConfig:
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
-            raise Exception("task is invalid")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"The task <{self.task}> is not in the {Const.TASK_LIST}.")
         if self.level and self.level not in Const.LEVEL_LIST:
-            raise Exception("level is invalid")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"The level <{self.level}> is not in the {Const.LEVEL_LIST}.")
         if not self.dump_path:
-            raise Exception("Invalid dump path, please check your config")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"The dump_path not found.")
 
     def check(self):
         self.check_kwargs()
