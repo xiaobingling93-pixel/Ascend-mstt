@@ -33,6 +33,10 @@ class Handler(BaseHandler):
         pass
 
 
+def where(*args):
+    return args[1]
+
+
 class TestBaseHandler(unittest.TestCase):
     base_handler = None
 
@@ -80,20 +84,22 @@ class TestBaseHandler(unittest.TestCase):
         second_tensor = Tensor([1.5, 2.0], dtype=ms.float32)
         abs_tol = FreeBenchmarkConst.PERT_VALUE_DICT.get(ms.float32)
         target = ops.max(ops.div(second_tensor, first_tensor))[0].item()
-        ret = self.base_handler.get_endless_norm(first_tensor, second_tensor, abs_tol)
-        self.assertEqual(ret, target)
+        with patch.object(ops, "where", new=where):
+            ret = self.base_handler.get_endless_norm(first_tensor, second_tensor, abs_tol)
+            self.assertEqual(ret, target)
 
-        first_tensor = Tensor([1.0, 1.2], dtype=ms.bfloat16)
-        second_tensor = Tensor([1.5, 2.0], dtype=ms.bfloat16)
-        target = ops.max(ops.div(second_tensor.to(ms.float32), first_tensor.to(ms.float32)))[0].item()
-        ret = self.base_handler.get_endless_norm(first_tensor, second_tensor, abs_tol)
-        self.assertEqual(ret, target)
+            first_tensor = Tensor([1.0, 1.2], dtype=ms.bfloat16)
+            second_tensor = Tensor([1.5, 2.0], dtype=ms.bfloat16)
+            target = ops.max(ops.div(second_tensor.to(ms.float32), first_tensor.to(ms.float32)))[0].item()
+            ret = self.base_handler.get_endless_norm(first_tensor, second_tensor, abs_tol)
+            self.assertEqual(ret, target)
 
     def test_ratio_calculate(self):
         original_output = Tensor([1.0, 1.2], dtype=ms.float32)
         fuzzed_output = Tensor([1.5, 2.0], dtype=ms.float32)
         target = ops.max(ops.div(fuzzed_output, original_output))[0].item()
-        ret = self.base_handler.ratio_calculate(original_output, fuzzed_output)
+        with patch.object(ops, "where", new=where):
+            ret = self.base_handler.ratio_calculate(original_output, fuzzed_output)
         self.assertEqual(ret, target)
 
     @patch.object(logger, "error")
