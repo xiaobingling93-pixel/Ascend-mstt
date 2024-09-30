@@ -33,6 +33,10 @@ def where(*args):
     return args[1]
 
 
+def abs(tensor):
+    return tensor
+
+
 class TestCheckHandler(unittest.TestCase):
     check_handler = None
 
@@ -59,7 +63,8 @@ class TestCheckHandler(unittest.TestCase):
             "output_index": None
         }
         with patch.object(DataWriter, "write_data_to_csv") as mock_write, \
-             patch.object(ops, "where", new=where):
+             patch.object(ops, "where", new=where), \
+             patch.object(ops, "abs", new=abs):
             self.check_handler.npu_compare_and_save(original_output, fuzzed_output, params)
         self.assertEqual(list(mock_write.call_args[0][0]), list(data_dict.values()))
         self.assertEqual(mock_write.call_args[0][1], data_dict.keys())
