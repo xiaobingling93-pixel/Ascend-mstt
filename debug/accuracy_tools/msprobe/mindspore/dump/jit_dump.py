@@ -39,7 +39,7 @@ class JitDump(_MindsporeFunctionExecutor):
     def __call__(self, *args, **kwargs):
         api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
-        if JitDump.jit_dump_switch is True:
+        if JitDump.jit_dump_switch:
             if isinstance(args[0], Tensor):
                 dump_jit({}, args, out, True)
             else:
@@ -65,10 +65,10 @@ class JitDump(_MindsporeFunctionExecutor):
         return True
 
     def grad(self, obj, grad, weights, grad_position, *args,  **kwargs):
-        if JitDump.jit_enable:
+        if JitDump.jit_dump_switch and JitDump.jit_enable:
             api_register.api_set_ori_func()
         output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
-        if JitDump.jit_enable:
+        if JitDump.jit_dump_switch and JitDump.jit_enable:
             dump_jit(obj, args, None, False)
             api_register.api_set_hook_func()
         return output
