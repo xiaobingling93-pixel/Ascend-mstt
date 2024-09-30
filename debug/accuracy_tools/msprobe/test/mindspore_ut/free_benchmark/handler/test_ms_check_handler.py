@@ -29,6 +29,10 @@ from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.runtime import Runtime
 
 
+def where(*args):
+    return args[1]
+
+
 class TestCheckHandler(unittest.TestCase):
     check_handler = None
 
@@ -54,7 +58,8 @@ class TestCheckHandler(unittest.TestCase):
             "shape": original_output.shape,
             "output_index": None
         }
-        with patch.object(DataWriter, "write_data_to_csv") as mock_write:
+        with patch.object(DataWriter, "write_data_to_csv") as mock_write, \
+             patch.object(ops, "where", new=where):
             self.check_handler.npu_compare_and_save(original_output, fuzzed_output, params)
         self.assertEqual(list(mock_write.call_args[0][0]), list(data_dict.values()))
         self.assertEqual(mock_write.call_args[0][1], data_dict.keys())

@@ -115,7 +115,8 @@ class TestBaseHandler(unittest.TestCase):
         fuzzed_output = Tensor([1.5, 2.0], dtype=ms.float32)
         ratio = ops.max(ops.div(fuzzed_output, original_output))[0].item()
         target = (False, ratio)
-        ret = self.base_handler.npu_compare(original_output, fuzzed_output)
+        with patch.object(ops, "where", new=where):
+            ret = self.base_handler.npu_compare(original_output, fuzzed_output)
         self.assertEqual(ret, target)
 
     def test_is_float_tensor(self):
