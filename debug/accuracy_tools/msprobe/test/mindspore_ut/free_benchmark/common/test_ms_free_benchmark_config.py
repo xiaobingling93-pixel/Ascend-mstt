@@ -23,7 +23,7 @@ from msprobe.mindspore.free_benchmark.common.config import Config
 
 class TestConfig(unittest.TestCase):
     def test_config(self):
-        self.assertFalse(hasattr(Config, "is_enable"))
+        self.assertTrue(hasattr(Config, "is_enable"))
         self.assertEqual(Config.handler_type, FreeBenchmarkConst.DEFAULT_HANDLER_TYPE)
         self.assertEqual(Config.pert_type, FreeBenchmarkConst.DEFAULT_PERT_TYPE)
         self.assertEqual(Config.stage, FreeBenchmarkConst.DEFAULT_STAGE)
