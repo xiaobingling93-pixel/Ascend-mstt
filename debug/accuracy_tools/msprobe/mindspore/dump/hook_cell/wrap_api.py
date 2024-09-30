@@ -20,6 +20,7 @@ import os
 from mindspore import Tensor, ops, mint
 from mindspore.mint.nn import functional
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.communication import comm_func
 
 from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.core.common.const import Const
@@ -51,6 +52,10 @@ class HOOKMintNNFunctionalOP(object):
     pass
 
 
+class HOOKDistributedOP(object):
+    pass
+
+
 class ApiTemplate(HOOKCell):
     def __init__(self, api_name, api_dict, prefix, hook):
         self.api_name = api_name
@@ -65,12 +70,14 @@ class ApiTemplate(HOOKCell):
 
 
 class WrapApiName:
-    def __init__(self, tensor_api_names, stub_tensor_api_names, ops_api_names, mint_api_names, mint_nn_func_api_names):
+    def __init__(self, tensor_api_names, stub_tensor_api_names, ops_api_names, mint_api_names, mint_nn_func_api_names,
+                 distributed_api_names):
         self.tensor_api_names = tensor_api_names
         self.stub_tensor_api_names = stub_tensor_api_names
         self.ops_api_names = ops_api_names
         self.mint_api_names = mint_api_names
         self.mint_nn_func_api_names = mint_nn_func_api_names
+        self.distributed_api_names = distributed_api_names
 
 
 def get_wrap_api_list():
@@ -79,11 +86,13 @@ def get_wrap_api_list():
     ops_api = api_list.get(MsConst.SUPPORTED_OPS_LIST_KEY)
     mint_api = api_list.get(MsConst.SUPPORTED_MINT_LIST_KEY)
     mint_nn_func_api = api_list.get(MsConst.SUPPORTED__MINT_NN_FUNC_LIST_KEY)
+    distributed_api = api_list.get(MsConst.SUPPORTED_COMM_LIST_KEY)
     wrap_api_name = WrapApiName(set(tensor_api) & set(dir(Tensor)),
                                 set(tensor_api) & set(dir(StubTensor)),
                                 set(ops_api) & set(dir(ops)),
                                 set(mint_api) & set(dir(mint)),
-                                set(mint_nn_func_api) & set(dir(functional)))
+                                set(mint_nn_func_api) & set(dir(functional)),
+                                set(distributed_api) & set(dir(comm_func)))
     return wrap_api_name
 
 
@@ -111,3 +120,5 @@ def setup_hooks(hook):
                            MsConst.MINT_DATA_PREFIX, hook, HOOKMintOP)
     wrap_api_func_and_bind(wrap_api_name.mint_nn_func_api_names, {f: getattr(functional, f) for f in dir(functional)},
                            MsConst.MINT_NN_FUNC_DATA_PREFIX, hook, HOOKMintNNFunctionalOP)
+    wrap_api_func_and_bind(wrap_api_name.distributed_api_names, {f: getattr(comm_func, f) for f in dir(comm_func)},
+                           MsConst.DISTRIBUTED_DATA_PREFIX, hook, HOOKDistributedOP)
