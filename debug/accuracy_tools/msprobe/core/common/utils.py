@@ -323,7 +323,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                                   f"Each element of {obj} must be greater than or equal to zero, currently it is {element}")
+                                   f"Each element of {obj} must be non-negative, currently it is {element}.")
         if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
             real_step_or_rank.append(element)
         elif isinstance(element, str) and Const.HYPHEN in element:
