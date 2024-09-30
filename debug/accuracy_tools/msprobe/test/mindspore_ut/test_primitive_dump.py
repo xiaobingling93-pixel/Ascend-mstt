@@ -59,6 +59,7 @@ class TestService(unittest.TestCase):
         self.service.model = Mock()
         self.service.data_collector = Mock()
         self.service.switch = True  # Make sure the switch is on for testing
+        self.service.primitive_switch = True  # Make sure the switch is on for testing
 
     def test_check_model_valid_none(self):
         model = None
