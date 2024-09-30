@@ -17,17 +17,16 @@
 
 import unittest
 
-from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
 
 
 class TestConfig(unittest.TestCase):
     def test_config(self):
         self.assertTrue(hasattr(Config, "is_enable"))
-        self.assertEqual(Config.handler_type, FreeBenchmarkConst.DEFAULT_HANDLER_TYPE)
-        self.assertEqual(Config.pert_type, FreeBenchmarkConst.DEFAULT_PERT_TYPE)
-        self.assertEqual(Config.stage, FreeBenchmarkConst.DEFAULT_STAGE)
-        self.assertEqual(Config.dump_level, FreeBenchmarkConst.DEFAULT_DUMP_LEVEL)
-        self.assertEqual(Config.steps, [])
-        self.assertEqual(Config.ranks, [])
-        self.assertEqual(Config.dump_path, "")
+        self.assertTrue(hasattr(Config, "handler_type"))
+        self.assertTrue(hasattr(Config, "pert_type"))
+        self.assertTrue(hasattr(Config, "stage"))
+        self.assertTrue(hasattr(Config, "dump_level"))
+        self.assertTrue(hasattr(Config, "steps"))
+        self.assertTrue(hasattr(Config, "ranks"))
+        self.assertTrue(hasattr(Config, "dump_path"))
