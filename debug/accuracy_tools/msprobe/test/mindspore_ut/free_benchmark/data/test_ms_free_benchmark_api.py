@@ -26,8 +26,7 @@ class TestSupportWrapOps(unittest.TestCase):
     def test_support_wrap_ops(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
         base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(cur_path))))
-        yaml_path = os.path.join(base_path, "mindspore", "free_benchmark", "data",
-                                 FreeBenchmarkConst.SUPPORTED_CHECK_API_FILE)
+        yaml_path = os.path.join(base_path, "mindspore", "free_benchmark", "data", "support_wrap_ops.yaml")
 
         supported_ops_list = load_yaml(yaml_path)
         for k, v in FreeBenchmarkConst.API_PREFIX_DICT.items():
