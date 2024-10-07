@@ -100,7 +100,7 @@ class TestUtils(TestCase):
         ]
 
         with self.assertRaises(CompareException) as context:
-            check_compare_param("npu_path", "output_path")
+            check_compare_param("npu_path", "output_path", dump_mode=Const.ALL)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameter 'input_param', "
                                       "the expected type dict but got <class 'str'>.")
@@ -110,8 +110,8 @@ class TestUtils(TestCase):
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
                 patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
                 patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
-            check_compare_param(params, "output_path")
-            check_compare_param(params, "output_path", summary_compare=False, md5_compare=True)
+            check_compare_param(params, "output_path", dump_mode=Const.ALL)
+            check_compare_param(params, "output_path", dump_mode=Const.MD5)
         for i in range(len(call_args)):
             self.assertEqual(mock_check_file_or_directory_path.call_args_list[i][0], call_args[i])
         self.assertEqual(len(mock_check_json_file.call_args[0]), 4)
@@ -199,17 +199,15 @@ class TestUtils(TestCase):
         input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
                 patch("msprobe.core.common.utils.json.load", return_value=npu_json):
-            summary_compare, md5_compare = task_dumppath_get(input_param)
-        self.assertFalse(summary_compare)
-        self.assertFalse(md5_compare)
+            dump_mode = task_dumppath_get(input_param)
+        self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
                 patch("msprobe.core.common.utils.json.load", return_value=npu_json), \
                 patch("msprobe.core.common.utils.md5_find", return_value=True):
-            summary_compare, md5_compare = task_dumppath_get(input_param)
-        self.assertFalse(summary_compare)
-        self.assertTrue(md5_compare)
+            dump_mode = task_dumppath_get(input_param)
+        self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \

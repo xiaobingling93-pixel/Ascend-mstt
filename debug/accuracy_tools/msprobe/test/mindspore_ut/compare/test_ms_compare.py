@@ -1,6 +1,8 @@
 # coding=utf-8
 import unittest
 from msprobe.mindspore.compare.ms_compare import MSComparator
+from msprobe.core.common.const import Const
+
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
@@ -152,12 +154,11 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, True)
 
     def test_data_mapping(self):
-        summary_compare = True
-        md5_compare = False
+        dump_mode = Const.SUMMARY
         stack_json_data = {}
         ms_comparator = MSComparator(data_mapping=data_mapping)
 
-        npu_ops_all = ms_comparator.merge_data(npu_json_data, stack_json_data, summary_compare, md5_compare)
+        npu_ops_all = ms_comparator.merge_data(npu_json_data, stack_json_data, dump_mode)
         npu_ops_all_correct = {
             'Functional.flash_attention_score.4.forward.input.0': {
                 'struct': ('BFloat16', [4096, 1, 2048]),
@@ -174,7 +175,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         self.assertDictEqual(npu_ops_all, npu_ops_all_correct)
 
-        bench_ops_all = ms_comparator.merge_data(bench_json_data, stack_json_data, summary_compare, md5_compare)
+        bench_ops_all = ms_comparator.merge_data(bench_json_data, stack_json_data, dump_mode)
         bench_ops_all_correct = {
             'NPU.npu_fusion_attention.4.forward.input.0': {
                 'struct': ('torch.bfloat16', [4096, 1, 2048]),
@@ -191,7 +192,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         self.assertDictEqual(bench_ops_all, bench_ops_all_correct)
 
-        result = ms_comparator.get_accuracy(npu_ops_all, bench_ops_all, summary_compare, md5_compare)
+        result = ms_comparator.get_accuracy(npu_ops_all, bench_ops_all, dump_mode)
         result_correct = [['Functional.flash_attention_score.4.forward.input.0',
                            'NPU.npu_fusion_attention.4.forward.input.0',
                            'BFloat16', 'torch.bfloat16', [4096, 1, 2048], [4096, 1, 2048], 0.0, 0.0,
@@ -208,9 +209,9 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertListEqual(result, result_correct)
 
     def test_dm_tensor_task(self):
-        self.compare_process_custom(False, False)
+        self.compare_process_custom(dump_mode=Const.ALL)
 
-    def compare_process_custom(self, summary_compare, md5_compare):
+    def compare_process_custom(self, dump_mode):
         import os, tempfile, json
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         npu_dump_path = os.path.join(data_path, 'npu_dump.json')
@@ -223,5 +224,5 @@ class TestUtilsMethods(unittest.TestCase):
             json.dump({}, n_s_f)
         ms_comparator = MSComparator()
         result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
-                                                         False, summary_compare, md5_compare)
+                                                         False, dump_mode)
         self.assertListEqual(result_df.values.tolist(), [])

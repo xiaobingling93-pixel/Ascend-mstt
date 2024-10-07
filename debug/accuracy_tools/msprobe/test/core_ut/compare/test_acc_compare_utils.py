@@ -2,6 +2,7 @@
 import unittest
 from msprobe.core.compare.utils import rename_api, read_op, op_item_parse, resolve_api_special_parameters, \
     get_accuracy, get_un_match_accuracy, merge_tensor
+from msprobe.core.common.const import Const
 
 
 # test_read_op
@@ -176,19 +177,19 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_un_match_accuracy_1(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=True, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
         self.assertEqual(result, o_result_unmatch_1)
 
     def test_get_un_match_accuracy_2(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=True)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result_unmatch_2)
 
     def test_get_un_match_accuracy_3(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
         self.assertEqual(result, o_result_unmatch_3)
 
     def test_merge_tensor(self):
-        op_dict = merge_tensor(tensor_list, True, False)
+        op_dict = merge_tensor(tensor_list, dump_mode=Const.SUMMARY)
         self.assertEqual(op_dict, result_op_dict)

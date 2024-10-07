@@ -209,26 +209,24 @@ def resolve_api_special_parameters(data_dict, full_op_name, item_list):
             item_list.append(parsed_item)
 
 
-def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=False):
+def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
         npu_stack_info = n_dict.get("stack_info", None)
         bench_stack_info = b_dict.get("stack_info", None)
         has_stack = npu_stack_info and bench_stack_info
 
-        all_mode_bool = not (summary_compare or md5_compare)
-        if all_mode_bool:
+        if dump_mode == Const.ALL:
             npu_data_name = n_dict.get("data_name", None)
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-
             n_name = n_dict['op_name'][n_start + index]
             b_name = b_dict['op_name'][b_start + index]
             n_struct = n_dict[key][index]
             b_struct = b_dict[key][index]
             err_msg = ""
-            if md5_compare:
+            if dump_mode == Const.MD5:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                n_struct[2], b_struct[2],
                                CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
@@ -239,7 +237,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 result.append(result_item)
                 continue
 
-            if summary_compare:
+            if dump_mode == Const.SUMMARY:
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                " ", " ", " ", " ", " ", " ", " ", " "]
             else:
@@ -251,7 +249,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             bench_summary_data = b_dict.get("summary")[b_start + index]
             result_item.extend(bench_summary_data)
 
-            if summary_compare:
+            if dump_mode == Const.SUMMARY:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
                 warning_flag = False
                 for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
@@ -274,13 +272,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     if str(result_item[i]) in ('inf', '-inf', 'nan'):
                         result_item[i] = f'{result_item[i]}\t'
 
-            result_item.append(accuracy_check if summary_compare else CompareConst.ACCURACY_CHECK_YES)
+            result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
             if has_stack and index == 0 and key == "input_struct":
                 result_item.extend(npu_stack_info)
             else:
                 result_item.append(CompareConst.NONE)
-            if all_mode_bool:
+            if dump_mode == Const.ALL:
                 result_item.append(npu_data_name[n_start + index])
 
             result.append(result_item)
@@ -289,7 +287,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             for index in range(b_len, n_len):
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
-                if md5_compare:
+                if dump_mode == Const.MD5:
                     result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
                                    n_struct[1], CompareConst.NAN, n_struct[2], CompareConst.NAN, CompareConst.NAN]
                     result.append(result_item)
@@ -309,7 +307,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     result_item.extend(npu_stack_info)
                 else:
                     result_item.append(CompareConst.NONE)
-                if all_mode_bool:
+                if dump_mode == Const.ALL:
                     result_item.append(npu_data_name[n_start + index])
 
                 result.append(result_item)
@@ -324,7 +322,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
     get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
 
 
-def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
+def get_un_match_accuracy(result, n_dict, dump_mode):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
@@ -339,7 +337,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             index_out += 1
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
-        if md5_compare:
+        if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
             if npu_stack_info and index == 0:
                 result_item.extend(npu_stack_info)
@@ -347,7 +345,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
                 result_item.append(CompareConst.NONE)
             result.append(result_item)
             continue
-        if summary_compare:
+        if dump_mode == Const.SUMMARY:
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
@@ -361,12 +359,12 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result_item.extend(npu_stack_info)
         else:
             result_item.append(CompareConst.NONE)
-        if not md5_compare and not summary_compare and result_item[1] == CompareConst.N_A:
+        if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
             result_item.extend(["-1"])
         result.append(result_item)
 
 
-def merge_tensor(tensor_list, summary_compare, md5_compare):
+def merge_tensor(tensor_list, dump_mode):
     op_dict = {}
     op_dict["op_name"] = []
     op_dict["input_struct"] = []
@@ -375,8 +373,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
     op_dict["summary"] = []
     op_dict["stack_info"] = []
 
-    all_mode_bool = not (summary_compare or md5_compare)
-    if all_mode_bool:
+    if dump_mode == Const.ALL:
         op_dict["data_name"] = []
 
     for tensor in tensor_list:
@@ -385,23 +382,23 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             break
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
-        if not md5_compare:
+        if dump_mode == Const.MD5:
+            if "input" in name_ele_list:
+                op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+            if "kwarg" in name_ele_list:
+                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+            elif "output" in name_ele_list:
+                op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+        else:
             if "input" in name_ele_list:
                 op_dict["input_struct"].append((tensor['dtype'], tensor['shape']))
             elif "kwarg" in name_ele_list:
                 op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape']))
-            elif "output" in name_ele_list:    
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
-        else:
-            if "input" in name_ele_list:
-                op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            if "kwarg" in name_ele_list:    
-                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
             elif "output" in name_ele_list:
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
+                op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
         op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
 
-        if all_mode_bool:
+        if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
             data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
