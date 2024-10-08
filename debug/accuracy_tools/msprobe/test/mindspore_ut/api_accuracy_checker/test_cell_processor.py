@@ -4,6 +4,7 @@ from msprobe.core.data_dump.scope import ModuleRangeScope
 from msprobe.core.common.const import Const
 from msprobe.mindspore.cell_processor import CellProcessor  # 替换为实际的模块名
 
+
 class MockCell:
     def __init__(self):
         self.mindstudio_reserved_name = None
@@ -46,13 +47,14 @@ class TestCellProcessor(unittest.TestCase):
     @patch('msprobe.core.common.const.Const')
     def test_node_hook_begin(self, mock_const):
         mock_const.START = "start"
-        # 使用 MockCell 代替字符串
         cell = MockCell()
         self.processor.node_hook("prefix", "start")(cell, "input")
 
-        # 验证 cell 的 mindstudio_reserved_name 是否正确设置
-        expected_name = "prefix" + Const.SEP + "0"
+        expected_name = "prefix" + mock_const.SEP + "0"
         self.assertEqual(cell.mindstudio_reserved_name, expected_name)
+        self.assertIn(expected_name, CellProcessor.cell_stack)
+        self.assertEqual(CellProcessor.api_parent_node, expected_name)
+        self.scope.begin_module.assert_called_once_with(expected_name)
 
     @patch('msprobe.core.common.const.Const')
     def test_node_hook_end(self, mock_const):
@@ -61,10 +63,35 @@ class TestCellProcessor(unittest.TestCase):
         self.processor.node_hook("prefix", "start")(cell, "input")
         self.processor.node_hook("prefix", "stop")(cell, "input", "output")
 
-        # 验证在结束时的操作
         self.assertEqual(len(CellProcessor.cell_stack), 0)
         self.assertIsNone(CellProcessor.api_parent_node)
         self.scope.end_module.assert_called_once_with(cell.mindstudio_reserved_name)
+
+    @patch('msprobe.core.common.const.Const')
+    def test_multiple_node_hook_calls(self, mock_const):
+        mock_const.START = "start"
+        cell = MockCell()
+
+        # First call
+        self.processor.node_hook("prefix", "start")(cell, "input")
+        expected_name1 = "prefix" + mock_const.SEP + "0"
+
+        # Second call
+        self.processor.node_hook("prefix", "start")(cell, "input")
+        expected_name2 = "prefix" + mock_const.SEP + "1"
+
+        self.assertEqual(cell.mindstudio_reserved_name, expected_name2)
+        self.assertEqual(CellProcessor.api_parent_node, expected_name2)
+
+        # End first call
+        self.processor.node_hook("prefix", "stop")(cell, "input", "output")
+        self.assertEqual(len(CellProcessor.cell_stack), 1)  # Still one item in stack
+        self.assertEqual(CellProcessor.api_parent_node, expected_name1)
+
+        # End second call
+        self.processor.node_hook("prefix", "stop")(cell, "input", "output")
+        self.assertEqual(len(CellProcessor.cell_stack), 0)  # Stack should be empty now
+        self.assertIsNone(CellProcessor.api_parent_node)
 
 
 if __name__ == "__main__":
