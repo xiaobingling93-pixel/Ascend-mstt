@@ -161,7 +161,8 @@ def parse_bsnd_args(query, key, head_num, input_layout):
     if d == 0:
         raise ValueError(f"Value d must be non-zero.")
     _dtype = query.dtype
-    return b, s1, s2, n1, n2, d, h1, h2, _dtype
+    ret = (b, s1, s2, n1, n2, d, h1, h2, _dtype)
+    return ret
 
 
 def convert_from_bnsd(_input, input_layout):
@@ -404,8 +405,8 @@ def npu_fusion_attention(*args, **kwargs):
     next_tockens = new_kwargs.get("next_tockens")
     pse = new_kwargs.get("pse")
     scale = new_kwargs.get("scale")
-
-    atten_mask = generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype)
+    args_temp = [sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype]
+    atten_mask = generate_atten_mask(*args_temp)
     query = convert_to_bnsd(query, n1, input_layout)
     key = convert_to_bnsd(key, n2, input_layout)
     value = convert_to_bnsd(value, n2, input_layout)
@@ -443,7 +444,8 @@ def npu_fusion_attention_grad(*args, **kwargs):
     softmax_sum = new_kwargs.get("softmax_sum")
     scale_value = new_kwargs.get("scale_value")
 
-    atten_mask = generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype)
+    args_temp = [sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype]
+    atten_mask = generate_atten_mask(*args_temp)
     query = convert_to_bnsd(query, n1, input_layout)
     dx = convert_to_bnsd(dx, n1, input_layout)
     key = convert_to_bnsd(key, n2, input_layout)
@@ -461,9 +463,9 @@ def npu_fusion_attention_grad(*args, **kwargs):
     if not (n1 == n2):
         if n2 == 0:
             raise ValueError("dims_kwargs.n2 must be non-zero.")
-        G = int(n1 / n2)
-        dk = torch.sum(dk.reshape(b, n2, G, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
-        dv = torch.sum(dv.reshape(b, n2, G, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
+        g = int(n1 / n2)
+        dk = torch.sum(dk.reshape(b, n2, g, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
+        dv = torch.sum(dv.reshape(b, n2, g, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
 
     if dq.dim() == 5:
         dq = dq.reshape(dq.size(0), dq.size(1) * dq.size(2), dq.size(3), dq.size(4))
