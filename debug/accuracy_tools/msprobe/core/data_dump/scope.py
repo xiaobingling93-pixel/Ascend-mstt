@@ -95,7 +95,6 @@ class RangeScope(BaseScope, ABC):
         self.in_scope = False
         self.is_valid = self.check_scope_is_valid()
 
-
     @staticmethod
     def rectify_args(scope, api_list):
         scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
@@ -105,7 +104,6 @@ class RangeScope(BaseScope, ABC):
             elif len(scope) > 2:
                 raise ScopeException(ScopeException.InvalidScope,
                     f"scope参数指定区间断点，须传入长度为1或2的列表，实际长度为{len(scope)}.")
-
         return scope, api_list
 
     @abstractmethod
