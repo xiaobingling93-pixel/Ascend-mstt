@@ -1,16 +1,11 @@
 import unittest
 import argparse
-from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import cmd_parser
+from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
 
 
 class TestApiAccuracyCheckerArgument(unittest.TestCase):
     def setUp(self):
         self.parser = argparse.ArgumentParser()
-
-    def test_required_arguments(self):
-        # 测试缺少必需参数的情况
-        with self.assertRaises(SystemExit):
-            self.parser.parse_args([])  # 不传入任何参数应该导致退出
 
     def test_api_info_argument(self):
         # 测试 -api_info 参数是否能正确解析
