@@ -1,7 +1,12 @@
 # coding=utf-8
+import os
+import json
+import shutil
 import unittest
-from msprobe.core.compare.utils import rename_api, read_op, op_item_parse, resolve_api_special_parameters, \
-    get_accuracy, get_un_match_accuracy, merge_tensor
+import argparse
+from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
+    check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
+    _compare_parser
 
 
 # test_read_op
@@ -142,7 +147,56 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                   'stack_info': []}
 
 
+base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils1')
+base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils2')
+
+
+def create_json_files(base_dir1):
+    """在指定目录中创建三个空的 JSON 文件：dump.json、stack.json 和 construct.json"""
+    file_names = ['dump.json', 'stack.json', 'construct.json']
+
+    # 创建空的 JSON 文件
+    for file_name in file_names:
+        file_path = os.path.join(base_dir1, file_name)
+        with open(file_path, 'w') as f:
+            json.dump({}, f)  # 写入空的字典
+
+
+def create_rank_dirs(base_dir2):
+    folder_names = ['rank0', 'rank1']
+
+    # 创建文件夹
+    for folder_name in folder_names:
+        folder_path = os.path.join(base_dir2, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+
 class TestUtilsMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.parser = argparse.ArgumentParser()
+        _compare_parser(self.parser)
+
+        os.makedirs(base_dir1, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir2, mode=0o750, exist_ok=True)
+
+    def tearDown(self):
+        if os.path.exists(base_dir1):
+            shutil.rmtree(base_dir1)
+        if os.path.exists(base_dir2):
+            shutil.rmtree(base_dir2)
+
+    def test_extract_json_1(self):
+        create_json_files(base_dir1)
+        result = extract_json(base_dir1, stack_json=False)
+        self.assertEqual(result, os.path.join(base_dir1, 'dump.json'))
+
+        result = extract_json(base_dir1, stack_json=True)
+        self.assertEqual(result, os.path.join(base_dir1, 'stack.json'))
+
+    def test_check_and_return_dir_contents(self):
+        result = check_and_return_dir_contents(base_dir2, 'rank')
+        self.assertEqual(result, ['rank0', 'rank1'])
 
     def test_rename_api_1(self):
         test_name_1 = "Distributed.broadcast.0.forward.input.0"
@@ -192,3 +246,30 @@ class TestUtilsMethods(unittest.TestCase):
     def test_merge_tensor(self):
         op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
+
+    def test_compare_parser_1(self):
+        # 模拟命令行输入
+        test_args = ["script_name", "-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
+        args = self.parser.parse_args(test_args)
+
+        self.assertEqual(args.input_path, "input.json")
+        self.assertEqual(args.output_path, "output.json")
+        self.assertTrue(args.stack_mode)
+        self.assertTrue(args.compare_only)
+        self.assertTrue(args.fuzzy_match)
+
+    def test_compare_parser_2(self):
+        test_args = ["script_name", "-i", "input.json"]
+
+        with self.assertRaises(SystemExit):  # argparse 会抛出 SystemExit
+            self.parser.parse_args(test_args)
+
+    def test_compare_parser_3(self):
+        test_args = ["script_name", "-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
+                     "data_mapping.txt", "-lm", "layer_mapping.txt"]
+        args = self.parser.parse_args(test_args)
+
+        self.assertEqual(args.cell_mapping, "cell_mapping.txt")
+        self.assertIsNone(args.api_mapping)  # 默认值应为 None
+        self.assertEqual(args.data_mapping, "data_mapping.txt")
+        self.assertEqual(args.layer_mapping, "layer_mapping.txt")
