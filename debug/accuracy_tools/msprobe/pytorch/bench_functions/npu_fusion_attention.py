@@ -77,10 +77,10 @@ def broadcast_kv(num_heads, num_kv_heads, kv_tensor, dtype):
 
     factor = num_heads // num_kv_heads
     kv_shape = kv_tensor.shape
-    B = kv_shape[0]
-    S = kv_shape[2]
-    D = kv_shape[3]
-    kv_res = torch.zeros([B, num_heads, S, D]).to(dtype)
+    b = kv_shape[0]
+    s = kv_shape[2]
+    d = kv_shape[3]
+    kv_res = torch.zeros([b, num_heads, s, d]).to(dtype)
     for i in range(num_heads):
         j = i // factor
         kv_res[:, i:i + 1, :, :] = kv_tensor[:, j:j + 1, :, :]
@@ -127,7 +127,7 @@ def fusion_attention_backward(dx, q, k, v, softmax_res, drop_mask, pse, scale, k
 
 def parse_bsnd_args(query, key, head_num, input_layout):
     supported_input_layout = ["BSH", "SBH", "BSND", "BNSD", "TND"]
-    B, S1, S2, N1, N2, D, H1, H2 = None, None, None, head_num, None, None, None, None
+    b, s1, s2, n1, n2, d, h1, h2 = None, None, None, head_num, None, None, None, None
 
     if not isinstance(input_layout, str) or input_layout not in supported_input_layout:
         raise ValueError(f"Invalid input_layout arg which must be one of {supported_input_layout}.")
@@ -136,32 +136,32 @@ def parse_bsnd_args(query, key, head_num, input_layout):
         raise ValueError(f"input_layout {input_layout} does not supported for now.")
     try:
         if input_layout == "BSH":
-            B, S1, H1 = query.shape
-            _, S2, H2 = key.shape
-            D = H1 // N1
-            N2 = H2 // D
+            b, s1, h1 = query.shape
+            _, s2, h2 = key.shape
+            d = h1 // n1
+            n2 = h2 // d
         elif input_layout == "SBH":
-            S1, B, H1 = query.shape
-            S2, _, H2 = key.shape
-            D = H1 // N1
-            N2 = H2 // D
+            s1, b, h1 = query.shape
+            s2, _, h2 = key.shape
+            d = h1 // n1
+            n2 = h2 // d
         elif input_layout == "BSND":
-            B, S1, N1, D = query.shape
-            _, S2, N2, _ = key.shape
-            H1 = N1 * D
-            H2 = N2 * D
+            b, s1, n1, d = query.shape
+            _, s2, n2, _ = key.shape
+            h1 = n1 * d
+            h2 = n2 * d
         elif input_layout == "BNSD":
-            B, N1, S1, D = query.shape
-            _, N2, S2, _ = key.shape
-            H1 = N1 * D
-            H2 = N2 * D
+            b, n1, s1, d = query.shape
+            _, n2, s2, _ = key.shape
+            h1 = n1 * d
+            h2 = n2 * d
     except Exception as e:
         raise ValueError(f"query.shape: {query.shape}, key.shape: {key.shape}, parse_bsnd_args error: {e}") from e
 
-    if D == 0:
-        raise ValueError(f"Value D must be non-zero.")
-    DTYPE = query.dtype
-    return B, S1, S2, N1, N2, D, H1, H2, DTYPE
+    if d == 0:
+        raise ValueError(f"Value d must be non-zero.")
+    _dtype = query.dtype
+    return b, s1, s2, n1, n2, d, h1, h2, _dtype
 
 
 def convert_from_bnsd(_input, input_layout):
@@ -201,24 +201,24 @@ def convert_to_bnsd(_input, n, input_layout):
     return out.to(gtype)
 
 
-def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next_tocken, dtype):
+def generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tocken, next_tocken, dtype):
     """
     # 当sparse_mode=2、3、4时小算子到融合算子会走这个优化，反过来看就要拆解回原来的基本实现
     ===> atten_mask = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(dtype)
     """
-    shape = [S1, S2]
+    shape = [s1, s2]
 
     if atten_mask is not None:
         # 当FA的输入已经包含atten_mask时，可以认为已经是转换之后的mask矩阵了，有三种特殊场景，即稀疏矩阵场景，需要进行逆向还原
         if sparse_mode == 2 or sparse_mode == 3 or sparse_mode == 4:
-            logger.info(f"S1: {S1}, S2:{S2}, atten_mask.shape:{atten_mask.shape}, atten_mask.dtype:{atten_mask.dtype}")
+            logger.info(f"s1: {s1}, s2:{s2}, atten_mask.shape:{atten_mask.shape}, atten_mask.dtype:{atten_mask.dtype}")
 
             if atten_mask.dim() == 2 and atten_mask.shape[0] == 2048 and atten_mask.shape[1] == 2048:
                 if atten_mask.equal(torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(atten_mask.dtype)):
                     if sparse_mode == 2:
                         atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=1))
                     elif sparse_mode == 3:
-                        atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=S2 - S1 + 1))
+                        atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=s2 - s1 + 1))
                     elif sparse_mode == 4:
                         atten_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
                         atten_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
@@ -230,14 +230,14 @@ def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next
 
     if atten_mask is not None:
         if atten_mask.dim() == 2:
-            if atten_mask.shape[0] != S1 or atten_mask.shape[1] != S2:
+            if atten_mask.shape[0] != s1 or atten_mask.shape[1] != s2:
                 raise ValueError(f"Invalid atten_mask shape `SS` {atten_mask.shape}")
-            shape = [S1, S2]
+            shape = [s1, s2]
         elif atten_mask.dim() == 4:
             if atten_mask.shape[1] == 1:
-                shape = [B, 1, S1, S2] if B != 1 else [1, 1, S1, S2]
+                shape = [b, 1, s1, s2] if b != 1 else [1, 1, s1, s2]
             else:
-                shape = [B, N1, S1, S2] if B != 1 else [1, N1, S1, S2]
+                shape = [b, n1, s1, s2] if b != 1 else [1, n1, s1, s2]
 
     if sparse_mode == 0:
         atten_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
@@ -248,7 +248,7 @@ def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next
     elif sparse_mode == 2:
         atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=1))
     elif sparse_mode == 3:
-        atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=S2 - S1 + 1))
+        atten_mask = torch.from_numpy(np.triu(np.ones(shape), k=s2 - s1 + 1))
     elif sparse_mode == 4:
         atten_mask_u = torch.from_numpy(np.triu(np.ones(shape), k=next_tocken + 1))
         atten_mask_l = torch.from_numpy(np.tril(np.ones(shape), k=-pre_tocken - 1))
@@ -258,11 +258,11 @@ def generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tocken, next
     return atten_mask.to(dtype)
 
 
-def generate_kv(key, value, N1, N2):
+def generate_kv(key, value, n1, n2):
     # N不等长适配by cdy
-    if not (N1 == N2):
-        k_new = broadcast_kv(N1, N2, key, key.dtype)
-        v_new = broadcast_kv(N1, N2, value, value.dtype)
+    if not (n1 == n2):
+        k_new = broadcast_kv(n1, n2, key, key.dtype)
+        v_new = broadcast_kv(n1, n2, value, value.dtype)
     else:
         k_new = key
         v_new = value
@@ -320,22 +320,22 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
     head_num = get_head_num(*args, **kwargs)
     input_layout = get_input_layout(*args, **kwargs)
 
-    B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], head_num, input_layout)
-    if N1 == N2 and S1 == S2:
-        logger.debug(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+    b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], head_num, input_layout)
+    if n1 == n2 and s1 == s2:
+        logger.debug(f"running case : BNSD = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
-        logger.debug(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
-    if not (N1 % N2 == 0 and N1 >= N2):
-        raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
+        logger.debug(f"running case: BNSD = {b}_{n1}({n2})_{s1}({s2})_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
+    if not (n1 % n2 == 0 and n1 >= n2):
+        raise ValueError(f"N1与N2不匹配,请检查: n1 = {n1}, n2 = {n2}.")
 
     dims_kwargs = {
-        "B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
-        "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE
+        "b": b, "s1": s1, "s2": s2, "n1": n1, "n2": n2,
+        "d": d, "h1": h1, "h2": h2, "dtype": dtype
     }
 
     new_kwargs = {
         "keep_prob": 1,
-        "scale": kwargs.get("scale", 1 / (D ** 0.5)),
+        "scale": kwargs.get("scale", 1 / (d ** 0.5)),
         "sparse_mode": kwargs.get("sparse_mode", 0),
         "prefix": kwargs.get("prefix"),
         "pre_tockens": kwargs.get("pre_tockens", 2147483647),
@@ -391,12 +391,12 @@ def npu_fusion_attention(*args, **kwargs):
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_forward_patch(*args, **kwargs)
     query, key, value = new_args[0], new_args[1], new_args[2]
     input_layout = get_input_layout(*args, **kwargs)
-    N1 = dims_kwargs.get("N1")
-    N2 = dims_kwargs.get("N2")
-    S1 = dims_kwargs.get("S1")
-    S2 = dims_kwargs.get("S2")
-    B = dims_kwargs.get("B")
-    DTYPE = dims_kwargs.get("DTYPE")
+    n1 = dims_kwargs.get("n1")
+    n2 = dims_kwargs.get("n2")
+    s1 = dims_kwargs.get("s1")
+    s2 = dims_kwargs.get("s2")
+    b = dims_kwargs.get("b")
+    dtype = dims_kwargs.get("dtype")
     atten_mask = new_kwargs.get("atten_mask")
     keep_prob = new_kwargs.get("keep_prob")
     sparse_mode = new_kwargs.get("sparse_mode")
@@ -405,11 +405,11 @@ def npu_fusion_attention(*args, **kwargs):
     pse = new_kwargs.get("pse")
     scale = new_kwargs.get("scale")
 
-    atten_mask = generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tockens, next_tockens, DTYPE)
-    query = convert_to_bnsd(query, N1, input_layout)
-    key = convert_to_bnsd(key, N2, input_layout)
-    value = convert_to_bnsd(value, N2, input_layout)
-    k_new, v_new = generate_kv(key, value, N1, N2)
+    atten_mask = generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype)
+    query = convert_to_bnsd(query, n1, input_layout)
+    key = convert_to_bnsd(key, n2, input_layout)
+    value = convert_to_bnsd(value, n2, input_layout)
+    k_new, v_new = generate_kv(key, value, n1, n2)
     out_golden, softmax_max, softmax_sum = fusion_attention_forward(q=query, k=k_new, v=v_new,
                                                                     drop_mask=None, atten_mask=atten_mask,
                                                                     pse=pse, scale=scale,
@@ -426,13 +426,13 @@ def npu_fusion_attention_grad(*args, **kwargs):
     # dx, q, k, v, softmax_res, drop_mask, pse, scale, keep_prob
     new_args, dims_kwargs, new_kwargs = npu_fusion_attention_backward_patch(*args, **kwargs)
     query, key, value, dx, input_layout = new_args[0], new_args[1], new_args[2], new_args[3], new_args[5]
-    N1 = dims_kwargs.get("N1")
-    N2 = dims_kwargs.get("N2")
-    S1 = dims_kwargs.get("S1")
-    S2 = dims_kwargs.get("S2")
-    B = dims_kwargs.get("B")
-    D = dims_kwargs.get("D")
-    DTYPE = dims_kwargs.get("DTYPE")
+    n1 = dims_kwargs.get("n1")
+    n2 = dims_kwargs.get("n2")
+    s1 = dims_kwargs.get("s1")
+    s2 = dims_kwargs.get("s2")
+    b = dims_kwargs.get("b")
+    d = dims_kwargs.get("d")
+    dtype = dims_kwargs.get("dtype")
     atten_mask = new_kwargs.get("atten_mask")
     keep_prob = new_kwargs.get("keep_prob")
     sparse_mode = new_kwargs.get("sparse_mode")
@@ -443,12 +443,12 @@ def npu_fusion_attention_grad(*args, **kwargs):
     softmax_sum = new_kwargs.get("softmax_sum")
     scale_value = new_kwargs.get("scale_value")
 
-    atten_mask = generate_atten_mask(sparse_mode, atten_mask, B, N1, S1, S2, pre_tockens, next_tockens, DTYPE)
-    query = convert_to_bnsd(query, N1, input_layout)
-    dx = convert_to_bnsd(dx, N1, input_layout)
-    key = convert_to_bnsd(key, N2, input_layout)
-    value = convert_to_bnsd(value, N2, input_layout)
-    k_new, v_new = generate_kv(key, value, N1, N2)
+    atten_mask = generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tockens, next_tockens, dtype)
+    query = convert_to_bnsd(query, n1, input_layout)
+    dx = convert_to_bnsd(dx, n1, input_layout)
+    key = convert_to_bnsd(key, n2, input_layout)
+    value = convert_to_bnsd(value, n2, input_layout)
+    k_new, v_new = generate_kv(key, value, n1, n2)
 
     if softmax_build_mode == "QKV":
         softmax_res = rebuid_softmax_by_qkv(query, k_new, atten_mask, pse, scale_value)
@@ -458,12 +458,12 @@ def npu_fusion_attention_grad(*args, **kwargs):
     dq, dk, dv = fusion_attention_backward(dx, query, k_new, v_new, softmax_res, None, pse, scale_value, keep_prob)
 
     # N不等长适配by cdy
-    if not (N1 == N2):
-        if N2 == 0:
-            raise ValueError("dims_kwargs.N2 must be non-zero.")
-        G = int(N1 / N2)
-        dk = torch.sum(dk.reshape(B, N2, G, S2, D), dim=2, keepdim=True).reshape(B, N2, S2, D)
-        dv = torch.sum(dv.reshape(B, N2, G, S2, D), dim=2, keepdim=True).reshape(B, N2, S2, D)
+    if not (n1 == n2):
+        if n2 == 0:
+            raise ValueError("dims_kwargs.n2 must be non-zero.")
+        G = int(n1 / n2)
+        dk = torch.sum(dk.reshape(b, n2, G, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
+        dv = torch.sum(dv.reshape(b, n2, G, s2, d), dim=2, keepdim=True).reshape(b, n2, s2, d)
 
     if dq.dim() == 5:
         dq = dq.reshape(dq.size(0), dq.size(1) * dq.size(2), dq.size(3), dq.size(4))
@@ -483,12 +483,12 @@ def is_attention_off_due_to_mask(atten_mask_dtype):
     return not atten_mask_dtype
 
 
-def is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, S1):
-    return sparse_mode == 4 and (next_tockens != 0 or pre_tockens < S1)
+def is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, s1):
+    return sparse_mode == 4 and (next_tockens != 0 or pre_tockens < s1)
 
 
-def is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, S1, S2):
-    return sparse_mode == 0 and pre_tockens >= S1 and next_tockens >= S2
+def is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, s1, s2):
+    return sparse_mode == 0 and pre_tockens >= s1 and next_tockens >= s2
 
 
 def gpu_fusion_attention(*args, **kwargs):
@@ -497,11 +497,11 @@ def gpu_fusion_attention(*args, **kwargs):
     query, key, value = new_args[0], new_args[1], new_args[2]
     keep_prob = new_kwargs.get("keep_prob", 1.0)
     scale = new_kwargs.get("scale")
-    N1 = dims_kwargs.get("N1")
-    N2 = dims_kwargs.get("N2")
-    S1 = dims_kwargs.get("S1")
-    S2 = dims_kwargs.get("S2")
-    B = dims_kwargs.get("B")
+    n1 = dims_kwargs.get("n1")
+    n2 = dims_kwargs.get("n2")
+    s1 = dims_kwargs.get("s1")
+    s2 = dims_kwargs.get("s2")
+    b = dims_kwargs.get("b")
     pse = new_kwargs.get("pse")
     sparse_mode = new_kwargs.get("sparse_mode")
     pre_tockens = new_kwargs.get("pre_tockens")
@@ -511,22 +511,22 @@ def gpu_fusion_attention(*args, **kwargs):
     pre_tockens = min(CompareConst.MAX_TOKENS, pre_tockens)
     next_tockens = min(CompareConst.MAX_TOKENS, next_tockens)
     atten_off = (is_attention_off_due_to_mask(atten_mask_dtype) or
-             is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, S1) or
-             is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, S1, S2))
+                 is_attention_off_in_sparse_mode_4(sparse_mode, next_tockens, pre_tockens, s1) or
+                 is_attention_off_in_sparse_mode_0(sparse_mode, pre_tockens, next_tockens, s1, s2))
     causal_switch = not atten_off
     if sparse_mode == CompareConst.SPECIAL_SPARSE_MOED:
         window_left = pre_tockens
         window_right = next_tockens
     else:
         pre_tockens = next_tockens = CompareConst.MAX_TOKENS
-        window_left = pre_tockens - S1 + S2
-        window_right = next_tockens + S1 - S2
-    
+        window_left = pre_tockens - s1 + s2
+        window_right = next_tockens + s1 - s2
+
     if pse is not None:
-        alibi_slopes = torch.rand(B, N1, dtype=torch.float32) * 0.3
+        alibi_slopes = torch.rand(b, n1, dtype=torch.float32) * 0.3
     else:
         alibi_slopes = None
-    
+
     out = flash_attn_func(
         query, key, value, dropout_p=(1 - keep_prob), softmax_scale=scale, causal=causal_switch,
         window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic

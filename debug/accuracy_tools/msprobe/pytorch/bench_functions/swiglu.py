@@ -19,13 +19,13 @@ import torch
 def npu_swiglu(x, dim=-1):
     tensor_dtype = x.dtype
 
-    inTensors = torch.chunk(x, 2, dim=dim)
+    in_tensors = torch.chunk(x, 2, dim=dim)
     if tensor_dtype == torch.float32:
-        tensor_scalar = torch.sigmoid(torch.mul(inTensors[0], 1.0))
-        output_data = torch.mul(torch.mul(tensor_scalar, inTensors[0]), inTensors[1])
+        tensor_scalar = torch.sigmoid(torch.mul(in_tensors[0], 1.0))
+        output_data = torch.mul(torch.mul(tensor_scalar, in_tensors[0]), in_tensors[1])
     else:
-        tensor_self_float = inTensors[0].type(torch.float)
-        tensor_other_float = inTensors[1].type(torch.float)
+        tensor_self_float = in_tensors[0].type(torch.float)
+        tensor_other_float = in_tensors[1].type(torch.float)
         tensor_out_float = torch.nn.functional.silu(tensor_self_float).type(tensor_dtype).type(
             torch.float32) * tensor_other_float
         output_data = tensor_out_float.type(tensor_dtype)
