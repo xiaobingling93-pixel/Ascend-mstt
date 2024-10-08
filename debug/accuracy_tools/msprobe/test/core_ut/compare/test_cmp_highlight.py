@@ -70,8 +70,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {'Max diff': 0, 'Bench max': 1}
-        api_out = {'Max diff': 0.6, 'Bench max': 1}
+        api_in = {6: 0, 18: 1}
+        api_out = {6: 0.6, 18: 1}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns)
@@ -85,8 +85,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {'Max diff': 0.001, 'Bench max': 1}
-        api_out = {'Max diff': 0.2, 'Bench max': 1}
+        api_in = {6: 0.001, 18: 1}
+        api_out = {6: 0.2, 18: 1}
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns)
@@ -100,8 +100,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {'Max diff': 0.001, 'Bench max': np.nan}
-        api_out = {'Max diff': 0.2, 'Bench max': 1}
+        api_in = {6: 0.001, 'Bench max': np.nan}
+        api_out = {6: 0.2, 'Bench max': 1}
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns)
@@ -114,7 +114,7 @@ class TestUtilsMethods(unittest.TestCase):
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
-        highlight_dict = {'red_rows': 0}
+        highlight_dict = {'red_rows': [0]}
         file_path = os.path.join(base_dir, 'result.xlsx')
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
         generate_result_xlsx(base_dir)
@@ -135,6 +135,9 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_highlight_rows_xlsx_3(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 '=torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  '=torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
                 ]
@@ -159,5 +162,5 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_csv_value_is_valid_3(self):
         result = csv_value_is_valid("=1.00")
-        self.assertTrue(result)
+        self.assertFalse(result)
 
