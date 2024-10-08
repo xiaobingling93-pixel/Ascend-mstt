@@ -40,7 +40,6 @@ def remove_dropout():
                 raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
             return _VF.dropout_(input, 0., training) if inplace else _VF.dropout(input, 0., training)
 
-
         def function_dropout2d(input: torch.Tensor, p: float = 0.5, training: bool = True,
                                inplace: bool = False) -> torch.Tensor:
             if has_torch_function_unary(input):
@@ -48,7 +47,6 @@ def remove_dropout():
             if p < 0.0 or p > 1.0:
                 raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
             return _VF.feature_dropout_(input, 0., training) if inplace else _VF.feature_dropout(input, 0., training)
-
 
         def function_dropout3d(input: torch.Tensor, p: float = 0.5, training: bool = True,
                                inplace: bool = False) -> torch.Tensor:
