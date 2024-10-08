@@ -100,8 +100,8 @@ class TestUtilsMethods(unittest.TestCase):
         red_lines, yellow_lines = [], []
         color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
 
-        api_in = {6: 0.001, 'Bench max': np.nan}
-        api_out = {6: 0.2, 'Bench max': 1}
+        api_in = {6: 0.001, 18: np.nan}
+        api_out = {6: 0.2, 18: 1}
         num = 1
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns)
@@ -143,7 +143,7 @@ class TestUtilsMethods(unittest.TestCase):
                 ]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
-        highlight_dict = {}
+        highlight_dict = {'red_rows': [], 'yellow_rows': []}
         file_path = base_dir
         with self.assertRaises(RuntimeError) as context:
             highlight_rows_xlsx(result_df, highlight_dict, file_path)
