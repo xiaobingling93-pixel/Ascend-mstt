@@ -355,22 +355,22 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
     if len(args) != 6:
         raise ValueError(f"Unsupported npu_fusion_attention_grad args {args}.")
 
-    B, S1, S2, N1, N2, D, H1, H2, DTYPE = parse_bsnd_args(args[0], args[1], args[4], args[5])
-    if N1 == N2 and S1 == S2:
-        logger.info(f"running case : BNSD = {B}_{N1}_{S1}_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
+    b, s1, s2, n1, n2, d, h1, h2, dtype = parse_bsnd_args(args[0], args[1], args[4], args[5])
+    if n1 == n2 and s1 == s2:
+        logger.info(f"running case : bnsd = {b}_{n1}_{s1}_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
     else:
-        logger.info(f"running case: BNSD = {B}_{N1}({N2})_{S1}({S2})_{D}, sparse = {kwargs.get('sparse_mode', 0)}")
-    if not (N1 % N2 == 0 and N1 >= N2):
-        raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
+        logger.info(f"running case: bnsd = {b}_{n1}({n2})_{s1}({s2})_{d}, sparse = {kwargs.get('sparse_mode', 0)}")
+    if not (n1 % n2 == 0 and n1 >= n2):
+        raise ValueError(f"N1与N2不匹配,请检查: n1 = {n1}, n2 = {n2}.")
 
     dims_kwargs = {
-        "B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
-        "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE
+        "b": b, "s1": s1, "s2": s2, "n1": n1, "n2": n2,
+        "d": d, "h1": h1, "h2": h2, "dtype": dtype
     }
 
     new_kwargs = {
         "keep_prob": 1,
-        "scale_value": kwargs.get("scale_value", 1 / (D ** 0.5)),
+        "scale_value": kwargs.get("scale_value", 1 / (d ** 0.5)),
         "sparse_mode": kwargs.get("sparse_mode", 0),
         "prefix": kwargs.get("prefix"),
         "pre_tockens": kwargs.get("pre_tockens", 2147483647),
