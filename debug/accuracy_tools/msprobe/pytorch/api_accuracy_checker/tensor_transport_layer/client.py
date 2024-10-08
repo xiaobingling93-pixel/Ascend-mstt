@@ -268,6 +268,8 @@ class ClientProtocol(protocol.Protocol):
         self.kill_process = False
         self.ack = None
 
+        self.timeout_call = None
+
         self.tls = tls
         self.send_buffer = b""
         self.buffer_cnt = 0
