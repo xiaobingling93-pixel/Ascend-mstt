@@ -5,6 +5,7 @@ import os
 import shutil
 import json
 import torch
+import threading
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.acc_compare import Comparator
@@ -259,6 +260,15 @@ class TestUtilsMethods(unittest.TestCase):
     def setUp(self):
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
 
+        self.result_df = pd.DataFrame({
+            'npu_op_name': ['op1', 'op2'],
+            'bench_op_name': ['bench_op1', 'bench_op2']
+        })
+        self.lock = threading.Lock()
+        self.input_param = {
+            "is_print_compare_log": False
+        }
+
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
@@ -439,6 +449,20 @@ class TestUtilsMethods(unittest.TestCase):
             }
         }
         self.assertEqual(result, ops_all)
+
+    def test_compare_ops_success(self):
+        updated_df = Comparator().compare_ops(idx=0, dump_path_dict={}, result_df=self.result_df, lock=self.lock,
+                                              input_param=self.input_param)
+
+        # 验证 _save_cmp_result 是否被正确调用
+        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 0.99)
+        self.assertEqual(updated_df.loc[0, CompareConst.MAX_ABS_ERR], 0.01)
+        self.assertEqual(updated_df.loc[1, CompareConst.COSINE], 0.98)
+        self.assertEqual(updated_df.loc[1, CompareConst.ERROR_MESSAGE], "error in comparison")
+
+        # 验证 compare_by_op 被调用了两次，分别对应不同的 op 名
+        Comparator().compare_by_op.assert_any_call('op1', 'bench_op1', {}, self.input_param)
+        Comparator().compare_by_op.assert_any_call('op2', 'bench_op2', {}, self.input_param)
 
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
