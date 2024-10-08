@@ -5,12 +5,9 @@ import shutil
 import pandas as pd
 import numpy as np
 import openpyxl
-import multiprocessing
 from collections import namedtuple
-from msprobe.core.compare.highlight import HighlightCheck, CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
-from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
 from msprobe.core.common.const import CompareConst
-from msprobe.core.common.utils import CompareException
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data')
