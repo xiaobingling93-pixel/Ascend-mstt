@@ -23,7 +23,8 @@ from threading import Thread
 from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
+    struct_unpack_mode as unpack_mode, str_to_bytes_order as bytes_order
 
 
 class TCPServer:
@@ -123,9 +124,9 @@ class ServerProtocol(protocol.Protocol):
     def send_ack(self, ack_info):
         ack_message = b"".join([
             ack_info,
-            self.sequence_number.to_bytes(8, byteorder='big'),
-            self.rank.to_bytes(8, byteorder='big'),
-            self.step.to_bytes(8, byteorder='big')
+            self.sequence_number.to_bytes(8, byteorder=bytes_order),
+            self.rank.to_bytes(8, byteorder=bytes_order),
+            self.step.to_bytes(8, byteorder=bytes_order)
         ])
         self.transport.write(ack_message)
 
@@ -191,10 +192,10 @@ class ServerProtocol(protocol.Protocol):
         # The first data packet is packet header, it contains obj_length, sequence_number, rank, step
         if self.obj_length is None and len(self.buffer.getvalue()) >= self.length_width * 4:
             self.start_time = time.time()
-            self.obj_length = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.sequence_number = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.rank = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.step = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
+            self.obj_length = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.sequence_number = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.rank = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.step = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
             self.tell += self.length_width * 4
             logger.debug(
                 f"流水号: {self.sequence_number}; RANK: {self.rank}; STEP: {self.step}; Length: {self.obj_length}")
