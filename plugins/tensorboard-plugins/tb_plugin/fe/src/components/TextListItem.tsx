@@ -2,53 +2,53 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import Grid from '@material-ui/core/Grid'
-import { makeStyles } from '@material-ui/core/styles'
-import * as React from 'react'
+import Grid from '@material-ui/core/Grid';
+import { makeStyles } from '@material-ui/core/styles';
+import * as React from 'react';
 
 export interface IStylesProps {
-  root?: string
-  name?: string
+  root?: string;
+  name?: string;
 }
 
 export interface IProps {
-  name: string
-  value?: string
-  description?: string
-  extra?: string
-  classes?: IStylesProps
-  dangerouslyAllowHtml?: boolean
+  name: string;
+  value?: string;
+  description?: string;
+  extra?: string;
+  classes?: IStylesProps;
+  dangerouslyAllowHtml?: boolean;
 }
 
 const useStyles = makeStyles((theme) => ({
   label: {
     ...theme.typography.subtitle2,
-    fontWeight: 'bolder'
+    fontWeight: 'bolder',
   },
   value: {
     textAlign: 'right',
     ...theme.typography.subtitle2,
-    fontWeight: 'bolder'
-  }
-}))
+    fontWeight: 'bolder',
+  },
+}));
 
 export const TextListItem: React.FC<IProps> = (props) => {
-  const classes = useStyles()
+  const classes = useStyles();
 
   const getSizes = function () {
     if (props.value && props.extra) {
-      return [4, 4, 4] as const
+      return [4, 4, 4] as const;
     }
     if (props.value) {
       if (props.value.length > props.name.length) {
-        return [4, 8, undefined] as const
+        return [4, 8, undefined] as const;
       }
-      return [8, 4, undefined] as const
+      return [8, 4, undefined] as const;
     }
-    return [12, undefined, undefined] as const
-  }
+    return [12, undefined, undefined] as const;
+  };
 
-  const sizes = getSizes()
+  const sizes = getSizes();
 
   const renderSpan = function (content: string, className?: string) {
     if (props.dangerouslyAllowHtml) {
@@ -57,15 +57,15 @@ export const TextListItem: React.FC<IProps> = (props) => {
           className={className}
           dangerouslySetInnerHTML={{ __html: content }}
         />
-      )
+      );
     }
-    return <span className={className}>{content}</span>
-  }
+    return <span className={className}>{content}</span>;
+  };
 
   return (
     <Grid container className={props.classes?.root}>
       <Grid item xs={sizes[0]}>
-        <Grid container direction="column">
+        <Grid container direction='column'>
           <Grid item className={classes.label}>
             {renderSpan(props.name, props.classes?.name)}
           </Grid>
@@ -85,5 +85,5 @@ export const TextListItem: React.FC<IProps> = (props) => {
         </Grid>
       )}
     </Grid>
-  )
-}
+  );
+};

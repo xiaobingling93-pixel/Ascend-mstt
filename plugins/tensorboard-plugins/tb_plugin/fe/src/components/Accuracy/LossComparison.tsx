@@ -17,17 +17,17 @@
  * limitations under the License.
  *--------------------------------------------------------------------------------------------*/
 
-import * as React from 'react'
-import { makeStyles } from '@material-ui/core/styles'
-import { FileInfo } from './entity'
-import { Empty, message } from 'antd'
-import { LossDisplayPanel } from './LossDisplayPanel'
-import { ComparisonPanel } from './ComparisonPanel'
-import { MAX_FILE_COUNT } from './AccuracyLeftPanel'
+import * as React from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import { FileInfo } from './entity';
+import { Empty, message } from 'antd';
+import { LossDisplayPanel } from './LossDisplayPanel';
+import { ComparisonPanel } from './ComparisonPanel';
+import { MAX_FILE_COUNT } from './AccuracyLeftPanel';
 
 interface IProps {
-  fileList: FileInfo[]
-  fileCount: number
+  fileList: FileInfo[];
+  fileCount: number;
 }
 
 const useStyles = makeStyles(() => ({
@@ -40,7 +40,7 @@ const useStyles = makeStyles(() => ({
     overflowY: 'auto',
     '& .welcomeLabel': {
       marginTop: '18%',
-      font: '36px bold'
+      font: '36px bold',
     },
     '& .importText': {
       fontSize: 20,
@@ -48,40 +48,41 @@ const useStyles = makeStyles(() => ({
       margin: '24px 0',
       '& span': {
         cursor: 'pointer',
-        color: '#0077ff'
-      }
-    }
-  }
-}))
+        color: '#0077ff',
+      },
+    },
+  },
+}));
 
 export const LossComparison: React.FC<IProps> = (props) => {
-  const { fileList, fileCount } = props
-  const classes = useStyles()
+  const { fileList, fileCount } = props;
+  const classes = useStyles();
 
   const onImportFile = () => {
     if (fileCount >= MAX_FILE_COUNT) {
-      message.warn(`You can import no more than ${MAX_FILE_COUNT} files.`)
-      return
+      message.warn(`You can import no more than ${MAX_FILE_COUNT} files.`);
+      return;
     }
-    document.getElementById('accComparisonSelectFile')?.click()
-  }
+    document.getElementById('accComparisonSelectFile')?.click();
+  };
 
   return (
     <div className={classes.root}>
-      {fileList.length <= 0 ?
+      {fileList.length <= 0 ? (
         <>
-          <span className="welcomeLabel">Welcome to loss comparison</span>
-          <div className='importText'>Select left files or <span onClick={onImportFile}>Import files</span></div>
+          <span className='welcomeLabel'>Welcome to loss comparison</span>
+          <div className='importText'>
+            Select left files or{' '}
+            <span onClick={onImportFile}>Import files</span>
+          </div>
           <Empty description={false} />
         </>
-        :
+      ) : (
         <>
           <LossDisplayPanel fileList={fileList} />
-          {fileList.length > 1 &&
-            <ComparisonPanel fileList={fileList} />
-          }
+          {fileList.length > 1 && <ComparisonPanel fileList={fileList} />}
         </>
-      }
+      )}
     </div>
-  )
-}
+  );
+};
