@@ -13,29 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
-from einops import rearrange
-try:
-    import torch_npu
-except ImportError:
-    is_gpu = True
-    try:
-        # flash_attn为gpu的fa三方库
-        from flash_attn import flash_attn_func
-    except ImportError:
-        # 如果为cpu的ut环境，则不做任何处理
-        pass
-else:
-    is_gpu = False
-
-
-from msprobe.pytorch.common.utils import logger
-from msprobe.core.common.const import Const, CompareConst
-
-gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
-softmax_build_mode = "QKV"  # "MAX_SUM"
-
 """
 # 前向函数声明对比
 标杆实现:fusion_attention_forward: q, k, v, drop_mask, atten_mask, pse, scale, keep_prob
@@ -52,6 +29,29 @@ softmax_build_mode = "QKV"  # "MAX_SUM"
                                        next_tockens=2147483647, inner_precise=0, seed=0, offset=0,
                                        numels=0, prefix=None, sparse_mode=0, gen_mask_parallel=True, sync=False
 """
+
+import torch
+import numpy as np
+from einops import rearrange
+
+try:
+    import torch_npu
+except ImportError:
+    is_gpu = True
+    try:
+        # flash_attn为gpu的fa三方库
+        from flash_attn import flash_attn_func
+    except ImportError:
+        # 如果为cpu的ut环境，则不做任何处理
+        pass
+else:
+    is_gpu = False
+
+from msprobe.pytorch.common.utils import logger
+from msprobe.core.common.const import Const, CompareConst
+
+gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
+softmax_build_mode = "QKV"  # "MAX_SUM"
 
 
 def softmax_forward(x):
@@ -328,18 +328,22 @@ def npu_fusion_attention_forward_patch(*args, **kwargs):
     if not (N1 % N2 == 0 and N1 >= N2):
         raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
 
-    dims_kwargs = {"B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
-                   "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE}
+    dims_kwargs = {
+        "B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
+        "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE
+    }
 
-    new_kwargs = {"keep_prob": 1,
-                  "scale": kwargs.get("scale", 1 / (D ** 0.5)),
-                  "sparse_mode": kwargs.get("sparse_mode", 0),
-                  "prefix": kwargs.get("prefix"),
-                  "pre_tockens": kwargs.get("pre_tockens", 2147483647),
-                  "next_tockens": kwargs.get("next_tockens", 2147483647),
-                  "pse": kwargs.get("pse"),
-                  "padding_mask": kwargs.get("padding_mask"),
-                  "atten_mask": kwargs.get("atten_mask")}
+    new_kwargs = {
+        "keep_prob": 1,
+        "scale": kwargs.get("scale", 1 / (D ** 0.5)),
+        "sparse_mode": kwargs.get("sparse_mode", 0),
+        "prefix": kwargs.get("prefix"),
+        "pre_tockens": kwargs.get("pre_tockens", 2147483647),
+        "next_tockens": kwargs.get("next_tockens", 2147483647),
+        "pse": kwargs.get("pse"),
+        "padding_mask": kwargs.get("padding_mask"),
+        "atten_mask": kwargs.get("atten_mask")
+    }
 
     return args, dims_kwargs, new_kwargs
 
@@ -356,25 +360,29 @@ def npu_fusion_attention_backward_patch(*args, **kwargs):
     if not (N1 % N2 == 0 and N1 >= N2):
         raise ValueError(f"N1与N2不匹配,请检查: N1 = {N1}, N2 = {N2}.")
 
-    dims_kwargs = {"B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
-                   "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE}
+    dims_kwargs = {
+        "B": B, "S1": S1, "S2": S2, "N1": N1, "N2": N2,
+        "D": D, "H1": H1, "H2": H2, "DTYPE": DTYPE
+    }
 
-    new_kwargs = {"keep_prob": 1,
-                  "scale_value": kwargs.get("scale_value", 1 / (D ** 0.5)),
-                  "sparse_mode": kwargs.get("sparse_mode", 0),
-                  "prefix": kwargs.get("prefix"),
-                  "pre_tockens": kwargs.get("pre_tockens", 2147483647),
-                  "next_tockens": kwargs.get("next_tockens", 2147483647),
-                  "pse": kwargs.get("pse"),
-                  "padding_mask": kwargs.get("padding_mask"),
-                  "softmax_max": kwargs.get("softmax_max"),
-                  "softmax_sum": kwargs.get("softmax_sum"),
-                  "softmax_in": kwargs.get("softmax_in"),
-                  "attention_in": kwargs.get("attention_in"),
-                  "seed": kwargs.get("seed", 0),
-                  "offset": kwargs.get("offset", 0),
-                  "numels": kwargs.get("numels", 0),
-                  "atten_mask": kwargs.get("atten_mask")}
+    new_kwargs = {
+        "keep_prob": 1,
+        "scale_value": kwargs.get("scale_value", 1 / (D ** 0.5)),
+        "sparse_mode": kwargs.get("sparse_mode", 0),
+        "prefix": kwargs.get("prefix"),
+        "pre_tockens": kwargs.get("pre_tockens", 2147483647),
+        "next_tockens": kwargs.get("next_tockens", 2147483647),
+        "pse": kwargs.get("pse"),
+        "padding_mask": kwargs.get("padding_mask"),
+        "softmax_max": kwargs.get("softmax_max"),
+        "softmax_sum": kwargs.get("softmax_sum"),
+        "softmax_in": kwargs.get("softmax_in"),
+        "attention_in": kwargs.get("attention_in"),
+        "seed": kwargs.get("seed", 0),
+        "offset": kwargs.get("offset", 0),
+        "numels": kwargs.get("numels", 0),
+        "atten_mask": kwargs.get("atten_mask")
+    }
 
     return args, dims_kwargs, new_kwargs
 

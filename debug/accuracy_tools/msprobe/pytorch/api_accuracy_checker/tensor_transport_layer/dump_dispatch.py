@@ -97,6 +97,7 @@ def dispatch4data(func, attl, status):
 
     return wrapper
 
+
 def run_ut_dispatch(attl, status):
     """
     This function called by online_run_ut. It is used to enable or disable dispatch for torch.autograd.backward function.
