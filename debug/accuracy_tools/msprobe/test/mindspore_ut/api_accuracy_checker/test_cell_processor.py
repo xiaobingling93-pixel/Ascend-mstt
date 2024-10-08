@@ -22,6 +22,7 @@ class TestCellProcessor(unittest.TestCase):
         self.assertIsInstance(self.processor.scope, ModuleRangeScope)
 
     def test_init_with_none_scope(self):
+        mock_const.SEP = "."  # 确保 SEPARATOR 设置为字符串
         processor = CellProcessor(None)
         self.assertIsNone(processor.scope)
 
@@ -46,6 +47,7 @@ class TestCellProcessor(unittest.TestCase):
 
     @patch('msprobe.core.common.const.Const')
     def test_node_hook_begin(self, mock_const):
+        mock_const.SEP = "."  # 确保 SEPARATOR 设置为字符串
         mock_const.START = "start"
         cell = MockCell()
         self.processor.node_hook("prefix", "start")(cell, "input")
