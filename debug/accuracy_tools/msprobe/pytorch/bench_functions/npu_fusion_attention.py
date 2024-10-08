@@ -202,11 +202,13 @@ def convert_to_bnsd(_input, n, input_layout):
     return out.to(gtype)
 
 
-def generate_atten_mask(sparse_mode, atten_mask, b, n1, s1, s2, pre_tocken, next_tocken, dtype):
+def generate_atten_mask(*args):
     """
     # 当sparse_mode=2、3、4时小算子到融合算子会走这个优化，反过来看就要拆解回原来的基本实现
     ===> atten_mask = torch.from_numpy(np.triu(np.ones([2048, 2048]), k=1)).to(dtype)
     """
+
+    sparse_mode, atten_mask, b, n1, s1, s2, pre_tocken, next_tocken, dtype = args
     shape = [s1, s2]
 
     if atten_mask is not None:
