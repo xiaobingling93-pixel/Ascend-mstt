@@ -233,7 +233,8 @@ class MessageServerFactory(protocol.ServerFactory):
     def __init__(self) -> None:
         """
         transport_dict: links that have not completed data transmission.
-        transport_list: Records all TCP links. Appends TCP link to the transport list when a new TCP link is established.
+        transport_list: Records all TCP links. Appends TCP link to the transport list
+                        when a new TCP link is established.
         """
         self.transport_dict = {}
         self.transport_list = []

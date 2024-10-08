@@ -100,7 +100,8 @@ def dispatch4data(func, attl, status):
 
 def run_ut_dispatch(attl, status):
     """
-    This function called by online_run_ut. It is used to enable or disable dispatch for torch.autograd.backward function.
+    This function called by online_run_ut.
+    It is used to enable or disable dispatch for torch.autograd.backward function.
 
     Args:
         attl (ATTL):  online_run_ut class ATTL, which is used to upload or send api data to server.

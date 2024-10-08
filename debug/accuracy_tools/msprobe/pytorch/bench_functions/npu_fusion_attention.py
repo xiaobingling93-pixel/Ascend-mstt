@@ -527,6 +527,8 @@ def gpu_fusion_attention(*args, **kwargs):
     else:
         alibi_slopes = None
     
-    out = flash_attn_func(query, key, value, dropout_p=(1-keep_prob), softmax_scale=scale, causal=causal_switch, 
-                          window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic)
+    out = flash_attn_func(
+        query, key, value, dropout_p=(1 - keep_prob), softmax_scale=scale, causal=causal_switch,
+        window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic
+    )
     return out, Const.NONE, Const.NONE
