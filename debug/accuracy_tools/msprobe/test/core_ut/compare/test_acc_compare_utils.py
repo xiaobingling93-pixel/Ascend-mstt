@@ -9,7 +9,7 @@ from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_ite
     _compare_parser
 
 
-# test_read_op
+# test_read_op_1
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
                     'Max': 0.33033010363578796, 'Min': -0.331031858921051,'Mean': -0.030964046716690063,
@@ -34,6 +34,29 @@ op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
+
+# test_read_op_1
+op_data_b = {
+    'input': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+               'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+               'Norm': 2.2533628940582275, 'requires_grad': True},
+              {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+               'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+               'Norm': 0.02844562754034996, 'requires_grad': False}],
+    'output': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+                'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+                'Norm': 2.2533628940582275, 'requires_grad': True}]}
+op_name_b = "Tensor.add_0.0.backward"
+op_result_b = [
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0'},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1'},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0'}]
 
 
 # test_op_item_parse
@@ -213,6 +236,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_read_op(self):
         result = read_op(op_data, op_name)
         self.assertEqual(result, op_result)
+
+    def test_read_op_back(self):
+        result = read_op(op_data_b, op_name_b)
+        self.assertEqual(result, op_result_b)
 
     def test_op_item_parse(self):
         result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool)
