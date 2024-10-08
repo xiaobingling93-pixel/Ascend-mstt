@@ -238,7 +238,7 @@ class TestPrimitiveHookService(unittest.TestCase):
         # 确保前向和后向 hook 均被调用
         mock_origin_func.assert_called_once()
 
-        self.assertIsInstance(result, Mock)
+        self.assertIsInstance(result, Tensor)
 
     def test_update_primitive_counters_different_names(self):
         # 测试不同 primitive 名称的计数器更新
