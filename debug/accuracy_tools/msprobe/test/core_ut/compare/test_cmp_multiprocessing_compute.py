@@ -1,11 +1,14 @@
 # coding=utf-8
 import unittest
+import threading
 import pandas as pd
 import multiprocessing
-from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, read_dump_data, check_accuracy
+from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, read_dump_data, ComparisonResult, \
+    _save_cmp_result, check_accuracy
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.utils import CompareException
+
 
 
 data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
@@ -25,6 +28,14 @@ o_result = pd.DataFrame(o_data, columns=columns)
 
 class TestUtilsMethods(unittest.TestCase):
 
+    def setUp(self):
+        self.result_df = pd.DataFrame(columns=[
+            CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
+            CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
+            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
+        ])
+        self.lock = threading.Lock()
+
     def test_handle_multi_process(self):
         func = Comparator().compare_ops
         input_parma = {}
@@ -38,6 +49,57 @@ class TestUtilsMethods(unittest.TestCase):
 
         with self.assertRaises(CompareException) as context:
             result = read_dump_data(pd.DataFrame())
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_save_cmp_result_success(self):
+        comparison_result = ComparisonResult(
+            cos_result=[0.99, 0.98],
+            max_err_result=[0.01, 0.02],
+            max_relative_err_result=[0.001, 0.002],
+            err_msgs=['', 'Error in comparison'],
+            one_thousand_err_ratio_result=[0.1, 0.2],
+            five_thousand_err_ratio_result=[0.05, 0.1]
+        )
+        offset = 0
+        updated_df = _save_cmp_result(offset, comparison_result, self.result_df, self.lock)
+
+        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 0.99)
+        self.assertEqual(updated_df.loc[1, CompareConst.COSINE], 0.98)
+        self.assertEqual(updated_df.loc[1, CompareConst.ERROR_MESSAGE], 'Error in comparison')
+
+    def test_save_cmp_result_value_error(self):
+        comparison_result = ComparisonResult(
+            cos_result=[0.99],
+            max_err_result=[0.01],
+            max_relative_err_result=[0.001],
+            err_msgs=[''],
+            one_thousand_err_ratio_result=[0.1],
+            five_thousand_err_ratio_result=[0.05]
+        )
+        # 设置一个无效的result_df (比如传入None)
+        invalid_result_df = None
+        with self.assertRaises(CompareException) as context:
+            _save_cmp_result(0, comparison_result, invalid_result_df, self.lock)
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
+
+    def test_save_cmp_result_index_error(self):
+        comparison_result = ComparisonResult(
+            cos_result=[0.99],
+            max_err_result=[0.01],
+            max_relative_err_result=[0.001],
+            err_msgs=[''],
+            one_thousand_err_ratio_result=[0.1],
+            five_thousand_err_ratio_result=[0.05]
+        )
+
+        # 制造一个导致IndexError的情况，比如 result_df 没有足够的行
+        invalid_df = pd.DataFrame(columns=[
+            CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
+            CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
+            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
+        ])
+        with self.assertRaises(CompareException) as context:
+            _save_cmp_result(10, comparison_result, invalid_df, self.lock)
         self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def test_check_accuracy(self):
