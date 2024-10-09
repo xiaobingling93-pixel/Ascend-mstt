@@ -24,7 +24,7 @@ class TestUtilsMethods(unittest.TestCase):
         bench_dump_dir = ''
         output_path = ''
         with self.assertRaises(CompareException) as context:
-            compare_distributed(npu_dump_dir, bench_dump_dir, output_path, suffix='')
+            compare_distributed(npu_dump_dir, bench_dump_dir, output_path, suffix=True)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
 
     def test_compare_distributed_2(self):
