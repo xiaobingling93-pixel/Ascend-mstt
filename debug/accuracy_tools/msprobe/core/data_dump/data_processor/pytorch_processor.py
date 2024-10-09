@@ -1,20 +1,35 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import zlib
 from dataclasses import asdict
 from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_utils import path_len_exceeds_limit, change_mode
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 from msprobe.pytorch.common.utils import save_pt, load_pt
+from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
+is_gpu = False
 try:
     import torch_npu
-    is_gpu = False
 except ImportError:
     is_gpu = True
 
@@ -245,7 +260,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if tensor_json['Max'] is None or tensor_json['Min'] is None:
             return
         self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)

@@ -1,6 +1,22 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
-from msprobe.core.common.exceptions import ScopeException
+
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import ScopeException
 
 
 def build_scope(scope_class, scope=None, api_list=None):
@@ -82,9 +98,9 @@ class ListScope(BaseScope):
                 f"scope和api_list不可以同时配置，实际配置为scope={scope}, api_list={api_list}.")
         return super(ListScope, ListScope).rectify_args(scope, api_list)
 
-    def check(self, module_name):
-        if not self.scope or module_name in self.scope:
-            return self.check_api_list(module_name)
+    def check(self, name):
+        if not self.scope or name in self.scope:
+            return self.check_api_list(name)
         return False
 
 
@@ -129,16 +145,16 @@ class APIRangeScope(RangeScope):
             return False
         return True
 
-    def check(self, api_name):
-        if self.scope and api_name == self.scope[0]:
+    def check(self, name):
+        if self.scope and name == self.scope[0]:
             self.in_scope = True
 
         if not self.scope or self.in_scope:
-            result = self.check_api_list(api_name)
+            result = self.check_api_list(name)
         else:
             result = False
 
-        if self.scope and api_name == self.scope[1]:
+        if self.scope and name == self.scope[1]:
             self.in_scope = False
         return result
 
@@ -149,6 +165,7 @@ class ModuleRangeScope(RangeScope):
         需要用pre_hook和full_backward_hook来精确控制module的开始和结束，
         在这些hook触发时调用begin_module和end_module做区间控制
     """
+
     def check_scope_is_valid(self):
         if not self.scope:
             return True
@@ -171,7 +188,7 @@ class ModuleRangeScope(RangeScope):
         if module_name == self.scope[1]:
             self.in_scope = False
 
-    def check(self, module_name):
+    def check(self, name):
         if not self.scope or self.in_scope:
-            return self.check_api_list(module_name)
+            return self.check_api_list(name)
         return False
