@@ -52,10 +52,10 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            ms_type=[["Float16", "Float32"], ["Float32", "Float16"],["Float16", "BFloat16"],["BFloat16", "Float16"]] 
-            torch_type=[["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
-                                ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
-            if ([npu_type, bench_type] in ms_type)or  ([npu_type, bench_type] in torch_type):                    
+            ms_type = [["Float16", "Float32"], ["Float32", "Float16"], ["Float16", "BFloat16"], ["BFloat16", "Float16"]]
+            torch_type = [["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
+                          ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
+            if ([npu_type, bench_type] in ms_type) or ([npu_type, bench_type] in torch_type):
                 type_match = True
             else:
                 type_match = False
@@ -66,9 +66,9 @@ def check_type_shape_match(npu_struct, bench_struct):
 
 
 def check_graph_mode(a_op_name, b_op_name):
-    if "Aten" in a_op_name and "Aten" not in b_op_name:
+    if Const.ATEN in a_op_name and Const.ATEN not in b_op_name:
         return True
-    if "Aten" not in a_op_name and "Aten" in b_op_name:
+    if Const.ATEN not in a_op_name and Const.ATEN in b_op_name:
         return True
     return False
 
