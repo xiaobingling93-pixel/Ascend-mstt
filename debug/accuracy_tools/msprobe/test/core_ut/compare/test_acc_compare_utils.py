@@ -174,23 +174,20 @@ base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_
 base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils2')
 
 
-def create_json_files(base_dir1):
-    """在指定目录中创建三个空的 JSON 文件：dump.json、stack.json 和 construct.json"""
+def create_json_files(base_dir):
     file_names = ['dump.json', 'stack.json', 'construct.json']
 
-    # 创建空的 JSON 文件
     for file_name in file_names:
-        file_path = os.path.join(base_dir1, file_name)
+        file_path = os.path.join(base_dir, file_name)
         with open(file_path, 'w') as f:
-            json.dump({}, f)  # 写入空的字典
+            json.dump({}, f)
 
 
-def create_rank_dirs(base_dir2):
+def create_rank_dirs(base_dir):
     folder_names = ['rank0', 'rank1']
 
-    # 创建文件夹
     for folder_name in folder_names:
-        folder_path = os.path.join(base_dir2, folder_name)
+        folder_path = os.path.join(base_dir, folder_name)
         os.makedirs(folder_path, exist_ok=True)
 
 
@@ -218,8 +215,9 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, os.path.join(base_dir1, 'stack.json'))
 
     def test_check_and_return_dir_contents(self):
+        create_rank_dirs(base_dir2)
         result = check_and_return_dir_contents(base_dir2, 'rank')
-        self.assertEqual(result, ['rank0', 'rank1'])
+        self.assertEqual(set(result), set(['rank0', 'rank1']))
 
     def test_rename_api_1(self):
         test_name_1 = "Distributed.broadcast.0.forward.input.0"
@@ -275,8 +273,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(op_dict, result_op_dict)
 
     def test_compare_parser_1(self):
-        # 模拟命令行输入
-        test_args = ["script_name", "-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
+        test_args = ["-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
         args = self.parser.parse_args(test_args)
 
         self.assertEqual(args.input_path, "input.json")
@@ -286,13 +283,13 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(args.fuzzy_match)
 
     def test_compare_parser_2(self):
-        test_args = ["script_name", "-i", "input.json"]
+        test_args = ["-i", "input.json"]
 
         with self.assertRaises(SystemExit):  # argparse 会抛出 SystemExit
             self.parser.parse_args(test_args)
 
     def test_compare_parser_3(self):
-        test_args = ["script_name", "-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
+        test_args = ["-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
                      "data_mapping.txt", "-lm", "layer_mapping.txt"]
         args = self.parser.parse_args(test_args)
 
