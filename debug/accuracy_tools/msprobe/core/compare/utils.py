@@ -250,9 +250,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
                                " ", " ", " ", " ", " "]
 
-            npu_summary_data = n_dict.get("summary")[n_start + index]
+            npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
             result_item.extend(npu_summary_data)
-            bench_summary_data = b_dict.get("summary")[b_start + index]
+            bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
             result_item.extend(bench_summary_data)
 
             if summary_compare:
@@ -264,7 +264,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         if bench_val != 0:
                             relative = str(abs((diff / bench_val) * 100)) + '%'
                         else:
-                            relative = "N/A"
+                            relative = CompareConst.N_A
                         result_item[start_idx + i] = diff
                         result_item[start_idx + i + 4] = relative
                         magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
@@ -300,9 +300,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     continue
                 result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
                                n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
-                summary_data = n_dict.get("summary")[n_start + index]
+                summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                 result_item.extend(summary_data)
-                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get("summary")[0]))]
+                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
                 result_item.extend(summary_data)
 
                 err_msg = ""
