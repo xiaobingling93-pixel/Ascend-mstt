@@ -1,4 +1,18 @@
-from msprobe.pytorch.common.utils import logger
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.pytorch.bench_functions.apply_adam_w import npu_apply_adam_w
 from msprobe.pytorch.bench_functions.confusion_transpose import npu_confusion_transpose, \
     npu_confusion_transpose_backward
@@ -12,7 +26,8 @@ from msprobe.pytorch.bench_functions.rms_norm import npu_rms_norm, npu_rms_norm_
 from msprobe.pytorch.bench_functions.rotary_mul import npu_rotary_mul, npu_rotary_mul_backward
 from msprobe.pytorch.bench_functions.scaled_mask_softmax import npu_scaled_masked_softmax, \
     npu_scaled_masked_softmax_backward
-from msprobe.pytorch.bench_functions.swiglu import npu_swiglu, npu_swiglu_backward, swish_grad, swish
+from msprobe.pytorch.bench_functions.swiglu import npu_swiglu, npu_swiglu_backward
+from msprobe.pytorch.common.utils import logger
 
 
 class Register(dict):
