@@ -61,12 +61,12 @@ def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
     try:
         torch_func_index, in_out = npu_split[0], npu_split[1]
-        torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
-        torch_func = str(torch_func_split[0]) + str(in_out)
-        return torch_func
     except IndexError as error:
         logger.error(f'{npu_name} can not be split with {process}, please check!')
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
+    torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
+    torch_func = str(torch_func_split[0]) + str(in_out)
+    return torch_func
 
 
 def read_op(op_data, op_name):
