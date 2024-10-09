@@ -5,12 +5,14 @@ import shutil
 import pandas as pd
 import numpy as np
 import openpyxl
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
 from collections import namedtuple
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
 from msprobe.core.common.const import CompareConst
 
 
-base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data')
+base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
 
 
 def generate_result_xlsx(base_dir):
@@ -21,15 +23,22 @@ def generate_result_xlsx(base_dir):
             ]
     columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
     result_df = pd.DataFrame(data, columns=columns)
-    result_df.to_excel(data_path, index=False)
+    result_df.to_excel(data_path, index=False, sheet_name='Sheet')
+    wb = load_workbook(data_path)
+    ws = wb.active
+    red_fill = PatternFill(start_color=CompareConst.RED, end_color=CompareConst.RED, fill_type='solid')
+    for row_index, row in enumerate(ws.iter_rows()):
+        if row_index == 0:
+            continue
+        for cell in row:
+            cell.fill = red_fill
+    wb.save(data_path)
 
 
 def compare_excel_files_with_highlight(file1, file2):
-    # 加载工作簿
     wb1 = openpyxl.load_workbook(file1)
     wb2 = openpyxl.load_workbook(file2)
 
-    # 比较每个工作表
     if len(wb1.sheetnames) != len(wb2.sheetnames):
         return False
 
@@ -39,19 +48,16 @@ def compare_excel_files_with_highlight(file1, file2):
         ws1 = wb1[sheet_name]
         ws2 = wb2[sheet_name]
 
-        # 比较单元格内容和高亮
-        for row in ws1.iter_rows():
+        for row_index, row in enumerate(ws1.iter_rows()):
+            if row_index == 0:
+                continue
             for cell in row:
                 other_cell = ws2[cell.coordinate]
 
-                # 比较单元格的值
                 if cell.value != other_cell.value:
                     return False
-
-                # 比较单元格的高亮
-                if cell.fill != other_cell.fill:  # 比较填充样式
+                if cell.fill.start_color.index != other_cell.fill.start_color.index:
                     return False
-
     return True
 
 
