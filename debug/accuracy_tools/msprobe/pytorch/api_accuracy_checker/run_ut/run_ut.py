@@ -116,22 +116,22 @@ def run_api_offline(config, compare, api_name_set):
             continue
         if is_unsupported_api(api_full_name):
             skip_message = f"API {api_full_name} not support for run ut. SKIP."
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
-            record_skip_info(api_full_name, compare, fwd_compare_alg_results)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         _, api_name = extract_basic_api_segments(api_full_name)
         if not api_name:
             err_message = f"API {api_full_name} not support for run ut. SKIP."
             logger.error(err_message)
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
-            record_skip_info(api_full_name, compare, fwd_compare_alg_results)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
                 skip_message = f"API {api_name} in black list or not in white list. SKIP."
                 logger.info(skip_message)
-                fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
-                record_skip_info(api_full_name, compare, fwd_compare_alg_results)
+                compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+                record_skip_info(api_full_name, compare, compare_alg_results)
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -143,8 +143,8 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
-            record_skip_info(api_full_name, compare, fwd_compare_alg_results)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            record_skip_info(api_full_name, compare, compare_alg_results)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
