@@ -19,6 +19,7 @@ import mindspore as ms
 from mindspore.common.tensor import Tensor
 from mindspore import ops
 
+from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
     ModuleBackwardInputs, ModuleBackwardOutputs
@@ -75,8 +76,8 @@ class PrimitiveHookService:
                         captured_grads.clear()
 
                 except Exception as exception:
-                    raise Exception(f"This is a primitive op {hook_type}_backward dump error: {exception},"
-                                    f" updated_primitive_name: {updated_primitive_name}") from exception
+                    logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
+                                 f"updated_primitive_name: {updated_primitive_name}")
 
             return backward_hook
 
@@ -159,14 +160,13 @@ class PrimitiveHookService:
             try:
                 hooked_inputs = hook_primitive_inputs(args, captured_grads_input, updated_primitive_name)
             except Exception as exception:
-                raise Exception("This is a primitive op dump error during input hooking: {},"
-                                " primitive_name: {}".format(exception, primitive_name)) from exception
-
+                logger.error(f"This is a primitive op dump error during input hooking: {exception}, "
+                             f"primitive_name: {primitive_name}")
             try:
                 out = origin_func(*hooked_inputs, **kwargs)
             except Exception as exception:
-                raise Exception("This is a primitive op dump error during function call: {},"
-                                " primitive_name: {}".format(exception, primitive_name)) from exception
+                logger.error(f"This is a primitive op dump error during function call: {exception}, "
+                             f"primitive_name: {primitive_name}")
 
             forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
             self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
@@ -176,8 +176,8 @@ class PrimitiveHookService:
                     self.service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self,
                                                              os.getpid(), module_input_output)
                 except Exception as exception:
-                    raise Exception("This is a primitive op dump error during forward data collection: {},"
-                                    " primitive_name: {}".format(exception, primitive_name)) from exception
+                    logger.error(f"This is a primitive op dump error during forward data collection: {exception}, "
+                                 f"primitive_name: {primitive_name}")
 
                 if self.service_instance.data_collector.if_return_forward_new_output():
                     out = self.service_instance.data_collector.get_forward_new_output()
@@ -185,8 +185,8 @@ class PrimitiveHookService:
             try:
                 out = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
             except Exception as exception:
-                raise Exception("This is a primitive op dump error during output hooking: {},"
-                                " primitive_name: {}".format(exception, primitive_name)) from exception
+                logger.error(f"This is a primitive op dump error during output hooking: {exception}, "
+                             f"primitive_name: {primitive_name}")
 
             return out
 
