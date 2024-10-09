@@ -21,24 +21,19 @@ import torch
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_functions
-
-cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-
 
 try:
     import torch_npu
 except ImportError:
-    is_gpu = True
-else:
-    is_gpu = False
+    logger.info("Failing to import torch_npu.")
 
 
-cuda_func_mapping = {
-    "npu_fusion_attention" : "gpu_fusion_attention"
-}
+cur_path = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
+cuda_func_mapping = {"npu_fusion_attention" : "gpu_fusion_attention"}
 
 
 def get_npu_ops():
@@ -83,7 +78,6 @@ class NpuOPTemplate(HOOKModule):
 def wrap_npu_op(op_name, hook):
     def npu_op_template(*args, **kwargs):
         return NpuOPTemplate(op_name, hook)(*args, **kwargs)
-
     return npu_op_template
 
 

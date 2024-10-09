@@ -14,7 +14,7 @@ class TestService(unittest.TestCase):
             "dump_path": "./dump/",
         }
         with patch("msprobe.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
-                patch("msprobe.pytorch.pt_config.json.load", return_value=mock_json_data):
+                patch("msprobe.pytorch.pt_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json", Const.STATISTICS)
         self.config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
         self.service = Service(self.config)

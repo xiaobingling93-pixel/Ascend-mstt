@@ -78,6 +78,11 @@ class ATTL:
         """
         npu major in 'send' (client)
         """
+
+        # if tcp connection lost,
+        if self.socket_manager.signal_exit:
+            raise ConnectionError(f"Failed to connect to {self.session_config.connect_ip}.")
+
         # know receiver receive and go next
         if isinstance(buffer, ApiData):
             buffer = move2target_device(buffer, torch.device('cpu'))

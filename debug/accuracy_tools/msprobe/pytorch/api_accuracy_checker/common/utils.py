@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,10 +14,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 import re
 from collections import namedtuple
+import importlib
 
 import torch
 
@@ -96,7 +98,8 @@ def cross_entropy_process(api_info_dict):
     Return api_info_dict:
         api_info_dict: Processed argument of the API.
     """
-    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 and 'Min' in api_info_dict['input_args'][1]:
+    if 'input_args' in api_info_dict and len(api_info_dict['input_args']) > 1 \
+        and 'Min' in api_info_dict['input_args'][1]:
         if api_info_dict['input_args'][1]['Min'] <= 0:
             # The second argument in cross_entropy should be -100 or not less than 0
             api_info_dict['input_args'][1]['Min'] = 0
@@ -107,18 +110,6 @@ def initialize_save_path(save_path, dir_name):
     data_path = os.path.join(save_path, dir_name)
     create_directory(data_path)
     return data_path
-
-
-def get_real_data_path(file_path):
-    targets = ['forward_real_data', 'backward_real_data', 'ut_error_data\d+']
-    pattern = re.compile(r'({})'.format('|'.join(targets)))
-    match = pattern.search(file_path)
-    if match:
-        target_index = match.start()
-        target_path = file_path[target_index:]
-        return target_path
-    else:
-        raise DumpException(DumpException.INVALID_PATH_ERROR)
 
 
 def get_full_data_path(data_path, real_data_path):
@@ -137,7 +128,10 @@ class UtDataProcessor:
         self.index = 0
         self._save_recursive(api_name, element)
 
-    def _save_recursive(self, api_name, element):
+    def _save_recursive(self, api_name, element, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"Maximum depth of {Const.MAX_DEPTH} exceeded for {api_name}")
+            raise DumpException(DumpException.RECURSION_LIMIT_ERROR)
         if isinstance(element, torch.Tensor):
             api_args = api_name + Const.SEP + str(self.index)
             create_directory(self.save_path)
@@ -153,10 +147,10 @@ class UtDataProcessor:
             self.index += 1
         elif isinstance(element, (list, tuple)):
             for item in element:
-                self._save_recursive(api_name, item)
+                self._save_recursive(api_name, item, depth=depth+1)
         elif isinstance(element, dict):
             for value in element.values():
-                self._save_recursive(api_name, value)
+                self._save_recursive(api_name, value, depth=depth+1)
         else:
             self.index += 1
 
@@ -211,4 +205,42 @@ def extract_detailed_api_segments(full_api_name_with_direction_status):
     else:
         full_api_name = None
     return api_name, full_api_name, direction_status
-    
+
+
+def get_module_and_atttribute_name(attribute):
+    '''
+    Function Description:
+        Get the module and attribute name.
+    Parameter:
+        name: Attribute of a module. Example: torch.float16
+    Return:
+        module_name: Name of the module. Example: torch.
+        attribute_name: Name of the attribute. Example: float16.
+    '''
+    try:
+        module_name, attribute_name = attribute.split(Const.SEP)
+    except ValueError as e:
+        logger.error(f"Failed to get module and attribute name from {attribute}")
+        raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+    return module_name, attribute_name
+
+
+def get_attribute(module_name, attribute_name):
+    '''
+    Function Description:
+        Get the attribute of the module.
+    Parameter:
+        module_name: Name of the module.
+        attribute_name: Name of the attribute.
+    '''
+    attribute = None
+    if module_name not in Const.MODULE_WHITE_LIST:
+        logger.error(f"Module {module_name} is not in white list")
+        raise CompareException(CompareException.INVALID_DATA_ERROR)
+    try:
+        module = importlib.import_module(module_name)
+        attribute = getattr(module, attribute_name)
+    except (ImportError, AttributeError) as e:
+        logger.error(f"Failed to get attribute {attribute_name} from module {module_name}: {e}")
+        raise CompareException(CompareException.INVALID_ATTRIBUTE_ERROR) from e
+    return attribute

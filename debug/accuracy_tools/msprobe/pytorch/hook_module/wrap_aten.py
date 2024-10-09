@@ -24,6 +24,7 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_grad_functions
 
+
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
 ops = load_yaml(yaml_path)

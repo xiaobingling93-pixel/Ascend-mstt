@@ -1,70 +1,110 @@
 import unittest
+from unittest.mock import MagicMock, patch
+
 import torch
-from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate, AtenOPPacketTemplate
+
+from msprobe.pytorch.function_factory import npu_custom_grad_functions
+from msprobe.pytorch.hook_module.wrap_aten import AtenOPTemplate, white_aten_ops, \
+    AtenOPPacketTemplate
 
 
-def hook(name):
-    def forward_pre_hook(nope, input, kwargs):
-            return input, kwargs
+def mock_build_hook(prefix):
+    return (MagicMock(), MagicMock(), MagicMock(), MagicMock())
 
-    def forward_hook(nope, input, kwargs, result):
-            return 2
+class TestAtenOPTemplate(unittest.TestCase):
 
-    def backward_hook():
-            pass
+    def test_init_with_string_op(self):
+        hook = mock_build_hook
+        op = 'add'
+        template = AtenOPTemplate(op, hook)
 
-    def forward_hook_torch_version_below_2():
-        pass
-    
-    return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
+        self.assertEqual(template.op, op)
+        self.assertTrue(template.prefix_op_name_.startswith('Aten.add'))
+        self.assertTrue(template.need_hook)
+
+    def test_init_with_op_overload_packet(self):
+        hook = mock_build_hook
+        op = MagicMock()
+        op._qualified_op_name = 'aten::add'
+        op.name.return_value = 'aten::add'
+        op._overloadname = 'default'
+        template = AtenOPTemplate(op, hook)
+
+        self.assertEqual(template.op, op)
+        self.assertTrue(template.prefix_op_name_.startswith('Aten.add'))
+        self.assertTrue(template.need_hook)
+
+    def test_forward_with_white_aten_ops(self):
+        hook = mock_build_hook
+        op = 'add'
+        white_aten_ops.append(op)
+        template = AtenOPTemplate(op, hook)
+
+        with patch('torch.ops.aten.add', return_value=3) as mock_add:
+            result = template.forward(1, 2)
+            self.assertEqual(result, 3)
+            mock_add.assert_called_once_with(1, 2)
+
+    def test_forward_with_custom_grad_function(self):
+        hook = mock_build_hook
+        op = 'custom_op'
+        npu_custom_grad_functions[op] = MagicMock(return_value=5)
+        template = AtenOPTemplate(op, hook)
+
+        result = template.forward(2, 3)
+        self.assertEqual(result, 5)
+
+    def test_forward_with_missing_op(self):
+        hook = mock_build_hook
+        op = 'missing_op'
+        template = AtenOPTemplate(op, hook)
+
+        with self.assertRaises(Exception) as context:
+            template.forward(1, 2)
+        self.assertIn("Skip op[missing_op] accuracy check", str(context.exception))
 
 
+class TestAtenOPPacketTemplate(unittest.TestCase):
 
-class TestWrapAten(unittest.TestCase):
     def setUp(self):
-        self.aten_op = AtenOPPacketTemplate(torch.ops.aten.convolution, hook)
-        
-    def test_atenop_attribute(self):
-        if torch.__version__.split("+")[0] <= '2.0':
-            return
-        self.setUp()
-        self.assertEqual(self.aten_op.default.op, torch.ops.aten.convolution.default)
-        self.assertEqual(self.aten_op.out.op, torch.ops.aten.convolution.out)
+        self.mock_op_packet = MagicMock()
+        self.mock_hook = MagicMock()
+        self.template = AtenOPPacketTemplate(self.mock_op_packet, self.mock_hook)
 
-    def test_atenop_forward(self):
-        if torch.__version__.split("+")[0] <= '2.0':
-            return
-        self.setUp()
-        image = torch.randn(4, 3, 24, 24)
-        kernel = torch.randn(10, 3, 3, 3)
-        functional_out = torch.nn.functional.conv2d(image, kernel, stride=[1, 1],
-                                                    padding=[1, 1], dilation=[1, 1], groups=1, bias=None)
-        aten_out = self.aten_op(image, kernel, None, [1, 1], [1, 1], [1, 1], False, [0, 0], 1)
-        self.assertTrue(aten_out == 2)
+    def test_getattr_existing_attribute(self):
+        self.mock_op_packet.some_attr = 'test_value'
+        self.assertEqual(self.template.some_attr, 'test_value')
 
-    def test_atenop_overload_forward(self):
-        if torch.__version__.split("+")[0] <= '2.0':
-            return
-        self.setUp()
-        image = torch.randn(4, 3, 24, 24)
-        kernel = torch.randn(10, 3, 3, 3)
-        functional_out = torch.nn.functional.conv2d(image, kernel, stride=[1, 1],
-                                                    padding=[1, 1], dilation=[1, 1], groups=1, bias=None)
-        aten_out = self.aten_op(image, kernel, None, [1, 1], [1, 1], [1, 1], False, [0, 0], 1)
-        self.assertTrue(aten_out == 2)
+    def test_getattr_nonexistent_attribute_raises_attribute_error(self):
+        del self.mock_op_packet.nonexistent_attr
+        with self.assertRaises(AttributeError) as context:
+            _ = self.template.nonexistent_attr
+        self.assertIn("or OpOverloadPacket does not have attribute 'nonexistent_attr'.", \
+            str(context.exception))
 
-    def test_atenop_nonattr(self):
-        if torch.__version__.split("+")[0] <= '2.0':
-            return
-        self.setUp()
-        self.assertRaises(AttributeError, getattr, self.aten_op, "foo")
+    @patch('msprobe.pytorch.hook_module.wrap_aten.AtenOPTemplate', autospec=True)
+    def test_getattr_op_overload(self, MockAtenOPTemplate):
+        mock_overload = MagicMock(spec=torch._ops.OpOverload)
+        mock_overload._overloadname = 'some_overload_name'
 
-    def test_atenop_overloads(self):
-        if torch.__version__.split("+")[0] <= '2.0':
-            return
-        self.setUp()
-        self.assertEqual(self.aten_op.overloads(), self.aten_op.opPacket.overloads())
+        self.mock_op_packet.some_op = mock_overload
+        result = self.template.some_op
+        MockAtenOPTemplate.assert_called_with(mock_overload, self.mock_hook)
+        self.assertIsInstance(result, AtenOPTemplate)
 
+    @patch('msprobe.pytorch.hook_module.wrap_aten.AtenOPTemplate', return_value=MagicMock())
+    def test_call(self, mock_AtenOPTemplate):
+        args = ('arg1', 'arg2')
+        kwargs = {'key': 'value'}
+        self.template(*args, **kwargs)
+        mock_AtenOPTemplate.assert_called_with(self.mock_op_packet, self.mock_hook)
+        mock_AtenOPTemplate.return_value.assert_called_with(*args, **kwargs)
 
+    def test_overloads(self):
+        expected_overloads = ['overload1', 'overload2']
+        self.mock_op_packet.overloads.return_value = expected_overloads
+        self.assertEqual(self.template.overloads(), expected_overloads)
 
-            
+    def test_getattr_non_opoverload_attribute(self):
+        self.mock_op_packet.non_op_attr = 'non_op_value'
+        self.assertEqual(self.template.non_op_attr, 'non_op_value')

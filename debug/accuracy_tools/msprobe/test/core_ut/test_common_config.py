@@ -31,12 +31,10 @@ class TestCommonConfig(TestCase):
         common_config = CommonConfig(json_config)
         self.assertIsNone(common_config.task)
         self.assertIsNone(common_config.dump_path)
-        self.assertIsNone(common_config.rank)
+        self.assertEqual(common_config.rank, [])
         self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
-        self.assertIsNone(common_config.seed)
         self.assertIsNone(common_config.acl_config)
-        self.assertFalse(common_config.is_deterministic)
         self.assertFalse(common_config.enable_dataloader)
 
         json_config.update({"task": "md5"})
@@ -45,49 +43,6 @@ class TestCommonConfig(TestCase):
                          "task is invalid, it should be one of {}".format(Const.TASK_LIST))
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": 0})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "rank is invalid, it should be a list")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": "invalid_step"})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(the_exception.code, MsprobeException.INVALID_PARAM_ERROR)
-        self.assertEqual(str(the_exception), 
-                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}step is invalid, it should be a list")
-
-        json_config.update({"step": [0, 1, "4-6?"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f"{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The hyphen(-) must start and end with decimal numbers.")
-
-        json_config.update({"step": [0, 1, "3--5"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f'{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}The string parameter for step only supports formats like "3-5". Now string parameter for step is "3--5".')
-
-        json_config.update({"step": [0, 1, "5-3"]})
-        with self.assertRaises(MsprobeException) as cm:
-            CommonConfig(json_config)
-        the_exception = cm.exception
-        self.assertEqual(str(the_exception), 
-                         f'{MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR)}For the hyphen(-) in step, the left boundary (5) cannot be greater than the right boundary (3).')
-
-        json_config.update({"step": [0, 1, "4-6"]})
-        common_config = CommonConfig(json_config)
-        self.assertEqual(common_config.step, [0, 1, 4, 5, 6])
 
         json_config.update({"task": Const.TENSOR})
         json_config.update({"rank": [0]})
@@ -103,31 +58,6 @@ class TestCommonConfig(TestCase):
         json_config.update({"rank": [0]})
         json_config.update({"step": [0]})
         json_config.update({"level": "L0"})
-        json_config.update({"seed": "1234"})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "seed is invalid, it should be an integer")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": [0]})
-        json_config.update({"level": "L0"})
-        json_config.update({"seed": 1234})
-        json_config.update({"is_deterministic": "ENABLE"})
-        CommonConfig(json_config)
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "is_deterministic is invalid, it should be a boolean")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
-
-        json_config.update({"task": Const.TENSOR})
-        json_config.update({"rank": [0]})
-        json_config.update({"step": [0]})
-        json_config.update({"level": "L0"})
-        json_config.update({"seed": 1234})
-        json_config.update({"is_deterministic": True})
         json_config.update({"enable_dataloader": "ENABLE"})
         CommonConfig(json_config)
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
@@ -154,7 +84,7 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "scope is invalid, it should be a list")
+                         "scope is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
@@ -163,7 +93,7 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "list is invalid, it should be a list")
+                         "list is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
@@ -173,6 +103,13 @@ class TestCommonConfig(TestCase):
         base_config = BaseConfig(json_config)
         base_config.check_config()
         self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "data_mode is invalid, it should be a list")
+                         "data_mode is invalid, it should be a list[str]")
+        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
+                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
+
+        json_config.update({"data_mode": ["all"]})
+        json_config.update({"backward_input": [1, 2]})
+        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
+                         "data_mode is invalid, it should be a list[str]")
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))

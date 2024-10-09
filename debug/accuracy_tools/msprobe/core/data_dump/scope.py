@@ -33,6 +33,7 @@ def build_range_scope_according_to_scope_name(scope, api_list):
 class BaseScope(ABC):
     Module_Type_Module = "Module"
     Module_Type_API = "api"
+    module_type = ["Module", "Cell"]
 
     def __init__(self, scope, api_list):
         scope, api_list = self.rectify_args(scope, api_list)
@@ -94,7 +95,6 @@ class RangeScope(BaseScope, ABC):
         self.in_scope = False
         self.is_valid = self.check_scope_is_valid()
 
-
     @staticmethod
     def rectify_args(scope, api_list):
         scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
@@ -104,7 +104,6 @@ class RangeScope(BaseScope, ABC):
             elif len(scope) > 2:
                 raise ScopeException(ScopeException.InvalidScope,
                     f"scope参数指定区间断点，须传入长度为1或2的列表，实际长度为{len(scope)}.")
-
         return scope, api_list
 
     @abstractmethod
@@ -123,10 +122,10 @@ class APIRangeScope(RangeScope):
         if not self.scope:
             return True
         scope_start_type = self.scope[0].split(Const.SEP)[0]
-        if scope_start_type == BaseScope.Module_Type_Module:
+        if scope_start_type in BaseScope.module_type:
             return False
         scope_stop_type = self.scope[1].split(Const.SEP)[0]
-        if scope_stop_type == BaseScope.Module_Type_Module:
+        if scope_stop_type in BaseScope.module_type:
             return False
         return True
 
@@ -155,8 +154,8 @@ class ModuleRangeScope(RangeScope):
             return True
         scope_start_type = self.scope[0].split(Const.SEP)[0]
         scope_stop_type = self.scope[1].split(Const.SEP)[0]
-        if scope_start_type == BaseScope.Module_Type_Module and \
-                scope_stop_type == BaseScope.Module_Type_Module:
+        if scope_start_type in BaseScope.module_type and \
+                scope_stop_type in BaseScope.module_type:
             return True
         return False
 

@@ -1,6 +1,8 @@
-from msprobe.pytorch.common import seed_all
-from msprobe.pytorch.common.log import logger
+import torch
+
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.pytorch.common.log import logger
 
 
 class DebuggerConfig:
@@ -10,8 +12,6 @@ class DebuggerConfig:
         self.rank = common_config.rank if common_config.rank else []
         self.step = common_config.step if common_config.step else []
         self.level = level or common_config.level or "L1"
-        self.seed = common_config.seed if common_config.seed else 1234
-        self.is_deterministic = common_config.is_deterministic
         self.enable_dataloader = common_config.enable_dataloader
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
@@ -31,8 +31,8 @@ class DebuggerConfig:
             self.fuzz_level = task_config.fuzz_level
             self.fuzz_stage = task_config.fuzz_stage
             self.preheat_config = {
-                "if_preheat": task_config.if_preheat, 
-                "preheat_step": task_config.preheat_step, 
+                "if_preheat": task_config.if_preheat,
+                "preheat_step": task_config.preheat_step,
                 "max_sample": task_config.max_sample
             }
 
@@ -57,31 +57,37 @@ class DebuggerConfig:
                 for index, scope_spec in enumerate(self.scope):
                     self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
                     self.backward_input[self.scope[index]] = self.backward_input_list[index]
-        seed_all(self.seed, self.is_deterministic)
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
-            raise Exception("task is invalid")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"The task <{self.task}> is not in the {Const.TASK_LIST}.")
         if self.level and self.level not in Const.LEVEL_LIST:
-            raise Exception("level is invalid")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"The level <{self.level}> is not in the {Const.LEVEL_LIST}.")
         if not self.dump_path:
-            raise Exception("Invalid dump path, please check your config")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"The dump_path not found.")
 
     def check(self):
         self.check_kwargs()
-        self._check_rank()
         return True
 
-    def check_model(self, model):
-        if self.level in ["L0", "mix"] and not model:
-            raise Exception(
-                f"For level {self.level}, PrecisionDebugger must receive a model argument."
-            )
-
-    def _check_rank(self):
-        if self.rank:
-            for rank_id in self.rank:
-                if not isinstance(rank_id, int) or rank_id < 0:
-                    raise ValueError(f"rank {self.rank} must be an integer and greater than or equal to 0.")
-            else:
-                logger.warning_on_rank_0(f"Rank argument is provided. Only rank {self.rank} data will be dumpped.")
+    def check_model(self, instance, start_model):
+        if self.level not in ["L0", "mix"]:
+            if instance.model is not None or start_model is not None:
+                logger.warning_on_rank_0(
+                    f"The current level is not L0 or mix level, so the model parameters will not be used.")
+            return
+        if start_model is None:
+            if instance.model is None:
+                logger.error_on_rank_0(
+                    f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' argument.")
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
+            return
+        if isinstance(start_model, torch.nn.Module):
+            instance.model = start_model
+        else:
+            logger.error_on_rank_0(f"The 'model' parameter of start must be a torch.nn.Module type.")
+            raise MsprobeException(
+                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")

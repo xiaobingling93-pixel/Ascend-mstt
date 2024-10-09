@@ -1,4 +1,16 @@
-# 1 精度预检工具
+
+
+# 1 数据采集
+
+1. dump.json中API或Module统计信息里出现null或None值的原因是什么？
+
+   dump.json里出现null或None值的可能性较多，常见的场景有：
+
+   - 输入或者输出参数本身是一个None值。
+   - 输入参数或输出参数类型当前工具不支持，会有日志打印提醒。
+   - 输入或者输出tensor的dtype为bool时，Mean和Norm等字段为null。
+
+# 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？
 
@@ -52,20 +64,20 @@
    | `__matmul__`    | 矩阵乘法         |
    | `__mod__`       | %                |
    | `__mul__`       | *                |
-   | `__nonzero__`   | 同`__bool__`     |
+   | `__nonzero__`   | 同 `__bool__`     |
    | `__or__`        | \|               |
    | `__radd__`      | +（反向）        |
    | `__rmul__`      | *（反向）        |
    | `__rshift__`    | >>               |
    | `__sub__`       | -                |
-   | `__truediv__`   | 同`__div__`      |
+   | `__truediv__`   | 同 `__div__`      |
    | `__xor__`       | ^                |
 
-# 2 精度比对工具
+# 3 精度比对(PyTorch)
 
-## 2.1 工具使用
+## 3.1 工具使用
 
-### 2.1.1 dump 指定融合算子
+### 3.1.1 dump 指定融合算子
 
 数据采集当前支持融合算子的输入输出，需要在 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 中添加，比如以下代码段调用的 softmax 融合算子。
 
@@ -83,7 +95,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
 （npu_scaled_masked_softmax 融合算子工具已支持 dump，本例仅供参考）。
 
-## 2.2 常见问题
+## 3.2 常见问题
 
 1. 在同一个目录多次执行 dump 会冲突吗？
 
@@ -97,7 +109,7 @@ def npu_forward_fused_softmax(self, input_, mask):
 
     答：torch 版本和硬件差异属于正常情况。
 
-## 2.3 异常情况
+## 3.3 异常情况
 
 1. HCCL 报错： error code: EI0006。
 
@@ -168,9 +180,9 @@ def npu_forward_fused_softmax(self, input_, mask):
 
     答：注释工具目录 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中 `Tensor: ` 下的 `- __getitem__`，工具会跳过采集该 API。如果是需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
-11. 添加 msprobe 工具后 F.gelu 触发 ValueError 报错：`activation_func must be F.gelu`等。
+11. 添加 msprobe 工具后 F.gelu 触发 ValueError 报错：`activation_func must be F.gelu` 等。以及采集 Megatron 数据时报错：`ValueError(Only support fusion of gelu and swiglu)`。
 
-    答：注释工具目录 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中 `functional: ` 下的 `-gelu`，工具会跳过采集该 API。如果需要采集关键位置 api 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
+    答：这一类问题是因为工具本身封装了 torch 算子，所以校验算子名时会报错。注释 `mstt/debug/accuracy_tools/msprobe/pytorch/hook_module/support_wrap_ops.yaml` 文件中的 `-gelu` 或者 `-silu`，工具会跳过采集该 API。如果需要采集关键位置 API 也可以考虑根据报错堆栈信息注释引发报错的类型检查。
 
 12. 添加 msprobe 工具后触发与 AsStrided 算子相关、或者编译相关的报错，如：`Failed to compile Op [AsStrided]`。
 

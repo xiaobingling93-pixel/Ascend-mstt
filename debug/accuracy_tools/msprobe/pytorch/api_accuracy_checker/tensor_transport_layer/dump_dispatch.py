@@ -1,14 +1,12 @@
 import os
 from functools import wraps
 
-import yaml
 import torch
 from torch.utils._python_dispatch import TorchDispatchMode
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.utils import get_tensor_rank
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.core.common.file_utils import load_yaml
 
 

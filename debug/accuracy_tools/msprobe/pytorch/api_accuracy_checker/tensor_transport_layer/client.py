@@ -68,6 +68,15 @@ class TCPClient:
     def run_reactor():
         reactor.run(installSignalHandlers=False)
 
+    def check_tls_path(self):
+        client_key = os.path.join(self.tls_path, "client.key")
+        client_crt = os.path.join(self.tls_path, "client.crt")
+        if not os.path.exists(client_key):
+            raise Exception(f"client_key: {client_key} is not exists.")
+        if not os.path.exists(client_crt):
+            raise Exception(f"client_crt: {client_crt} is not exists.")
+        return client_key, client_crt
+
     def start(self):
         def conn_callback(cur_protocol):
             if cur_protocol.transport and cur_protocol.transport.getPeer().host == self.host:
@@ -81,8 +90,6 @@ class TCPClient:
             time.sleep(1)
             reactor.stop()
             logger.error(f"Failed to connected {self.host} {self.port}. Reason is {failure.getErrorMessage()}")
-            os.kill(os.getpid(), signal.SIGKILL)
-            os.kill(os.getppid(), signal.SIGKILL)
 
         def cur_protocol():
             return self.tcp_manager
@@ -91,8 +98,7 @@ class TCPClient:
         self.factory.protocol = cur_protocol
         if self.tls_path:
             from twisted.internet import ssl
-            client_key = os.path.join(self.tls_path, "client.key")
-            client_crt = os.path.join(self.tls_path, "client.crt")
+            client_key, client_crt = self.check_tls_path()
             client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt)
             endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
         else:
@@ -124,8 +130,6 @@ class TCPClient:
         while not self._ready_to_exit():
             if not self.check_client_alive():
                 break
-            time.sleep(1)
-        while not self.tcp_manager.kill_process:
             time.sleep(1)
 
     def add_to_sending_queue(self, data: Union[bytes, TCPDataItem], rank: int = 0, step: int = 0):

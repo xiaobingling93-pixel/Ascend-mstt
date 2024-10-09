@@ -28,7 +28,7 @@ from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_utils import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_utils import FileChecker, check_file_or_directory_path, remove_path
+from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type
 from msprobe.pytorch.common.log import logger
 
 
@@ -71,21 +71,19 @@ class Util:
         check_path_executable(path)
 
     @staticmethod
-    def get_subdir_count(self, directory):
+    def get_subdir_count(directory):
         subdir_count = 0
-        path_checker = FileChecker(directory)
-        path_checker.common_check()
+        check_file_or_directory_path(directory, isdir=True)
         for _, dirs, _ in os.walk(directory):
             subdir_count += len(dirs)
             break
         return subdir_count
 
     @staticmethod
-    def get_subfiles_count(self, directory):
+    def get_subfiles_count(directory):
         file_count = 0
         for root, _, files in os.walk(directory, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
+            check_file_or_directory_path(root, isdir=True)
             file_count += len(files)
             path_depth = root.count(os.sep)
             if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
@@ -95,7 +93,7 @@ class Util:
         return file_count
 
     @staticmethod
-    def get_sorted_subdirectories_names(self, directory):
+    def get_sorted_subdirectories_names(directory):
         subdirectories = []
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -104,7 +102,7 @@ class Util:
         return sorted(subdirectories)
 
     @staticmethod
-    def get_sorted_files_names(self, directory):
+    def get_sorted_files_names(directory):
         files = []
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -113,7 +111,7 @@ class Util:
         return sorted(files)
 
     @staticmethod
-    def check_npy_files_valid_in_dir(self, dir_path):
+    def check_npy_files_valid_in_dir(dir_path):
         for file_name in os.listdir(dir_path):
             file_path = os.path.join(dir_path, file_name)
             check_file_or_directory_path(file_path)
@@ -123,18 +121,18 @@ class Util:
         return True
 
     @staticmethod
-    def get_md5_for_numpy(self, obj):
+    def get_md5_for_numpy(obj):
         np_bytes = obj.tobytes()
         md5_hash = hashlib.md5(np_bytes)
         return md5_hash.hexdigest()
 
     @staticmethod
-    def deal_with_dir_or_file_inconsistency(self, output_path):
+    def deal_with_dir_or_file_inconsistency(output_path):
         remove_path(output_path)
         raise ParseException("Inconsistent directory structure or file.")
 
     @staticmethod
-    def deal_with_value_if_has_zero(self, data):
+    def deal_with_value_if_has_zero(data):
         if data.dtype in Const.FLOAT_TYPE:
             zero_mask = (data == 0)
             # 给0的地方加上eps防止除0
@@ -147,10 +145,9 @@ class Util:
         return data
     
     @staticmethod
-    def dir_contains_only(self, path, endfix):
+    def dir_contains_only(path, endfix):
         for root, _, files in os.walk(path, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
+            check_file_or_directory_path(root, isdir=True)
             for file in files:
                 if not file.endswith(endfix):
                     return False
@@ -162,11 +159,11 @@ class Util:
         return True
     
     @staticmethod
-    def localtime_str(self):
+    def localtime_str():
         return time.strftime("%Y%m%d%H%M%S", time.localtime())
     
     @staticmethod
-    def change_filemode_safe(self, path):
+    def change_filemode_safe(path):
         change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
     @staticmethod
@@ -183,7 +180,7 @@ class Util:
         if not cmd:
             self.log.error("Commond is None")
             return -1
-        self.log.info("[RUN CMD]: %s", cmd)
+        self.log.info("[RUN CMD]: %s" % cmd)
         cmd = cmd.split(" ")
         complete_process = subprocess.run(cmd, shell=False)
         return complete_process.returncode
@@ -205,7 +202,7 @@ class Util:
         result = subprocess.run(
             [self.python, target_file, "--help"], stdout=subprocess.PIPE, shell=False)
         if result.returncode == 0:
-            self.log.info("Check [%s] success.", target_file)
+            self.log.info("Check [%s] success." % (target_file))
         else:
             self.log.error("Check msaccucmp failed in dir %s" % target_file)
             self.log.error("Please specify a valid msaccucmp.py path or install the cann package")
@@ -244,8 +241,11 @@ class Util:
 
     def check_path_valid(self, path):
         path = self.path_strip(path)
-        path_checker = FileChecker(path)
-        path_checker.common_check()
+        if not path or not os.path.exists(path):
+            self.log.error("The path %s does not exist." % path)
+            raise ParseException(ParseException.PARSE_INVALID_PATH_ERROR)
+        isdir = check_file_type(path) == FileCheckConst.DIR
+        check_file_or_directory_path(path, isdir=isdir)
         return True
 
     def check_files_in_path(self, path):
@@ -274,8 +274,7 @@ class Util:
         file_list = {}
         re_pattern = re.compile(pattern)
         for dir_path, _, file_names in os.walk(path, topdown=True):
-            path_checker = FileChecker(dir)
-            path_checker.common_check()
+            check_file_or_directory_path(dir_path, isdir=True)
             for name in file_names:
                 match = re_pattern.match(name)
                 if not match:
@@ -314,3 +313,8 @@ class Util:
         dir1_count = self.get_subdir_count(dir1)
         dir2_count = self.get_subdir_count(dir2)
         return dir1_count == dir2_count
+
+    def check_positive(self, value):
+        if value <= 0.0:
+            self.log.error("Invalid value. It must be greater than 0.")
+            raise ParseException(ParseException.PARSE_INVALID_DATA_ERROR)

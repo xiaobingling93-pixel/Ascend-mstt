@@ -19,6 +19,7 @@ import shutil
 import platform
 
 
+
 class PathManager:
     MAX_PATH_LENGTH = 4096
     MAX_FILE_NAME_LENGTH = 255
@@ -80,12 +81,11 @@ class PathManager:
             msg = f"Invalid input path which is a soft link."
             raise RuntimeError(msg)
 
-        if platform.system().lower() == cls.WINDOWS:
-            pattern = r'(\.|:|\\|/|_|-|\s|[~0-9a-zA-Z\u4e00-\u9fa5])+'
-        else:
-            pattern = r'(\.|/|_|-|\s|[~0-9a-zA-Z])+'
+        pattern = r'(\.|:|\\|/|_|-|\s|[~0-9a-zA-Z\u4e00-\u9fa5])+'
         if not re.fullmatch(pattern, path):
-            msg = f"Invalid input path."
+            illegal_pattern = r'([^\.\:\\\/\_\-\s~0-9a-zA-Z\u4e00-\u9fa5])+'
+            invalid_obj = re.search(illegal_pattern, path).group()
+            msg = f"Invalid path which has illagal characters \"{invalid_obj}\"."
             raise RuntimeError(msg)
 
         path_split_list = path.split("/")
@@ -199,4 +199,4 @@ class PathManager:
         if os.path.islink(path):
             msg = f"Invalid input path which is a soft link."
             raise RuntimeError(msg)
-        return os.path.realpath(path)
+        return os.path.abspath(path)

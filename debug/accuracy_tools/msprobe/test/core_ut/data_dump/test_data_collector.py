@@ -33,7 +33,7 @@ class TestDataCollector(unittest.TestCase):
             "dump_path": "./ut_dump",
         }
         with patch("msprobe.pytorch.pt_config.FileOpen", mock_open(read_data='')), \
-                patch("msprobe.pytorch.pt_config.json.load", return_value=mock_json_data):
+                patch("msprobe.pytorch.pt_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json", Const.STATISTICS)
         config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
         self.data_collector = DataCollector(config)
@@ -70,7 +70,7 @@ class TestDataCollector(unittest.TestCase):
         with patch.object(DataCollector, "update_data", return_value="msg") as mock_update_data, \
              patch.object(DataCollector, "write_json") as mock_write_json, \
              patch("msprobe.core.data_dump.data_collector.logger.debug") as mock_debug, \
-             patch("msprobe.core.data_dump.json_writer.DataWriter.flush_data_when_buffer_is_full") as mock_flush:
+             patch("msprobe.core.data_dump.json_writer.DataWriter.flush_data_periodically") as mock_flush:
             self.data_collector.handle_data("Tensor.add", {"min": 0})
             msg = "msprobe is collecting data on Tensor.add. "
             mock_update_data.assert_called_with({"min": 0}, msg)
