@@ -179,7 +179,7 @@ def execute_command(cmd):
         line = process.stdout.readline()
         line = line.strip()
         if line:
-            print(line)
+            logger.info(line)
     if process.returncode != 0:
         logger.error('Failed to execute command:%s' % " ".join(cmd))
         raise CompareException(CompareException.INVALID_DATA_ERROR)
@@ -313,26 +313,29 @@ def get_step_or_rank_from_string(step_or_rank, obj):
         try:
             borderlines = int(splited[0]), int(splited[1])
         except (ValueError, IndexError) as e:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    "The hyphen(-) must start and end with decimal numbers.") from e
     else:
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                               f'The string parameter for {obj} only supports formats like "3-5". Now string parameter for {obj} is "{step_or_rank}".')
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f'The string parameter for {obj} only supports formats like "3-5". '
+                               f'Now string parameter for {obj} is "{step_or_rank}".')
     if all(Const.STEP_RANK_MAXIMUM_RANGE[0] <= b <= Const.STEP_RANK_MAXIMUM_RANGE[1] for b in borderlines):
         if borderlines[0] <= borderlines[1]:
             continual_step_or_rank = list(range(borderlines[0], borderlines[1] + 1))
         else:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                               f'For the hyphen(-) in {obj}, the left boundary ({borderlines[0]}) cannot be greater than the right boundary ({borderlines[1]}).')
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f'For the hyphen(-) in {obj}, the left boundary ({borderlines[0]}) cannot be '
+                                   f'greater than the right boundary ({borderlines[1]}).')
     else:
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
-                               f"The boundaries must fall within the range of [{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f"The boundaries must fall within the range of "
+                               f"[{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
     return continual_step_or_rank
 
 
 def get_real_step_or_rank(step_or_rank_input, obj):
     if obj not in [Const.STEP, Const.RANK]:
-        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f"Only support parsing {[Const.STEP, Const.RANK]}, the current parsing object is {obj}.")
     if step_or_rank_input is None:
         return []
@@ -341,10 +344,10 @@ def get_real_step_or_rank(step_or_rank_input, obj):
     real_step_or_rank = []
     for element in step_or_rank_input:
         if not isinstance(element, (int, str)):
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"Each element of {obj} must be non-negative, currently it is {element}.")
         if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
             real_step_or_rank.append(element)

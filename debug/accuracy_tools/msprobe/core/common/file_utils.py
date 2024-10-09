@@ -482,7 +482,7 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
         for row in data:
             for cell in row:
                 if not csv_value_is_valid(cell):
-                    raise RuntimeError(f"Malicious value [{cell}] is not allowed " \
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
                                        f"to be written into the csv: {filepath}.")
 
     check_path_before_create(filepath)
