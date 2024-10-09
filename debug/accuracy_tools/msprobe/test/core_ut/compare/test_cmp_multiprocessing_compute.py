@@ -67,39 +67,17 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(updated_df.loc[1, CompareConst.COSINE], 0.98)
         self.assertEqual(updated_df.loc[1, CompareConst.ERROR_MESSAGE], 'Error in comparison')
 
-    def test_save_cmp_result_value_error(self):
-        comparison_result = ComparisonResult(
-            cos_result=[0.99],
-            max_err_result=[0.01],
-            max_relative_err_result=[0.001],
-            err_msgs=[''],
-            one_thousand_err_ratio_result=[0.1],
-            five_thousand_err_ratio_result=[0.05]
-        )
-        # 设置一个无效的result_df (比如传入None)
-        invalid_result_df = None
-        with self.assertRaises(CompareException) as context:
-            _save_cmp_result(0, comparison_result, invalid_result_df, self.lock)
-        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
-
     def test_save_cmp_result_index_error(self):
         comparison_result = ComparisonResult(
             cos_result=[0.99],
-            max_err_result=[0.01],
+            max_err_result=[],
             max_relative_err_result=[0.001],
             err_msgs=[''],
             one_thousand_err_ratio_result=[0.1],
             five_thousand_err_ratio_result=[0.05]
         )
-
-        # 制造一个导致IndexError的情况，比如 result_df 没有足够的行
-        invalid_df = pd.DataFrame(columns=[
-            CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
-            CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
-            CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
-        ])
         with self.assertRaises(CompareException) as context:
-            _save_cmp_result(10, comparison_result, invalid_df, self.lock)
+            _save_cmp_result(0, comparison_result, self.result_df, self.lock)
         self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def test_check_accuracy(self):

@@ -214,6 +214,8 @@ op_result = [
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data')
 base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data2')
+base_dir3 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data3')
+pt_dir = os.path.join(base_dir3, f'dump_data_dir')
 
 
 def generate_dump_json(base_dir):
@@ -261,21 +263,20 @@ class TestUtilsMethods(unittest.TestCase):
     def setUp(self):
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
         os.makedirs(base_dir2, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir3, mode=0o750, exist_ok=True)
+        os.makedirs(pt_dir, mode=0o750, exist_ok=True)
 
-        self.result_df = pd.DataFrame({
-            'npu_op_name': ['op1', 'op2'],
-            'bench_op_name': ['bench_op1', 'bench_op2']
-        })
         self.lock = threading.Lock()
-        self.input_param = {
-            "is_print_compare_log": False
-        }
 
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
         if os.path.exists(base_dir2):
             shutil.rmtree(base_dir2)
+        if os.path.exists(pt_dir):
+            shutil.rmtree(pt_dir)
+        if os.path.exists(base_dir3):
+            shutil.rmtree(base_dir3)
 
     def test_get_accuracy_graph_mode(self):
         result = []
@@ -464,24 +465,30 @@ class TestUtilsMethods(unittest.TestCase):
         }
         output_path = base_dir2
 
-        Comparator().compare_core(input_params, output_path, summary_compare=True)
+        PTComparator().compare_core(input_params, output_path, summary_compare=True)
 
         output_files = os.listdir(output_path)
         self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
 
     def test_compare_ops(self):
-        updated_df = Comparator().compare_ops(idx=0, dump_path_dict={}, result_df=self.result_df, lock=self.lock,
-                                              input_param=self.input_param)
+        generate_dump_json(base_dir3)
+        generate_stack_json(base_dir3)
+        generate_pt(pt_dir)
+        dump_path = os.path.join(base_dir3, 'dump.json')
+        stack_path = os.path.join(base_dir3, 'stack.json')
+        input_param = {'npu_json_path': dump_path, 'bench_json_path': dump_path, 'stack_json_path': stack_path,
+                       'is_print_compare_log': True, 'npu_dump_data_dir': pt_dir, 'bench_dump_data_dir': pt_dir}
+        dump_path_dict = {'Functional.linear.0.forward.input.0': ['Functional.linear.0.forward.input.0.pt',
+                                                                  'Functional.linear.0.forward.input.0.pt']}
+        result_df = pd.DataFrame({
+            'NPU Name': ['Functional.linear.0.forward.input.0'],
+            'Bench Name': ['Functional.linear.0.forward.input.0']
+        })
+        updated_df = Comparator().compare_ops(idx=0, dump_path_dict=dump_path_dict, result_df=result_df, lock=self.lock,
+                                              input_param=input_param)
 
-        # 验证 _save_cmp_result 是否被正确调用
-        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 0.99)
-        self.assertEqual(updated_df.loc[0, CompareConst.MAX_ABS_ERR], 0.01)
-        self.assertEqual(updated_df.loc[1, CompareConst.COSINE], 0.98)
-        self.assertEqual(updated_df.loc[1, CompareConst.ERROR_MESSAGE], "error in comparison")
-
-        # 验证 compare_by_op 被调用了两次，分别对应不同的 op 名
-        Comparator().compare_by_op.assert_any_call('op1', 'bench_op1', {}, self.input_param)
-        Comparator().compare_by_op.assert_any_call('op2', 'bench_op2', {}, self.input_param)
+        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 1.0)
+        self.assertEqual(updated_df.loc[0, CompareConst.MAX_ABS_ERR], 0)
 
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
