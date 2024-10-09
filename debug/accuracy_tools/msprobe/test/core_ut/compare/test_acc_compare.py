@@ -484,7 +484,7 @@ class TestUtilsMethods(unittest.TestCase):
             'NPU Name': ['Functional.linear.0.forward.input.0'],
             'Bench Name': ['Functional.linear.0.forward.input.0']
         })
-        updated_df = Comparator().compare_ops(idx=0, dump_path_dict=dump_path_dict, result_df=result_df, lock=self.lock,
+        updated_df = PTComparator().compare_ops(idx=0, dump_path_dict=dump_path_dict, result_df=result_df, lock=self.lock,
                                               input_param=input_param)
 
         self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 1.0)
