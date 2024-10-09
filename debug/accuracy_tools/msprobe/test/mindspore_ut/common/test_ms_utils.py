@@ -15,8 +15,24 @@
 # limitations under the License.
 """
 import unittest
+from unittest.mock import MagicMock, patch, call
+import numpy as np
+import mindspore as ms
+import os
+import random
 
-from msprobe.mindspore.common.utils import MsprobeStep
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.mindspore.common.utils import (get_rank_if_initialized,
+    convert_bf16_to_fp32,
+    save_tensor_as_npy,
+    convert_to_int,
+    list_lowest_level_directories,
+    seed_all,
+    MsprobeStep)
+
+class MockCell:
+    def __init__(self):
+        self.mindstudio_reserved_name = None
 
 
 class TestMsprobeStep(unittest.TestCase):
@@ -53,3 +69,111 @@ class TestMsprobeStep(unittest.TestCase):
         self.assertTrue(self.msprobe_step.debugger.stop_called)
         self.assertTrue(self.msprobe_step.debugger.step_called)
         self.assertTrue(self.msprobe_step.debugger.stop_called_first)
+
+
+class TestMsprobeStep(unittest.TestCase):
+    def setUp(self):
+        class Debugger:
+            def __init__(self):
+                self.start_called = False
+                self.stop_called = False
+                self.step_called = False
+                self.stop_called_first = False
+
+            def start(self):
+                self.start_called = True
+
+            def stop(self):
+                self.stop_called = True
+
+            def step(self):
+                if self.stop_called:
+                    self.stop_called_first = True
+                self.step_called = True
+
+        debugger = Debugger()
+        self.msprobe_step = MsprobeStep(debugger)
+
+    def test_on_train_step_begin(self):
+        self.msprobe_step.on_train_step_begin("run_context")
+        self.assertTrue(self.msprobe_step.debugger.start_called)
+        self.assertFalse(self.msprobe_step.debugger.stop_called)
+        self.assertFalse(self.msprobe_step.debugger.step_called)
+
+    def test_on_train_step_end(self):
+        self.msprobe_step.on_train_step_end("run_context")
+        self.assertFalse(self.msprobe_step.debugger.start_called)
+        self.assertTrue(self.msprobe_step.debugger.stop_called)
+        self.assertTrue(self.msprobe_step.debugger.step_called)
+        self.assertTrue(self.msprobe_step.debugger.stop_called_first)
+
+
+class TestMsprobeFunctions(unittest.TestCase):
+
+    @patch('mindspore.communication.GlobalComm.INITED', True)
+    @patch('mindspore.communication.get_rank', return_value=0)
+    def test_get_rank_if_initialized(self, mock_get_rank):
+        rank = get_rank_if_initialized()
+        self.assertEqual(rank, 0)
+        mock_get_rank.assert_called_once()
+
+    @patch('mindspore.Tensor')
+    def test_convert_bf16_to_fp32(self, mock_tensor):
+        mock_tensor.dtype = ms.bfloat16
+        mock_tensor.to.return_value = mock_tensor
+        result = convert_bf16_to_fp32(mock_tensor)
+        self.assertEqual(result, mock_tensor)
+        mock_tensor.to.assert_called_once_with(ms.float32)
+
+        # Test when tensor is not bfloat16
+        mock_tensor.dtype = ms.float32
+        result = convert_bf16_to_fp32(mock_tensor)
+        self.assertEqual(result, mock_tensor)
+        mock_tensor.to.assert_not_called()
+
+    @patch('os.path.exists', return_value=True)
+    @patch('msprobe.core.common.file_utils.save_npy')
+    def test_save_tensor_as_npy(self, mock_save_npy, mock_exists):
+        tensor = MagicMock()
+        tensor.dtype = ms.bfloat16
+        tensor.asnumpy.return_value = np.array([1, 2, 3])
+
+        with patch('msprobe.core.common.utils.convert_bf16_to_fp32', return_value=tensor):
+            file_path = "test.npy"
+            save_tensor_as_npy(tensor, file_path)
+
+            # Assert the conversion and saving
+            tensor.asnumpy.assert_called_once()
+            mock_save_npy.assert_called_once_with(np.array([1, 2, 3]), file_path)
+
+    def test_convert_to_int(self):
+        self.assertEqual(convert_to_int("123"), 123)
+        self.assertEqual(convert_to_int("abc"), -1)
+
+    @patch('os.listdir', return_value=['dir1', 'dir2'])
+    @patch('os.path.isdir', side_effect=lambda x: x in ['dir1', 'dir2'])
+    @patch('msprobe.core.common.file_utils.check_path_exists')  # 确保正确路径
+    def test_list_lowest_level_directories(self, mock_check_exists):
+        mock_check_exists.return_value = None
+        os.listdir = lambda x: ['dir1', 'dir2'] if x == 'root' else []
+
+        lowest_dirs = list_lowest_level_directories('root')
+        self.assertEqual(lowest_dirs, ['dir1', 'dir2'])
+
+    @patch('os.environ', new_callable=dict)
+    @patch('mindspore.set_seed')
+    @patch('random.seed')
+    @patch('mindspore.set_context')
+    @patch('msprobe.core.common.utils.check_seed_all')
+    def test_seed_all(self, mock_check_seed_all, mock_set_context, mock_random_seed, mock_set_seed, mock_environ):
+        seed_all(42, True)
+
+        mock_check_seed_all.assert_called_once_with(42, True)
+        self.assertEqual(mock_environ['PYTHONHASHSEED'], '42')
+        mock_set_seed.assert_called_once_with(42)
+        mock_random_seed.assert_called_once_with(42)
+        mock_set_context.assert_called_once_with(deterministic="ON")
+
+
+if __name__ == "__main__":
+    unittest.main()
