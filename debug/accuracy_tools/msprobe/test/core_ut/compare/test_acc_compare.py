@@ -213,6 +213,7 @@ op_result = [
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data')
+base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data2')
 
 
 def generate_dump_json(base_dir):
@@ -259,6 +260,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir2, mode=0o750, exist_ok=True)
 
         self.result_df = pd.DataFrame({
             'npu_op_name': ['op1', 'op2'],
@@ -272,6 +274,8 @@ class TestUtilsMethods(unittest.TestCase):
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
+        if os.path.exists(base_dir2):
+            shutil.rmtree(base_dir2)
 
     def test_get_accuracy_graph_mode(self):
         result = []
@@ -450,7 +454,22 @@ class TestUtilsMethods(unittest.TestCase):
         }
         self.assertEqual(result, ops_all)
 
-    def test_compare_ops_success(self):
+    def test_compare_core_basic(self):
+        generate_dump_json(base_dir2)
+        generate_stack_json(base_dir2)
+        input_params = {
+            "npu_json_path": os.path.join(base_dir2, "dump.json"),
+            "bench_json_path": os.path.join(base_dir2, "dump.json"),
+            "stack_json_path": os.path.join(base_dir2, "stack.json"),
+        }
+        output_path = base_dir2
+
+        Comparator().compare_core(input_params, output_path, summary_compare=True)
+
+        output_files = os.listdir(output_path)
+        self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
+
+    def test_compare_ops(self):
         updated_df = Comparator().compare_ops(idx=0, dump_path_dict={}, result_df=self.result_df, lock=self.lock,
                                               input_param=self.input_param)
 
