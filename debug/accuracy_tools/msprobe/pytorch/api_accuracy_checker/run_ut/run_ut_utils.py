@@ -208,6 +208,6 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     return cpu_args, cpu_kwargs
 
 
-def record_skip_info(api_full_name, compare, fwd_compare_alg_results):
-    result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
+def record_skip_info(api_full_name, compare, compare_alg_results):
+    result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [compare_alg_results], None, 0)
     compare.record_results(result_info)
