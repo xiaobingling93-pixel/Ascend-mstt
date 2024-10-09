@@ -35,9 +35,11 @@ class CheckOneThousandErrorRatio(HighlightCheck):
     def apply(self, info, color_columns, summary_compare=True):
         api_in, api_out, num = info
         one_thousand_index = get_header_index('One Thousandth Err Ratio', summary_compare)
-        if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
+        if (not isinstance(api_in[one_thousand_index], (float, int)) or
+                not isinstance(api_out[one_thousand_index], (float, int))):
             return
-        if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
+        if (api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and
+                api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED):
             color_columns.red.append(num)
         elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
             color_columns.yellow.append(num)
@@ -67,7 +69,8 @@ class CheckMaxRelativeDiff(HighlightCheck):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
             color_columns.red.append(num)
-        elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
+        elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
+              input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
             color_columns.yellow.append(num)
 
 
@@ -194,7 +197,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
             input_num = num
         else:
             output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare, md5_compare)
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
+                        summary_compare, md5_compare)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):

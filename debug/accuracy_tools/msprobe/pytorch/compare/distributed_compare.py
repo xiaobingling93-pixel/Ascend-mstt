@@ -55,12 +55,14 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         }
         try:
             summary_compare, md5_compare = task_dumppath_get(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, dump_result_param.get('is_print_compare_log', True))
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match,
+                                      dump_result_param.get('is_print_compare_log', True))
             create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, summary_compare=summary_compare, md5_compare=md5_compare)
+            check_compare_param(dump_result_param, output_path,
+                                summary_compare=summary_compare, md5_compare=md5_compare)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
         pt_comparator = PTComparator()
-        pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', summary_compare=summary_compare,
-                     md5_compare=md5_compare, **kwargs)
+        pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}',
+                                   summary_compare=summary_compare, md5_compare=md5_compare, **kwargs)

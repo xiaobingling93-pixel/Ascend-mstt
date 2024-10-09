@@ -24,6 +24,7 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
+
 class Advisor:
     """
     Class for generate advisor

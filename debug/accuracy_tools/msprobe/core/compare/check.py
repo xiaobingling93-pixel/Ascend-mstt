@@ -85,10 +85,10 @@ def fuzzy_check_op(npu_name_list, bench_name_list):
 
 
 def fuzzy_check_name(npu_name, bench_name):
-    if "forward" in npu_name and "forward" in bench_name:
-        is_match = rename_api(npu_name, "forward") == rename_api(bench_name, "forward")
-    elif "backward" in npu_name and "backward" in bench_name:
-        is_match = rename_api(npu_name, "backward") == rename_api(bench_name, "backward")
+    if Const.FORWARD in npu_name and Const.FORWARD in bench_name:
+        is_match = rename_api(npu_name, Const.FORWARD) == rename_api(bench_name, Const.FORWARD)
+    elif Const.BACKWARD in npu_name and Const.BACKWARD in bench_name:
+        is_match = rename_api(npu_name, Const.BACKWARD) == rename_api(bench_name, Const.BACKWARD)
     else:
         is_match = npu_name == bench_name
     return is_match

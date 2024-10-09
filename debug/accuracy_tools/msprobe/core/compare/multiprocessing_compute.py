@@ -93,7 +93,8 @@ def read_dump_data(result_df):
     except IndexError as e:
         logger.error('result dataframe elements can not be access.')
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    
+
+
 @dataclass
 class ComparisonResult:
     cos_result: list
@@ -125,9 +126,12 @@ def _save_cmp_result(offset, result: ComparisonResult, result_df, lock):
             result_df.loc[process_index, CompareConst.MAX_ABS_ERR] = result.max_err_result[i]
             result_df.loc[process_index, CompareConst.MAX_RELATIVE_ERR] = result.max_relative_err_result[i]
             result_df.loc[process_index, CompareConst.ERROR_MESSAGE] = result.err_msgs[i]
-            result_df.loc[process_index, CompareConst.ACCURACY] = check_accuracy(result.cos_result[i], result.max_err_result[i])
-            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = result.one_thousand_err_ratio_result[i]
-            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = result.five_thousand_err_ratio_result[i]
+            result_df.loc[process_index, CompareConst.ACCURACY] = (
+                check_accuracy(result.cos_result[i], result.max_err_result[i]))
+            result_df.loc[process_index, CompareConst.ONE_THOUSANDTH_ERR_RATIO] = (
+                result.one_thousand_err_ratio_result)[i]
+            result_df.loc[process_index, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = (
+                result.five_thousand_err_ratio_result)[i]
         return result_df
     except ValueError as e:
         logger.error('result dataframe is not found.')

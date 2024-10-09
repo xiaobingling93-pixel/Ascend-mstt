@@ -97,7 +97,7 @@ class Comparator:
         return result_df   
     
     @classmethod
-    def gen_merge_list(self, json_data, op_name,stack_json_data, summary_compare, md5_compare):
+    def gen_merge_list(cls, json_data, op_name, stack_json_data, summary_compare, md5_compare):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
@@ -176,7 +176,8 @@ class Comparator:
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
                 read_err_npu = True
-                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data, summary_compare, md5_compare)
+                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data,
+                                                     summary_compare, md5_compare)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
             except StopIteration:
@@ -185,7 +186,8 @@ class Comparator:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
                 check_op_str_pattern_valid(op_name_bench)
-                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data, summary_compare, md5_compare)
+                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data,
+                                                       summary_compare, md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -320,9 +322,11 @@ class Comparator:
                 if frame_name == "MSComparator":
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
                     if self.cross_frame:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
+                                                bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
                     else:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
+                                                bench_op_name + Const.NUMPY_SUFFIX)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
                     b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
@@ -419,13 +423,14 @@ class Comparator:
             bench_op_name = result_df.iloc[i, 1]
             if is_print_compare_log:
                 logger.info("start compare: {}".format(npu_op_name))
-            cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = self.compare_by_op(
-                npu_op_name, bench_op_name, dump_path_dict, input_param)
+            cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
+                self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
             if is_print_compare_log:
                 logger.info(
-                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, "
-                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
-                                                        one_thousand_err_ratio, five_thousand_err_ratio))
+                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
+                    one_thousand_err_ratio {}, "
+                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
+                                                        err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
             cos_result.append(cos_sim)
             max_err_result.append(max_abs_err)
             max_relative_err_result.append(max_relative_err)
@@ -446,7 +451,8 @@ class Comparator:
     
     def _do_multi_process(self,input_parma, result_df):
         try:
-            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
+            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
+                                              multiprocessing.Manager().RLock())
             return result_df
         except ValueError as e:
             logger.error('result dataframe is not found.')
