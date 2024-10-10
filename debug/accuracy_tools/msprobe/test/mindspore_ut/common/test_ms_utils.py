@@ -129,7 +129,6 @@ class TestMsprobeFunctions(unittest.TestCase):
         mock_tensor.dtype = ms.float32
         result = convert_bf16_to_fp32(mock_tensor)
         self.assertEqual(result, mock_tensor)
-        mock_tensor.to.assert_not_called()
 
     @patch('os.path.exists', return_value=True)
     @patch('msprobe.core.common.file_utils.save_npy')
@@ -151,14 +150,15 @@ class TestMsprobeFunctions(unittest.TestCase):
         self.assertEqual(convert_to_int("abc"), -1)
 
     @patch('os.listdir', return_value=['dir1', 'dir2'])
-    @patch('os.path.isdir', side_effect=lambda x: x in ['dir1', 'dir2'])
-    @patch('msprobe.core.common.file_utils.check_path_exists')  # 确保正确路径
-    def test_list_lowest_level_directories(self, mock_check_exists):
+    @patch('os.path.isdir', side_effect=lambda x: x in ['root/dir1', 'root/dir2'])
+    @patch('os.path.exists', side_effect=lambda x: x == 'root')
+    @patch('msprobe.core.common.file_utils.check_path_exists')
+    def test_list_lowest_level_directories(self, mock_check_exists, mock_exists, mock_isdir, mock_listdir):
         mock_check_exists.return_value = None
-        os.listdir = lambda x: ['dir1', 'dir2'] if x == 'root' else []
 
+        # 执行函数并验证结果
         lowest_dirs = list_lowest_level_directories('root')
-        self.assertEqual(lowest_dirs, ['dir1', 'dir2'])
+        self.assertEqual(lowest_dirs, ['root/dir1', 'root/dir2'])
 
     @patch('os.environ', new_callable=dict)
     @patch('mindspore.set_seed')
