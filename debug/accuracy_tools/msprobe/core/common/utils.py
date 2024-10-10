@@ -75,7 +75,7 @@ class MsprobeBaseException(Exception):
         self.error_info = error_info
 
     def __str__(self):
-        return f"Error Code {self.code}: {self.error_info}"
+        return self.error_info
 
 
 class CompareException(MsprobeBaseException):
