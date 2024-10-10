@@ -6,7 +6,7 @@ import json
 import numpy as np
 from unittest import TestCase, mock
 from mindspore import Tensor
-from msprobe.mindspore.grad_probe.global_analyzer import CSVGenerator
+from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator
 from msprobe.core.grad_probe.constant import GradConst
 
 class TestGradAnalyzer(TestCase):
