@@ -154,15 +154,15 @@ o_result_unmatch_3 = [
 tensor_list = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'Max': 0.33033010363578796,
      'Min': -0.331031858921051,'Mean': -0.030964046716690063, 'Norm': 2.2533628940582275, 'requires_grad': True,
-     'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1},
+     'full_op_name': 'Tensor.add_.0.forward.input.0'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
      'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1'},
     {'full_op_name': 'Tensor.add_.0.forward.input.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'md5': 2},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 3}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0'}
 ]
 result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.input.1',
                               'Tensor.add_.0.forward.input.alpha.0', 'Tensor.add_.0.forward.output.0'],
@@ -174,6 +174,26 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                               [-0.1, -0.1, -0.1, -0.1],
                               [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
                   'stack_info': []}
+
+tensor_list_md5 = [
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1},
+    {'full_op_name': 'Tensor.add_.0.forward.kwarg.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 2}
+]
+result_op_dict_md5 = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.kwarg.alpha.0',
+                                  'Tensor.add_.0.forward.output.0'],
+                      'input_struct': [('torch.float32', [16, 1, 3, 3], 1)],
+                      'kwargs_struct': [("<class 'float'>", '[]', None)],
+                      'output_struct': [('torch.float32', [16, 1, 3, 3], 2)],
+                      'summary': [[0.003992878366261721, -0.008102823048830032, -0.0002002553956117481, 0.02844562754034996],
+                                  [-0.1, -0.1, -0.1, -0.1],
+                                  [0.33033010363578796, -0.331031858921051, -0.030964046716690063, 2.2533628940582275]],
+                      'stack_info': []}
 
 
 base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils1')
@@ -284,7 +304,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(op_dict, result_op_dict)
 
     def test_merge_tensor_md5(self):
-        op_dict = merge_tensor(tensor_list, False, True)
+        op_dict = merge_tensor(tensor_list_md5, False, True)
         self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):
