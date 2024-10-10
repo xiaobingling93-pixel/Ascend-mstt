@@ -84,12 +84,7 @@ class CompareException(MsprobeBaseException):
     """
 
     def __init__(self, code, error_info: str = ""):
-        super(CompareException, self).__init__()
-        self.code = code
-        self.error_info = error_info
-
-    def __str__(self):
-        return self.error_info
+        super(CompareException, self).__init__(code, error_info)
 
 
 class DumpException(MsprobeBaseException):
