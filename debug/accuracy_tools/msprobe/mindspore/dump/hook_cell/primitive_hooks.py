@@ -78,7 +78,7 @@ class PrimitiveHookService:
                 except Exception as exception:
                     logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
                                  f"updated_primitive_name: {updated_primitive_name}")
-                    raise DumpException(DumpException.BACKWARD_DATA_COLLECTION_ERROR)
+                    raise DumpException(DumpException.BACKWARD_DATA_COLLECTION_ERROR) from exception
 
             return backward_hook
 
@@ -163,14 +163,14 @@ class PrimitiveHookService:
             except Exception as exception:
                 logger.error(f"This is a primitive op dump error during input hooking: {exception}, "
                              f"primitive_name: {primitive_name}")
-                raise DumpException(DumpException.INPUT_HOOK_ERROR)
+                raise DumpException(DumpException.INPUT_HOOK_ERROR) from exception
 
             try:
                 out = origin_func(*hooked_inputs, **kwargs)
             except Exception as exception:
                 logger.error(f"This is a primitive op dump error during function call: {exception}, "
                              f"primitive_name: {primitive_name}")
-                raise DumpException(DumpException.FUNCTION_CALL_ERROR)
+                raise DumpException(DumpException.FUNCTION_CALL_ERROR) from exception
 
             forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
             self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
@@ -182,7 +182,7 @@ class PrimitiveHookService:
                 except Exception as exception:
                     logger.error(f"This is a primitive op dump error during forward data collection: {exception}, "
                                  f"primitive_name: {primitive_name}")
-                    raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR)
+                    raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
 
                 if self.service_instance.data_collector.if_return_forward_new_output():
                     out = self.service_instance.data_collector.get_forward_new_output()
@@ -192,7 +192,7 @@ class PrimitiveHookService:
             except Exception as exception:
                 logger.error(f"This is a primitive op dump error during output hooking: {exception}, "
                              f"primitive_name: {primitive_name}")
-                raise DumpException(DumpException.OUTPUT_HOOK_ERROR)
+                raise DumpException(DumpException.OUTPUT_HOOK_ERROR) from exception
 
             return out
 
