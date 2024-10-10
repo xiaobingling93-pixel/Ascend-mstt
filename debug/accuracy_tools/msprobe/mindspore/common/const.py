@@ -39,12 +39,14 @@ class Const:
     OPS_DATA_PREFIX = "Functional."
     MINT_DATA_PREFIX = "Mint."
     MINT_NN_FUNC_DATA_PREFIX = "MintFunctional."
+    DISTRIBUTED_DATA_PREFIX = "Distributed."
 
     SUPPORTED_API_LIST_FILE = "support_wrap_ops.yaml"
     SUPPORTED_TENSOR_LIST_KEY = "tensor"
     SUPPORTED_OPS_LIST_KEY = "ops"
     SUPPORTED_MINT_LIST_KEY = "mint.ops"
     SUPPORTED__MINT_NN_FUNC_LIST_KEY = "mint.nn.functional"
+    SUPPORTED_COMM_LIST_KEY = "communication.comm_func"
 
     DROPOUT_API_NAME_PREFIX = "dropout"
 

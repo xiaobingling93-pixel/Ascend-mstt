@@ -1,10 +1,15 @@
 # coding=utf-8
+import os
+import json
+import shutil
 import unittest
-from msprobe.core.compare.utils import rename_api, read_op, op_item_parse, resolve_api_special_parameters, \
-    get_accuracy, get_un_match_accuracy, merge_tensor
+import argparse
+from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
+    check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
+    _compare_parser
 
 
-# test_read_op
+# test_read_op_1
 op_data = {
     'input_args': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
                     'Max': 0.33033010363578796, 'Min': -0.331031858921051,'Mean': -0.030964046716690063,
@@ -29,6 +34,29 @@ op_result = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
+
+# test_read_op_1
+op_data_b = {
+    'input': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+               'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+               'Norm': 2.2533628940582275, 'requires_grad': True},
+              {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+               'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+               'Norm': 0.02844562754034996, 'requires_grad': False}],
+    'output': [{'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+                'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+                'Norm': 2.2533628940582275, 'requires_grad': True}]}
+op_name_b = "Tensor.add_0.0.backward"
+op_result_b = [
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0'},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+     'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1'},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0'}]
 
 
 # test_op_item_parse
@@ -142,7 +170,54 @@ result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.fo
                   'stack_info': []}
 
 
+base_dir1 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils1')
+base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_utils2')
+
+
+def create_json_files(base_dir):
+    file_names = ['dump.json', 'stack.json', 'construct.json']
+
+    for file_name in file_names:
+        file_path = os.path.join(base_dir, file_name)
+        with open(file_path, 'w') as f:
+            json.dump({}, f)
+
+
+def create_rank_dirs(base_dir):
+    folder_names = ['rank0', 'rank1']
+
+    for folder_name in folder_names:
+        folder_path = os.path.join(base_dir, folder_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+
 class TestUtilsMethods(unittest.TestCase):
+
+    def setUp(self):
+        self.parser = argparse.ArgumentParser()
+        _compare_parser(self.parser)
+
+        os.makedirs(base_dir1, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir2, mode=0o750, exist_ok=True)
+
+    def tearDown(self):
+        if os.path.exists(base_dir1):
+            shutil.rmtree(base_dir1)
+        if os.path.exists(base_dir2):
+            shutil.rmtree(base_dir2)
+
+    def test_extract_json_1(self):
+        create_json_files(base_dir1)
+        result = extract_json(base_dir1, stack_json=False)
+        self.assertEqual(result, os.path.join(base_dir1, 'dump.json'))
+
+        result = extract_json(base_dir1, stack_json=True)
+        self.assertEqual(result, os.path.join(base_dir1, 'stack.json'))
+
+    def test_check_and_return_dir_contents(self):
+        create_rank_dirs(base_dir2)
+        result = check_and_return_dir_contents(base_dir2, 'rank')
+        self.assertEqual(set(result), set(['rank0', 'rank1']))
 
     def test_rename_api_1(self):
         test_name_1 = "Distributed.broadcast.0.forward.input.0"
@@ -159,6 +234,10 @@ class TestUtilsMethods(unittest.TestCase):
     def test_read_op(self):
         result = read_op(op_data, op_name)
         self.assertEqual(result, op_result)
+
+    def test_read_op_back(self):
+        result = read_op(op_data_b, op_name_b)
+        self.assertEqual(result, op_result_b)
 
     def test_op_item_parse(self):
         result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool)
@@ -192,3 +271,29 @@ class TestUtilsMethods(unittest.TestCase):
     def test_merge_tensor(self):
         op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
+
+    def test_compare_parser_1(self):
+        test_args = ["-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
+        args = self.parser.parse_args(test_args)
+
+        self.assertEqual(args.input_path, "input.json")
+        self.assertEqual(args.output_path, "output.json")
+        self.assertTrue(args.stack_mode)
+        self.assertTrue(args.compare_only)
+        self.assertTrue(args.fuzzy_match)
+
+    def test_compare_parser_2(self):
+        test_args = ["-i", "input.json"]
+
+        with self.assertRaises(SystemExit):  # argparse 会抛出 SystemExit
+            self.parser.parse_args(test_args)
+
+    def test_compare_parser_3(self):
+        test_args = ["-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
+                     "data_mapping.txt", "-lm", "layer_mapping.txt"]
+        args = self.parser.parse_args(test_args)
+
+        self.assertEqual(args.cell_mapping, "cell_mapping.txt")
+        self.assertIsNone(args.api_mapping)  # 默认值应为 None
+        self.assertEqual(args.data_mapping, "data_mapping.txt")
+        self.assertEqual(args.layer_mapping, "layer_mapping.txt")

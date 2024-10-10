@@ -230,16 +230,17 @@ class Comparator:
             if merge_list:
                 input_index, output_index = 0, 0
                 for index, input_or_output in enumerate(merge_list['op_name']):
+                    input_or_output_list = input_or_output.split(Const.SEP)
                     data_name = merge_list.get('data_name')
                     data_name = data_name[index] if data_name else None
-                    if Const.INPUT in input_or_output or 'kwarg' in input_or_output:
+                    if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
                         ops_all[input_or_output] = {'struct': merge_list.get('input_struct')[input_index],
                                                     'summary': merge_list.get('summary')[index],
                                                     'data_name': data_name,
                                                     'stack_info': merge_list.get('stack_info')}
                         input_index += 1
 
-                    elif Const.OUTPUT in input_or_output:
+                    elif Const.OUTPUT in input_or_output_list:
                         ops_all[input_or_output] = {'struct': merge_list.get('output_struct')[output_index],
                                                     'summary': merge_list.get('summary')[index],
                                                     'data_name': data_name,

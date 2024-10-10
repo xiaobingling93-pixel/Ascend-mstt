@@ -87,6 +87,7 @@ class TestPrecisionDebugger(unittest.TestCase):
     def test_start_statistics(self):
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
+        debugger.config = MagicMock()
         debugger.model = 'model'
         debugger.api_origin = 'api_origin'
         debugger.task = ''
