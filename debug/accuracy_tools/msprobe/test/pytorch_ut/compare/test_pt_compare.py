@@ -2,6 +2,7 @@
 import os
 import torch
 import unittest
+import shutil
 import numpy as np
 from msprobe.pytorch.compare.pt_compare import PTComparator
 from msprobe.core.common.utils import CompareException
@@ -24,6 +25,12 @@ def generate_pt(base_dir):
 
 
 class TestUtilsMethods(unittest.TestCase):
+    def setUp(self):
+        os.makedirs(base_dir, mode=0o750, exist_ok=True)
+
+    def tearDown(self):
+        if os.path.exists(base_dir):
+            shutil.rmtree(base_dir)
 
     def test_check_op(self):
         fuzzy_match = False
