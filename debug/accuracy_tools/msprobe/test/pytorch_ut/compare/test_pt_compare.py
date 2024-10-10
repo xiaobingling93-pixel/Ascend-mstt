@@ -29,10 +29,13 @@ class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
         os.makedirs(base_dir1, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir2, mode=0o750, exist_ok=True)
 
     def tearDown(self):
         if os.path.exists(base_dir1):
             shutil.rmtree(base_dir1)
+        if os.path.exists(base_dir2):
+            shutil.rmtree(base_dir2)
 
     def test_check_op(self):
         fuzzy_match = False
