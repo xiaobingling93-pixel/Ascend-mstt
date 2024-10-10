@@ -129,11 +129,15 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
         if not top_bool:
-            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
-                   'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
+                'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'
+            }
         else:
-            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
-                   'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
+                'shape': None, 'md5': None, 'data_name': '-1'
+            }
         item_list.append(tmp)
         return item_list
     if index is None:
@@ -247,9 +251,10 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             b_struct = b_dict[key][index]
             err_msg = ""
             if md5_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2],
-                               CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], n_struct[2], b_struct[2],
+                    CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF
+                ]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 else:
@@ -258,11 +263,15 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 continue
 
             if summary_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " ", " ", " ", " "
+                ]
             else:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " "
+                ]
 
             npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
             result_item.extend(npu_summary_data)
@@ -308,12 +317,16 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
                 if md5_compare:
-                    result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                                   n_struct[1], CompareConst.NAN, n_struct[2], CompareConst.NAN, CompareConst.NAN]
+                    result_item = [
+                        n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                        n_struct[2], CompareConst.NAN, CompareConst.NAN
+                    ]
                     result.append(result_item)
                     continue
-                result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                               n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                    " ", " ", " ", " ", " "
+                ]
                 summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                 result_item.extend(summary_data)
                 summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]

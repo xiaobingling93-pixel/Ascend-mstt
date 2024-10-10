@@ -19,7 +19,7 @@ import time
 
 from msprobe.core.advisor.advisor_const import AdvisorConst
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, FileCheckConst
+from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.file_utils import change_mode, FileOpen
 
 
@@ -50,9 +50,11 @@ class AdvisorResult:
 
     def print_advisor_log(self):
         logger.info("The summary of the expert advice is as follows: ")
-        message_list = [AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
-                        AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
-                        AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message]
+        message_list = [
+            AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
+            AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
+            AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message
+        ]
         for message in message_list:
             logger.info(message)
         return message_list

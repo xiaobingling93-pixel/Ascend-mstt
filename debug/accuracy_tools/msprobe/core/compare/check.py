@@ -67,10 +67,14 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            ms_type = [["Float16", "Float32"], ["Float32", "Float16"],
-                       ["Float16", "BFloat16"], ["BFloat16", "Float16"]]
-            torch_type = [["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
-                          ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
+            ms_type = [
+                ["Float16", "Float32"], ["Float32", "Float16"],
+                ["Float16", "BFloat16"], ["BFloat16", "Float16"]
+            ]
+            torch_type = [
+                ["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
+                ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]
+            ]
             if ([npu_type, bench_type] in ms_type) or ([npu_type, bench_type] in torch_type):
                 type_match = True
             else:
