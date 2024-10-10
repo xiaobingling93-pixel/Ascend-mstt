@@ -1,7 +1,22 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api
 from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
-from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.const import Const
 
 
 dtype_mapping = {
@@ -52,7 +67,8 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            ms_type = [["Float16", "Float32"], ["Float32", "Float16"], ["Float16", "BFloat16"], ["BFloat16", "Float16"]]
+            ms_type = [["Float16", "Float32"], ["Float32", "Float16"],
+                       ["Float16", "BFloat16"], ["BFloat16", "Float16"]]
             torch_type = [["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
                           ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
             if ([npu_type, bench_type] in ms_type) or ([npu_type, bench_type] in torch_type):

@@ -1,3 +1,17 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import re
@@ -418,7 +432,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.",  required=True)
+                        help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",

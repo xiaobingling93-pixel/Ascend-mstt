@@ -1,9 +1,23 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import multiprocessing
 import os
-import json
 import pandas as pd
 from tqdm import tqdm
-from msprobe.core.common.file_utils import FileOpen, load_json
+from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
@@ -69,8 +83,7 @@ class Comparator:
         result_item.append(err_msg)
     
     @classmethod
-    def make_result_table(cls,result, md5_compare, summary_compare, stack_mode):
-        header = []
+    def make_result_table(cls, result, md5_compare, summary_compare, stack_mode):
         if md5_compare:
             header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
         elif summary_compare:
@@ -118,7 +131,7 @@ class Comparator:
         b_op_name = bench_dict["op_name"]
         graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
         
-        frame_name = getattr(self,"frame_name")
+        frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
             if graph_mode:
@@ -449,7 +462,7 @@ class Comparator:
 
         return _save_cmp_result(idx, cr, result_df, lock)   
     
-    def _do_multi_process(self,input_parma, result_df):
+    def _do_multi_process(self, input_parma, result_df):
         try:
             result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
                                               multiprocessing.Manager().RLock())
