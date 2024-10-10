@@ -66,11 +66,11 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 
 class TestUtilsMethods(unittest.TestCase):
 
-    def test_check_struct_match_1(self):
+    def test_check_struct_match_success(self):
         result = check_struct_match(npu_dict, bench_dict, cross_frame=False)
         self.assertTrue(result)
 
-    def test_check_struct_match_2(self):
+    def test_check_struct_match_fail(self):
         npu_dict2 = {'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                                       ('torch.float32', [16])],
                      'output_struct': [('torch.float32', [1, 16, 28, 28])]
@@ -83,7 +83,7 @@ class TestUtilsMethods(unittest.TestCase):
         result = check_struct_match(npu_dict2, bench_dict2, cross_frame=False)
         self.assertFalse(result)
 
-    def test_check_type_shape_match_1(self):
+    def test_check_type_shape_match(self):
         result = check_type_shape_match(npu_struct, bench_struct)
         self.assertTrue(result)
 
