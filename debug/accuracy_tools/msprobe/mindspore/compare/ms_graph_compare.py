@@ -240,8 +240,7 @@ class GraphMSComparator:
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
             check_path_before_create(compare_result_path)
-            compare_result_df.to_excel(compare_result_path, index=False)
-            change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            self.to_excel(compare_result_df, compare_result_path)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
     
     def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0) -> int:
