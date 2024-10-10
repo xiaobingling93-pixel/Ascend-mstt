@@ -7,6 +7,7 @@ import argparse
 from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
     check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
     _compare_parser
+from msprobe.core.common.utils import CompareException
 
 
 # test_read_op_1
@@ -62,15 +63,20 @@ op_result_b = [
 # test_op_item_parse
 parse_item = [
     {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False, 'shape': [5], 'type': 'torch.Tensor'},
-    {'type': 'int', 'value': 0}
+    {'type': 'int', 'value': 0},
+    {'type': 'slice', 'value': [None, None, None]}
 ]
 parse_op_name = 'Distributed.broadcast.0.forward.input'
 parse_index = None
 parse_item_list = None
 parse_top_bool = True
 o_result_parse = [
-    {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False, 'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0'},
-    {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]', 'md5': None, 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1'}
+    {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False,
+     'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0'},
+    {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]',
+     'md5': None, 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1'},
+    {'Max': None, 'Mean': None, 'Min': None, 'Norm': None, 'data_name': '-1', 'dtype': 'slice',
+     'full_op_name': 'Distributed.broadcast.0.forward.input.2', 'md5': None, 'shape': '(3,)'}
 ]
 
 
@@ -148,15 +154,15 @@ o_result_unmatch_3 = [
 tensor_list = [
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'Max': 0.33033010363578796,
      'Min': -0.331031858921051,'Mean': -0.030964046716690063, 'Norm': 2.2533628940582275, 'requires_grad': True,
-     'full_op_name': 'Tensor.add_.0.forward.input.0'},
+     'full_op_name': 'Tensor.add_.0.forward.input.0', 'md5': 1},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
      'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_.0.forward.input.1'},
     {'full_op_name': 'Tensor.add_.0.forward.input.alpha.0', 'dtype': "<class 'float'>", "shape": '[]', 'md5': None,
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'md5': 2},
     {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
-     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0'}
+     'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_.0.forward.output.0', 'md5': 3}
 ]
 result_op_dict = {'op_name': ['Tensor.add_.0.forward.input.0', 'Tensor.add_.0.forward.input.1',
                               'Tensor.add_.0.forward.input.alpha.0', 'Tensor.add_.0.forward.output.0'],
@@ -243,6 +249,11 @@ class TestUtilsMethods(unittest.TestCase):
         result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool)
         self.assertEqual(result, o_result_parse)
 
+    def test_op_item_parse_max_depth(self):
+        with self.assertRaises(CompareException) as context:
+            result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool, depth=11)
+        self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
+
     def test_resolve_api_special_parameters(self):
         item_list = []
         resolve_api_special_parameters(data_dict, full_op_name, item_list)
@@ -268,9 +279,13 @@ class TestUtilsMethods(unittest.TestCase):
         get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=False)
         self.assertEqual(result, o_result_unmatch_3)
 
-    def test_merge_tensor(self):
+    def test_merge_tensor_summary(self):
         op_dict = merge_tensor(tensor_list, True, False)
         self.assertEqual(op_dict, result_op_dict)
+
+    def test_merge_tensor_md5(self):
+        op_dict = merge_tensor(tensor_list, False, True)
+        self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):
         test_args = ["-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]

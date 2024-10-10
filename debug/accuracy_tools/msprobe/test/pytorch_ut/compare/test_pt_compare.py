@@ -6,7 +6,6 @@ import shutil
 import numpy as np
 from msprobe.pytorch.compare.pt_compare import PTComparator, compare
 from msprobe.core.common.utils import CompareException
-from msprobe.test.core_ut.compare.test_acc_compare import npu_dict, bench_dict
 from msprobe.test.core_ut.compare.test_acc_compare import generate_dump_json, generate_stack_json
 
 
