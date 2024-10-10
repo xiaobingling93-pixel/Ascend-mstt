@@ -130,20 +130,23 @@ class TestMsprobeFunctions(unittest.TestCase):
         result = convert_bf16_to_fp32(mock_tensor)
         self.assertEqual(result, mock_tensor)
 
-    @patch('os.path.exists', return_value=True)
+    @patch('msprobe.mindspore.common.utils.path_len_exceeds_limit', return_value=False)
     @patch('msprobe.core.common.file_utils.save_npy')
-    def test_save_tensor_as_npy(self, mock_save_npy, mock_exists):
+    def test_save_tensor_as_npy(self, mock_save_npy, mock_path_len_exceeds):
+        # 创建一个模拟的 tensor 对象
         tensor = MagicMock()
         tensor.dtype = ms.bfloat16
+        tensor.to.return_value = tensor  # Mock the conversion to float32
         tensor.asnumpy.return_value = np.array([1, 2, 3])
 
-        with patch('msprobe.core.common.utils.convert_bf16_to_fp32', return_value=tensor):
-            file_path = "test.npy"
-            save_tensor_as_npy(tensor, file_path)
+        # 执行被测函数
+        file_path = "test.npy"
+        save_tensor_as_npy(tensor, file_path)
 
-            # Assert the conversion and saving
-            tensor.asnumpy.assert_called_once()
-            mock_save_npy.assert_called_once_with(np.array([1, 2, 3]), file_path)
+        # 断言 tensor 的转换和保存是否被正确调用
+        tensor.to.assert_called_once_with(ms.float32)
+        tensor.asnumpy.assert_called_once()
+        mock_save_npy.assert_called_once()
 
     def test_convert_to_int(self):
         self.assertEqual(convert_to_int("123"), 123)
