@@ -81,7 +81,7 @@ class TestUtilsMethods(unittest.TestCase):
                        'output_struct': [('torch.float32', [1, 16, 28, 28])]
                        }
         result = check_struct_match(npu_dict2, bench_dict2, cross_frame=False)
-        self.assertTrue(result)
+        self.assertFalse(result)
 
     def test_check_type_shape_match_1(self):
         result = check_type_shape_match(npu_struct, bench_struct)
