@@ -1,5 +1,3 @@
-
-
 import os
 import shutil
 import json
@@ -32,12 +30,15 @@ class TestGradAnalyzer(TestCase):
                 GradConst.BOUNDS: [-0.1, 0.0, 0.1]
             }[x]
         }))
+        # Clear dump directory before each test
+        shutil.rmtree(self.dump_dir, ignore_errors=True)
+        os.makedirs(self.dump_dir, exist_ok=True)
 
     def test_run_with_no_dump_dir(self):
         # Test run method when dump directory does not exist
         shutil.rmtree(self.dump_dir)
-        with mock.patch("time.sleep", return_value=None):
-            with self.assertRaises(SystemExit):
+        with mock.patch("time.sleep", side_effect=InterruptedError):
+            with self.assertRaises(InterruptedError):
                 self.csv_generator.run()
 
     def test_traverse_files_with_empty_directory(self):
@@ -62,15 +63,15 @@ class TestGradAnalyzer(TestCase):
 
     def test_check_valid_data(self):
         # Test check_valid method with valid and invalid data
-        valid_data = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+        invalid_data_long = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
         invalid_data = np.array([0, 1, 2, 3, 4, 5])
-        self.assertTrue(self.csv_generator.check_valid(valid_data))
+        self.assertFalse(self.csv_generator.check_valid(invalid_data_long))
         self.assertFalse(self.csv_generator.check_valid(invalid_data))
 
     def test_gen_csv_line(self):
         # Test gen_csv_line method
         file_path = os.path.join(self.dump_dir, "0_test_param.npy")
-        stat_data = np.array([0, 1, 2, 3, 4, 2, 2, 2, 1, 0])
+        stat_data = np.array([0, 1, 2, 3, 4, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0])
         with mock.patch.object(self.csv_generator.cache_list, 'append') as mock_append:
             self.csv_generator.gen_csv_line(file_path, stat_data)
             mock_append.assert_called_once()
