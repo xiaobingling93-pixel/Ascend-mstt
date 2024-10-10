@@ -243,6 +243,18 @@ class GraphMSComparator:
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
+    
+    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0) -> int:
+        size = len(compare_result_df)
+        # sheet size cannot be larger than 1048576
+        if size < 1 << 20:
+            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx')
+            compare_result_df.to_excel(compare_result_path, index=False)
+            change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
+        else:
+            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num)
+            self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
+        return slice_num
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
@@ -287,11 +299,11 @@ class GraphMSComparator:
                                                   CompareConst.BENCH_NORM])
 
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(np.float32)
+            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(float)
 
             bench_float_type = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
                                 CompareConst.BENCH_NORM]
-            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(np.float32)
+            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)
 
         npu_data_df['Local Index'] = npu_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
         bench_data_df['Local Index'] = bench_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
