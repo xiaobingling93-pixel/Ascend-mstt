@@ -521,3 +521,15 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
+
+# 对os.walk设置遍历深度
+def os_walk_for_files(path, depth):
+    res = []
+    for root, _, files in os.walk(path, topdown=True):
+        check_file_or_directory_path(root, isdir=True)
+        if root.count(os.sep) - path.count(os.sep) >= depth:
+            _[:] = []
+        else:
+            for file in files:
+                res.append({"file": file, "root": root})
+    return res
