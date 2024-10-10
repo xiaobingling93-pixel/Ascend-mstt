@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 from typing import Any
 
@@ -118,8 +133,10 @@ class PreheatHandler(FuzzHandler):
         """
         # 每一步样本数
         total_count = preheat_counter.get_one_step_used_api(self.pure_name)
-        sample_count_per_step = self._get_sample_count_per_step()
         need_sample_set = set()
+        if total_count == 0:
+            return need_sample_set
+        sample_count_per_step = self._get_sample_count_per_step()
         prehead_step = self.params.preheat_config.get("preheat_step")
         for i in range(1, sample_count_per_step + 1):
             count = (prehead_step * (i - 1) + self.params.step) % total_count
@@ -136,9 +153,7 @@ class PreheatHandler(FuzzHandler):
 
     def _adjust_threshold_for_dtype(self, dtype_str, compare_result):
         con_ratio = [ratio for ratio, is_consistent in compare_result if is_consistent]
-        incon_ratio = [
-            ratio for ratio, is_consistent in compare_result if not is_consistent
-        ]
+        incon_ratio = [ratio for ratio, is_consistent in compare_result if not is_consistent]
         old_thd = preheat_counter.get_api_thd(self.pure_name, dtype_str)
         new_thd = old_thd
         # 正例负例都存在

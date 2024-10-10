@@ -89,6 +89,12 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [兼容 PyTorch 和 MindSpore 框架的梯度监测](./docs/17.grad_probe.md)
 
+### 8 在线精度比对
+
+在线精度比对是实现在PyTorch训练过程中直接完成精度比对并输出比对结果的功能，是NPU与CPU之间的精度比对。
+
+[PyTorch 场景的在线精度比对](./docs/18.online_dispatch.md)
+
 ## 🌟 新版本特性
 
 若查看历史版本特性，请点击[安装](./docs/01.installation.md)。

@@ -1,0 +1,260 @@
+import os
+import io
+import unittest
+from unittest.mock import MagicMock, patch
+import tempfile
+
+import torch
+import torch.distributed as dist
+
+from msprobe.core.common.file_utils import FileCheckConst
+from msprobe.core.common.log import logger 
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.pytorch.common.utils import parameter_adapter, get_rank_if_initialized, \
+    get_tensor_rank, get_rank_id, print_rank_0, load_pt, save_pt, save_api_data, load_api_data
+
+
+class TestParameterAdapter(unittest.TestCase):
+
+    def setUp(self):
+        self.func_mock = MagicMock()
+        self.decorated_func = parameter_adapter(self.func_mock)
+        self.op_name_ = "__getitem__"
+
+    def test_handle_masked_select_bfloat16(self):
+        input_tensor = torch.tensor([1.0, 2.0], dtype=torch.bfloat16)
+        indices = torch.tensor([1, 0], dtype=torch.uint8)
+        self.func_mock.return_value = input_tensor[indices.bool()]
+
+        result = self.decorated_func(self, input_tensor, indices)
+        expected = input_tensor[indices.bool()]
+        self.assertTrue(torch.equal(result, expected))
+
+    def test_handle_masked_select_bool(self):
+        input_tensor = torch.tensor([1.0, 2.0, 3.0])
+        indices = torch.tensor([True, False, True])
+        self.func_mock.return_value = input_tensor[indices]
+        result = self.decorated_func(self, input_tensor, indices)
+        self.assertTrue(torch.equal(result, torch.tensor([1.0, 3.0])))
+
+    def test_handle_nonzero_indices(self):
+        input_tensor = torch.tensor([10.0, 20.0, 30.0])
+        indices = torch.tensor([1, 2])
+        self.func_mock.return_value = input_tensor[indices]
+        result = self.decorated_func(self, input_tensor, indices)
+        self.assertTrue(torch.equal(result, torch.tensor([20.0, 30.0])))
+
+    def test_op_name_eq_with_none(self):
+        self.op_name_ = "__eq__"
+        args = (torch.tensor([1]), None)
+        result = self.decorated_func(self, *args)
+        self.assertFalse(result)
+
+    def test_two_dimensional_indices(self):
+        input_tensor = torch.tensor([10.0, 20.0, 30.0])
+        indices = torch.tensor([[0], [2]])
+        self.func_mock.side_effect = [torch.tensor(10.0), torch.tensor(30.0)]
+
+        result = self.decorated_func(self, input_tensor, indices)
+        expected = torch.stack([torch.tensor(10.0), torch.tensor(30.0)])
+        self.assertTrue(torch.equal(result, expected))
+
+        self.func_mock.assert_any_call(self, input_tensor, [0])
+        self.func_mock.assert_any_call(self, input_tensor, [2])
+
+    def test_greater_than_two_dimensional_indices(self):
+        input_tensor = torch.tensor([10.0, 20.0, 30.0])
+        indices = torch.tensor([[[0]], [[2]]])
+        self.func_mock.side_effect = [torch.tensor(10.0), torch.tensor(30.0)]
+
+        result = self.decorated_func(self, input_tensor, indices)
+        expected = torch.stack([torch.tensor([[10.0]]), torch.tensor([[30.0]])])
+        self.assertTrue(torch.equal(result, expected), f"Expected: {expected}, but got: {result}")
+
+
+class TestGetRankIfInitialized(unittest.TestCase):
+
+    @patch('torch.distributed')
+    def test_get_rank_init(self, mock_distributed):
+        mock_distributed.is_initialized.return_value = True
+        mock_distributed.get_rank.return_value = 2
+        rank = get_rank_if_initialized()
+        self.assertEqual(rank, 2)
+
+    @patch('torch.distributed')
+    def test_get_rank_not_init(self, mock_distributed):
+        mock_distributed.is_initialized.return_value = False
+        with self.assertRaises(DistributedNotInitializedError):
+            get_rank_if_initialized()
+
+
+class TestGetTensorRank(unittest.TestCase):
+
+    def setUp(self):
+        self.dist_mock = MagicMock()
+        dist.is_initialized = self.dist_mock.is_initialized
+        dist.get_rank = self.dist_mock.get_rank
+
+    def test_get_tensor_rank_with_initialized_dist(self):
+        self.dist_mock.is_initialized.return_value = True
+        self.dist_mock.get_rank.return_value = 3
+        in_feat = torch.tensor([1, 2, 3])
+        out_feat = torch.tensor([4, 5, 6])
+        result = get_tensor_rank(in_feat, out_feat)
+        self.assertEqual(result, 3)
+
+    def test_get_tensor_rank_with_cpu_tensor(self):
+        self.dist_mock.is_initialized.return_value = False
+        in_feat = torch.tensor([1, 2, 3])
+        out_feat = torch.tensor([4, 5, 6])
+        result = get_tensor_rank(in_feat, out_feat)
+        self.assertIsNone(result)
+
+    def test_get_tensor_rank_with_list_of_tensor(self):
+        self.dist_mock.is_initialized.return_value = False
+        in_feat = [torch.tensor([1, 2, 3])]
+        out_feat = [torch.tensor([4, 5, 6])]
+        result = get_tensor_rank(in_feat, out_feat)
+        self.assertIsNone(result)
+
+    def test_get_tensor_rank_with_empty_list(self):
+        self.dist_mock.is_initialized.return_value = False
+        in_feat = []
+        out_feat = [torch.tensor([4, 5, 6])]
+        result = get_tensor_rank(in_feat, out_feat)
+        self.assertIsNone(result)
+
+
+class TestGetRankId(unittest.TestCase):
+
+    def test_get_rank_id_init(self):
+        torch.distributed.is_initialized = MagicMock(return_value=True)
+        torch.distributed.get_rank = MagicMock(return_value=3)
+        self.assertEqual(get_rank_id(), 3)
+
+    def test_get_rank_id_not_init(self):
+        torch.distributed.is_initialized = MagicMock(return_value=False)
+        self.assertEqual(get_rank_id(), 0)
+
+
+class TestPrintRank0(unittest.TestCase):
+
+    @patch('msprobe.core.common.log.logger.info')
+    @patch('torch.distributed.is_initialized', return_value=True)
+    @patch('torch.distributed.get_rank', return_value=0)
+    def test_print_rank_0_initialized_rank_0(self, mock_get_rank, mock_is_initialized, mock_logger_info):
+        message = "Test message"
+        print_rank_0(message)
+        mock_logger_info.assert_called_once_with(message)
+
+
+class TestLoadPt(unittest.TestCase):
+
+    def setUp(self):
+        self.temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pt')
+        tensor = torch.tensor([1, 2, 3])
+        torch.save(tensor, self.temp_file.name)
+
+    @patch('torch.load')
+    def test_load_pt_cpu(self, mock_load):
+        mock_load.return_value = torch.tensor([1, 2, 3])
+        result = load_pt(self.temp_file.name, to_cpu=True)
+        self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
+        mock_load.assert_called_once_with(self.temp_file.name, map_location=torch.device("cpu"))
+
+    @patch('torch.load')
+    def test_load_pt_nogpu(self, mock_load):
+        mock_load.return_value = torch.tensor([1, 2, 3])
+        result = load_pt(self.temp_file.name, to_cpu=False)
+        self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
+        mock_load.assert_called_once_with(self.temp_file.name)
+
+    @patch('torch.load')
+    def test_load_pt_failure(self, mock_load):
+        mock_load.side_effect = RuntimeError("Load failed")
+        with self.assertRaises(RuntimeError) as context:
+            load_pt(self.temp_file.name)
+        self.assertIn("load pt file", str(context.exception))
+
+    def tearDown(self):
+        if os.path.isfile(self.temp_file.name):
+            os.remove(self.temp_file.name)
+
+class TestSavePT(unittest.TestCase):
+
+    def setUp(self):
+        self.tensor = torch.tensor([1, 2, 3])
+        self.filepath = 'temp_tensor.pt'
+
+    @patch('msprobe.pytorch.common.utils.save_pt')
+    @patch('os.path.realpath', return_value='temp_tensor.pt')
+    @patch('msprobe.core.common.file_utils.check_path_before_create')
+    @patch('msprobe.core.common.file_utils.change_mode')
+    def test_save_pt_success(self, mock_change_mode, mock_check_path, mock_realpath, mock_torch_save):
+        mock_torch_save(self.tensor, self.filepath)
+        mock_torch_save.assert_called_once_with(self.tensor, self.filepath)
+        mock_change_mode.assert_called_once_with(self.filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+class TestSavePT(unittest.TestCase):
+
+    def setUp(self):
+        self.tensor = torch.tensor([1, 2, 3])
+        self.filepath = 'temp_tensor.pt'
+
+    @patch('torch.save')
+    @patch('os.path.realpath', return_value='temp_tensor.pt')
+    @patch('msprobe.core.common.file_utils.check_path_before_create')
+    @patch('msprobe.core.common.file_utils.change_mode')
+    def test_save_pt_success(self, mock_change_mode, mock_check_path, mock_realpath, mock_torch_save):
+        save_pt(self.tensor, self.filepath)
+        mock_torch_save.assert_called_once_with(self.tensor, self.filepath)
+
+    @patch('torch.save', side_effect=Exception("Save failed"))
+    @patch('os.path.realpath', return_value='temp_tensor.pt')
+    @patch('msprobe.core.common.file_utils.check_path_before_create')
+    @patch('msprobe.core.common.file_utils.change_mode')
+    def test_save_pt_failure(self, mock_change_mode, mock_check_path, mock_realpath, mock_torch_save):
+        with self.assertRaises(RuntimeError) as context:
+            save_pt(self.tensor, self.filepath)
+        self.assertIn("save pt file temp_tensor.pt failed", str(context.exception))
+
+    def tearDown(self):
+        try:
+            os.remove(self.filepath)
+        except FileNotFoundError:
+            pass
+
+
+class TestSaveApiData(unittest.TestCase):
+
+    def test_save_api_data_success(self):
+        api_data = {"key": "value"}
+        io_buff = save_api_data(api_data)
+        self.assertIsInstance(io_buff, io.BytesIO)
+        io_buff.seek(0)
+        loaded_data = torch.load(io_buff)
+        self.assertEqual(loaded_data, api_data)
+
+    def test_save_api_data_failure(self):
+        api_data = MagicMock()
+        with patch('torch.save', side_effect=Exception("save error")):
+            with self.assertRaises(RuntimeError) as context:
+                save_api_data(api_data)
+            self.assertIn("save api_data to io_buff failed", str(context.exception))
+
+
+class TestLoadApiData(unittest.TestCase):
+
+    def test_load_api_data_success(self):
+        mock_tensor = torch.tensor([1, 2, 3])
+        buffer = io.BytesIO()
+        torch.save(mock_tensor, buffer)
+        buffer.seek(0)
+        result = load_api_data(buffer.read())
+        self.assertTrue(torch.equal(result, mock_tensor))
+
+    def test_load_api_data_failure(self):
+        invalid_bytes = b'not a valid tensor'
+        with self.assertRaises(RuntimeError) as context:
+            load_api_data(invalid_bytes)
+        self.assertIn("load api_data from bytes failed", str(context.exception))

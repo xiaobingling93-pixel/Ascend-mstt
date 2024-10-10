@@ -1,8 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import CommonField
-from msprobe.pytorch.free_benchmark.common.params import DataParams, HandlerParams, data_pre_deal
+from msprobe.pytorch.free_benchmark.common.params import (
+    DataParams,
+    HandlerParams,
+    data_pre_deal,
+)
 from msprobe.pytorch.free_benchmark.perturbed_layers.layer_factory import LayerFactory
 from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
     FuzzHandlerFactory,
@@ -84,7 +103,7 @@ class GradSaver:
         if self.perturbed_grad_input is None:
             raise FreeBenchmarkException(
                 FreeBenchmarkException.InvalidGrad,
-                f"grad not exists : {self.api_name}."
+                f"grad not exists : {self.api_name}.",
             )
         with torch.no_grad():
             perturbed_grad = self.perturbed_grad_input[new_grad_index].to(
@@ -94,7 +113,7 @@ class GradSaver:
             raise FreeBenchmarkException(
                 FreeBenchmarkException.InvalidGrad,
                 f"grad shapes are inconsistent. api:{self.handler_params.api_name}."
-                f"origin:{origin_grad.shape}, perturbation: {perturbed_grad.shape}"
+                f"origin:{origin_grad.shape}, perturbation: {perturbed_grad.shape}",
             )
         return perturbed_grad
 
@@ -150,8 +169,8 @@ class GradSaver:
                 else:
                     _real_input.append(object_)
             kwargs = self.kwargs.copy()
-            if 'inplace' in kwargs:
-                kwargs['inplace'] = False
+            if "inplace" in kwargs:
+                kwargs["inplace"] = False
             return self.origin_func(*_real_input, **kwargs)
 
         _, grad_input = torch.autograd.functional.vjp(
@@ -159,12 +178,14 @@ class GradSaver:
         )
         return grad_input
 
-    def calculate_perturbed_grad_input(self, grad_output, need_grad_tensors, inner_args):
+    def calculate_perturbed_grad_input(
+        self, grad_output, need_grad_tensors, inner_args
+    ):
         data_params = data_pre_deal(
             self.handler_params.api_name,
             self.get_grad_input_from_vjp,
             [need_grad_tensors, grad_output, inner_args],
-            {}
+            {},
         )
         layer = LayerFactory.create(
             self.handler_params.api_name,

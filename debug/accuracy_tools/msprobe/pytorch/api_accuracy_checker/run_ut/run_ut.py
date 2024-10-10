@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import os
 import csv
@@ -17,8 +34,8 @@ else:
 import torch
 from tqdm import tqdm
 
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import Backward_Message, hf_32_standard_api, UtDataInfo, \
-    get_validated_result_csv_path, get_validated_details_csv_path, exec_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, UtDataInfo, \
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
@@ -26,8 +43,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.file_utils import FileOpen, FileChecker, \
-    change_mode, check_path_before_create, create_directory, get_json_contents
+from msprobe.core.common.file_utils import FileChecker, change_mode, check_path_before_create, \
+    create_directory, get_json_contents, read_csv
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -81,10 +98,8 @@ def run_ut(config):
     if config.online_config.is_online:
         run_api_online(config, compare)
     else:
-        with FileOpen(config.result_csv_path, 'r') as file:
-            csv_reader = csv.reader(file)
-            next(csv_reader)
-            api_name_set = {row[0] for row in csv_reader}
+        csv_df = read_csv(config.result_csv_path)
+        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -100,17 +115,23 @@ def run_api_offline(config, compare, api_name_set):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
+            skip_message = f"API {api_full_name} not support for run ut. SKIP."
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         _, api_name = extract_basic_api_segments(api_full_name)
         if not api_name:
             err_message = f"API {api_full_name} not support for run ut. SKIP."
             logger.error(err_message)
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
-            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
-            compare.record_results(result_info)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                skip_message = f"API {api_name} in black list or not in white list. SKIP."
+                logger.info(skip_message)
+                compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+                record_skip_info(api_full_name, compare, compare_alg_results)
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -122,9 +143,8 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
-            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
-            compare.record_results(result_info)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            record_skip_info(api_full_name, compare, compare_alg_results)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
@@ -229,12 +249,12 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     in_fwd_data_list.append(kwargs)
     need_backward = api_full_name in backward_content
     if not need_grad:
-        logger.warning("%s %s" % (api_full_name, Backward_Message.UNSUPPORT_BACKWARD_MESSAGE))
-        backward_message += Backward_Message.UNSUPPORT_BACKWARD_MESSAGE
+        logger.warning("%s %s" % (api_full_name, BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE))
+        backward_message += BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        logger.warning("%s %s" % (api_full_name, Backward_Message.NO_BACKWARD_RESULT_MESSAGE))
-        backward_message += Backward_Message.NO_BACKWARD_RESULT_MESSAGE
+        logger.warning("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
+        backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
@@ -264,7 +284,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             device_grad = grad.clone().detach().to(current_device)
             device_grad_out = run_backward(device_args, device_grad, grad_index, device_out)
         else:
-            backward_message += Backward_Message.MULTIPLE_BACKWARD_MESSAGE
+            backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
         out = out[0]
         device_out = device_out[0]
@@ -321,7 +341,7 @@ def initialize_save_error_data(error_data_path):
     error_data_path_checker = FileChecker(error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
     error_data_path = error_data_path_checker.common_check()
-    error_data_path =initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
+    error_data_path = initialize_save_path(error_data_path, UT_ERROR_DATA_DIR)
     return error_data_path
 
 
@@ -382,7 +402,8 @@ def preprocess_forward_content(forward_content):
         if key not in arg_cache:
             filtered_new_args = [
                 {k: v for k, v in arg.items() if k not in ['Max', 'Min']}
-                for arg in value['input_args'] if isinstance(arg, dict)
+                for arg in value['input_args']
+                if isinstance(arg, dict)
             ]
             arg_cache[key] = (filtered_new_args, value['input_kwargs'])
 
@@ -434,14 +455,14 @@ def run_ut_command(args):
     # 离线场景下，forward_content, backward_content, real_data_path从api_info_file中解析
     forward_content, backward_content, real_data_path = None, None, None
     if args.api_info_file:
-        api_info_file_checker = FileChecker(file_path = args.api_info_file, path_type = FileCheckConst.FILE, 
-                                            ability = FileCheckConst.READ_ABLE, file_type = FileCheckConst.JSON_SUFFIX)
+        api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
         checked_api_info = api_info_file_checker.common_check()
         forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
         if args.filter_api:
-            logger.info("Start filtering the api in the forward_input_file.")
+            logger.info("Start filtering the api in the api_info_file.")
             forward_content = preprocess_forward_content(forward_content)
-            logger.info("Finish filtering the api in the forward_input_file.")
+            logger.info("Finish filtering the api in the api_info_file.")
 
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
     check_path_before_create(out_path)

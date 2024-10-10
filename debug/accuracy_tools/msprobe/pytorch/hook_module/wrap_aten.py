@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2023-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 import torch
@@ -23,6 +21,7 @@ from msprobe.pytorch.common.utils import torch_device_guard
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_grad_functions
+
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
@@ -78,13 +77,13 @@ class AtenOPTemplate(HOOKModule):
 
 
 class AtenOPPacketTemplate():
-    def __init__(self, opPacket, hook):
-        self.opPacket = opPacket
+    def __init__(self, op_packet, hook):
+        self.op_packet = op_packet
         self.hook = hook
 
     def __getattr__(self, key):
         try:
-            attr = getattr(self.opPacket, key)
+            attr = getattr(self.op_packet, key)
         except AttributeError as e:
             raise AttributeError(f"AtenOPPacketTemplate or OpOverloadPacket does not have attribute '{key}'.") from e
         if isinstance(attr, torch._ops.OpOverload):
@@ -94,10 +93,10 @@ class AtenOPPacketTemplate():
 
     @torch_device_guard
     def __call__(self, *args, **kwargs):
-        return AtenOPTemplate(self.opPacket, self.hook)(*args, **kwargs)
+        return AtenOPTemplate(self.op_packet, self.hook)(*args, **kwargs)
 
     def overloads(self):
-        return self.opPacket.overloads()
+        return self.op_packet.overloads()
 
 
 def wrap_aten_op(op, hook):

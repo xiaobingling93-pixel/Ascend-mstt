@@ -59,14 +59,18 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
-    torch_func_index, in_out = npu_split[0], npu_split[1]
+    try:
+        torch_func_index, in_out = npu_split[0], npu_split[1]
+    except IndexError as error:
+        logger.error(f'{npu_name} can not be split with {process}, please check!')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
     torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
 
 
 def read_op(op_data, op_name):
-    op_parsed_list = Const.DEFAULT_LIST
+    op_parsed_list = []
     if Const.FORWARD in op_name:
         if Const.INPUT_ARGS in op_data:
             input_item = op_data[Const.INPUT_ARGS]
@@ -316,15 +320,12 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
 
     n_num = len(n_dict['op_name'])
     b_num = len(b_dict['op_name'])
-    n_num_input = len([name for name in n_dict['op_name'] if Const.INPUT in name])
-    b_num_input = len([name for name in b_dict['op_name'] if Const.INPUT in name])
-    n_num_kwarg = len([name for name in n_dict['op_name'] if 'kwarg' in name])
-    b_num_kwarg = len([name for name in b_dict['op_name'] if 'kwarg' in name])
-    n_num_output = n_num - n_num_input - n_num_kwarg
-    b_num_output = b_num - b_num_input - b_num_kwarg
+    n_num_input = len([name for name in n_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    b_num_input = len([name for name in b_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    n_num_output = n_num - n_num_input
+    b_num_output = b_num - b_num_input
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
-    get_accuracy_core(n_num_input, n_num_kwarg, b_num_input, b_num_kwarg, "kwargs_struct")
-    get_accuracy_core(n_num_input + n_num_kwarg, n_num_output, b_num_input + b_num_kwarg, b_num_output, 'output_struct')
+    get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
 
 
 def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
@@ -334,7 +335,8 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     err_msg = CompareConst.NO_BENCH
     accuracy_check_res = CompareConst.N_A
     for index, n_name in enumerate(n_dict["op_name"]):
-        if n_name.find("input") != -1:
+        name_ele_list = n_name.split(Const.SEP)
+        if "input" in name_ele_list:
             n_struct = n_dict["input_struct"][index]
         else:
             n_struct = n_dict["output_struct"][index_out]
@@ -386,21 +388,21 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             op_dict['stack_info'].append(tensor['full_info'])
             break
         op_dict["op_name"].append(tensor['full_op_name'])
+        name_ele_list = tensor['full_op_name'].split(Const.SEP)
         if not md5_compare:
-            if tensor['full_op_name'].find("input") != -1:
+            if "input" in name_ele_list:
                 op_dict["input_struct"].append((tensor['dtype'], tensor['shape']))
-            elif tensor['full_op_name'].find("kwarg") != -1:
+            elif "kwarg" in name_ele_list:
                 op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape']))
-            elif tensor['full_op_name'].find("output") != -1:
+            elif "output" in name_ele_list:    
                 op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
         else:
-            if tensor['full_op_name'].find("input") != -1:
+            if "input" in name_ele_list:
                 op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            elif tensor['full_op_name'].find("kwarg") != -1:
+            if "kwarg" in name_ele_list:    
                 op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            elif tensor['full_op_name'].find("output") != -1:
+            elif "output" in name_ele_list:
                 op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-
         op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
 
         if all_mode_bool:
@@ -408,7 +410,6 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
-
 
     if not op_dict["kwargs_struct"]:
         del op_dict["kwargs_struct"]
