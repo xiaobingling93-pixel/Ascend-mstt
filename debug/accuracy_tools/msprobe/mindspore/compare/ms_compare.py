@@ -297,7 +297,7 @@ def generate_file_mapping(npu_json_path, bench_json_path, mapping_list):
 
 
 def check_cross_framework(bench_json_path):
-    pattern = r'"data_name":\s*"[^"]\.pt"'
+    pattern = r'"data_name":\s*"[^"]+\.pt"'
     with FileOpen(bench_json_path, 'r') as file:
         for line in file:
             if re.search(pattern, line):
