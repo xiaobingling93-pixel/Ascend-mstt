@@ -253,7 +253,7 @@ class GraphMSComparator:
         else:
             slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num)
             self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
-        return slice_num
+        return slice_num + 1
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
