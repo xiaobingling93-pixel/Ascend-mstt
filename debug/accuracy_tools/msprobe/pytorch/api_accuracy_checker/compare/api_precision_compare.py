@@ -380,8 +380,6 @@ def analyse_csv(npu_data, gpu_data, config):
                 message = UNSUPPORTED_MESSAGE
                 write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
                 print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
-                forward_status, backward_status = [], []
-                message = ''
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
@@ -389,9 +387,9 @@ def analyse_csv(npu_data, gpu_data, config):
                 message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 print_test_success(last_api_name, forward_result, backward_result)
-                forward_status, backward_status = [], []
-                message = ''
                 last_api_skip_message = ''
+            forward_status, backward_status = [], []
+            message = ''
 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
         last_api_name = api_full_name
