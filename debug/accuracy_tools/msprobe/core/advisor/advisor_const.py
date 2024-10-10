@@ -35,8 +35,8 @@ class AdvisorConst:
     # advisor message
     NO_ERR_SUGGEST = "All data in comparison result meets the accuracy requirements."
     FORWARD_INPUT_SUGGEST = "1. Analyze the model to view the input source.\n" \
-                            "2. Check whether an inplace API causes the output result to overwrite the input result. \
-                            That is, the fault is actually caused by a computation error.\n" \
+                            "2. Check whether an inplace API causes the output result to overwrite the input result. "\
+                            "That is, the fault is actually caused by a computation error.\n" \
                             "3. The fault may be caused by memory corruption and further analysis is required."
     FORWARD_OUTPUT_SUGGEST = "This is a forward API computation error. Check the computation implementation."
     BACKWARD_INPUT_SUGGEST = "Check whether the forward computation result is affected."

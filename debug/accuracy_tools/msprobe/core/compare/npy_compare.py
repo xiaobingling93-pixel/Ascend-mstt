@@ -287,8 +287,8 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
             return CompareConst.NAN, ""
-        return (format_value(np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)),
-                "")
+        return (format_value(np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) /
+                             np.size(relative_err)), "")
 
 
 class CompareOps:
