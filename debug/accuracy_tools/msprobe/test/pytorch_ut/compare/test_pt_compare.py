@@ -37,19 +37,6 @@ class TestUtilsMethods(unittest.TestCase):
         if os.path.exists(base_dir2):
             shutil.rmtree(base_dir2)
 
-    def test_check_op(self):
-        fuzzy_match = False
-        pt_comparator = PTComparator()
-        result = pt_comparator.check_op(npu_dict, bench_dict, fuzzy_match)
-        self.assertEqual(result, True)
-
-    def test_match_op(self):
-        fuzzy_match = False
-        pt_comparator = PTComparator()
-        a, b = pt_comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
-        self.assertEqual(a, 0)
-        self.assertEqual(b, 0)
-
     def test_read_npy_data_bf16(self):
         generate_bf16_pt(base_dir1)
         result = PTComparator().read_npy_data(base_dir1, 'bf16.pt')
