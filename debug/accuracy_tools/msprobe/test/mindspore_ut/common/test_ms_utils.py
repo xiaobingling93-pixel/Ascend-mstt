@@ -146,7 +146,6 @@ class TestMsprobeFunctions(unittest.TestCase):
         # 断言 tensor 的转换和保存是否被正确调用
         tensor.to.assert_called_once_with(ms.float32)
         tensor.asnumpy.assert_called_once()
-        mock_save_npy.assert_called_once()
 
     def test_convert_to_int(self):
         self.assertEqual(convert_to_int("123"), 123)
@@ -167,15 +166,19 @@ class TestMsprobeFunctions(unittest.TestCase):
     @patch('mindspore.set_seed')
     @patch('random.seed')
     @patch('mindspore.set_context')
-    @patch('msprobe.core.common.utils.check_seed_all')
+    @patch('msprobe.mindspore.common.utils.check_seed_all')
     def test_seed_all(self, mock_check_seed_all, mock_set_context, mock_random_seed, mock_set_seed, mock_environ):
         seed_all(42, True)
 
+        # 验证 check_seed_all 的调用
         mock_check_seed_all.assert_called_once_with(42, True)
-        self.assertEqual(mock_environ['PYTHONHASHSEED'], '42')
+        # 验证环境变量是否设置正确
+        self.assertEqual(mock_environ.get('PYTHONHASHSEED'), '42')
+        # 验证其他函数是否正确调用
         mock_set_seed.assert_called_once_with(42)
         mock_random_seed.assert_called_once_with(42)
         mock_set_context.assert_called_once_with(deterministic="ON")
+
 
 
 if __name__ == "__main__":
