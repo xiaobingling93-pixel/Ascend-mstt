@@ -32,34 +32,6 @@ device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
 
 
-class DumpException(Exception):
-    """
-    Class for Dump Exception
-    """
-    NONE_ERROR = 0
-    INVALID_DUMP_PATH_ERROR = 1
-    DUMP_FILE_OPEN_ERROR = 2
-    DUMP_FILE_CLOSE_ERROR = 3
-    DUMP_FILE_READ_ERROR = 4
-    DUMP_FILE_WRITE_ERROR = 5
-    INVALID_DUMP_FORMAT_ERROR = 6
-    NO_DUMP_DATA_ERROR = 7
-    PERMISSION_DENIED_ERROR = 8
-    UNKNOWN_DUMP_ERROR = 9
-    OUTPUT_HOOK_ERROR = 10
-    INPUT_HOOK_ERROR = 11
-    FUNCTION_CALL_ERROR = 12
-    FORWARD_DATA_COLLECTION_ERROR = 13
-    BACKWARD_DATA_COLLECTION_ERROR = 14
-
-    def __init__(self, code, error_info: str = ""):
-        super(DumpException, self).__init__()
-        self.code = code
-        self.error_info = error_info
-
-    def __str__(self):
-        return f"Error Code {self.code}: {self.error_info}"
-
 class CompareException(Exception):
     """
     Class for Accuracy Compare Exception
@@ -101,8 +73,20 @@ class CompareException(Exception):
 
 
 class DumpException(CompareException):
-    pass
+    """
+    Class for Dump Exception
+    """
+    OUTPUT_HOOK_ERROR = 26
+    INPUT_HOOK_ERROR = 27
+    FUNCTION_CALL_ERROR = 28
+    FORWARD_DATA_COLLECTION_ERROR = 29
+    BACKWARD_DATA_COLLECTION_ERROR = 30
 
+    def __init__(self, code, error_info: str = ""):
+        super(DumpException, self).__init__(code, error_info)
+
+    def __str__(self):
+        return f"Dump Error Code {self.code}: {self.error_info}"
 
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
     if not isinstance(input_param, dict):
