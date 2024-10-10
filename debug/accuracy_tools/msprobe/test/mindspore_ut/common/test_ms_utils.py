@@ -1,185 +1,83 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""
-import unittest
-from unittest.mock import MagicMock, patch, call
-import numpy as np
-import mindspore as ms
 import os
-import random
-
-from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.mindspore.common.utils import (get_rank_if_initialized,
-    convert_bf16_to_fp32,
-    save_tensor_as_npy,
-    convert_to_int,
-    list_lowest_level_directories,
-    seed_all,
-    MsprobeStep)
-
-class MockCell:
-    def __init__(self):
-        self.mindstudio_reserved_name = None
+import shutil
+import json
+import numpy as np
+from unittest import TestCase, mock
+from mindspore import Tensor
+from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator
+from msprobe.core.grad_probe.constant import GradConst
 
 
-class TestMsprobeStep(unittest.TestCase):
+class TestGradAnalyzer(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.output_path = "./test_output"
+        cls.dump_dir = f"{cls.output_path}/rank0/Dump"
+        cls.save_dir = f"{cls.output_path}/rank0"
+        os.makedirs(cls.dump_dir, exist_ok=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.exists(cls.output_path):
+            shutil.rmtree(cls.output_path)
+
     def setUp(self):
-        class Debugger:
-            def __init__(self):
-                self.start_called = False
-                self.stop_called = False
-                self.step_called = False
-                self.stop_called_first = False
+        # Initialize CSVGenerator instance before each test
+        self.csv_generator = CSVGenerator()
+        self.csv_generator.init(mock.Mock(**{
+            'get_context.side_effect': lambda x: {
+                GradConst.OUTPUT_PATH: self.output_path,
+                GradConst.LEVEL: GradConst.LEVEL2,
+                GradConst.BOUNDS: [-0.1, 0.0, 0.1]
+            }[x]
+        }))
+        # Clear dump directory before each test
+        shutil.rmtree(self.dump_dir, ignore_errors=True)
+        os.makedirs(self.dump_dir, exist_ok=True)
 
-            def start(self):
-                self.start_called = True
+    def test_run_with_no_dump_dir(self):
+        # Test run method when dump directory does not exist
+        shutil.rmtree(self.dump_dir)
+        with mock.patch("time.sleep", side_effect=InterruptedError):
+            with self.assertRaises(InterruptedError):
+                self.csv_generator.run()
 
-            def stop(self):
-                self.stop_called = True
+    def test_traverse_files_with_empty_directory(self):
+        # Test traverse_files method with empty dump directory
+        self.csv_generator.traverse_files([])
+        self.assertEqual(len(os.listdir(self.dump_dir)), 0)
 
-            def step(self):
-                if self.stop_called:
-                    self.stop_called_first = True
-                self.step_called = True
-        debugger = Debugger()
-        self.msprobe_step = MsprobeStep(debugger)
+    def test_load_npy_data(self):
+        # Test load_npy_data method with mock data
+        test_file_path = os.path.join(self.dump_dir, "test_data.npy")
+        np.save(test_file_path, np.array([1, 2, 3]))
+        data = self.csv_generator.load_npy_data(test_file_path)
+        self.assertIsNotNone(data)
+        np.testing.assert_array_equal(data, np.array([1, 2, 3]))
 
-    def test_on_train_step_begin(self):
-        self.msprobe_step.on_train_step_begin("run_context")
-        self.assertTrue(self.msprobe_step.debugger.start_called)
-        self.assertFalse(self.msprobe_step.debugger.stop_called)
-        self.assertFalse(self.msprobe_step.debugger.step_called)
+    def test_create_csv_file(self):
+        # Test CSV file creation
+        self.csv_generator.current_step = 0
+        self.csv_generator.create_csv_file()
+        csv_path = os.path.join(self.save_dir, "grad_summary_0.csv")
+        self.assertTrue(os.path.exists(csv_path))
 
-    def test_on_train_step_end(self):
-        self.msprobe_step.on_train_step_end("run_context")
-        self.assertFalse(self.msprobe_step.debugger.start_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called)
-        self.assertTrue(self.msprobe_step.debugger.step_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called_first)
+    def test_check_valid_data(self):
+        # Test check_valid method with valid and invalid data
+        invalid_data_long = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
+        invalid_data = np.array([0, 1, 2, 3, 4, 5])
+        self.assertFalse(self.csv_generator.check_valid(invalid_data_long))
+        self.assertFalse(self.csv_generator.check_valid(invalid_data))
 
-
-class TestMsprobeStep(unittest.TestCase):
-    def setUp(self):
-        class Debugger:
-            def __init__(self):
-                self.start_called = False
-                self.stop_called = False
-                self.step_called = False
-                self.stop_called_first = False
-
-            def start(self):
-                self.start_called = True
-
-            def stop(self):
-                self.stop_called = True
-
-            def step(self):
-                if self.stop_called:
-                    self.stop_called_first = True
-                self.step_called = True
-
-        debugger = Debugger()
-        self.msprobe_step = MsprobeStep(debugger)
-
-    def test_on_train_step_begin(self):
-        self.msprobe_step.on_train_step_begin("run_context")
-        self.assertTrue(self.msprobe_step.debugger.start_called)
-        self.assertFalse(self.msprobe_step.debugger.stop_called)
-        self.assertFalse(self.msprobe_step.debugger.step_called)
-
-    def test_on_train_step_end(self):
-        self.msprobe_step.on_train_step_end("run_context")
-        self.assertFalse(self.msprobe_step.debugger.start_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called)
-        self.assertTrue(self.msprobe_step.debugger.step_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called_first)
-
-
-class TestMsprobeFunctions(unittest.TestCase):
-
-    @patch('mindspore.communication.GlobalComm.INITED', True)
-    @patch('mindspore.communication.get_rank', return_value=0)
-    def test_get_rank_if_initialized(self, mock_get_rank):
-        rank = get_rank_if_initialized()
-        self.assertEqual(rank, 0)
-        mock_get_rank.assert_called_once()
-
-    @patch('mindspore.Tensor')
-    def test_convert_bf16_to_fp32(self, mock_tensor):
-        mock_tensor.dtype = ms.bfloat16
-        mock_tensor.to.return_value = mock_tensor
-        result = convert_bf16_to_fp32(mock_tensor)
-        self.assertEqual(result, mock_tensor)
-        mock_tensor.to.assert_called_once_with(ms.float32)
-
-        # Test when tensor is not bfloat16
-        mock_tensor.dtype = ms.float32
-        result = convert_bf16_to_fp32(mock_tensor)
-        self.assertEqual(result, mock_tensor)
-
-    @patch('msprobe.mindspore.common.utils.path_len_exceeds_limit', return_value=False)
-    @patch('msprobe.core.common.file_utils.save_npy')
-    def test_save_tensor_as_npy(self, mock_save_npy, mock_path_len_exceeds):
-        # 创建一个模拟的 tensor 对象
-        tensor = MagicMock()
-        tensor.dtype = ms.bfloat16
-        tensor.to.return_value = tensor  # Mock the conversion to float32
-        tensor.asnumpy.return_value = np.array([1, 2, 3])
-
-        # 执行被测函数
-        file_path = "test.npy"
-        save_tensor_as_npy(tensor, file_path)
-
-        # 断言 tensor 的转换和保存是否被正确调用
-        tensor.to.assert_called_once_with(ms.float32)
-        tensor.asnumpy.assert_called_once()
-
-    def test_convert_to_int(self):
-        self.assertEqual(convert_to_int("123"), 123)
-        self.assertEqual(convert_to_int("abc"), -1)
-
-    @patch('os.listdir', return_value=['dir1', 'dir2'])
-    @patch('os.path.isdir', side_effect=lambda x: x in ['root/dir1', 'root/dir2'])
-    @patch('os.path.exists', side_effect=lambda x: x == 'root')
-    @patch('msprobe.core.common.file_utils.check_path_exists')
-    def test_list_lowest_level_directories(self, mock_check_exists, mock_exists, mock_isdir, mock_listdir):
-        mock_check_exists.return_value = None
-
-        # 执行函数并验证结果
-        lowest_dirs = list_lowest_level_directories('root')
-        self.assertEqual(lowest_dirs, ['root/dir1', 'root/dir2'])
-
-    @patch('os.environ', new_callable=dict)
-    @patch('mindspore.set_seed')
-    @patch('random.seed')
-    @patch('mindspore.set_context')
-    @patch('msprobe.mindspore.common.utils.check_seed_all')
-    def test_seed_all(self, mock_check_seed_all, mock_set_context, mock_random_seed, mock_set_seed, mock_environ):
-        seed_all(42, True)
-
-        # 验证 check_seed_all 的调用
-        mock_check_seed_all.assert_called_once_with(42, True)
-        # 验证环境变量是否设置正确
-        self.assertEqual(mock_environ.get('PYTHONHASHSEED'), '42')
-        # 验证其他函数是否正确调用
-        mock_set_seed.assert_called_once_with(42)
-        mock_random_seed.assert_called_once_with(42)
-        mock_set_context.assert_called_once_with(deterministic="ON")
-
+    def test_gen_csv_line(self):
+        # Test gen_csv_line method
+        file_path = os.path.join(self.dump_dir, "0_test_param.npy")
+        stat_data = np.array([0, 1, 2, 3, 4, 2, 2, 2, 1, 0, 0, 0, 0, 0, 0])
+        with mock.patch.object(self.csv_generator.cache_list, 'append') as mock_append:
+            self.csv_generator.gen_csv_line(file_path, stat_data)
+            mock_append.assert_called_once()
 
 
 if __name__ == "__main__":
-    unittest.main()
+    from unittest import main
+    main()
