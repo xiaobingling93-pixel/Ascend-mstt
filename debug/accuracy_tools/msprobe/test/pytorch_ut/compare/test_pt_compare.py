@@ -62,7 +62,17 @@ class TestUtilsMethods(unittest.TestCase):
             'is_print_compare_log': True
         }
         output_path = base_dir2
-        compare(input_param, output_path)
 
+        compare(input_param, output_path)
         output_files = os.listdir(output_path)
         self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
+
+        input_param2 = {
+            'npu_json_path': '',
+            'bench_json_path': dump_path,
+            'stack_json_path': stack_path,
+            'is_print_compare_log': True
+        }
+        with self.assertRaises(CompareException) as context:
+            compare(input_param2, output_path)
+        self.assertEqual(context.exception.code, 1)
