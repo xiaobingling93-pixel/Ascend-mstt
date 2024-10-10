@@ -149,6 +149,14 @@ class Const:
     HYPHEN = "-"
     STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
 
+    # data type const
+    FLOAT16 = "Float16"
+    FLOAT32 = "Float32"
+    BFLOAT16 = "BFloat16"
+    TORCH_FLOAT16 = "torch.float16"
+    TORCH_FLOAT32 = "torch.float32"
+    TORCH_BFLOAT16 = "torch.bfloat16"
+
 
 class CompareConst:
     """
