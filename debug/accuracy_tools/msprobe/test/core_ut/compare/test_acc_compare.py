@@ -419,39 +419,38 @@ class TestUtilsMethods(unittest.TestCase):
         result = Comparator().gen_merge_list(json_data, op_name, stack_json_data, summary_compare, md5_compare)
         self.assertEqual(result, merge_list)
 
-    def test_check_op_1(self):
+    def test_check_op_fuzzy_false(self):
         fuzzy_match = False
         pt_comparator = PTComparator()
         result = pt_comparator.check_op(npu_dict, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
-    def test_check_op_2(self):
+    def test_check_op_fuzzy_true(self):
         fuzzy_match = True
         pt_comparator = PTComparator()
         result = pt_comparator.check_op(npu_dict2, bench_dict, fuzzy_match)
         self.assertEqual(result, True)
 
-    def test_match_op_1(self):
+    def test_match_op_both_last_element(self):
         fuzzy_match = False
         pt_comparator = PTComparator()
         a, b = pt_comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
-    def test_match_op_2(self):
+    def test_match_op_only_npu_last_element(self):
         fuzzy_match = False
         pt_comparator = PTComparator()
         a, b = pt_comparator.match_op([npu_dict], [bench_dict, 1], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
 
-    def test_match_op_3(self):
+    def test_match_op_only_bench_last_element(self):
         fuzzy_match = False
         pt_comparator = PTComparator()
         a, b = pt_comparator.match_op([npu_dict, npu_dict2], [bench_dict], fuzzy_match)
         self.assertEqual(a, 0)
         self.assertEqual(b, 0)
-
 
     def test_compare_process(self):
         generate_dump_json(base_dir)

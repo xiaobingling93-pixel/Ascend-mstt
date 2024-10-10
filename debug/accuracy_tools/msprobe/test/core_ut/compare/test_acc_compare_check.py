@@ -139,21 +139,21 @@ class TestUtilsMethods(unittest.TestCase):
         result = check_json_key_value(input_output, op_name, depth=11)
         self.assertEqual(result, None)
 
-    def test_valid_key_value_1(self):
+    def test_valid_key_value_type_shape(self):
         key = 'shape'
         value = 'abc'
         with self.assertRaises(CompareException) as context:
             valid_key_value(key, value, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_OBJECT_TYPE_ERROR)
 
-    def test_valid_key_value_2(self):
+    def test_valid_key_value_type_requires_grad(self):
         key = 'requires_grad'
         value = 'abc'
         with self.assertRaises(CompareException) as context:
             valid_key_value(key, value, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_OBJECT_TYPE_ERROR)
 
-    def test_check_stack_json_str_1(self):
+    def test_check_stack_json_str_type_stack_info(self):
         stack_info = 'File'
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
