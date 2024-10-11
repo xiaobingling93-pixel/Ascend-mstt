@@ -243,17 +243,17 @@ class GraphMSComparator:
             self.to_excel(compare_result_df, compare_result_path)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
     
-    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0) -> int:
+    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0, need_slice=False) -> int:
         size = len(compare_result_df)
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
-            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx')
+            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             return slice_num + 1
         else:
-            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num)
-            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
+            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num, True)
+            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num, True)
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
