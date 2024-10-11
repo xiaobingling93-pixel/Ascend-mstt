@@ -50,7 +50,7 @@ def _handle_multi_process(func, input_parma, result_df, lock):
     return pd.concat(final_results, ignore_index=True)
 
 
-def _ms_graph_handle_multi_process(func, result_df, mode, pool):
+def _ms_graph_handle_multi_process(func, result_df, mode):
     process_num = int((multiprocessing.cpu_count() + 1) // 4)
     df_chunk_size = len(result_df) // process_num
     if df_chunk_size > 0:
@@ -59,6 +59,7 @@ def _ms_graph_handle_multi_process(func, result_df, mode, pool):
         df_chunks = [result_df]
 
     results = []
+    pool = multiprocessing.Pool(process_num)
 
     def err_call(args):
         logger.error('multiprocess compare failed! Reason: {}'.format(args))
@@ -71,6 +72,8 @@ def _ms_graph_handle_multi_process(func, result_df, mode, pool):
         result = pool.apply_async(func, args=(df_chunk, mode), error_callback=err_call)
         results.append(result)
     final_results = [r.get() for r in results]
+    pool.close()
+    pool.join()
     return pd.concat(final_results, ignore_index=True)
 
 
