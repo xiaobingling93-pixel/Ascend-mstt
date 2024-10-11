@@ -5,6 +5,7 @@ import os
 
 import numpy as np
 import pandas as pd
+import multiprocessing as mp
 from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
 from msprobe.core.common.file_utils import FileOpen, check_path_before_create, change_mode, load_npy
 from msprobe.core.common.log import logger
@@ -225,6 +226,8 @@ class GraphMSComparator:
 
     def compare_core(self):
         logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
+        process_num = int((mp.cpu_count() + 1) // 4)
+        pool = mp.Pool(process_num)
 
         for rank_id, step_id in self.common_rank_step:
             compare_result_df, mode = self.compare_process(rank_id, step_id)
@@ -236,24 +239,35 @@ class GraphMSComparator:
                 is_empty = True
             if is_empty or not mode:
                 continue
-            compare_result_df = self._do_multi_process(compare_result_df, mode)
+            compare_result_df = self._do_multi_process(compare_result_df, mode, pool)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
             check_path_before_create(compare_result_path)
-            self.to_excel(compare_result_df, compare_result_path)
+            self.to_excel(compare_result_df, compare_result_path, pool)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
+        pool.close()
+        pool.join()
     
-    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0) -> int:
+    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, pool) -> int:
         size = len(compare_result_df)
-        # sheet size cannot be larger than 1048576
-        if size < CompareConst.MAX_EXCEL_LENGTH:
-            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx')
+        # sheet size is limited to 10000 to improve performance
+        if size <= CompareConst.MAX_EXCEL_LENGTH:
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            return slice_num + 1
-        else:
-            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num)
-            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
+            return
+
+        def err_call(args):
+            logger.error('multiprocess save excel failed! Reason: {}'.format(args))
+            try:
+                pool.terminate()
+            except OSError as e:
+                logger.error("pool terminate failed")
+
+        slice_num = size // CompareConst.MAX_EXCEL_LENGTH + bool(size % CompareConst.MAX_EXCEL_LENGTH)
+        for i in range(slice_num):
+            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{i}.xlsx')
+            df = compare_result_df.iloc[i*CompareConst.MAX_EXCEL_LENGTH: (i+1)*CompareConst.MAX_EXCEL_LENGTH]
+            pool.apply_async(lambda df, path: df.to_excel(path, index=False), args=(df, compare_result_path), error_callback=err_call)
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
@@ -351,9 +365,9 @@ class GraphMSComparator:
                 rank_step_path_dict[rank_step_key] = [dir_path]
         return dict(sorted(rank_step_path_dict.items()))
 
-    def _do_multi_process(self, result_df, mode):
+    def _do_multi_process(self, result_df, mode, pool):
         try:
-            result_df = _ms_graph_handle_multi_process(self.compare_ops, result_df, mode)
+            result_df = _ms_graph_handle_multi_process(self.compare_ops, result_df, mode, pool)
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
