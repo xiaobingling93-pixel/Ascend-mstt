@@ -39,12 +39,12 @@ def check_struct_match(npu_dict, bench_dict, cross_frame=False):
         try:
             struct_in_is_match = check_type_shape_match(npu_struct_in, bench_struct_in)
             struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
-        except CompareException:
+        except CompareException as error:
             err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
                       f'npu_dict: {npu_dict}' \
                       f'bench_dict: {bench_dict}'
             logger.error(err_msg)
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         is_match = struct_in_is_match and struct_out_is_match
     return is_match
 
