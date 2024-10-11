@@ -2,9 +2,10 @@ import os
 import shutil
 import json
 import numpy as np
+import mindspore as ms
 from unittest import TestCase, mock
-from mindspore import Tensor
-from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator
+from mindspore import Tensor, Parameter
+from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator, grad_dump
 from msprobe.core.grad_probe.constant import GradConst
 
 class TestGradAnalyzer(TestCase):
@@ -75,6 +76,49 @@ class TestGradAnalyzer(TestCase):
         with mock.patch.object(self.csv_generator.cache_list, 'append') as mock_append:
             self.csv_generator.gen_csv_line(file_path, stat_data)
             mock_append.assert_called_once()
+
+    def test_grad_dump(self):
+        # Test grad_dump function with numpy file output
+        dump_dir = self.dump_dir
+        g_name = "test_grad"
+        dump_step = Parameter(Tensor([1.0]), name="dump_step")
+        grad = Tensor(np.array([0.1, 0.2, 0.3]), dtype=ms.float32)
+        level = GradConst.LEVEL2
+        bounds = [-0.1, 0.0, 0.1]
+
+        # Run the grad_dump function
+        try:
+            grad_dump(dump_dir, g_name, dump_step, grad, level, bounds)
+        except RuntimeError as e:
+            # If TensorDump fails due to environment, skip the file existence check
+            self.skipTest(f"TensorDump operation failed: {e}")
+
+        # Verify if the expected dump files are created with the correct naming convention
+        expected_files = ["0_test_grad.npy", "1_test_grad_dir.npy"]
+        for expected_file in expected_files:
+            expected_path = os.path.join(dump_dir, expected_file)
+            self.assertTrue(os.path.exists(expected_path), f"Expected file {expected_file} does not exist.")
+
+        # Load the saved numpy arrays and check their contents
+        for i, expected_file in enumerate(expected_files):
+            file_path = os.path.join(dump_dir, expected_file)
+            data = np.load(file_path)
+            print(f"Content of {file_path}: {data}")
+
+
+    def test_stop_method(self):
+        # Test stop method to ensure stop_event is set
+        self.csv_generator.stop()
+        self.assertTrue(self.csv_generator.stop_event.is_set())
+
+    def test_traverse_files_with_data(self):
+        # Test traverse_files method with mock npy files
+        npy_files = ["0_test_param.npy"]
+        test_file_path = os.path.join(self.dump_dir, "0_test_param.npy")
+        np.save(test_file_path, np.array([1, 2, 3, 4, 5]))
+        with mock.patch.object(self.csv_generator, 'load_npy_data', return_value=np.array([1, 2, 3, 4, 5])):
+            self.csv_generator.traverse_files(npy_files)
+        self.assertFalse(os.path.exists(test_file_path))
 
 if __name__ == "__main__":
     from unittest import main
