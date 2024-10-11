@@ -250,10 +250,10 @@ class GraphMSComparator:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx')
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            return slice_num + 1
         else:
             slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num)
-            self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
-        return slice_num + 1
+            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num)
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
