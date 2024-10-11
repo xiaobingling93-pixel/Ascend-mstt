@@ -133,8 +133,10 @@ class PreheatHandler(FuzzHandler):
         """
         # 每一步样本数
         total_count = preheat_counter.get_one_step_used_api(self.pure_name)
-        sample_count_per_step = self._get_sample_count_per_step()
         need_sample_set = set()
+        if total_count == 0:
+            return need_sample_set
+        sample_count_per_step = self._get_sample_count_per_step()
         prehead_step = self.params.preheat_config.get("preheat_step")
         for i in range(1, sample_count_per_step + 1):
             count = (prehead_step * (i - 1) + self.params.step) % total_count

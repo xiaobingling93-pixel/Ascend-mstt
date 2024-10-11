@@ -51,7 +51,8 @@ npu_op_name_Mint = ['Mint.conv2d.0.forward.input.0', 'Mint.conv2d.0.forward.inpu
 bench_op_name = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                           'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output']
 
-data_mapping = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0'}
+data_mapping = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0',
+                'Functional.flash_attention_score.4.forward.output.0': 'NPU.npu_fusion_attention.4.forward.output.0'}
 
 npu_json_data = {
     'task': 'statistics',
@@ -71,7 +72,26 @@ npu_json_data = {
                     'Max': 4.1875,
                     'Min': -4.4375,
                     'Mean': -4.550282028503716e-05,
-                    'Norm': 2316.379150390625
+                    'Norm': 2316.379150390625,
+                    'data_name': '',
+                    'md5': ''
+                }
+            ],
+            'output': [
+                {
+                    'type': 'mindspore.Tensor',
+                    'dtype': 'BFloat16',
+                    'shape': [
+                        4096,
+                        1,
+                        2048
+                    ],
+                    'Max': 4.1875,
+                    'Min': -4.4375,
+                    'Mean': -4.550282028503716e-05,
+                    'Norm': 2316.379150390625,
+                    'data_name': '',
+                    'md5': ''
                 }
             ]
         }
@@ -96,12 +116,32 @@ bench_json_data = {
                     'Max': 4.1875,
                     'Min': -4.4375,
                     'Mean': -4.553794860839844e-05,
-                    'Norm': 2320.0
+                    'Norm': 2320.0,
+                    'data_name': '',
+                    'md5': ''
+                }
+            ],
+            'output': [
+                {
+                    'type': 'torch.Tensor',
+                    'dtype': 'torch.bfloat16',
+                    'shape': [
+                        4096,
+                        1,
+                        2048
+                    ],
+                    'Max': 4.1875,
+                    'Min': -4.4375,
+                    'Mean': -4.553794860839844e-05,
+                    'Norm': 2320.0,
+                    'data_name': '',
+                    'md5': ''
                 }
             ]
         }
     }
 }
+
 
 class TestUtilsMethods(unittest.TestCase):
 
@@ -124,6 +164,12 @@ class TestUtilsMethods(unittest.TestCase):
                 'summary': [4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625],
                 'data_name': None,
                 'stack_info': [None]
+            },
+            'Functional.flash_attention_score.4.forward.output.0': {
+                'struct': ('BFloat16', [4096, 1, 2048]),
+                'summary': [4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625],
+                'data_name': None,
+                'stack_info': [None]
             }
         }
         self.assertDictEqual(npu_ops_all, npu_ops_all_correct)
@@ -131,6 +177,12 @@ class TestUtilsMethods(unittest.TestCase):
         bench_ops_all = ms_comparator.merge_data(bench_json_data, stack_json_data, summary_compare, md5_compare)
         bench_ops_all_correct = {
             'NPU.npu_fusion_attention.4.forward.input.0': {
+                'struct': ('torch.bfloat16', [4096, 1, 2048]),
+                'summary': [4.1875, -4.4375, -4.553794860839844e-05, 2320.0],
+                'data_name': None,
+                'stack_info': [None]
+            },
+            'NPU.npu_fusion_attention.4.forward.output.0': {
                 'struct': ('torch.bfloat16', [4096, 1, 2048]),
                 'summary': [4.1875, -4.4375, -4.553794860839844e-05, 2320.0],
                 'data_name': None,
@@ -145,5 +197,31 @@ class TestUtilsMethods(unittest.TestCase):
                            'BFloat16', 'torch.bfloat16', [4096, 1, 2048], [4096, 1, 2048], 0.0, 0.0,
                            3.512832336127758e-08, -3.620849609375, '0.0%', '0.0%', '0.07714076816099476%',
                            '0.1560711038523707%', 4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625,
-                           4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None]]
+                           4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None],
+                          ['Functional.flash_attention_score.4.forward.output.0',
+                           'NPU.npu_fusion_attention.4.forward.output.0',
+                           'BFloat16', 'torch.bfloat16', [4096, 1, 2048], [4096, 1, 2048], 0.0, 0.0,
+                           3.512832336127758e-08, -3.620849609375, '0.0%', '0.0%', '0.07714076816099476%',
+                           '0.1560711038523707%', 4.1875, -4.4375, -4.550282028503716e-05, 2316.379150390625,
+                           4.1875, -4.4375, -4.553794860839844e-05, 2320.0, '', '', None]
+                          ]
         self.assertListEqual(result, result_correct)
+
+    def test_dm_tensor_task(self):
+        self.compare_process_custom(False, False)
+
+    def compare_process_custom(self, summary_compare, md5_compare):
+        import os, tempfile, json
+        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
+        npu_dump_path = os.path.join(data_path, 'npu_dump.json')
+        bench_dump_path = os.path.join(data_path, 'bench_dump.json')
+        npu_stack_path = os.path.join(data_path, 'npu_stack.json')
+
+        with open(npu_dump_path, 'w') as n_d_f, open(bench_dump_path, 'w') as b_d_f, open(npu_stack_path, 'w') as n_s_f:
+            json.dump(npu_json_data, n_d_f)
+            json.dump(bench_json_data, b_d_f)
+            json.dump({}, n_s_f)
+        ms_comparator = MSComparator()
+        result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
+                                                         False, summary_compare, md5_compare)
+        self.assertListEqual(result_df.values.tolist(), [])

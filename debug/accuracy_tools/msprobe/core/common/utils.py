@@ -32,10 +32,11 @@ device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
 
 
-class CompareException(Exception):
+class MsprobeBaseException(Exception):
     """
-    Class for Accuracy Compare Exception
+    Base class for all custom exceptions.
     """
+    # 所有的错误代码
     NONE_ERROR = 0
     INVALID_PATH_ERROR = 1
     OPEN_FILE_ERROR = 2
@@ -61,9 +62,15 @@ class CompareException(Exception):
     INVALID_OBJECT_TYPE_ERROR = 22
     INVALID_CHAR_ERROR = 23
     RECURSION_LIMIT_ERROR = 24
+    INVALID_ATTRIBUTE_ERROR = 25
+    OUTPUT_HOOK_ERROR = 26
+    INPUT_HOOK_ERROR = 27
+    FUNCTION_CALL_ERROR = 28
+    FORWARD_DATA_COLLECTION_ERROR = 29
+    BACKWARD_DATA_COLLECTION_ERROR = 30
 
     def __init__(self, code, error_info: str = ""):
-        super(CompareException, self).__init__()
+        super(MsprobeBaseException, self).__init__()
         self.code = code
         self.error_info = error_info
 
@@ -71,8 +78,25 @@ class CompareException(Exception):
         return self.error_info
 
 
-class DumpException(CompareException):
-    pass
+class CompareException(MsprobeBaseException):
+    """
+    Class for Accuracy Compare Exception
+    """
+
+    def __init__(self, code, error_info: str = ""):
+        super(CompareException, self).__init__(code, error_info)
+
+
+class DumpException(MsprobeBaseException):
+    """
+    Class for Dump Exception
+    """
+
+    def __init__(self, code, error_info: str = ""):
+        super(DumpException, self).__init__(code, error_info)
+
+    def __str__(self):
+        return f"Dump Error Code {self.code}: {self.error_info}"
 
 
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
@@ -321,6 +345,9 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         if not isinstance(element, (int, str)):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
                                    f"{obj} element {element} must be an integer or string.")
+        if isinstance(element, int) and element < 0:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 
+                                   f"Each element of {obj} must be non-negative, currently it is {element}.")
         if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
             real_step_or_rank.append(element)
         elif isinstance(element, str) and Const.HYPHEN in element:

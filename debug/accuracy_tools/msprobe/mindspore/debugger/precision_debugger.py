@@ -1,17 +1,31 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 import mindspore as ms
 from mindspore._c_expression import MSContext
 
-from msprobe.mindspore.service import Service
-from msprobe.mindspore.ms_config import parse_json_config
-from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 from msprobe.core.common.const import Const, MsgConst
 from msprobe.mindspore.common.const import Const as MsConst
-from msprobe.mindspore.runtime import Runtime
-
+from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
+from msprobe.mindspore.ms_config import parse_json_config
+from msprobe.mindspore.runtime import Runtime
+from msprobe.mindspore.service import Service
+from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
 
 class PrecisionDebugger:
@@ -69,7 +83,7 @@ class PrecisionDebugger:
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
 
-        instance.config.execution_mode = instance._get_execution_mode()
+        instance.config.execution_mode = cls._get_execution_mode()
         if cls._need_service():
             if not instance.service:
                 instance.service = Service(instance.config)

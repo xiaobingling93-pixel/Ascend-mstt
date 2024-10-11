@@ -80,6 +80,7 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
+    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -232,6 +233,8 @@ class CompareConst:
     ERROR = 'error'
     SKIP = 'SKIP'
     N_A = 'N/A'
+    INF = 'inf'
+    NEG_INF = '-inf'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8
@@ -309,7 +312,8 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 10 * 1024 * 1024
+    MAX_YAML_SIZE = 1048576  # 1 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750

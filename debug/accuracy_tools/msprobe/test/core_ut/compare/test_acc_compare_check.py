@@ -66,11 +66,24 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 
 class TestUtilsMethods(unittest.TestCase):
 
-    def test_check_struct_match_1(self):
+    def test_check_struct_match_success(self):
         result = check_struct_match(npu_dict, bench_dict, cross_frame=False)
         self.assertTrue(result)
 
-    def test_check_type_shape_match_1(self):
+    def test_check_struct_match_fail(self):
+        npu_dict2 = {'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
+                                      ('torch.float32', [16])],
+                     'output_struct': [('torch.float32', [1, 16, 28, 28])]
+                     }
+
+        bench_dict2 = {'input_struct': [('torch.float32', [2, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
+                                        ('torch.float32', [16])],
+                       'output_struct': [('torch.float32', [1, 16, 28, 28])]
+                       }
+        result = check_struct_match(npu_dict2, bench_dict2, cross_frame=False)
+        self.assertFalse(result)
+
+    def test_check_type_shape_match(self):
         result = check_type_shape_match(npu_struct, bench_struct)
         self.assertTrue(result)
 
@@ -122,21 +135,25 @@ class TestUtilsMethods(unittest.TestCase):
             check_json_key_value(input_output, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_CHAR_ERROR)
 
-    def test_valid_key_value_1(self):
+    def test_check_json_key_value_max_depth(self):
+        result = check_json_key_value(input_output, op_name, depth=11)
+        self.assertEqual(result, None)
+
+    def test_valid_key_value_type_shape(self):
         key = 'shape'
         value = 'abc'
         with self.assertRaises(CompareException) as context:
             valid_key_value(key, value, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_OBJECT_TYPE_ERROR)
 
-    def test_valid_key_value_2(self):
+    def test_valid_key_value_type_requires_grad(self):
         key = 'requires_grad'
         value = 'abc'
         with self.assertRaises(CompareException) as context:
             valid_key_value(key, value, op_name)
         self.assertEqual(context.exception.code, CompareException.INVALID_OBJECT_TYPE_ERROR)
 
-    def test_check_stack_json_str_1(self):
+    def test_check_stack_json_str_type_stack_info(self):
         stack_info = 'File'
         with self.assertRaises(CompareException) as context:
             check_stack_json_str(stack_info, op_name)
