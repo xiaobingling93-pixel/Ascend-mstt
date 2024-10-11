@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import hashlib
 import io
 import struct
@@ -12,7 +27,8 @@ from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
-
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import struct_unpack_mode as unpack_mode, \
+    str_to_bytes_order as bytes_order
 
 MAX_SENDING_QUEUE_SIZE = 20
 
@@ -253,6 +269,8 @@ class ClientProtocol(protocol.Protocol):
         self.kill_process = False
         self.ack = None
 
+        self.timeout_call = None
+
         self.tls = tls
         self.send_buffer = b""
         self.buffer_cnt = 0
@@ -268,9 +286,9 @@ class ClientProtocol(protocol.Protocol):
             if len(self.buffer.getvalue()) >= 29:  # 5 + 8 * 3
                 ack = self.buffer.read(5)
                 self.ack = ack
-                seq_number = struct.unpack('!Q', self.buffer.read(8))[0]
-                rank = struct.unpack('!Q', self.buffer.read(8))[0]
-                step = struct.unpack('!Q', self.buffer.read(8))[0]
+                seq_number = struct.unpack(unpack_mode, self.buffer.read(8))[0]
+                rank = struct.unpack(unpack_mode, self.buffer.read(8))[0]
+                step = struct.unpack(unpack_mode, self.buffer.read(8))[0]
                 logger.debug(f"receive 流水号: {seq_number}; RANK: {rank}; STEP: {step}; ACK: {ack}")
                 if ack == b"KILL_":
                     self.kill_process = True
@@ -290,10 +308,10 @@ class ClientProtocol(protocol.Protocol):
     def send_wrapped_data(self, data, sequence_number: int = 0, rank: int = 0, step: int = 0):
         length = len(data)
         md5_hash = hashlib.md5(data).hexdigest() if self.check_sum else ""
-        data_meaasge = length.to_bytes(8, byteorder='big') + \
-                       sequence_number.to_bytes(8, byteorder='big') + \
-                       rank.to_bytes(8, byteorder='big') + \
-                       step.to_bytes(8, byteorder='big') + \
+        data_meaasge = length.to_bytes(8, byteorder=bytes_order) + \
+                       sequence_number.to_bytes(8, byteorder=bytes_order) + \
+                       rank.to_bytes(8, byteorder=bytes_order) + \
+                       step.to_bytes(8, byteorder=bytes_order) + \
                        md5_hash.encode() + \
                        data
         logger.debug(f"send 流水号: {sequence_number}; RANK: {rank}; STEP: {step}; LENGTH: {length}")

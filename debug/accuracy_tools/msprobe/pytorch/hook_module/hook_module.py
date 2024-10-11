@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import functools
 import threading
@@ -58,12 +56,12 @@ class HOOKModule(nn.Module):
                 self.register_forward_hook(forward_hook)
             self.register_backward_hook(backward_hook)
 
-    def __call__(self, *input, **kwargs):
+    def __call__(self, *args, **kwargs):
         changed = False
         if not self.stop_hook:
             HOOKModule.inner_stop_hook[self.current_thread] = True
             changed = True
-        result = self._call_func(*input, **kwargs)
+        result = self._call_func(*args, **kwargs)
         if changed:
             HOOKModule.inner_stop_hook[self.current_thread] = False
         return result
@@ -72,28 +70,28 @@ class HOOKModule(nn.Module):
     def reset_module_stats(cls):
         cls.module_count = {}
 
-    def _call_func(self, *input, **kwargs):
+    def _call_func(self, *args, **kwargs):
         full_backward_hooks, non_full_backward_hooks = [], []
         if len(self._backward_hooks) > 0:
             full_backward_hooks, non_full_backward_hooks = self._get_backward_hooks()
         for hook in self._forward_pre_hooks.values():
-            result_input, result_kwargs = hook(self, input, kwargs)
-            if result_input is not None:
-                if not isinstance(result_input, tuple):
-                    result_input = (result_input,)
-                input = result_input
+            result_args, result_kwargs = hook(self, args, kwargs)
+            if result_args is not None:
+                if not isinstance(result_args, tuple):
+                    result_args = (result_args,)
+                args = result_args
             if result_kwargs is not None:
                 kwargs = result_kwargs
         bw_hook = None
         if len(full_backward_hooks) > 0:
             bw_hook = full_hooks.BackwardHook(self, full_backward_hooks)
-            input = bw_hook.setup_input_hook(input)
+            args = bw_hook.setup_input_hook(args)
         if torch._C._get_tracing_state():
-            result = self._slow_forward(*input, **kwargs)
+            result = self._slow_forward(*args, **kwargs)
         else:
-            result = self.forward(*input, **kwargs)
+            result = self.forward(*args, **kwargs)
         for hook in self._forward_hooks.values():
-            hook_result = hook(self, input, kwargs, result)
+            hook_result = hook(self, args, kwargs, result)
             if hook_result is not None:
                 result = hook_result
         if bw_hook:
@@ -116,5 +114,5 @@ class HOOKModule(nn.Module):
                     wrapper = functools.partial(hook, self)
                     functools.update_wrapper(wrapper, hook)
                     grad_fn.register_hook(wrapper)
-                self._maybe_warn_non_full_backward_hook(input, result, grad_fn)
+                self._maybe_warn_non_full_backward_hook(args, result, grad_fn)
         return result

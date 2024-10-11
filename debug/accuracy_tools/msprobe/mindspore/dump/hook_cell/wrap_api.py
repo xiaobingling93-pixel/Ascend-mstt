@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,20 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 
-from mindspore import Tensor, ops, mint
-from mindspore.mint.nn import functional
+from mindspore import Tensor, mint, ops
 from mindspore.common._stub_tensor import StubTensor
 from mindspore.communication import comm_func
+from mindspore.mint.nn import functional
 
-from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.core.common.const import Const
-from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.core.common.file_utils import load_yaml
-
+from msprobe.mindspore.common.const import Const as MsConst
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
 cur_path = os.path.dirname(os.path.realpath(__file__))
 yaml_path = os.path.join(cur_path, MsConst.SUPPORTED_API_LIST_FILE)

@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 from msprobe.core.data_dump.scope import build_scope, ListScope
@@ -58,16 +73,16 @@ class DataCollector:
     def write_json(self):
         self.data_writer.write_json()
 
-    def update_data(self, data_info, msg=''):
+    def update_data(self, name, data_info):
+        msg = f"msprobe is collecting data on {name}."
         if self.config.task == Const.OVERFLOW_CHECK:
             if self.data_processor.has_overflow:
+                msg += " Overflow detected."
+                logger.warning(msg)
                 self.data_writer.update_data(data_info)
-                msg += "Overflow detected."
-            else:
-                msg += "No Overflow, OK."
-        else:
-            self.data_writer.update_data(data_info)
-        return msg
+            return
+        logger.debug(msg)
+        self.data_writer.update_data(data_info)
 
     def pre_forward_data_collect(self, name, module, pid, module_input_output):
         backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
@@ -124,9 +139,7 @@ class DataCollector:
 
     def handle_data(self, name, data_info, flush=False):
         if data_info:
-            msg = f"msprobe is collecting data on {name}. "
-            msg = self.update_data(data_info, msg)
-            logger.debug(msg)
+            self.update_data(name, data_info)
         if not flush:
             self.data_writer.flush_data_periodically()
         else:
