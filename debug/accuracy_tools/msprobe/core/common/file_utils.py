@@ -325,7 +325,7 @@ def check_file_type(path):
     elif os.path.isfile(path):
         return FileCheckConst.FILE
     else:
-        logger.error('Neither a file nor a directory.')
+        logger.error(f'{path} does not exist, please check!')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
