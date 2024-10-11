@@ -246,7 +246,7 @@ class GraphMSComparator:
     def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0) -> int:
         size = len(compare_result_df)
         # sheet size cannot be larger than 1048576
-        if size < 1 << 20:
+        if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx')
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
