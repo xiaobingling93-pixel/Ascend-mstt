@@ -51,8 +51,15 @@ def check_struct_match(npu_dict, bench_dict, cross_frame=False):
     if not is_match:
         if len(npu_struct_in) == 0 or len(bench_struct_in) == 0 or len(npu_struct_in) != len(bench_struct_in):
             return False
-        struct_in_is_match = check_type_shape_match(npu_struct_in, bench_struct_in)
-        struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
+        try:
+            struct_in_is_match = check_type_shape_match(npu_struct_in, bench_struct_in)
+            struct_out_is_match = check_type_shape_match(npu_struct_out, bench_struct_out)
+        except CompareException as error:
+            err_msg = f'index out of bounds error occurs in npu or bench api, please check!\n' \
+                      f'npu_dict: {npu_dict}' \
+                      f'bench_dict: {bench_dict}'
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         is_match = struct_in_is_match and struct_out_is_match
     return is_match
 
@@ -60,10 +67,15 @@ def check_struct_match(npu_dict, bench_dict, cross_frame=False):
 def check_type_shape_match(npu_struct, bench_struct):
     shape_type_match = False
     for npu_type_shape, bench_type_shape in zip(npu_struct, bench_struct):
-        npu_type = npu_type_shape[0]
-        npu_shape = npu_type_shape[1]
-        bench_type = bench_type_shape[0]
-        bench_shape = bench_type_shape[1]
+        try:
+            npu_type = npu_type_shape[0]
+            npu_shape = npu_type_shape[1]
+            bench_type = bench_type_shape[0]
+            bench_shape = bench_type_shape[1]
+        except IndexError as error:
+            logger.error(f'length of npu_type_shape: {npu_type_shape} and bench_type_shape: {bench_type_shape} '
+                         f'should both be 2, please check!')
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
