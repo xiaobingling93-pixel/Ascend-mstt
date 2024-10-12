@@ -23,6 +23,7 @@ class NodeOp(Enum):
     function_api = 1
     api_collection = 9
 
+
     @staticmethod
     def get_node_op(node_name: str):
         """
