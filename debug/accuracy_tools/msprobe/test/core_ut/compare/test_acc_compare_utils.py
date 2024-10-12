@@ -285,17 +285,17 @@ class TestUtilsMethods(unittest.TestCase):
         get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
 
-    def test_get_un_match_accuracy_1(self):
+    def test_get_un_match_accuracy_md5(self):
         result = []
         get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
         self.assertEqual(result, o_result_unmatch_1)
 
-    def test_get_un_match_accuracy_2(self):
+    def test_get_un_match_accuracy_summary(self):
         result = []
         get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result_unmatch_2)
 
-    def test_get_un_match_accuracy_3(self):
+    def test_get_un_match_accuracy_all(self):
         result = []
         get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
         self.assertEqual(result, o_result_unmatch_3)
