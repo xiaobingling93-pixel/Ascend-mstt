@@ -305,7 +305,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(op_dict, result_op_dict)
 
     def test_merge_tensor_md5(self):
-        op_dict = merge_tensor(tensor_list_md5, False, True)
+        op_dict = merge_tensor(tensor_list_md5, dump_mode=Const.MD5)
         self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):

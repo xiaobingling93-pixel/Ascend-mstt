@@ -336,19 +336,13 @@ class TestUtilsMethods(unittest.TestCase):
 
         stack_mode = True
 
-        md5_compare = True
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_md5, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_md5, stack_mode, dump_mode=Const.MD5)
         self.assertTrue(result_df.equals(result_table_md5_true))
 
-        md5_compare = False
-        summary_mode = True
-        result_df = Comparator().make_result_table(result_summary, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_summary, stack_mode, dump_mode=Const.SUMMARY)
         self.assertTrue(result_df.equals(result_table_summary_true))
 
-        md5_compare = False
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_all, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_all, stack_mode, dump_mode=Const.ALL)
         self.assertTrue(result_df.equals(result_table_all_true))
 
     def test_make_result_table_stack_mode_False(self):
@@ -378,19 +372,13 @@ class TestUtilsMethods(unittest.TestCase):
 
         stack_mode = False
 
-        md5_compare = True
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_md5_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_md5_test, stack_mode, dump_mode=Const.MD5)
         self.assertTrue(result_df.equals(result_table_md5_true))
 
-        md5_compare = False
-        summary_mode = True
-        result_df = Comparator().make_result_table(result_summary_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_summary_test, stack_mode, dump_mode=Const.SUMMARY)
         self.assertTrue(result_df.equals(result_table_summary_true))
 
-        md5_compare = False
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_all_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_all_test, stack_mode, dump_mode=Const.ALL)
         self.assertTrue(result_df.equals(result_table_all_true))
 
     def test_gen_merge_list(self):
@@ -502,7 +490,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         output_path = base_dir2
 
-        PTComparator().compare_core(input_params, output_path, summary_compare=True)
+        PTComparator().compare_core(input_params, output_path, dump_mode=Const.SUMMARY)
 
         output_files = os.listdir(output_path)
         self.assertTrue(any(f.endswith(".xlsx") for f in output_files))

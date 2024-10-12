@@ -234,7 +234,8 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             if not isinstance(value, (float, int)):
                 value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
             if not csv_value_is_valid(value):
-                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: {file_path}.")
+                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
+                                   f"{file_path}.")
             ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
 
             if (i - 2) in highlight_dict['red_rows']:
