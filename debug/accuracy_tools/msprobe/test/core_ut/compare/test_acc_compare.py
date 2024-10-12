@@ -290,7 +290,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_accuracy_graph_mode(self):
         result = []
-        get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
+        get_accuracy(result, npu_dict_aten, bench_dict_functional, dump_mode=Const.SUMMARY)
         self.assertEqual(result, aten_result)
 
     def test_find_error_rows(self):
