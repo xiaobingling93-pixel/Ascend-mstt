@@ -217,20 +217,23 @@ def md5_find(data):
     return False
 
 
-def struct_json_get(input_param, framework):
-    if framework == Const.PT_FRAMEWORK:
-        prefix = "bench"
-    elif framework == Const.MS_FRAMEWORK:
-        prefix = "npu"
-    else:
-        logger.error("Error framework found.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def detect_framework_by_dump_json(json_path):
+    pattern_ms = r'"type":\s*"mindspore'
+    pattern_pt = r'"type":\s*"torch'
+    with FileOpen(json_path, 'r') as file:
+        for line in file:
+            if re.search(pattern_ms, line):
+                return Const.MS_FRAMEWORK
+            if re.search(pattern_pt, line):
+                return Const.PT_FRAMEWORK
+    return Const.UNKNOWN_FRAMEWORK
 
-    frame_json_path = input_param.get(f"{prefix}_json_path", None)
-    if not frame_json_path:
+
+def get_stack_construct_by_dump_json_path(dump_json_path):
+    if not dump_json_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    directory = os.path.dirname(frame_json_path)
+    directory = os.path.dirname(dump_json_path)
     check_file_or_directory_path(directory, True)
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
