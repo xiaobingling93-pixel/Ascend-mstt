@@ -1,7 +1,22 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.core.common.log import logger
 from msprobe.core.compare.utils import rename_api
 from msprobe.core.common.utils import check_op_str_pattern_valid, CompareException
-from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.const import Const
 
 
 dtype_mapping = {
@@ -52,10 +67,15 @@ def check_type_shape_match(npu_struct, bench_struct):
         shape_match = npu_shape == bench_shape
         type_match = npu_type == bench_type
         if not type_match:
-            ms_type=[["Float16", "Float32"], ["Float32", "Float16"],["Float16", "BFloat16"],["BFloat16", "Float16"]] 
-            torch_type=[["torch.float16", "torch.float32"], ["torch.float32", "torch.float16"],
-                                ["torch.float16", "torch.bfloat16"], ["torch.bfloat16", "torch.float16"]]
-            if ([npu_type, bench_type] in ms_type)or  ([npu_type, bench_type] in torch_type):                    
+            ms_type = [
+                [Const.FLOAT16, Const.FLOAT32], [Const.FLOAT32, Const.FLOAT16],
+                [Const.FLOAT16, Const.BFLOAT16], [Const.BFLOAT16, Const.FLOAT16]
+            ]
+            torch_type = [
+                [Const.TORCH_FLOAT16, Const.TORCH_FLOAT32], [Const.TORCH_FLOAT32, Const.TORCH_FLOAT16],
+                [Const.TORCH_FLOAT16, Const.TORCH_BFLOAT16], [Const.TORCH_BFLOAT16, Const.TORCH_FLOAT16]
+            ]
+            if ([npu_type, bench_type] in ms_type) or ([npu_type, bench_type] in torch_type):
                 type_match = True
             else:
                 type_match = False
@@ -66,9 +86,9 @@ def check_type_shape_match(npu_struct, bench_struct):
 
 
 def check_graph_mode(a_op_name, b_op_name):
-    if "Aten" in a_op_name and "Aten" not in b_op_name:
+    if Const.ATEN in a_op_name and Const.ATEN not in b_op_name:
         return True
-    if "Aten" not in a_op_name and "Aten" in b_op_name:
+    if Const.ATEN not in a_op_name and Const.ATEN in b_op_name:
         return True
     return False
 
@@ -85,10 +105,10 @@ def fuzzy_check_op(npu_name_list, bench_name_list):
 
 
 def fuzzy_check_name(npu_name, bench_name):
-    if "forward" in npu_name and "forward" in bench_name:
-        is_match = rename_api(npu_name, "forward") == rename_api(bench_name, "forward")
-    elif "backward" in npu_name and "backward" in bench_name:
-        is_match = rename_api(npu_name, "backward") == rename_api(bench_name, "backward")
+    if Const.FORWARD in npu_name and Const.FORWARD in bench_name:
+        is_match = rename_api(npu_name, Const.FORWARD) == rename_api(bench_name, Const.FORWARD)
+    elif Const.BACKWARD in npu_name and Const.BACKWARD in bench_name:
+        is_match = rename_api(npu_name, Const.BACKWARD) == rename_api(bench_name, Const.BACKWARD)
     else:
         is_match = npu_name == bench_name
     return is_match

@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2019-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2019-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 from msprobe.core.common.utils import CompareException, check_compare_param, \
     check_configuration_param, task_dumppath_get
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.const import Const
 from msprobe.pytorch.compare.pt_compare import PTComparator
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
@@ -55,7 +53,8 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         }
         try:
             dump_mode = task_dumppath_get(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, dump_result_param.get('is_print_compare_log', True))
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match,
+                                      dump_result_param.get('is_print_compare_log', True))
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, dump_mode)
         except (CompareException, FileCheckException) as error:

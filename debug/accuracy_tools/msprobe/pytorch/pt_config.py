@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 from msprobe.core.common.const import Const
@@ -72,9 +87,8 @@ class FreeBenchmarkCheckConfig(BaseConfig):
         self.fuzz_stage = json_config.get("fuzz_stage", PytorchFreeBenchmarkConst.DEFAULT_FUZZ_STAGE)
         self.if_preheat = json_config.get("if_preheat", False)
         self.preheat_step = json_config.get("preheat_step", PytorchFreeBenchmarkConst.DEFAULT_PREHEAT_STEP)
-        self.max_sample = json_config.get("max_sample",  PytorchFreeBenchmarkConst.DEFAULT_PREHEAT_STEP)
+        self.max_sample = json_config.get("max_sample", PytorchFreeBenchmarkConst.DEFAULT_PREHEAT_STEP)
         self.check_freebenchmark_config()
-
 
     def check_freebenchmark_config(self):
         self._check_pert_mode()
@@ -108,7 +122,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
         if (self.fuzz_device == DeviceType.CPU) ^ (
-            self.pert_mode in PytorchFreeBenchmarkConst.CPU_MODE_LIST
+                self.pert_mode in PytorchFreeBenchmarkConst.CPU_MODE_LIST
         ):
             msg = (
                 f"You neet to and can only set fuzz_device as {DeviceType.CPU} "
@@ -199,6 +213,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
+
 
 class RunUTConfig(BaseConfig):
     WrapApi = get_ops()

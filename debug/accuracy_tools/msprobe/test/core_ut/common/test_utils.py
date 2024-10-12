@@ -252,6 +252,9 @@ class TestUtils(TestCase):
             get_real_step_or_rank("not_a_list", "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([-1, 1, 2], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
             get_real_step_or_rank([1, 2, 3.5], "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         result = get_real_step_or_rank([1, 10, 50], "step")

@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 import abc
 import re
@@ -35,9 +50,11 @@ class CheckOneThousandErrorRatio(HighlightCheck):
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
         one_thousand_index = get_header_index('One Thousandth Err Ratio', dump_mode)
-        if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
+        if (not isinstance(api_in[one_thousand_index], (float, int)) or
+                not isinstance(api_out[one_thousand_index], (float, int))):
             return
-        if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
+        if (api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and
+                api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED):
             color_columns.red.append(num)
         elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
             color_columns.yellow.append(num)
@@ -67,7 +84,8 @@ class CheckMaxRelativeDiff(HighlightCheck):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
             color_columns.red.append(num)
-        elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
+        elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
+              input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
             color_columns.yellow.append(num)
 
 
@@ -194,7 +212,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
             input_num = num
         else:
             output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, dump_mode)
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
+                        dump_mode)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):

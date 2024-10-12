@@ -26,7 +26,7 @@ except ImportError:
 else:
     current_device = "npu"
 
-from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -206,3 +206,8 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
     cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
+
+
+def record_skip_info(api_full_name, compare, compare_alg_results):
+    result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [compare_alg_results], None, 0)
+    compare.record_results(result_info)

@@ -69,3 +69,48 @@ class TestRunUtMethods(unittest.TestCase):
         self.assertIsNone(data_info.bench_output)
         self.assertIsNone(data_info.grad_in)
         self.assertIsNone(data_info.in_fwd_data_list)
+    
+    def test_blacklist_and_whitelist_filter(self):
+        api_name = "test_api"
+        black_list = ["test_api"]
+        white_list = []
+        result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
+        self.assertTrue(result)
+        
+        api_name = "test_api"
+        black_list = []
+        white_list = ["another_api"]
+        result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
+        self.assertTrue(result)
+        
+        api_name = "test_api"
+        black_list = ["test_api"]
+        white_list = ["test_api"]
+        result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
+        self.assertTrue(result)
+        
+        api_name = "test_api"
+        black_list = []
+        white_list = ["test_api"]
+        result = blacklist_and_whitelist_filter(api_name, black_list, white_list)
+        self.assertFalse(result)
+
+    def test_supported_api(self):
+        api_name = "torch.matmul"
+        result = is_unsupported_api(api_name)
+        self.assertFalse(result)
+
+        api_name = "Distributed.all_reduce"
+        result = is_unsupported_api(api_name)
+        self.assertTrue(result)
+        
+    def test_no_backward(self):
+        grad_index = None
+        out = (1, 2, 3) 
+        result = need_to_backward(grad_index, out)
+        self.assertFalse(result)
+
+        grad_index = 0
+        out = 42 
+        result = need_to_backward(grad_index, out)
+        self.assertTrue(result)

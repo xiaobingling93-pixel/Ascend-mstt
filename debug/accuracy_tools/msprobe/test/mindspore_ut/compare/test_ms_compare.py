@@ -1,8 +1,10 @@
 # coding=utf-8
 import unittest
-from msprobe.mindspore.compare.ms_compare import MSComparator
-from msprobe.core.common.const import Const
+import tempfile
+import json
 
+from msprobe.mindspore.compare.ms_compare import MSComparator, check_cross_framework
+from msprobe.core.common.const import Const
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
@@ -226,3 +228,19 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
                                                          False, dump_mode)
         self.assertListEqual(result_df.values.tolist(), [])
+
+    def test_check_cross_framework(self):
+        ms_data = {
+            "data_name": "Cell.model.language_model.encoder.layers.5.input_norm.FusedRMSNorm.forward.0.input.0.npy",
+        }
+        pt_data = {
+            "data_name": "Module.module.module.language_model.encoder.layers.0.input_norm.RMSNorm.forward.0.input.0.pt",
+        }
+
+        def check_data(data):
+            with tempfile.NamedTemporaryFile(mode='w+', suffix='.json', encoding='utf-8', delete=True) as temp_file:
+                json.dump(data, temp_file, ensure_ascii=False, indent=4)
+                temp_file.flush()
+                return check_cross_framework(temp_file.name)
+        self.assertFalse(check_data(ms_data))
+        self.assertTrue(check_data(pt_data))

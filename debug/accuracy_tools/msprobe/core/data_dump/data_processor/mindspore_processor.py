@@ -17,6 +17,7 @@ import zlib
 
 import mindspore as ms
 from mindspore import mint, ops
+from mindspore._c_expression.typing import Number
 import numpy as np
 
 from msprobe.core.common.const import Const
@@ -29,7 +30,7 @@ from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor])
+    mindspore_special_type = tuple([ms.Tensor, Number])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -93,9 +94,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)
+        if isinstance(element, Number):
+            return self.analyze_dtype_in_kwargs(element)
         if isinstance(element, ms.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
