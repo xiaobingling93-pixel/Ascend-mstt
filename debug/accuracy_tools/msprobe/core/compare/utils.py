@@ -345,8 +345,10 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
     n_num = len(n_dict['op_name'])
     b_num = len(b_dict['op_name'])
-    n_num_input = len([name for name in n_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    b_num_input = len([name for name in b_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    n_num_input = len([name for name in n_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or
+                       Const.KWARGS in name.split(Const.SEP)])
+    b_num_input = len([name for name in b_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or
+                       Const.KWARGS in name.split(Const.SEP)])
     n_num_output = n_num - n_num_input
     b_num_output = b_num - b_num_input
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
