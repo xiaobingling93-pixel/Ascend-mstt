@@ -80,6 +80,7 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
+    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -149,6 +150,14 @@ class Const:
     HYPHEN = "-"
     STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
 
+    # data type const
+    FLOAT16 = "Float16"
+    FLOAT32 = "Float32"
+    BFLOAT16 = "BFloat16"
+    TORCH_FLOAT16 = "torch.float16"
+    TORCH_FLOAT32 = "torch.float32"
+    TORCH_BFLOAT16 = "torch.bfloat16"
+
 
 class CompareConst:
     """
@@ -194,6 +203,7 @@ class CompareConst:
     INPUT_STRUCT = "input_struct"
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
+    MAX_EXCEL_LENGTH = 1048576
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -311,7 +321,8 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 10 * 1024 * 1024
+    MAX_YAML_SIZE = 1048576  # 1 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750

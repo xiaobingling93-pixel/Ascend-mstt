@@ -73,16 +73,16 @@ class DataCollector:
     def write_json(self):
         self.data_writer.write_json()
 
-    def update_data(self, data_info, msg=''):
+    def update_data(self, name, data_info):
+        msg = f"msprobe is collecting data on {name}."
         if self.config.task == Const.OVERFLOW_CHECK:
             if self.data_processor.has_overflow:
+                msg += " Overflow detected."
+                logger.warning(msg)
                 self.data_writer.update_data(data_info)
-                msg += "Overflow detected."
-            else:
-                msg += "No Overflow, OK."
-        else:
-            self.data_writer.update_data(data_info)
-        return msg
+            return
+        logger.debug(msg)
+        self.data_writer.update_data(data_info)
 
     def pre_forward_data_collect(self, name, module, pid, module_input_output):
         backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
@@ -139,9 +139,7 @@ class DataCollector:
 
     def handle_data(self, name, data_info, flush=False):
         if data_info:
-            msg = f"msprobe is collecting data on {name}. "
-            msg = self.update_data(data_info, msg)
-            logger.debug(msg)
+            self.update_data(name, data_info)
         if not flush:
             self.data_writer.flush_data_periodically()
         else:

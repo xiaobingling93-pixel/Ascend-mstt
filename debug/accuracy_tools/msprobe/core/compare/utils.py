@@ -1,3 +1,17 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import re
@@ -115,11 +129,15 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
         if not top_bool:
-            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
-                   'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
+                'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'
+            }
         else:
-            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
-                   'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
+                'shape': None, 'md5': None, 'data_name': '-1'
+            }
         item_list.append(tmp)
         return item_list
     if index is None:
@@ -233,9 +251,10 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             b_struct = b_dict[key][index]
             err_msg = ""
             if md5_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2],
-                               CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], n_struct[2], b_struct[2],
+                    CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF
+                ]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 else:
@@ -244,15 +263,19 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 continue
 
             if summary_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " ", " ", " ", " "
+                ]
             else:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " "
+                ]
 
-            npu_summary_data = n_dict.get("summary")[n_start + index]
+            npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
             result_item.extend(npu_summary_data)
-            bench_summary_data = b_dict.get("summary")[b_start + index]
+            bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
             result_item.extend(bench_summary_data)
 
             if summary_compare:
@@ -264,7 +287,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                         if bench_val != 0:
                             relative = str(abs((diff / bench_val) * 100)) + '%'
                         else:
-                            relative = "N/A"
+                            relative = CompareConst.N_A
                         result_item[start_idx + i] = diff
                         result_item[start_idx + i + 4] = relative
                         magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
@@ -294,15 +317,19 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
                 if md5_compare:
-                    result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                                   n_struct[1], CompareConst.NAN, n_struct[2], CompareConst.NAN, CompareConst.NAN]
+                    result_item = [
+                        n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                        n_struct[2], CompareConst.NAN, CompareConst.NAN
+                    ]
                     result.append(result_item)
                     continue
-                result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                               n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
-                summary_data = n_dict.get("summary")[n_start + index]
+                result_item = [
+                    n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                    " ", " ", " ", " ", " "
+                ]
+                summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                 result_item.extend(summary_data)
-                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get("summary")[0]))]
+                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
                 result_item.extend(summary_data)
 
                 err_msg = ""
@@ -418,7 +445,7 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.",  required=True)
+                        help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
