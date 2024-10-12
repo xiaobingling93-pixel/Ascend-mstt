@@ -2,6 +2,7 @@ import math
 import statistics
 
 from kj600.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
+from kj600.utils import print_error_log
 
 
 def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):
@@ -70,9 +71,12 @@ class MinMetric(Metric):
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        for key in metric_value[0][metric_name].keys():
-            min_value = min([item[metric_name][key].item() for item in metric_value])
-            summary_writer.add_scalar(f'{key}_min', min_value, step)
+        try:
+            for key in metric_value[0][metric_name].keys():
+                min_value = min([item[metric_name][key].item() for item in metric_value])
+                summary_writer.add_scalar(f'{key}_min', min_value, step)
+        except Exception as e:
+            print_error_log(f"min metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("max")
@@ -83,9 +87,12 @@ class MaxMetric(Metric):
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        for key in metric_value[0][metric_name].keys():
-            max_value = max([item[metric_name][key].item() for item in metric_value])
-            summary_writer.add_scalar(f'{key}_max', max_value, step)
+        try:
+            for key in metric_value[0][metric_name].keys():
+                max_value = max([item[metric_name][key].item() for item in metric_value])
+                summary_writer.add_scalar(f'{key}_max', max_value, step)
+        except Exception as e:
+            print_error_log(f"max metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("norm")
@@ -96,9 +103,12 @@ class NormMetric(Metric):
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        for key in metric_value[0][metric_name].keys():
-            norm_value = math.sqrt(sum([item[metric_name][key].item() for item in metric_value]))
-            summary_writer.add_scalar(f'{key}_norm', norm_value, step)
+        try:
+            for key in metric_value[0][metric_name].keys():
+                norm_value = math.sqrt(sum([item[metric_name][key].item() for item in metric_value]))
+                summary_writer.add_scalar(f'{key}_norm', norm_value, step)
+        except Exception as e:
+            print_error_log(f"norm metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("zeros")
@@ -109,21 +119,29 @@ class ZerosMetric(Metric):
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        for key in metric_value[0][metric_name].keys():
-            zeros_value = statistics.mean([item[metric_name][key].item() for item in metric_value])
-            summary_writer.add_scalar(f'{key}_zeros', zeros_value, step)
+        try:
+            for key in metric_value[0][metric_name].keys():
+                zeros_value = statistics.mean([item[metric_name][key].item() for item in metric_value])
+                summary_writer.add_scalar(f'{key}_zeros', zeros_value, step)
+        except Exception as e:
+            print_error_log(f"zeros metric metric_tensorboard error: {e}")
+
 
 @register_config_metric("nans")
 class NaNsMetric(Metric):
     @staticmethod
     def get_metric_value(t, eps):
         return get_nans(t)
-    
+
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        for key in metric_value[0][metric_name].keys():
-            nans_value = sum([v[metric_name][key].item() for v in metric_value])
-            summary_writer.add_scalar(f'{key}_nans', nans_value, step)
+        try:
+            for key in metric_value[0][metric_name].keys():
+                nans_value = sum([v[metric_name][key].item() for v in metric_value])
+                summary_writer.add_scalar(f'{key}_nans', nans_value, step)
+        except Exception as e:
+            print_error_log(f"nans metric metric_tensorboard error: {e}")
+
 
 @register_config_metric("id")
 class IdentMetric(Metric):
@@ -135,11 +153,14 @@ class IdentMetric(Metric):
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step): #metric_value is a dict, key is parameter name and value is a list of scalar tensor
-        if len(metric_value) == 1:
-            for key, value in metric_value[0][metric_name].items():
-                if not value:
-                    continue
-                summary_writer.add_scalar(f'{key}_identical', value.item(), step)
+        try:
+            if len(metric_value) == 1:
+                for key, value in metric_value[0][metric_name].items():
+                    if not value:
+                        continue
+                    summary_writer.add_scalar(f'{key}_identical', value.item(), step)
+        except Exception as e:
+            print_error_log(f"id metric metric_tensorboard error: {e}")
 
 
 def get_metrics(metric_name, tag2tensor, eps):
