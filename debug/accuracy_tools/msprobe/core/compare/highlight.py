@@ -130,7 +130,7 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
         return
     npu_max_index = get_header_index('NPU max', dump_mode)
     bench_max_index = get_header_index('Bench max', dump_mode)
-    max_diff_index = get_header_index('Max diff' if Const.SUMMARY else 'MaxAbsErr', dump_mode)
+    max_diff_index = get_header_index('Max diff' if dump_mode == Const.SUMMARY else 'MaxAbsErr', dump_mode)
 
     red_lines, yellow_lines = [], []
     LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
