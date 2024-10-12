@@ -5,7 +5,7 @@ import sys
 from itertools import zip_longest
 
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, struct_json_get, add_time_with_yaml
+    get_dump_mode_dump_path, struct_json_get, add_time_with_yaml
 from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json, save_yaml, FileOpen
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
@@ -315,7 +315,7 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
 
-        dump_mode = task_dumppath_get(input_param)
+        dump_mode = get_dump_mode_dump_path(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, dump_mode)

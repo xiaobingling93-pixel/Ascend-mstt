@@ -240,7 +240,7 @@ def struct_json_get(input_param, framework):
     return stack, construct
 
 
-def task_dumppath_get(input_param):
+def get_dump_mode_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:

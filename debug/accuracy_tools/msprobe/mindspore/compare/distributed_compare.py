@@ -16,7 +16,7 @@
 """
 import os
 from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, task_dumppath_get
+    check_configuration_param, get_dump_mode_dump_path
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
@@ -53,7 +53,7 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'is_print_compare_log': True
         }
         try:
-            dump_mode = task_dumppath_get(dump_result_param)
+            dump_mode = get_dump_mode_dump_path(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match, dump_result_param.get('is_print_compare_log', True))
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, dump_mode)
