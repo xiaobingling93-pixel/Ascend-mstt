@@ -282,7 +282,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_accuracy(self):
         result = []
-        get_accuracy(result, npu_dict, bench_dict, highlight_dict)
+        get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
 
     def test_get_un_match_accuracy_1(self):
