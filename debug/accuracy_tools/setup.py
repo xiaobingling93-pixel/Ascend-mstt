@@ -13,14 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-<<<<<<< HEAD
 import setuptools
 
 
 __version__ = '1.1.0'
-=======
-__version__ = '1.0.4'
->>>>>>> 17957d2094309647e2998a39f4994c9afcb1626a
 
 import setuptools
 
