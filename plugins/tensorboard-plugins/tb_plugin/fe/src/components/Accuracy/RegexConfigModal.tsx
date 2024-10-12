@@ -17,16 +17,16 @@
  * limitations under the License.
  *--------------------------------------------------------------------------------------------*/
 
-import { Input, message, Modal } from 'antd'
-import * as React from 'react'
-import { useState } from 'react'
-import { makeStyles } from '@material-ui/core/styles'
-import { FileInfo } from './entity'
+import { Input, message, Modal } from 'antd';
+import * as React from 'react';
+import { useState } from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import { FileInfo } from './entity';
 
 interface IProps {
-  file: FileInfo
-  onOk: (file: FileInfo) => void
-  onCancel: () => void
+  file: FileInfo;
+  onOk: (file: FileInfo) => void;
+  onCancel: () => void;
 }
 
 const useStyles = makeStyles(() => ({
@@ -36,8 +36,8 @@ const useStyles = makeStyles(() => ({
       overflow: 'hidden',
       textOverflow: 'ellipsis',
       whiteSpace: 'nowrap',
-      fontWeight: 'bold'
-    }
+      fontWeight: 'bold',
+    },
   },
   filterItem: {
     display: 'flex',
@@ -46,51 +46,51 @@ const useStyles = makeStyles(() => ({
     alignItems: 'center',
     '& .tagLabel': {
       display: 'inline-block',
-      width: 100
+      width: 100,
     },
     '& .ant-input': {
       width: 320,
-      height: 32
+      height: 32,
     },
     '& .ant-checkbox-wrapper': {
-      marginLeft: 'auto'
-    }
-  }
-}))
+      marginLeft: 'auto',
+    },
+  },
+}));
 
 export const RegexConfigModal: React.FC<IProps> = (props) => {
-  const classes = useStyles()
-  const [lossTag, setLossTag] = useState<string>(props.file.lossTag)
-  const [iterTag, setIterTag] = useState<string>(props.file.iterTag)
+  const classes = useStyles();
+  const [lossTag, setLossTag] = useState<string>(props.file.lossTag);
+  const [iterTag, setIterTag] = useState<string>(props.file.iterTag);
 
   const lossTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLossTag(e.target.value)
-  }
+    setLossTag(e.target.value);
+  };
 
   const iterTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setIterTag(e.target.value)
-  }
+    setIterTag(e.target.value);
+  };
 
   const configModalOk = () => {
     if (lossTag.trim() === '') {
-      message.warning('Loss Tag cannot be empty or only spaces!')
-      return
+      message.warning('Loss Tag cannot be empty or only spaces!');
+      return;
     }
     if (iterTag.trim() === '') {
-      message.warning('Iteration Tag cannot be empty or only spaces!')
-      return
+      message.warning('Iteration Tag cannot be empty or only spaces!');
+      return;
     }
     if (lossTag === props.file.lossTag && iterTag === props.file.iterTag) {
-      props.onCancel()
+      props.onCancel();
     } else {
       const configFile: FileInfo = {
         ...props.file,
         lossTag,
-        iterTag
-      }
-      props.onOk(configFile)
+        iterTag,
+      };
+      props.onOk(configFile);
     }
-  }
+  };
 
   return (
     <Modal
@@ -104,13 +104,13 @@ export const RegexConfigModal: React.FC<IProps> = (props) => {
       className={classes.root}
     >
       <div className={classes.filterItem}>
-        <span className="tagLabel">Loss Tag</span>
+        <span className='tagLabel'>Loss Tag</span>
         <Input onChange={lossTagChange} value={lossTag} maxLength={200} />
       </div>
       <div className={classes.filterItem}>
-        <span className="tagLabel">Iteration Tag</span>
+        <span className='tagLabel'>Iteration Tag</span>
         <Input onChange={iterTagChange} value={iterTag} maxLength={200} />
       </div>
     </Modal>
-  )
-}
+  );
+};

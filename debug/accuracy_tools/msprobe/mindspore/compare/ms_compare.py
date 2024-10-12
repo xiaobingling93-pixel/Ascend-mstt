@@ -126,8 +126,12 @@ class MSComparator(Comparator):
         del summary[idx]
     
     def get_api_name(self, api_list):
-        return api_list[0] + Const.SEP + api_list[1]
-
+        try:
+            api_name = api_list[0] + Const.SEP + api_list[1]
+        except IndexError as error:
+            logger.error(f'Failed to retrieve API name, please check if the dump data is reasonable')
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
+        return api_name
     
     def transform_user_mapping_api(self, new_npu_dict, new_bench_dict):
         """
