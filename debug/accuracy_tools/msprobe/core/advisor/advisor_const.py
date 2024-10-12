@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2022-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 
 class AdvisorConst:
@@ -35,7 +33,8 @@ class AdvisorConst:
     # advisor message
     NO_ERR_SUGGEST = "All data in comparison result meets the accuracy requirements."
     FORWARD_INPUT_SUGGEST = "1. Analyze the model to view the input source.\n" \
-                            "2. Check whether an inplace API causes the output result to overwrite the input result. That is, the fault is actually caused by a computation error.\n" \
+                            "2. Check whether an inplace API causes the output result to overwrite the input result. "\
+                            "That is, the fault is actually caused by a computation error.\n" \
                             "3. The fault may be caused by memory corruption and further analysis is required."
     FORWARD_OUTPUT_SUGGEST = "This is a forward API computation error. Check the computation implementation."
     BACKWARD_INPUT_SUGGEST = "Check whether the forward computation result is affected."

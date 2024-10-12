@@ -115,13 +115,17 @@ def calculate_coverage(added_lines, covered_lines):
 
         if not found:
             print(f"File {filename} not found in coverage report.")  # 调试信息：找不到的文件
+    # 计算有效代码行
+    total_effective_lines = total_added - total_annotation
 
     # 输出总的新增行和覆盖行
     print(f"Total added lines: {total_added}")
     print(f"Total annotation lines: {total_annotation}")
+    print(f"Total effective lines: {total_effective_lines}")
     print(f"Total covered lines: {total_covered}")
 
-    coverage_rate = (total_covered / (total_added - total_annotation) * 100) if total_added > 0 else 0
+    coverage_rate = (total_covered / total_effective_lines * 100) if total_effective_lines > 0 else 0
+
     return coverage_rate
 
 

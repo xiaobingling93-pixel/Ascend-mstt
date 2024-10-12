@@ -1,11 +1,12 @@
 import os
+import re
 import copy
 import sys
 from itertools import zip_longest
 
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
     task_dumppath_get, struct_json_get, add_time_with_yaml
-from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json, save_yaml
+from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json, save_yaml, FileOpen
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
@@ -15,12 +16,15 @@ from msprobe.mindspore.compare.modify_mapping import modify_mapping_with_stack
 from msprobe.mindspore.compare.layer_mapping import get_layer_mapping
 
 class MSComparator(Comparator):
-    def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
+    def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
         self.api_mapping = api_mapping
         self.data_mapping = data_mapping
-        self.cross_frame = cell_mapping is not None or api_mapping is not None or data_mapping is not None
+        if data_mapping:
+            self.cross_frame = is_cross_framework
+        else:
+            self.cross_frame = cell_mapping is not None or api_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
         self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
         if api_mapping is not None:
@@ -292,6 +296,15 @@ def generate_file_mapping(npu_json_path, bench_json_path, mapping_list):
     return result
 
 
+def check_cross_framework(bench_json_path):
+    pattern = r'"data_name":\s*"[^"]+\.pt"'
+    with FileOpen(bench_json_path, 'r') as file:
+        for line in file:
+            if re.search(pattern, line):
+                return True
+    return False
+
+
 def ms_compare(input_param, output_path, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
@@ -321,8 +334,8 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping_name = add_time_with_yaml(f"data_mapping")
         data_mapping_path = os.path.join(os.path.realpath(output_path), f"{data_mapping_name}")
         save_yaml(data_mapping_path, data_mapping)
-
-    ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping)
+    is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
+    ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
                  md5_compare=md5_compare)

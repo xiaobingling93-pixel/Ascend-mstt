@@ -215,7 +215,9 @@ def check_common_file_size(file_path):
         for suffix, max_size in FileCheckConst.FILE_SIZE_DICT.items():
             if file_path.endswith(suffix):
                 check_file_size(file_path, max_size)
-                break
+                return
+        check_file_size(file_path, FileCheckConst.COMMOM_FILE_SIZE)
+        
 
 
 def check_file_suffix(file_path, file_suffix):
@@ -323,7 +325,7 @@ def check_file_type(path):
     elif os.path.isfile(path):
         return FileCheckConst.FILE
     else:
-        logger.error('Neither a file nor a directory.')
+        logger.error(f'{path} does not exist, please check!')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 

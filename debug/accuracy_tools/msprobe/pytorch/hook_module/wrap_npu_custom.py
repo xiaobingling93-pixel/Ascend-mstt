@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2019-2020. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 import torch
@@ -21,24 +19,19 @@ import torch
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.common.utils import torch_device_guard, torch_without_guard_version
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.function_factory import npu_custom_functions
-
-cur_path = os.path.dirname(os.path.realpath(__file__))
-yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
-
 
 try:
     import torch_npu
 except ImportError:
-    is_gpu = True
-else:
-    is_gpu = False
+    logger.info("Failing to import torch_npu.")
 
 
-cuda_func_mapping = {
-    "npu_fusion_attention" : "gpu_fusion_attention"
-}
+cur_path = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(cur_path, "support_wrap_ops.yaml")
+cuda_func_mapping = {"npu_fusion_attention" : "gpu_fusion_attention"}
 
 
 def get_npu_ops():
@@ -83,7 +76,6 @@ class NpuOPTemplate(HOOKModule):
 def wrap_npu_op(op_name, hook):
     def npu_op_template(*args, **kwargs):
         return NpuOPTemplate(op_name, hook)(*args, **kwargs)
-
     return npu_op_template
 
 

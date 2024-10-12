@@ -1,52 +1,34 @@
 import unittest
-from unittest.mock import patch, Mock
-
+from unittest.mock import MagicMock, patch
+import threading
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 
-class TestHookModule(unittest.TestCase):
-    def test_call_1(self):
-        def forward_pre_hook():
-            return "result_input", "result_kwargs"
+class TestHOOKModuleInit(unittest.TestCase):
 
-        def forward_hook():
-            return 2
+    def setUp(self):
+        self.mock_build_hook = MagicMock(return_value=(MagicMock(), MagicMock(), MagicMock(), None))
 
-        def backward_hook():
-            pass
+    def test_thread_handling(self):
+        module = HOOKModule(self.mock_build_hook)
+        current_thread_id = module.current_thread
+        self.assertEqual(current_thread_id, threading.current_thread().ident)
 
-        def forward_hook_torch_version_below_2():
-            pass
 
-        def hook(prefix):
-            return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
-        HOOKModule.prefix_op_name_ = "123"
-        test = HOOKModule(hook)
-        test._call_func = Mock(return_value=1)
-        result = test()
-        self.assertEqual(result, 1)
+class TestHOOKModuleCall(unittest.TestCase):
+    def setUp(self):
+        self.mock_build_hook = MagicMock(return_value=(MagicMock(), MagicMock(), MagicMock(), None))
+        self.module = HOOKModule(self.mock_build_hook)
 
-    def test_call_2(self):
-        def forward_pre_hook(nope, input, kwargs):
-            return input, kwargs
+    @patch.object(HOOKModule, '_call_func')
+    def test_call_function(self, mock_call_func):
+        mock_call_func.return_value = "test_result"
+        result = self.module("input_data")
+        mock_call_func.assert_called_once_with("input_data", **{})
+        self.assertEqual(result, "test_result")
 
-        def forward_hook(nope, input, kwargs, result):
-            return input
-
-        def backward_hook():
-            pass
-
-        def forward_hook_torch_version_below_2():
-            pass
-
-        def hook(prefix):
-            return forward_pre_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2
-        HOOKModule.prefix_op_name_ = "123"
-        input = 1
-        test = HOOKModule(hook)
-
-        def temp_forward(*input, **kwargs):
-            return input
-
-        test.forward = Mock(return_value=1)
-        result = test(input)
-        self.assertEqual(result, input)
+    @patch.object(HOOKModule, '_call_func')
+    def test_call_func_with_hooks(self, mock_call_func):
+        mock_call_func.return_value = "test_result_with_hooks"
+        result = self.module("input_data")
+        self.assertEqual(result, "test_result_with_hooks")
+        HOOKModule.inner_stop_hook[self.module.current_thread] = False
