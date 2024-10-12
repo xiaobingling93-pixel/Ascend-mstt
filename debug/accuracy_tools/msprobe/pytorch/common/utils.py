@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,20 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import io
 import os
 import random
 import stat
+from functools import wraps
+
+import numpy as np
 import torch
 import torch.distributed as dist
-import numpy as np
-from functools import wraps
 from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import (FileCheckConst, change_mode,
                                             check_file_or_directory_path, check_path_before_create)
-
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import check_seed_all
+from packaging import version
 
 try:
     import torch_npu
@@ -35,9 +36,7 @@ except ImportError:
 else:
     is_gpu = False
 
-
 torch_without_guard_version = torch.__version__ >= '2.1'
-
 
 if not is_gpu and not torch_without_guard_version:
     from torch_npu.utils.device_guard import torch_device_guard as torch_npu_device_guard
@@ -46,7 +45,6 @@ npu_distributed_api = ['isend', 'irecv']
 
 
 def parameter_adapter(func):
-
     def handle_masked_select(input_tensor, indices):
         masked_select_func = getattr(torch._C._VariableFunctionsClass, "masked_select")
         if input_tensor.dtype == torch.bfloat16:
@@ -80,17 +78,19 @@ def parameter_adapter(func):
         if self.op_name_ == "__eq__" and args[1] is None:
             return False
         return func(self, *args, **kwargs)
+
     return inner
 
 
 def torch_device_guard(func):
     if is_gpu or torch_without_guard_version:
         return func
-    # Parse args/kwargs matched torch.device objects
 
+    # Parse args/kwargs matched torch.device objects
     @torch_npu_device_guard
     def wrapper(*args, **kwargs):
         return func(*args, **kwargs)
+
     return wrapper
 
 
@@ -105,20 +105,28 @@ def get_rank_if_initialized():
 
 
 def seed_all(seed=1234, mode=False):
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.use_deterministic_algorithms(mode)
-    if is_gpu:
-        torch.cuda.manual_seed_all(seed)
-        torch.cuda.manual_seed(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.enable = False
-        torch.backends.cudnn.benchmark = False
-    else:
-        torch_npu.npu.manual_seed_all(seed)
-        torch_npu.npu.manual_seed(seed)
+    check_seed_all(seed, mode)
+    try:
+        random.seed(seed)
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        cuda_version = torch.version.cuda
+        if cuda_version is not None and version.parse(cuda_version) >= version.parse("10.2"):
+            os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+        os.environ['HCCL_DETERMINISTIC'] = str(mode)
+        torch.use_deterministic_algorithms(mode)
+        if is_gpu:
+            torch.cuda.manual_seed_all(seed)
+            torch.cuda.manual_seed(seed)
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.enable = False
+            torch.backends.cudnn.benchmark = False
+        else:
+            torch_npu.npu.manual_seed_all(seed)
+            torch_npu.npu.manual_seed(seed)
+    except Exception as e:
+        logger.error(f"There is an unexpected error while determinating randomness. {e}")
 
 
 class Const:
@@ -191,7 +199,7 @@ class Const:
     ENV_ENABLE = "1"
     ENV_DISABLE = "0"
 
-    MAX_SEED_VALUE = 2**32 - 1
+    MAX_SEED_VALUE = 2 ** 32 - 1
 
     TASK_LIST = ["tensor", "statistics", "overflow_check", "free_benchmark"]
     LEVEL_LIST = ["L0", "L1", "L2", "mix"]
@@ -254,7 +262,7 @@ def print_rank_0(message):
             logger.info(message)
     else:
         logger.info(message)
-        
+
 
 def load_pt(pt_path, to_cpu=False):
     pt_path = os.path.realpath(pt_path)
@@ -276,8 +284,8 @@ def save_pt(tensor, filepath):
         torch.save(tensor, filepath)
     except Exception as e:
         logger.error("Save pt file failed, please check according possible error causes: "
-                            "1. out of disk space or disk error, "
-                            "2. no permission to write files, etc.")
+                     "1. out of disk space or disk error, "
+                     "2. no permission to write files, etc.")
         raise RuntimeError(f"save pt file {filepath} failed") from e
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 

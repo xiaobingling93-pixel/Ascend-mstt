@@ -16,9 +16,10 @@
 from mindspore import Tensor, ops, mint
 from mindspore.mint.nn import functional
 from mindspore.common._stub_tensor import StubTensor
+from mindspore.communication import comm_func
 
 from msprobe.mindspore.dump.hook_cell.wrap_api import (HOOKTensor, HOOKStubTensor, HOOKFunctionalOP,
-                                                       HOOKMintOP, HOOKMintNNFunctionalOP,
+                                                       HOOKMintOP, HOOKMintNNFunctionalOP, HOOKDistributedOP,
                                                        get_wrap_api_list, setup_hooks)
 from msprobe.core.common.utils import Const
 
@@ -30,6 +31,7 @@ class ApiRegistry:
         self.functional_ori_attr = {}
         self.mint_ops_ori_attr = {}
         self.mint_func_ops_ori_attr = {}
+        self.distributed_ori_attr = {}
         self.norm_inner_ops_ori_attr = {}
 
         self.tensor_hook_attr = {}
@@ -37,6 +39,7 @@ class ApiRegistry:
         self.functional_hook_attr = {}
         self.mint_ops_hook_attr = {}
         self.mint_func_ops_hook_attr = {}
+        self.distibuted_hook_attr = {}
         self.norm_inner_ops_hook_attr = {}
 
         self.norm_inner_ops = ["norm", "square", "sqrt", "is_complex"]
@@ -74,6 +77,7 @@ class ApiRegistry:
         self.set_api_attr(ops, self.functional_hook_attr)
         self.set_api_attr(mint, self.mint_ops_hook_attr)
         self.set_api_attr(functional, self.mint_func_ops_hook_attr)
+        self.set_api_attr(comm_func, self.distibuted_hook_attr)
 
     def api_set_ori_func(self):
         self.set_api_attr(Tensor, self.tensor_ori_attr)
@@ -81,6 +85,7 @@ class ApiRegistry:
         self.set_api_attr(ops, self.functional_ori_attr)
         self.set_api_attr(mint, self.mint_ops_ori_attr)
         self.set_api_attr(functional, self.mint_func_ops_ori_attr)
+        self.set_api_attr(comm_func, self.distributed_ori_attr)
 
     def initialize_hook(self, hook):
         wrap_api_name = get_wrap_api_list()
@@ -89,6 +94,7 @@ class ApiRegistry:
         self.store_ori_attr(ops, wrap_api_name.ops_api_names, self.functional_ori_attr)
         self.store_ori_attr(mint, wrap_api_name.mint_api_names, self.mint_ops_ori_attr)
         self.store_ori_attr(functional, wrap_api_name.mint_nn_func_api_names, self.mint_func_ops_ori_attr)
+        self.store_ori_attr(comm_func, wrap_api_name.distributed_api_names, self.distributed_ori_attr)
         self.store_ori_attr(ops, self.norm_inner_ops, self.norm_inner_ops_ori_attr)
         setup_hooks(hook)
         for attr_name in dir(HOOKTensor):
@@ -113,6 +119,10 @@ class ApiRegistry:
             if attr_name.startswith(Const.ATTR_NAME_PREFIX):
                 api_name = attr_name[Const.ATTR_NAME_PREFIX_LEN:]
                 self.mint_func_ops_hook_attr[api_name] = getattr(HOOKMintNNFunctionalOP, attr_name)
+        for attr_name in dir(HOOKDistributedOP):
+            if attr_name.startswith(Const.ATTR_NAME_PREFIX):
+                api_name = attr_name[Const.ATTR_NAME_PREFIX_LEN:]
+                self.distibuted_hook_attr[api_name] = getattr(HOOKDistributedOP, attr_name)
 
 
 api_register = ApiRegistry()

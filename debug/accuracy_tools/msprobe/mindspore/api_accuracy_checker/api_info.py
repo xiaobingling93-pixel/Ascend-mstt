@@ -10,7 +10,7 @@ class ApiInfo:
         if not isinstance(api_name, str):
             err_msg = "ApiInfo.__init__ failed: api_name is not a string"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
-        if is_invalid_pattern(api_name, stack=False):
+        if is_invalid_pattern(api_name):
             err_msg = "ApiInfo.__init__ failed: api_name contain illegal character"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
         self.api_name = api_name

@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import functools
 import os
 
@@ -17,9 +32,10 @@ from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if torch_version_above_or_equal_2:
+    from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.dump_dispatch import run_ut_dispatch
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
@@ -42,22 +58,21 @@ class Service:
     def forward_backward_dump_end():
         logger.info_on_rank_0("Data needed ends here.")
         api_register.api_originality()
-    
+
     @staticmethod
     def is_registered_backward_hook(module):
         if hasattr(module, '_backward_hooks') and \
-            len(module._backward_hooks) > 0 and \
+                len(module._backward_hooks) > 0 and \
                 module._is_full_backward_hook is False:
-                    return True
+            return True
         return False
-    
-    def check_register_full_backward_hook(self, module, backward_hook):
+
+    def check_register_full_backward_hook(self, module):
         if self.is_registered_backward_hook(module):
             module._backward_hooks.clear()
             module._is_full_backward_hook = None
-            logger.warning("Found regular backward hooks. Removing them and switching to full backward hooks.")
-        module.register_full_backward_hook(backward_hook)
-        
+            logger.warning("Found deprecated backward hooks. Removing them and switching to full backward hooks.")
+
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
             if not self.should_execute_hook():
@@ -143,7 +158,7 @@ class Service:
             self.first_start = False
         if api_origin:
             api_register.api_modularity()
-        if self.config.online_run_ut:
+        if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True)
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
@@ -161,7 +176,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
-        if self.config.online_run_ut:
+        if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False)
             return
         self.data_collector.write_json()
@@ -180,7 +195,7 @@ class Service:
         if self.should_stop_service:
             return True
         end_service = self.config.step and self.current_iter > max(self.config.step) or \
-                        self.data_collector and self.data_collector.data_processor.is_terminated
+                      self.data_collector and self.data_collector.data_processor.is_terminated
         if end_service:
             if self.config.online_run_ut:
                 # send stop signal if online_run_ut
@@ -233,15 +248,17 @@ class Service:
                 prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
                          module.__class__.__name__ + Const.SEP
 
-                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 \
-                    = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = self.build_hook(
+                    BaseScope.Module_Type_Module, prefix)
                 if torch_version_above_or_equal_2:
                     module.register_forward_hook(forward_hook, with_kwargs=True)
                 else:
-                    self.check_register_full_backward_hook(module, 
-                                                           self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    self.check_register_full_backward_hook(module)
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
                     module.register_forward_hook(forward_hook_torch_version_below_2)
-                self.check_register_full_backward_hook(module, backward_hook)
+                self.check_register_full_backward_hook(module)
+                module.register_full_backward_hook(backward_hook)
 
                 module.register_forward_pre_hook(
                     self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
@@ -250,7 +267,9 @@ class Service:
                 if torch_version_above_or_equal_2:
                     module.register_full_backward_pre_hook(
                         self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                    self.check_register_full_backward_hook(module, self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+                    self.check_register_full_backward_hook(module)
+                    module.register_full_backward_hook(
+                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
 
         if self.config.level in ["mix", "L1", "L2"]:
             api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API),

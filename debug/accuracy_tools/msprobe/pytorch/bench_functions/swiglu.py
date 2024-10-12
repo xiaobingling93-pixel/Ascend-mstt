@@ -1,16 +1,31 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 
 
 def npu_swiglu(x, dim=-1):
     tensor_dtype = x.dtype
 
-    inTensors = torch.chunk(x, 2, dim=dim)
+    in_tensors = torch.chunk(x, 2, dim=dim)
     if tensor_dtype == torch.float32:
-        tensor_scalar = torch.sigmoid(torch.mul(inTensors[0], 1.0))
-        output_data = torch.mul(torch.mul(tensor_scalar, inTensors[0]), inTensors[1])
+        tensor_scalar = torch.sigmoid(torch.mul(in_tensors[0], 1.0))
+        output_data = torch.mul(torch.mul(tensor_scalar, in_tensors[0]), in_tensors[1])
     else:
-        tensor_self_float = inTensors[0].type(torch.float)
-        tensor_other_float = inTensors[1].type(torch.float)
+        tensor_self_float = in_tensors[0].type(torch.float)
+        tensor_other_float = in_tensors[1].type(torch.float)
         tensor_out_float = torch.nn.functional.silu(tensor_self_float).type(tensor_dtype).type(
             torch.float32) * tensor_other_float
         output_data = tensor_out_float.type(tensor_dtype)

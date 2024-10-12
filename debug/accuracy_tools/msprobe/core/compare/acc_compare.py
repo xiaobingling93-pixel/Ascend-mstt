@@ -1,9 +1,23 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import multiprocessing
 import os
-import json
 import pandas as pd
 from tqdm import tqdm
-from msprobe.core.common.file_utils import FileOpen, load_json
+from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
@@ -69,8 +83,7 @@ class Comparator:
         result_item.append(err_msg)
     
     @classmethod
-    def make_result_table(cls,result, md5_compare, summary_compare, stack_mode):
-        header = []
+    def make_result_table(cls, result, md5_compare, summary_compare, stack_mode):
         if md5_compare:
             header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
         elif summary_compare:
@@ -97,7 +110,7 @@ class Comparator:
         return result_df   
     
     @classmethod
-    def gen_merge_list(self, json_data, op_name,stack_json_data, summary_compare, md5_compare):
+    def gen_merge_list(cls, json_data, op_name, stack_json_data, summary_compare, md5_compare):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
@@ -118,7 +131,7 @@ class Comparator:
         b_op_name = bench_dict["op_name"]
         graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
         
-        frame_name = getattr(self,"frame_name")
+        frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
             if graph_mode:
@@ -176,7 +189,8 @@ class Comparator:
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
                 read_err_npu = True
-                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data, summary_compare, md5_compare)
+                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data,
+                                                     summary_compare, md5_compare)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
             except StopIteration:
@@ -185,7 +199,8 @@ class Comparator:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
                 check_op_str_pattern_valid(op_name_bench)
-                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data, summary_compare, md5_compare)
+                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data,
+                                                       summary_compare, md5_compare)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -230,16 +245,17 @@ class Comparator:
             if merge_list:
                 input_index, output_index = 0, 0
                 for index, input_or_output in enumerate(merge_list['op_name']):
+                    input_or_output_list = input_or_output.split(Const.SEP)
                     data_name = merge_list.get('data_name')
                     data_name = data_name[index] if data_name else None
-                    if Const.INPUT in input_or_output or 'kwarg' in input_or_output:
+                    if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
                         ops_all[input_or_output] = {'struct': merge_list.get('input_struct')[input_index],
                                                     'summary': merge_list.get('summary')[index],
                                                     'data_name': data_name,
                                                     'stack_info': merge_list.get('stack_info')}
                         input_index += 1
 
-                    elif Const.OUTPUT in input_or_output:
+                    elif Const.OUTPUT in input_or_output_list:
                         ops_all[input_or_output] = {'struct': merge_list.get('output_struct')[output_index],
                                                     'summary': merge_list.get('summary')[index],
                                                     'data_name': data_name,
@@ -319,9 +335,11 @@ class Comparator:
                 if frame_name == "MSComparator":
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
                     if self.cross_frame:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
+                                                bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
                     else:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.NUMPY_SUFFIX)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
+                                                bench_op_name + Const.NUMPY_SUFFIX)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
                     b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
@@ -418,13 +436,14 @@ class Comparator:
             bench_op_name = result_df.iloc[i, 1]
             if is_print_compare_log:
                 logger.info("start compare: {}".format(npu_op_name))
-            cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = self.compare_by_op(
-                npu_op_name, bench_op_name, dump_path_dict, input_param)
+            cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
+                self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
             if is_print_compare_log:
                 logger.info(
-                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, one_thousand_err_ratio {}, "
-                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err, err_msg,
-                                                        one_thousand_err_ratio, five_thousand_err_ratio))
+                    "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
+                    one_thousand_err_ratio {}, "
+                    "five_thousand_err_ratio {}".format(npu_op_name, cos_sim, max_abs_err, max_relative_err,
+                                                        err_msg, one_thousand_err_ratio, five_thousand_err_ratio))
             cos_result.append(cos_sim)
             max_err_result.append(max_abs_err)
             max_relative_err_result.append(max_relative_err)
@@ -443,9 +462,10 @@ class Comparator:
 
         return _save_cmp_result(idx, cr, result_df, lock)   
     
-    def _do_multi_process(self,input_parma, result_df):
+    def _do_multi_process(self, input_parma, result_df):
         try:
-            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df, multiprocessing.Manager().RLock())
+            result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
+                                              multiprocessing.Manager().RLock())
             return result_df
         except ValueError as e:
             logger.error('result dataframe is not found.')
