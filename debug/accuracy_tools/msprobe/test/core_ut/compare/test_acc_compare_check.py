@@ -83,9 +83,30 @@ class TestUtilsMethods(unittest.TestCase):
         result = check_struct_match(npu_dict2, bench_dict2, cross_frame=False)
         self.assertFalse(result)
 
-    def test_check_type_shape_match(self):
+    def test_check_struct_index_error(self):
+        npu_dict3 = {'input_struct': [('torch.float32'), ('torch.float32'),
+                                      ('torch.float32')],
+                     'output_struct': [('torch.float32')]
+                     }
+
+        bench_dict3 = {'input_struct': [('torch.float32'), ('torch.float32'),
+                                        ('torch.float32')],
+                       'output_struct': [('torch.float32')]
+                       }
+        with self.assertRaises(CompareException) as context:
+            result = check_struct_match(npu_dict3, bench_dict3, cross_frame=False)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_check_type_shape_match_success(self):
         result = check_type_shape_match(npu_struct, bench_struct)
         self.assertTrue(result)
+
+    def test_check_type_shape_match_index_error(self):
+        npu_struct2 = [('torch.float32'), ('torch.float32'), ('torch.float32')]
+        bench_struct2 = [('torch.float32'), ('torch.float32'), ('torch.float32')]
+        with self.assertRaises(CompareException) as context:
+            result = check_type_shape_match(npu_struct2, bench_struct2)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def test_check_graph_mode(self):
         op1 = "Aten"
