@@ -84,27 +84,20 @@ class Comparator:
     
     @classmethod
     def make_result_table(cls, result, stack_mode, dump_mode):
-        if dump_mode == Const.MD5:
-            header = CompareConst.MD5_COMPARE_RESULT_HEADER[:]
-        elif dump_mode == Const.SUMMARY:
-            header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
-        else:
-            header = CompareConst.COMPARE_RESULT_HEADER[:]
+        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode]
 
         if stack_mode:
+            header.append(CompareConst.STACK)
             if dump_mode == Const.ALL:
-                header.append(CompareConst.STACK)
                 header.append(CompareConst.DATA_NAME)
-            else:
-                header.append(CompareConst.STACK)
         else:
             if dump_mode == Const.ALL:
                 for row in result:
-                    del row[-2]
+                    del row[-2]     # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
                 header.append(CompareConst.DATA_NAME)
             else:
                 for row in result:
-                    del row[-1]
+                    del row[-1]     # 输出结果不要堆栈信息时，删除中间结果result中的stack info，非真实数据时为倒数第1列
         result_df = pd.DataFrame(result, columns=header, dtype='object')
         return result_df   
     
