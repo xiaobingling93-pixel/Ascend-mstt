@@ -223,9 +223,9 @@ class CompareConst:
     ]
 
     HEAD_OF_COMPARE_MODE = {
-        Const.ALL: COMPARE_RESULT_HEADER,
-        Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
-        Const.MD5: MD5_COMPARE_RESULT_HEADER
+        Const.ALL: COMPARE_RESULT_HEADER[:],
+        Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER[:],
+        Const.MD5: MD5_COMPARE_RESULT_HEADER[:]
     }
 
     # compare standard
