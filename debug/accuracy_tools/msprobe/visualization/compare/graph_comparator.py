@@ -14,7 +14,8 @@
 # limitations under the License.
 
 from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
-from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
+from msprobe.visualization.utils import (GraphConst, load_json_file, load_data_json_file, get_csv_df,
+                                         process_kwargs_parameter)
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
@@ -50,10 +51,10 @@ class GraphComparator:
         for item in compare_result_list:
             if not node.stack_info and node.id in item[0]:
                 node.stack_info = item[-1]
-            if 'output' in item[0]:
+            if '.output.' in item[0]:
                 compare_out_dict[item[0]] = item
             else:
-                compare_in_dict[item[0]] = item
+                compare_in_dict[process_kwargs_parameter(item[0])] = item
         precision_index, other_dict = (
             self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index

@@ -15,7 +15,7 @@
 
 import json
 from msprobe.core.common.file_utils import FileOpen
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.acc_compare import Comparator
 
 
@@ -67,6 +67,20 @@ def str2float(percentage_str):
         return float(percentage_str) / 100
     except (ValueError, AttributeError):
         return 0
+
+
+def process_kwargs_parameter(parameter):
+    """
+    转换kwargs参数命名
+    Args:
+        parameter: 'Module.module.Float16Module.forward.0.input.labels.0'
+    Returns: 'Module.module.Float16Module.forward.0.kwargs.labels'
+    """
+    parts = parameter.split(Const.SEP)
+    if parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT:
+        parts[GraphConst.OUTPUT_INDEX_THREE] = 'kwargs'
+        return Const.SEP.join(parts[:-1])
+    return parameter
 
 
 class ToolTip:
