@@ -145,6 +145,7 @@ class TestJitDump(unittest.TestCase):
     @patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_hook_func')
     @patch.object(JitDump, 'need_dump', return_value=True)
     def test_jitdump_forward(self, mock_need_dump, mock_set_ori_func, mock_set_hook_func):
+        # Set up configurations
         json_config = {
             "task": "statistics",
             "dump_path": "/absolute_path",
@@ -153,15 +154,13 @@ class TestJitDump(unittest.TestCase):
             "level": "L1"
         }
 
-        # Set up configurations
         common_config = CommonConfig(json_config)
         task_config = BaseConfig(json_config)
-        mock_parse_json_config = MagicMock()
-        mock_parse_json_config.return_value = [common_config, task_config]
         debugger = MagicMock()
 
         # Setup MindSpore context and JitDump class
         ms.set_context(mode=ms.PYNATIVE_MODE)
+
         def identity_fn(x):
             return x
 
@@ -171,14 +170,17 @@ class TestJitDump(unittest.TestCase):
         JitDump.set_config(common_config)
         JitDump.set_data_collector(MagicMock())
 
-        with patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_ori_func'):
-            net = SimpleNet()
-            input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
-            output_tensor = net(input_tensor)
+        net = SimpleNet()
+        input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
+        output_tensor = net(input_tensor)
 
-            jit_dump_instance(output_tensor)
-            self.assertTrue(mock_need_dump.called)
-            self.assertTrue(mock_set_ori_func.called)
+        # Call the JitDump instance and validate expectations
+        jit_dump_instance(input_tensor)
+
+        # Assertions to ensure required methods are called
+        self.assertTrue(mock_need_dump.called, "need_dump should be called to check if dump is required.")
+        self.assertTrue(mock_set_ori_func.called, "api_set_ori_func should be called during forward pass.")
+        self.assertTrue(mock_set_hook_func.called, "api_set_hook_func should be called after forward pass.")
 
     @patch('os.getpid', return_value=12345)
     def test_dump_jit(self, mock_getpid):
@@ -207,14 +209,25 @@ class TestJitDump(unittest.TestCase):
 
     @patch.object(JitDump, 'need_dump', return_value=False)
     def test_jitdump_no_dump(self, mock_need_dump):
+        # Set JitDump configuration
         JitDump.jit_enable = False
+
+        # Mock network and input tensor
         net = MagicMock()
         net.return_value = ops.relu(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
+
         def identity_fn(x):
             return x
+
+        # Create JitDump instance
         jit_dump_instance = JitDump(fn=identity_fn, ms_create_time=0)
-        jit_dump_instance(Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
-        self.assertTrue(mock_need_dump.called)
+
+        # Call JitDump instance with input tensor
+        input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
+        jit_dump_instance(input_tensor)
+
+        # Assert need_dump was called
+        self.assertTrue(mock_need_dump.called, "need_dump should be called to check if dump is required.")
 
 if __name__ == "__main__":
     unittest.main()
