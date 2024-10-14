@@ -84,7 +84,7 @@ class Comparator:
     
     @classmethod
     def make_result_table(cls, result, stack_mode, dump_mode):
-        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode]
+        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode][:]
 
         if stack_mode:
             header.append(CompareConst.STACK)
