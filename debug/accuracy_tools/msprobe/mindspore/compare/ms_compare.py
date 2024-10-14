@@ -160,14 +160,16 @@ class MSComparator(Comparator):
                 for idx in reversed(range(npu_out_len)):
                     if idx not in ms_out_list:
                         del npu_struct_out[idx]
-                        del npu_summary[idx + npu_in_len]
-                        del npu_op_name[idx + npu_in_len]
+                        if idx + npu_in_len < len(npu_summary) and idx + npu_in_len < len(npu_op_name): 
+                            del npu_summary[idx + npu_in_len]
+                            del npu_op_name[idx + npu_in_len]
                 pt_out_list = api_dict.get("pt_output", [])
                 for idx in reversed(range(bench_out_len)):
                     if idx not in pt_out_list:
                         del bench_struct_out[idx]
-                        del bench_summary[idx + bench_in_len]
-                        del bench_op_name[idx + bench_in_len]
+                        if idx + bench_in_len < len(bench_summary) and idx + bench_in_len < len(bench_op_name): 
+                            del bench_summary[idx + bench_in_len]
+                            del bench_op_name[idx + bench_in_len]
                 ms_para_list = api_dict.get("ms_args", []) 
                 for idx in reversed(range(npu_in_len)):
                     if idx not in ms_para_list:
