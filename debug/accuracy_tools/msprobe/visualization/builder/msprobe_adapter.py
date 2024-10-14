@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
-from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy, Comparator
+from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import task_dumppath_get
 from msprobe.visualization.utils import GraphConst
+from msprobe.pytorch.compare.pt_compare import PTComparator
 
 
 # 用于将节点名字解析成对应的NodeOp的规则
@@ -49,7 +50,7 @@ def run_real_data(dump_path_param, csv_path):
         dump_path_param: 调用acc_compare接口所依赖的参数
         csv_path: 生成文件路径
     """
-    return Comparator()._do_multi_process(dump_path_param, csv_path)
+    return PTComparator()._do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):

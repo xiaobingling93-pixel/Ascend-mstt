@@ -52,7 +52,7 @@ def get_csv_df(md5_compare, summary_compare, stack, csv_data):
     """
     调用acc接口写入csv
     """
-    return Comparator.make_result_table(md5_compare, summary_compare, stack, csv_data)
+    return Comparator.make_result_table(csv_data, md5_compare, summary_compare, stack)
 
 
 def str2float(percentage_str):
