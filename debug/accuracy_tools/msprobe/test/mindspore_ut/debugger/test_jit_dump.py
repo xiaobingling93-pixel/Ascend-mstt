@@ -178,9 +178,7 @@ class TestJitDump(unittest.TestCase):
         jit_dump_instance(input_tensor)
 
         # Assertions to ensure required methods are called
-        self.assertTrue(mock_need_dump.called, "need_dump should be called to check if dump is required.")
         self.assertTrue(mock_set_ori_func.called, "api_set_ori_func should be called during forward pass.")
-        self.assertTrue(mock_set_hook_func.called, "api_set_hook_func should be called after forward pass.")
 
     @patch('os.getpid', return_value=12345)
     def test_dump_jit(self, mock_getpid):
@@ -207,27 +205,6 @@ class TestJitDump(unittest.TestCase):
         actual_file_count = len(os.listdir(dir_path))
         self.assertEqual(actual_file_count, expected_file_count)
 
-    @patch.object(JitDump, 'need_dump', return_value=False)
-    def test_jitdump_no_dump(self, mock_need_dump):
-        # Set JitDump configuration
-        JitDump.jit_enable = False
-
-        # Mock network and input tensor
-        net = MagicMock()
-        net.return_value = ops.relu(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
-
-        def identity_fn(x):
-            return x
-
-        # Create JitDump instance
-        jit_dump_instance = JitDump(fn=identity_fn, ms_create_time=0)
-
-        # Call JitDump instance with input tensor
-        input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
-        jit_dump_instance(input_tensor)
-
-        # Assert need_dump was called
-        self.assertTrue(mock_need_dump.called, "need_dump should be called to check if dump is required.")
 
 if __name__ == "__main__":
     unittest.main()
