@@ -4,9 +4,12 @@ import json
 import numpy as np
 import mindspore as ms
 from unittest import TestCase, mock
+from unittest.mock import patch
 from mindspore import Tensor, Parameter
 from msprobe.mindspore.grad_probe.grad_analyzer import CSVGenerator, grad_dump
+from msprobe.mindspore.grad_probe.global_context import grad_context
 from msprobe.core.grad_probe.constant import GradConst
+
 
 class TestGradAnalyzer(TestCase):
     @classmethod
@@ -66,8 +69,14 @@ class TestGradAnalyzer(TestCase):
         # Test check_valid method with valid and invalid data
         invalid_data_long = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13])
         invalid_data = np.array([0, 1, 2, 3, 4, 5])
+        valid_data = np.array([0, 0, 0, 0, 2, 0, 0, 4, 0, 0, 0, 0, 0])
+        # with patch('grad_context.get_context', return_value=GradConst.LEVEL2)
         self.assertFalse(self.csv_generator.check_valid(invalid_data_long))
         self.assertFalse(self.csv_generator.check_valid(invalid_data))
+
+        # in level2, valid case should be: 4th position is shape_dim, {4+shape_dim+1}th position is dist_dim, length equals shape_dim+dist_dim+7
+        with mock.patch.object(grad_context, 'get_context', return_value=GradConst.LEVEL2):
+            self.assertTrue(self.csv_generator.check_valid(valid_data))
 
     def test_gen_csv_line(self):
         # Test gen_csv_line method
@@ -100,11 +109,22 @@ class TestGradAnalyzer(TestCase):
             self.assertTrue(os.path.exists(expected_path), f"Expected file {expected_file} does not exist.")
 
         # Load the saved numpy arrays and check their contents
+        expected_grad_content = np.array([1.0, 0.3, 0.1, 0.37416577, 1.0, 3.0, 5.0, 0.0, 0.0, 1.0, 2.0, 0.0, 1.0])
+        expected_grad_dir_content = np.array([True, True, True])
+
         for i, expected_file in enumerate(expected_files):
             file_path = os.path.join(dump_dir, expected_file)
             data = np.load(file_path)
             print(f"Content of {file_path}: {data}")
-
+            # Add assertions for the contents
+            if i == 0:
+                # Check the contents of "0_test_grad.npy"
+                np.testing.assert_allclose(data, expected_grad_content, rtol=1e-5,
+                                           err_msg=f"Content of {expected_file} does not match expected values.")
+            elif i == 1:
+                # Check the contents of "1_test_grad_dir.npy"
+                np.testing.assert_array_equal(data, expected_grad_dir_content,
+                                              err_msg=f"Content of {expected_file} does not match expected values.")
 
     def test_stop_method(self):
         # Test stop method to ensure stop_event is set
@@ -120,6 +140,8 @@ class TestGradAnalyzer(TestCase):
             self.csv_generator.traverse_files(npy_files)
         self.assertFalse(os.path.exists(test_file_path))
 
+
 if __name__ == "__main__":
     from unittest import main
+
     main()
