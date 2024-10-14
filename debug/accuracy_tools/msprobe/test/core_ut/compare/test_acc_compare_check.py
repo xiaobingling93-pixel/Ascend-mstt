@@ -84,7 +84,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertFalse(result)
 
     def test_check_struct_index_error(self):
-        npu_dict3 = {'input_struct': [('torch.float32'), ('torch.float32', 1),
+        npu_dict3 = {'input_struct': [('a'), ('torch.float32'),
                                       ('torch.float32')],
                      'output_struct': [('torch.float32')]
                      }
@@ -102,7 +102,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(result)
 
     def test_check_type_shape_match_index_error(self):
-        npu_struct2 = [('torch.float32'), ('torch.float32', 1), ('torch.float32')]
+        npu_struct2 = [('a'), ('torch.float32'), ('torch.float32')]
         bench_struct2 = [('torch.float32'), ('torch.float32'), ('torch.float32')]
         with self.assertRaises(CompareException) as context:
             result = check_type_shape_match(npu_struct2, bench_struct2)
