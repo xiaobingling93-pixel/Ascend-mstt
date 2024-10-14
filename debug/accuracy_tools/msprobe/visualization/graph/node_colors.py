@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from enum import Enum
-from msprobe.pytorch.visualization.utils import GraphConst, ToolTip
+from msprobe.visualization.utils import GraphConst, ToolTip
 
 SUMMARY_DESCRIPTION = "此节点所有输入输出的统计量相对误差, 值越大代表测量值与标杆值的偏差越大, 相对误差计算方式:|(测量值-标杆值)/标杆值|"
 REAL_DATA_DESCRIPTION = (f"此节点所有输入的最小双千分之一和所有输出的最小双千分之一的差值的绝对值, 代表双千指标的变化情况, "

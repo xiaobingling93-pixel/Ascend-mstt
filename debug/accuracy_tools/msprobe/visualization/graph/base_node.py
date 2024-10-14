@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.pytorch.visualization.graph.node_op import NodeOp
-from msprobe.pytorch.visualization.utils import Suggestions, GraphConst
-from msprobe.pytorch.visualization.builder.msprobe_adapter import format_node_data, compare_data, compare_mapping_data
+from msprobe.visualization.graph.node_op import NodeOp
+from msprobe.visualization.utils import Suggestions, GraphConst
+from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data, compare_mapping_data
 
 
 class BaseNode:
