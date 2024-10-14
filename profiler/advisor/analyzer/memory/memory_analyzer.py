@@ -1,3 +1,17 @@
+# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import logging
 
 from profiler.advisor.analyzer.base_analyzer import BaseAnalyzer
@@ -31,7 +45,7 @@ class MemoryAnalyzer(BaseAnalyzer):
     def get_priority(self, max_mem_op_dur):
         step_duration = getattr(self.dataset, "step_duration", None)
         if step_duration is None:
-            return PriorityBackgroundColor.low
+            return PriorityBackgroundColor.high
         ratio = self.get_priority_by_time_ratio(max_mem_op_dur, step_duration)
 
         return ratio

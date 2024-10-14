@@ -47,8 +47,10 @@ def npy_data_read(data_path, npy_file_list, mapping_dict):
 def statistic_data_read(statistic_file_list, statistic_file_path):
     data_list = []
     statistic_data_list = []
-    header_index = {'Data Type': None, 'Shape': None, 'Max Value': None, 'Min Value': None,
-                    'Avg Value': None, 'L2Norm Value': None}
+    header_index = {
+        'Data Type': None, 'Shape': None, 'Max Value': None, 
+        'Min Value': None,'Avg Value': None, 'L2Norm Value': None
+    }
     for statistic_file in statistic_file_list:
         with FileOpen(statistic_file, "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
@@ -240,9 +242,20 @@ class GraphMSComparator:
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
             check_path_before_create(compare_result_path)
+            self.to_excel(compare_result_df, compare_result_path)
+            logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
+    
+    def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0, need_slice=False) -> int:
+        size = len(compare_result_df)
+        # sheet size cannot be larger than 1048576
+        if size < CompareConst.MAX_EXCEL_LENGTH:
+            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
             compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
-            logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
+            return slice_num + 1
+        else:
+            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num, True)
+            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num, True)
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
@@ -252,8 +265,8 @@ class GraphMSComparator:
             return [], ''
 
         # generate file name
-        npu_mode = 'ERROR_MODE'
-        bench_mode = 'ERROR_MODE'
+        npu_mode = GraphMode.ERROR_MODE
+        bench_mode = GraphMode.ERROR_MODE
         npu_data_list = []
         bench_data_list = []
         for npu_data_path in npu_data_path_list:
@@ -263,7 +276,7 @@ class GraphMSComparator:
             bench_mode, data_list = generate_data_name(bench_data_path)
             bench_data_list.extend(data_list)
 
-        if npu_mode == "ERROR_MODE" or bench_mode == "ERROR_MODE":
+        if npu_mode == GraphMode.ERROR_MODE or bench_mode == GraphMode.ERROR_MODE:
             logger.warning(f"Data_path {npu_data_path} or {bench_data_path} is not exist.")
             return [], ''
         if npu_mode != bench_mode:
@@ -287,11 +300,13 @@ class GraphMSComparator:
                                                   CompareConst.BENCH_NORM])
 
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(np.float32)
+            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(float)
 
-            bench_float_type = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
-                                CompareConst.BENCH_NORM]
-            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(np.float32)
+            bench_float_type = [
+                CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, 
+                CompareConst.BENCH_MEAN,CompareConst.BENCH_NORM
+            ]
+            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)
 
         npu_data_df['Local Index'] = npu_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
         bench_data_df['Local Index'] = bench_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()

@@ -40,7 +40,7 @@ class MSComparator(Comparator):
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_path = os.path.join(cur_path,"ms_to_pt_api.yaml")
+        yaml_path = os.path.join(cur_path, "ms_to_pt_api.yaml")
         return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
@@ -69,10 +69,12 @@ class MSComparator(Comparator):
         if self.api_mapping is not None:
             npu_op_name = self.process_internal_api_mapping(npu_op_name, bench_op_name)
             if isinstance(self.api_mapping, str):
-                npu_dict_new, bench_dict_new, target_dict = self.transform_user_mapping_api(npu_dict_new, bench_dict_new)
+                npu_dict_new, bench_dict_new, target_dict = self.transform_user_mapping_api(npu_dict_new, 
+                                                                                            bench_dict_new)
                 if target_dict:
                     bench_dict = self.reconstitution_bench_dict(npu_dict, copy.deepcopy(bench_dict_new), target_dict)
-                    npu_op_name, bench_op_name = npu_dict_new.get(CompareConst.OP_NAME), bench_dict_new.get(CompareConst.OP_NAME)
+                    npu_op_name = npu_dict_new.get(CompareConst.OP_NAME) 
+                    bench_op_name = bench_dict_new.get(CompareConst.OP_NAME)
         struct_match = check_struct_match(npu_dict_new, bench_dict_new, cross_frame=self.cross_frame)
         if not fuzzy_match:
             return npu_op_name == bench_op_name and struct_match
@@ -124,7 +126,12 @@ class MSComparator(Comparator):
         del summary[idx]
     
     def get_api_name(self, api_list):
-        return api_list[0] + Const.SEP + api_list[1]
+        try:
+            api_name = api_list[0] + Const.SEP + api_list[1]
+        except IndexError as error:
+            logger.error(f'Failed to retrieve API name, please check if the dump data is reasonable')
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
+        return api_name
     
     def transform_user_mapping_api(self, new_npu_dict, new_bench_dict):
         """
@@ -136,10 +143,13 @@ class MSComparator(Comparator):
             tuple: Updated NPU and benchmark dictionaries, along with the target dictionary.
         """
         npu_op_name, bench_op_name = new_npu_dict.get(CompareConst.OP_NAME), new_bench_dict.get(CompareConst.OP_NAME)
-        npu_struct_in, bench_struct_in = new_npu_dict.get(CompareConst.INPUT_STRUCT), new_bench_dict.get(CompareConst.INPUT_STRUCT)
-        npu_struct_out, bench_struct_out = new_npu_dict.get(CompareConst.OUTPUT_STRUCT), new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
+        npu_struct_in = new_npu_dict.get(CompareConst.INPUT_STRUCT)
+        bench_struct_in = new_bench_dict.get(CompareConst.INPUT_STRUCT)
+        npu_struct_out = new_npu_dict.get(CompareConst.OUTPUT_STRUCT)
+        bench_struct_out =  new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
         npu_summary, bench_summary = new_npu_dict.get(CompareConst.SUMMARY), new_bench_dict.get(CompareConst.SUMMARY)
-        npu_in_len, bench_in_len, npu_out_len, bench_out_len  = len(npu_struct_in), len(bench_struct_in), len(npu_struct_out), len(bench_struct_out)
+        npu_in_len, bench_in_len = len(npu_struct_in), len(bench_struct_in) 
+        npu_out_len, bench_out_len = len(npu_struct_out), len(bench_struct_out)
         ms_api_list, pt_api_list = npu_op_name[0].split(Const.SEP), bench_op_name[0].split(Const.SEP)
         ms_api_name = self.get_api_name(ms_api_list)
         pt_api_name = self.get_api_name(pt_api_list)
@@ -147,22 +157,25 @@ class MSComparator(Comparator):
         for api_dict in self.api_mapping_dict:
             if api_dict.get("pt_api") == pt_api_name and api_dict.get("ms_api") == ms_api_name:
                 ms_user_args_len, pt_user_args_len = len(api_dict.get("ms_args")), len(api_dict.get("pt_args"))
-                ms_user_output_len, pt_user_output_len  = len(api_dict.get("ms_output")), len(api_dict.get("pt_output"))
+                ms_user_output_len, pt_user_output_len = len(api_dict.get("ms_output")), len(api_dict.get("pt_output"))
                 if ms_user_args_len != pt_user_args_len or ms_user_output_len != pt_user_output_len:
-                    logger.warning("The user-defined mapping table is incorrect, make sure that the number of parameters is equal" )
+                    logger.warning("The user-defined mapping table is incorrect,\
+                        make sure that the number of parameters is equal")
                     break
                 ms_out_list = api_dict.get("ms_output", [])
                 for idx in reversed(range(npu_out_len)):
                     if idx not in ms_out_list:
                         del npu_struct_out[idx]
-                        del npu_summary[idx + npu_in_len]
-                        del npu_op_name[idx + npu_in_len]
+                        if idx + npu_in_len < len(npu_summary) and idx + npu_in_len < len(npu_op_name): 
+                            del npu_summary[idx + npu_in_len]
+                            del npu_op_name[idx + npu_in_len]
                 pt_out_list = api_dict.get("pt_output", [])
                 for idx in reversed(range(bench_out_len)):
                     if idx not in pt_out_list:
                         del bench_struct_out[idx]
-                        del bench_summary[idx + bench_in_len]
-                        del bench_op_name[idx + bench_in_len]
+                        if idx + bench_in_len < len(bench_summary) and idx + bench_in_len < len(bench_op_name): 
+                            del bench_summary[idx + bench_in_len]
+                            del bench_op_name[idx + bench_in_len]
                 ms_para_list = api_dict.get("ms_args", []) 
                 for idx in reversed(range(npu_in_len)):
                     if idx not in ms_para_list:
@@ -176,8 +189,10 @@ class MSComparator(Comparator):
                 target_dict = api_dict
                 break
         if target_dict:
-            new_npu_dict.update({CompareConst.OP_NAME: npu_op_name, CompareConst.INPUT_STRUCT: npu_struct_in, CompareConst.OUTPUT_STRUCT: npu_struct_out, CompareConst.SUMMARY: npu_summary})
-            new_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
+            new_npu_dict.update({CompareConst.OP_NAME: npu_op_name, CompareConst.INPUT_STRUCT: npu_struct_in, 
+                                 CompareConst.OUTPUT_STRUCT: npu_struct_out, CompareConst.SUMMARY: npu_summary})
+            new_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in,
+                                   CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
         return new_npu_dict, new_bench_dict, target_dict  
     
     def para_sequence_update(self, npu_op_name, bench_op_name):
@@ -197,9 +212,9 @@ class MSComparator(Comparator):
         if npu_in_len == len(ms_user_args_list) and npu_out_len == len(ms_user_output_list):
             return del_bench_dict
         ms_input_args_list = [i for i in range(npu_in_len)]
-        input_sub_list =list(set(ms_input_args_list) - set(ms_user_args_list))
+        input_sub_list = list(set(ms_input_args_list) - set(ms_user_args_list))
         ms_output_args_list = [i for i in range(npu_out_len)]
-        output_sub_list =list(set(ms_output_args_list) - set(ms_user_output_list))
+        output_sub_list = list(set(ms_output_args_list) - set(ms_user_output_list))
         bench_op_name = del_bench_dict.get(CompareConst.OP_NAME, [])
         bench_struct_in = del_bench_dict.get(CompareConst.INPUT_STRUCT, [])
         bench_struct_out = del_bench_dict.get(CompareConst.OUTPUT_STRUCT, [])
@@ -212,7 +227,8 @@ class MSComparator(Comparator):
             bench_op_name.insert(npu_in_len + idx, CompareConst.N_A)
             bench_struct_out.insert(idx, CompareConst.N_A)
             bench_summary.insert(npu_in_len + idx, CompareConst.N_A)
-        del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
+        del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, 
+                               CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
         return del_bench_dict
         
 

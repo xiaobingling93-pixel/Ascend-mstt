@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2019-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2019-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 import os
 from msprobe.core.common.utils import CompareException, check_compare_param, \
     check_configuration_param, get_dump_mode_dump_path
@@ -23,6 +21,7 @@ from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.compare.ms_compare import MSComparator
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
+
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get('suffix'):
@@ -70,5 +69,5 @@ def ms_graph_compare(inputs, outputs):
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         return
-    msComparator = GraphMSComparator(inputs, outputs)
-    msComparator.compare_core()
+    ms_comparator = GraphMSComparator(inputs, outputs)
+    ms_comparator.compare_core()

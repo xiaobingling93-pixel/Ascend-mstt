@@ -10,7 +10,7 @@
 
 | 依赖软件        |
 |-------------|
-| torch       |
+| torch>=2.0       |
 | torch_npu   |
 | torchvision |
 | tensorboard |

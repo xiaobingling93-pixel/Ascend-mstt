@@ -4,6 +4,10 @@ import json
 from collections import defaultdict
 from datetime import datetime
 import torch
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if not torch_version_above_or_equal_2:
+    raise ValueError("msmonitor require torch>=2.0")
+
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from kj600.module_spec_verifier import validate_config_spec
@@ -16,7 +20,6 @@ from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summ
 from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
 from kj600.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
 from kj600.file_check import FileOpen
-
 
 
 class ModuleHookContext:
