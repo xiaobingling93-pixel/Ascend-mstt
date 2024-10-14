@@ -54,42 +54,6 @@ class TestMsprobeStep(unittest.TestCase):
                 if self.stop_called:
                     self.stop_called_first = True
                 self.step_called = True
-        debugger = Debugger()
-        self.msprobe_step = MsprobeStep(debugger)
-
-    def test_on_train_step_begin(self):
-        self.msprobe_step.on_train_step_begin("run_context")
-        self.assertTrue(self.msprobe_step.debugger.start_called)
-        self.assertFalse(self.msprobe_step.debugger.stop_called)
-        self.assertFalse(self.msprobe_step.debugger.step_called)
-
-    def test_on_train_step_end(self):
-        self.msprobe_step.on_train_step_end("run_context")
-        self.assertFalse(self.msprobe_step.debugger.start_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called)
-        self.assertTrue(self.msprobe_step.debugger.step_called)
-        self.assertTrue(self.msprobe_step.debugger.stop_called_first)
-
-
-class TestMsprobeStep(unittest.TestCase):
-    def setUp(self):
-        class Debugger:
-            def __init__(self):
-                self.start_called = False
-                self.stop_called = False
-                self.step_called = False
-                self.stop_called_first = False
-
-            def start(self):
-                self.start_called = True
-
-            def stop(self):
-                self.stop_called = True
-
-            def step(self):
-                if self.stop_called:
-                    self.stop_called_first = True
-                self.step_called = True
 
         debugger = Debugger()
         self.msprobe_step = MsprobeStep(debugger)
