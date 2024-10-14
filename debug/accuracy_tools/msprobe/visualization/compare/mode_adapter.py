@@ -26,7 +26,7 @@ class ModeAdapter:
     
     @staticmethod
     def _add_md5_compare_data(node_data, compare_data_dict):
-        precision_index = GraphConst.MIN_INDEX_KEY
+        precision_index = GraphConst.MAX_INDEX_KEY
         for key, value in node_data.items():
             if not isinstance(value, dict):
                 continue
@@ -37,7 +37,7 @@ class ModeAdapter:
                 ModeAdapter._match_data(value, compare_data, GraphConst.MD5_INDEX_LIST, id_list)
                 # md5比对是否通过
                 if value.get(CompareConst.RESULT) != CompareConst.PASS:
-                    precision_index = GraphConst.MAX_INDEX_KEY
+                    precision_index = GraphConst.MIN_INDEX_KEY
                 node_data[key] = value
         return precision_index
     
@@ -118,7 +118,7 @@ class ModeAdapter:
             precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict[0])
             precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict[1])
             # 所有输入输出md5对比通过，这个节点才算通过
-            precision_index = max(precision_index_in, precision_index_out)
+            precision_index = min(precision_index_in, precision_index_out)
             other_result = CompareConst.PASS if precision_index == 1 else CompareConst.DIFF
             other_dict[CompareConst.RESULT] = other_result
         elif self.is_summary_compare():
