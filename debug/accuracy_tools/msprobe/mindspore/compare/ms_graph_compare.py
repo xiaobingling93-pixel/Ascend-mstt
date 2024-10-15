@@ -2,6 +2,7 @@ import copy
 import csv
 import glob
 import os
+import re
 
 import numpy as np
 import pandas as pd
@@ -28,17 +29,34 @@ class row_data:
         return self.data
 
 
+def get_name_dict(name: str) -> dict:
+    compare_pattern = re.compile(r'^([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(\d+[.\d]*)\.'
+                                 r'([inout]+put[.\d]*)\.([^.]+)\.([^.]+)\.npy$')
+    match = compare_pattern.match(name)
+    if match:
+        return {'op_type': match.group(1),
+                'op_name': match.group(2),
+                'task_id': match.group(3),
+                'stream_id': match.group(4),
+                'timestamp': match.group(5).split(Const.SEP)[0],
+                'input_output_index': match.group(6),
+                'slot': match.group(7),
+                'format': match.group(8)}
+    return {}
+
+
 def npy_data_read(data_path, npy_file_list, mapping_dict):
     data_list = []
+    compare_key_elements = ['op_name', 'task_id', 'input_output_index', 'slot']
     for data in npy_file_list:
         if data in mapping_dict:
-            split_list = mapping_dict[data].split(Const.SEP)
+            name_dict = get_name_dict(mapping_dict[data])
         else:
-            split_list = data.split(Const.SEP)
-        if len(split_list) < 7:
+            name_dict = get_name_dict(data)
+        if not name_dict:
             continue
-        compare_key = f"{split_list[1]}.{split_list[2]}.{split_list[3]}.{split_list[5]}.{split_list[6]}"
-        timestamp = convert_to_int(split_list[4])
+        compare_key = Const.SEP.join([name_dict[element] for element in compare_key_elements])
+        timestamp = convert_to_int(name_dict['timestamp'])
 
         data_list.append([os.path.join(data_path, data), compare_key, timestamp])
     return data_list
@@ -212,10 +230,9 @@ class GraphMSComparator:
                     result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
                 magnitude_diff = result_dict[CompareConst.MAX_DIFF] / (
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
-                if magnitude_diff > CompareConst.MAGNITUDE:
-                    result_dict[CompareConst.ACCURACY] = 'No'
-                else:
-                    result_dict[CompareConst.ACCURACY] = 'Yes'
+                if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
+                    magnitude_diff = 0
+                result_dict[CompareConst.ACCURACY] = 'Yes' if magnitude_diff < CompareConst.MAGNITUDE else 'No'
 
             return pd.Series(result_dict)
 
@@ -250,7 +267,7 @@ class GraphMSComparator:
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
-            compare_result_df.to_excel(compare_result_path, index=False)
+            compare_result_df.astype(str).to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             return slice_num + 1
         else:
