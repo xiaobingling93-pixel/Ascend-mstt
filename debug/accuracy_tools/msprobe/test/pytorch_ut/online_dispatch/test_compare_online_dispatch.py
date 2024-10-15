@@ -141,7 +141,7 @@ class TestComparator(unittest.TestCase):
                                                   True, None]])
 
     @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
-    def test_dropout_compare_success(self):
+    def test_compare_dropout_success(self):
         # 元素数量大于阈值，零值分布接近的情况
         bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
         npu_out = torch.tensor([0, 1, 1, 0, 0])  # 3个零
@@ -151,7 +151,7 @@ class TestComparator(unittest.TestCase):
         self.assertEqual(code, 1)
 
     @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
-    def test_dropout_compare_failure(self):
+    def test_compare_dropout_failure(self):
         # 元素数量大于阈值，零值分布差异大的情况
         bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
         npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
@@ -161,7 +161,7 @@ class TestComparator(unittest.TestCase):
         self.assertEqual(code, 0)
 
     @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
-    def test_tensor_num_less_than_threshold(self):
+    def test_compare_dropout_tensor_num_less_than_threshold(self):
         # 元素数量小于阈值的情况
         bench_out = torch.tensor([1, 1, 1])
         npu_out = torch.tensor([1, 1, 1])
@@ -170,7 +170,7 @@ class TestComparator(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(code, 1)
 
-    def test_empty_tensors(self):
+    def test_compare_dropout_empty_tensors(self):
         # 空张量的情况
         bench_out = torch.tensor([])
         npu_out = torch.tensor([])
@@ -178,3 +178,41 @@ class TestComparator(unittest.TestCase):
         result, code = self.comparator._compare_dropout(bench_out, npu_out)
         self.assertTrue(result)
         self.assertEqual(code, 1)
+
+    def test_compare_output_fwd(self):
+        api_name = 'Tensor.add.0.forward.input.0'
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out)
+        self.assertTrue(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_output_fwd_dropout(self):
+        api_name = 'Tensor.add.0.forward.input.dropout.0'
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out)
+        self.assertFalse(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    def test_compare_output_bwd(self):
+        api_name = 'Tensor.add.0.forward.input.0'
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        bench_grad = torch.Tensor([1])
+        npu_grad = torch.Tensor([1])
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        self.assertTrue(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_output_bwd_dropout(self):
+        api_name = 'Tensor.add.0.forward.input.dropout.0'
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+        bench_grad = [torch.Tensor([1, 2, 3, 4])]
+        npu_grad = [torch.Tensor([1, 2, 3, 4])]
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        self.assertFalse(is_fwd_success)
+        self.assertTrue(is_bwd_success)
