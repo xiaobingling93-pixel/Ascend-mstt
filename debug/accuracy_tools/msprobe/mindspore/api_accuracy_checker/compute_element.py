@@ -196,15 +196,16 @@ class ComputeElement:
                                                     accepted_type=str, accepted_value=api_info_type_str_to_type.keys())
             self.shape = tuple()
             self.dtype_str = type_str
-            value = check_and_get_from_json_dict(compute_element_info, "value", "value field in api_info.json")
             if type_str == MINDSPORE_TENSOR_TYPE_STR:
                 self._init_from_mstensor_compute_element_info(compute_element_info)
-            elif type_str == MINDSPORE_DTYPE_TYPE_STR:
-                self.parameter = DtypeMetaData(value)
-            elif type_str == SLICE_TYPE_STR:
-                self.parameter = slice(*tuple(value))
-            else: # type_str in ("str", "int", "float", "bool")
-                self.parameter = value
+            else:
+                value = check_and_get_from_json_dict(compute_element_info, "value", "value field in api_info.json")
+                if type_str == MINDSPORE_DTYPE_TYPE_STR:
+                    self.parameter = DtypeMetaData(value)
+                elif type_str == SLICE_TYPE_STR:
+                    self.parameter = slice(*tuple(value))
+                else: # type_str in ("str", "int", "float", "bool")
+                    self.parameter = value
 
     def _init_from_mstensor_compute_element_info(self, compute_element_info):
         '''
