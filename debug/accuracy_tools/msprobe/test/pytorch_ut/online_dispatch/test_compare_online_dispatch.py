@@ -108,22 +108,87 @@ class TestSaver(unittest.TestCase):
 
         self.assertTrue(pd.read_csv(self.detail_save_path).to_dict() == mock_data_detail)
 
-    class TestComparator(unittest.TestCase):
-        def setUp(self):
-            self.save_path = "./saver_save.csv"
-            self.detail_save_path = "./saver_detail.csv"
-            self.comparator = Comparator(self.save_path, self.detail_save_path, False)
-            Path(self.save_path).touch()
-            Path(self.detail_save_path).touch()
 
-        def tearDown(self):
-            if os.path.exists(self.save_path):
-                os.remove(self.save_path)
-            if os.path.exists(self.detail_save_path):
-                os.remove(self.detail_save_path)
+class TestComparator(unittest.TestCase):
+    def setUp(self):
+        self.save_path = "./saver_save.csv"
+        self.detail_save_path = "./saver_detail.csv"
+        self.comparator = Comparator(self.save_path, self.detail_save_path, False)
+        Path(self.save_path).touch()
+        Path(self.detail_save_path).touch()
+        self.error_thd = {torch.float16: [2 ** -11, 2 ** -7],
+                          torch.bfloat16: [2 ** -8, 2 ** -6],
+                          torch.float32: [2 ** -14, 2 ** -11],
+                          torch.float64: [2 ** -14, 2 ** -11]}
+        self.eb_thd = {torch.float16: 2 ** -10,
+                       torch.bfloat16: 2 ** -7,
+                       torch.float32: 2 ** -14,
+                       torch.float64: 2 ** -14}
 
-        def test_compare_core_wrapper(self):
-            bench_out = torch.Tensor([1, 2, 3, 4])
-            npu_out = torch.Tensor([1, 2, 3, 4])
-            test_final_success, detailed_result_total = self.comparator._compare_core_wrapper(bench_out, npu_out)
-            a = 1
+    def tearDown(self):
+        if os.path.exists(self.save_path):
+            os.remove(self.save_path)
+        if os.path.exists(self.detail_save_path):
+            os.remove(self.detail_save_path)
+
+    def test_compare_core_wrapper(self):
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        test_final_success, detailed_result_total = self.comparator._compare_core_wrapper(bench_out, npu_out)
+        self.assertTrue(test_final_success)
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (4,), 0.0, 0.0, 0, 0.0, 0,
+                                                  self.error_thd[torch.float32][0], self.eb_thd[torch.float32],
+                                                  True, None]])
+
+    @patch('module_containing_function.ELEMENT_NUM_THRESHOLD', 4)
+    @patch('module_containing_function.ZERO_NUM_THRESHOLD', 0.05)
+    def test_dropout_compare_success(self):
+        # 元素数量大于阈值，零值分布接近的情况
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([0, 1, 1, 0, 0])  # 3个零
+
+        # 调用被测试的函数
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+
+        # 断言
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
+
+    @patch('module_containing_function.ELEMENT_NUM_THRESHOLD', 4)
+    @patch('module_containing_function.ZERO_NUM_THRESHOLD', 0.05)
+    def test_dropout_compare_failure(self):
+        # 元素数量大于阈值，零值分布差异大的情况
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+
+        # 调用被测试的函数
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+
+        # 断言
+        self.assertFalse(result)
+        self.assertEqual(code, 0)
+
+    @patch('module_containing_function.ELEMENT_NUM_THRESHOLD', 4)
+    def test_tensor_num_less_than_threshold(self):
+        # 元素数量小于阈值的情况
+        bench_out = torch.tensor([1, 1, 1])  # 3个元素，小于 ELEMENT_NUM_THRESHOLD
+        npu_out = torch.tensor([1, 1, 1])
+
+        # 调用被测试的函数
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+
+        # 断言
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
+
+    def test_empty_tensors(self):
+        # 空张量的情况
+        bench_out = torch.tensor([])  # 空张量
+        npu_out = torch.tensor([])  # 空张量
+
+        # 调用被测试的函数
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+
+        # 断言
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
