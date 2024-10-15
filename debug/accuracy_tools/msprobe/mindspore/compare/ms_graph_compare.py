@@ -55,8 +55,8 @@ def npy_data_read(data_path, npy_file_list, mapping_dict):
             name_dict = get_name_dict(data)
         if not name_dict:
             continue
-        compare_key = Const.SEP.join([name_dict[element] for element in compare_key_elements])
-        timestamp = convert_to_int(name_dict['timestamp'])
+        compare_key = Const.SEP.join([name_dict.get(element) for element in compare_key_elements])
+        timestamp = convert_to_int(name_dict.get('timestamp'))
 
         data_list.append([os.path.join(data_path, data), compare_key, timestamp])
     return data_list
