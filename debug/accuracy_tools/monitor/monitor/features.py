@@ -1,6 +1,6 @@
 import torch
 from torch.autograd.functional import jacobian
-from kj600.utils import print_info_log
+from monitor.utils import print_info_log
 
 
 @torch.no_grad()

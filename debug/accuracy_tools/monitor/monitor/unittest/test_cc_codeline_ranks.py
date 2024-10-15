@@ -3,8 +3,8 @@ sys.path.append(".")
 import torch
 from torch import distributed as dist
 import torch.multiprocessing as mp
-from kj600.module_hook import TrainerMon
-from kj600.unittest.cc_utils import *
+from monitor.module_hook import TrainerMon
+from monitor.unittest.cc_utils import *
 
 @wrap_reset
 def test_all_gather(context, rank, target_rank, world_size, async_op):
@@ -32,7 +32,7 @@ def main(rank, world_size):
     async_op = False
 
     net = Model()
-    monitor = TrainerMon("kj600/unittest/config_cc_codeline_ranks.json")
+    monitor = TrainerMon("monitor/unittest/config_cc_codeline_ranks.json")
     target_rank = monitor.module_rank_list
     # monitor = None
     # monitor.hook_optimizer() # to enable tb

@@ -6,20 +6,20 @@ from datetime import datetime
 import torch
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
-    raise ValueError("msmonitor require torch>=2.0")
+    raise ValueError("monitor require torch>=2.0")
 
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
-from kj600.module_spec_verifier import validate_config_spec
-from kj600.optimizer_collect import MixPrecsionOptimizerMon, OptimizerMonFactory
-from kj600.features import eff_rank, get_sign_matches
-from kj600.visualizer import HeatmapVisualizer
-from kj600.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
-from kj600.anomaly_inform import AnomalyInformFactory
-from kj600.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
-from kj600.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from kj600.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
-from kj600.file_check import FileOpen
+from monitor.module_spec_verifier import validate_config_spec
+from monitor.optimizer_collect import MixPrecsionOptimizerMon, OptimizerMonFactory
+from monitor.features import eff_rank, get_sign_matches
+from monitor.visualizer import HeatmapVisualizer
+from monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
+from monitor.anomaly_inform import AnomalyInformFactory
+from monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
+from monitor.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
+from monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
+from monitor.file_check import FileOpen
 
 
 class ModuleHookContext:
@@ -133,7 +133,7 @@ class TrainerMon:
         anomaly_inform = AnomalyInformFactory.create_informer(**alert_setting["inform"]) if "inform" in alert_setting else None
         
         self.optimizer_hooked = False
-        output_base_dir = os.getenv('KJ600_OUTPUT_DIR', './kj600_output')
+        output_base_dir = os.getenv('MONITOR_OUTPUT_DIR', './monitor_output')
         cur_time = datetime.now().strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
         if dist.is_initialized():

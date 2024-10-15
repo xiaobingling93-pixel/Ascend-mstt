@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from kj600.features import cal_histc
+from monitor.features import cal_histc
 
 
 class HeatmapVisualizer:

@@ -11,8 +11,8 @@ except:
     BACKEND = 'nccl'
     DEVICE = 'cuda'
 
-from kj600.features import square_sum, get_max, get_min, get_zeros
-from kj600.module_hook import CommunicationContext
+from monitor.features import square_sum, get_max, get_min, get_zeros
+from monitor.module_hook import CommunicationContext
 
 
 OP_FUNCS = {

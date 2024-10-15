@@ -5,8 +5,8 @@ from typing import List
 import sys
 from torch.utils.tensorboard import SummaryWriter
 from collections import defaultdict
-from kj600.utils import print_info_log, print_error_log
-from kj600.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
+from monitor.utils import print_info_log, print_error_log
+from monitor.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
 
 class ScanRule(ABC):
     def apply(self, history, cur):

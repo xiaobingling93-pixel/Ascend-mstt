@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from sqlalchemy import inspect
 
-from kj600.database import Database, ExceptionMessage
+from monitor.database import Database, ExceptionMessage
 
 
 class TestDatabase(TestCase):

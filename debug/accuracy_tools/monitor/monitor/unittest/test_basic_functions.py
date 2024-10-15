@@ -8,7 +8,7 @@ try:
     device = torch.device('npu:0')
 except ModuleNotFoundError:
     device = torch.device('cpu')
-from kj600.module_hook import TrainerMon
+from monitor.module_hook import TrainerMon
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
@@ -30,13 +30,13 @@ class ToyDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.data[idx].to(device), self.labels[idx].to(device)
 def get_file_path():
-    output_dir = os.environ.get("KJ600_OUTPUT_DIR")
+    output_dir = os.environ.get("MONITOR_OUTPUT_DIR")
     for root1, dirs, files in os.walk(output_dir):
         for root2, dir, file in os.walk(os.path.join(root1, dirs[-1])):
             return os.path.join(root2, file[0])
 
 def get_config():
-    os.environ["KJ600_OUTPUT_DIR"] = "./test_kj600_output"
+    os.environ["MONITOR_OUTPUT_DIR"] = "./test_monitor_output"
     with open("config_basic_functions.json", 'r') as file:
         config_test = json.load(file)
     return config_test
@@ -55,7 +55,7 @@ def get_tensorbaord(event_file_path):
     return scalers_tag, images_tag
 
 def clean_output():
-    folder_path = os.environ.get("KJ600_OUTPUT_DIR")
+    folder_path = os.environ.get("MONITOR_OUTPUT_DIR")
     if os.path.exists(folder_path):
         shutil.rmtree(folder_path)
 
@@ -86,9 +86,9 @@ def train():
         loss.backward()
         optimizer.step()
 
-class TestKj600(unittest.TestCase):
+class TestMonitor(unittest.TestCase):
     def __init__(self, method_name: str) -> None:
-        super(TestKj600, self).__init__(method_name)
+        super(TestMonitor, self).__init__(method_name)
         self.config_test = get_config()
         self.event_file_path = None
         self.scalers_tag = None

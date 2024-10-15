@@ -37,7 +37,7 @@ INSTALL_REQUIRED = [
 EXCLUDE_PKGS = [
     "api_accuracy_checker*",
     "grad_tool*",
-    "kj600*",
+    "monitor*",
     "ptdbg_ascend*",
     "msprobe.test*",
 ]

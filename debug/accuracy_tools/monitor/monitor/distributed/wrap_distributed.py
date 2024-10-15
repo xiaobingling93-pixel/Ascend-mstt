@@ -5,7 +5,7 @@ import inspect
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-from kj600.utils import print_error_log
+from monitor.utils import print_error_log
 
 from ..module_metric import get_metrics
 

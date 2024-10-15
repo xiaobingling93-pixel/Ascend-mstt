@@ -1,8 +1,8 @@
 import math
 import statistics
 
-from kj600.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
-from kj600.utils import print_error_log
+from monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
+from monitor.utils import print_error_log
 
 
 def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):

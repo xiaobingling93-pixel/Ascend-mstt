@@ -8,7 +8,7 @@ try:
 except ModuleNotFoundError:
     device = torch.device('cpu')
 import torch.nn.functional as F
-from kj600.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMon
+from monitor.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMon
 #from hook_api import reg_grad_hook, reg_grad_one_hook, reg_module_backward_hook, reg_module_forward_hook
 #from torch.cuda.amp import GradScaler
 
@@ -23,7 +23,7 @@ from kj600.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMo
 #debugger = PD(dump_path="./dump/", hook_name="dump", step=[1, 2, 3], enable_dataloader=False)
 #debugger.configure_hook(mode="list", scope=["optim_Adam_step"], )
 
-parser = argparse.ArgumentParser(prog="kj600 debug", description="kj600 sample code", epilog="")
+parser = argparse.ArgumentParser(prog="monitor debug", description="monitor sample code", epilog="")
 parser.add_argument("-o", "--out_dir", type=str, default=".")
 args = parser.parse_args()
 DTYPE = torch.float32
@@ -54,7 +54,7 @@ config = {
 # reg_module_backward_hook(net, module_bwd_hook, config)
 optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
 
-hooker = TrainerMon('./kj600/unittest/config_1.json', opt_ty = 'Megatron_Float16OptimizerWithFloat16Params')
+hooker = TrainerMon('./monitor/unittest/config_1.json', opt_ty = 'Megatron_Float16OptimizerWithFloat16Params')
 hooker.hook_modules(model=net, global_batch_size=2, dp=1, micro_batch_size=2, fwd_or_bkd=0, params_have_main_grad=False)
 # hooker.hook_optimizer(optimizer)
 

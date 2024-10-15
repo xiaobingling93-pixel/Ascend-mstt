@@ -1,7 +1,7 @@
 import uuid
 import unittest
 
-from kj600.anomaly_inform import AnomalyInformFactory
+from monitor.anomaly_inform import AnomalyInformFactory
 
 
 class TestAnomalyInform(unittest.TestCase):

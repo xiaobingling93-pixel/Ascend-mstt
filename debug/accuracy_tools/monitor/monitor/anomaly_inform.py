@@ -2,7 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
-from kj600.database import Database, ExceptionMessage
+from monitor.database import Database, ExceptionMessage
 
 
 # define class InformRegistry to get inform_sub_class

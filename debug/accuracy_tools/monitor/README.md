@@ -1,4 +1,4 @@
-# TensorProbe (codename:kj600) 模型训练状态监控工具
+# Monitor模型训练状态监控工具
 
 ## 简介
 
@@ -6,7 +6,7 @@
 
 ## 安装
 
-###  1. 安装依赖
+###  1. 三方依赖
 
 | 依赖软件        |
 |-------------|
@@ -18,29 +18,17 @@
 | sqlalchemy  |
 | pymysql     |
 
-###  2. 安装 kj600
+###  2. 安装 Monitor
 
-方式一：从 git 直接安装
-
-```
-pip install git+https://gitee.com/xiangsen2/kj600.git
-```
-
-方式二：下载源码安装
-
-```
-git clone https://gitee.com/xiangsen2/kj600.git
-cd kj600
-pip install .
-```
+参考msprobe工具安装
 
 #  快速上手
 
-   下面以Ascend/ModelLink训练框架为例，给出kj600工具的使用方法。
+   下面以Ascend/ModelLink训练框架为例，给出Monitor工具的使用方法。
 
 1. 在ModelLink的根目录，创建json配置文件，如llama2_config.json，内容如下：
 
-```
+```json
 {  
     "targets": {  
         "language_model.encoder.layers.0": {"input": "tuple[2]:0", "output": "tensor", "input_grad":"tuple[2]:0", "output_grad":"tuple[1]:0"}  
@@ -103,7 +91,7 @@ pip install .
 
 对于language_model.embedding.word_embeddings这类输入层，我们不关心输入的情况下，可以不填"input"和"input_grad"，监控的状态中不会包含输入的相关信息。config文件示例如下：
 
-```
+```json
 {  
     "targets": {  
         "language_model.embedding.word_embeddings": {"output": "tensor","output_grad":"tuple[1]:0"}  
@@ -111,51 +99,58 @@ pip install .
 }  
 ```
 
-2. 在训练器中加入代码，开启kj600训练监控。
+2. 在训练器中加入代码，开启Monitor训练监控。
 
    例如在ModelLink/pretrain_gpt.py的model_provider GPTModel构造后加入以下代码,  **注意优化器类型opt_ty** ：
 
-   ```
-       from kj600.module_hook import TrainerMon
-       hooker = TrainerMon("./llama2_config.json", params_have_main_grad=True, opt_ty="Megatron_DistributedOptimizer") # or opt_ty=Megatron_Float16OptimizerWithFloat16Params
-       hooker.hook_modules(model=model, grad_acc_steps=args.global_batch_size//args.data_parallel_size//args.micro_batch_size) 
+   ```python
+       from monitor.module_hook import TrainerMon
+       hooker = TrainerMon(
+           "./llama2_config.json", 
+           params_have_main_grad=True, 
+           opt_ty="Megatron_DistributedOptimizer"
+       ) # or opt_ty=Megatron_Float16OptimizerWithFloat16Params
+       hooker.hook_modules(
+           model=model,
+           grad_acc_steps=args.global_batch_size//args.data_parallel_size//args.micro_batch_size
+       )
    ```
    params_have_main_grad: 若为True则参数权重梯度为main_grad，否则为grad，默认为True。
    
    如果不是Megatron-LM的训练框架， 可以设置对应的梯度累积步数grad_acc_steps。 
 
-   如果要监控混合精度优化器的动量和方差， 需要在混合精度优化器构造后加入如下代码。 目前只支持Megatron_DistributedOptimizer， 使用bf16或者fp16混合精度时开启分布式优化器。 或者Megatron_Float16OptimizerWithFloat16Params， 使用bf16或者fp16混合精度选项并且不开启分布式优化器。 
+   如果要监控混合精度优化器的动量和方差， 需要在混合精度优化器构造后加入如下代码。 目前只支持Megatron_DistributedOptimizer， 使用bf16或者fp16混合精度时开启分布式优化器。 或者Megatron_Float16OptimizerWithFloat16Params， 使用bf16或者fp16混合精度选项并且不开启分布式优化器。
 
-   ```
+   ```python
    model, optimizer, opt_param_scheduler = setup_model_and_optimizer(
            model_provider, model_type) 
    # 插入位置
-   from kj600.module_hook import TrainerMon
+   from monitor.module_hook import TrainerMon
    TrainerMon.set_wrapped_optimizer(optimizer)
    ```
 
 3. 配置tensorboard写入的目录
 
-   ```
-   export KJ600_OUTPUT_DIR=/xxx/output_dir
+   ```shell
+   export MONITOR_OUTPUT_DIR=/xxx/output_dir
    ```
 
 4. 开始预训练，在日志中如果发现以下内容， 则说明指定的模块被成功监视。
 
-   ```
+   ```txt
    > language_model.encoder.layers.0 is monitored successfully
    > 1 out of 1 modules are monitored.
    ```
 
 5. 训练过程中，打开tensorboard，可以查看训练的中间状态：
 
-```
-tensorboard --logdir=$KJ600_OUTPUT_DIR
+```shell
+tensorboard --logdir=$MONITOR_OUTPUT_DIR
 ```
 
 之后，运行以下SSH命令来建立端口转发，可以在本地通过http://localhost:6006访问tensorboard：
 
-```
+```shell
 ssh -N -L localhost:6006:localhost:6006 your_username@remote_server_address
 ```
 

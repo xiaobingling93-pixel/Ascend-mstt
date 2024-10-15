@@ -2,7 +2,7 @@ import unittest
 import torch
 import torch.nn as nn
 import torch_npu
-from kj600.features import eff_rank
+from monitor.features import eff_rank
 
 
 class TestFeatureCalculation(unittest.TestCase):

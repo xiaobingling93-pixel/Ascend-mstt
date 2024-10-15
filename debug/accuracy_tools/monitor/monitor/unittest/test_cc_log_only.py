@@ -5,8 +5,8 @@ import json
 import torch
 from torch import distributed as dist
 import torch.multiprocessing as mp
-from kj600.module_hook import TrainerMon
-from kj600.unittest.cc_utils import *
+from monitor.module_hook import TrainerMon
+from monitor.unittest.cc_utils import *
 
 
 with open(os.path.join(os.path.dirname(__file__), 'expected_cc_log.json')) as f:
@@ -30,7 +30,7 @@ def main(rank, world_size):
     async_op = False
 
     net = Model()
-    monitor = TrainerMon("kj600/unittest/config_cc_logonly.json")
+    monitor = TrainerMon("monitor/unittest/config_cc_logonly.json")
     monitor.hook_optimizer() # to enable tb
     optimizer = torch.optim.Adam(net.parameters())
     cc_context = monitor.cc_context
