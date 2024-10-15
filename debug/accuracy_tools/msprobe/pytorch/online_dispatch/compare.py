@@ -19,6 +19,7 @@ FLOAT_PRECISION = 14
 ResultInfo = namedtuple('ResultInfo', ['api_name', 'is_fwd_success', 'is_bwd_success',
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results'])
 
+
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()

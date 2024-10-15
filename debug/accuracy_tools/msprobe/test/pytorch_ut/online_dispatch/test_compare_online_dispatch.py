@@ -15,13 +15,14 @@
 import json
 import os
 import unittest
+import torch
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
-from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver
+from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
 
 
 class TestCompare(unittest.TestCase):
@@ -80,6 +81,13 @@ class TestSaver(unittest.TestCase):
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
 
+
+    # def test_print_pretest_result(self):
+    #
+    # def test_get_statistics_from_result_csv(self):
+    #
+
+
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
@@ -99,3 +107,23 @@ class TestSaver(unittest.TestCase):
         mock_data_detail = {'api_name.forward.output.0': {0: 'api_name.backward.output.0'}, 'f': {0: 'b'}}
 
         self.assertTrue(pd.read_csv(self.detail_save_path).to_dict() == mock_data_detail)
+
+    class TestComparator(unittest.TestCase):
+        def setUp(self):
+            self.save_path = "./saver_save.csv"
+            self.detail_save_path = "./saver_detail.csv"
+            self.comparator = Comparator(self.save_path, self.detail_save_path, False)
+            Path(self.save_path).touch()
+            Path(self.detail_save_path).touch()
+
+        def tearDown(self):
+            if os.path.exists(self.save_path):
+                os.remove(self.save_path)
+            if os.path.exists(self.detail_save_path):
+                os.remove(self.detail_save_path)
+
+        def test_compare_core_wrapper(self):
+            bench_out = torch.Tensor([1, 2, 3, 4])
+            npu_out = torch.Tensor([1, 2, 3, 4])
+            test_final_success, detailed_result_total = self.comparator._compare_core_wrapper(bench_out, npu_out)
+            a = 1
