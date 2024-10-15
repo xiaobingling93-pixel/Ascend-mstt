@@ -1,8 +1,23 @@
-from abc import ABC, abstractmethod
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import hashlib
+from abc import ABC, abstractmethod
 
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import ops
 from msprobe.core.grad_probe.constant import GradConst
 
 
@@ -11,6 +26,7 @@ class CsvInput:
         self.param_name = param_name
         self.grad = grad
         self.bounds = bounds
+
 
 class GradStatCsv:
     csv = {}
@@ -70,11 +86,11 @@ class CsvDistribution(CsvItem):
         if bounds:
             intervals.append(f"(-inf, {bounds[0]}]")
             for i in range(1, len(bounds)):
-                intervals.append(f"({bounds[i-1]}, {bounds[i]}]")
+                intervals.append(f"({bounds[i - 1]}, {bounds[i]}]")
         if intervals:
             intervals.append(f"({bounds[-1]}, inf)")
         intervals.append("=0")
-    
+
         return intervals
 
     def generate_csv_content(csv_input):
