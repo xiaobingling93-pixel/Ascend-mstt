@@ -15,7 +15,7 @@ def generate_npy_data(path):
     data_path = os.path.join(path, 'rank_0/mnist/0/0')
     os.makedirs(data_path, exist_ok=True)
     array = np.full((10, 10), 44, dtype=np.float16)
-    file_name = os.path.join(data_path, "op_1.0.0.1721724968854345.input.0.DefaultFormat.npy")
+    file_name = os.path.join(data_path, "op_type.op_1.0.0.1721724968854345.input.0.DefaultFormat.npy")
 
     np.save(file_name, array)
 
