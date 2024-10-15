@@ -79,14 +79,14 @@ class BitNoiseLayer(NpuBaseLayer):
         判断是否需要添加扰动,  bit翻转
         """
         if not self.bit_type:
-            logger.info_on_rank_0(
+            logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.api_name}, "
                 f"dtype unsupported. Cancel perturbation."
             )
             return False
         if tensor_obj.numel() == 0:
             logger.warning_on_rank_0(
-                f"[msprobe] Free benchmark: For {self.api_name}, tensor shape must > 0"
+                f"[msprobe] Free benchmark: For {self.api_name}, tensor shape must > 0."
                 f" Cancel adding noise."
             )
             return False
@@ -102,9 +102,9 @@ class BitNoiseLayer(NpuBaseLayer):
             )
             max_val = TorchC.max(TorchC.abs(tensor_obj.to(torch.float32))).item()
         if max_val < abs_tol:
-            logger.info_on_rank_0(
+            logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.api_name}, "
-                f"Maximun value is less than the  minimun threshold. Cancel add noise."
+                f"Maximun value is less than the minimun threshold. Cancel add noise."
             )
             return False
         return True

@@ -99,7 +99,7 @@ class AddNoiseLayer(NpuBaseLayer):
         if max_val < abs_tol:
             logger.warning_on_rank_0(
                 f"[msprobe] Free Benchmark: For {self.api_name}, "
-                f"Maximun value is less than the  minimun threshold. Cancel add noise."
+                f"Maximun value is less than the minimun threshold. Cancel add noise."
             )
             return False
         return True
