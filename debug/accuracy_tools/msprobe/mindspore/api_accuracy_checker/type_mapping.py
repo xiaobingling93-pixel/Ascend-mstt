@@ -2,6 +2,7 @@ from mindspore.common import dtype as mstype
 import numpy as np
 import mindspore
 import torch
+from mindspore._c_expression import typing
 
 INT8 = "Int8"
 UINT8 = "UInt8"
@@ -75,6 +76,8 @@ FLOAT_TYPE_STR = "float"
 SLICE_TYPE_STR = "slice"
 TUPLE_TYPE_STR = "tuple"
 STR_TYPE_STR = "str"
+MINDSPORE_DTYPE_TYPE_STR = "mindspore.dtype"
+TORCH_DTYPE_TYPE_STR = "torch.dtype"
 
 api_info_type_str_to_type = {
     MINDSPORE_TENSOR_TYPE_STR: mindspore.Tensor,
@@ -83,6 +86,7 @@ api_info_type_str_to_type = {
     FLOAT_TYPE_STR: float,
     SLICE_TYPE_STR: slice,
     STR_TYPE_STR: str,
+    MINDSPORE_DTYPE_TYPE_STR: typing.Type,
 }
 type_to_api_info_type_str = {value: key for key, value in api_info_type_str_to_type.items()}
 

@@ -22,21 +22,19 @@ def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_t
         3. value is not accepted type
         4. value is not accepted value
     '''
-    parse_failed_exception = ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed)
     if not isinstance(dict_instance, dict):
-        logger.error_log_with_exp("check_and_get_from_json_dict failed: input is not a dict", parse_failed_exception)
+        error_info = "check_and_get_from_json_dict failed: input is not a dict"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     value = dict_instance.get(key)
     if value is None:
-        logger.error_log_with_exp(f"check_and_get_from_json_dict failed: {key_description} is missing",
-                                  parse_failed_exception)
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is missing"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     elif accepted_type is not None and not isinstance(value, accepted_type):
-        logger.error_log_with_exp(
-            f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}",
-            parse_failed_exception)
+        error_info =  f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     elif accepted_value is not None and value not in accepted_value:
-        logger.error_log_with_exp(
-            f"check_and_get_from_json_dict failed: {key_description} is not accepted value: {accepted_value}",
-            parse_failed_exception)
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is not accepted value: {accepted_value}"
+        raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     return value
 
 def convert_to_tuple(input):
