@@ -1,7 +1,7 @@
 import uuid
 import unittest
 
-from monitor.anomaly_inform import AnomalyInformFactory
+from msprobe.pytorch.monitor.anomaly_inform import AnomalyInformFactory
 
 
 class TestAnomalyInform(unittest.TestCase):

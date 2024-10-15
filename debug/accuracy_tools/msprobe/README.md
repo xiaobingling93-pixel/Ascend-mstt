@@ -95,6 +95,12 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 场景的在线精度比对](./docs/18.online_dispatch.md)
 
+### 9 训练状态监控
+
+该功能收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
+
+[PyTorch 场景的训练状态监控](./docs/19.monitor.md)
+
 ## 🌟 新版本特性
 
 若查看历史版本特性，请点击[安装](./docs/01.installation.md)。

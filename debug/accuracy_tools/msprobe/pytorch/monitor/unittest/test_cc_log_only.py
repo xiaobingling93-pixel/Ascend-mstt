@@ -5,8 +5,8 @@ import json
 import torch
 from torch import distributed as dist
 import torch.multiprocessing as mp
-from monitor.module_hook import TrainerMon
-from monitor.unittest.cc_utils import *
+from msprobe.pytorch.monitor.module_hook import TrainerMon
+from msprobe.pytorch.monitor.unittest.cc_utils import *
 
 
 with open(os.path.join(os.path.dirname(__file__), 'expected_cc_log.json')) as f:

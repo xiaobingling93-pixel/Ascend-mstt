@@ -8,7 +8,7 @@ try:
 except ModuleNotFoundError:
     device = torch.device('cpu')
 import torch.nn.functional as F
-from monitor.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMon
+from msprobe.pytorch.monitor.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMon
 #from hook_api import reg_grad_hook, reg_grad_one_hook, reg_module_backward_hook, reg_module_forward_hook
 #from torch.cuda.amp import GradScaler
 
@@ -16,7 +16,7 @@ from monitor.module_hook import TrainerMon # Modify PYTHONPATH to import Trainer
 
 
 # from ptdbg_ascend import PrecisionDebugger as PD
-# from monitor import GradientMonitor
+# from msprobe.pytorch.monitor import GradientMonitor
 
 # print(torch_npu.__version__)
 

@@ -11,8 +11,8 @@ except:
     BACKEND = 'nccl'
     DEVICE = 'cuda'
 
-from monitor.features import square_sum, get_max, get_min, get_zeros
-from monitor.module_hook import CommunicationContext
+from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros
+from msprobe.pytorch.monitor.module_hook import CommunicationContext
 
 
 OP_FUNCS = {

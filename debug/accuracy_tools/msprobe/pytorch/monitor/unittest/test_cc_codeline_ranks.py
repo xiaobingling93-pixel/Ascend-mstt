@@ -3,8 +3,8 @@ sys.path.append(".")
 import torch
 from torch import distributed as dist
 import torch.multiprocessing as mp
-from monitor.module_hook import TrainerMon
-from monitor.unittest.cc_utils import *
+from msprobe.pytorch.monitor.module_hook import TrainerMon
+from msprobe.pytorch.monitor.unittest.cc_utils import *
 
 @wrap_reset
 def test_all_gather(context, rank, target_rank, world_size, async_op):

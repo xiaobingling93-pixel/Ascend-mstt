@@ -1,8 +1,8 @@
 import math
 import statistics
 
-from monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
-from monitor.utils import print_error_log
+from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
+from msprobe.pytorch.monitor.utils import print_error_log
 
 
 def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):

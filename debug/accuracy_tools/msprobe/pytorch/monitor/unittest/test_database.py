@@ -5,7 +5,7 @@ from unittest import TestCase
 
 from sqlalchemy import inspect
 
-from monitor.database import Database, ExceptionMessage
+from msprobe.pytorch.monitor.database import Database, ExceptionMessage
 
 
 class TestDatabase(TestCase):

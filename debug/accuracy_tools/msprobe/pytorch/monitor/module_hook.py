@@ -10,16 +10,16 @@ if not torch_version_above_or_equal_2:
 
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
-from monitor.module_spec_verifier import validate_config_spec
-from monitor.optimizer_collect import MixPrecsionOptimizerMon, OptimizerMonFactory
-from monitor.features import eff_rank, get_sign_matches
-from monitor.visualizer import HeatmapVisualizer
-from monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
-from monitor.anomaly_inform import AnomalyInformFactory
-from monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
-from monitor.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
-from monitor.file_check import FileOpen
+from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
+from msprobe.pytorch.monitor.optimizer_collect import MixPrecsionOptimizerMon, OptimizerMonFactory
+from msprobe.pytorch.monitor.features import eff_rank, get_sign_matches
+from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
+from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
+from msprobe.pytorch.monitor.anomaly_inform import AnomalyInformFactory
+from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
+from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
+from msprobe.pytorch.monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
+from msprobe.pytorch.monitor.file_check import FileOpen
 
 
 class ModuleHookContext:

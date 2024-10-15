@@ -8,7 +8,7 @@ try:
     device = torch.device('npu:0')
 except ModuleNotFoundError:
     device = torch.device('cpu')
-from monitor.module_hook import TrainerMon
+from msprobe.pytorch.monitor.module_hook import TrainerMon
 
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 

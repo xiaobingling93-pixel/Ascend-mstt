@@ -5,7 +5,7 @@ import re
 from functools import wraps
 from torch import distributed as dist
 
-from monitor.const import Const
+from msprobe.pytorch.monitor.const import Const
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255

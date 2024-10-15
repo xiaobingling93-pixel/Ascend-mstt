@@ -2,7 +2,7 @@ import unittest
 import torch
 import torch.nn as nn
 import torch_npu
-from monitor.features import eff_rank
+from msprobe.pytorch.monitor.features import eff_rank
 
 
 class TestFeatureCalculation(unittest.TestCase):

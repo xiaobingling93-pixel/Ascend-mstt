@@ -1,5 +1,5 @@
 stack:
-- monitor/distributed
+- msprobe/pytorch/monitor/distributed
 - site-packages/torch/nn/modules/module.py
 - multiprocessing
 - debugpy

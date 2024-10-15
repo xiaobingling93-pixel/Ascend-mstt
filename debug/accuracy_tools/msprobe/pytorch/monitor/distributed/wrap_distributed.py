@@ -5,9 +5,9 @@ import inspect
 import torch
 import torch.nn as nn
 import torch.distributed as dist
-from monitor.utils import print_error_log
 
-from ..module_metric import get_metrics
+from msprobe.pytorch.monitor.utils import print_error_log
+from msprobe.pytorch.monitor.module_metric import get_metrics
 
 try:
     import torch_npu

@@ -1,6 +1,6 @@
 import torch
 from torch.autograd.functional import jacobian
-from monitor.utils import print_info_log
+from msprobe.pytorch.monitor.utils import print_info_log
 
 
 @torch.no_grad()

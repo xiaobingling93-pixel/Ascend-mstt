@@ -5,8 +5,8 @@ from typing import List
 import sys
 from torch.utils.tensorboard import SummaryWriter
 from collections import defaultdict
-from monitor.utils import print_info_log, print_error_log
-from monitor.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
+from msprobe.pytorch.monitor.utils import print_info_log, print_error_log
+from msprobe.pytorch.monitor.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
 
 class ScanRule(ABC):
     def apply(self, history, cur):
