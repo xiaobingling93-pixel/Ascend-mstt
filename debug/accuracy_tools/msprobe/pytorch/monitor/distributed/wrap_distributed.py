@@ -1,12 +1,12 @@
 import os
-import yaml
 import re
 import inspect
+
 import torch
 import torch.nn as nn
 import torch.distributed as dist
 
-from msprobe.pytorch.monitor.utils import print_error_log
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.pytorch.monitor.module_metric import get_metrics
 
 try:
@@ -17,20 +17,10 @@ except ImportError:
 PREFIX_POST = "post"
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
-try:
-    with open(OpsPath) as f:
-        WrapDistributedOps = yaml.safe_load(f).get('distributed')
-except Exception as e:
-    print_error_log(f"load file {OpsPath} failed.")
-    raise RuntimeError(f"load file {OpsPath} failed.") from e
+WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
  
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
-try:
-    with open(StackBlackListPath) as f:
-        StackBlackList = yaml.safe_load(f).get('stack')
-except Exception as e:
-    print_error_log(f"load file {StackBlackListPath} failed.")
-    raise RuntimeError(f"load file {StackBlackListPath} failed.") from e
+StackBlackList = load_yaml(StackBlackListPath).get("stack", [])
 
 distributed_func = {}
 for f in dir(dist):
@@ -86,6 +76,21 @@ class ApiRegistry:
             else:
                 setattr(api_group, cc_api_name, cc_api_entry_func)
 
+    @staticmethod
+    def redirect_wait():
+        global ORIGIN_WAIT
+        global PENDING_ASYNC_CC_BY_HANDLE
+
+        def wrapped_wait(work):
+            def wrapped_wait(*args, **kwargs):
+                ORIGIN_WAIT(*args, **kwargs)
+                if args[0] in PENDING_ASYNC_CC_BY_HANDLE:
+                    store_func = PENDING_ASYNC_CC_BY_HANDLE.pop(args[0])
+                    store_func()
+            return wrapped_wait
+
+        dist.Work.wait = wrapped_wait(dist.Work)
+
     def redirect_api(self):
         self.set_api_attr(dist, self.distributed_attr_hooked)
         self.set_api_attr(dist.distributed_c10d, self.distributed_attr_hooked)
@@ -101,20 +106,6 @@ class ApiRegistry:
         for op_name in get_distributed_ops():
             self.distributed_attr_hooked[op_name] = DistributedOPTemplate(op_name, pre_hooks, post_hooks)
 
-    def redirect_wait(self):
-        global ORIGIN_WAIT
-        global PENDING_ASYNC_CC_BY_HANDLE
-
-        def wrapped_wait(work):
-            def wrapped_wait(*args, **kwargs):
-                ORIGIN_WAIT(*args, **kwargs)
-                if args[0] in PENDING_ASYNC_CC_BY_HANDLE:
-                    store_func = PENDING_ASYNC_CC_BY_HANDLE.pop(args[0])
-                    store_func()
-            return wrapped_wait
-
-        dist.Work.wait = wrapped_wait(dist.Work)
-
 
 def stack_filter(stack):
     for pattern in StackBlackList:
@@ -124,7 +115,7 @@ def stack_filter(stack):
 
 def get_callstack():
     callstack = []
-    for (_, path, line, func, code, _) in inspect.stack():
+    for (_, path, line, func, _, _) in inspect.stack():
         stack_line = f'{path}[{line}]'
         if stack_filter(stack_line):
             callstack.append(stack_line+'   '+func)

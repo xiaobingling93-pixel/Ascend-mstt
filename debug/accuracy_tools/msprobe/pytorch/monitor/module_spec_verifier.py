@@ -1,8 +1,6 @@
-import json
 import re
 import abc
 import torch
-
 
 # 用于存储所有validator实现类的注册表
 config_validator_registry = {}
@@ -32,8 +30,8 @@ class TensorValidator(ConfigValidator):
 
     def validate(self, actual_data, module_name:str, data_type:str, pattern_match):
         if not torch.is_tensor(actual_data):
-            raise ValueError(f"Format of {module_name} {data_type} does not match the required format 'tensor' in config.")
-        return None
+            raise ValueError(
+                f"Format of {module_name} {data_type} does not match the required format 'tensor' in config.")
 
 
 @register_config_validator    
@@ -45,11 +43,16 @@ class TupleValidator(ConfigValidator):
     def validate(self, actual_data, module_name: str, data_type: str, pattern_match):
         length, index = map(int, pattern_match.groups())
         if not (0 <= index < length):
-            raise ValueError(f"Format of {module_name} {data_type} in config.json does not match the required format 'tuple[x]:y'. y must be greater than or equal to 0 and less than x.")
+            raise ValueError(
+                f"Format of {module_name} {data_type} in config.json does not match the required format 'tuple[x]:y'."
+                f"y must be greater than or equal to 0 and less than x.")
         if not isinstance(actual_data, tuple):
-            raise ValueError(f"Type of {module_name} {data_type} does not match spec of config.json, should be tuple, please check.")
+            raise ValueError(
+                f"Type of {module_name} {data_type} does not match spec of config.json, should be tuple, please check.")
         if len(actual_data) != length:
-            raise ValueError(f"Length of {module_name} {data_type} does not match spec of config.json, should be {length}, actual is {len(actual_data)} please check.")
+            raise ValueError(
+                f"Length of {module_name} {data_type} does not match spec of config.json, should be {length}, "
+                f"actual is {len(actual_data)} please check.")
         return index
 
 
@@ -60,4 +63,5 @@ def validate_config_spec(config_spec:str, actual_data, module_name:str, data_typ
         if pattern_match:
             focused_col = config_validator.validate(actual_data, module_name, data_type, pattern_match)
             return focused_col
-    raise ValueError(f"config spec in {module_name} {data_type} not supported, expected spec:'tuple\[(\d+)\]:(\d+)' or 'tensor', actual spec: {config_spec}.")
+    raise ValueError(f"config spec in {module_name} {data_type} not supported, "
+                     f"expected spec:'tuple\[(\d+)\]:(\d+)' or 'tensor', actual spec: {config_spec}.")

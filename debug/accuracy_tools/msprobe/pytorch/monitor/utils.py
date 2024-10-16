@@ -2,16 +2,18 @@ import os
 import time
 import sys
 import re
+from datetime import timezone, timedelta
 from functools import wraps
 from torch import distributed as dist
 
-from msprobe.pytorch.monitor.const import Const
+from msprobe.core.common.const import MonitorConst
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
 FILE_NAME_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
 
+beijing_tz = timezone(timedelta(hours=8))
 
 
 class MsgConst:
@@ -209,12 +211,12 @@ def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")
     if not ops:
-        raise TypeError(f"specify ops to calculate metrics. Optional ops: {Const.OP_LIST}")
+        raise TypeError(f"specify ops to calculate metrics. Optional ops: {MonitorConst.OP_LIST}")
 
     valid_ops = []
     for op in ops:
-        if op not in Const.OP_LIST:
-            raise ValueError(f"op {op} is not supported. Optional ops: {Const.OP_LIST}")
+        if op not in MonitorConst.OP_LIST:
+            raise ValueError(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
         else:
             valid_ops.append(op)
     return valid_ops
@@ -249,5 +251,4 @@ def validate_config(config):
     validate_ranks(ranks)
 
     targets = config.get("targets", {})
-    validate_targets(targets)    
-    
+    validate_targets(targets)

@@ -6,7 +6,7 @@ from torch import nn
 from torch import distributed as dist
 import torch.multiprocessing as mp
 from msprobe.pytorch.monitor.module_hook import TrainerMon
-from msprobe.pytorch.monitor.unittest.cc_utils import *
+from msprobe.pytorch.monitor.unittest.cc_utils import DEVICE, assert_context, assert_equal, wrap_reset, ddp_setup
 
 DEBUG = False
 DIM = 2

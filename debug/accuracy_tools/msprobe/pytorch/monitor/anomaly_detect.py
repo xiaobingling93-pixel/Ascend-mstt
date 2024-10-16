@@ -1,10 +1,12 @@
 import os
-import statistics  as st
+import sys
+import statistics as st
 from abc import ABC
 from typing import List
-import sys
-from torch.utils.tensorboard import SummaryWriter
 from collections import defaultdict
+
+from torch.utils.tensorboard import SummaryWriter
+
 from msprobe.pytorch.monitor.utils import print_info_log, print_error_log
 from msprobe.pytorch.monitor.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
 
@@ -50,7 +52,8 @@ class AnomalyScanner:
                 return anomaly, rule.name
         return anomaly, None
 
-class bcolors:
+
+class BCOLORS:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
     OKCYAN = '\033[96m'
@@ -69,7 +72,7 @@ class SummaryWriterWithAD(SummaryWriter):
             super().__init__(path)
         except Exception as e:
             print_error_log(f'error when init summary writer at {path}: {e}')
-            raise e
+            raise ValueError("Init summary writer error.") from e
         for event in os.listdir(path):
             change_mode(os.path.join(path, event), FileCheckConst.DATA_FILE_AUTHORITY)
         self.tag2scalars = defaultdict(list)
@@ -80,17 +83,19 @@ class SummaryWriterWithAD(SummaryWriter):
     def add_scalar(self, tag, scalar_value, global_step=None, walltime=None, new_style=False, double_precision=False):
         new_avg = avg = scalar_value
         if tag in self.tag2scalars:
-            N = len(self.tag2scalars[tag])
+            n = len(self.tag2scalars[tag])
             _, avg = self.tag2scalars[tag][-1]
-            new_avg = (avg*N + scalar_value)/(N + 1)
-        self.tag2scalars[tag].append((scalar_value, new_avg))    
+            new_avg = (avg * n + scalar_value) / (n + 1)
+        self.tag2scalars[tag].append((scalar_value, new_avg))
         detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
-            print_info_log(f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}")
-            exception_message = f"{bcolors.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{bcolors.ENDC}"
+            print_info_log(
+                f"{BCOLORS.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{BCOLORS.ENDC}")
+            exception_message = f"{BCOLORS.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}.{BCOLORS.ENDC}"
             if self.anomaly_inform:
                 self.anomaly_inform.run(exception_message, self.job_id)
-        return super().add_scalar(tag, scalar_value, global_step, walltime, new_style, double_precision)
-    
+        args = [tag, scalar_value, global_step, walltime, new_style, double_precision]
+        return super().add_scalar(*args)
+
     def _ad(self, scalar_value, history):
         return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)

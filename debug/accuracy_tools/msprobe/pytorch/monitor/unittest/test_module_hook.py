@@ -1,27 +1,17 @@
 import sys
+
 sys.path.append('./')
 import argparse
 import torch
+
 try:
     import torch_npu
+
     device = torch.device('npu:0')
 except ModuleNotFoundError:
     device = torch.device('cpu')
 import torch.nn.functional as F
-from msprobe.pytorch.monitor.module_hook import TrainerMon # Modify PYTHONPATH to import TrainerMon
-#from hook_api import reg_grad_hook, reg_grad_one_hook, reg_module_backward_hook, reg_module_forward_hook
-#from torch.cuda.amp import GradScaler
-
-# from torch.npu.amp import GradScaler
-
-
-# from ptdbg_ascend import PrecisionDebugger as PD
-# from msprobe.pytorch.monitor import GradientMonitor
-
-# print(torch_npu.__version__)
-
-#debugger = PD(dump_path="./dump/", hook_name="dump", step=[1, 2, 3], enable_dataloader=False)
-#debugger.configure_hook(mode="list", scope=["optim_Adam_step"], )
+from msprobe.pytorch.monitor.module_hook import TrainerMon  # Modify PYTHONPATH to import TrainerMon
 
 parser = argparse.ArgumentParser(prog="monitor debug", description="monitor sample code", epilog="")
 parser.add_argument("-o", "--out_dir", type=str, default=".")
@@ -43,20 +33,15 @@ net = Model().to(device=device)
 
 config = {
     "targets": {
-        "fc": {"input": "tuple[2]:0", "output": "tensor::"}, 
+        "fc": {"input": "tuple[2]:0", "output": "tensor::"},
         "relu": {"input": "..", "output": ".."}
     }
 }
-# reg_grad_hook(net, hook_factory=hook_factory, config=config)
-# reg_grad_one_hook(net, hook=monitor_hook, config=config)
-# net.fc.register_forward_hook(get_actv_hook("fc"))
-# reg_module_forward_hook(net, module_fwd_hook, config)
-# reg_module_backward_hook(net, module_bwd_hook, config)
+
 optimizer = torch.optim.Adam(net.parameters(), lr=0.0001)
 
-hooker = TrainerMon('./monitor/unittest/config_1.json', opt_ty = 'Megatron_Float16OptimizerWithFloat16Params')
+hooker = TrainerMon('./monitor/unittest/config_1.json', opt_ty='Megatron_Float16OptimizerWithFloat16Params')
 hooker.hook_modules(model=net, global_batch_size=2, dp=1, micro_batch_size=2, fwd_or_bkd=0, params_have_main_grad=False)
-# hooker.hook_optimizer(optimizer)
 
 
 class ToyDataset(torch.utils.data.Dataset):
@@ -70,11 +55,11 @@ class ToyDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.data[idx].to(device), self.labels[idx].to(device)
 
+
 train_ds = ToyDataset()
 train_loader = torch.utils.data.DataLoader(train_ds, shuffle=True, batch_size=2)
 
 
-# scaler = GradScaler()
 for (inputs, labels) in train_loader:
     optimizer.zero_grad()
     outputs = net(inputs)

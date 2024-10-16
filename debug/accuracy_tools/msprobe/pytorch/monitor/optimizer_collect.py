@@ -1,6 +1,5 @@
 from collections import defaultdict
 import torch
-import torch.distributed as dist
 
 
 class MixPrecsionOptimizerMon:
@@ -47,15 +46,17 @@ class MixPrecsionOptimizerMon:
                     ratio_dict[name] = exp_avg / torch.sqrt(exp_avg_sq)
                     monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
                     monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
-        return exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict
+        res = (exp_avg_dict, exp_avg_sq_dict, update_dict, ratio_dict)
+        return res
 
 
 class MegatronDistributedOptimizerMon(MixPrecsionOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
         mix_prec_opt = MixPrecsionOptimizerMon.wrapped_optimizer
-        if not (hasattr(mix_prec_opt, "model_float16_groups") and hasattr(mix_prec_opt, "shard_fp32_from_float16_groups")):
-            raise Exception("megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, \
-                             if not, please check megatron-lm version")
+        if not (hasattr(mix_prec_opt, "model_float16_groups")
+                and hasattr(mix_prec_opt, "shard_fp32_from_float16_groups")):
+            raise Exception("megatron distributed optimizer should have model_float16_groups "
+                            "and shard_fp32_from_float16_groups, if not, please check megatron-lm version")
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
             for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups, mix_prec_opt.shard_fp32_from_float16_groups):
                 for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
@@ -66,7 +67,8 @@ class MegatronDistributedOptimizerMon(MixPrecsionOptimizerMon):
 
 class DummyOptimizerMon(MixPrecsionOptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
-        return None, None, None, None
+        res = None, None, None, None
+        return res
 
 
 class OptimizerMonFactory:
@@ -78,4 +80,5 @@ class OptimizerMonFactory:
             return MegatronDistributedOptimizerMon()
         if opt_ty is None or opt_ty == "unknown":
             return DummyOptimizerMon()
-        raise Exception("opt_ty should be Megatron_Float16OptimizerWithFloat16Params or Megatron_DistributedOptimizer or None or unknown")
+        raise Exception("opt_ty should be Megatron_Float16OptimizerWithFloat16Params "
+                        "or Megatron_DistributedOptimizer or None or unknown")

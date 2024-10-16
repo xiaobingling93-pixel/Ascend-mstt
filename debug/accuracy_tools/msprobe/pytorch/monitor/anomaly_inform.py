@@ -2,19 +2,22 @@ import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 
+from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.monitor.database import Database, ExceptionMessage
+from msprobe.pytorch.monitor.utils import beijing_tz
 
 
 # define class InformRegistry to get inform_sub_class
 class AnomalyInformFactory:
     @staticmethod
     def create_informer(**kwargs):
-        if kwargs['recipient'] == "database":
+        recipient = kwargs.get("recipient")
+        if recipient == MonitorConst.DATABASE:
             return DatabaseInform(**kwargs)
-        elif kwargs['recipient'] == "email":
+        elif recipient == MonitorConst.EMAIL:
             return EmailInform(**kwargs)
-        else:
-            raise ValueError("Invaild recipient specified")
+        raise ValueError("Invalid recipient specified")
+
 
 # define class AnomalyInform to inform with database or email
 class AnomalyInform:
@@ -29,16 +32,17 @@ class AnomalyInform:
 
     def run(self, exception_message, job_id):
         if self.time != 0 and self.current_time == 0:
-            self.current_time = datetime.now()
+            self.current_time = datetime.now(tz=beijing_tz)
         if self.time == 0 or ((self.current_time - self.time) > timedelta(minutes=self.interval_time)):
             self.exception_message_list.append(exception_message)
             self.inform_fun(self.exception_message_list, job_id)
             self.exception_message_list = []
-            self.time = datetime.now()
+            self.time = datetime.now(tz=beijing_tz)
         elif (self.current_time - self.time) <= timedelta(minutes=self.interval_time):
             self.exception_message_list.append(exception_message)
-            self.current_time = datetime.now()
-        
+            self.current_time = datetime.now(tz=beijing_tz)
+
+
 class DatabaseInform(AnomalyInform):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -49,7 +53,11 @@ class DatabaseInform(AnomalyInform):
     def inform_fun(self, exception_message_list, job_id):
         save_list = []
         for exception_message in exception_message_list:
-            item = {'job_id': job_id, 'message': exception_message, 'create_time': datetime.now()}
+            item = {
+                'job_id': job_id,
+                'message': exception_message,
+                'create_time': datetime.now(tz=beijing_tz)
+            }
             save_list.append(ExceptionMessage(**item))
         self.database.insert_batch(save_list)
 
@@ -70,6 +78,7 @@ class EmailInform(AnomalyInform):
 
         with smtplib.SMTP(self.inform_args.get('smtp_server', None), self.inform_args.get('smtp_port', 587)) as server:
             server.starttls()
-            server.login(self.inform_args.get('send_email_username', None), self.inform_args.get('send_email_password', None))
-            server.sendmail(self.inform_args.get('send_email_address', None), 
+            server.login(self.inform_args.get('send_email_username', None),
+                         self.inform_args.get('send_email_password', None))
+            server.sendmail(self.inform_args.get('send_email_address', None),
                             self.inform_args.get('receive_email_address', None), message.as_string())

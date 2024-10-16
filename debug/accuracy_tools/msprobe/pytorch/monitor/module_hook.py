@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 import json
@@ -16,10 +17,15 @@ from msprobe.pytorch.monitor.features import eff_rank, get_sign_matches
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD
 from msprobe.pytorch.monitor.anomaly_inform import AnomalyInformFactory
-from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, TensorMetrics
-from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks,  op_aggregate
-from msprobe.pytorch.monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config
+from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, \
+    TensorMetrics
+from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
+from msprobe.pytorch.monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, \
+    check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config, beijing_tz
 from msprobe.pytorch.monitor.file_check import FileOpen
+from msprobe.core.common.const import MonitorConst
+
+output_base_dir = os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
 
 
 class ModuleHookContext:
@@ -80,8 +86,12 @@ class TrainerMon:
 
     tensor_metrics = TensorMetrics()
 
-    # opt_ty: "Megatron_Float16OptimizerWithFloat16Params" or "Megatron_DistributedOptimizer"
     def __init__(self, config_file_path, params_have_main_grad=True, opt_ty=None) -> None:
+        """
+        config_file_path: str, monitor config path
+        params_have_main_grad: bool, whether param has attribution main_grad
+        opt_ty: str, Megatron_Float16OptimizerWithFloat16Params or Megatron_DistributedOptimizer
+        """
         self.module_fwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
@@ -99,8 +109,8 @@ class TrainerMon:
         
         # backward hook cause megatron-lm pipeline parallel schedule assert exception. 
         # TBD: backward hook cause output tensor is view of some base tensor. root cause invesigation pending.
-        self.forward_only = self.config.get('forward_only', False) 
-        if self.forward_only: 
+        self.forward_only = self.config.get('forward_only', False)
+        if self.forward_only:
             print_rank_0("> only module forward is monitored. ")
 
         self.ur_distribution = self.config.get('ur_distribution', False)
@@ -129,12 +139,12 @@ class TrainerMon:
 
         alert_setting = self.config.get('alert', {"rules":[]})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
-        
-        anomaly_inform = AnomalyInformFactory.create_informer(**alert_setting["inform"]) if "inform" in alert_setting else None
-        
+
+        anomaly_inform = AnomalyInformFactory.create_informer(
+            **alert_setting["inform"]) if "inform" in alert_setting else None
+
         self.optimizer_hooked = False
-        output_base_dir = os.getenv('MONITOR_OUTPUT_DIR', './monitor_output')
-        cur_time = datetime.now().strftime('%b%d_%H-%M-%S')
+        cur_time = datetime.now(beijing_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
         if dist.is_initialized():
             cur_path = os.path.join(output_base_dir, f"{cur_time}-rank{dist.get_rank()}-{unique_id}")
@@ -168,7 +178,7 @@ class TrainerMon:
                 raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
-        self.module_struct = {}
+        self.module_struct = defaultdict(dict)
         return
 
     def __del__(self):
@@ -188,9 +198,39 @@ class TrainerMon:
                 return
         TrainerMon.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
 
+    @staticmethod
+    def build_tbtag_tensor_map(module_name, tag, tensor):
+        metrics = {}
+        rank = dist.get_rank() if dist.is_initialized() else None
+        key = get_summary_writer_tag_name(module_name, tag, rank)
+        if tensor is not None:
+            metrics[key] = tensor
+        return metrics
+
+    @staticmethod
+    def generate_cc_metrics(cc_name, cc_tensor):
+        metrics = defaultdict(dict)
+        rank = dist.get_rank() if dist.is_initialized() else None
+        for op, tag2tensor in cc_tensor.data.items():
+            for tag, tensor in tag2tensor.items():
+                key = get_summary_writer_tag_name(cc_name, tag, rank)
+                metrics[op].update({key: tensor})
+        cc_tensor.reset()
+        return metrics
+
+    def generate_param_metrics(self, tag, param_tensor):
+        metrics = {}
+        rank = dist.get_rank() if dist.is_initialized() else None
+        for _, name in self.param2name.items():
+            key = get_summary_writer_tag_name(name, tag, rank)
+            if name not in param_tensor or param_tensor[name] is None:
+                continue
+            metrics[key] = param_tensor[name]
+        return metrics
+
     def hook_modules(self, model:torch.nn.Module, grad_acc_steps):
         # fwd=0, bkd=1
-        # targets is module name list like ["xx.xxx1", "xxx.xxx2"] which can be obtained when first run. 
+        # targets is module name list like ["xx.xxx1", "xxx.xxx2"] which can be obtained when first run.
         if not isinstance(model, torch.nn.Module):
             raise TypeError("model should be a nn.Module")
         if not isinstance(grad_acc_steps, int) or isinstance(grad_acc_steps, bool):
@@ -214,39 +254,13 @@ class TrainerMon:
             for name, param in model.named_parameters():
                 print_rank_0(f"\t{name}")
                 for target_module, _ in self.config['targets'].items():
-                    if name.startswith(target_module): # name : language_model.encoder.layers.0.mlp.weight, target_module:language_model.encoder.layers.0
+                    if name.startswith(target_module):
+                        # name : language_model.encoder.layers.0.mlp.weight
+                        # target_module:language_model.encoder.layers.0
                         self.param_name_list.append(name)
                         self.param2name[param] = name
             self.hook_optimizer()
         return
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
-        rank = dist.get_rank() if dist.is_initialized() else None
-        key = get_summary_writer_tag_name(module_name, tag, rank)
-        if tensor is not None:
-            metrics[key] = tensor
-        return metrics
-
-    def generate_param_metrics(self, tag, param_tensor):
-        metrics = {}
-        rank = dist.get_rank() if dist.is_initialized() else None
-        for param, name in self.param2name.items():
-            key = get_summary_writer_tag_name(name, tag, rank)
-            if name not in param_tensor or param_tensor[name] is None:
-                continue
-            metrics[key] = param_tensor[name]
-        return metrics
-    
-    def generate_cc_metrics(self, cc_name, cc_tensor):
-        metrics = defaultdict(dict)
-        rank = dist.get_rank() if dist.is_initialized() else None
-        for op, tag2tensor in cc_tensor.data.items():
-            for tag, tensor in tag2tensor.items():
-                key = get_summary_writer_tag_name(cc_name, tag, rank)
-                metrics[op].update({key: tensor})
-        cc_tensor.reset()
-        return metrics
 
     def write_adhoc_check(self, step):
         TrainerMon.tensor_metrics.flush(self.summary_writer)
@@ -256,14 +270,16 @@ class TrainerMon:
             return
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if not len(fwd_context.actv) == self.micro_batch_number:
-                print_warn_log(f"fwd_context.actv not equal to micro_batch_number: {len(fwd_context.actv)}, {self.micro_batch_number}")
+                print_warn_log(
+                    f"fwd_context.actv not equal to micro_batch_number: {len(fwd_context.actv)}, {self.micro_batch_number}")
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, fwd_context.actv, step)
             fwd_context.actv.clear()
 
         for _, bwd_context in self.module_bwd_hook_context_by_module.items():
             if not len(bwd_context.actvgrad) == self.micro_batch_number:
-                print_warn_log(f"bwd_context.actvgrad not equal to micro_batch_number: {len(bwd_context.actvgrad)}, {self.micro_batch_number}")
+                print_warn_log(
+                    f"bwd_context.actvgrad not equal to micro_batch_number: {len(bwd_context.actvgrad)}, {self.micro_batch_number}")
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, bwd_context.actvgrad, step)
             bwd_context.actvgrad.clear()
@@ -272,7 +288,8 @@ class TrainerMon:
         # in DDP by default use params_have_main_grad
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
-            if self.print_struct and not all(value == {} for value in self.module_struct.values()) and not self.struct_printed:
+            if (self.print_struct and not all(value == {} for value in self.module_struct.values())
+                    and not self.struct_printed):
                 self._smallest_rank_print("> module struct:")
                 self._smallest_rank_print(json.dumps(self.module_struct))
                 self.struct_printed = True
@@ -280,13 +297,13 @@ class TrainerMon:
                     raise Exception("exit after first step when print model struct")
             if self.cc_log_only and context.step > 0:
                 self._smallest_rank_print("> Used communication ops and corresponding stack")
-                self._smallest_rank_print(json.dumps({k:[i.split(';') for i in v] for k,v in self.cc_logged_stack.items()}, indent=4))
+                self._smallest_rank_print(
+                    json.dumps({k: [i.split(';') for i in v] for k, v in self.cc_logged_stack.items()}, indent=4))
                 raise Exception("exit after first step when print cc stack")
-            
 
-            context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, context.param_adam_ratio = self.mix_precision_optimizer_mon.fetch_mv(self,
-                optimizer, self.param2name)
-            
+            context.param_exp_avg, context.param_exp_avg_sq, context.param_adam_update, context.param_adam_ratio = \
+                self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name)
+
             for param, name in self.param2name.items():
                 if "params_effrank" in self.config and name in self.config["params_effrank"]:
                     context.param_effective_rank[name] = eff_rank(param.detach())
@@ -311,8 +328,6 @@ class TrainerMon:
                 tbtag_tensor_map.update(self.generate_param_metrics('exp_avg_sq', context.param_exp_avg_sq))
             if self.mg_direction:
                 tbtag_tensor_map.update(self.generate_param_metrics('mg_direction', context.param_mg_direction))
-            # if not tbtag_tensor_map:
-            #     return
             metric_dict = {}
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
@@ -335,9 +350,11 @@ class TrainerMon:
 
             if self.ur_distribution:
                 for param_name, _ in context.param_adam_update.items():
-                    self.update_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
+                    self.update_heatmap_visualizer[param_name].visualize(
+                        get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
                 for param_name, _ in context.param_adam_ratio.items():
-                    self.ratio_heatmap_visualizer[param_name].visualize(get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
+                    self.ratio_heatmap_visualizer[param_name].visualize(
+                        get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
 
             for metric_name in self.ops:
                 if not context.metric_list:
@@ -371,8 +388,12 @@ class TrainerMon:
         def fwd_hook_fun(module, module_input, module_output):
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if self.print_struct:
-                self.module_struct[context.module_name].update(
-                    {"input": f"{get_param_struct(module_input)}", "output": f"{get_param_struct(module_output)}"})
+                if context.module_name not in self.module_struct:
+                    self.module_struct[context.module_name] = {}
+                self.module_struct[context.module_name].update({
+                    "input": f"{get_param_struct(module_input)}",
+                    "output": f"{get_param_struct(module_output)}"
+                })
                 return
             if not self.xy_distribution:
                 return
@@ -395,8 +416,8 @@ class TrainerMon:
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
             if context.micro_step == 0 and context.actv:
-                print_warn_log(
-                    f"actv context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
+                print_warn_log(f"actv context of {context.module_name} is not empty when first micro_step, "
+                               f"maybe something wrong happened. Now clear it.")
                 context.actv.clear()
             context.actv.append(metric_dict)
 
@@ -409,8 +430,10 @@ class TrainerMon:
         def bwd_hook_fun(module, input_grad, output_grad):
             context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
             if self.print_struct:
-                self.module_struct[context.module_name].update(
-                    {"input_grad": f"{get_param_struct(input_grad)}", "output_grad": f"{get_param_struct(output_grad)}"})
+                self.module_struct[context.module_name].update({
+                    "input_grad": f"{get_param_struct(input_grad)}",
+                    "output_grad": f"{get_param_struct(output_grad)}"
+                })
                 return
             if not self.xy_distribution:
                 return
@@ -419,21 +442,25 @@ class TrainerMon:
                 context.set_format_by_arg('output_grad', self.config['targets'])
             if not context.verified:
                 if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg['input_grad'], input_grad, context.module_name, 'input_grad')
-                context.focused_out_col = validate_config_spec(context.format_by_arg['output_grad'], output_grad, context.module_name, 'output_grad')
+                    context.focused_in_col = validate_config_spec(
+                        context.format_by_arg['input_grad'], input_grad, context.module_name, 'input_grad')
+                context.focused_out_col = validate_config_spec(
+                    context.format_by_arg['output_grad'], output_grad, context.module_name, 'output_grad')
                 context.verified = True
 
             tbtag_tensor_map = {}
             if not context.ignore_in:
                 cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
-                tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'input_grad', cared_input_grad))
+                tbtag_tensor_map.update(
+                    self.build_tbtag_tensor_map(context.module_name, 'input_grad', cared_input_grad))
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
             tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output_grad', cared_output_grad))
             metric_dict = {}
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
             if context.micro_step == 0 and context.actvgrad:
-                print_warn_log(f"actvgrad context of {context.module_name} is not empty when first micro_step, maybe something wrong happened. Now clear it.")
+                print_warn_log(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
+                               f"maybe something wrong happened. Now clear it.")
                 context.actvgrad.clear()
             context.actvgrad.append(metric_dict)
 

@@ -1,16 +1,18 @@
 import unittest
 import shutil
-import torch
 import json
 import os
+
+import torch
 try:
     import torch_npu
     device = torch.device('npu:0')
 except ModuleNotFoundError:
     device = torch.device('cpu')
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
 from msprobe.pytorch.monitor.module_hook import TrainerMon
 
-from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 
 class Model(torch.nn.Module):
     def __init__(self):
