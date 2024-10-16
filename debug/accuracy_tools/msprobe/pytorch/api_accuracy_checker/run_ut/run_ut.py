@@ -464,7 +464,7 @@ def run_ut_command(args):
             forward_content = preprocess_forward_content(forward_content)
             logger.info("Finish filtering the api in the api_info_file.")
 
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    out_path = args.out_path if args.out_path else "./"
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)

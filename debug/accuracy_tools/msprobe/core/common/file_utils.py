@@ -271,6 +271,7 @@ def create_directory(dir_path):
 
 
 def check_path_before_create(path):
+    check_link(path)
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
