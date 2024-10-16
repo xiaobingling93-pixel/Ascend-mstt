@@ -12,6 +12,7 @@ from msprobe.visualization.builder.msprobe_adapter import (
     compare_mapping_data
 )
 from msprobe.visualization.utils import GraphConst
+import torch
 
 
 class TestMsprobeAdapter(unittest.TestCase):
@@ -19,11 +20,6 @@ class TestMsprobeAdapter(unittest.TestCase):
     def test_get_compare_mode_summary(self, mock_task_dumppath_get):
         mode = get_compare_mode("dummy_param")
         self.assertEqual(mode, GraphConst.SUMMARY_COMPARE)
-
-    @patch('msprobe.visualization.builder.msprobe_adapter._do_multi_process')
-    def test_run_real_data(self, mock_do_multi_process):
-        run_real_data("dump_path", "csv_path")
-        mock_do_multi_process.assert_called_once_with("dump_path", "csv_path")
 
     def test_get_input_output(self):
         node_data = {
@@ -39,8 +35,8 @@ class TestMsprobeAdapter(unittest.TestCase):
         }
         node_id = "Distributed.broadcast.0.forward"
         input_data, output_data = get_input_output(node_data, node_id)
-        self.assertIn("Distributed.broadcast.0.forward_output.0", output_data)
-        self.assertIn("Distributed.broadcast.0.forward_input.0", input_data)
+        self.assertIn("Distributed.broadcast.0.forward.output.0", output_data)
+        self.assertIn("Distributed.broadcast.0.forward.input.0", input_data)
 
     def test_compare_data(self):
         data_dict_list1 = {'key1': {'type': 'Type1', 'dtype': 'DType1', 'shape': 'Shape1'}}

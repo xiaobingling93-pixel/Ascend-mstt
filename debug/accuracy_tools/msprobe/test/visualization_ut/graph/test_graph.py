@@ -64,7 +64,7 @@ class TestGraph(unittest.TestCase):
         graph.dfs(node_a, result)
         self.assertEqual(result, {'node_id': {'id': 'node_id', 'node_type': 0, 'data': {},
                                               'output_data': {}, 'input_data': {}, 'upnode': 'None', 'subnodes': [],
-                                              'matched_node_link': [], 'suggestions': {}}})
+                                              'matched_node_link': [], 'suggestions': {}, 'stack_info': []}})
         
     def test_split_nodes_by_micro_step(self):
         nodes = [BaseNode(NodeOp.module, 'a.0'), BaseNode(NodeOp.module, 'b.0'),

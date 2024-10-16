@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph
+from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph, GraphExportConfig
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.graph.base_node import BaseNode
 
@@ -12,6 +12,8 @@ class TestGraphBuilder(unittest.TestCase):
         self.data_path = "step/rank/dump.json"
         self.model_name = "TestModel"
         self.graph = Graph(self.model_name)
+        self.graph_b = Graph(self.model_name)
+        self.config = GraphExportConfig(self.graph, self.graph_b)
         self.construct_dict = {
             "Tensor1": "Module1",
             "Module1": None
@@ -34,7 +36,7 @@ class TestGraphBuilder(unittest.TestCase):
 
     @patch('msprobe.visualization.builder.graph_builder.save_json_file')
     def test_to_json(self, mock_save_json_file):
-        GraphBuilder.to_json("step/rank/output.vis", self.graph)
+        GraphBuilder.to_json("step/rank/output.vis", self.config)
         mock_save_json_file.assert_called_once()
 
     @patch('msprobe.visualization.graph.node_op.NodeOp.get_node_op')

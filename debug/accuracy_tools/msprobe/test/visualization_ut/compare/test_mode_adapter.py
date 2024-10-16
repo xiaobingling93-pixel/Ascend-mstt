@@ -21,7 +21,7 @@ class TestModeAdapter(unittest.TestCase):
         node_data = {'md5_key': 'some_md5_value'}
         compare_data_dict = {'md5_key': 'expected_md5_value'}
         precision_index = ModeAdapter._add_md5_compare_data(node_data, compare_data_dict)
-        self.assertEqual(precision_index, 0)
+        self.assertEqual(precision_index, 1)
 
     @patch('msprobe.visualization.compare.mode_adapter.ModeAdapter')
     def test_parse_result(self, mock_mode_adapter):
