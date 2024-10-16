@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
-from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph, BaseNode, NodeOp
+from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph
+from msprobe.visualization.graph.node_op import NodeOp
+from msprobe.visualization.graph.base_node import BaseNode
 
 
 class TestGraphBuilder(unittest.TestCase):
