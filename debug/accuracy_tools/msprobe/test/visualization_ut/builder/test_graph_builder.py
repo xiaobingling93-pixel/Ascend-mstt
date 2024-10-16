@@ -1,0 +1,99 @@
+import unittest
+from unittest.mock import MagicMock, patch
+from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph, BaseNode, NodeOp
+
+
+class TestGraphBuilder(unittest.TestCase):
+
+    def setUp(self):
+        self.construct_path = "step/rank/construct.json"
+        self.data_path = "step/rank/dump.json"
+        self.model_name = "TestModel"
+        self.graph = Graph(self.model_name)
+        self.construct_dict = {
+            "Tensor1": "Module1",
+            "Module1": None
+        }
+        self.data_dict = {
+            "Module1": {"data": "data for Module1"},
+            "Tensor1": {"data": "data for Tensor1"}
+        }
+
+    @patch('msprobe.visualization.builder.graph_builder.load_json_file')
+    @patch('msprobe.visualization.builder.graph_builder.load_data_json_file')
+    def test_build(self, mock_load_data_json_file, mock_load_json_file):
+        mock_load_data_json_file.return_value = self.data_dict
+        mock_load_json_file.return_value = self.construct_dict
+
+        graph = GraphBuilder.build(self.construct_path, self.data_path, self.model_name)
+        self.assertIsNotNone(graph)
+        self.assertIsInstance(graph, Graph)
+        self.assertEqual(len(graph.node_map), 3)
+
+    @patch('msprobe.visualization.builder.graph_builder.save_json_file')
+    def test_to_json(self, mock_save_json_file):
+        GraphBuilder.to_json("step/rank/output.vis", self.graph)
+        mock_save_json_file.assert_called_once()
+
+    @patch('msprobe.visualization.graph.node_op.NodeOp.get_node_op')
+    @patch('msprobe.visualization.builder.msprobe_adapter.get_input_output', return_value=([], []))
+    def test__init_nodes(self, mock_get_input_output, mock_get_node_op):
+        GraphBuilder._init_nodes(self.graph, self.construct_dict, self.data_dict)
+        mock_get_node_op.assert_any_call("Tensor1")
+        mock_get_node_op.assert_any_call("Module1")
+        self.assertIs(self.graph.root, self.graph.get_node("TestModel"))
+
+    def test__create_or_get_node(self):
+        node_op = MagicMock()
+        data_dict = {"node1": {}}
+        node = GraphBuilder._create_or_get_node(self.graph, data_dict, node_op, "node1")
+        self.assertIn("node1", self.graph.node_map)
+        self.assertEqual(node.input_data, {})
+        self.assertEqual(node.output_data, {})
+
+    def test__handle_backward_upnode_missing(self):
+        construct_dict = {'Module.module.a.forward.0': 'Module.root.forward.0', 'Module.module.a.backward.0': None,
+                          'Module.root.forward.0': None, 'Module.root.backward.0': None,
+                          'Module.module.b.forward.0': 'Module.root.forward.0',
+                          'Module.module.b.backward.0': 'Module.root.backward.0', 'Module.module.c.backward.0': None}
+        node_id_a = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.a.backward.0', None)
+        self.assertEqual(node_id_a, 'Module.root.backward.0')
+        node_id_b = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.b.backward.0',
+                                                                 'Module.root.backward.0')
+        self.assertEqual(node_id_b, 'Module.root.backward.0')
+        node_id_c = GraphBuilder._handle_backward_upnode_missing(construct_dict, 'Module.module.c.backward.0', None)
+        self.assertIsNone(node_id_c)
+
+    def test__collect_apis_between_modules_only_apis(self):
+        graph = Graph('TestNet')
+        graph.root.subnodes = [BaseNode(NodeOp.function_api, 'Tensor.a.0'), BaseNode(NodeOp.function_api, 'Tensor.b.0')]
+        GraphBuilder._collect_apis_between_modules(graph)
+        self.assertEqual(len(graph.root.subnodes), 1)
+        self.assertEqual(graph.root.subnodes[0].op, NodeOp.api_collection)
+        self.assertEqual(len(graph.root.subnodes[0].subnodes), 2)
+        self.assertEqual(graph.root.subnodes[0].id, 'Apis_Between_Modules.0')
+
+    def test__collect_apis_between_modules_mixed_nodes(self):
+        graph = Graph('TestNet')
+        graph.root.subnodes = [BaseNode(NodeOp.function_api, 'Tensor.a.0'), BaseNode(NodeOp.module, 'Module.a.0'),
+                               BaseNode(NodeOp.module, 'Module.b.0'), BaseNode(NodeOp.function_api, 'Tensor.b.0'),
+                               BaseNode(NodeOp.function_api, 'Tensor.c.0'), BaseNode(NodeOp.module, 'Module.a.1')]
+        GraphBuilder._collect_apis_between_modules(graph)
+        self.assertEqual(len(graph.root.subnodes), 5)
+        self.assertEqual(graph.root.subnodes[0].op, NodeOp.function_api)
+        self.assertEqual(graph.root.subnodes[1].op, NodeOp.module)
+        self.assertEqual(graph.root.subnodes[3].op, NodeOp.api_collection)
+        self.assertEqual(len(graph.root.subnodes[3].subnodes), 2)
+        self.assertEqual(graph.root.subnodes[3].id, 'Apis_Between_Modules.0')
+
+    def test__collect_apis_between_modules_only_modules(self):
+        graph = Graph('TestNet')
+        graph.root.subnodes = [BaseNode(NodeOp.module, 'Module.a.0'), BaseNode(NodeOp.module, 'Module.b.0'),
+                               BaseNode(NodeOp.module, 'Module.a.1')]
+        GraphBuilder._collect_apis_between_modules(graph)
+        self.assertEqual(len(graph.root.subnodes), 3)
+        self.assertEqual(graph.root.subnodes[0].op, NodeOp.module)
+        self.assertEqual(graph.root.subnodes[1].op, NodeOp.module)
+        self.assertEqual(graph.root.subnodes[2].op, NodeOp.module)
+        self.assertEqual(len(graph.root.subnodes[0].subnodes), 0)
+        self.assertEqual(graph.root.subnodes[0].id, 'Module.a.0')
