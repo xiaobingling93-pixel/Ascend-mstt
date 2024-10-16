@@ -15,7 +15,7 @@
 
 from enum import Enum
 import re
-from msprobe.pytorch.visualization.builder.msprobe_adapter import op_patterns
+from msprobe.visualization.builder.msprobe_adapter import op_patterns
 
 
 class NodeOp(Enum):

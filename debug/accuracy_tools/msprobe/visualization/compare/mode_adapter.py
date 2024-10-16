@@ -1,0 +1,199 @@
+# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+from msprobe.core.common.const import CompareConst, Const
+from msprobe.visualization.utils import ToolTip, GraphConst, str2float
+
+
+class ModeAdapter:
+    def __init__(self, compare_mode):
+        self.compare_mode = compare_mode
+        self.csv_data = []
+        self.compare_nodes = []
+    
+    @staticmethod
+    def _add_md5_compare_data(node_data, compare_data_dict):
+        precision_index = GraphConst.MAX_INDEX_KEY
+        for key, value in node_data.items():
+            if not isinstance(value, dict):
+                continue
+            compare_data = compare_data_dict.get(key)
+            if compare_data:
+                headers = CompareConst.MD5_COMPARE_RESULT_HEADER
+                id_list = [headers.index(x) for x in GraphConst.MD5_INDEX_LIST]
+                ModeAdapter._match_data(value, compare_data, GraphConst.MD5_INDEX_LIST, id_list)
+                # md5比对是否通过
+                if value.get(CompareConst.RESULT) != CompareConst.PASS:
+                    precision_index = GraphConst.MIN_INDEX_KEY
+                node_data[key] = value
+        return precision_index
+    
+    @staticmethod
+    def _add_real_compare_data(node_data, compare_data_dict):
+        min_thousandth = float(1)
+        numbers = []
+        for key, value in node_data.items():
+            if not isinstance(value, dict):
+                continue
+            compare_data = compare_data_dict.get(key)
+            if compare_data:
+                headers = CompareConst.COMPARE_RESULT_HEADER
+                id_list = [headers.index(x) for x in GraphConst.REAL_DATA_INDEX_LIST]
+                ModeAdapter._match_data(value, compare_data, GraphConst.REAL_DATA_INDEX_LIST, id_list)
+                # 获取一个节点所有的输入或输出最小的双千指标
+                thousandth = value.get(CompareConst.ONE_THOUSANDTH_ERR_RATIO)
+                # 可能是None，可能是非数字内容str
+                try:
+                    thousandth = float(thousandth)
+                except (ValueError, TypeError):
+                    thousandth = None
+                if thousandth is not None:
+                    numbers.append(thousandth)
+                node_data[key] = value
+        # 双千指标都是None的异常情况
+        if not numbers:
+            min_thousandth = None
+        else:
+            min_thousandth = min(numbers + [min_thousandth])
+        return min_thousandth
+    
+    @staticmethod
+    def _add_summary_compare_data( node_data, compare_data_dict):
+        max_relative_err = 0
+        for key, value in node_data.items():
+            if not isinstance(value, dict):
+                continue
+            compare_data = compare_data_dict.get(key)
+            if compare_data:
+                # 对应比对结果csv的列
+                key_list = GraphConst.SUMMARY_INDEX_LIST
+                headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
+                id_list = [headers.index(x) for x in key_list]
+                ModeAdapter._match_data(value, compare_data, key_list, id_list)
+                # 相对误差大于0.5疑似有精度问题，小值域1e-3不比较相对误差
+                for index, item in enumerate(key_list[4:]):
+                    value_diff = value.get(key_list[index])
+                    if isinstance(value_diff, float) and value_diff != 0 and abs(value_diff) < GraphConst.SMALL_VALUE:
+                        value[item] = ToolTip.SMALL_VALUE_TIP.format(key_list[index])
+                        continue
+                    relative_err = str2float(value.get(item))
+                    max_relative_err = max(max_relative_err, relative_err)
+                node_data[key] = value
+        max_relative_err = 1 if max_relative_err > 1 else max_relative_err
+        return max_relative_err
+    
+    @staticmethod
+    def _match_data(data_dict, compare_data, key_list, id_list):
+        """
+        绑定精度指标到node的input_data和output_data
+        """
+        if len(key_list) != len(id_list):
+            return
+        for id, key in zip(id_list, key_list):
+            data = compare_data[id]
+            if data is not None and 'nan' not in str(data) and str(data) != ' ':
+                data_dict[key] = data
+            else:
+                data_dict[key] = 'null'
+    
+    def parse_result(self, node, compare_data_dict):
+        """
+        根据结果返回数据，分别是precision_index，和附加数据
+        """
+        other_dict = {}
+        if self.is_md5_compare():
+            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict[0])
+            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict[1])
+            # 所有输入输出md5对比通过，这个节点才算通过
+            precision_index = min(precision_index_in, precision_index_out)
+            other_result = CompareConst.PASS if precision_index == 1 else CompareConst.DIFF
+            other_dict[CompareConst.RESULT] = other_result
+        elif self.is_summary_compare():
+            precision_index_in = ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict[0])
+            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict[1])
+            precision_index = max(precision_index_in, precision_index_out)
+        else:
+            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict[0])
+            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict[0])
+            if min_thousandth_in is not None and min_thousandth_out is not None:
+                change_percentage = abs(min_thousandth_in - min_thousandth_out)
+            else:
+                change_percentage = 0
+            precision_index = GraphConst.MAX_INDEX_KEY \
+                if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
+        return precision_index, other_dict
+    
+    def prepare_real_data(self, node):
+        """
+        为真实数据比较模式准备节点信息
+        """
+        if self.is_real_data_compare():
+            self.compare_nodes.append(node)
+            return True
+        return False
+    
+    def is_summary_compare(self):
+        return self.compare_mode == GraphConst.SUMMARY_COMPARE
+    
+    def is_md5_compare(self):
+        return self.compare_mode == GraphConst.MD5_COMPARE
+    
+    def is_real_data_compare(self):
+        return self.compare_mode == GraphConst.REAL_DATA_COMPARE
+    
+    def add_csv_data(self, compare_result_list):
+        if not self.is_real_data_compare():
+            return
+        self.csv_data.extend(compare_result_list)
+    
+    def add_error_key(self, node_data):
+        """
+        根据不同的模式进行提供不同错误信息
+        """
+        for key, value in node_data.items():
+            if not isinstance(value, dict):
+                continue
+            if self.is_summary_compare():
+                message = [CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
+                           CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
+            elif self.is_real_data_compare():
+                message = [CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO]
+            else:
+                # 输出件优化
+                message = []
+            value[GraphConst.ERROR_KEY] = message
+            node_data[key] = value
+    
+    def get_tool_tip(self):
+        """
+        用于前端展示字段的具体含义
+        """
+        if self.is_summary_compare():
+            tips = {
+                CompareConst.MAX_DIFF: ToolTip.MAX_DIFF,
+                CompareConst.MIN_DIFF: ToolTip.MIN_DIFF,
+                CompareConst.MEAN_DIFF: ToolTip.MEAN_DIFF,
+                CompareConst.NORM_DIFF: ToolTip.NORM_DIFF}
+        elif self.is_md5_compare():
+            tips = {Const.MD5: ToolTip.MD5}
+        else:
+            tips = {
+                CompareConst.ONE_THOUSANDTH_ERR_RATIO: ToolTip.ONE_THOUSANDTH_ERR_RATIO,
+                CompareConst.FIVE_THOUSANDTHS_ERR_RATIO: ToolTip.FIVE_THOUSANDTHS_ERR_RATIO,
+                CompareConst.COSINE: ToolTip.COSINE,
+                CompareConst.MAX_ABS_ERR: ToolTip.MAX_ABS_ERR,
+                CompareConst.MAX_RELATIVE_ERR: ToolTip.MAX_RELATIVE_ERR}
+        return json.dumps(tips)

@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.pytorch.visualization.graph.base_node import BaseNode
-from msprobe.pytorch.visualization.graph.node_op import NodeOp
-from msprobe.pytorch.visualization.utils import GraphConst
+from msprobe.visualization.graph.base_node import BaseNode
+from msprobe.visualization.graph.node_op import NodeOp
+from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 
