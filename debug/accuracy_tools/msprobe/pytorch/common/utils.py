@@ -269,9 +269,9 @@ def load_pt(pt_path, to_cpu=False):
     check_file_or_directory_path(pt_path)
     try:
         if to_cpu:
-            pt = torch.load(pt_path, map_location=torch.device("cpu"))
+            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=True)
         else:
-            pt = torch.load(pt_path)
+            pt = torch.load(pt_path, weights_only=True)
     except Exception as e:
         raise RuntimeError(f"load pt file {pt_path} failed") from e
     return pt
@@ -304,7 +304,7 @@ def load_api_data(api_data_bytes):
     """Load data from bytes stream"""
     try:
         buffer = io.BytesIO(api_data_bytes)
-        buffer = torch.load(buffer, map_location="cpu")
+        buffer = torch.load(buffer, map_location="cpu", weights_only=True)
     except Exception as e:
         raise RuntimeError(f"load api_data from bytes failed") from e
     return buffer
