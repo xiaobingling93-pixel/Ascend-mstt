@@ -197,8 +197,6 @@ class TestUtils(TestCase):
         mock_error.assert_called_with("Please check the json path is valid.")
 
         input_param["npu_json_path"] = "npu_path"
-        # with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-        #         patch("msprobe.core.common.utils.json.load", return_value=npu_json):
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
             summary_compare, md5_compare = task_dumppath_get(input_param)
         self.assertFalse(summary_compare)
