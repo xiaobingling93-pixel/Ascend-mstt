@@ -45,8 +45,8 @@ class row_data:
 
 
 def get_name_dict(name: str) -> dict:
-    compare_pattern = re.compile(r'^([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(\d+[.\d]*)\.'
-                                 r'([inout]+put[.\d]*)\.([^.]+)\.([^.]+)\.npy$')
+    compare_pattern = re.compile(r'^([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(\d+(?:\.\d+)*)\.'
+                                 r'((?:in|out)put(?:\.\d+)*)\.([^.]+)\.([^.]+)\.npy$')
     match = compare_pattern.match(name)
     if match:
         return {'op_type': match.group(1),
@@ -247,7 +247,7 @@ class GraphMSComparator:
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
                 if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
                     magnitude_diff = 0
-                result_dict[CompareConst.ACCURACY] = 'Yes' if magnitude_diff < CompareConst.MAGNITUDE else 'No'
+                result_dict[CompareConst.ACCURACY] = CompareConst.YES if magnitude_diff < CompareConst.MAGNITUDE else CompareConst.NO
 
             return pd.Series(result_dict)
 

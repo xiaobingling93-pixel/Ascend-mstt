@@ -205,6 +205,8 @@ class CompareConst:
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
     MAX_EXCEL_LENGTH = 1048576
+    YES = "Yes"
+    NO = "No"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
