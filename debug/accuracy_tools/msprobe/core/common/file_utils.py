@@ -262,6 +262,7 @@ def create_directory(dir_path):
     Exception Description:
         when invalid data throw exception
     """
+    check_link(dir_path)
     dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
     parent_dir = os.path.dirname(dir_path)
