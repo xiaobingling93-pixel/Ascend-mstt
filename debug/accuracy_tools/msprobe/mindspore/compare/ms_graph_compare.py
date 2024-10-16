@@ -267,7 +267,7 @@ class GraphMSComparator:
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
-            compare_result_df.astype(str).to_excel(compare_result_path, index=False)
+            compare_result_df.fillna('nan').to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             return slice_num + 1
         else:
