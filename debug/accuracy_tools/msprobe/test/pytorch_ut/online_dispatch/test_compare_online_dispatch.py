@@ -81,13 +81,6 @@ class TestSaver(unittest.TestCase):
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
 
-
-    # def test_print_pretest_result(self):
-    #
-    # def test_get_statistics_from_result_csv(self):
-    #
-
-
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
