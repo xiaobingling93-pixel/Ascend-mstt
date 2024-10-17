@@ -104,13 +104,14 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
             return float('nan')
+
         finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
+            finite_values = getattr(torch._C._TensorBase, "__getitem__")(data_clone, finite_mask)
             return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(finite_values).item()
         else:
-            data_no_nan = data_clone[~data_nan]
+            data_no_nan = getattr(torch._C._TensorBase, "__getitem__")(data_clone, ~data_nan)
             return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
