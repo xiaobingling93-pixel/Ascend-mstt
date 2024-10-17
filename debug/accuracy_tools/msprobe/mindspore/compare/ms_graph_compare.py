@@ -14,15 +14,14 @@
 # limitations under the License.
 
 import copy
-import csv
 import glob
 import os
 import re
 
 import numpy as np
 import pandas as pd
-from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, check_path_before_create, change_mode, load_npy
+from msprobe.core.common.const import CompareConst, GraphMode, Const
+from msprobe.core.common.file_utils import load_npy, read_csv, save_excel
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
@@ -85,14 +84,13 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
         'Min Value': None,'Avg Value': None, 'L2Norm Value': None
     }
     for statistic_file in statistic_file_list:
-        with FileOpen(statistic_file, "r") as f:
-            csv_reader = csv.reader(f, delimiter=",")
-            header = next(csv_reader)
-            for key in header_index.keys():
-                for index, value in enumerate(header):
-                    if key == value:
-                        header_index[key] = index
-            statistic_data_list.extend([row for row in csv_reader])
+        content = read_csv(statistic_file, as_pd=False)
+        header = content[0]
+        for key in header_index.keys():
+            for index, value in enumerate(header):
+                if key == value:
+                    header_index[key] = index
+        statistic_data_list.extend(content[1:])
 
     for key in header_index.keys():
         if header_index[key] is None:
@@ -130,11 +128,9 @@ def generate_data_name(data_path):
     mapping_dict = {}
     if mapping_exist:
         for mapping_file in mapping_file_list:
-            with FileOpen(mapping_file, "r") as f:
-                csv_reader = csv.reader(f, delimiter=",")
-                header = next(csv_reader)
-                for row in csv_reader:
-                    mapping_dict[row[0]] = row[1]
+            content = read_csv(mapping_file, False)
+            for row in content[1:]:
+                mapping_dict[row[0]] = row[1]
 
     if npy_exist:
         data_list = npy_data_read(data_path, npy_file_list, mapping_dict)
@@ -277,7 +273,6 @@ class GraphMSComparator:
             compare_result_df = self._do_multi_process(compare_result_df, mode)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
-            check_path_before_create(compare_result_path)
             self.to_excel(compare_result_df, compare_result_path)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
     
@@ -286,8 +281,7 @@ class GraphMSComparator:
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
-            compare_result_df.to_excel(compare_result_path, index=False)
-            change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            save_excel(compare_result_path, compare_result_df)
             return slice_num + 1
         else:
             slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num, True)

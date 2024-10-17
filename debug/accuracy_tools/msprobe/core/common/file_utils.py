@@ -27,6 +27,7 @@ import pandas as pd
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
+from openpyxl import Workbook
 
 
 class FileChecker:
@@ -391,6 +392,37 @@ def save_yaml(yaml_path, data):
     change_mode(yaml_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def save_excel(path, data):
+    path = os.path.realpath(path)
+    check_path_before_create(path)
+
+    def check_excel_data(data):
+        try:
+            shape = np.array(data).shape
+            if len(shape) != 2:
+                logger.error(f'Cannot transfer data into excel: data shape is {shape}.')
+                raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+        except ValueError as e:
+            logger.error(f'Invalid excel data: {e.args}')
+            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+
+    try:
+        if isinstance(data, pd.DataFrame):
+            data.to_excel(path, index=False)
+        elif isinstance(data, list):
+            check_excel_data(data)
+            wb = Workbook()
+            sheet = wb.active
+            for i in range(len(data)):
+                for j in range(len(data[i])):
+                    sheet.cell(row=i, column=j, value=data[i][j])
+            wb.save(path)
+    except Exception as e:
+        logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
+        raise RuntimeError(f"Save excel file {path} failed.") from e
+    change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def move_file(src_path, dst_path):
     check_file_or_directory_path(src_path)
     check_path_before_create(dst_path)
@@ -479,10 +511,15 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def read_csv(filepath):
+def read_csv(filepath, as_pd=True):
     check_file_or_directory_path(filepath)
     try:
-        csv_data = pd.read_csv(filepath)
+        if as_pd:
+            csv_data = pd.read_csv(filepath)
+        else:
+            with FileOpen(filepath, 'r', encoding='utf-8-sig') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+                csv_data = list(csv_reader)
     except Exception as e:
         logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Read csv file {filepath} failed.") from e
