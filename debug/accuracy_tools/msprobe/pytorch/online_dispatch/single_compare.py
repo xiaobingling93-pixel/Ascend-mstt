@@ -5,6 +5,7 @@ from prettytable import PrettyTable
 from collections import namedtuple
 from msprobe.pytorch.common.log import logger
 
+
 def func_log_wrapper():
     def _out_wrapper(func):
         @wraps(func)
@@ -82,7 +83,7 @@ class SingleBenchmarkAccuracyCompare:
     @func_log_wrapper()
     def check_output_size(cls, npu_out, bench_out):
         acc_result = None
-        if npu_out.numel() == 0 and bench_out.nuimel() == 0:
+        if npu_out.numel() == 0 and bench_out.numel() == 0:
             info = (
                 "The npu_output is [], and it is same as benchmark_output, "
                 "the result of data_compare is Pass"

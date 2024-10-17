@@ -15,6 +15,7 @@
 import unittest
 import torch
 import logging
+from msprobe.pytorch.common.log import logger
 from unittest.mock import Mock, patch, MagicMock
 from msprobe.pytorch.online_dispatch.single_compare import SingleBenchmarkCompareStandard, \
     SingleBenchmarkAccuracyResult, SingleBenchmarkAccuracyCompare
@@ -57,52 +58,44 @@ class TestSingleBenchmarkAccuracyResult(unittest.TestCase):
 
 
 class TestSingleBenchmarkAccuracyCompare(unittest.TestCase):
-    @patch('logging.debug')  # mock logging.debug
-    @patch('logging.error')  # mock logging.error
+    @patch('logging.debug')
+    @patch('logging.error')
     def test_check_output_size_pass(self, mock_error, mock_debug):
         # 模拟 npu_out 和 bench_out，它们的 numel() 返回 0
         npu_out = MagicMock()
         bench_out = MagicMock()
         npu_out.numel.return_value = 0
         bench_out.numel.return_value = 0
+        npu_out.size.return_value = 0
+        bench_out.size.return_value = 0
 
-        # 调用要测试的函数
         result = SingleBenchmarkAccuracyCompare.check_output_size(npu_out, bench_out)
 
-        # 检查结果是否为 True
         self.assertTrue(result.result)
-
-        # 确保调用了正确的日志
         mock_debug.assert_called_once_with(
             "The npu_output is [], and it is same as benchmark_output, "
             "the result of data_compare is Pass"
         )
-        # error 不应该被调用
         mock_error.assert_not_called()
 
-    @patch('logging.debug')  # mock logging.debug
-    @patch('logging.error')  # mock logging.error
+    @patch('logging.debug')
+    @patch('logging.error')
     def test_check_output_size_fail(self, mock_error, mock_debug):
         # 模拟 npu_out 和 bench_out，它们的 size() 不一样
         npu_out = MagicMock()
         bench_out = MagicMock()
-        npu_out.numel.return_value = 10  # 非零值
-        bench_out.numel.return_value = 10  # 非零值
+        npu_out.numel.return_value = 10
+        bench_out.numel.return_value = 10
         npu_out.size.return_value = [2, 3]
         bench_out.size.return_value = [3, 2]
 
-        # 调用要测试的函数
         result = SingleBenchmarkAccuracyCompare.check_output_size(npu_out, bench_out)
 
-        # 检查结果是否为 False
         self.assertFalse(result.result)
-
-        # 确保调用了正确的日志
         mock_error.assert_called_once_with(
             "the size of npu output[[2, 3]] and"
             "benchmark[[3, 2]] is not equal"
         )
-        # debug 不应该被调用
         mock_debug.assert_not_called()
 
     def test_check_output_invalid_value_with_nan_and_inf(self):
@@ -117,20 +110,11 @@ class TestSingleBenchmarkAccuracyCompare(unittest.TestCase):
 
         self.assertFalse(result)
 
-    def test_compute_binary_diff(self):
+    @patch('from msprobe.pytorch.common.log.logger.info')
+    def test_compute_binary_diff(self, mock_info):
         npu_out = torch.Tensor([1, 2, 3, 4])
         bench_out = torch.Tensor([1, 2, 3, 4])
         result = SingleBenchmarkAccuracyCompare.compute_binary_diff(npu_out, bench_out)
 
-    def test_compute_error_balance(self):
-        def compute_error_balance(cls, npu_out, bench_out, benchmark_standard: SingleBenchmarkCompareStandard):
-            ones = torch.ones_like(npu_out)
-            zeros = torch.zeros_like(npu_out)
-            abs_mask_idx = torch.where(torch.abs(bench_out) < benchmark_standard.small_value, ones, zeros)
-            abs_mask_idx = abs_mask_idx.type(torch.bool)
-            diff_value = torch.subtract(npu_out, bench_out)
-            diff_value_rel = diff_value / (torch.abs(bench_out) + torch.finfo(torch.float).eps)
-            rel_and_abs = torch.where(abs_mask_idx, diff_value, diff_value_rel)
-            eb_float = float(torch.mean(rel_and_abs))
-            return eb_float
-
+        self.assertTrue(result.result)
+        self.assertEqual(mock_info.call_count, 3)
