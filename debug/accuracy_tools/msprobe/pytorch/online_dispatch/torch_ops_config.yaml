@@ -49,7 +49,7 @@ aten_ops_blacklist:
   - zeros
   - zeros_like
 
-npu_adjust_autogard:
+npu_adjust_autograd:
   - adaptive_avg_pool2d
   - batch_norm
   - log_softmax

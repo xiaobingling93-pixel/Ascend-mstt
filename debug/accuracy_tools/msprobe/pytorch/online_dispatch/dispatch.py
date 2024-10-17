@@ -80,7 +80,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.comparator = Comparator(self.result_csv_path, self.detail_csv_path, False)
 
         self.aten_ops_blacklist = []
-        self.npu_adjust_autogard = []
+        self.npu_adjust_autograd = []
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
         self.get_ops(yaml_path)
 
@@ -147,7 +147,7 @@ class PtdbgDispatch(TorchDispatchMode):
             logger.error(f"Please check the func name {func.__name__}!")
             return func(*args, **kwargs)
 
-        self.enable_autogard(aten_api)
+        self.enable_autograd(aten_api)
         if aten_api in self.aten_ops_blacklist:
             npu_out = func(*args, **kwargs)
             return npu_out
@@ -229,7 +229,7 @@ class PtdbgDispatch(TorchDispatchMode):
     def get_ops(self, file_path):
         yaml_file = load_yaml(file_path)
         self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+        self.npu_adjust_autograd = yaml_file.get('npu_adjust_autograd')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:
@@ -280,6 +280,6 @@ class PtdbgDispatch(TorchDispatchMode):
             logger.error('The type of parameter "process_num" can only be int and it should not be less than 0.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
 
-    def enable_autogard(self, aten_api):
-        if aten_api in self.npu_adjust_autogard:
+    def enable_autograd(self, aten_api):
+        if aten_api in self.npu_adjust_autograd:
             torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)
