@@ -231,18 +231,22 @@ class GraphMSComparator:
                     result_dict[CompareConst.NPU_NORM] - result_dict[CompareConst.BENCH_NORM])
                 result_dict[CompareConst.MAX_RELATIVE_ERR] = result_dict[CompareConst.MAX_DIFF] / result_dict[
                     CompareConst.BENCH_MAX] if result_dict[CompareConst.BENCH_MAX] > 0 else 0
-                result_dict[CompareConst.MAX_RELATIVE_ERR] = str(result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MAX_RELATIVE_ERR]):
+                    result_dict[CompareConst.MAX_RELATIVE_ERR] = str(result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MIN_RELATIVE_ERR] = result_dict[CompareConst.MIN_DIFF] / result_dict[
                     CompareConst.BENCH_MIN] if result_dict[CompareConst.BENCH_MIN] > 0 else 0
-                result_dict[CompareConst.MIN_RELATIVE_ERR] = str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MIN_RELATIVE_ERR]):
+                    result_dict[CompareConst.MIN_RELATIVE_ERR] = str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MEAN_RELATIVE_ERR] = result_dict[CompareConst.MEAN_DIFF] / result_dict[
                     CompareConst.BENCH_MEAN] if result_dict[CompareConst.BENCH_MEAN] > 0 else 0
-                result_dict[CompareConst.MEAN_RELATIVE_ERR] = str(
-                    result_dict[CompareConst.MEAN_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MEAN_RELATIVE_ERR]):
+                    result_dict[CompareConst.MEAN_RELATIVE_ERR] = str(
+                        result_dict[CompareConst.MEAN_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.NORM_RELATIVE_ERR] = result_dict[CompareConst.NORM_DIFF] / result_dict[
                     CompareConst.BENCH_NORM] if result_dict[CompareConst.BENCH_NORM] > 0 else 0
-                result_dict[CompareConst.NORM_RELATIVE_ERR] = str(
-                    result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.NORM_RELATIVE_ERR]):
+                    result_dict[CompareConst.NORM_RELATIVE_ERR] = str(
+                        result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
                 magnitude_diff = result_dict[CompareConst.MAX_DIFF] / (
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
                 if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
@@ -282,7 +286,7 @@ class GraphMSComparator:
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
-            compare_result_df.fillna('nan').to_excel(compare_result_path, index=False)
+            compare_result_df.to_excel(compare_result_path, index=False)
             change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
             return slice_num + 1
         else:
