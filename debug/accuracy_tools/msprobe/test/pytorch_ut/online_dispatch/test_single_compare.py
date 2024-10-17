@@ -110,7 +110,7 @@ class TestSingleBenchmarkAccuracyCompare(unittest.TestCase):
 
         self.assertFalse(result)
 
-    @patch('from msprobe.pytorch.common.log.logger.info')
+    @patch('msprobe.pytorch.common.log.logger.info')
     def test_compute_binary_diff(self, mock_info):
         npu_out = torch.Tensor([1, 2, 3, 4])
         bench_out = torch.Tensor([1, 2, 3, 4])
