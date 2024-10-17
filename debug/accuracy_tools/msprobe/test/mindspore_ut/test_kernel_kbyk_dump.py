@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 
 from unittest import TestCase
@@ -43,9 +42,12 @@ class TestKernelKbykDump(TestCase):
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
         with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
-             patch("msprobe.mindspore.dump.kernel_kbyk_dump.FileOpen"), \
-             patch("msprobe.mindspore.dump.kernel_kbyk_dump.json.dump"), \
-             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info:
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
             dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
         mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
         self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]

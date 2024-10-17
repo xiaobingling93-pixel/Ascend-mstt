@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
-from msprobe.pytorch.compare.acc_compare import read_op, merge_tensor, get_accuracy, _do_multi_process
+from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import task_dumppath_get
-from msprobe.pytorch.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
+from msprobe.pytorch.compare.pt_compare import PTComparator
 
 
 # 用于将节点名字解析成对应的NodeOp的规则
@@ -49,7 +50,7 @@ def run_real_data(dump_path_param, csv_path):
         dump_path_param: 调用acc_compare接口所依赖的参数
         csv_path: 生成文件路径
     """
-    return _do_multi_process(dump_path_param, csv_path)
+    return PTComparator()._do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
@@ -73,7 +74,7 @@ def get_input_output(node_data, node_id):
                 GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
             output_data[full_op_name] = item
         else:
-            input_data[full_op_name] = item
+            input_data[process_kwargs_parameter(full_op_name)] = item
     return input_data, output_data
 
 
@@ -84,7 +85,7 @@ def compare_data(data_dict_list1, data_dict_list2):
     if len(data_dict_list1) != len(data_dict_list2):
         return False
     # 用于比较两个节点是否相等的关键字段
-    tag_keys = ['type', 'dtype', 'shape']
+    tag_keys = ['type', 'shape']
     for key1, key2 in zip(data_dict_list1, data_dict_list2):
         dict1 = data_dict_list1[key1]
         dict2 = data_dict_list2[key2]

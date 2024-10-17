@@ -197,21 +197,18 @@ class TestUtils(TestCase):
         mock_error.assert_called_with("Please check the json path is valid.")
 
         input_param["npu_json_path"] = "npu_path"
-        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-                patch("msprobe.core.common.utils.json.load", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
             dump_mode = get_dump_mode_dump_path(input_param)
         self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
-        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-                patch("msprobe.core.common.utils.json.load", return_value=npu_json), \
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
                 patch("msprobe.core.common.utils.md5_find", return_value=True):
             dump_mode = get_dump_mode_dump_path(input_param)
         self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
-        with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-                patch("msprobe.core.common.utils.json.load", return_value=npu_json):
+        with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
             with self.assertRaises(CompareException) as context:
                 get_dump_mode_dump_path(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)

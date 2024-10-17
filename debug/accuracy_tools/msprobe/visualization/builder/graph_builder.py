@@ -14,10 +14,10 @@
 # limitations under the License.
 
 import re
-from msprobe.pytorch.visualization.graph.graph import Graph, BaseNode
-from msprobe.pytorch.visualization.graph.node_op import NodeOp
-from msprobe.pytorch.visualization.utils import load_json_file, load_data_json_file, save_json_file, GraphConst
-from msprobe.pytorch.visualization.builder.msprobe_adapter import get_input_output
+from msprobe.visualization.graph.graph import Graph
+from msprobe.visualization.graph.node_op import NodeOp
+from msprobe.visualization.utils import load_json_file, load_data_json_file, save_json_file, GraphConst
+from msprobe.visualization.builder.msprobe_adapter import get_input_output
 
 
 class GraphBuilder:

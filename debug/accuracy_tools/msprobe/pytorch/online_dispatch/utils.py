@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
 import psutil
 import torch
@@ -31,24 +46,26 @@ COMPARE_LOGO = '''
                                                  |_|    
 '''
 
-CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
-                   CompareConst.BENCH_NAME,
-                   CompareConst.NPU_DTYPE,
-                   CompareConst.BENCH_DTYPE,
-                   CompareConst.NPU_SHAPE,
-                   CompareConst.BENCH_SHAPE,
-                   CompareConst.NPU_MAX,
-                   CompareConst.NPU_MIN,
-                   CompareConst.NPU_MEAN,
-                   CompareConst.BENCH_MAX,
-                   CompareConst.BENCH_MIN,
-                   CompareConst.BENCH_MEAN,
-                   CompareConst.COSINE,
-                   CompareConst.MAX_ABS_ERR,
-                   CompareConst.MAX_RELATIVE_ERR,
-                   CompareConst.ACCURACY,
-                   CompareConst.STACK,
-                   CompareConst.ERROR_MESSAGE]
+CSV_COLUMN_NAME = [
+    CompareConst.NPU_NAME,
+    CompareConst.BENCH_NAME,
+    CompareConst.NPU_DTYPE,
+    CompareConst.BENCH_DTYPE,
+    CompareConst.NPU_SHAPE,
+    CompareConst.BENCH_SHAPE,
+    CompareConst.NPU_MAX,
+    CompareConst.NPU_MIN,
+    CompareConst.NPU_MEAN,
+    CompareConst.BENCH_MAX,
+    CompareConst.BENCH_MIN,
+    CompareConst.BENCH_MEAN,
+    CompareConst.COSINE,
+    CompareConst.MAX_ABS_ERR,
+    CompareConst.MAX_RELATIVE_ERR,
+    CompareConst.ACCURACY,
+    CompareConst.STACK,
+    CompareConst.ERROR_MESSAGE
+]
 
 FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
 BOOL_TYPE = [bool, np.uint8]

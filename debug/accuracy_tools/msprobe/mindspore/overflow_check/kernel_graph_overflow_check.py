@@ -13,10 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 
-from msprobe.core.common.file_utils import FileOpen, create_directory
+from msprobe.core.common.file_utils import create_directory, save_json
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 
@@ -52,8 +51,7 @@ class KernelGraphOverflowCheck:
         json_path = self.dump_json["common_dump_settings"]["path"]
         create_directory(json_path)
         json_path = os.path.join(json_path, "kernel_graph_overflow_check.json")
-        with FileOpen(json_path, 'w') as f:
-            json.dump(self.dump_json, f)
+        save_json(json_path, self.dump_json, indent=4)
         logger.info(json_path + " has been created.")
         os.environ["MINDSPORE_DUMP_CONFIG"] = json_path
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:
