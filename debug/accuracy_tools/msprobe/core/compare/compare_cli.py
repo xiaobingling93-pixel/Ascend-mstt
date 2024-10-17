@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type, load_json
+from msprobe.core.common.file_utils import check_file_type, load_json
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
