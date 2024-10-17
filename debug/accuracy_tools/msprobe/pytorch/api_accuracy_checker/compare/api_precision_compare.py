@@ -602,7 +602,7 @@ def _api_precision_compare(parser=None):
 def _api_precision_compare_command(args):
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)

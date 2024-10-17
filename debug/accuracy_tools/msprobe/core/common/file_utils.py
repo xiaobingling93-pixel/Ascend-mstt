@@ -262,6 +262,7 @@ def create_directory(dir_path):
     Exception Description:
         when invalid data throw exception
     """
+    check_link(dir_path)
     dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
     parent_dir = os.path.dirname(dir_path)
@@ -271,6 +272,7 @@ def create_directory(dir_path):
 
 
 def check_path_before_create(path):
+    check_link(path)
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
