@@ -104,3 +104,33 @@ class TestSingleBenchmarkAccuracyCompare(unittest.TestCase):
         )
         # debug 不应该被调用
         mock_debug.assert_not_called()
+
+    def test_check_output_invalid_value_with_nan_and_inf(self):
+        output = torch.tensor([float('nan'), float('inf')])
+        result = SingleBenchmarkAccuracyCompare.check_output_invalid_value(output)
+
+        self.assertTrue(result)
+
+    def test_check_output_invalid_value_without_nan_or_inf(self):
+        output = torch.tensor([1.0, 2.0, 3.0])
+        result = SingleBenchmarkAccuracyCompare.check_output_invalid_value(output)
+
+        self.assertFalse(result)
+
+    def test_compute_binary_diff(self):
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        result = SingleBenchmarkAccuracyCompare.compute_binary_diff(npu_out, bench_out)
+
+    def test_compute_error_balance(self):
+        def compute_error_balance(cls, npu_out, bench_out, benchmark_standard: SingleBenchmarkCompareStandard):
+            ones = torch.ones_like(npu_out)
+            zeros = torch.zeros_like(npu_out)
+            abs_mask_idx = torch.where(torch.abs(bench_out) < benchmark_standard.small_value, ones, zeros)
+            abs_mask_idx = abs_mask_idx.type(torch.bool)
+            diff_value = torch.subtract(npu_out, bench_out)
+            diff_value_rel = diff_value / (torch.abs(bench_out) + torch.finfo(torch.float).eps)
+            rel_and_abs = torch.where(abs_mask_idx, diff_value, diff_value_rel)
+            eb_float = float(torch.mean(rel_and_abs))
+            return eb_float
+
