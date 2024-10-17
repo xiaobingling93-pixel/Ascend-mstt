@@ -9,8 +9,6 @@
 
 **相关目录 mstt/debug/accuracy_tools/api_accuracy_checker 和 mstt/debug/accuracy_tools/ptdbg_ascend 将于 2024.09.30 删除。新版本的预检和 ptdbg 已经合到 mstt/debug/accuracy_tools/msprobe 目录下。**
 
-**4. msprobe 精度工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
-
 ---
 
 # 🧰 MindStudio Training Tools
