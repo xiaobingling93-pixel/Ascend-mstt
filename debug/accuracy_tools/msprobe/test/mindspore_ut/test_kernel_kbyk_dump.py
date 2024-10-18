@@ -98,6 +98,7 @@ class TestKernelKbykDump(TestCase):
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
             dumper.handle()
+
         mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
         self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
 
