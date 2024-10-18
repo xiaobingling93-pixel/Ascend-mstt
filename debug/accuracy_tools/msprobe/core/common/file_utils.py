@@ -239,8 +239,8 @@ def check_path_type(file_path, file_type):
 
 
 def make_dir(dir_path):
-    dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
     if os.path.isdir(dir_path):
         return
     try:
@@ -263,8 +263,8 @@ def create_directory(dir_path):
         when invalid data throw exception
     """
     check_link(dir_path)
-    dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
     parent_dir = os.path.dirname(dir_path)
     if not os.path.isdir(parent_dir):
         create_directory(parent_dir)
@@ -366,8 +366,8 @@ def load_json(json_path):
 
 
 def save_json(json_path, data, indent=None):
-    json_path = os.path.realpath(json_path)
     check_path_before_create(json_path)
+    json_path = os.path.realpath(json_path)
     try:
         with FileOpen(json_path, 'w') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
@@ -380,8 +380,8 @@ def save_json(json_path, data, indent=None):
 
 
 def save_yaml(yaml_path, data):
-    yaml_path = os.path.realpath(yaml_path)
     check_path_before_create(yaml_path)
+    yaml_path = os.path.realpath(yaml_path)
     try:
         with FileOpen(yaml_path, 'w') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
@@ -420,8 +420,8 @@ def move_file(src_path, dst_path):
 
 
 def save_npy(data, filepath):
-    filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
     try:
         np.save(filepath, data)
     except Exception as e:
@@ -442,6 +442,7 @@ def save_npy_to_txt(data, dst_file='', align=0):
         pad_array = np.zeros((align - data.size % align,))
         data = np.append(data, pad_array)
     check_path_before_create(dst_file)
+    dst_file = os.path.realpath(dst_file)
     try:
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
     except Exception as e:
@@ -455,8 +456,8 @@ def save_workbook(workbook, file_path):
     workbook: 要保存的工作簿对象
     file_path: 文件保存路径
     """
-    file_path = os.path.realpath(file_path)
     check_path_before_create(file_path)
+    file_path = os.path.realpath(file_path)
     try:
         workbook.save(file_path)
     except Exception as e:
@@ -484,8 +485,8 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
                     raise RuntimeError(f"Malicious value [{cell}] is not allowed " \
                                        f"to be written into the csv: {filepath}.")
 
-    file_path = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
     try:
         with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
             writer = csv.writer(f)
