@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
 # Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +10,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
+
 import os
 
 from unittest import TestCase
@@ -51,7 +49,7 @@ class TestKernelKbykDump(TestCase):
         self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
         if "MINDSPORE_DUMP_CONFIG" in os.environ:
             del os.environ["MINDSPORE_DUMP_CONFIG"]
-            
+
     @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle_tensor(self, _):
         json_config = {
