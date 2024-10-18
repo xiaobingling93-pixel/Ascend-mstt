@@ -104,7 +104,7 @@ class PrimitiveHookService:
                     hooked_inputs.append(arg_hooked)
                 else:
                     hooked_inputs.append(arg)
-            return hooked_inputs
+            return tuple(hooked_inputs)
 
         def hook_primitive_outputs(out, captured_grads_output, updated_primitive_name):
             """
