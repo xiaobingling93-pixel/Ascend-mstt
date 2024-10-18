@@ -46,9 +46,12 @@ class TestKernelKbykDump(TestCase):
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
              patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
             dumper.handle()
+        self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
         mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
         self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
-
+        if "MINDSPORE_DUMP_CONFIG" in os.environ:
+            del os.environ["MINDSPORE_DUMP_CONFIG"]
+            
     @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle_tensor(self, _):
         json_config = {
