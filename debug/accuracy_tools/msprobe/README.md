@@ -33,6 +33,10 @@ export MSPROBE_LOG_LEVEL={x}
 ```
 **config.json** 的配置要求和各功能具体的使用指导详见后续章节。
 
+## 🚨 工具限制与注意事项
+
+**1. Pytorch 框架下，工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
+
 ## ⚙️ [安装](./docs/01.installation.md)
 
 ## 🛠️ config.json [介绍](./docs/02.config_introduction.md) 和 [示例](./docs/03.config_examples.md)
