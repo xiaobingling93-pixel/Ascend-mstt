@@ -400,3 +400,14 @@ class GraphMode:
     NPY_MODE = "NPY_MODE"
     STATISTIC_MODE = "STATISTIC_MODE"
     ERROR_MODE = "ERROR_MODE"
+
+
+class MonitorConst:
+    """
+    Class for monitor const
+    """
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
+    DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
+    DATABASE = "database"
+    EMAIL = "email"
