@@ -27,7 +27,6 @@ import pandas as pd
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.const import FileCheckConst
-from openpyxl import Workbook
 
 
 class FileChecker:
@@ -395,31 +394,12 @@ def save_yaml(yaml_path, data):
 def save_excel(path, data):
     path = os.path.realpath(path)
     check_path_before_create(path)
-
-    def check_excel_data(data):
-        format_check = isinstance(data, list) and all([isinstance(line, list) for line in data])
-        if not format_check:
-            logger.error('Invalid excel data: data is not a 2-dimension-metrix.')
-            raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
-        dimension_check = True
-        for i in range(1, len(data)):
-            dimension_check = len(data[0]) == len(data[i])
-            if not dimension_check:
-                logger.error(f'Invalid excel data: line {i} is inhomogeneous, expected length 
-                             {len(data[0])}, actual length {len(data[i])}')
-                raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
-
     try:
         if isinstance(data, pd.DataFrame):
             data.to_excel(path, index=False)
-        elif isinstance(data, list):
-            check_excel_data(data)
-            wb = Workbook()
-            sheet = wb.active
-            for i in range(len(data)):
-                for j in range(len(data[i])):
-                    sheet.cell(row=i, column=j, value=data[i][j])
-            wb.save(path)
+        else:
+            logger.error(f'unsupported data type.')
+            return
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
