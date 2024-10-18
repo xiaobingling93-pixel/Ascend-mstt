@@ -267,8 +267,8 @@ class Testcalc(unittest.TestCase):
 
         summary = SingleBenchSummary(precision_result)
 
-        npu_out = torch.Tensor([1, 2, 3, 4])
-        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1])
+        bench_out = torch.Tensor([1])
         status, details = calc_status_details_list_tuple(npu_out, bench_out, summary)
         self.assertEqual(status, [True])
         self.assertEqual(details, [['torch.float32', 'torch.float32', (1,), 0.0, 0.0, 0, 0.0, 0, 2 ** -14, 2 ** -14, True, None]])
@@ -295,6 +295,12 @@ class Testcalc(unittest.TestCase):
         npu_out = {'a': 1, 'b': 2}
         bench_out = {'a': 1, 'b': 2}
         precision_result = type('SingleBenchmarkAccuracyResult', (), {})()
+        precision_result.result = True
+        precision_result.error_balance = 0
+        precision_result.max_abs_diff = 1
+        precision_result.max_abs_idx = 2
+        precision_result.max_rel_diff = 3
+        precision_result.max_rel_idx = 4
         summary = SingleBenchSummary(precision_result)
 
         mock_compare_wrap.return_value = (True, "details_info")
@@ -337,4 +343,4 @@ class Testcalc(unittest.TestCase):
         bench_out = 1
         status, details = calc_status_details_none(npu_out, bench_out, summary)
         self.assertTrue(status)
-        self.assertEqual(details, [None, None, None, 0, 1, 2, 3, 4, None, None, True, 'Output is None'])
+        self.assertEqual(details, [None, None, None, 0, 1, 2, 3, 4, None, None, True, 'Output is None.'])
