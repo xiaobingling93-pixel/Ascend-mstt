@@ -1,9 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
-from functools import wraps
-import torch
-from prettytable import PrettyTable
 from collections import namedtuple
+from functools import wraps
+
+import torch
 from msprobe.pytorch.common.log import logger
+from prettytable import PrettyTable
+
+
 
 def func_log_wrapper():
     def _out_wrapper(func):
@@ -13,9 +31,9 @@ def func_log_wrapper():
             x = func(*kargs, **kwargs)
             logger.info(f"end to run: {func.__name__}")
             return x
-        
+
         return _in_wrapper
-    
+
     return _out_wrapper
 
 
@@ -31,7 +49,7 @@ class SingleBenchmarkCompareStandard:
                        torch.bfloat16: 2 ** -7,
                        torch.float32: 2 ** -14,
                        torch.float64: 2 ** -14}
-        
+
     def get_error_thd(self, dtype):
         if dtype in self.error_thd.keys():
             if dtype == torch.float64:
@@ -42,12 +60,12 @@ class SingleBenchmarkCompareStandard:
             "in fp16, bf16, fp32. "
         )
         return None
-    
+
     def get_eb_thd(self, dtype):
         if dtype in self.eb_thd.keys():
             return self.eb_thd.get(dtype)
         return None
-    
+
 
 class SingleBenchmarkAccuracyResult:
     def __init__(
@@ -82,7 +100,7 @@ class SingleBenchmarkAccuracyCompare:
     @func_log_wrapper()
     def check_output_size(cls, npu_out, bench_out):
         acc_result = None
-        if npu_out.numel() == 0 and bench_out.nuimel() == 0:
+        if npu_out.numel() == 0 and bench_out.numel() == 0:
             info = (
                 "The npu_output is [], and it is same as benchmark_output, "
                 "the result of data_compare is Pass"
@@ -99,14 +117,14 @@ class SingleBenchmarkAccuracyCompare:
             logging.error(error_info)
             acc_result = SingleBenchmarkAccuracyResult(result=False)
         return acc_result
-    
+
     @classmethod
     @func_log_wrapper()
     def check_output_invalid_value(cls, output):
         has_nan = torch.isnan(output).any()
         has_inf = torch.isinf(output).any()
         return has_nan or has_inf
-    
+
     @classmethod
     @func_log_wrapper()
     def precision_compare_for_case(cls, npu_out, bench_out, benchmark_standard: SingleBenchmarkCompareStandard):
@@ -119,19 +137,19 @@ class SingleBenchmarkAccuracyCompare:
         if acc_result:
             failed_info = "比对数据的shape不一致"
             return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-        
+
         if cls.check_output_invalid_value(bench_out):
             logging.info("The benchmark result contains nan/inf value. ")
             failed_info = "标杆结果存在nan值或inf值, 依照单标杆标准该用例通过"
             acc_result = SingleBenchmarkAccuracyResult(result=True)
             return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-        
+
         if cls.check_output_invalid_value(npu_out):
             logging.info("The NPU result contains nan/inf value. ")
             failed_info = "NPU结果存在nan值或inf值, 依照单标杆标准该用例不通过"
             acc_result = SingleBenchmarkAccuracyResult(result=False)
             return CompareResultInfo(acc_result, error_thd, eb_thd, failed_info)
-        
+
         data_type = npu_out.dtype
         if data_type not in [torch.float16, torch.float32, torch.float64, torch.bfloat16]:
             acc_result = cls.compute_binary_diff(npu_out, bench_out)
@@ -159,7 +177,6 @@ class SingleBenchmarkAccuracyCompare:
                 acc_result.get_result(eb_thd, error_thd)
         return CompareResultInfo(acc_result, error_thd, eb_thd, None)
 
-
     @classmethod
     @func_log_wrapper()
     def compute_binary_diff(cls, npu_out, bench_out):
@@ -167,7 +184,7 @@ class SingleBenchmarkAccuracyCompare:
         if result:
             logger.info("二进制精度比对通过, 无需单标杆比对法验证")
         return SingleBenchmarkAccuracyResult(result=result, max_abs_diff=0, max_rel_diff=0, error_balance=0)
-    
+
     @classmethod
     @func_log_wrapper()
     def compute_error_balance(cls, npu_out, bench_out, benchmark_standard: SingleBenchmarkCompareStandard):
@@ -176,11 +193,11 @@ class SingleBenchmarkAccuracyCompare:
         abs_mask_idx = torch.where(torch.abs(bench_out) < benchmark_standard.small_value, ones, zeros)
         abs_mask_idx = abs_mask_idx.type(torch.bool)
         diff_value = torch.subtract(npu_out, bench_out)
-        diff_value_rel = diff_value / (torch.abs(bench_out) + torch.finfo(torch.float).eps )
+        diff_value_rel = diff_value / (torch.abs(bench_out) + torch.finfo(torch.float).eps)
         rel_and_abs = torch.where(abs_mask_idx, diff_value, diff_value_rel)
         eb_float = float(torch.mean(rel_and_abs))
         return eb_float
-    
+
     @classmethod
     @func_log_wrapper()
     def compute_abs_diff(cls, npu_out, bench_out, error_thd, benchmark_standard: SingleBenchmarkCompareStandard):
@@ -208,7 +225,7 @@ class SingleBenchmarkAccuracyCompare:
             if err_for_max.max() != 0:
                 max_abs_diff = diff_abs[max_abs_idx]
         return (float(max_abs_diff), int(max_abs_idx) if torch.is_tensor(max_abs_idx) else max_abs_idx)
-    
+
     @classmethod
     @func_log_wrapper()
     def compute_rel_diff(cls, npu_out, bench_out, error_thd, benchmark_standard: SingleBenchmarkCompareStandard):
@@ -221,7 +238,7 @@ class SingleBenchmarkAccuracyCompare:
         diff_abs = torch.abs(diff_value)
 
         rel_mask_idx = torch.where(torch.abs(bench_out) >= benchmark_standard.small_value, ones, zeros)
-        rel_err = diff_abs / (torch.abs(bench_out) + torch.finfo(torch.float).eps )
+        rel_err = diff_abs / (torch.abs(bench_out) + torch.finfo(torch.float).eps)
         diff_rel = rel_err
         rel_err_idx = torch.where(rel_err > error_thd, ones, zeros)
         rel_err_idx = rel_err_idx * rel_mask_idx
@@ -242,7 +259,7 @@ class SingleBenchmarkAccuracyCompare:
 
 class SingleBenchSummary:
     def __init__(self, precision_result: SingleBenchmarkAccuracyResult, npu_dtype=None,
-                bench_dtype=None, shape=None, error_thd=None, eb_thd=None, failed_info=None):
+                 bench_dtype=None, shape=None, error_thd=None, eb_thd=None, failed_info=None):
         self.npu_dtype = npu_dtype
         self.bench_dtype = bench_dtype
         self.shape = shape
@@ -261,12 +278,12 @@ class SingleBenchSummary:
             return "PASS"
         else:
             return "FAILED"
-        
+
     def get_result_msg(self):
         result_str = ""
         if self.failed_info:
             return self.failed_info
-        
+
         if self.result:
             result_str += "误差均衡性EB: %s <= 阈值%s\n" % (self.error_balance, self.eb_thd)
             result_str += "最大绝对误差: %s <= 阈值%s\n" % (self.max_abs_diff, self.error_thd)
@@ -290,7 +307,7 @@ class SingleBenchSummary:
                     self.max_rel_diff,
                 )
         return result_str
-    
+
     def print_detail_table(self):
         table = PrettyTable()
         table.title = "Single Benchmark Metrics Info"
@@ -307,7 +324,7 @@ class SingleBenchSummary:
         return [self.bench_dtype, self.npu_dtype, self.shape, self.error_balance,
                 self.max_abs_diff, self.max_abs_idx, self.max_rel_diff, self.max_rel_idx,
                 self.eb_thd, self.error_thd, self.result, self.failed_info]
-    
+
 
 def single_benchmark_compare(npu_out: torch.Tensor, bench_out: torch.Tensor, high_precision: bool = True):
     benchmark_standard = SingleBenchmarkCompareStandard(high_precision)
@@ -322,8 +339,9 @@ def single_benchmark_compare(npu_out: torch.Tensor, bench_out: torch.Tensor, hig
         failed_info
     ) = (compare_results.accuracy_result, compare_results.error_threshold,
          compare_results.eb_threshold, compare_results.failed_information)
-    
-    summary = SingleBenchSummary(precision_result, str(npu_out.dtype), str(bench_out.dtype), tuple(npu_out.shape), error_thd, eb_thd, failed_info)
+
+    summary = SingleBenchSummary(precision_result, str(npu_out.dtype), str(bench_out.dtype), tuple(npu_out.shape),
+                                 error_thd, eb_thd, failed_info)
     result = summary.result
     details = summary.to_column_value()
     return result, details

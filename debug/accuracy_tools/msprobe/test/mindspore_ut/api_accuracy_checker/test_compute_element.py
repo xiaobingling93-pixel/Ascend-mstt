@@ -144,6 +144,18 @@ class TestComputeElement(unittest.TestCase):
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
 
+    def test_init_with_compute_element_info_mindspore_dtype(self):
+        compute_element_info = {
+            "type": "mindspore.dtype",
+            "value": "Float32",
+        }
+        compute_element = ComputeElement(compute_element_info=compute_element_info)
+        ms_parameter = compute_element.get_parameter(tensor_platform=Const.MS_FRAMEWORK)
+        pt_parameter = compute_element.get_parameter(tensor_platform=Const.PT_FRAMEWORK)
+        self.assertEqual(ms_parameter, mindspore.float32)
+        self.assertEqual(pt_parameter, torch.float32)
+        
+
 
 if __name__ == '__main__':
     unittest.main()

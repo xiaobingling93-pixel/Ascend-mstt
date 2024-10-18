@@ -41,7 +41,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def get_md5_for_tensor(x):
         x = convert_bf16_to_fp32(x)
-        tensor_bytes = x.asnumpy().tobytes()
+        tensor_bytes = x.contiguous().asnumpy().tobytes()
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
 
@@ -58,13 +58,13 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if data.numel() == 0:
             return tensor_stat
         elif data.dtype == ms.bool_:
-            data_np = data.asnumpy()
+            data_np = data.contiguous().asnumpy()
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
-            data_abs = np.abs(data.asnumpy())
+            data_abs = np.abs(data.contiguous().asnumpy())
             tensor_stat.max = np.max(data_abs).item()
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()

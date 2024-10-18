@@ -1,25 +1,37 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 
 import mindspore
 import mindspore as ms
 from mindspore.common.api import jit
-from mindspore.nn.optim.optimizer import Optimizer
-from mindspore.common.parameter import Parameter
 from mindspore.common.initializer import initializer
-
+from mindspore.common.parameter import Parameter
+from mindspore.nn.optim.optimizer import Optimizer
+from msprobe.core.common.file_utils import remove_path, write_csv, create_directory
 from msprobe.core.grad_probe.constant import GradConst
 from msprobe.mindspore.common.log import logger
-
-from msprobe.core.common.file_utils import remove_path, write_csv, create_directory
 from msprobe.mindspore.grad_probe.global_context import grad_context
-from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id
 from msprobe.mindspore.grad_probe.grad_analyzer import csv_generator
+from msprobe.mindspore.grad_probe.grad_analyzer import grad_dump, get_rank_id
 from msprobe.mindspore.grad_probe.grad_stat_csv import GradStatCsv, CsvInput
 from msprobe.mindspore.grad_probe.utils import save_grad_direction, get_adapted_level
 
-class HookInput:
 
+class HookInput:
     '''
     HookInput is a class wrapping all the variables used for hooking optimizer
     '''
@@ -40,6 +52,7 @@ class HookInput:
         self.bounds = grad_context.get_context(GradConst.BOUNDS)
         self.mode = mindspore.get_context("mode")
 
+
 def hook_graph_mode_optimizer(opt, hook_input):
     @jit
     def new_construct(self, gradients):
@@ -47,7 +60,7 @@ def hook_graph_mode_optimizer(opt, hook_input):
             if hook_input.param_list and hook_input.g_names[index] not in hook_input.param_list:
                 continue
             grad_dump(hook_input.dump_dir, hook_input.g_names[index], self.dump_step,
-                    grad_value, hook_input.level, hook_input.bounds)
+                      grad_value, hook_input.level, hook_input.bounds)
         ms.ops.TensorDump()(hook_input.step_finish_flag, self.dump_step)
         self.assignadd(self.dump_step, self.global_step_increase_tensor)
         out = hook_input.func(gradients)
@@ -56,6 +69,7 @@ def hook_graph_mode_optimizer(opt, hook_input):
     opt.dump_step = Parameter(initializer(0, [1], ms.int32), name="dump_step")
     opt.construct = new_construct.__get__(opt, type(opt))
     csv_generator.start()
+
 
 def hook_pynative_optimizer(opt, hook_input):
     level_adapted = get_adapted_level(hook_input.level)

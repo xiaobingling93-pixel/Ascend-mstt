@@ -13,6 +13,9 @@ from msprobe.pytorch.free_benchmark.common.enums import (
     HandlerType,
     PerturbationMode,
 )
+from msprobe.pytorch.free_benchmark.result_handlers.handler_factory import (
+    FuzzHandlerFactory,
+)
 
 
 class Config(ABC):
@@ -52,12 +55,24 @@ class UnequalDataProcessor(ABC):
         self.unequal_rows = []
 
     def update_unequal_rows(self, unequal_rows):
-        self.unequal_rows.append(unequal_rows)
+        if unequal_rows:
+            self.unequal_rows.append(unequal_rows)
 
 
 class TestInterface(TestCase):
     def setUp(self):
         self.api_name = "Torch.mul.0"
+
+    def test_init_with_none(self):
+        # 对于全为none的输入初始化无标杆实例，检查其默认值
+        config = Config(None, None)
+        config.pert_mode = None
+        config.fuzz_level = None
+        config.fuzz_device = None
+        checker = FreeBenchmarkCheck(config)
+        self.assertEqual(checker.config.pert_mode, PerturbationMode.IMPROVE_PRECISION)
+        self.assertEqual(checker.config.fuzz_level, FuzzLevel.BASE_LEVEL)
+        self.assertEqual(checker.config.fuzz_device, DeviceType.NPU)
 
     def testForwardFix(self):
         # 对于前向接口，在forward钩子中开启FIX，返回结果给hook的输出
@@ -87,7 +102,7 @@ class TestInterface(TestCase):
         # 初始化输入输出
         x = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
         y = torch.tensor([2, 3], dtype=torch.float16, requires_grad=True)
-        grad_output =  torch.tensor([1,1], dtype=torch.float16)
+        grad_output = torch.tensor([1, 1], dtype=torch.float16)
         backward_name = Const.SEP.join([self.api_name, Const.BACKWARD])
         # 执行前向生成grad saver实例
         mul_module = WrapMul(self.api_name)
@@ -100,3 +115,9 @@ class TestInterface(TestCase):
         self.assertTrue(hasattr(mul_module, CommonField.GRADSAVER))
         grad_saver = getattr(mul_module, CommonField.GRADSAVER)
         self.assertEqual(grad_saver.perturbed_grad_input[0][0], 2)
+        handler = FuzzHandlerFactory.create(grad_saver.handler_params)
+        # 模拟一个张量的梯度更新时触发反向检测
+        grad_saver.compare_grad_results(
+            handler, torch.tensor(1.0), torch.tensor(2.0), 0
+        )
+        self.assertEqual(len(processor.unequal_rows), 0)

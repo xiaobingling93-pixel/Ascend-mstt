@@ -1,0 +1,59 @@
+# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import time
+from msprobe.visualization.compare.graph_comparator import GraphComparator
+from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
+from msprobe.core.common.log import logger
+from msprobe.visualization.mapping_config import MappingConfig
+from msprobe.visualization.graph.node_colors import NodeColors
+
+current_time = time.strftime("%Y%m%d%H%M%S")
+
+
+def compare_graph(dump_path_n, dump_path_b, out_path, model_name='Model', mapping_file=None):
+    logger.info('Start building model graphs...')
+    # 对两个数据进行构图
+    construct_path_n = os.path.join(dump_path_n, GraphConst.CONSTRUCT_FILE)
+    construct_path_b = os.path.join(dump_path_b, GraphConst.CONSTRUCT_FILE)
+    data_path_n = os.path.join(dump_path_n, GraphConst.DUMP_FILE)
+    data_path_b = os.path.join(dump_path_b, GraphConst.DUMP_FILE)
+    graph_n = GraphBuilder.build(construct_path_n, data_path_n, model_name)
+    graph_b = GraphBuilder.build(construct_path_b, data_path_b, model_name)
+    logger.info('Model graphs built successfully, start Comparing graphs...')
+    # 基于graph、stack和data进行比较
+    stack_path = os.path.join(dump_path_n, GraphConst.STACK_FILE)
+    graph_comparator = GraphComparator([graph_n, graph_b], [data_path_n, data_path_b], stack_path, out_path,
+                                       mapping_config=MappingConfig(mapping_file) if mapping_file else None)
+    graph_comparator.compare()
+    micro_steps = graph_n.paging_by_micro_step(graph_b)
+    output_path = os.path.join(out_path, f'compare_{current_time}.vis')
+    export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
+                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps)
+    GraphBuilder.to_json(output_path, export_config)
+    logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
+
+
+def build_graph(dump_path, out_path, model_name='Model'):
+    logger.info('Start building model graph...')
+    construct_path = os.path.join(dump_path, GraphConst.CONSTRUCT_FILE)
+    data_path = os.path.join(dump_path, GraphConst.DUMP_FILE)
+    output_path = os.path.join(out_path, f'build_{current_time}.vis')
+    graph = GraphBuilder.build(construct_path, data_path, model_name)
+    micro_steps = graph.paging_by_micro_step()
+    GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
+    logger.info(f'Model graph built successfully, the result file is saved in {output_path}')

@@ -1,0 +1,132 @@
+# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
+from msprobe.visualization.utils import (GraphConst, load_json_file, load_data_json_file, get_csv_df,
+                                         process_kwargs_parameter)
+from msprobe.visualization.graph.graph import Graph, NodeOp
+from msprobe.visualization.graph.node_colors import NodeColors
+from msprobe.visualization.compare.mode_adapter import ModeAdapter
+
+
+class GraphComparator:
+    def __init__(self, graphs, data_paths, stack_path, output_path, mapping_config=None):
+        self.graph_n = graphs[0]
+        self.graph_b = graphs[1]
+        self._parse_param(data_paths, stack_path, output_path)
+        self.mapping_config = mapping_config
+
+    def compare(self):
+        """
+        比较函数，初始化结束后单独调用。比较结果写入graph_n
+        """
+        self._compare_nodes(self.graph_n.root)
+        self._postcompare()
+    
+    def add_compare_result_to_node(self, node, compare_result_list):
+        """
+        将比对结果添加到节点的输入输出数据中
+        Args:
+            node: 节点
+            compare_result_list: 包含参数信息和对比指标（真实数据对比模式除外）的list
+        """
+        # 真实数据比对，先暂存节点，在多进程对比得到精度指标后，再将指标添加到节点中
+        if self.ma.prepare_real_data(node):
+            return
+        compare_in_dict = {}
+        compare_out_dict = {}
+        # input和output对比数据分开
+        for item in compare_result_list:
+            if not node.stack_info and node.id in item[0]:
+                node.stack_info = item[-1]
+            if '.output.' in item[0]:
+                compare_out_dict[item[0]] = item
+            else:
+                compare_in_dict[process_kwargs_parameter(item[0])] = item
+        precision_index, other_dict = (
+            self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
+        node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+        node.data.update(other_dict)
+        if NodeColors.get_node_error_status(self.ma.compare_mode, precision_index):
+            self.ma.add_error_key(node.output_data)
+            node.get_suggestions()
+    
+    def _parse_param(self, data_paths, stack_path, output_path):
+        self.dump_path_param = {
+            'npu_json_path': data_paths[0],
+            'bench_json_path': data_paths[1],
+            'stack_json_path': stack_path,
+            'is_print_compare_log': True
+        }
+        self.output_path = output_path
+        compare_mode = get_compare_mode(self.dump_path_param)
+        self.ma = ModeAdapter(compare_mode)
+        self.data_n_dict = load_data_json_file(data_paths[0])
+        self.data_b_dict = load_data_json_file(data_paths[1])
+        self.stack_json_data = load_json_file(stack_path)
+
+    def _postcompare(self):
+        self._handle_api_collection_index()
+        if not self.ma.is_real_data_compare():
+            return
+        df = get_csv_df(self.ma.is_md5_compare(), self.ma.is_summary_compare(), True, self.ma.csv_data)
+        df = run_real_data(self.dump_path_param, df)
+        compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
+        for node in self.ma.compare_nodes:
+            precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
+            node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+            if NodeColors.get_node_error_status(self.ma.compare_mode, precision_index):
+                self.ma.add_error_key(node.output_data)
+                node.get_suggestions()
+
+    def _handle_api_collection_index(self):
+        """
+        api集合的指标使用集合中所有api最小的指标
+        """
+        for node in self.graph_n.root.subnodes:
+            if node.op == NodeOp.api_collection:
+                precision_index = 1
+                for api in node.subnodes:
+                    precision_index = min(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, 1))
+                node.data[GraphConst.JSON_INDEX_KEY] = precision_index
+
+    def _compare_nodes(self, node_n):
+        """
+        递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
+        这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
+        """
+        if self.mapping_config:
+            node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_config)
+            if node_b:
+                ancestors_n.append(node_n.id)
+                ancestors_b.append(node_b.id)
+                node_n.matched_node_link = ancestors_b
+                node_b.matched_node_link = ancestors_n
+        else:
+            node_b, ancestors = Graph.match(self.graph_n, node_n, self.graph_b)
+            if node_b:
+                ancestors.append(node_b.id)
+                node_n.add_link(node_b, ancestors)
+        if node_b:
+            # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
+            compare_result_list = compare_node([node_n.id, node_b.id],
+                                               [self.data_n_dict, self.data_b_dict],
+                                               self.stack_json_data, self.ma.is_summary_compare(),
+                                               self.ma.is_md5_compare())
+            if compare_result_list:
+                self.ma.add_csv_data(compare_result_list)
+                self.add_compare_result_to_node(node_n, compare_result_list)
+        for subnode in node_n.subnodes:
+            self._compare_nodes(subnode)

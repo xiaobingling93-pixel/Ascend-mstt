@@ -262,6 +262,7 @@ def create_directory(dir_path):
     Exception Description:
         when invalid data throw exception
     """
+    check_link(dir_path)
     dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
     parent_dir = os.path.dirname(dir_path)
@@ -271,6 +272,7 @@ def create_directory(dir_path):
 
 
 def check_path_before_create(path):
+    check_link(path)
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
@@ -521,3 +523,15 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
+
+# 对os.walk设置遍历深度
+def os_walk_for_files(path, depth):
+    res = []
+    for root, _, files in os.walk(path, topdown=True):
+        check_file_or_directory_path(root, isdir=True)
+        if root.count(os.sep) - path.count(os.sep) >= depth:
+            _[:] = []
+        else:
+            for file in files:
+                res.append({"file": file, "root": root})
+    return res

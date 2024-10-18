@@ -1,15 +1,30 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import os
 
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
 from msprobe.core.common.utils import add_time_as_suffix
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
+from msprobe.mindspore.common.log import logger
 
 
 class BasicInfoAndStatus:
@@ -20,6 +35,7 @@ class BasicInfoAndStatus:
         self.shape = shape
         self.status = status
         self.err_msg = err_msg
+
 
 class ResultCsvEntry:
     def __init__(self) -> None:
@@ -80,13 +96,13 @@ class ApiAccuracyChecker:
                 compare_result_dict[compare_algorithm_name] = compare_result
 
             if compare_result_dict.get(CompareConst.COSINE).pass_status == CompareConst.PASS and \
-                compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
+                    compare_result_dict.get(CompareConst.MAX_ABS_ERR).pass_status == CompareConst.PASS:
                 status = CompareConst.PASS
                 err_msg = ""
             else:
                 status = CompareConst.ERROR
                 err_msg = compare_result_dict.get(CompareConst.COSINE).err_msg + \
-                    compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg
+                          compare_result_dict.get(CompareConst.MAX_ABS_ERR).err_msg
             basic_info_status = \
                 BasicInfoAndStatus(api_name_with_slot, bench_dtype, tested_dtype, shape, status, err_msg)
             output_list.append(tuple([api_name_str, forward_or_backward, basic_info_status, compare_result_dict]))
@@ -115,7 +131,7 @@ class ApiAccuracyChecker:
 
         # init global context
         task = check_and_get_from_json_dict(api_info_dict, MsCompareConst.TASK_FIELD,
-                                            "task field in api_info.json",accepted_type=str,
+                                            "task field in api_info.json", accepted_type=str,
                                             accepted_value=(MsCompareConst.STATISTICS_TASK,
                                                             MsCompareConst.TENSOR_TASK))
         is_constructed = task == MsCompareConst.STATISTICS_TASK
@@ -130,13 +146,13 @@ class ApiAccuracyChecker:
                                                      "data field in api_info.json", accepted_type=dict)
         for api_name, api_info in api_info_data.items():
             is_mint = api_name.split(Const.SEP)[0] in \
-                (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
+                      (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
             if not is_mint:
                 continue
             forbackward_str = api_name.split(Const.SEP)[-1]
             if forbackward_str not in (Const.FORWARD, Const.BACKWARD):
                 logger.warning(f"api: {api_name} is not recognized as forward api or backward api, skip this.")
-            api_name = Const.SEP.join(api_name.split(Const.SEP)[:-1]) # www.xxx.yyy.zzz --> www.xxx.yyy
+            api_name = Const.SEP.join(api_name.split(Const.SEP)[:-1])  # www.xxx.yyy.zzz --> www.xxx.yyy
             if api_name not in self.api_infos:
                 self.api_infos[api_name] = ApiInfo(api_name)
 
@@ -193,7 +209,6 @@ class ApiAccuracyChecker:
                 self.results[key] = []
             self.results[key].append(tuple([basic_info, compare_result_dict]))
 
-
     def to_detail_csv(self, csv_dir):
         # detail_csv
         detail_csv = []
@@ -219,15 +234,14 @@ class ApiAccuracyChecker:
                 csv_row_basic_info = \
                     [basic_info.api_name, basic_info.bench_dtype, basic_info.tested_dtype, basic_info.shape]
                 csv_row_compare_result = list(compare_result_dict.get(algorithm_name).compare_value \
-                                            for algorithm_name in detail_csv_header_compare_result)
+                                              for algorithm_name in detail_csv_header_compare_result)
                 csv_row_status = [basic_info.status, basic_info.err_msg]
-                csv_row = csv_row_basic_info  + csv_row_compare_result + csv_row_status
+                csv_row = csv_row_basic_info + csv_row_compare_result + csv_row_status
                 detail_csv.append(csv_row)
 
         file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.DETAIL_CSV_FILE_NAME))
         create_directory(csv_dir)
         write_csv(detail_csv, file_name, mode="w")
-
 
     def to_result_csv(self, csv_dir):
         result_csv_dict = dict()
@@ -244,7 +258,7 @@ class ApiAccuracyChecker:
             forward_or_backward_overall_err_msg = \
                 "" if forward_or_backward_pass_status == CompareConst.PASS else forward_or_backward_overall_err_msg
 
-            #result_csv_dict
+            # result_csv_dict
             if api_real_name not in result_csv_dict:
                 result_csv_dict[api_real_name] = ResultCsvEntry()
             if forward_or_backward == Const.FORWARD:
@@ -254,7 +268,7 @@ class ApiAccuracyChecker:
                 result_csv_dict[api_real_name].backward_pass_status = forward_or_backward_pass_status
                 result_csv_dict[api_real_name].backward_err_msg = forward_or_backward_overall_err_msg
 
-        #result_csv
+        # result_csv
         result_csv = []
         result_csv_header = [
             MsCompareConst.DETAIL_CSV_API_NAME,
@@ -266,12 +280,16 @@ class ApiAccuracyChecker:
 
         for api_name, result_csv_entry in result_csv_dict.items():
             if result_csv_entry.forward_pass_status == CompareConst.PASS and \
-                result_csv_entry.backward_pass_status == CompareConst.PASS:
+                    result_csv_entry.backward_pass_status == CompareConst.PASS:
                 overall_err_msg = ""
             else:
                 overall_err_msg = result_csv_entry.forward_err_msg + result_csv_entry.backward_err_msg
-            row = [api_name, result_csv_entry.forward_pass_status,
-                   result_csv_entry.backward_pass_status, overall_err_msg]
+            row = [
+                api_name,
+                result_csv_entry.forward_pass_status,
+                result_csv_entry.backward_pass_status,
+                overall_err_msg
+            ]
             result_csv.append(row)
 
         file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))

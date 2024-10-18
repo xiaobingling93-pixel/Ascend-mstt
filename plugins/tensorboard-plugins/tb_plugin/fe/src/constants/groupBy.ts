@@ -4,10 +4,10 @@
 
 export enum OperationGroupBy {
   Operation = 'Operation',
-  OperationAndInputShape = 'OperationAndInputShape'
+  OperationAndInputShape = 'OperationAndInputShape',
 }
 
 export enum KernelGroupBy {
   Kernel = 'Kernel',
-  KernelNameAndOpName = 'KernelNameAndOpName'
+  KernelNameAndOpName = 'KernelNameAndOpName',
 }
