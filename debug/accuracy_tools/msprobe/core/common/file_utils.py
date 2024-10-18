@@ -392,8 +392,8 @@ def save_yaml(yaml_path, data):
 
 
 def save_excel(path, data):
-    path = os.path.realpath(path)
     check_path_before_create(path)
+    path = os.path.realpath(path)
     try:
         if isinstance(data, pd.DataFrame):
             data.to_excel(path, index=False)
