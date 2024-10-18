@@ -393,6 +393,21 @@ def save_yaml(yaml_path, data):
     change_mode(yaml_path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
+def save_excel(path, data):
+    check_path_before_create(path)
+    path = os.path.realpath(path)
+    try:
+        if isinstance(data, pd.DataFrame):
+            data.to_excel(path, index=False)
+        else:
+            logger.error(f'unsupported data type.')
+            return
+    except Exception as e:
+        logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
+        raise RuntimeError(f"Save excel file {path} failed.") from e
+    change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def move_file(src_path, dst_path):
     check_file_or_directory_path(src_path)
     check_path_before_create(dst_path)
@@ -481,10 +496,15 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def read_csv(filepath):
+def read_csv(filepath, as_pd=True):
     check_file_or_directory_path(filepath)
     try:
-        csv_data = pd.read_csv(filepath)
+        if as_pd:
+            csv_data = pd.read_csv(filepath)
+        else:
+            with FileOpen(filepath, 'r', encoding='utf-8-sig') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+                csv_data = list(csv_reader)
     except Exception as e:
         logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Read csv file {filepath} failed.") from e
