@@ -247,7 +247,7 @@ class GraphMSComparator:
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
                 if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
                     magnitude_diff = 0
-                result_dict[CompareConst.ACCURACY] = CompareConst.YES if magnitude_diff < CompareConst.MAGNITUDE else CompareConst.NO
+                result_dict[CompareConst.ACCURACY] = CompareConst.YES if magnitude_diff <= CompareConst.MAGNITUDE else CompareConst.NO
 
             return pd.Series(result_dict)
 
