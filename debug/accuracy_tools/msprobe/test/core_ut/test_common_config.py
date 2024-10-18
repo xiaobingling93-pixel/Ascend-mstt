@@ -65,6 +65,8 @@ class TestCommonConfig(TestCase):
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
+
+class TestBaseConfig(TestCase):
     @patch.object(logger, "error_log_with_exp")
     def test_base_config(self, mock_error_log_with_exp):
         json_config = dict()
@@ -73,7 +75,6 @@ class TestCommonConfig(TestCase):
         base_config.check_config()
         self.assertIsNone(base_config.scope)
         self.assertIsNone(base_config.list)
-        self.assertIsNone(base_config.data_mode)
         self.assertIsNone(base_config.backward_input)
         self.assertIsNone(base_config.file_format)
         self.assertIsNone(base_config.summary_mode)
@@ -97,19 +98,44 @@ class TestCommonConfig(TestCase):
         self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
                          MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
 
-        json_config.update({"scope": ["Tensor_Add"]})
-        json_config.update({"list": ["Tensor_Add"]})
-        json_config.update({"data_mode": "all"})
-        base_config = BaseConfig(json_config)
-        base_config.check_config()
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "data_mode is invalid, it should be a list[str]")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
+    @patch.object(logger, "error_log_with_exp")
+    def test_check_data_mode(self, mock_error_log_with_exp):
+        self.config = BaseConfig({})
 
-        json_config.update({"data_mode": ["all"]})
-        json_config.update({"backward_input": [1, 2]})
-        self.assertEqual(mock_error_log_with_exp.call_args[0][0],
-                         "data_mode is invalid, it should be a list[str]")
-        self.assertEqual(str(mock_error_log_with_exp.call_args[0][1]),
-                         MsprobeException.err_strs.get(MsprobeException.INVALID_PARAM_ERROR))
+        self.config._check_data_mode()
+        mock_error_log_with_exp.assert_not_called()
+
+        self.config.data_mode = ["all"]
+        self.config._check_data_mode()
+        mock_error_log_with_exp.assert_not_called()
+
+        self.config.data_mode = "all"
+        self.config._check_data_mode()
+        self.assertEqual(
+            mock_error_log_with_exp.call_args_list[0][0][0],
+            f"data_mode is invalid, it should be a list[str]",
+        )
+
+        mock_error_log_with_exp.reset_mock()
+        self.config.data_mode = ["test", "all", "input", "output", "forward", "backward"]
+        self.config._check_data_mode()
+        self.assertEqual(
+            mock_error_log_with_exp.call_args_list[0][0][0],
+            f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST)}.",
+        )
+
+        mock_error_log_with_exp.reset_mock()
+        self.config.data_mode = [123, 'test_case_1']
+        self.config._check_data_mode()
+        self.assertEqual(
+            mock_error_log_with_exp.call_args_list[0][0][0],
+            f"data_mode is invalid, it should be a list[str]"
+        )
+
+        mock_error_log_with_exp.reset_mock()
+        self.config.data_mode = ['all', 'test_case_1']
+        self.config._check_data_mode()
+        self.assertEqual(
+            mock_error_log_with_exp.call_args_list[0][0][0],
+            f"The element 'test_case_1' of data_mode {self.config.data_mode} is not in {Const.DUMP_DATA_MODE_LIST}."
+        )
