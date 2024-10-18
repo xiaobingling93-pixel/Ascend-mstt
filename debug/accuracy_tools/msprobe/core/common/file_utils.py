@@ -397,14 +397,17 @@ def save_excel(path, data):
     check_path_before_create(path)
 
     def check_excel_data(data):
-        try:
-            shape = np.array(data).shape
-            if len(shape) != 2:
-                logger.error(f'Cannot transfer data into excel: data shape is {shape}.')
-                raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
-        except ValueError as e:
-            logger.error(f'Invalid excel data: {e.args}')
+        format_check = isinstance(data, list) and all([isinstance(line, list) for line in data])
+        if not format_check:
+            logger.error('Invalid excel data: data is not a 2-dimension-metrix.')
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
+        dimension_check = True
+        for i in range(1, len(data)):
+            dimension_check = len(data[0]) == len(data[i])
+            if not dimension_check:
+                logger.error(f'Invalid excel data: line {i} is inhomogeneous, expected length 
+                             {len(data[0])}, actual length {len(data[i])}')
+                raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
     try:
         if isinstance(data, pd.DataFrame):
