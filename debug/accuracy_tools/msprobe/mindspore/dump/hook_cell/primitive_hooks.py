@@ -134,7 +134,7 @@ class PrimitiveHookService:
                         hooked_outputs.append(ops.HookBackward(output_backward_hook)(tensor))
                     else:
                         hooked_outputs.append(tensor)
-                return tuple(hooked_outputs)
+                return hooked_outputs
             return out
 
         def wrapped_primitive_call(instance_self, *args, **kwargs):
