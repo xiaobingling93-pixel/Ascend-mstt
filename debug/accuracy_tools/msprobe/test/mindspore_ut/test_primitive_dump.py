@@ -15,6 +15,7 @@
 # limitations under the License.
 """
 import unittest
+import mindspore as ms
 import numpy as np
 from unittest.mock import Mock, patch
 
@@ -139,6 +140,209 @@ class TestPrimitiveHookService(unittest.TestCase):
     def tearDown(self):
         # 测试结束时删除临时目录
         self.temp_dir.cleanup()
+
+    def test_two_input_backward_hook(self):
+        # 模拟梯度输入
+        captured_grads = []
+        num_tensors = 2
+        updated_primitive_name = "test_primitive_output"
+        hook_type = Const.INPUT
+
+        # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
+        hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
+        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
+
+        create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
+
+        backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+        # 模拟反向梯度
+        grad_1 = Mock()
+        grad_2 = Mock()
+
+        # 调用 backward_hook
+        backward_hook(grad_1)
+        backward_hook(grad_2)
+        print(f"1After first backward_hook call, len(captured_grads): {len(captured_grads)}")
+
+        # 验证 data_collector 的调用
+        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
+            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
+        )
+        self.mock_service_instance.data_collector.backward_output_data_collect.assert_called_once()
+
+        # 确保梯度列表在捕获后被清除
+        self.assertEqual(len(captured_grads), 0)
+
+    def test_four_input_backward_hook(self):
+        # 模拟梯度输入
+        captured_grads = []
+        num_tensors = 4
+        updated_primitive_name = "test_primitive_output"
+        hook_type = Const.INPUT
+
+        # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
+        hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
+        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
+
+        create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
+
+        backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+        # 模拟反向梯度
+        grad_1 = Mock()
+        grad_2 = Mock()
+        grad_3 = Mock()
+        grad_4 = Mock()
+
+        # 调用 backward_hook
+        backward_hook(grad_1)
+        backward_hook(grad_2)
+        backward_hook(grad_3)
+        backward_hook(grad_4)
+        print(f"1After first backward_hook call, len(captured_grads): {len(captured_grads)}")
+
+        # 验证 data_collector 的调用
+        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
+            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
+        )
+        self.mock_service_instance.data_collector.backward_output_data_collect.assert_called_once()
+
+        # 确保梯度列表在捕获后被清除
+        self.assertEqual(len(captured_grads), 0)
+
+    def test_two_output_backward_hook(self):
+        # 模拟梯度输入
+        captured_grads = []
+        num_tensors = 2
+        updated_primitive_name = "test_primitive_output"
+        hook_type = Const.OUTPUT
+
+        # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
+        hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
+        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(None, "example")
+        if wrapped_primitive_call.__closure__:
+            for i, closure in enumerate(wrapped_primitive_call.__closure__):
+                print(f"Closure[{i}]:", closure.cell_contents)
+
+        if hook_primitive_inputs.__closure__:
+            for i, closure in enumerate(hook_primitive_inputs.__closure__):
+                print(f"2Closure[{i}]:", closure.cell_contents)
+        create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
+
+        backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+        # 模拟反向梯度
+        grad_1 = Mock()
+        grad_2 = Mock()
+
+        # 调用 backward_hook
+        backward_hook(grad_1)
+        backward_hook(grad_2)
+        print(f"After first backward_hook call, len(captured_grads): {len(captured_grads)}")
+
+        # 验证 data_collector 的调用
+        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
+            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
+        )
+        self.mock_service_instance.data_collector.backward_input_data_collect.assert_called_once()
+
+        # 确保梯度列表在捕获后被清除
+        self.assertEqual(len(captured_grads), 0)
+
+    def test_four_output_backward_hook(self):
+        # 模拟梯度输入
+        captured_grads = []
+        num_tensors = 4
+        updated_primitive_name = "test_primitive_output"
+        hook_type = Const.OUTPUT
+
+        # 调用 wrap_primitive 获取包装函数通过闭包显式调用backward_hook
+        hook_primitive_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents
+
+        create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
+
+        backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+        # 模拟反向梯度
+        grad_1 = Mock()
+        grad_2 = Mock()
+        grad_3 = Mock()
+        grad_4 = Mock()
+
+        # 调用 backward_hook
+        backward_hook(grad_1)
+        backward_hook(grad_2)
+        backward_hook(grad_3)
+        backward_hook(grad_4)
+
+        # 验证 data_collector 的调用
+        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
+            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
+        )
+        self.mock_service_instance.data_collector.backward_input_data_collect.assert_called_once()
+
+        # 确保梯度列表在捕获后被清除
+        self.assertEqual(len(captured_grads), 0)
+
+    def test_hook_primitive_inputs(self):
+        # 模拟前向输入
+        args = (Tensor(np.array([1.0, 2.0]), ms.float32), Tensor(np.array([3.0, 4.0]), ms.float32))
+        captured_grads_input = []
+        updated_primitive_name = "test_primitive_input"
+
+        # 调用 hook_primitive_inputs
+        hooked_inputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[0].cell_contents(args,
+                                                                                                                 captured_grads_input,
+                                                                                                                 updated_primitive_name)
+
+        # 验证 hooked_inputs 是否正确添加了 hook
+        for arg, hooked_arg in zip(args, hooked_inputs):
+            if isinstance(arg, Tensor):
+                print(f"Captured hooked_arg after hook: {hooked_arg}")
+                self.assertTrue(hasattr(hooked_arg, 'grad_fn'))
+
+        # 打印调试信息
+        print(f"Captured gradients after hook: {captured_grads_input}")
+
+    def test_hook_primitive_outputs(self):
+        # 模拟前向输出
+        out = (Tensor(np.array([1.0, 2.0]), ms.float32), Tensor(np.array([3.0, 4.0]), ms.float32))
+        captured_grads_output = []
+        updated_primitive_name = "test_primitive_output"
+
+        # 调用 hook_primitive_outputs
+        hook_primitive_outputs = self.primitive_hook_service.wrap_primitive(None, "example").__closure__[
+            1].cell_contents
+        hooked_outputs = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)
+
+        # 验证 hooked_outputs 是否正确添加了 hook
+        for tensor, hooked_tensor in zip(out, hooked_outputs):
+            if isinstance(tensor, Tensor):
+                self.assertTrue(hasattr(hooked_tensor, 'grad_fn'))
+
+        # 打印调试信息
+        print(f"Captured gradients after output hook: {captured_grads_output}")
+
+    def test_wrapped_primitive_call_args(self):
+        # 模拟前向输入
+        args = (Tensor(np.array([1.0, 2.0]), ms.float32), Tensor(np.array([3.0, 4.0]), ms.float32))
+        captured_grads_input = []
+        updated_primitive_name = "test_primitive_args"
+
+        # 获取 wrapped_primitive_call 函数
+        wrapped_primitive_call = self.primitive_hook_service.wrap_primitive(lambda x, y: x + y, "add")
+
+        # 调用 wrapped_primitive_call 并检查 hooked_inputs 是否与原始 args 相同
+        try:
+            hooked_inputs = wrapped_primitive_call.__closure__[0].cell_contents(args, captured_grads_input,
+                                                                                updated_primitive_name)
+            for arg, hooked_arg in zip(args, hooked_inputs):
+                if isinstance(arg, Tensor):
+                    self.assertTrue(hasattr(hooked_arg, 'grad_fn'))
+                    self.assertTrue(np.array_equal(arg.asnumpy(), hooked_arg.asnumpy()))
+                    print(f"Arg type: {type(arg)}, Hooked input type: {type(hooked_arg)}")
+                else:
+                    self.assertEqual(arg, hooked_arg)
+        except Exception as e:
+            self.fail(f"wrapped_primitive_call raised an exception: {e}")
+
 
     def test_update_primitive_counters_multiple(self):
         # 测试更新 primitive 计数器的功能，增加多个不同名称的测试
