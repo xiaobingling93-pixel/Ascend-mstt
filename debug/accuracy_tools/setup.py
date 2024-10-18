@@ -32,7 +32,6 @@ INSTALL_REQUIRED = [
     "pyopenssl",
     "twisted",
     "matplotlib",
-    "torchvision",
     "tensorboard",
     "sqlalchemy",
     "pymysql"
