@@ -138,8 +138,11 @@ class Service:
                 primitive_set.add((pname, primitive))
 
         for pname, primitive in primitive_set:
+            primitive_class_name = primitive.__class__.__name__
+            primitive_combined_name = pname + Const.SEP + primitive_class_name
             NewPrimitive = type('NewPrimitive', (primitive.__class__,),
-                                {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__, pname)})
+                                {'__call__': self.primitive_hook_service.wrap_primitive(primitive.__call__,
+                                                                                        primitive_combined_name)})
             primitive.__class__ = NewPrimitive
 
     def step(self):
