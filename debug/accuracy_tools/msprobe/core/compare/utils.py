@@ -421,14 +421,13 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             Const.KWARGS: CompareConst.KWARGS_STRUCT,
             Const.OUTPUT: CompareConst.OUTPUT_STRUCT
         }
-        if not md5_compare:
-            for name_key, struct_key in name_to_struct_mapping.items():
-                if name_key in name_ele_list:
-                    if md5_compare:
-                        op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
-                    else:
-                        op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-                    break
+        for name_key, struct_key in name_to_struct_mapping.items():
+            if name_key in name_ele_list:
+                if md5_compare:
+                    op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+                else:
+                    op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+                break
         op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
         if all_mode_bool:
