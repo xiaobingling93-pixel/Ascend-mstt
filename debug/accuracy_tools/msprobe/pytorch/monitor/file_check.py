@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +14,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 import re
 
@@ -32,6 +33,7 @@ class FileChecker:
         ability(str): FileCheckConst.WRITE_ABLE or FileCheckConst.READ_ABLE to set file has writability or readability
         file_type(str): The correct file type for file
     """
+
     def __init__(self, file_path, path_type, ability=None, file_type=None, is_script=True):
         self.file_path = file_path
         self.path_type = self._check_path_type(path_type)
@@ -187,7 +189,7 @@ def check_path_owner_consistent(path):
 
 def check_path_pattern_vaild(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
-        logger.error('The file path %s contains special characters.' %(path))
+        logger.error('The file path %s contains special characters.' % path)
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
 
 
@@ -238,7 +240,8 @@ def create_directory(dir_path):
         os.makedirs(dir_path, mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
     except OSError as ex:
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
-            'Failed to create {}. Please check the path permission or disk space .{}'.format(dir_path, str(ex))) from ex
+                                 'Failed to create {}. Please check the path permission or disk space .{}'.format(
+                                     dir_path, str(ex))) from ex
 
 
 def check_path_before_create(path):
