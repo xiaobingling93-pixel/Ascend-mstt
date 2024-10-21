@@ -23,6 +23,7 @@ import pandas as pd
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
+from rich.table import Table
 
 
 class TestCompare(unittest.TestCase):
@@ -80,6 +81,66 @@ class TestSaver(unittest.TestCase):
                             'error_thd': {}, 'Status': {}, 'Message': {}}
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
+
+    @patch('rich.console.Console.print')
+    @patch('mymodule.MyTestClass.get_statistics_from_result_csv')
+    def test_print_pretest_result(self, mock_get_stats, mock_console_print):
+        # 创建测试实例
+        # my_test_class = MyTestClass()
+
+        # 模拟 test_result_cnt 的数据
+        self.saver.test_result_cnt = {
+            "total_num": 100,
+            "success_num": 80,
+            "forward_and_backward_fail_num": 10,
+            "forward_or_backward_fail_num": 5,
+            "forward_fail_num": 3,
+            "backward_fail_num": 2
+        }
+
+        # 调用待测试的函数
+        self.saver.print_pretest_result()
+
+        # 计算预期的通过率
+        expected_passing_rate = str(80 / 100)
+
+        # 验证 get_statistics_from_result_csv 被正确调用
+        mock_get_stats.assert_called_once()
+
+        # 验证 Console.print 被调用两次（一次用于 table_total，一次用于 table_detail）
+        self.assertEqual(mock_console_print.call_count, 2)
+
+        # 验证第一个表格内容（table_total）
+        args_table_total = mock_console_print.call_args_list[0][0][0]  # 第一次调用的参数
+        self.assertIsInstance(args_table_total, Table)
+        self.assertEqual(args_table_total.title, "Overall Statistics")
+        self.assertEqual(args_table_total.columns[0].header, "Result")
+        self.assertEqual(args_table_total.columns[1].header, "Statistics")
+
+        # 验证表格的行数据
+        expected_rows_total = [
+            ("[green]Pass[/green]", "80"),
+            ("[red]Fail[/red]", "15"),  # 10 + 5
+            ("Passing Rate", expected_passing_rate)
+        ]
+        for idx, row in enumerate(expected_rows_total):
+            self.assertEqual(args_table_total.rows[idx].cells[0].text, row[0])
+            self.assertEqual(args_table_total.rows[idx].cells[1].text, row[1])
+
+        # 验证第二个表格内容（table_detail）
+        args_table_detail = mock_console_print.call_args_list[1][0][0]  # 第二次调用的参数
+        self.assertIsInstance(args_table_detail, Table)
+        self.assertEqual(args_table_detail.title, "Detail Statistics")
+
+        # 验证表格的行数据
+        expected_rows_detail = [
+            ("Only Forward Fail", "3"),
+            ("Only Backward Fail", "2"),
+            ("Both Forward & Backward Fail", "10"),
+        ]
+        for idx, row in enumerate(expected_rows_detail):
+            self.assertEqual(args_table_detail.rows[idx].cells[0].text, row[0])
+            self.assertEqual(args_table_detail.rows[idx].cells[1].text, row[1])
 
     def test_write_summary_csv(self):
         mock_test_result = Mock()
