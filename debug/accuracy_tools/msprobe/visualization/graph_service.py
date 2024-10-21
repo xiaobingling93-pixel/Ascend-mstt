@@ -15,6 +15,12 @@
 
 import os
 import time
+import argparse
+import sys
+import json
+from msprobe.core.common.file_utils import FileOpen, check_file_type
+from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.utils import CompareException
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
@@ -57,3 +63,32 @@ def build_graph(dump_path, out_path, model_name='Model'):
     micro_steps = graph.paging_by_micro_step()
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
+
+
+def _graph_service(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    _graph_service_parser(parser)
+    args = parser.parse_args(sys.argv[1:])
+    _graph_service_command(args)
+
+
+def _graph_service_parser(parser):
+    parser.add_argument("-i", "--input_path", dest="input_path", type=str,
+                        help="<Required> The compare input path, a dict json.", required=True)
+    parser.add_argument("-o", "--output_path", dest="output_path", type=str,
+                        help="<Required> The compare task result out path.", required=True)
+
+
+def _graph_service_command(args):
+    with FileOpen(args.input_path, "r") as file:
+        input_param = json.load(file)
+    npu_path = input_param.get("npu_path", None)
+    bench_path = input_param.get("bench_path", None)
+    if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
+        build_graph(npu_path, args.output_path)
+    elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
+        compare_graph(npu_path, bench_path, args.output_path)
+    else:
+        logger.error("The npu_path or bench_path should be a folder.")
+        raise CompareException(CompareException.INVALID_COMPARE_MODE)

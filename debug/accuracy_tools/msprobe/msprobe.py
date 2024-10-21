@@ -45,6 +45,7 @@ def main():
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
+    graph_service_cmd_parser = subparsers.add_parser('graph')
     _compare_parser(compare_cmd_parser)
     is_torch_available=is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
@@ -56,6 +57,7 @@ def main():
             _api_precision_compare_command
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
+        from msprobe.visualization.graph_service import _graph_service_parser, _graph_service_command
 
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
@@ -63,6 +65,7 @@ def main():
                                         help='Number of splits for parallel processing. Range: 1-64')
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
+        _graph_service_parser(graph_service_cmd_parser)
     elif is_mindspore_available:
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
@@ -86,6 +89,8 @@ def main():
             _api_precision_compare_command(args)
         elif sys.argv[3] == "run_overflow_check":
             _run_overflow_check_command(args)
+        elif sys.argv[3] == "graph":
+            _graph_service_command(args)
         elif sys.argv[3] == "compare":
             if args.cell_mapping is not None or args.api_mapping is not None:
                 logger.error("Argument -cm or -am is not supported in PyTorch framework")

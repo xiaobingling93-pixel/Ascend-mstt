@@ -105,6 +105,12 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 场景的训练状态监控](./docs/19.monitor.md)
 
+### 10 分级可视化构图比对
+
+该功能将msprobe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
+
+[PyTorch 场景的分级可视化构图比对](./docs/21.visualization_PyTorch.md)
+
 ## 🌟 新版本特性
 
 若查看历史版本特性，请点击[安装](./docs/01.installation.md)。
