@@ -367,7 +367,7 @@ def calc_status_details_dict(npu_out, bench_out, summary):
         summary.failed_info = "bench and npu_output dict keys are different."
         return False, summary.to_column_value()
     else:
-        status, details = single_benchmark_compare_wrap(list(bench_out.values(), list(npu_out.values())))
+        status, details = single_benchmark_compare_wrap(list(bench_out.values()), list(npu_out.values()))
         return status, details
 
 
