@@ -1,14 +1,28 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 import mindspore
-import torch
 import numpy as np
+import torch
 from mindspore._c_expression import typing
-
-from msprobe.mindspore.common.log import logger
+from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.core.common.file_utils import load_npy
-from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np_dtype, api_info_type_str_to_type,
+from msprobe.mindspore.api_accuracy_checker.type_mapping import (api_info_type_str_to_type,
                                                                  ms_dtype_to_dtype_str, torch_dtype_to_dtype_str,
                                                                  dtype_str_to_ms_dtype, dtype_str_to_np_dtype,
                                                                  dtype_str_to_torch_dtype, type_to_api_info_type_str,
@@ -16,8 +30,8 @@ from msprobe.mindspore.api_accuracy_checker.type_mapping import (dtype_str_to_np
                                                                  MINDSPORE_TENSOR_TYPE_STR, MINDSPORE_DTYPE_TYPE_STR,
                                                                  SLICE_TYPE_STR, TORCH_DTYPE_TYPE_STR,
                                                                  float_dtype_str_list, int_dtype_str_list)
-from msprobe.core.common.const import Const
 from msprobe.mindspore.api_accuracy_checker.utils import check_and_get_from_json_dict, global_context
+from msprobe.mindspore.common.log import logger
 
 
 class MstensorMetaData:
@@ -28,9 +42,11 @@ class MstensorMetaData:
         self.minimum = minimum
         self.shape = shape
 
+
 class DtypeMetaData:
     def __init__(self, dtype_str) -> None:
         self.dtype_str = dtype_str
+
 
 class ComputeElement:
     def __init__(self, compute_element_info=None, parameter=None):
@@ -141,13 +157,13 @@ class ComputeElement:
             parameter_tmp = mindspore.Tensor(ndarray, dtype=ms_dtype)
         else:
             err_msg = "ComputeElement.get_parameter failed: self.parameter type is not in " \
-                "(int, float, str, slice, bool, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
+                      "(int, float, str, slice, bool, torch.Tensor, mindspore.Tensor, MstensorMetaData)"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
 
         # if necessary, do transfer
         if not get_origin and isinstance(parameter_tmp, mindspore.Tensor) and tensor_platform == Const.PT_FRAMEWORK:
             parameter = self.transfer_to_torch_tensor(parameter_tmp)
-        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform ==Const.MS_FRAMEWORK:
+        elif not get_origin and isinstance(parameter_tmp, torch.Tensor) and tensor_platform == Const.MS_FRAMEWORK:
             parameter = self.transfer_to_mindspore_tensor(parameter_tmp)
         else:
             parameter = parameter_tmp
@@ -204,7 +220,7 @@ class ComputeElement:
                     self.parameter = DtypeMetaData(value)
                 elif type_str == SLICE_TYPE_STR:
                     self.parameter = slice(*tuple(value))
-                else: # type_str in ("str", "int", "float", "bool")
+                else:  # type_str in ("str", "int", "float", "bool")
                     self.parameter = value
 
     def _init_from_mstensor_compute_element_info(self, compute_element_info):
@@ -212,20 +228,20 @@ class ComputeElement:
             do not load real tensor, only record meta data
         '''
         dtype_str = check_and_get_from_json_dict(compute_element_info, "dtype", "dtype field in api_info.json",
-                                            accepted_type=str, accepted_value=dtype_str_to_ms_dtype.keys())
+                                                 accepted_type=str, accepted_value=dtype_str_to_ms_dtype.keys())
         shape = check_and_get_from_json_dict(compute_element_info, "shape", "shape field in api_info.json",
-                                                accepted_type=(list,))
+                                             accepted_type=(list,))
         if global_context.get_is_constructed():
             maximum = check_and_get_from_json_dict(compute_element_info, "Max", "Max field in api_info.json",
-                                                    accepted_type=(int, float))
+                                                   accepted_type=(int, float))
             minimum = check_and_get_from_json_dict(compute_element_info, "Min", "Min field in api_info.json",
-                                                accepted_type=(int, float))
+                                                   accepted_type=(int, float))
 
             npy_path = None
         else:
             maximum, minimum = None, None
             data_name = check_and_get_from_json_dict(compute_element_info, "data_name",
-                                                "data_name field in api_info.json", accepted_type=(str,))
+                                                     "data_name field in api_info.json", accepted_type=(str,))
             npy_path = os.path.join(global_context.get_dump_data_dir(), data_name)
         mstensor_meta_data = MstensorMetaData(dtype_str, npy_path, maximum, minimum, shape)
         self.parameter = mstensor_meta_data
@@ -237,7 +253,7 @@ class ComputeElement:
         self.shape = tuple()
         if not isinstance(parameter, self.supported_parameter_type):
             err_msg = "ComputeElement._init_with_parameter failed: " \
-                "parameter type is not in (int, float, str, slice, bool, torch.Tensor, mindspore.Tensor)"
+                      "parameter type is not in (int, float, str, slice, bool, torch.Tensor, mindspore.Tensor)"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         if isinstance(parameter, mindspore.Tensor):
             self.shape = tuple(parameter.shape)

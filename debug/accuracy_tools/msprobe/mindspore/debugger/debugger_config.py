@@ -33,7 +33,7 @@ class DebuggerConfig:
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list
         self.scope = [] if not task_config.scope else task_config.scope
-        self.data_mode = [] if not task_config.data_mode else task_config.data_mode
+        self.data_mode = [Const.ALL] if not task_config.data_mode else task_config.data_mode
         self.file_format = task_config.file_format
         self.overflow_nums = 1 if not task_config.overflow_nums else task_config.overflow_nums
         self.check_mode = task_config.check_mode

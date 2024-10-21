@@ -22,6 +22,7 @@ from msprobe.pytorch.common.log import logger
 from prettytable import PrettyTable
 
 
+
 def func_log_wrapper():
     def _out_wrapper(func):
         @wraps(func)
@@ -99,7 +100,7 @@ class SingleBenchmarkAccuracyCompare:
     @func_log_wrapper()
     def check_output_size(cls, npu_out, bench_out):
         acc_result = None
-        if npu_out.numel() == 0 and bench_out.nuimel() == 0:
+        if npu_out.numel() == 0 and bench_out.numel() == 0:
             info = (
                 "The npu_output is [], and it is same as benchmark_output, "
                 "the result of data_compare is Pass"
@@ -366,7 +367,7 @@ def calc_status_details_dict(npu_out, bench_out, summary):
         summary.failed_info = "bench and npu_output dict keys are different."
         return False, summary.to_column_value()
     else:
-        status, details = single_benchmark_compare_wrap(list(bench_out.values(), list(npu_out.values())))
+        status, details = single_benchmark_compare_wrap(list(bench_out.values()), list(npu_out.values()))
         return status, details
 
 

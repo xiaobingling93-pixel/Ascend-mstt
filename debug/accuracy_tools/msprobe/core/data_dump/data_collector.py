@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import atexit
 import os
 
 from msprobe.core.data_dump.scope import build_scope, ListScope
@@ -42,8 +43,7 @@ class DataCollector:
         else:
             self.scope = build_scope(None, self.config.scope, self.config.list)
 
-    def __del__(self):
-        self.write_json()
+        atexit.register(self.write_json)
 
     @property
     def dump_data_dir(self):
