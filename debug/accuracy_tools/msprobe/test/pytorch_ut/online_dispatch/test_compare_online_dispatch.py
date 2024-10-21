@@ -100,8 +100,8 @@ class TestSaver(unittest.TestCase):
         }
         my_test_class.print_pretest_result()
 
-        mock_console.return_value.print.assert_called()
-        self.assertEqual(mock_console.return_value.print.call_count, 2)
+        mock_console_print.assert_called()
+        self.assertEqual(mock_console_print.call_count, 2)
 
     def test_write_summary_csv(self):
         mock_test_result = Mock()
