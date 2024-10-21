@@ -278,8 +278,8 @@ def load_pt(pt_path, to_cpu=False):
 
 
 def save_pt(tensor, filepath):
-    filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
     try:
         torch.save(tensor, filepath)
     except Exception as e:

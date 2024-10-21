@@ -43,7 +43,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.file_utils import FileChecker, change_mode, check_path_before_create, \
+from msprobe.core.common.file_utils import FileChecker, change_mode, \
     create_directory, get_json_contents, read_csv
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
@@ -336,7 +336,6 @@ def run_backward(args, grad, grad_index, out):
 
 
 def initialize_save_error_data(error_data_path):
-    check_path_before_create(error_data_path)
     create_directory(error_data_path)
     error_data_path_checker = FileChecker(error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
@@ -465,7 +464,6 @@ def run_ut_command(args):
             logger.info("Finish filtering the api in the api_info_file.")
 
     out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
-    check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()

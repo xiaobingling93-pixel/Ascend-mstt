@@ -33,7 +33,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
-    check_path_before_create, create_directory
+    create_directory
 from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.const import FileCheckConst
 
@@ -186,7 +186,6 @@ def prepare_config(args):
     api_info = os.path.realpath(args.api_info_file)
     check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
     out_path = os.path.realpath(args.out_path) if args.out_path else "./"
-    check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
