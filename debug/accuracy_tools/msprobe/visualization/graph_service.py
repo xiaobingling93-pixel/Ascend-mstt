@@ -18,7 +18,7 @@ import time
 import argparse
 import sys
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type
+from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.utils import CompareException
 from msprobe.visualization.compare.graph_comparator import GraphComparator
@@ -31,22 +31,29 @@ from msprobe.visualization.graph.node_colors import NodeColors
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def compare_graph(dump_path_n, dump_path_b, out_path, model_name='Model', mapping_file=None):
+def compare_graph(dump_path_n, dump_path_b, out_path, is_print_compare_log=True, mapping_file=None):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
     construct_path_n = os.path.join(dump_path_n, GraphConst.CONSTRUCT_FILE)
     construct_path_b = os.path.join(dump_path_b, GraphConst.CONSTRUCT_FILE)
     data_path_n = os.path.join(dump_path_n, GraphConst.DUMP_FILE)
     data_path_b = os.path.join(dump_path_b, GraphConst.DUMP_FILE)
-    graph_n = GraphBuilder.build(construct_path_n, data_path_n, model_name)
-    graph_b = GraphBuilder.build(construct_path_b, data_path_b, model_name)
+    graph_n = GraphBuilder.build(construct_path_n, data_path_n)
+    graph_b = GraphBuilder.build(construct_path_b, data_path_b)
     logger.info('Model graphs built successfully, start Comparing graphs...')
     # 基于graph、stack和data进行比较
     stack_path = os.path.join(dump_path_n, GraphConst.STACK_FILE)
-    graph_comparator = GraphComparator([graph_n, graph_b], [data_path_n, data_path_b], stack_path, out_path,
+    dump_path_param = {
+        'npu_json_path': data_path_n,
+        'bench_json_path': data_path_b,
+        'stack_json_path': stack_path,
+        'is_print_compare_log': is_print_compare_log
+    }
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, out_path,
                                        mapping_config=MappingConfig(mapping_file) if mapping_file else None)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
+    create_directory(out_path)
     output_path = os.path.join(out_path, f'compare_{current_time}.vis')
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps)
@@ -54,12 +61,13 @@ def compare_graph(dump_path_n, dump_path_b, out_path, model_name='Model', mappin
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def build_graph(dump_path, out_path, model_name='Model'):
+def build_graph(dump_path, out_path):
     logger.info('Start building model graph...')
     construct_path = os.path.join(dump_path, GraphConst.CONSTRUCT_FILE)
     data_path = os.path.join(dump_path, GraphConst.DUMP_FILE)
+    create_directory(out_path)
     output_path = os.path.join(out_path, f'build_{current_time}.vis')
-    graph = GraphBuilder.build(construct_path, data_path, model_name)
+    graph = GraphBuilder.build(construct_path, data_path)
     micro_steps = graph.paging_by_micro_step()
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
@@ -83,12 +91,13 @@ def _graph_service_parser(parser):
 def _graph_service_command(args):
     with FileOpen(args.input_path, "r") as file:
         input_param = json.load(file)
-    npu_path = input_param.get("npu_path", None)
-    bench_path = input_param.get("bench_path", None)
+    npu_path = input_param.get("npu_path")
+    bench_path = input_param.get("bench_path")
+    is_print_compare_log = input_param.get("is_print_compare_log", True)
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
         build_graph(npu_path, args.output_path)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        compare_graph(npu_path, bench_path, args.output_path)
+        compare_graph(npu_path, bench_path, args.output_path, is_print_compare_log=is_print_compare_log)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)

@@ -22,10 +22,10 @@ from msprobe.visualization.compare.mode_adapter import ModeAdapter
 
 
 class GraphComparator:
-    def __init__(self, graphs, data_paths, stack_path, output_path, mapping_config=None):
+    def __init__(self, graphs, dump_path_param, output_path, mapping_config=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
-        self._parse_param(data_paths, stack_path, output_path)
+        self._parse_param(dump_path_param, output_path)
         self.mapping_config = mapping_config
 
     def compare(self):
@@ -63,19 +63,14 @@ class GraphComparator:
             self.ma.add_error_key(node.output_data)
             node.get_suggestions()
     
-    def _parse_param(self, data_paths, stack_path, output_path):
-        self.dump_path_param = {
-            'npu_json_path': data_paths[0],
-            'bench_json_path': data_paths[1],
-            'stack_json_path': stack_path,
-            'is_print_compare_log': True
-        }
+    def _parse_param(self, dump_path_param, output_path):
+        self.dump_path_param = dump_path_param
         self.output_path = output_path
         compare_mode = get_compare_mode(self.dump_path_param)
         self.ma = ModeAdapter(compare_mode)
-        self.data_n_dict = load_data_json_file(data_paths[0])
-        self.data_b_dict = load_data_json_file(data_paths[1])
-        self.stack_json_data = load_json_file(stack_path)
+        self.data_n_dict = load_data_json_file(dump_path_param.get('npu_json_path'))
+        self.data_b_dict = load_data_json_file(dump_path_param.get('bench_json_path'))
+        self.stack_json_data = load_json_file(dump_path_param.get('stack_json_path'))
 
     def _postcompare(self):
         self._handle_api_collection_index()
