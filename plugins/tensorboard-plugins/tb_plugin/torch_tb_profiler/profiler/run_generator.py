@@ -154,8 +154,10 @@ class RunGenerator(object):
                 key = step[0]
                 if key == '':
                     key = 'all'
-                overlap = [float(step[int(title_name[0])]), float(step[int(title_name[1])]),
-                           float(step[int(title_name[2])]), float(step[int(title_name[3])])]
+                overlap = [
+                            float(step[int(title_name[0])]), float(step[int(title_name[1])]),
+                            float(step[int(title_name[2])]), float(step[int(title_name[3])])
+                ]
                 if key in overlap_by_steps:
                     overlap_by_steps[key] = list(np.add(overlap, overlap_by_steps[key]))
                 else:
@@ -256,8 +258,10 @@ class RunGenerator(object):
             return operator_by_name, operator_by_name_and_input_shapes
         for idx, ls in enumerate(datas[1:]):
             try:
-                temp: list = [ls[0], RunGenerator._trans_shape(str(ls[1])), ls[2], float(ls[3]), float(ls[4]),
-                              float(ls[5]), float(ls[6]), float(ls[7]), float(ls[8])]
+                temp: list = [
+                            ls[0], RunGenerator._trans_shape(str(ls[1])), ls[2], float(ls[3]), float(ls[4]),
+                            float(ls[5]), float(ls[6]), float(ls[7]), float(ls[8])
+                ]
                 operator_by_name[ls[0]].append(temp)
                 key = "{}###{}".format(str(ls[0]), RunGenerator._trans_shape(str(ls[1])))
                 operator_by_name_and_input_shapes[key].append(temp)
@@ -281,8 +285,10 @@ class RunGenerator(object):
 
     def _get_operator_pie(self, group_by_input_shape=False):
         data = {}
-        tag = {'device_self_time': 'Device Self Time (us)', 'device_total_time': 'Device Total Time (us)',
-               'host_self_time': 'Host Self Time (us)', 'host_total_time': 'Host Total Time (us)'}
+        tag = {
+                'device_self_time': 'Device Self Time (us)', 'device_total_time': 'Device Total Time (us)',
+                'host_self_time': 'Host Self Time (us)', 'host_total_time': 'Host Total Time (us)'
+        }
         for key, value in tag.items():
             data[key] = {
                 'title': value,
@@ -386,9 +392,11 @@ class RunGenerator(object):
     def _get_table_head(name: str, input_shape: str, call_stack: str, value: list):
         if name is None:
             return {}
-        temp = {'name': name, 'calls': 0, 'host_self_duration': 0,
+        temp = {
+                'name': name, 'calls': 0, 'host_self_duration': 0,
                 'host_total_duration': 0, 'device_self_duration': 0, 'device_total_duration': 0,
-                'tc_self_ratio': 0, 'tc_total_ratio': 0, 'tc_eligible': 'Yes'}
+                'tc_self_ratio': 0, 'tc_total_ratio': 0, 'tc_eligible': 'Yes'
+        }
         if input_shape is not None:
             temp['input_shape'] = input_shape
             if call_stack is not None:
@@ -431,6 +439,11 @@ class RunGenerator(object):
             'rows': {}
         }
         datas = RunGenerator._get_csv_data(path)
+        if len(datas) < 1:
+            return {
+                'operator': table,
+                'component': peak_memory_events
+            }
         for idx, column in enumerate(datas[0]):
             if column == 'Device Type':
                 self.device_type_form_idx = idx
@@ -452,12 +465,14 @@ class RunGenerator(object):
             # convert time metric 'us' to 'ms'
             # some operators may not have the following columns
             try:
-                nums = [ls[name_idx] if ls[name_idx] else '<unknown>', abs(float(ls[size_idx])),
+                nums = [
+                        ls[name_idx] if ls[name_idx] else '<unknown>', abs(float(ls[size_idx])),
                         round((float(ls[allocation_idx]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[
                             allocation_idx] else None,
                         round((float(ls[release_idx]) - self.profile_data.profiler_start_ts) / 1000, 3) if ls[
                             release_idx] else None,
-                        round(float(ls[duration_idx]) / 1000, 3) if ls[duration_idx] else None]
+                        round(float(ls[duration_idx]) / 1000, 3) if ls[duration_idx] else None
+                ]
                 display_datas[device_type].append(nums)
             except ValueError:
                 logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
@@ -615,8 +630,10 @@ class RunGenerator(object):
                         pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(
                             line_chart_data)
                     elif ls[tag_type_idx] in ('PTA', 'GE'):
-                        line_chart_data = [time_column, round(float(ls[allocated_idx]), 3),
-                                           round(float(ls[reserved_idx]), 3)]
+                        line_chart_data = [
+                                           time_column, round(float(ls[allocated_idx]), 3),
+                                           round(float(ls[reserved_idx]), 3)
+                        ]
                         pta_or_ge_data.setdefault(device_type, {}).setdefault(ls[tag_type_idx], []).append(
                             line_chart_data)
                 except ValueError:
@@ -763,9 +780,11 @@ class RunGenerator(object):
             build_avg_cost_dict('Other', self.profile_data.avg_costs.costs[ProfileRole.Other])
         ])
 
-        data['performance'] = [{'name': 'Average Step Time', 'description': '',
+        data['performance'] = [
+                                {'name': 'Average Step Time', 'description': '',
                                 'value': round(self.profile_data.avg_costs.costs[ProfileRole.Total]),
-                                'extra': 100, 'children': avg_costs}]
+                                'extra': 100, 'children': avg_costs}
+        ]
 
         if len(self.profile_data.recommendations) == 0:
             html = '<li>N/A</li>'
@@ -915,7 +934,8 @@ class RunGenerator(object):
             },
             'data': table
         }
-        table['columns'] = [{'type': 'string', 'name': 'Name'},
+        table['columns'] = [
+                            {'type': 'string', 'name': 'Name'},
                             {'type': 'string', 'name': 'Operator'},
                             {'type': 'string', 'name': 'Grid'},
                             {'type': 'string', 'name': 'Block'},
@@ -924,7 +944,8 @@ class RunGenerator(object):
                             {'type': 'string', 'name': 'Kernel Uses Tensor Cores',
                              'tooltip': consts.TOOLTIP_KERNEL_USES_TC},
                             {'type': 'string', 'name': 'Op is Tensor Cores eligible',
-                             'tooltip': consts.TOOLTIP_KERNEL_OP_TC_ELIGIBLE}]
+                             'tooltip': consts.TOOLTIP_KERNEL_OP_TC_ELIGIBLE}
+        ]
         col_names = ['Calls', 'Total Duration (us)', 'Mean Duration (us)', 'Max Duration (us)', 'Min Duration (us)']
         for column in col_names:
             table['columns'].append({'type': 'number', 'name': column})
@@ -935,14 +956,16 @@ class RunGenerator(object):
         kernel_list: List[KernelAggByNameOp] = sorted(
             self.profile_data.kernel_list_groupby_name_op, key=lambda x: x.total_duration, reverse=True)
         for agg_by_name_op in kernel_list:
-            kernel_op_row = [agg_by_name_op.name, agg_by_name_op.op_name,
+            kernel_op_row = [
+                             agg_by_name_op.name, agg_by_name_op.op_name,
                              str(agg_by_name_op.grid), str(agg_by_name_op.block),
                              str(agg_by_name_op.regs_per_thread or '0'), str(agg_by_name_op.shared_memory or '0'),
                              'Yes' if agg_by_name_op.tc_used else 'No',
                              'Yes' if agg_by_name_op.op_tc_eligible else 'No',
                              agg_by_name_op.calls,
                              agg_by_name_op.total_duration, round(agg_by_name_op.avg_duration),
-                             agg_by_name_op.max_duration, agg_by_name_op.min_duration]
+                             agg_by_name_op.max_duration, agg_by_name_op.min_duration
+            ]
             if self.profile_data.gpu_metrics_parser.has_blocks_per_sm:
                 kernel_op_row.append(round(agg_by_name_op.avg_blocks_per_sm, 2))
             if self.profile_data.gpu_metrics_parser.has_occupancy:
@@ -965,9 +988,11 @@ class RunGenerator(object):
             },
             'data': table
         }
-        table['columns'] = [{'type': 'string', 'name': 'Name'},
+        table['columns'] = [
+                            {'type': 'string', 'name': 'Name'},
                             {'type': 'string', 'name': 'Tensor Cores Used',
-                             'tooltip': consts.TOOLTIP_KERNEL_USES_TC}]
+                             'tooltip': consts.TOOLTIP_KERNEL_USES_TC}
+                            ]
         columns = ['count', 'sum', 'mean', 'max', 'min']
         round_digits = [0, 0, 0, 0, 0]
         if self.profile_data.gpu_metrics_parser.has_blocks_per_sm:
@@ -1011,7 +1036,8 @@ class RunGenerator(object):
                             {'type': 'number', 'name': 'Total Durations(us)'},
                             {'type': 'number', 'name': 'Min Durations(us)'},
                             {'type': 'number', 'name': 'Avg Durations(us)'},
-                            {'type': 'number', 'name': 'Max Durations(us)'}]
+                            {'type': 'number', 'name': 'Max Durations(us)'}
+                            ]
         table['rows'] = []
         for key, value in self.statistic_data.items():
             temp = [key]
@@ -1117,12 +1143,17 @@ class RunGenerator(object):
                 self.accelerator_data[call_type] = call_duration
 
             if self.statistic_data.get(call_name) is not None:
-                temp = self.statistic_data[call_name]
-                temp['Max'] = max(temp['Max'], call_duration)
-                temp['Min'] = min(temp['Min'], call_duration)
-                temp['Total'] = round(temp['Total'] + call_duration, 2)
-                temp['Calls'] += 1
-                temp['Average'] = round(temp['Total'] / temp['Calls'], 2)
+                temp = self.statistic_data.get(call_name, {})
+                temp['Max'] = max(temp.get('Max', 0), call_duration)
+                temp['Min'] = min(temp.get('Min', 0), call_duration)
+                temp['Total'] = round(temp.get('Total', 0) + call_duration, 2)
+                temp['Calls'] = temp.get('Calls', 0) + 1
+                if temp['Calls'] == 0:
+                    logger.error(
+                        f'temp["Calls"] is zero which can not be divisor.')
+                    temp['Average'] = 0
+                else:
+                    temp['Average'] = round(temp['Total'] / temp['Calls'], 2)
             else:
                 self.statistic_data[call_name] = {
                     'Calls': 1,
@@ -1223,7 +1254,8 @@ class DistributedRunGenerator(object):
                 round(costs.other, 3)
             ]
             steps_to_overlap['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[step_name][data.worker])]
+                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[step_name][data.worker])
+            ]
 
     @staticmethod
     def _get_npu_overlap_data(data, steps_to_overlap):
@@ -1235,7 +1267,8 @@ class DistributedRunGenerator(object):
             steps_to_overlap[k][data.worker] = list(
                 [round(v[0] - v[1], 3), round(v[1], 3), round(v[2], 3), round(v[3], 3)])
             steps_to_overlap['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[k][data.worker])]
+                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[k][data.worker])
+            ]
 
     @staticmethod
     def _get_npu_wait_data(data, steps_to_wait):
@@ -1250,7 +1283,8 @@ class DistributedRunGenerator(object):
             wait = round(v.get('Synchronize') * 1000, 3)  # 1ms = 1000us
             steps_to_wait[k][data.worker] = list([trans, wait])
             steps_to_wait['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[k][data.worker])]
+                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[k][data.worker])
+            ]
         steps_to_wait['all'][data.worker] = [x / step_number for x in steps_to_wait['all'][data.worker]]
 
     @staticmethod
@@ -1264,7 +1298,8 @@ class DistributedRunGenerator(object):
                 round(comm_stats[0] - comm_stats[1], 3)
             ]
             steps_to_wait['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[step][data.worker])]
+                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[step][data.worker])
+            ]
         steps_to_wait['all'][data.worker] = [int(x / step_number) for x in steps_to_wait['all'][data.worker]]
 
     def _generate_wait_graph(self):
@@ -1352,10 +1387,11 @@ class DistributedRunGenerator(object):
                 op,
                 stats[0],
                 round(stats[1], 3),
-                round(stats[1] / stats[0] if stats != 0 else 0),
+
+                round(stats[1] / stats[0] if stats[0] != 0 else 0),
                 round(stats[2], 3),
-                round(stats[2] / stats[0] if stats != 0 else 0),
+                round(stats[2] / stats[0] if stats[0] != 0 else 0),
                 round(stats[3], 3),
-                round(stats[3] / stats[0] if stats != 0 else 0)
+                round(stats[3] / stats[0] if stats[0] != 0 else 0)
             ]
             table['rows'].append(row)
