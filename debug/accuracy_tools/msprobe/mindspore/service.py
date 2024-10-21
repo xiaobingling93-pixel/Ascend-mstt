@@ -105,9 +105,6 @@ class Service:
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
             self.data_collector.update_api_or_module_name(api_or_cell_name)
-            print(f"grad_input: {grad_input}, type: {type(grad_input)}")
-            logger.warning(f"grad_input: {grad_input}, type: {type(grad_input)}")
-            logger.warning(f"grad_output: {grad_output}, type: {type(grad_output)}")
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)

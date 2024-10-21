@@ -57,37 +57,22 @@ class PrimitiveHookService:
             """
 
             def backward_hook(grad):
-                logger.warning(f"grad: {grad}, type: {type(grad)}")
                 captured_grads.extend(grad)
                 backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
 
                 try:
-                    # if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
                     if hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
                         self.service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
-                        logger.warning(f"captured_grads: {captured_grads}, type: {type(captured_grads)}")
-                        logger.warning(
-                            f"new_module_input: {new_module_input_output}, type: {type(new_module_input_output)}")
-                        logger.warning(f"captured_grads: {tuple(captured_grads)}, type: {type(tuple(captured_grads))}")
-                        # captured_grads.clear()
-                    # elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
                     elif hook_type == Const.OUTPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
                         self.service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
-
-                        logger.warning(f"captured_grads: {captured_grads}, type: {type(captured_grads)}")
-                        logger.warning(
-                            f"new_module_output: {new_module_input_output}, type: {type(new_module_input_output)}")
-                        logger.warning(f"captured_grads: {tuple(captured_grads)}, type: {type(tuple(captured_grads))}")
-
-                        # captured_grads.clear()
 
                 except Exception as exception:
                     logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
