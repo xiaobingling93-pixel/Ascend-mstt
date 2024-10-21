@@ -24,6 +24,8 @@ from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
 from rich.table import Table
+from io import StringIO
+from rich.console import Console
 
 
 class TestCompare(unittest.TestCase):
@@ -143,9 +145,10 @@ class TestSaver(unittest.TestCase):
             self.assertEqual(args_table_detail.rows[idx].cells[1].text, row[1])
 
     @patch('mymodule.MyTestClass.get_statistics_from_result_csv')  # Mock get_statistics_from_result_csv
-    def test_print_pretest_result(self, mock_get_stats):
+    @patch('rich.console.Console')  # Mock Console
+    def test_print_pretest_result(self, mock_console, mock_get_stats):
         # 创建测试实例
-        my_test_class = MyTestClass()
+        my_test_class = self.saver
 
         # 模拟 test_result_cnt 的数据
         my_test_class.test_result_cnt = {
@@ -159,14 +162,17 @@ class TestSaver(unittest.TestCase):
 
         # 捕获 rich Console 的输出
         console_output = StringIO()
-        console = Console(file=console_output, force_terminal=True)
+        mock_console.return_value = Console(file=console_output, force_terminal=True)
 
-        # 用 mock 替换原 Console
-        with patch('rich.console.Console', return_value=console):
-            my_test_class.print_pretest_result()
+        # 调用被测试的函数
+        my_test_class.print_pretest_result()
 
         # 获取捕获的输出
         output = console_output.getvalue()
+
+        # 验证 console.print 被调用了两次
+        mock_console.return_value.print.assert_called()
+        self.assertEqual(mock_console.return_value.print.call_count, 2)
 
         # 验证输出内容是否符合预期
         self.assertIn("Overall Statistics", output)
