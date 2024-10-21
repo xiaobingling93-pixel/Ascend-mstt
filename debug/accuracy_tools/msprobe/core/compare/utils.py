@@ -416,23 +416,19 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             break
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
+        name_to_struct_mapping = {
+            Const.INPUT: CompareConst.INPUT_STRUCT,
+            Const.KWARGS: CompareConst.KWARGS_STRUCT,
+            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
+        }
         if not md5_compare:
-            if Const.INPUT in name_ele_list:
-                op_dict[CompareConst.INPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-            elif Const.KWARGS in name_ele_list:
-                op_dict[CompareConst.KWARGS_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-            elif Const.OUTPUT in name_ele_list:
-                op_dict[CompareConst.OUTPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
-        else:
-            if Const.INPUT in name_ele_list:
-                op_dict[CompareConst.INPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
-                                                           tensor[Const.MD5]))
-            if Const.KWARGS in name_ele_list:
-                op_dict[CompareConst.KWARGS_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
-                                                            tensor[Const.MD5]))
-            elif Const.OUTPUT in name_ele_list:
-                op_dict[CompareConst.OUTPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
-                                                            tensor[Const.MD5]))
+            for name_key, struct_key in name_to_struct_mapping.items():
+                if name_key in name_ele_list:
+                    if md5_compare:
+                        op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+                    else:
+                        op_dict[struct_key].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+                    break
         op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
         if all_mode_bool:
