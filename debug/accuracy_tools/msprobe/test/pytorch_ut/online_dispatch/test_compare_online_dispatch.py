@@ -142,6 +142,41 @@ class TestSaver(unittest.TestCase):
             self.assertEqual(args_table_detail.rows[idx].cells[0].text, row[0])
             self.assertEqual(args_table_detail.rows[idx].cells[1].text, row[1])
 
+    @patch('mymodule.MyTestClass.get_statistics_from_result_csv')  # Mock get_statistics_from_result_csv
+    def test_print_pretest_result(self, mock_get_stats):
+        # 创建测试实例
+        my_test_class = MyTestClass()
+
+        # 模拟 test_result_cnt 的数据
+        my_test_class.test_result_cnt = {
+            "total_num": 100,
+            "success_num": 80,
+            "forward_and_backward_fail_num": 10,
+            "forward_or_backward_fail_num": 5,
+            "forward_fail_num": 3,
+            "backward_fail_num": 2
+        }
+
+        # 捕获 rich Console 的输出
+        console_output = StringIO()
+        console = Console(file=console_output, force_terminal=True)
+
+        # 用 mock 替换原 Console
+        with patch('rich.console.Console', return_value=console):
+            my_test_class.print_pretest_result()
+
+        # 获取捕获的输出
+        output = console_output.getvalue()
+
+        # 验证输出内容是否符合预期
+        self.assertIn("Overall Statistics", output)
+        self.assertIn("[green]Pass[/green]   80", output)
+        self.assertIn("[red]Fail[/red]   15", output)  # 10 + 5
+        self.assertIn("Passing Rate   0.80", output)
+        self.assertIn("Only Forward Fail   3", output)
+        self.assertIn("Only Backward Fail   2", output)
+        self.assertIn("Both Forward & Backward Fail   10", output)
+
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
