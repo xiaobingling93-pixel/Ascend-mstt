@@ -304,7 +304,7 @@ def load_api_data(api_data_bytes):
     """Load data from bytes stream"""
     try:
         buffer = io.BytesIO(api_data_bytes)
-        buffer = torch.load(buffer, map_location="cpu", weights_only=True)
+        buffer = torch.load(buffer, map_location="cpu")
     except Exception as e:
         raise RuntimeError(f"load api_data from bytes failed") from e
     return buffer
