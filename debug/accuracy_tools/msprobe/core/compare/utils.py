@@ -363,10 +363,10 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     accuracy_check_res = CompareConst.N_A
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
-        if "input" in name_ele_list:
-            n_struct = n_dict["input_struct"][index]
-        else:
-            n_struct = n_dict["output_struct"][index_out]
+        if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
+            n_struct = n_dict[CompareConst.INPUT_STRUCT][index]
+        if Const.OUTPUT in name_ele_list:
+            n_struct = n_dict[CompareConst.OUTPUT_STRUCT][index_out]
             index_out += 1
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
@@ -400,10 +400,10 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
 def merge_tensor(tensor_list, summary_compare, md5_compare):
     op_dict = {}
     op_dict["op_name"] = []
-    op_dict["input_struct"] = []
-    op_dict["kwargs_struct"] = []
-    op_dict["output_struct"] = []
-    op_dict["summary"] = []
+    op_dict[CompareConst.INPUT_STRUCT] = []
+    op_dict[CompareConst.KWARGS_STRUCT] = []
+    op_dict[CompareConst.OUTPUT_STRUCT] = []
+    op_dict[Const.SUMMARY] = []
     op_dict["stack_info"] = []
 
     all_mode_bool = not (summary_compare or md5_compare)
@@ -417,20 +417,23 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
         if not md5_compare:
-            if "input" in name_ele_list:
-                op_dict["input_struct"].append((tensor['dtype'], tensor['shape']))
-            elif "kwarg" in name_ele_list:
-                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape']))
-            elif "output" in name_ele_list:    
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
+            if Const.INPUT in name_ele_list:
+                op_dict[CompareConst.INPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+            elif Const.KWARGS in name_ele_list:
+                op_dict[CompareConst.KWARGS_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+            elif Const.OUTPUT in name_ele_list:
+                op_dict[CompareConst.OUTPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
         else:
-            if "input" in name_ele_list:
-                op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            if "kwarg" in name_ele_list:    
-                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            elif "output" in name_ele_list:
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-        op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
+            if Const.INPUT in name_ele_list:
+                op_dict[CompareConst.INPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
+                                                           tensor[Const.MD5]))
+            if Const.KWARGS in name_ele_list:
+                op_dict[CompareConst.KWARGS_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
+                                                            tensor[Const.MD5]))
+            elif Const.OUTPUT in name_ele_list:
+                op_dict[CompareConst.OUTPUT_STRUCT].append((tensor[Const.DTYPE], tensor[Const.SHAPE],
+                                                            tensor[Const.MD5]))
+        op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
         if all_mode_bool:
             op_dict["data_name"].append(tensor['data_name'])
@@ -438,8 +441,8 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
 
-    if not op_dict["kwargs_struct"]:
-        del op_dict["kwargs_struct"]
+    if not op_dict[CompareConst.KWARGS_STRUCT]:
+        del op_dict[CompareConst.KWARGS_STRUCT]
     return op_dict if op_dict["op_name"] else {}
 
 
