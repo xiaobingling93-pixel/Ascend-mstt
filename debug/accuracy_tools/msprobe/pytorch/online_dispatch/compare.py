@@ -123,7 +123,7 @@ class Saver:
         console.print(table_detail)
 
     def get_statistics_from_result_csv(self):
-        checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.NA, CompareConst.SKIP]
+        checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.N_A, CompareConst.SKIP]
         data = read_csv(self.save_path)
         result_csv_name = os.path.basename(self.save_path)
         for _, row in data.iterrows():
@@ -138,7 +138,7 @@ class Saver:
             if column1 == CompareConst.SKIP:
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, 'N/A']:
+            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, CompareConst.N_A]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.FALSE and column2 == CompareConst.FALSE:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
