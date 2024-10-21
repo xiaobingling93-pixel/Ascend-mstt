@@ -244,6 +244,8 @@ class CompareConst:
     PASS = 'pass'
     WARNING = 'Warning'
     ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
     SKIP = 'SKIP'
     N_A = 'N/A'
     INF = 'inf'
