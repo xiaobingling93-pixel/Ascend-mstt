@@ -20,7 +20,7 @@ from mindspore import Tensor
 from mindspore._c_expression import PyNativeExecutor_
 from mindspore.common.api import _MindsporeFunctionExecutor
 
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.core.common.log import logger
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs
@@ -33,6 +33,8 @@ def dump_jit(name, in_feat, out_feat, is_forward):
     index = ori_args.find("<")
     if index != 0 and index != -1:
         result = ori_args[0:index]
+    elif name is not None and "<" not in str(name):
+        result = str(name)
     else:
         result = "JitFunction"
     if JitDump.need_dump():
@@ -59,14 +61,22 @@ class JitDump(_MindsporeFunctionExecutor):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.name = None
+        if len(args) > 0:
+            self.name = args[0].__name__
         self._executor = PyNativeExecutor_.get_instance()
 
     def __call__(self, *args, **kwargs):
         api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
         if JitDump.jit_dump_switch and len(args) > 0:
-            dump_jit(args[0], args, out, True)
+            if self.name and self.name != "construct":
+                dump_jit(self.name, args, out, True)
+            else:
+                dump_jit(args[0], args, out, True)
             JitDump.jit_enable = True
+        else:
+            logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
         api_register.api_set_hook_func()
         return out
 
