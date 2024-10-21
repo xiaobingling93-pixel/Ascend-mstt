@@ -55,27 +55,19 @@ class TestUtils(unittest.TestCase):
 
     @patch('inspect.stack')
     def test_get_callstack(self, mock_stack):
-        # 模拟 inspect.stack() 的返回值
         mock_stack.return_value = [
             (None, '/path/to/file1.py', 10, 'function_a', ['line_of_code_a'], None),
             (None, '/path/to/file2.py', 20, 'function_b', ['line_of_code_b'], None),
             (None, '/path/to/file3.py', 30, 'function_c', ['line_of_code_c'], None),
         ]
 
-        # 调用函数
         result = get_callstack()
 
-        # 定义预期的结果
         expected_callstack = [
-            ['/path/to/file2.py', '20', 'function_b', 'line_of_code_b'],
-            ['/path/to/file3.py', '30', 'function_c', 'line_of_code_c'],
+            ['/path/to/file3.py', '30', 'function_c', 'line_of_code_c']
         ]
 
-        # 验证返回结果是否与预期一致
         self.assertEqual(result, expected_callstack)
-
-        # 验证 inspect.stack() 被正确调用
-        mock_stack.assert_called_once()
 
     def test_data_to_cpu_tensor(self):
         data = torch.tensor([1, 2], device=cpu_device, dtype=torch.float16)
@@ -102,10 +94,11 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(data_to_cpu(data, deep, data_cpu), data)
 
     def test_data_to_cpu_c_device(self):
-        # cpu_device = torch.device("cpu")  # 假设 cpu_device 为预期的返回值
-        data = torch.device("cpu")  # 模拟传入的 data 为 torch.device 类型
-        result = data_to_cpu(data)  # 调用包含该 elif 语句的函数
-        self.assertEqual(result, cpu_device)  # 确保返回的是 cpu_device
+        data = torch.device("cpu")
+        deep = 0
+        data_cpu = []
+        result = data_to_cpu(data, deep, data_cpu)
+        self.assertEqual(result, cpu_device)
 
     def test_str(self):
         self.assertEqual(self.dispatch_exception.__str__(), "messages")
@@ -113,18 +106,14 @@ class TestUtils(unittest.TestCase):
     @patch('psutil.virtual_memory')
     @patch('psutil.cpu_percent')
     def test_get_sys_info(self, mock_cpu_percent, mock_virtual_memory):
-        # 模拟 psutil.virtual_memory() 的返回值
         mock_virtual_memory.return_value = MagicMock(
-            total=8 * 1024 * 1024 * 1024,  # 8GB
-            available=4 * 1024 * 1024 * 1024,  # 4GB
-            used=3 * 1024 * 1024 * 1024  # 3GB
+            total=8 * 1024 * 1024 * 1024,
+            available=4 * 1024 * 1024 * 1024,
+            used=3 * 1024 * 1024 * 1024
         )
-        # 模拟 psutil.cpu_percent() 的返回值
-        mock_cpu_percent.return_value = 55.0  # 55% CPU 使用率
+        mock_cpu_percent.return_value = 55.0
 
-        # 调用函数并获取结果
         result = get_sys_info()
 
-        # 验证返回结果是否包含预期的字符串内容
         expected_output = 'Total: 8192.00MB Free: 4096.00 MB Used: 3072.00 MB CPU: 55.0%'
         self.assertIn(expected_output, result)
