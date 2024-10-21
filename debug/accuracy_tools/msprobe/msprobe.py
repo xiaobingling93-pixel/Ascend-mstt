@@ -46,7 +46,7 @@ def main():
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     _compare_parser(compare_cmd_parser)
-    is_torch_available=is_module_available("torch")
+    is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
     if is_torch_available:
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
@@ -60,7 +60,7 @@ def main():
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
         multi_run_ut_cmd_parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8,
-                                        help='Number of splits for parallel processing. Range: 1-64')
+                                             help='Number of splits for parallel processing. Range: 1-64')
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
     elif is_mindspore_available:
@@ -100,6 +100,7 @@ def main():
         elif sys.argv[3] == "run_ut":
             from msprobe.mindspore.api_accuracy_checker.main import api_checker_main
             api_checker_main(args)
+
 
 if __name__ == "__main__":
     main()

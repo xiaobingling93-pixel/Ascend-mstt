@@ -46,7 +46,7 @@ def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_t
         error_info = f"check_and_get_from_json_dict failed: {key_description} is missing"
         raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     elif accepted_type is not None and not isinstance(value, accepted_type):
-        error_info =  f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}"
+        error_info = f"check_and_get_from_json_dict failed: {key_description} is not accepted type: {accepted_type}"
         raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     elif accepted_value is not None and value not in accepted_value:
         error_info = f"check_and_get_from_json_dict failed: {key_description} is not accepted value: {accepted_value}"

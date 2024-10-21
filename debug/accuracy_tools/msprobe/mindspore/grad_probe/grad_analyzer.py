@@ -41,12 +41,12 @@ def get_rank_id():
 
 @ms.jit
 def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor, level: str, bounds: List):
-    '''
+    """
     Dump gradient statistic data.
         level0: [step, max, min, norm, shape_dim, shape]
         level1: [step, max, min, norm, shape_dim, shape] + grad_bool_data
         level2: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
-    '''
+    """
     dump_path = os.path.join(dump_dir, g_name)
     dump_dir_path = dump_path + "_dir"
     save_op = ms.ops.TensorDump()
