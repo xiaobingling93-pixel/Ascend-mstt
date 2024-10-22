@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 from grad_tool.common.constant import GradConst
 from grad_tool.common.utils import write_csv, check_file_or_directory_path, print_info_log, create_directory, print_error_log
 
-from ptdbg_ascend.src.python.ptdbg_ascend.common import file_check_util
-from ptdbg_ascend.src.python.ptdbg_ascend.common.file_check_util import FileCheckConst, check_path_pattern_valid, check_path_length
+from msprobe.core.common.file_utils import change_mode, FileCheckConst, check_path_pattern_valid, check_path_length
 
 
 class BaseComparator(ABC):
@@ -100,7 +99,7 @@ class BaseComparator(ABC):
                 error_message = "An unexpected error occurred: %s when savfig to %s" % (str(e), file_path)
                 print_error_log(error_message)
             full_path = os.path.realpath(file_path)
-            file_check_util.change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            change_mode(full_path, FileCheckConst.DATA_FILE_AUTHORITY)
             head_tuple = tuple(['step'] + [str(step) for step in steps])
             write_csv(os.path.join(output_dir, "similarities.csv"), [[key] + value], head_tuple)
 
