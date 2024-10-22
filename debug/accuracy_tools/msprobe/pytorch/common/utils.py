@@ -299,7 +299,9 @@ class TypeCheckingUnpickler(pickle.Unpickler):
     allowed_types = [
         "str",
         "ApiData",
-        "OrderedDict"
+        "OrderedDict",
+        "_rebuild_tensor_v2",  # from torch.utils
+        "_load_from_bytes"  # from torch.storage
     ]
 
     def find_class(self, module, name):
@@ -307,7 +309,7 @@ class TypeCheckingUnpickler(pickle.Unpickler):
         Method to find the class of the object to be unpickled.
         Throws pickle.UnpicklingError If the object type is not in the allowed types list.
         """
-        if module.startswith("torch.") or name in self.allowed_types:
+        if name in self.allowed_types:
             return super().find_class(module, name)
         raise pickle.UnpicklingError("Unsupported object type: {}.{}".format(module, name))
 
