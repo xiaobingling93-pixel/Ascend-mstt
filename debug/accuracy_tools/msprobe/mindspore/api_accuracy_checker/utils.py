@@ -1,7 +1,23 @@
-from msprobe.core.common.exceptions import ApiAccuracyCheckerException
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import ApiAccuracyCheckerException
 from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list
 from msprobe.mindspore.common.log import logger
+
 
 def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_type=None, accepted_value=None):
     '''
@@ -37,12 +53,14 @@ def check_and_get_from_json_dict(dict_instance, key, key_description, accepted_t
         raise ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed, error_info)
     return value
 
-def convert_to_tuple(input):
-    if isinstance(input, (tuple, list)):
-        return tuple(input)
+
+def convert_to_tuple(args):
+    if isinstance(args, (tuple, list)):
+        return tuple(args)
     else:
-        input_list = [input]
+        input_list = [args]
         return tuple(input_list)
+
 
 def trim_output_compute_element_list(compute_element_list, forward_or_backward):
     '''
@@ -53,11 +71,12 @@ def trim_output_compute_element_list(compute_element_list, forward_or_backward):
     trimmed_list = []
     for compute_element in compute_element_list:
         if compute_element.get_parameter() is None or \
-            (forward_or_backward == Const.BACKWARD and compute_element.get_dtype() not in float_dtype_str_list):
+                (forward_or_backward == Const.BACKWARD and compute_element.get_dtype() not in float_dtype_str_list):
             # trim case: 1. parameter is None. 2. backward output has non float parameter
             continue
         trimmed_list.append(compute_element)
     return trimmed_list
+
 
 class GlobalContext:
     def __init__(self):

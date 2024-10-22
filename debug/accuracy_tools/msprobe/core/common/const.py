@@ -82,6 +82,7 @@ class Const:
     GRAD_PROBE = "grad_probe"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
     DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
+    DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -159,6 +160,13 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    DTYPE = 'dtype'
+    SHAPE = 'shape'
+    MAX = 'Max'
+    MIN = 'Min'
+    MEAN = 'Mean'
+    NORM = 'Norm'
+
 
 class CompareConst:
     """
@@ -202,9 +210,12 @@ class CompareConst:
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
     INPUT_STRUCT = "input_struct"
+    KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
     MAX_EXCEL_LENGTH = 1048576
+    YES = "Yes"
+    NO = "No"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -241,6 +252,8 @@ class CompareConst:
     PASS = 'pass'
     WARNING = 'Warning'
     ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
     SKIP = 'SKIP'
     N_A = 'N/A'
     INF = 'inf'
@@ -400,3 +413,14 @@ class GraphMode:
     NPY_MODE = "NPY_MODE"
     STATISTIC_MODE = "STATISTIC_MODE"
     ERROR_MODE = "ERROR_MODE"
+
+
+class MonitorConst:
+    """
+    Class for monitor const
+    """
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
+    DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
+    DATABASE = "database"
+    EMAIL = "email"

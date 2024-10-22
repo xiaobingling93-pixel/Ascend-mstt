@@ -246,10 +246,8 @@ def task_dumppath_get(input_param):
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    with FileOpen(npu_path, 'r') as npu_f:
-        npu_json_data = json.load(npu_f)
-    with FileOpen(bench_path, 'r') as bench_f:
-        bench_json_data = json.load(bench_f)
+    npu_json_data = load_json(npu_path)
+    bench_json_data = load_json(bench_path)
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)

@@ -28,7 +28,7 @@ from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
 from msprobe.core.common.file_utils import change_mode, check_other_user_writable,\
     check_path_executable, check_path_owner_consistent
 from msprobe.core.common.const import FileCheckConst
-from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type
+from msprobe.core.common.file_utils import check_file_or_directory_path, remove_path, check_file_type, os_walk_for_files
 from msprobe.pytorch.common.log import logger
 
 
@@ -81,16 +81,8 @@ class Util:
 
     @staticmethod
     def get_subfiles_count(directory):
-        file_count = 0
-        for root, _, files in os.walk(directory, topdown=True):
-            check_file_or_directory_path(root, isdir=True)
-            file_count += len(files)
-            path_depth = root.count(os.sep)
-            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
-                yield root, _, files
-            else:
-                _[:] = []
-        return file_count
+        files = os_walk_for_files(directory, Const.MAX_TRAVERSAL_DEPTH)
+        return len(files)
 
     @staticmethod
     def get_sorted_subdirectories_names(directory):
@@ -146,16 +138,10 @@ class Util:
     
     @staticmethod
     def dir_contains_only(path, endfix):
-        for root, _, files in os.walk(path, topdown=True):
-            check_file_or_directory_path(root, isdir=True)
-            for file in files:
-                if not file.endswith(endfix):
-                    return False
-            path_depth = root.count(os.sep)
-            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
-                yield root, _, files
-            else:
-                _[:] = []
+        files = os_walk_for_files(path, Const.MAX_TRAVERSAL_DEPTH)
+        for file in files:
+            if not file['file'].endswith(endfix):
+                return False
         return True
     
     @staticmethod
@@ -273,20 +259,15 @@ class Util:
         self.check_path_valid(path)
         file_list = {}
         re_pattern = re.compile(pattern)
-        for dir_path, _, file_names in os.walk(path, topdown=True):
-            check_file_or_directory_path(dir_path, isdir=True)
-            for name in file_names:
-                match = re_pattern.match(name)
-                if not match:
-                    continue
-                if extern_pattern != '' and re_pattern.match(extern_pattern) and not re.match(extern_pattern, name):
-                    continue
-                file_list[name] = gen_info_func(name, match, dir_path)
-            path_depth = dir_path.count(os.sep)
-            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
-                yield dir_path, _, file_names
-            else:
-                _[:] = []
+        files = os_walk_for_files(path, Const.MAX_TRAVERSAL_DEPTH)
+        for file in files:
+            name = file["file"]
+            match = re_pattern.match(name)
+            if not match:
+                continue
+            if extern_pattern != '' and re_pattern.match(extern_pattern) and not re.match(extern_pattern, name):
+                continue
+            file_list[name] = gen_info_func(name, match, file["root"])
         return file_list
 
     def check_file_path_format(self, path, suffix):

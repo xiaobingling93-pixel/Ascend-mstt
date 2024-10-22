@@ -14,15 +14,14 @@
 # limitations under the License.
 
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type
+from msprobe.core.common.file_utils import check_file_type, load_json
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 
 
 def compare_cli(args):
-    with FileOpen(args.input_path, "r") as file:
-        input_param = json.load(file)
+    input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     frame_name = args.framework

@@ -33,6 +33,10 @@ export MSPROBE_LOG_LEVEL={x}
 ```
 **config.json** 的配置要求和各功能具体的使用指导详见后续章节。
 
+## 🚨 工具限制与注意事项
+
+**1. Pytorch 框架下，工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
+
 ## ⚙️ [安装](./docs/01.installation.md)
 
 ## 🛠️ config.json [介绍](./docs/02.config_introduction.md) 和 [示例](./docs/03.config_examples.md)
@@ -94,6 +98,18 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 在线精度比对是实现在PyTorch训练过程中直接完成精度比对并输出比对结果的功能，是NPU与CPU之间的精度比对。
 
 [PyTorch 场景的在线精度比对](./docs/18.online_dispatch.md)
+
+### 9 训练状态监控
+
+该功能收集和聚合模型训练过程中的网络层，优化器， 通信算子的中间值，帮助诊断模型训练过程中计算， 通信，优化器各部分出现的异常情况。
+
+[PyTorch 场景的训练状态监控](./docs/19.monitor.md)
+
+### 10 分级可视化构图比对
+
+该功能将msprobe工具dump的精度数据进行解析，还原模型图结构，实现模型各个层级的精度数据比对，方便用户理解模型结构、分析精度问题。
+
+[PyTorch 场景的分级可视化构图比对](./docs/21.visualization_PyTorch.md)
 
 ## 🌟 新版本特性
 

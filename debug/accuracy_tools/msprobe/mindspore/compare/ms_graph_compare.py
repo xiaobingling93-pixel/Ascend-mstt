@@ -1,12 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import copy
-import csv
 import glob
 import os
+import re
 
 import numpy as np
 import pandas as pd
-from msprobe.core.common.const import CompareConst, GraphMode, Const, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, check_path_before_create, change_mode, load_npy
+from msprobe.core.common.const import CompareConst, GraphMode, Const
+from msprobe.core.common.file_utils import load_npy, read_csv, save_excel
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
@@ -28,17 +43,34 @@ class row_data:
         return self.data
 
 
+def get_name_dict(name: str) -> dict:
+    compare_pattern = re.compile(r'^([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(\d+(?:\.\d+)*)\.'
+                                 r'((?:in|out)put(?:\.\d+)*)\.([^.]+)\.([^.]+)\.npy$')
+    match = compare_pattern.match(name)
+    if match:
+        return {'op_type': match.group(1),
+                'op_name': match.group(2),
+                'task_id': match.group(3),
+                'stream_id': match.group(4),
+                'timestamp': match.group(5).split(Const.SEP)[0],
+                'input_output_index': match.group(6),
+                'slot': match.group(7),
+                'format': match.group(8)}
+    return {}
+
+
 def npy_data_read(data_path, npy_file_list, mapping_dict):
     data_list = []
+    compare_key_elements = ['op_name', 'task_id', 'input_output_index', 'slot']
     for data in npy_file_list:
         if data in mapping_dict:
-            split_list = mapping_dict[data].split(Const.SEP)
+            name_dict = get_name_dict(mapping_dict[data])
         else:
-            split_list = data.split(Const.SEP)
-        if len(split_list) < 7:
+            name_dict = get_name_dict(data)
+        if not name_dict:
             continue
-        compare_key = f"{split_list[1]}.{split_list[2]}.{split_list[3]}.{split_list[5]}.{split_list[6]}"
-        timestamp = convert_to_int(split_list[4])
+        compare_key = Const.SEP.join([name_dict.get(element) for element in compare_key_elements])
+        timestamp = convert_to_int(name_dict.get('timestamp'))
 
         data_list.append([os.path.join(data_path, data), compare_key, timestamp])
     return data_list
@@ -52,14 +84,13 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
         'Min Value': None,'Avg Value': None, 'L2Norm Value': None
     }
     for statistic_file in statistic_file_list:
-        with FileOpen(statistic_file, "r") as f:
-            csv_reader = csv.reader(f, delimiter=",")
-            header = next(csv_reader)
-            for key in header_index.keys():
-                for index, value in enumerate(header):
-                    if key == value:
-                        header_index[key] = index
-            statistic_data_list.extend([row for row in csv_reader])
+        content = read_csv(statistic_file, as_pd=False)
+        header = content[0]
+        for key in header_index.keys():
+            for index, value in enumerate(header):
+                if key == value:
+                    header_index[key] = index
+        statistic_data_list.extend(content[1:])
 
     for key in header_index.keys():
         if header_index[key] is None:
@@ -97,11 +128,9 @@ def generate_data_name(data_path):
     mapping_dict = {}
     if mapping_exist:
         for mapping_file in mapping_file_list:
-            with FileOpen(mapping_file, "r") as f:
-                csv_reader = csv.reader(f, delimiter=",")
-                header = next(csv_reader)
-                for row in csv_reader:
-                    mapping_dict[row[0]] = row[1]
+            content = read_csv(mapping_file, False)
+            for row in content[1:]:
+                mapping_dict[row[0]] = row[1]
 
     if npy_exist:
         data_list = npy_data_read(data_path, npy_file_list, mapping_dict)
@@ -198,24 +227,27 @@ class GraphMSComparator:
                     result_dict[CompareConst.NPU_NORM] - result_dict[CompareConst.BENCH_NORM])
                 result_dict[CompareConst.MAX_RELATIVE_ERR] = result_dict[CompareConst.MAX_DIFF] / result_dict[
                     CompareConst.BENCH_MAX] if result_dict[CompareConst.BENCH_MAX] > 0 else 0
-                result_dict[CompareConst.MAX_RELATIVE_ERR] = str(result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MAX_RELATIVE_ERR]):
+                    result_dict[CompareConst.MAX_RELATIVE_ERR] = str(result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MIN_RELATIVE_ERR] = result_dict[CompareConst.MIN_DIFF] / result_dict[
                     CompareConst.BENCH_MIN] if result_dict[CompareConst.BENCH_MIN] > 0 else 0
-                result_dict[CompareConst.MIN_RELATIVE_ERR] = str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MIN_RELATIVE_ERR]):
+                    result_dict[CompareConst.MIN_RELATIVE_ERR] = str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MEAN_RELATIVE_ERR] = result_dict[CompareConst.MEAN_DIFF] / result_dict[
                     CompareConst.BENCH_MEAN] if result_dict[CompareConst.BENCH_MEAN] > 0 else 0
-                result_dict[CompareConst.MEAN_RELATIVE_ERR] = str(
-                    result_dict[CompareConst.MEAN_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.MEAN_RELATIVE_ERR]):
+                    result_dict[CompareConst.MEAN_RELATIVE_ERR] = str(
+                        result_dict[CompareConst.MEAN_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.NORM_RELATIVE_ERR] = result_dict[CompareConst.NORM_DIFF] / result_dict[
                     CompareConst.BENCH_NORM] if result_dict[CompareConst.BENCH_NORM] > 0 else 0
-                result_dict[CompareConst.NORM_RELATIVE_ERR] = str(
-                    result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
+                if not np.isnan(result_dict[CompareConst.NORM_RELATIVE_ERR]):
+                    result_dict[CompareConst.NORM_RELATIVE_ERR] = str(
+                        result_dict[CompareConst.NORM_RELATIVE_ERR] * 100) + "%"
                 magnitude_diff = result_dict[CompareConst.MAX_DIFF] / (
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
-                if magnitude_diff > CompareConst.MAGNITUDE:
-                    result_dict[CompareConst.ACCURACY] = 'No'
-                else:
-                    result_dict[CompareConst.ACCURACY] = 'Yes'
+                if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
+                    magnitude_diff = 0
+                result_dict[CompareConst.ACCURACY] = CompareConst.YES if magnitude_diff <= CompareConst.MAGNITUDE else CompareConst.NO
 
             return pd.Series(result_dict)
 
@@ -241,7 +273,6 @@ class GraphMSComparator:
             compare_result_df = self._do_multi_process(compare_result_df, mode)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
-            check_path_before_create(compare_result_path)
             self.to_excel(compare_result_df, compare_result_path)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
     
@@ -250,8 +281,7 @@ class GraphMSComparator:
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
             compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
-            compare_result_df.to_excel(compare_result_path, index=False)
-            change_mode(compare_result_path, FileCheckConst.DATA_FILE_AUTHORITY)
+            save_excel(compare_result_path, compare_result_df)
             return slice_num + 1
         else:
             slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num, True)

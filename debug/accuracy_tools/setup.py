@@ -31,13 +31,15 @@ INSTALL_REQUIRED = [
     "openpyxl",
     "pyopenssl",
     "twisted",
-    "matplotlib"
+    "matplotlib",
+    "tensorboard",
+    "sqlalchemy",
+    "pymysql"
 ]
 
 EXCLUDE_PKGS = [
     "api_accuracy_checker*",
     "grad_tool*",
-    "kj600*",
     "ptdbg_ascend*",
     "msprobe.test*",
 ]

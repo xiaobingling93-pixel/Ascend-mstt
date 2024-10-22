@@ -15,7 +15,7 @@ def generate_npy_data(path):
     data_path = os.path.join(path, 'rank_0/mnist/0/0')
     os.makedirs(data_path, exist_ok=True)
     array = np.full((10, 10), 44, dtype=np.float16)
-    file_name = os.path.join(data_path, "op_1.0.0.1721724968854345.input.0.DefaultFormat.npy")
+    file_name = os.path.join(data_path, "op_type.op_1.0.0.1721724968854345.input.0.DefaultFormat.npy")
 
     np.save(file_name, array)
 
@@ -72,7 +72,7 @@ class TestMsGraphCompare(unittest.TestCase):
         result = str(compare_result_db.values.tolist())
 
         files = os.listdir(self.output_path)
-        op_name = 'op_1.0.0.1721724968854345.input.0.DefaultFormat.npy'
+        op_name = 'op_type.op_1.0.0.1721724968854345.input.0.DefaultFormat.npy'
         npu_file_path = os.path.join(self.npu_data_path, f'rank_0/mnist/0/0/{op_name}')
         bench_file_path = os.path.join(self.bench_data_path, f'rank_0/mnist/0/0/{op_name}')
 

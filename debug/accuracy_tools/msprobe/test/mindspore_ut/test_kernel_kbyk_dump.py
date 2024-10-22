@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import os
 
 from unittest import TestCase
@@ -47,7 +48,202 @@ class TestKernelKbykDump(TestCase):
             dumper.handle()
         self.assertIn("kernel_kbyk_dump.json", mock_save_json.call_args_list[0][0][0])
         mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
-        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
 
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
         if "MINDSPORE_DUMP_CONFIG" in os.environ:
             del os.environ["MINDSPORE_DUMP_CONFIG"]
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "level": "L2"
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_input(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "data_mode": [
+            "input"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_output(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [0, 2],
+            "data_mode": [
+            "output"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_output_rank_0(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "rank": [0],
+            "step": [0, 2],
+            "data_mode": [
+            "output"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_output_rank_0(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "rank": [0],
+            "step": [0, 2],
+            "data_mode": [
+            "output"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_list_output(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "list": ['add'],
+            "rank": [0],
+            "step": [0, 2],
+            "data_mode": [
+            "output"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
+
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
+    def test_handle_tensor_list_input(self, _):
+        json_config = {
+            "task": "tensor",
+            "dump_path": "/absolute_path",
+            "list": ['add'],
+            "rank": [0],
+            "step": [0, 2],
+            "data_mode": [
+            "input"
+            ],
+            "level": "L2"
+
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        config = DebuggerConfig(common_config, task_config)
+        dumper = KernelKbykDump(config)
+        self.assertEqual(dumper.dump_json["common_dump_settings"]["iteration"], "0|2")
+
+        os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
+        with patch("msprobe.mindspore.dump.kernel_kbyk_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.logger.info") as mock_info, \
+             patch("msprobe.mindspore.dump.kernel_kbyk_dump.save_json") as mock_save_json:
+            dumper.handle()
+        mock_info.assert_called_with("/absolute_path/kernel_kbyk_dump.json has been created.")
+        self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
