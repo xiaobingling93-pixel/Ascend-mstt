@@ -103,6 +103,46 @@ class TestSaver(unittest.TestCase):
         mock_console_print.assert_called()
         self.assertEqual(mock_console_print.call_count, 2)
 
+    def test_get_statistics_from_result_csv_success(self):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2', 'test3'],
+            1: ['TRUE', 'FALSE', 'SKIP'],
+            2: ['TRUE', 'FALSE', 'N/A']
+        })
+        mock_result_csv_name = 'result_csv'
+        with patch('your_module.read_csv', return_value=mock_data), \
+            patch('os.path.basename', return_value=mock_result_csv_name):
+                self.saver.get_statistics_from_result_csv()
+        self.assertEqual(self.saver.test_result_cnt['total_num'], 2)
+        self.assertEqual(self.saver.test_result_cnt['success_num'], 1)
+        self.assertEqual(self.saver.test_result_cnt['forward_and_backward_fail_num'], 1)
+
+    def test_get_statistics_from_result_csv_incorrect_column_number(self):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['TRUE', 'FALSE']
+        })
+        mock_result_csv_name = 'result_csv'
+        with patch('your_module.read_csv', return_value=mock_data), \
+            patch('os.path.basename', return_value=mock_result_csv_name):
+                with self.assertRaises(ValueError) as context:
+                    self.saver.get_statistics_from_result_csv()
+                self.assertIn("The number of columns in mock_file.csv is incorrect", str(context.exception))
+
+    def test_get_statistics_from_result_csv_invalid_values(self):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['INVALID', 'FALSE'],
+            2: ['TRUE', 'FALSE']
+        })
+        mock_result_csv_name = 'result_csv'
+        with patch('your_module.read_csv', return_value=mock_data), \
+            patch('os.path.basename', return_value=mock_result_csv_name):
+                with self.assertRaises(ValueError) as context:
+                    self.saver.get_statistics_from_result_csv()
+                self.assertIn("The value in the 2nd or 3rd column of mock_file.csv is wrong", str(context.exception))
+
+
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
