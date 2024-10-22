@@ -191,7 +191,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
                 return CompareConst.NAN, 'Cannot compare by Cosine Similarity, the dump data has NaN.'
             result = format_value(cos)
             result = self.correct_data(result)
-        return result, ''
+        return 1.0 if float(result) > 0.99999 else result, ''
 
 
 class GetMaxAbsErr(TensorComparisonBasic):
