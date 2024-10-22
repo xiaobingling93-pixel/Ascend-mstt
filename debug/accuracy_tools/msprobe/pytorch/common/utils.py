@@ -298,7 +298,8 @@ class TypeCheckingUnpickler(pickle.Unpickler):
     """
     allowed_types = [
         "str",
-        "ApiData"
+        "ApiData",
+        "OrderedDict"
     ]
 
     def find_class(self, module, name):
@@ -306,9 +307,9 @@ class TypeCheckingUnpickler(pickle.Unpickler):
         Method to find the class of the object to be unpickled.
         Throws pickle.UnpicklingError If the object type is not in the allowed types list.
         """
-        if name not in self.allowed_types:
-            raise pickle.UnpicklingError("Unsupported object type: {}.{}".format(module, name))
-        return super().find_class(module, name)
+        if module.startswith("torch.") or name in self.allowed_types:
+            return super().find_class(module, name)
+        raise pickle.UnpicklingError("Unsupported object type: {}.{}".format(module, name))
 
 
 def save_pkl(tensor, filepath):
@@ -316,7 +317,8 @@ def save_pkl(tensor, filepath):
     filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
     try:
-        pickle.dump(tensor, filepath)
+        with FileOpen(filepath, 'wb') as f:
+            pickle.dump(tensor, f)
     except Exception as e:
         logger.error("Save pt file failed, please check according possible error causes: "
                      "1. out of disk space or disk error, "
@@ -333,7 +335,7 @@ def load_pkl(pt_path):
         with FileOpen(pt_path, 'rb') as f:
             pt = TypeCheckingUnpickler(f).load()
     except Exception as e:
-        raise RuntimeError(f"load pt file {pt_path} failed") from e
+        raise RuntimeError(f"load pt file {pt_path} failed: {e}") from e
     return pt
 
 
