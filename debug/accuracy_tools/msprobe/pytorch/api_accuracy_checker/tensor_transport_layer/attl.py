@@ -26,9 +26,8 @@ import torch
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
-from msprobe.pytorch.common.utils import logger
 from msprobe.core.common.file_utils import remove_path
-from msprobe.pytorch.common.utils import save_api_data, load_api_data, save_pt, load_pt
+from msprobe.pytorch.common.utils import logger, save_api_data, load_api_data, save_pkl, load_pkl
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
 
@@ -160,7 +159,7 @@ class ATTL:
             file_path = os.path.join(self.session_config.nfs_path, buffer + f"_{int(time.time())}")
 
         try:
-            save_pt(buffer, file_path)
+            save_pkl(buffer, file_path)
         except Exception as e:
             self.logger.warning("there is something error in save_pt. please check it. %s", e)
 
@@ -176,7 +175,7 @@ class ATTL:
 
         if cur_file is not None:
             try:
-                buffer = load_pt(cur_file)
+                buffer = load_pkl(cur_file)
             except Exception as e:
                 self.logger.warning("there is something error. please check it. %s", e)
             remove_path(cur_file)
