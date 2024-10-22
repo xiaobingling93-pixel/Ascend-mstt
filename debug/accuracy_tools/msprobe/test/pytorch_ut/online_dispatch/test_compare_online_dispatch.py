@@ -23,6 +23,9 @@ import pandas as pd
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
 from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
+from rich.table import Table
+from io import StringIO
+from rich.console import Console
 
 
 class TestCompare(unittest.TestCase):
@@ -80,6 +83,70 @@ class TestSaver(unittest.TestCase):
                             'error_thd': {}, 'Status': {}, 'Message': {}}
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.Saver.get_statistics_from_result_csv')
+    @patch('rich.console.Console')
+    @patch('rich.console.Console.print')
+    def test_print_pretest_result(self, mock_console_print, mock_console, mock_get_stats):
+        my_test_class = self.saver
+
+        my_test_class.test_result_cnt = {
+            "total_num": 100,
+            "success_num": 80,
+            "forward_and_backward_fail_num": 10,
+            "forward_or_backward_fail_num": 5,
+            "forward_fail_num": 3,
+            "backward_fail_num": 2
+        }
+        my_test_class.print_pretest_result()
+
+        mock_console_print.assert_called()
+        self.assertEqual(mock_console_print.call_count, 2)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_success(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2', 'test3'],
+            1: ['TRUE', 'FALSE', 'SKIP'],
+            2: ['TRUE', 'FALSE', 'N/A']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        self.saver.get_statistics_from_result_csv()
+        self.assertEqual(self.saver.test_result_cnt['total_num'], 2)
+        self.assertEqual(self.saver.test_result_cnt['success_num'], 1)
+        self.assertEqual(self.saver.test_result_cnt['forward_and_backward_fail_num'], 1)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_incorrect_column_number(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['TRUE', 'FALSE']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        with self.assertRaises(ValueError) as context:
+            self.saver.get_statistics_from_result_csv()
+        self.assertIn("The number of columns in mock_file.csv is incorrect", str(context.exception))
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_invalid_values(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['INVALID', 'FALSE'],
+            2: ['TRUE', 'FALSE']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        with self.assertRaises(ValueError) as context:
+            self.saver.get_statistics_from_result_csv()
+        self.assertIn("The value in the 2nd or 3rd column of mock_file.csv is wrong", str(context.exception))
 
     def test_write_summary_csv(self):
         mock_test_result = Mock()
