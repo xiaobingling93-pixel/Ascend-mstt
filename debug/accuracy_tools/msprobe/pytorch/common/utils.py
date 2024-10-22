@@ -316,8 +316,8 @@ class TypeCheckingUnpickler(pickle.Unpickler):
 
 def save_pkl(tensor, filepath):
     """Save ApiData or str objection by pickle"""
-    filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
     try:
         with FileOpen(filepath, 'wb') as f:
             pickle.dump(tensor, f)
@@ -330,9 +330,9 @@ def save_pkl(tensor, filepath):
 
 
 def load_pkl(pt_path):
-    """Save ApiData or str objection by pickle for accuracy_checker_online"""
-    pt_path = os.path.realpath(pt_path)
+    """Load ApiData or str objection by pickle for accuracy_checker_online"""
     check_file_or_directory_path(pt_path)
+    pt_path = os.path.realpath(pt_path)
     try:
         with FileOpen(pt_path, 'rb') as f:
             pt = TypeCheckingUnpickler(f).load()
