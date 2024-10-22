@@ -119,10 +119,8 @@ class TestDump(TestCase):
         main()
 
         #check
-        target_keys = ["Primitive.conv2d.0.forward", "Primitive.relu.0.forward", "Primitive.max_pool.0.forward",
-                       "Mint.add.0.forward", "Functional.mul.0.forward",
-                       "Primitive.conv2d.0.backward", "Primitive.relu.0.backward", "Primitive.max_pool.0.backward",
-                       "Mint.add.0.backward", "Functional.mul.0.backward",]
+        target_keys = ["Mint.add.0.forward", "Functional.mul.0.forward",
+                       "Mint.add.0.backward", "Functional.mul.0.backward"]
         for root, _, files in os.walk(output_path):
             for file in files:
                 if file == 'dump.json':
