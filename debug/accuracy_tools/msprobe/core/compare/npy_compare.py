@@ -167,7 +167,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ''
             if n_value == CompareConst.NAN:
-                return "N/A", ''
+                return CompareConst.N_A, ''
 
         if not n_value.shape:
             return CompareConst.UNSUPPORTED, ''
@@ -191,7 +191,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
                 return CompareConst.NAN, 'Cannot compare by Cosine Similarity, the dump data has NaN.'
             result = format_value(cos)
             result = self.correct_data(result)
-        return 1.0 if float(result) > 0.99999 else result, ''
+        return result, ''
 
 
 class GetMaxAbsErr(TensorComparisonBasic):
@@ -205,10 +205,12 @@ class GetMaxAbsErr(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
+        if np.isnan(max_value):
+            return CompareConst.NAN, ""
         return format_value(max_value), ""
 
 
@@ -235,7 +237,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ''
             if n_value == CompareConst.NAN:
-                return "N/A", ''
+                return CompareConst.N_A, ''
 
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
@@ -257,7 +259,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         if not n_value.shape:
             return CompareConst.NAN, ""
@@ -279,7 +281,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         if not n_value.shape:
             return CompareConst.NAN, ""
