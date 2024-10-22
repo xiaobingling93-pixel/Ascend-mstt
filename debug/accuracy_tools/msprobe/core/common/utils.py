@@ -246,6 +246,9 @@ def get_dump_mode_dump_path(input_param):
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
+    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
     if npu_json_data['task'] != bench_json_data['task']:
@@ -262,8 +265,6 @@ def get_dump_mode_dump_path(input_param):
     else:
         logger.error(f"Compare is not required for overflow_check or free_benchmark.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
     return dump_mode
 
 

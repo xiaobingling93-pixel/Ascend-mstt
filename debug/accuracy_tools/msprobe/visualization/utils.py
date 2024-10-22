@@ -48,11 +48,11 @@ def save_json_file(file_path, data):
         f.write(json.dumps(data, indent=4))
 
 
-def get_csv_df(md5_compare, summary_compare, stack, csv_data):
+def get_csv_df(stack, csv_data, dump_mode):
     """
     调用acc接口写入csv
     """
-    return Comparator.make_result_table(csv_data, md5_compare, summary_compare, stack)
+    return Comparator.make_result_table(csv_data, stack, dump_mode)
 
 
 def str2float(percentage_str):

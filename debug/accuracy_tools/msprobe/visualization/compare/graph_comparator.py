@@ -79,9 +79,9 @@ class GraphComparator:
 
     def _postcompare(self):
         self._handle_api_collection_index()
-        if not self.ma.is_real_data_compare():
+        if self.ma.compare_mode != GraphConst.MD5_COMPARE and self.ma.compare_mode != GraphConst.SUMMARY_COMPARE:
             return
-        df = get_csv_df(self.ma.is_md5_compare(), self.ma.is_summary_compare(), True, self.ma.csv_data)
+        df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
         df = run_real_data(self.dump_path_param, df)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
@@ -123,8 +123,7 @@ class GraphComparator:
             # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
             compare_result_list = compare_node([node_n.id, node_b.id],
                                                [self.data_n_dict, self.data_b_dict],
-                                               self.stack_json_data, self.ma.is_summary_compare(),
-                                               self.ma.is_md5_compare())
+                                               self.stack_json_data, self.ma.compare_mode)
             if compare_result_list:
                 self.ma.add_csv_data(compare_result_list)
                 self.add_compare_result_to_node(node_n, compare_result_list)
