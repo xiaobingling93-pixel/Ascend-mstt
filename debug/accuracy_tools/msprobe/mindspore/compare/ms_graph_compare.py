@@ -29,7 +29,7 @@ from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_che
 from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories
 
 
-class row_data:
+class RowData:
     def __init__(self, mode):
         self.basic_data = copy.deepcopy(CompareConst.MS_GRAPH_BASE)
         self.npy_data = copy.deepcopy(CompareConst.MS_GRAPH_NPY)
@@ -81,7 +81,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     statistic_data_list = []
     header_index = {
         'Data Type': None, 'Shape': None, 'Max Value': None, 
-        'Min Value': None,'Avg Value': None, 'L2Norm Value': None
+        'Min Value': None, 'Avg Value': None, 'L2Norm Value': None
     }
     for statistic_file in statistic_file_list:
         content = read_csv(statistic_file, as_pd=False)
@@ -165,7 +165,7 @@ class GraphMSComparator:
     def compare_ops(compare_result_db, mode):
 
         def npy_mode_compute(row):
-            result_dict = row_data(GraphMode.NPY_MODE)()
+            result_dict = RowData(GraphMode.NPY_MODE)()
 
             def process_npy_file(file_path, name_prefix, result):
                 if os.path.exists(file_path):
@@ -200,7 +200,7 @@ class GraphMSComparator:
             return pd.Series(result_dict)
 
         def statistic_mode_compute(row):
-            result_dict = row_data('STATISTIC')()
+            result_dict = RowData('STATISTIC')()
 
             def update_result_dict(result, rows, prefix):
                 result[f'{prefix} Name'] = rows[f'{prefix} Name']
@@ -232,7 +232,8 @@ class GraphMSComparator:
                 result_dict[CompareConst.MIN_RELATIVE_ERR] = result_dict[CompareConst.MIN_DIFF] / result_dict[
                     CompareConst.BENCH_MIN] if result_dict[CompareConst.BENCH_MIN] > 0 else 0
                 if not np.isnan(result_dict[CompareConst.MIN_RELATIVE_ERR]):
-                    result_dict[CompareConst.MIN_RELATIVE_ERR] = str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
+                    result_dict[CompareConst.MIN_RELATIVE_ERR] = \
+                        str(result_dict[CompareConst.MIN_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MEAN_RELATIVE_ERR] = result_dict[CompareConst.MEAN_DIFF] / result_dict[
                     CompareConst.BENCH_MEAN] if result_dict[CompareConst.BENCH_MEAN] > 0 else 0
                 if not np.isnan(result_dict[CompareConst.MEAN_RELATIVE_ERR]):
@@ -247,7 +248,8 @@ class GraphMSComparator:
                         max(result_dict[CompareConst.NPU_MAX], result_dict[CompareConst.BENCH_MAX]) + 1e-10)
                 if np.isnan(result_dict[CompareConst.NPU_MAX]) and np.isnan(result_dict[CompareConst.BENCH_MAX]):
                     magnitude_diff = 0
-                result_dict[CompareConst.ACCURACY] = CompareConst.YES if magnitude_diff <= CompareConst.MAGNITUDE else CompareConst.NO
+                result_dict[CompareConst.ACCURACY] = CompareConst.YES if \
+                    magnitude_diff <= CompareConst.MAGNITUDE else CompareConst.NO
 
             return pd.Series(result_dict)
 
@@ -280,7 +282,8 @@ class GraphMSComparator:
         size = len(compare_result_df)
         # sheet size cannot be larger than 1048576
         if size < CompareConst.MAX_EXCEL_LENGTH:
-            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if need_slice else compare_result_path
+            compare_result_path = compare_result_path.replace('.xlsx', f'_slice_{slice_num}.xlsx') if \
+                need_slice else compare_result_path
             save_excel(compare_result_path, compare_result_df)
             return slice_num + 1
         else:
@@ -334,7 +337,7 @@ class GraphMSComparator:
 
             bench_float_type = [
                 CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, 
-                CompareConst.BENCH_MEAN,CompareConst.BENCH_NORM
+                CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM
             ]
             bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)
 

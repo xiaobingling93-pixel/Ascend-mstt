@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import re
 
 from msprobe.core.common.const import Const
@@ -66,7 +81,8 @@ class DFSConverter:
         if node.has_data:
             for count in node.call_count_list:
                 origin_name = f"{path}.{count}" if node.node_type == "Cell" else f"{path}.{type_name}.{count}"
-                mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" else f"{mapping_path}.{type_name}.{count}"
+                mapping_name = f"{mapping_path}.{count}" if node.node_type == "Cell" \
+                    else f"{mapping_path}.{type_name}.{count}"
                 self.result[origin_name] = mapping_name
 
         name_mapping = self.mapping.get(type_name, {})
@@ -109,7 +125,7 @@ def get_prefix_mapping(scope_list):
 
 def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
     # 1. get layer prefix to full name mapping
-    # ect: Cell.network_with_loss.language_model.embedding.3 : Cell.network_with_loss.language_model.embedding.Embedding.3
+    # ect: Cell.network_with_loss.model.embedding.3 : Cell.network_with_loss.model.embedding.Embedding.3
     ms_prefix2fullname = get_prefix_mapping(ms_scope_list)
     # 2. build trie tree
     ms_tree = Trie(type_name="Cell")
@@ -119,7 +135,7 @@ def get_layer_mapping(ms_scope_list, pt_scope_list, mapping):
         ms_tree.insert(k, data_type)
     msname2ptname = get_mapping_list(ms_tree, mapping)
     # 3. get pt layer prefix to full name mapping
-    # ect: Module.network_with_loss.language_model.embedding.3 : Module.network_with_loss.language_model.embedding.Embedding.3
+    # ect: Module.network_with_loss.model.embedding.3 : Module.network_with_loss.model.embedding.Embedding.3
     pt_prefix2fullname = get_prefix_mapping(pt_scope_list)
 
     final_mapping = []

@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import re
 import copy
@@ -14,6 +29,7 @@ from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 from msprobe.mindspore.compare.modify_mapping import modify_mapping_with_stack
 from msprobe.mindspore.compare.layer_mapping import get_layer_mapping
+
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):
@@ -146,7 +162,7 @@ class MSComparator(Comparator):
         npu_struct_in = new_npu_dict.get(CompareConst.INPUT_STRUCT)
         bench_struct_in = new_bench_dict.get(CompareConst.INPUT_STRUCT)
         npu_struct_out = new_npu_dict.get(CompareConst.OUTPUT_STRUCT)
-        bench_struct_out =  new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
+        bench_struct_out = new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
         npu_summary, bench_summary = new_npu_dict.get(CompareConst.SUMMARY), new_bench_dict.get(CompareConst.SUMMARY)
         npu_in_len, bench_in_len = len(npu_struct_in), len(bench_struct_in) 
         npu_out_len, bench_out_len = len(npu_struct_out), len(bench_struct_out)
@@ -345,7 +361,8 @@ def ms_compare(input_param, output_path, **kwargs):
         ms_mapping_result = modify_mapping_with_stack(ms_stack, ms_construct)
         pt_mapping_result = modify_mapping_with_stack(pt_stack, pt_construct)
         layer_mapping = get_layer_mapping(ms_mapping_result, pt_mapping_result, mapping)
-        data_mapping = generate_file_mapping(input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
+        data_mapping = generate_file_mapping(
+            input_param.get("npu_json_path"), input_param.get("bench_json_path"), layer_mapping)
 
         data_mapping_name = add_time_with_yaml(f"data_mapping")
         data_mapping_path = os.path.join(os.path.realpath(output_path), f"{data_mapping_name}")

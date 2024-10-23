@@ -87,7 +87,7 @@ class Advisor:
         return message
 
     def analysis(self):
-        self._check_path_vaild()
+        self._check_path_valid()
         analyze_data = self._parse_input_data()
         logger.info("Start analyzing the comparison result: %s" % self.file_type)
         self.analyze_unmatched(analyze_data)
@@ -119,6 +119,6 @@ class Advisor:
         df = self.input_data.reset_index()
         return df
 
-    def _check_path_vaild(self):
+    def _check_path_valid(self):
         out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
         out_path_checker.common_check()
