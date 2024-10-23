@@ -240,7 +240,7 @@ def struct_json_get(input_param, framework):
     return stack, construct
 
 
-def get_dump_mode_dump_path(input_param):
+def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:
@@ -249,6 +249,10 @@ def get_dump_mode_dump_path(input_param):
     input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
     input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
 
+
+def get_dump_mode(input_param):
+    npu_path = input_param.get("npu_json_path", None)
+    bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
     if npu_json_data['task'] != bench_json_data['task']:
@@ -263,7 +267,7 @@ def get_dump_mode_dump_path(input_param):
         else:
             dump_mode = Const.SUMMARY
     else:
-        logger.error(f"Compare is not required for overflow_check or free_benchmark.")
+        logger.error(f"Compare applies only to task = tensor or statistics")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
     return dump_mode
 

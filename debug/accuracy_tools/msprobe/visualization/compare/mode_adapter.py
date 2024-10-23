@@ -155,7 +155,7 @@ class ModeAdapter:
         return self.compare_mode == GraphConst.REAL_DATA_COMPARE
     
     def add_csv_data(self, compare_result_list):
-        if self.compare_mode != GraphConst.MD5_COMPARE and self.compare_mode != GraphConst.SUMMARY_COMPARE:
+        if self.compare_mode != GraphConst.REAL_DATA_COMPARE:
             return
         self.csv_data.extend(compare_result_list)
     

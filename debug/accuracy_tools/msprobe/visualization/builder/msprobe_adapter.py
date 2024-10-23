@@ -14,7 +14,7 @@
 # limitations under the License.
 import re
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
-from msprobe.core.common.utils import get_dump_mode_dump_path
+from msprobe.core.common.utils import get_dump_mode
 from msprobe.core.common.const import Const
 from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
 from msprobe.pytorch.compare.pt_compare import PTComparator
@@ -34,13 +34,8 @@ def get_compare_mode(dump_path_param):
         dump_path_param: 调用acc_compare接口所依赖的参数
     Returns: 0 summary mode, 1 md5 mode, 2 true data mode
     """
-    dump_mode = get_dump_mode_dump_path(dump_path_param)
-    if dump_mode == Const.SUMMARY:
-        compare_mode = GraphConst.SUMMARY_COMPARE
-    elif dump_mode == Const.MD5:
-        compare_mode = GraphConst.MD5_COMPARE
-    else:
-        compare_mode = GraphConst.REAL_DATA_COMPARE
+    dump_mode = get_dump_mode(dump_path_param)
+    compare_mode = GraphConst.DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING.get(dump_mode)
     return compare_mode
 
 
@@ -130,23 +125,25 @@ def format_node_data(data_dict):
     return data_dict
 
 
-def compare_node(node_ids, data_dicts, stack_json_data, dump_mode):
+def compare_node(node_ids, data_dicts, stack_json_data, compare_mode):
     """
     调用acc_compare.py中的get_accuracy获得精度对比指标
     真实数据对比模式无法获得精度对比指标，需要调用多进程比对接口
     Returns: 包含参数信息和对比指标（真实数据对比模式除外）的list
     """
-    merge_n = _parse_node(node_ids[0], data_dicts[0], stack_json_data, dump_mode)
-    merge_b = _parse_node(node_ids[1], data_dicts[1], stack_json_data, dump_mode)
+    merge_n = _parse_node(node_ids[0], data_dicts[0], stack_json_data, compare_mode)
+    merge_b = _parse_node(node_ids[1], data_dicts[1], stack_json_data, compare_mode)
     result = []
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
     get_accuracy(result, merge_n, merge_b, dump_mode)
     return result
 
 
-def _parse_node(node_id, data_dict, stack_json_data, dump_mode):
+def _parse_node(node_id, data_dict, stack_json_data, compare_mode):
     """
     转换节点，使其能够作为acc_compare.py中的get_accuracy的入参
     """
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING(compare_mode)
     op_parsed_list = read_op(data_dict.get(node_id, {}), node_id)
     if node_id in stack_json_data:
         op_parsed_list.append(
