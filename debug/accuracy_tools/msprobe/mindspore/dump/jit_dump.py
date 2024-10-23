@@ -49,7 +49,7 @@ def dump_jit(name, in_feat, out_feat, is_forward):
             name_template = Const.JIT + Const.SEP + result + Const.SEP + str(JitDump.jit_count[result]) + Const.SEP + \
                             Const.BACKWARD
             JitDump.data_collector.update_api_or_module_name(name_template)
-            module_input_output = ModuleBackwardInputsOutputs(grad_input=in_feat ,grad_output=out_feat)
+            module_input_output = ModuleBackwardInputsOutputs(grad_input=in_feat, grad_output=out_feat)
             JitDump.data_collector.backward_data_collect(name_template, None, pid, module_input_output)
 
 
