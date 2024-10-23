@@ -74,8 +74,8 @@ def hook_graph_mode_optimizer(opt, hook_input):
 def hook_pynative_optimizer(opt, hook_input):
     level_adapted = get_adapted_level(hook_input.level)
 
-    def hook_fn(cell, input):
-        gradients, = input
+    def hook_fn(cell, input_data):
+        gradients, = input_data
         cur_step = grad_context.get_context(GradConst.CURRENT_STEP)
         if grad_context.step_need_dump(cur_step) and grad_context.rank_need_dump(hook_input.rank_id):
             create_directory(hook_input.save_dir)

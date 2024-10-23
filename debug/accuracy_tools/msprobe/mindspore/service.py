@@ -24,9 +24,10 @@ from mindspore import ops
 from mindspore import nn
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
-    pijit_label = True
 except ImportError:
     pijit_label = False
+else:
+    pijit_label = True
 
 
 from msprobe.core.data_dump.data_collector import build_data_collector
@@ -79,15 +80,15 @@ class Service:
             )
 
     def build_hook(self, target_type, name):
-        def forward_hook(api_or_cell_name, cell, input, output):
+        def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
                 return None
 
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = cell.mindstudio_reserved_name
-                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs={}, output=output)
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
             else:
-                module_input_output = ModuleForwardInputsOutputs(args=input, kwargs=cell.input_kwargs,
+                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs,
                                                                  output=output)
 
             self.data_collector.update_api_or_module_name(api_or_cell_name)
@@ -116,8 +117,8 @@ class Service:
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
 
-        def wrap_forward_hook(cell, input, output):
-            return forward_hook(cell, input, output)
+        def wrap_forward_hook(cell, input_data, output_data):
+            return forward_hook(cell, input_data, output_data)
 
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
