@@ -36,7 +36,8 @@ class CheckOrderMagnitude(HighlightCheck):
     """检查Max diff的数量级差异"""
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        max_diff_index = get_header_index('Max diff' if dump_mode == Const.SUMMARY else 'MaxAbsErr', dump_mode)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                          else CompareConst.MAX_ABS_ERR, dump_mode)
         if abs(api_in[max_diff_index]) > abs(api_out[max_diff_index]):
             return
         in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
@@ -49,7 +50,7 @@ class CheckOneThousandErrorRatio(HighlightCheck):
     """检查千分误差比率"""
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        one_thousand_index = get_header_index('One Thousandth Err Ratio', dump_mode)
+        one_thousand_index = get_header_index(CompareConst.ONE_THOUSANDTH_ERR_RATIO, dump_mode)
         if (not isinstance(api_in[one_thousand_index], (float, int)) or
                 not isinstance(api_out[one_thousand_index], (float, int))):
             return
@@ -64,7 +65,7 @@ class CheckCosineSimilarity(HighlightCheck):
     """检查余弦相似度"""
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        cosine_index = get_header_index('Cosine', dump_mode)
+        cosine_index = get_header_index(CompareConst.COSINE, dump_mode)
         if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
             return
         if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
@@ -75,8 +76,8 @@ class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
     def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        max_diff_index = get_header_index('Max diff', dump_mode)
-        bench_max_index = get_header_index('Bench max', dump_mode)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
+        bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
         input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
         output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(0.01, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
@@ -93,9 +94,10 @@ class CheckOverflow(HighlightCheck):
     """检查是否存在溢出"""
     def apply(self, info, color_columns, dump_mode):
         line, num = info
-        npu_max_index = get_header_index('NPU max', dump_mode)
-        npu_min_index = get_header_index('NPU min', dump_mode)
-        max_diff_index = get_header_index('Max diff' if dump_mode == Const.SUMMARY else 'MaxAbsErr', dump_mode)
+        npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
+        npu_min_index = get_header_index(CompareConst.NPU_MIN, dump_mode)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                          else CompareConst.MAX_ABS_ERR, dump_mode)
         if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(
                 line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
             color_columns.red.append(num)
@@ -128,9 +130,10 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
     """找到单个API中需要高亮的行"""
     if dump_mode == Const.MD5:
         return
-    npu_max_index = get_header_index('NPU max', dump_mode)
-    bench_max_index = get_header_index('Bench max', dump_mode)
-    max_diff_index = get_header_index('Max diff' if dump_mode == Const.SUMMARY else 'MaxAbsErr', dump_mode)
+    npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
+    bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
+    max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                      else CompareConst.MAX_ABS_ERR, dump_mode)
 
     red_lines, yellow_lines = [], []
     LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
@@ -174,12 +177,12 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 def get_name_and_state(name):
     """Get api/module name and state"""
-    if "input" in name:
-        api_name = name.split("input")[0]
-        state = "input"
+    if Const.INPUT in name:
+        api_name = name.split(Const.INPUT)[0]
+        state = Const.INPUT
     else:
-        api_name = name.split("output")[0]
-        state = "output"
+        api_name = name.split(Const.OUTPUT)[0]
+        state = Const.OUTPUT
     return api_name, state
 
 
@@ -208,7 +211,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
         else:
             num, last_api_name, last_state = 1, api_name, state
     if state:
-        if state == "input":
+        if state == Const.INPUT:
             input_num = num
         else:
             output_num = num

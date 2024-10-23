@@ -160,6 +160,13 @@ class Const:
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
 
+    DTYPE = 'dtype'
+    SHAPE = 'shape'
+    MAX = 'Max'
+    MIN = 'Min'
+    MEAN = 'Mean'
+    NORM = 'Norm'
+
 
 class CompareConst:
     """
@@ -203,6 +210,7 @@ class CompareConst:
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
     INPUT_STRUCT = "input_struct"
+    KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
     MAX_EXCEL_LENGTH = 1048576

@@ -68,9 +68,11 @@ class CsvItem(ABC):
 
 @register_csv_item(GradConst.MD5)
 class CsvMd5(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["MD5"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         tensor_bytes = grad.float().numpy().tobytes()
@@ -80,6 +82,7 @@ class CsvMd5(CsvItem):
 
 @register_csv_item(GradConst.DISTRIBUTION)
 class CsvDistribution(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         bounds = csv_input.bounds
         intervals = []
@@ -93,6 +96,7 @@ class CsvDistribution(CsvItem):
 
         return intervals
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         bounds = csv_input.bounds
@@ -110,9 +114,11 @@ class CsvDistribution(CsvItem):
 
 @register_csv_item(GradConst.MAX)
 class CsvMax(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["max"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.amax(grad).float().numpy().tolist()]
@@ -120,9 +126,11 @@ class CsvMax(CsvItem):
 
 @register_csv_item(GradConst.MIN)
 class CsvMin(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["min"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.amin(grad).float().numpy().tolist()]
@@ -130,9 +138,11 @@ class CsvMin(CsvItem):
 
 @register_csv_item(GradConst.NORM)
 class CsvNorm(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["norm"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.norm(grad).float().numpy().tolist()]
@@ -140,9 +150,11 @@ class CsvNorm(CsvItem):
 
 @register_csv_item(GradConst.SHAPE)
 class CsvShape(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["shape"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [list(grad.shape)]

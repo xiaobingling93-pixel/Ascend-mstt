@@ -34,7 +34,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
-from msprobe.core.common.file_utils import FileChecker, change_mode, check_path_before_create, create_directory
+from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
@@ -603,7 +603,6 @@ def _api_precision_compare_command(args):
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
     out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
-    check_path_before_create(out_path)
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()

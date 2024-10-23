@@ -41,6 +41,7 @@ class PrimitiveHookService:
         Returns:
             callable: 包装后的 primitive 函数。
         """
+
         def create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type):
             """
             创建反向 hook 函数，用于捕获梯度。
@@ -54,26 +55,24 @@ class PrimitiveHookService:
             Returns:
                 callable: 反向 hook 函数。
             """
-            def backward_hook(grad):
 
-                captured_grads.append(grad)
+            def backward_hook(grad):
+                captured_grads.extend(grad)
                 backward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
 
                 try:
-                    if len(captured_grads) == num_tensors and hook_type == Const.INPUT:
+                    if hook_type == Const.INPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardOutputs(grad_output=tuple(captured_grads))
                         self.service_instance.data_collector.backward_output_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
-                        captured_grads.clear()
-                    elif len(captured_grads) == num_tensors and hook_type == Const.OUTPUT:
+                    elif hook_type == Const.OUTPUT:
                         self.service_instance.data_collector.update_api_or_module_name(backward_primitive_name)
                         new_module_input_output = ModuleBackwardInputs(grad_input=tuple(captured_grads))
                         self.service_instance.data_collector.backward_input_data_collect(
                             backward_primitive_name, self, os.getpid(), new_module_input_output
                         )
-                        captured_grads.clear()
 
                 except Exception as exception:
                     logger.error(f"This is a primitive op {hook_type}_backward dump error: {exception}, "
@@ -104,7 +103,7 @@ class PrimitiveHookService:
                     hooked_inputs.append(arg_hooked)
                 else:
                     hooked_inputs.append(arg)
-            return hooked_inputs
+            return tuple(hooked_inputs)
 
         def hook_primitive_outputs(out, captured_grads_output, updated_primitive_name):
             """
@@ -178,7 +177,7 @@ class PrimitiveHookService:
                 module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
                 try:
                     self.service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self,
-                                                             os.getpid(), module_input_output)
+                                                                              os.getpid(), module_input_output)
                 except Exception as exception:
                     logger.error(f"This is a primitive op dump error during forward data collection: {exception}, "
                                  f"primitive_name: {primitive_name}")
