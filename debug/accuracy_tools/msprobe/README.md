@@ -97,7 +97,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 🌟 新版本特性
 
-若查看历史版本特性，请点击[安装](./docs/01.installation.md)。
+若查看历史版本特性，请参见[安装](./docs/01.installation.md)。
 
 【数据采集】
 - 支持 config.json 中的 step 传入范围；
