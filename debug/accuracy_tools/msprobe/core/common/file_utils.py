@@ -365,11 +365,11 @@ def load_json(json_path):
     return data
 
 
-def save_json(json_path, data, indent=None):
+def save_json(json_path, data, indent=None, mode="w"):
     check_path_before_create(json_path)
     json_path = os.path.realpath(json_path)
     try:
-        with FileOpen(json_path, 'w') as f:
+        with FileOpen(json_path, mode) as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(data, f, indent=indent)
             fcntl.flock(f, fcntl.LOCK_UN)
