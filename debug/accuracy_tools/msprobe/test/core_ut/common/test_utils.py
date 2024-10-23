@@ -35,7 +35,8 @@ from msprobe.core.common.utils import (CompareException,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
-                                       get_dump_mode_dump_path,
+                                       set_dump_path,
+                                       get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
                                        struct_json_get)
@@ -180,7 +181,19 @@ class TestUtils(TestCase):
                                                  f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
     @patch.object(logger, "error")
-    def test_get_dump_mode_dump_path(self, mock_error):
+    def test_set_dump_path(self, mock_error):
+        input_param = {
+            "npu_json_path": None,
+            "bench_json_path": "bench_path"
+        }
+
+        with self.assertRaises(CompareException) as context:
+            set_dump_path(input_param)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+        mock_error.assert_called_with("Please check the json path is valid.")
+
+    @patch.object(logger, "error")
+    def test_get_dump_mode(self, mock_error):
         input_param = {
             "npu_json_path": None,
             "bench_json_path": "bench_path"
@@ -191,28 +204,23 @@ class TestUtils(TestCase):
             "data": "data"
         }
 
-        with self.assertRaises(CompareException) as context:
-            get_dump_mode_dump_path(input_param)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_error.assert_called_with("Please check the json path is valid.")
-
         input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
-            dump_mode = get_dump_mode_dump_path(input_param)
+            dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
                 patch("msprobe.core.common.utils.md5_find", return_value=True):
-            dump_mode = get_dump_mode_dump_path(input_param)
+            dump_mode = get_dump_mode(input_param)
         self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
             with self.assertRaises(CompareException) as context:
-                get_dump_mode_dump_path(input_param)
+                dump_mode = get_dump_mode(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
-            mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
+            mock_error.assert_called_with("Compare applies only to task is tensor or statistics")
 
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):

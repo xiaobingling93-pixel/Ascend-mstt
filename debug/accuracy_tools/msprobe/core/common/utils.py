@@ -267,7 +267,7 @@ def get_dump_mode(input_param):
         else:
             dump_mode = Const.SUMMARY
     else:
-        logger.error(f"Compare applies only to task = tensor or statistics")
+        logger.error(f"Compare applies only to task is tensor or statistics")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
     return dump_mode
 
