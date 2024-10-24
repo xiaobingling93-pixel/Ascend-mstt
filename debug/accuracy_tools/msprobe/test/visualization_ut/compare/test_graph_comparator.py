@@ -73,8 +73,8 @@ class TestGraphComparator(unittest.TestCase):
         node.data.update.assert_not_called()
 
     @patch('msprobe.visualization.graph.node_colors.NodeColors.get_node_error_status')
-    @patch('msprobe.visualization.utils.get_csv_df')
-    @patch('msprobe.visualization.builder.msprobe_adapter.run_real_data')
+    @patch('msprobe.visualization.compare.graph_comparator.get_csv_df')
+    @patch('msprobe.visualization.compare.graph_comparator.run_real_data')
     @patch('msprobe.visualization.compare.graph_comparator.get_compare_mode')
     @patch('msprobe.visualization.compare.graph_comparator.load_json_file')
     @patch('msprobe.visualization.compare.graph_comparator.load_data_json_file')

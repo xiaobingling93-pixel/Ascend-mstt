@@ -74,7 +74,7 @@ class GraphComparator:
 
     def _postcompare(self):
         self._handle_api_collection_index()
-        if self.ma.compare_mode != GraphConst.MD5_COMPARE and self.ma.compare_mode != GraphConst.SUMMARY_COMPARE:
+        if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
         df = run_real_data(self.dump_path_param, df)

@@ -143,7 +143,7 @@ def _parse_node(node_id, data_dict, stack_json_data, compare_mode):
     """
     转换节点，使其能够作为acc_compare.py中的get_accuracy的入参
     """
-    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING(compare_mode)
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
     op_parsed_list = read_op(data_dict.get(node_id, {}), node_id)
     if node_id in stack_json_data:
         op_parsed_list.append(
