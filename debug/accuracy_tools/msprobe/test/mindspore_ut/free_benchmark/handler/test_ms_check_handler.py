@@ -52,7 +52,7 @@ class TestCheckHandler(unittest.TestCase):
         params.original_result = original_output
         params.fuzzed_result = fuzzed_output
         data_dict = {
-            "rank": None,
+            "rank": None if Runtime.rank_id == -1 else Runtime.rank_id,
             "pert_type": Config.pert_type,
             "stage": Config.stage,
             "step": Runtime.step_count,

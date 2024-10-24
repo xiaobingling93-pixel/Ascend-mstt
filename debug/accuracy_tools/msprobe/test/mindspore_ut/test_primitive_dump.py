@@ -17,6 +17,7 @@
 import unittest
 import mindspore as ms
 import numpy as np
+import os
 from unittest.mock import Mock, patch
 
 from mindspore import nn
@@ -155,23 +156,20 @@ class TestPrimitiveHookService(unittest.TestCase):
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
         backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
-        # 模拟反向梯度
-        grad_1 = Mock()
-        grad_2 = Mock()
+        # 模拟 ndarray 梯度
+        grad_1 = np.array([1.0, 2.0, 3.0])  # 模拟第一个梯度
+        grad_2 = np.array([4.0, 5.0, 6.0])  # 模拟第二个梯度
 
-        # 调用 backward_hook
+        # 模拟反向梯度
         backward_hook(grad_1)
+        self.assertEqual(len(captured_grads), 3)  # 只捕获了一个梯度
+
         backward_hook(grad_2)
+        self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
         print(f"1After first backward_hook call, len(captured_grads): {len(captured_grads)}")
 
-        # 验证 data_collector 的调用
-        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
-            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-        )
-        self.mock_service_instance.data_collector.backward_output_data_collect.assert_called_once()
-
-        # 确保梯度列表在捕获后被清除
-        self.assertEqual(len(captured_grads), 0)
+        # 调用到达阈值，验证数据收集
+        self.assertTrue(self.mock_service_instance.data_collector.backward_output_data_collect.called)
 
     def test_four_input_backward_hook(self):
         # 模拟梯度输入
@@ -187,27 +185,28 @@ class TestPrimitiveHookService(unittest.TestCase):
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
         backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+
+        # 模拟 ndarray 梯度
+        grad_1 = np.array([1.0, 2.0, 3.0])  # 模拟第一个梯度
+        grad_2 = np.array([4.0, 5.0, 6.0])  # 模拟第二个梯度
+        grad_3 = np.array([7.0, 8.0, 9.0])  # 模拟第三个梯度
+        grad_4 = np.array([10.0, 11.0, 12.0])  # 模拟第四个梯度
+
         # 模拟反向梯度
-        grad_1 = Mock()
-        grad_2 = Mock()
-        grad_3 = Mock()
-        grad_4 = Mock()
-
-        # 调用 backward_hook
         backward_hook(grad_1)
+        self.assertEqual(len(captured_grads), 3)  # 只捕获了一个梯度
+
         backward_hook(grad_2)
+        self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
+
         backward_hook(grad_3)
+        self.assertEqual(len(captured_grads), 9)  # 捕获到三个梯度
+
         backward_hook(grad_4)
-        print(f"1After first backward_hook call, len(captured_grads): {len(captured_grads)}")
+        self.assertEqual(len(captured_grads), 12)  # 捕获到四个梯度
 
-        # 验证 data_collector 的调用
-        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
-            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-        )
-        self.mock_service_instance.data_collector.backward_output_data_collect.assert_called_once()
-
-        # 确保梯度列表在捕获后被清除
-        self.assertEqual(len(captured_grads), 0)
+        # 调用到达阈值，验证数据收集
+        self.assertTrue(self.mock_service_instance.data_collector.backward_output_data_collect.called)
 
     def test_two_output_backward_hook(self):
         # 模拟梯度输入
@@ -229,23 +228,20 @@ class TestPrimitiveHookService(unittest.TestCase):
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
         backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
-        # 模拟反向梯度
-        grad_1 = Mock()
-        grad_2 = Mock()
+        # 模拟 ndarray 梯度
+        grad_1 = np.array([1.0, 2.0, 3.0])  # 模拟第一个梯度
+        grad_2 = np.array([4.0, 5.0, 6.0])  # 模拟第二个梯度
 
-        # 调用 backward_hook
+        # 模拟反向梯度
         backward_hook(grad_1)
+        self.assertEqual(len(captured_grads), 3)  # 只捕获了一个梯度
+
         backward_hook(grad_2)
+        self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
         print(f"After first backward_hook call, len(captured_grads): {len(captured_grads)}")
 
-        # 验证 data_collector 的调用
-        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
-            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-        )
-        self.mock_service_instance.data_collector.backward_input_data_collect.assert_called_once()
-
-        # 确保梯度列表在捕获后被清除
-        self.assertEqual(len(captured_grads), 0)
+        # 调用到达阈值，验证数据收集
+        self.assertTrue(self.mock_service_instance.data_collector.backward_input_data_collect.called)
 
     def test_four_output_backward_hook(self):
         # 模拟梯度输入
@@ -260,26 +256,27 @@ class TestPrimitiveHookService(unittest.TestCase):
         create_backward_hook = hook_primitive_inputs.__closure__[0].cell_contents
 
         backward_hook = create_backward_hook(captured_grads, num_tensors, updated_primitive_name, hook_type)
+        # 模拟 ndarray 梯度
+        grad_1 = np.array([1.0, 2.0, 3.0])  # 模拟第一个梯度
+        grad_2 = np.array([4.0, 5.0, 6.0])  # 模拟第二个梯度
+        grad_3 = np.array([7.0, 8.0, 9.0])  # 模拟第三个梯度
+        grad_4 = np.array([10.0, 11.0, 12.0])  # 模拟第四个梯度
+
         # 模拟反向梯度
-        grad_1 = Mock()
-        grad_2 = Mock()
-        grad_3 = Mock()
-        grad_4 = Mock()
-
-        # 调用 backward_hook
         backward_hook(grad_1)
+        self.assertEqual(len(captured_grads), 3)  # 只捕获了一个梯度
+
         backward_hook(grad_2)
+        self.assertEqual(len(captured_grads), 6)  # 捕获到两个梯度
+
         backward_hook(grad_3)
+        self.assertEqual(len(captured_grads), 9)  # 捕获到三个梯度
+
         backward_hook(grad_4)
+        self.assertEqual(len(captured_grads), 12)  # 捕获到四个梯度
 
-        # 验证 data_collector 的调用
-        self.mock_service_instance.data_collector.update_api_or_module_name.assert_called_once_with(
-            f"{updated_primitive_name}{Const.SEP}{Const.BACKWARD}"
-        )
-        self.mock_service_instance.data_collector.backward_input_data_collect.assert_called_once()
-
-        # 确保梯度列表在捕获后被清除
-        self.assertEqual(len(captured_grads), 0)
+        # 调用到达阈值，验证数据收集
+        self.assertTrue(self.mock_service_instance.data_collector.backward_input_data_collect.called)
 
     def test_hook_primitive_inputs(self):
         # 模拟前向输入

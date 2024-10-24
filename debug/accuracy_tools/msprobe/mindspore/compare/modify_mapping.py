@@ -1,5 +1,21 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
+
 
 def find_regard_scope(lines, start_sign, end_sign):
     # 找出 start_pos 和 end_pos
@@ -75,7 +91,7 @@ def modify_mapping_with_stack(stack, construct):
                 logger.info(f"Parent name in construct.json is not valid")
                 continue
             parent_idx = Const.NAME_FIRST_POSSIBLE_INDEX if not \
-            parent[Const.NAME_FIRST_POSSIBLE_INDEX].isdigit() else Const.NAME_SECOND_POSSIBLE_INDEX
+                parent[Const.NAME_FIRST_POSSIBLE_INDEX].isdigit() else Const.NAME_SECOND_POSSIBLE_INDEX
             parent_name = parent[parent_idx]
 
             if code_list:
@@ -97,7 +113,8 @@ def modify_mapping_with_stack(stack, construct):
                 func_stack_list = []
             # 组合逻辑：parent的节点名（到节点名字为止）加上调用栈名[reversed_list]加上原来key重复key的节点名[key_components[1:-2] + key_components[-3:]]
             final_res_key = Const.SEP.join(parent[:parent_idx + 1] + func_stack_list +
-                                     key_components[1:Const.CONSTRUCT_NAME_INDEX + 1] + key_components[Const.CONSTRUCT_NAME_INDEX:])
+                                           key_components[1:Const.CONSTRUCT_NAME_INDEX + 1] +
+                                           key_components[Const.CONSTRUCT_NAME_INDEX:])
             final_res_key = final_res_key.strip(".forward").strip(".backward")
         else:
             final_res_key = Const.SEP.join(key_components[:-2] + [key_components[-1]])
