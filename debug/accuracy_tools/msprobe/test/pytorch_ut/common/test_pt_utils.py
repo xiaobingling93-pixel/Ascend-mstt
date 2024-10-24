@@ -160,14 +160,14 @@ class TestLoadPt(unittest.TestCase):
         mock_load.return_value = torch.tensor([1, 2, 3])
         result = load_pt(self.temp_file.name, to_cpu=True)
         self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
-        mock_load.assert_called_once_with(self.temp_file.name, map_location=torch.device("cpu"))
+        mock_load.assert_called_once_with(self.temp_file.name, map_location=torch.device("cpu"), weights_only=True)
 
     @patch('torch.load')
     def test_load_pt_nogpu(self, mock_load):
         mock_load.return_value = torch.tensor([1, 2, 3])
         result = load_pt(self.temp_file.name, to_cpu=False)
         self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
-        mock_load.assert_called_once_with(self.temp_file.name)
+        mock_load.assert_called_once_with(self.temp_file.name, weights_only=True)
 
     @patch('torch.load')
     def test_load_pt_failure(self, mock_load):
