@@ -15,6 +15,7 @@
 
 import os
 import re
+import math
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
@@ -274,9 +275,9 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 ]
 
             npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-            result_item.extend(npu_summary_data)
+            result_item.extend(CompareConst.NAN if math.isnan(x) else x for x in npu_summary_data)
             bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
-            result_item.extend(bench_summary_data)
+            result_item.extend(CompareConst.NAN if math.isnan(x) else x for x in bench_summary_data)
 
             if summary_compare:
                 start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
