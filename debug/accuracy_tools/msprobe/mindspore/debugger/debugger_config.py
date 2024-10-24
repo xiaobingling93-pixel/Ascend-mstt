@@ -1,9 +1,24 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_utils import create_directory
 
 
 class DebuggerConfig:
@@ -18,7 +33,7 @@ class DebuggerConfig:
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list
         self.scope = [] if not task_config.scope else task_config.scope
-        self.data_mode = [] if not task_config.data_mode else task_config.data_mode
+        self.data_mode = [Const.ALL] if not task_config.data_mode else task_config.data_mode
         self.file_format = task_config.file_format
         self.overflow_nums = 1 if not task_config.overflow_nums else task_config.overflow_nums
         self.check_mode = task_config.check_mode

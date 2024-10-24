@@ -19,26 +19,26 @@
  * Modifications: Offer offline supporting.
  *--------------------------------------------------------------------------------------------*/
 
-import { makeStyles } from '@material-ui/core/styles'
-import * as React from 'react'
-import { Graph } from '../../api'
-import { value } from '../../utils'
-import { useResizeEventDependency } from '../../utils/resize'
-import * as echarts from 'echarts'
+import { makeStyles } from '@material-ui/core/styles';
+import * as React from 'react';
+import { Graph } from '../../api';
+import { value } from '../../utils';
+import { useResizeEventDependency } from '../../utils/resize';
+import * as echarts from 'echarts';
 
 interface IProps {
-  graph: Graph
-  height?: number
-  top?: number
-  noLegend?: boolean
-  title?: string
-  colors?: Array<string>
-  tooltip_mode?: string
+  graph: Graph;
+  height?: number;
+  top?: number;
+  noLegend?: boolean;
+  title?: string;
+  colors?: Array<string>;
+  tooltip_mode?: string;
 }
 
-const noLegendArea = { left: '5%', width: '90%', top: '5%', height: '90%' }
-const normalArea = { left: '5%', width: '95%' }
-const noTitleArea = { left: '5%', width: '95%', top: '10%', height: '80%' }
+const noLegendArea = { left: '5%', width: '90%', top: '5%', height: '90%' };
+const normalArea = { left: '5%', width: '95%' };
+const noTitleArea = { left: '5%', width: '95%', top: '10%', height: '80%' };
 
 export const PieChart: React.FC<IProps> = (props) => {
   const {
@@ -48,52 +48,58 @@ export const PieChart: React.FC<IProps> = (props) => {
     noLegend,
     title,
     colors,
-    tooltip_mode = 'both'
-  } = props
-  const graphRef = React.useRef<HTMLDivElement>(null)
+    tooltip_mode = 'both',
+  } = props;
+  const graphRef = React.useRef<HTMLDivElement>(null);
 
-  const [resizeEventDependency] = useResizeEventDependency()
+  const [resizeEventDependency] = useResizeEventDependency();
 
   React.useLayoutEffect(() => {
-    const element = graphRef.current
-    if (!element) return
+    const element = graphRef.current;
+    if (!element) return;
 
-    const chart = echarts.init(element)
+    const chart = echarts.init(element);
 
-    let totalValue = 0
-    const rowsWithUniqueName: Array<{ name: string, value: number }> =
+    let totalValue = 0;
+    const rowsWithUniqueName: Array<{ name: string; value: number }> =
       top === undefined
         ? graph.rows.map((item, index) => {
-          totalValue += item[1] as number
-          return { name: `${index}_${item[0]}`, value: item[1] as number }
-        })
-        : graph.rows
-          .sort((a, b) => (value(b[1]) as number) - (value(a[1]) as number))
-          .slice(0, top).map((item, index) => {
-            totalValue += item[1] as number
-            return { name: `${index}_${item[0]}`, value: item[1] as number }
+            totalValue += item[1] as number;
+            return { name: `${index}_${item[0]}`, value: item[1] as number };
           })
+        : graph.rows
+            .sort((a, b) => (value(b[1]) as number) - (value(a[1]) as number))
+            .slice(0, top)
+            .map((item, index) => {
+              totalValue += item[1] as number;
+              return { name: `${index}_${item[0]}`, value: item[1] as number };
+            });
 
     const option: echarts.EChartsOption = {
       height,
       width: '100%',
       title: {
-        text: title
+        text: title,
       },
       tooltip: {
         trigger: 'item',
         formatter: (data) => {
-          const typedData = data as echarts.DefaultLabelFormatterCallbackParams
-          const index = typedData.name.indexOf('_')
-          const safeName = typedData.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${tooltip_mode === 'both' ?
-              typedData.value : ''}(${typedData.percent}%)<b />`
+          const typedData = data as echarts.DefaultLabelFormatterCallbackParams;
+          const index = typedData.name.indexOf('_');
+          const safeName = typedData.name
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+          return `${
+            index > -1 ? safeName.slice(index + 1) : safeName
+          }<br /><b>${tooltip_mode === 'both' ? typedData.value : ''}(${
+            typedData.percent
+          }%)<b />`;
         },
         confine: true,
         extraCssText: `max-width: 300px;
           word-wrap:break-word;
           white-space:pre-wrap;
-          padding-right: 10px`
+          padding-right: 10px`,
       },
       chartArea: noLegend ? noLegendArea : !title ? noTitleArea : normalArea,
       legend: {
@@ -104,24 +110,34 @@ export const PieChart: React.FC<IProps> = (props) => {
         // Display at most 36 characters.
         formatter: (name) => {
           // Show legends for datas with the same name.
-          const index = name.indexOf('_')
+          const index = name.indexOf('_');
           if (index > -1) {
-            name = name.slice(index + 1)
+            name = name.slice(index + 1);
           }
-          return name.length > 36 ? name.slice(0, 34) + "..." : name;
+          return name.length > 36 ? name.slice(0, 34) + '...' : name;
         },
         tooltip: {
           show: true,
           triggerOn: 'mousemove',
           formatter: (data) => {
-            const currentItem = rowsWithUniqueName.find(item => item.name === data.name)
-            const index = data.name.indexOf('_')
-            const percent = ((currentItem?.value || 0) * 100 / totalValue).toFixed(2)
-            const safeName = data.name.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-            return `${index > -1 ? safeName.slice(index + 1) :
-              safeName}<br /><b>${tooltip_mode === 'both' ? (currentItem?.value || 0) : ''}(${percent}%)<b />`
-          }
-        }
+            const currentItem = rowsWithUniqueName.find(
+              (item) => item.name === data.name
+            );
+            const index = data.name.indexOf('_');
+            const percent = (
+              ((currentItem?.value || 0) * 100) /
+              totalValue
+            ).toFixed(2);
+            const safeName = data.name
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+            return `${
+              index > -1 ? safeName.slice(index + 1) : safeName
+            }<br /><b>${
+              tooltip_mode === 'both' ? currentItem?.value || 0 : ''
+            }(${percent}%)<b />`;
+          },
+        },
       },
       sliceVisibilityThreshold: 0,
       colors,
@@ -133,21 +149,19 @@ export const PieChart: React.FC<IProps> = (props) => {
           label: {
             position: 'inside',
             formatter: `{d}%`,
-            color: '#ffffff'
+            color: '#ffffff',
           },
-          data: rowsWithUniqueName
-        }
-      ]
-    }
+          data: rowsWithUniqueName,
+        },
+      ],
+    };
 
-    option && chart.setOption(option, true)
+    option && chart.setOption(option, true);
 
     return () => {
-      chart.dispose()
-    }
-  }, [graph, height, top, resizeEventDependency])
+      chart.dispose();
+    };
+  }, [graph, height, top, resizeEventDependency]);
 
-  return (
-    <div ref={graphRef} style={{ height }}></div>
-  )
-}
+  return <div ref={graphRef} style={{ height }}></div>;
+};

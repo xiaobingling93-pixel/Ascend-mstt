@@ -9,6 +9,9 @@ from mindspore.common.tensor import Tensor
 from mindspore import jit
 from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.mindspore.dump.jit_dump import JitDump, dump_jit
+import unittest
+from unittest.mock import MagicMock, patch
 
 def conv(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_mode="valid", has_bias=True):
     return nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding,
@@ -127,3 +130,81 @@ if __name__ == "__main__":
     dir_path = "/absolute_path/step0/rank/dump_tensor_data/"
     actual_file_count = len(os.listdir(dir_path))
     assert actual_file_count == expected_file_count
+
+
+class SimpleNet(nn.Cell):
+    def __init__(self):
+        super(SimpleNet, self).__init__()
+        self.relu = ops.relu
+
+    def construct(self, x):
+        return self.relu(x)
+
+class TestJitDump(unittest.TestCase):
+    @patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_ori_func')
+    @patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_hook_func')
+    @patch.object(JitDump, 'need_dump', return_value=True)
+    def test_jitdump_forward(self, mock_need_dump, mock_set_ori_func, mock_set_hook_func):
+        # Set up configurations
+        json_config = {
+            "task": "statistics",
+            "dump_path": "/absolute_path",
+            "rank": [],
+            "step": [],
+            "level": "L1"
+        }
+
+        common_config = CommonConfig(json_config)
+        task_config = BaseConfig(json_config)
+        debugger = MagicMock()
+
+        # Setup MindSpore context and JitDump class
+        ms.set_context(mode=ms.PYNATIVE_MODE)
+
+        def identity_fn(x):
+            return x
+
+        jit_dump_instance = JitDump(fn=identity_fn, ms_create_time=0)
+
+        # Set collector and config for JitDump
+        JitDump.set_config(common_config)
+        JitDump.set_data_collector(MagicMock())
+
+        net = SimpleNet()
+        input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
+        output_tensor = net(input_tensor)
+
+        # Call the JitDump instance and validate expectations
+        jit_dump_instance(input_tensor)
+
+        # Assertions to ensure required methods are called
+        self.assertTrue(mock_set_ori_func.called, "api_set_ori_func should be called during forward pass.")
+
+    @patch('os.getpid', return_value=12345)
+    def test_dump_jit(self, mock_getpid):
+        in_feat = Tensor(np.array([1, 2, 3]), mstype.float32)
+        out_feat = Tensor(np.array([4, 5, 6]), mstype.float32)
+
+        # Mock need_dump to return True
+        with patch.object(JitDump, 'need_dump', return_value=True):
+            # Add a mock data_collector to the JitDump class
+            JitDump.data_collector = MagicMock()
+
+            # Call the function to be tested
+            dump_jit('sample_name', in_feat, out_feat, True)
+
+            # Verify the expected calls
+            self.assertTrue(JitDump.data_collector.update_api_or_module_name.called)
+            self.assertTrue(JitDump.data_collector.forward_data_collect.called)
+            JitDump.data_collector.forward_data_collect.assert_called_once()
+
+    @patch('os.listdir', return_value=['tensor1', 'tensor2', 'tensor3', 'tensor4', 'tensor5'])
+    def test_dump_tensor_data_files_count(self, mock_listdir):
+        dir_path = "/absolute_path/step0/rank/dump_tensor_data/"
+        expected_file_count = 5
+        actual_file_count = len(os.listdir(dir_path))
+        self.assertEqual(actual_file_count, expected_file_count)
+
+
+if __name__ == "__main__":
+    unittest.main()

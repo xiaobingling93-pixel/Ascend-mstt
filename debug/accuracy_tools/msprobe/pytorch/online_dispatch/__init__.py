@@ -12,9 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+__all__ = ["PtdbgDispatch"]
+
 from signal import signal, SIGPIPE, SIG_DFL
 from .dispatch import PtdbgDispatch
 signal(SIGPIPE, SIG_DFL)
-
-
-__all__ = ["PtdbgDispatch"]

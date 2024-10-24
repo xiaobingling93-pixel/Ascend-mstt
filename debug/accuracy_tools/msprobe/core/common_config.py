@@ -74,5 +74,27 @@ class BaseConfig:
     def check_config(self):
         self._check_str_list_config(self.scope, "scope")
         self._check_str_list_config(self.list, "list")
-        self._check_str_list_config(self.data_mode, "data_mode")
         self._check_str_list_config(self.backward_input, "backward_input")
+        self._check_data_mode()
+
+    def _check_data_mode(self):
+        if self.data_mode is not None:
+            if not isinstance(self.data_mode, list):
+                logger.error_log_with_exp(f"data_mode is invalid, it should be a list[str]",
+                                          MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+
+            if len(self.data_mode) > len(Const.DUMP_DATA_MODE_LIST):
+                logger.error_log_with_exp(
+                    f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST)}.",
+                    MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+                )
+
+            for mode in self.data_mode:
+                if not isinstance(mode, str):
+                    logger.error_log_with_exp(f"data_mode is invalid, it should be a list[str]",
+                                              MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
+                if mode not in Const.DUMP_DATA_MODE_LIST:
+                    logger.error_log_with_exp(
+                        f"The element '{mode}' of data_mode {self.data_mode} is not in {Const.DUMP_DATA_MODE_LIST}.",
+                        MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+                    )

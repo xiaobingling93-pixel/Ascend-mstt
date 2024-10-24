@@ -1,20 +1,33 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import multiprocessing
 import os
 import time
-from typing import List, Tuple
-import multiprocessing
 from multiprocessing import Process
+from typing import List
 
-import numpy as np
 import mindspore as ms
-from mindspore.communication import get_rank
-from mindspore.ops import operations as P
+import numpy as np
 from mindspore.common.parameter import Parameter
-
-from msprobe.core.grad_probe.utils import ListCache
-from msprobe.core.grad_probe.constant import GradConst
-from msprobe.mindspore.common.log import logger
+from mindspore.communication import get_rank
 from msprobe.core.common.file_utils import (create_directory, check_file_or_directory_path,
                                             write_csv, remove_path, move_file, load_npy)
+from msprobe.core.grad_probe.constant import GradConst
+from msprobe.core.grad_probe.utils import ListCache
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.grad_probe.global_context import grad_context, GlobalContext
 
 
@@ -28,12 +41,12 @@ def get_rank_id():
 
 @ms.jit
 def grad_dump(dump_dir: str, g_name: str, dump_step: Parameter, grad: ms.Tensor, level: str, bounds: List):
-    '''
+    """
     Dump gradient statistic data.
         level0: [step, max, min, norm, shape_dim, shape]
         level1: [step, max, min, norm, shape_dim, shape] + grad_bool_data
         level2: [step, max, min, norm, shape_dim, shape, dist_dim, dist] + grad_bool_data
-    '''
+    """
     dump_path = os.path.join(dump_dir, g_name)
     dump_dir_path = dump_path + "_dir"
     save_op = ms.ops.TensorDump()
@@ -182,7 +195,7 @@ class CSVGenerator(Process):
         shape_dim = int(stat_data[GradConst.SHAPE_DIM_IDX])
         file_name = os.path.basename(file_path)
         prefix_idx = len(file_name.split("_")[0])
-        param_name = file_name[(prefix_idx + 1) : -(len(GradConst.NPY_SUFFIX) + 1)]
+        param_name = file_name[(prefix_idx + 1): -(len(GradConst.NPY_SUFFIX) + 1)]
         if not param_name:
             raise RuntimeError("Invalid gradient statistic file name.")
         csv_line = [param_name]
@@ -224,8 +237,9 @@ class CSVGenerator(Process):
             if i == 0:
                 intervals.append(f"(-inf, {self.bounds[i]}]")
             else:
-                intervals.append(f"({self.bounds[i-1]}, {self.bounds[i]}]")
+                intervals.append(f"({self.bounds[i - 1]}, {self.bounds[i]}]")
         intervals.extend([f"({self.bounds[-1]}, inf)", "=0"])
         return intervals
+
 
 csv_generator = CSVGenerator()

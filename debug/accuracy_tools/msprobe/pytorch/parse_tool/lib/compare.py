@@ -22,7 +22,7 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv
+from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv, os_walk_for_files
 
 
 class Compare:
@@ -240,20 +240,14 @@ class Compare:
 
     def convert_api_dir_to_npy(self, dump_dir, param, output_dir, msaccucmp_path):
         dump_dir = self.util.path_strip(dump_dir)
-        for root, _, files in os.walk(dump_dir, topdown=True):
-            self.util.check_path_valid(root)
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_name = os.path.basename(file_path)
-                parts = file_name.split(".")
-                if len(parts) < 5:
-                    continue
-                op_name = parts[1]
-                timestamp = parts[-1]
-                output_path = os.path.join(output_dir, op_name, timestamp)
-                self.convert_dump_to_npy(file_path, param, output_path, msaccucmp_path)
-            path_depth = root.count(os.sep)
-            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
-                yield root, _, files
-            else:
-                _[:] = []
+        files = os_walk_for_files(dump_dir, Const.MAX_TRAVERSAL_DEPTH)
+        filepaths = [os.path.join(file['root'], file['file']) for file in files]
+        for path in filepaths:
+            filename = os.path.basename(path)
+            parts = filename.split(".")
+            if len(parts) < 5:
+                continue
+            op_name = parts[1]
+            timestamp = parts[-1]
+            output_path = os.path.join(output_dir, op_name, timestamp)
+            self.convert_dump_to_npy(path, param, output_path, msaccucmp_path)

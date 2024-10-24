@@ -1,0 +1,2 @@
+- vision_model: "language_model.vision_encoder"
+- vision_projection: "language_model.projection"

@@ -32,10 +32,11 @@ device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
 
 
-class CompareException(Exception):
+class MsprobeBaseException(Exception):
     """
-    Class for Accuracy Compare Exception
+    Base class for all custom exceptions.
     """
+    # 所有的错误代码
     NONE_ERROR = 0
     INVALID_PATH_ERROR = 1
     OPEN_FILE_ERROR = 2
@@ -62,9 +63,14 @@ class CompareException(Exception):
     INVALID_CHAR_ERROR = 23
     RECURSION_LIMIT_ERROR = 24
     INVALID_ATTRIBUTE_ERROR = 25
+    OUTPUT_HOOK_ERROR = 26
+    INPUT_HOOK_ERROR = 27
+    FUNCTION_CALL_ERROR = 28
+    FORWARD_DATA_COLLECTION_ERROR = 29
+    BACKWARD_DATA_COLLECTION_ERROR = 30
 
     def __init__(self, code, error_info: str = ""):
-        super(CompareException, self).__init__()
+        super(MsprobeBaseException, self).__init__()
         self.code = code
         self.error_info = error_info
 
@@ -72,8 +78,25 @@ class CompareException(Exception):
         return self.error_info
 
 
-class DumpException(CompareException):
-    pass
+class CompareException(MsprobeBaseException):
+    """
+    Class for Accuracy Compare Exception
+    """
+
+    def __init__(self, code, error_info: str = ""):
+        super(CompareException, self).__init__(code, error_info)
+
+
+class DumpException(MsprobeBaseException):
+    """
+    Class for Dump Exception
+    """
+
+    def __init__(self, code, error_info: str = ""):
+        super(DumpException, self).__init__(code, error_info)
+
+    def __str__(self):
+        return f"Dump Error Code {self.code}: {self.error_info}"
 
 
 def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
@@ -223,10 +246,8 @@ def task_dumppath_get(input_param):
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    with FileOpen(npu_path, 'r') as npu_f:
-        npu_json_data = json.load(npu_f)
-    with FileOpen(bench_path, 'r') as bench_f:
-        bench_json_data = json.load(bench_f)
+    npu_json_data = load_json(npu_path)
+    bench_json_data = load_json(bench_path)
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)

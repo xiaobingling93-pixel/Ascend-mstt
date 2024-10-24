@@ -15,13 +15,17 @@
 import json
 import os
 import unittest
+import torch
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
-from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver
+from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
+from rich.table import Table
+from io import StringIO
+from rich.console import Console
 
 
 class TestCompare(unittest.TestCase):
@@ -80,6 +84,70 @@ class TestSaver(unittest.TestCase):
         self.assertEqual(pd.read_csv(self.save_path).to_dict(), mock_data_save)
         self.assertEqual(pd.read_csv(self.detail_save_path).to_dict(), mock_data_detail)
 
+    @patch('msprobe.pytorch.online_dispatch.compare.Saver.get_statistics_from_result_csv')
+    @patch('rich.console.Console')
+    @patch('rich.console.Console.print')
+    def test_print_pretest_result(self, mock_console_print, mock_console, mock_get_stats):
+        my_test_class = self.saver
+
+        my_test_class.test_result_cnt = {
+            "total_num": 100,
+            "success_num": 80,
+            "forward_and_backward_fail_num": 10,
+            "forward_or_backward_fail_num": 5,
+            "forward_fail_num": 3,
+            "backward_fail_num": 2
+        }
+        my_test_class.print_pretest_result()
+
+        mock_console_print.assert_called()
+        self.assertEqual(mock_console_print.call_count, 2)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_success(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2', 'test3'],
+            1: ['TRUE', 'FALSE', 'SKIP'],
+            2: ['TRUE', 'FALSE', 'N/A']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        self.saver.get_statistics_from_result_csv()
+        self.assertEqual(self.saver.test_result_cnt['total_num'], 2)
+        self.assertEqual(self.saver.test_result_cnt['success_num'], 1)
+        self.assertEqual(self.saver.test_result_cnt['forward_and_backward_fail_num'], 1)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_incorrect_column_number(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['TRUE', 'FALSE']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        with self.assertRaises(ValueError) as context:
+            self.saver.get_statistics_from_result_csv()
+        self.assertIn("The number of columns in mock_file.csv is incorrect", str(context.exception))
+
+    @patch('msprobe.pytorch.online_dispatch.compare.read_csv')
+    @patch('os.path.basename')
+    def test_get_statistics_from_result_csv_invalid_values(self, mock_basename, mock_read_csv):
+        mock_data = pd.DataFrame({
+            0: ['test1', 'test2'],
+            1: ['INVALID', 'FALSE'],
+            2: ['TRUE', 'FALSE']
+        })
+        mock_read_csv.return_value = mock_data
+        mock_basename.return_value = 'mock_file.csv'
+
+        with self.assertRaises(ValueError) as context:
+            self.saver.get_statistics_from_result_csv()
+        self.assertIn("The value in the 2nd or 3rd column of mock_file.csv is wrong", str(context.exception))
+
     def test_write_summary_csv(self):
         mock_test_result = Mock()
         mock_test_result.api_name = "api_name"
@@ -99,3 +167,112 @@ class TestSaver(unittest.TestCase):
         mock_data_detail = {'api_name.forward.output.0': {0: 'api_name.backward.output.0'}, 'f': {0: 'b'}}
 
         self.assertTrue(pd.read_csv(self.detail_save_path).to_dict() == mock_data_detail)
+
+
+class TestComparator(unittest.TestCase):
+    def setUp(self):
+        self.save_path = "./saver_save.csv"
+        self.detail_save_path = "./saver_detail.csv"
+        self.comparator = Comparator(self.save_path, self.detail_save_path, False)
+        Path(self.save_path).touch()
+        Path(self.detail_save_path).touch()
+        self.error_thd = {torch.float16: [2 ** -11, 2 ** -7],
+                          torch.bfloat16: [2 ** -8, 2 ** -6],
+                          torch.float32: [2 ** -14, 2 ** -11],
+                          torch.float64: [2 ** -14, 2 ** -11]}
+        self.eb_thd = {torch.float16: 2 ** -10,
+                       torch.bfloat16: 2 ** -7,
+                       torch.float32: 2 ** -14,
+                       torch.float64: 2 ** -14}
+
+    def tearDown(self):
+        if os.path.exists(self.save_path):
+            os.remove(self.save_path)
+        if os.path.exists(self.detail_save_path):
+            os.remove(self.detail_save_path)
+
+    def test_compare_core_wrapper(self):
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        test_final_success, detailed_result_total = self.comparator._compare_core_wrapper(bench_out, npu_out)
+        self.assertTrue(test_final_success)
+        self.assertEqual(detailed_result_total, [['torch.float32', 'torch.float32', (4,), 0.0, 0.0, 0, 0.0, 0,
+                                                  self.error_thd[torch.float32][0], self.eb_thd[torch.float32],
+                                                  True, None]])
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_dropout_success(self):
+        # 元素数量大于阈值，零值分布接近的情况
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([0, 1, 1, 0, 0])  # 3个零
+
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_dropout_failure(self):
+        # 元素数量大于阈值，零值分布差异大的情况
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+        self.assertFalse(result)
+        self.assertEqual(code, 0)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_dropout_tensor_num_less_than_threshold(self):
+        # 元素数量小于阈值的情况
+        bench_out = torch.tensor([1, 1, 1])
+        npu_out = torch.tensor([1, 1, 1])
+
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
+
+    def test_compare_dropout_empty_tensors(self):
+        # 空张量的情况
+        bench_out = torch.tensor([])
+        npu_out = torch.tensor([])
+
+        result, code = self.comparator._compare_dropout(bench_out, npu_out)
+        self.assertTrue(result)
+        self.assertEqual(code, 1)
+
+    def test_compare_output_fwd(self):
+        api_name = 'Tensor.add.0.forward.input.0'
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out)
+        self.assertTrue(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_output_fwd_dropout(self):
+        api_name = 'Tensor.add.0.forward.input.dropout.0'
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out)
+        self.assertFalse(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    def test_compare_output_bwd(self):
+        api_name = 'Tensor.add.0.forward.input.0'
+        bench_out = torch.Tensor([1, 2, 3, 4])
+        npu_out = torch.Tensor([1, 2, 3, 4])
+        bench_grad = torch.Tensor([1])
+        npu_grad = torch.Tensor([1])
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        self.assertTrue(is_fwd_success)
+        self.assertTrue(is_bwd_success)
+
+    @patch('msprobe.pytorch.online_dispatch.compare.ELEMENT_NUM_THRESHOLD', 4)
+    def test_compare_output_bwd_dropout(self):
+        api_name = 'Tensor.add.0.forward.input.dropout.0'
+        bench_out = torch.tensor([0, 0, 1, 1, 0])  # 3个零
+        npu_out = torch.tensor([1, 1, 1, 0, 1])  # 1个零
+        bench_grad = [torch.Tensor([1, 2, 3, 4])]
+        npu_grad = [torch.Tensor([1, 2, 3, 4])]
+        is_fwd_success, is_bwd_success = self.comparator.compare_output(api_name, bench_out, npu_out, bench_grad, npu_grad)
+        self.assertFalse(is_fwd_success)
+        self.assertTrue(is_bwd_success)
