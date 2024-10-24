@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from collections import defaultdict
 from functools import wraps
 
 import torch
@@ -39,7 +40,7 @@ def singleton(cls):
 @singleton
 class Counter:
     def __init__(self) -> None:
-        self.index_dict = {}
+        self.index_dict = defaultdict(int)
 
 
 counter = Counter()
@@ -67,9 +68,9 @@ class AccuracyCheckerDispatch(TorchDispatchMode):
 
         res = func(*args, **kwargs)
         cur_rank = get_tensor_rank(args, res)
-        cur_api_number = self.counter.index_dict.setdefault(aten_api, 0)
+        cur_api_number = self.counter.index_dict[aten_api]
         api_name = f'{Const.ATEN}{Const.SEP}{aten_api}{Const.SEP}{cur_api_number}'
-        logger.info(f"tools is dumping api: {api_name}")
+        logger.info(f"tools is dumping api: {api_name}, rank: {cur_rank}")
         api_data = ApiData(api_name, args, kwargs, res, 0, cur_rank)
         if "device" in api_data.kwargs:
             api_data.kwargs.pop("device")
@@ -98,7 +99,7 @@ def dispatch4data(func, attl, status):
     return wrapper
 
 
-def run_ut_dispatch(attl, status):
+def run_ut_dispatch(attl, status, is_recompute=False):
     """
     This function called by online_run_ut.
     It is used to enable or disable dispatch for torch.autograd.backward function.
@@ -106,5 +107,8 @@ def run_ut_dispatch(attl, status):
     Args:
         attl (ATTL):  online_run_ut class ATTL, which is used to upload or send api data to server.
         status (bool): True means enable dispatch, False means disable dispatch.
+        is_recompute (bool): Flag of recompute, which is conflicted with aten api, then skip dispatch4data.
     """
+    if is_recompute:
+        return
     torch.autograd.backward = dispatch4data(torch.autograd.backward, attl, status)

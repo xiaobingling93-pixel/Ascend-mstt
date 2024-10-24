@@ -59,6 +59,9 @@ class DebuggerConfig:
             self.tls_path = task_config.tls_path if task_config.tls_path else ""
             self.host = task_config.host if task_config.host else ""
             self.port = task_config.port if task_config.port else -1
+            self.online_run_ut_recompute = False
+            if isinstance(task_config.online_run_ut_recompute, bool) and task_config.online_run_ut_recompute:
+                self.online_run_ut_recompute = task_config.online_run_ut_recompute
 
         self.check()
 
