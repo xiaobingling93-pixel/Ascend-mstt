@@ -17,8 +17,9 @@ from msprobe.core.common.const import Const
 
 
 class TestMsprobeAdapter(unittest.TestCase):
+    @patch('msprobe.visualization.builder.msprobe_adapter.set_dump_path')
     @patch('msprobe.visualization.builder.msprobe_adapter.get_dump_mode', return_value=Const.SUMMARY)
-    def test_get_compare_mode_summary(self, mock_get_dump_mode):
+    def test_get_compare_mode_summary(self, mock_get_dump_mode, mock_set_dump_path):
         mode = get_compare_mode("dummy_param")
         self.assertEqual(mode, GraphConst.SUMMARY_COMPARE)
 
