@@ -179,14 +179,12 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.assertEqual(mock_save.call_args_list[1][0],
                          (tensor2, "tensor2"))
 
-    @patch("msprobe.core.data_dump.data_processor.mindspore_processor.logger.info")
-    def test_is_terminated(self, mock_info):
+    def test_is_terminated(self):
         self.data_processor.overflow_nums = -1
         self.assertFalse(self.data_processor.is_terminated)
         self.data_processor.real_overflow_nums = 2
         self.data_processor.overflow_nums = 2
         self.assertTrue(self.data_processor.is_terminated)
-        mock_info.assert_called_with("[msprobe] 超过预设溢出次数 当前溢出次数: 2")
         self.data_processor.overflow_nums = 3
         self.assertFalse(self.data_processor.is_terminated)
 

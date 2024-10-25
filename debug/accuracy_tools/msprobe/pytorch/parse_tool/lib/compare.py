@@ -22,8 +22,7 @@ from collections import namedtuple
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.utils import create_directory, write_csv, save_npy_to_txt
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import create_directory, load_npy, save_npy_to_txt, write_csv, os_walk_for_files
 
 
 class Compare:
@@ -50,10 +49,10 @@ class Compare:
         dump_file = self.util.path_strip(dump_file)
         file_name = ""
         if os.path.isfile(dump_file):
-            self.log.info("Covert file is: %s", dump_file)
+            self.log.info("Covert file is: %s" % dump_file)
             file_name = os.path.basename(dump_file)
         elif os.path.isdir(dump_file):
-            self.log.info("Convert all files in path: %s", dump_file)
+            self.log.info("Convert all files in path: %s" % dump_file)
             file_name = ""
         output = output if output else Const.DUMP_CONVERT_DIR
         convert = self.convert(dump_file, data_format, output, msaccucmp_path)
@@ -63,7 +62,7 @@ class Compare:
             summary_txt = ["SrcFile: %s" % dump_file]
             for convert_file in convert_files.values():
                 summary_txt.append(" - %s" % convert_file.file_name)
-            self.log.info("Transfer result is saved in : %s", os.path.realpath(output))
+            self.log.info("Transfer result is saved in : %s" % os.path.realpath(output))
             self.util.print_panel("\n".join(summary_txt))
 
     def convert(self, dump_file, data_format, output, msaccucmp_path):
@@ -86,17 +85,8 @@ class Compare:
         if left is None or right is None:
             raise ParseException("invalid input or output")
         if self.util.check_path_valid(left) and self.util.check_path_valid(right):
-            try:
-                left_data = np.load(left)
-                right_data = np.load(right)
-            except UnicodeError as e:
-                self.log.error("%s %s" % ("UnicodeError", str(e)))
-                self.log.warning("Please check the npy file")
-                raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
-            except IOError:
-                self.log.error("Failed to load npy %s or %s." % (left, right))
-                raise ParseException(ParseException.PARSE_LOAD_NPY_ERROR) from e
-
+            left_data = load_npy(left)
+            right_data = load_npy(right)
         # save to txt
         if save_txt:
             save_npy_to_txt(left_data, left + ".txt")
@@ -124,11 +114,11 @@ class Compare:
         shape_left = data_left.shape
         shape_right = data_right.shape
         if shape_left != shape_right:
-            self.log.warning("Data shape not equal: %s vs %s", data_left.shape, data_right.shape)
+            self.log.warning("Data shape not equal: %s vs %s" % (data_left.shape, data_right.shape))
         data_left = data_left.reshape(-1)
         data_right = data_right.reshape(-1)
         if data_left.shape[0] != data_right.shape[0]:
-            self.log.warning("Data size not equal: %s vs %s", data_left.shape, data_right.shape)
+            self.log.warning("Data size not equal: %s vs %s" % (data_left.shape, data_right.shape))
             if data_left.shape[0] < data_right.shape[0]:
                 data_left = np.pad(data_left, (0, data_right.shape[0] - data_left.shape[0]), 'constant')
             else:
@@ -160,10 +150,9 @@ class Compare:
         return res
 
     def compare_npy(self, file, bench_file, output_path):
-        if self.util.check_path_valid(file):
-            data = np.load(file)
-        if self.util.check_path_valid(bench_file):
-            bench_data = np.load(bench_file)
+        if self.util.check_path_valid(file) and self.util.check_path_valid(bench_file):
+            data = load_npy(file)
+            bench_data = load_npy(bench_file)
         shape, dtype = data.shape, data.dtype
         bench_shape, bench_dtype = bench_data.shape, bench_data.dtype
         filename = os.path.basename(file)
@@ -171,7 +160,7 @@ class Compare:
         if shape != bench_shape or dtype != bench_dtype:
             self.log.error(
                 "Shape or dtype between two npy files is inconsistent. Please check the two files."
-                "File 1: %s, file 2: %s", file, bench_file)
+                "File 1: %s, file 2: %s" % (file, bench_file))
             self.util.deal_with_dir_or_file_inconsistency(output_path)
             return
         md5_consistency = False
@@ -247,25 +236,18 @@ class Compare:
             golden_subdir_path = os.path.join(golden_dump_dir, golden_subdir_name)
             self.compare_timestamp_directory(my_subdir_path, golden_subdir_path, output_path)
         self.util.change_filemode_safe(output_path)
-        self.log.info("Compare result is saved in : %s", output_path)
+        self.log.info("Compare result is saved in : %s" % (output_path))
 
     def convert_api_dir_to_npy(self, dump_dir, param, output_dir, msaccucmp_path):
         dump_dir = self.util.path_strip(dump_dir)
-        for root, _, files in os.walk(dump_dir, topdown=True):
-            path_checker = FileChecker(root)
-            path_checker.common_check()
-            for file in files:
-                file_path = os.path.join(root, file)
-                file_name = os.path.basename(file_path)
-                parts = file_name.split(".")
-                if len(parts) < 5:
-                    continue
-                op_name = parts[1]
-                timestamp = parts[-1]
-                output_path = os.path.join(output_dir, op_name, timestamp)
-                self.convert_dump_to_npy(file_path, param, output_path, msaccucmp_path)
-            path_depth = root.count(os.sep)
-            if path_depth <= Const.MAX_TRAVERSAL_DEPTH:
-                yield root, _, files
-            else:
-                _[:] = []
+        files = os_walk_for_files(dump_dir, Const.MAX_TRAVERSAL_DEPTH)
+        filepaths = [os.path.join(file['root'], file['file']) for file in files]
+        for path in filepaths:
+            filename = os.path.basename(path)
+            parts = filename.split(".")
+            if len(parts) < 5:
+                continue
+            op_name = parts[1]
+            timestamp = parts[-1]
+            output_path = os.path.join(output_dir, op_name, timestamp)
+            self.convert_dump_to_npy(path, param, output_path, msaccucmp_path)

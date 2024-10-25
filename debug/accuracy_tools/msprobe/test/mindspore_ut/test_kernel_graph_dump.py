@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 
 from unittest import TestCase
@@ -25,7 +24,7 @@ from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
 
 
 class TestKernelGraphDump(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "tensor",
@@ -45,10 +44,9 @@ class TestKernelGraphDump(TestCase):
         self.assertEqual(dumper.dump_json["common_dump_settings"]["file_format"], "bin")
         self.assertEqual(dumper.dump_json["common_dump_settings"]["input_output"], 2)
 
-        with patch("msprobe.mindspore.dump.kernel_graph_dump.make_dump_path_if_not_exists"), \
-             patch("msprobe.mindspore.dump.kernel_graph_dump.FileOpen"), \
-             patch("msprobe.mindspore.dump.kernel_graph_dump.json.dump"), \
-             patch("msprobe.mindspore.dump.kernel_graph_dump.logger.info"):
+        with patch("msprobe.mindspore.dump.kernel_graph_dump.create_directory"), \
+             patch("msprobe.mindspore.dump.kernel_graph_dump.logger.info"), \
+             patch("msprobe.mindspore.dump.kernel_graph_dump.save_json") as mock_save_json:
 
             os.environ["GRAPH_OP_RUN"] = "1"
             with self.assertRaises(Exception) as context:
@@ -58,6 +56,7 @@ class TestKernelGraphDump(TestCase):
                 del os.environ["GRAPH_OP_RUN"]
 
             dumper.handle()
+            self.assertIn("kernel_graph_dump.json", mock_save_json.call_args_list[0][0][0])
             self.assertIn("kernel_graph_dump.json", os.environ.get("MS_ACL_DUMP_CFG_PATH"))
 
         if "MINDSPORE_DUMP_CONFIG" in os.environ:

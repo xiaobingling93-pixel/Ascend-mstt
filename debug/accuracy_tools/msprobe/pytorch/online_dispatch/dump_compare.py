@@ -1,13 +1,26 @@
-import os
-import json
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import copy
+import json
+import os
 from datetime import datetime, timezone
 
-import pandas as pd
 import torch
+from msprobe.core.common.file_utils import FileOpen, save_npy
 from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_check import FileOpen
-from .utils import np_save_data
 
 
 class DispatchRunParam:
@@ -57,7 +70,7 @@ class TimeStatistics:
         if self.debug:
             self.time = datetime.now(tz=timezone.utc)
             logger.info(f'Time[{self.tag}]-ENTER: Dev[{self.device}], Pid[{os.getpid()}], Fun[{self.fun}], ' \
-                         f'Id[{self.index}]')
+                        f'Id[{self.index}]')
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.debug:
@@ -87,7 +100,8 @@ def dump_data(data, prefix, dump_path):
         if isinstance(data, torch.Tensor) and data.is_meta:
             return
         # dump data may greater than summary_list collect
-        np_save_data(data, prefix, dump_path)
+        path = os.path.join(dump_path, f'{prefix}.npy')
+        save_npy(data, path)
 
 
 def save_temp_summary(api_index, single_api_summary, path, lock):
@@ -153,4 +167,3 @@ def dispatch_multiprocess(run_param, dispatch_data_info):
 
 def error_call(err):
     logger.error(f'multiprocess {err}')
-

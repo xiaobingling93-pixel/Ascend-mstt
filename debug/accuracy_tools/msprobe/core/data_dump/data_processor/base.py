@@ -1,11 +1,27 @@
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
+import os
 from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
+
 import numpy as np
-from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple, CompareException
 
 
 @dataclass
@@ -69,8 +85,11 @@ class TensorStatInfo:
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
-                    bool, int, float, str, slice, type(Ellipsis))
+    special_type = (
+        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
+        bool, int, float, str, slice,
+        type(Ellipsis)
+    )
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -79,7 +98,6 @@ class BaseDataProcessor:
         self.stack_info_struct = {}
         self.current_api_or_module_name = None
         self.api_data_category = None
-        self.has_overflow = False
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
@@ -87,26 +105,27 @@ class BaseDataProcessor:
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
-    
+
     @property
     def is_terminated(self):
         return False
 
     @staticmethod
     def analyze_api_call_stack(name):
+        try:
+            api_stack = inspect.stack()[5:]
+        except Exception as e:
+            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+            api_stack = None
         stack_str = []
-        for (_, path, line, func, code, _) in inspect.stack()[5:]:
-            if not code:
-                continue
-            stack_line = " ".join([
-                "File", ", ".join([
-                    path,
-                    " ".join(["line", str(line)]),
-                    " ".join(["in", func]),
-                    " ".join(["\n", code[0].strip()])
-                ])
-            ])
-            stack_str.append(stack_line)
+        if api_stack:
+            for (_, path, line, func, code, _) in api_stack:
+                if not code:
+                    continue
+                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
+                stack_str.append(stack_line)
+        else:
+            stack_str.append(Const.WITHOUT_CALL_STACK)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
@@ -168,7 +187,10 @@ class BaseDataProcessor:
         return cls.special_type
 
     @classmethod
-    def recursive_apply_transform(cls, args, transform):
+    def recursive_apply_transform(cls, args, transform, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive transform, {Const.MAX_DEPTH} is reached.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
             return arg_transform
@@ -176,14 +198,14 @@ class BaseDataProcessor:
             result_list = []
             for i, arg in enumerate(args):
                 cls._recursive_key_stack.append(str(i))
-                result_list.append(cls.recursive_apply_transform(arg, transform))
+                result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
                 cls._recursive_key_stack.pop()
             return type(args)(result_list)
         elif isinstance(args, dict):
             result_dict = {}
             for k, arg in args.items():
                 cls._recursive_key_stack.append(str(k))
-                result_dict[k] = cls.recursive_apply_transform(arg, transform)
+                result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
                 cls._recursive_key_stack.pop()
             return result_dict
         elif args is not None:
@@ -202,10 +224,9 @@ class BaseDataProcessor:
     def update_iter(self, current_iter):
         self.current_iter = current_iter
 
-    def visit_and_clear_overflow_status(self, api_or_module_name):
+    def update_api_or_module_name(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
-            self.has_overflow = False
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """
@@ -224,7 +245,7 @@ class BaseDataProcessor:
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
-    
+
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
 

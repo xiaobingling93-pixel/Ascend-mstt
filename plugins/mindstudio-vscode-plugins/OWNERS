@@ -1,0 +1,9 @@
+options:
+  no_parent_owners: true
+approvers:
+- lee314
+- linxi9527
+reviewers:
+- jzc_23
+- duanhaomiao
+- yangqingliang4

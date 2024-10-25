@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2022-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,14 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 import os
 import time
 
 from msprobe.core.advisor.advisor_const import AdvisorConst
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, FileCheckConst
-from msprobe.core.common.file_check import change_mode
+from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import change_mode, FileOpen
 
 
 class AdvisorResult:
@@ -34,11 +32,11 @@ class AdvisorResult:
         self.advisor_message = message
 
     @staticmethod
-    def gen_summary_file(out_path, message_list):
-        file_name = 'advisor_{}.txt'.format(time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
+    def gen_summary_file(out_path, message_list, suffix):
+        file_name = 'advisor{}_{}.txt'.format(suffix, time.strftime("%Y%m%d%H%M%S", time.localtime(time.time())))
         result_file = os.path.join(out_path, file_name)
         try:
-            with os.fdopen(os.open(result_file, Const.WRITE_FLAGS, Const.WRITE_MODES), 'w+') as output_file:
+            with FileOpen(result_file, 'w+') as output_file:
                 output_file.truncate(0)
                 message_list = [message + AdvisorConst.NEW_LINE for message in message_list]
                 output_file.writelines(message_list)
@@ -50,9 +48,11 @@ class AdvisorResult:
 
     def print_advisor_log(self):
         logger.info("The summary of the expert advice is as follows: ")
-        message_list = [AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
-                        AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
-                        AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message]
+        message_list = [
+            AdvisorConst.LINE + AdvisorConst.COLON + str(self.line),
+            AdvisorConst.SUSPECT_NODES + AdvisorConst.COLON + self.suspect_node,
+            AdvisorConst.ADVISOR_SUGGEST + AdvisorConst.COLON + self.advisor_message
+        ]
         for message in message_list:
             logger.info(message)
         return message_list

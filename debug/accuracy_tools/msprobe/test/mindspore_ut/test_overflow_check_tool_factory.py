@@ -24,7 +24,7 @@ from msprobe.mindspore.overflow_check.overflow_check_tool_factory import Overflo
 
 
 class TestOverflowCheckToolFactory(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_create(self, _):
         json_config = {
             "task": "overflow_check",
@@ -48,7 +48,8 @@ class TestOverflowCheckToolFactory(TestCase):
         with self.assertRaises(Exception) as context:
             OverflowCheckToolFactory.create(config)
         self.assertEqual(str(context.exception),
-                         f"Overflow check is not supported in {config.execution_mode} mode when level is {config.level}.")
+                         f"Overflow check is not supported in {config.execution_mode} mode "
+                         f"when level is {config.level}.")
 
         config.level = "kernel"
         dumper = OverflowCheckToolFactory.create(config)

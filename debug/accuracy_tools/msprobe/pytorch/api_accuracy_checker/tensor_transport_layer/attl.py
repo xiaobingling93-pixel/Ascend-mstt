@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import glob
 import os.path
 import time
@@ -12,7 +27,7 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
 from msprobe.pytorch.common.utils import logger
-from msprobe.core.common.utils import remove_path
+from msprobe.core.common.file_utils import remove_path
 from msprobe.pytorch.common.utils import save_api_data, load_api_data, save_pt, load_pt
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
@@ -41,6 +56,7 @@ class ATTL:
         self.message_end = False
         self.kill_progress = False
         self.check_attl_config()
+        self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
         elif self.session_config.is_benchmark_device:
@@ -77,6 +93,11 @@ class ATTL:
         """
         npu major in 'send' (client)
         """
+
+        # if tcp connection lost,
+        if self.socket_manager.signal_exit:
+            raise ConnectionError(f"Failed to connect to {self.session_config.connect_ip}.")
+
         # know receiver receive and go next
         if isinstance(buffer, ApiData):
             buffer = move2target_device(buffer, torch.device('cpu'))

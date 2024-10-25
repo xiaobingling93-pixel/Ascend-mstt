@@ -1,16 +1,29 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import threading
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
-from msprobe.core.grad_probe.utils import check_str
+from msprobe.core.common.file_utils import create_directory, check_path_before_create
 from msprobe.core.grad_probe.constant import GradConst
-from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import create_directory
-from msprobe.core.common.utils import check_path_before_create
+from msprobe.core.grad_probe.utils import check_str, check_bounds_element
+from msprobe.mindspore.common.log import logger
 
 
 class GlobalContext:
-
     _instance = None
     _instance_lock = threading.Lock()
     _setting = {
@@ -19,7 +32,7 @@ class GlobalContext:
         GradConst.STEP: None,
         GradConst.RANK: None,
         GradConst.CURRENT_STEP: 0,
-        GradConst.BOUNDS: [-10, -1, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 1, 10],
+        GradConst.BOUNDS: [-1, 0, 1],
         GradConst.OUTPUT_PATH: None
     }
 
@@ -32,19 +45,19 @@ class GlobalContext:
 
     def init_context(self, config_dict: Dict):
         level = config_dict.get(GradConst.LEVEL)
-        check_str(level, variable_name = "level in yaml")
+        check_str(level, variable_name="level in yaml")
         if level in GradConst.SUPPORTED_LEVEL:
             self._setting[GradConst.LEVEL] = config_dict.get(GradConst.LEVEL)
         else:
             raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
 
         self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
-        self._set_input_list(config_dict, GradConst.BOUNDS, float)
+        self._set_input_list(config_dict, GradConst.BOUNDS, (float, int), element_check=check_bounds_element)
         self._set_input_list(config_dict, GradConst.STEP, int)
         self._set_input_list(config_dict, GradConst.RANK, int)
 
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
-        check_str(output_path, variable_name = "output_path in yaml")
+        check_str(output_path, variable_name="output_path in yaml")
         try:
             check_path_before_create(output_path)
         except RuntimeError as err:
@@ -71,21 +84,32 @@ class GlobalContext:
         dump_rank_list = self.get_context(GradConst.RANK)
         return (not dump_rank_list) or (rank in dump_rank_list)
 
-    def _set_input_list(self, config_dict: Dict, name: str, dtype: Union[int, str, float]):
-        value = config_dict.get(name)
+    def _get_type_str(self, dtype: Union[int, str, float, Tuple[int, str, float]]):
+        if isinstance(dtype, tuple):
+            return "/".join([self._get_type_str(element) for element in dtype])
         if dtype == int:
             type_str = "integer"
         elif dtype == float:
             type_str = "float"
         else:
             type_str = "string"
+        return type_str
+
+    def _set_input_list(self, config_dict: Dict, name: str,
+                        dtype: Union[int, str, float, Tuple[int, str, float]], element_check=None):
+        value = config_dict.get(name)
+        type_str = self._get_type_str(dtype)
         if value and isinstance(value, list):
             for val in value:
                 if not isinstance(val, dtype):
                     logger.warning(f"Invalid {name} which must be None or list of {type_str}")
                     return
+                if element_check and not element_check(val):
+                    logger.warning(f"Given {name} violates some rules.")
+                    return
             self._setting[name] = value
         else:
             logger.warning(f"{name} is None or not a list with valid items, use default value.")
+
 
 grad_context = GlobalContext()

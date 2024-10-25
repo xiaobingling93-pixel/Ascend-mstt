@@ -1,12 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
 
 import mindspore
-import torch
 import numpy as np
-
-from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
+import torch
 from msprobe.core.common.const import CompareConst, MsCompareConst
+from msprobe.core.common.exceptions import ApiAccuracyCheckerException
+from msprobe.mindspore.common.log import logger
+
 
 class CompareResult:
     def __init__(self, compare_value, pass_status, err_msg):
@@ -28,7 +43,7 @@ class BaseCompareAlgorithm(ABC):
             CompareConst.MAX_ABS_ERR: {
                 CompareConst.PASS: "",
                 CompareConst.ERROR: "max absolute difference is greater than " \
-                    f"threshold: {CompareConst.MAX_ABS_ERR_THRESHOLD} ",
+                                    f"threshold: {CompareConst.MAX_ABS_ERR_THRESHOLD} ",
                 CompareConst.SKIP: "two inputs are not valid for computing max absolute difference, skip comparing ",
             },
             CompareConst.MAX_RELATIVE_ERR: {
@@ -68,7 +83,7 @@ class BaseCompareAlgorithm(ABC):
             ndarray = tensor.to(torch.float64, copy=True).numpy()
         else:
             err_msg = "BaseCompareAlgorithm.convert_to_np_float64_ndarray failed: " \
-                "input is not mindspore.Tensor or torch.Tensor"
+                      "input is not mindspore.Tensor or torch.Tensor"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.UnsupportType))
         return ndarray
 
@@ -187,7 +202,6 @@ class MaxRelativeDiffCompareAlgorithm(BaseCompareAlgorithm):
             return CompareConst.PASS
         else:
             return CompareConst.ERROR
-
 
 
 compare_algorithms = {

@@ -15,8 +15,24 @@
 # limitations under the License.
 """
 import unittest
+from unittest.mock import MagicMock, patch, call
+import numpy as np
+import mindspore as ms
+import os
+import random
 
-from msprobe.mindspore.common.utils import MsprobeStep
+from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.mindspore.common.utils import (get_rank_if_initialized,
+    convert_bf16_to_fp32,
+    save_tensor_as_npy,
+    convert_to_int,
+    list_lowest_level_directories,
+    seed_all,
+    MsprobeStep)
+
+class MockCell:
+    def __init__(self):
+        self.mindstudio_reserved_name = None
 
 
 class TestMsprobeStep(unittest.TestCase):
@@ -38,6 +54,7 @@ class TestMsprobeStep(unittest.TestCase):
                 if self.stop_called:
                     self.stop_called_first = True
                 self.step_called = True
+
         debugger = Debugger()
         self.msprobe_step = MsprobeStep(debugger)
 
@@ -53,3 +70,63 @@ class TestMsprobeStep(unittest.TestCase):
         self.assertTrue(self.msprobe_step.debugger.stop_called)
         self.assertTrue(self.msprobe_step.debugger.step_called)
         self.assertTrue(self.msprobe_step.debugger.stop_called_first)
+
+
+class TestMsprobeFunctions(unittest.TestCase):
+
+    @patch('mindspore.communication.GlobalComm.INITED', True)
+    @patch('mindspore.communication.get_rank', return_value=0)
+    def test_get_rank_if_initialized(self, mock_get_rank):
+        rank = get_rank_if_initialized()
+        self.assertEqual(rank, 0)
+        mock_get_rank.assert_called_once()
+
+    @patch('mindspore.Tensor')
+    def test_convert_bf16_to_fp32(self, mock_tensor):
+        mock_tensor.dtype = ms.bfloat16
+        mock_tensor.to.return_value = mock_tensor
+        result = convert_bf16_to_fp32(mock_tensor)
+        self.assertEqual(result, mock_tensor)
+        mock_tensor.to.assert_called_once_with(ms.float32)
+
+        # Test when tensor is not bfloat16
+        mock_tensor.dtype = ms.float32
+        result = convert_bf16_to_fp32(mock_tensor)
+        self.assertEqual(result, mock_tensor)
+
+    def test_convert_to_int(self):
+        self.assertEqual(convert_to_int("123"), 123)
+        self.assertEqual(convert_to_int("abc"), -1)
+
+    @patch('os.listdir', return_value=['dir1', 'dir2'])
+    @patch('os.path.isdir', side_effect=lambda x: x in ['root/dir1', 'root/dir2'])
+    @patch('os.path.exists', side_effect=lambda x: x == 'root')
+    @patch('msprobe.core.common.file_utils.check_path_exists')
+    def test_list_lowest_level_directories(self, mock_check_exists, mock_exists, mock_isdir, mock_listdir):
+        mock_check_exists.return_value = None
+
+        # 执行函数并验证结果
+        lowest_dirs = list_lowest_level_directories('root')
+        self.assertEqual(lowest_dirs, ['root/dir1', 'root/dir2'])
+
+    @patch('os.environ', new_callable=dict)
+    @patch('mindspore.set_seed')
+    @patch('random.seed')
+    @patch('mindspore.set_context')
+    @patch('msprobe.mindspore.common.utils.check_seed_all')
+    def test_seed_all(self, mock_check_seed_all, mock_set_context, mock_random_seed, mock_set_seed, mock_environ):
+        seed_all(42, True)
+
+        # 验证 check_seed_all 的调用
+        mock_check_seed_all.assert_called_once_with(42, True)
+        # 验证环境变量是否设置正确
+        self.assertEqual(mock_environ.get('PYTHONHASHSEED'), '42')
+        # 验证其他函数是否正确调用
+        mock_set_seed.assert_called_once_with(42)
+        mock_random_seed.assert_called_once_with(42)
+        mock_set_context.assert_called_once_with(deterministic="ON")
+
+
+
+if __name__ == "__main__":
+    unittest.main()

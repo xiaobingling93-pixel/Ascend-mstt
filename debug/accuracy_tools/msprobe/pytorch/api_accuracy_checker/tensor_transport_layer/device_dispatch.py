@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
 from collections import namedtuple
 
@@ -12,6 +27,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TE
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params
+
 
 # NPU vs GPU api list
 CompareApi = set(absolute_standard_api) | set(binary_standard_api) | set(thousandth_standard_api)
@@ -75,7 +92,8 @@ def online_precision_compare(api_data, device, common_config, api_precision_csv_
 
     try:
         # NPU vs CPU
-        cpu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+        cpu_args, cpu_kwargs = generate_cpu_params(npu_args, npu_kwargs, False, api_name)
+        cpu_out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
         npu_data_info = UtDataInfo(None, None, npu_out, cpu_out, None, [], None, rank=api_data.rank)
         npu_detail = compare.compare_output(api_full_name, npu_data_info, True)
         npu_data = pd.DataFrame(npu_detail, columns=DETAIL_TEST_ROWS[-1])
@@ -156,7 +174,10 @@ class ConsumerDispatcher:
 
     def start(self, handle_func, config):
         self.queues = [mp.Queue(maxsize=self.capacity) for _ in range(self.num_workers)]
-        api_precision_csv_file = [ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME, ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME]
+        api_precision_csv_file = [
+            ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME,
+            ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME
+        ]
         common_config = CommonCompareConfig(self.compare, handle_func, config)
         for xpu_id, q in enumerate(self.queues):
             p = mp.Process(name="run_ut_process", target=run_ut_process,
@@ -164,8 +185,10 @@ class ConsumerDispatcher:
 
             p.start()
             self.processes.append(p)
-        logger.info(f"Api_precision_compare task result will be saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}")
-        logger.info(f"Api_precision_compare task details will be saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}")
+        logger.info(
+            f'Api_precision_compare task result will be saved in {ONLINE_API_PRECISION_COMPARE_RESULT_FILE_NAME}')
+        logger.info(
+            f"Api_precision_compare task details will be saved in {ONLINE_API_PRECISION_COMPARE_DETAILS_FILE_NAME}")
         logger.info("Successfully start unittest process.")
 
     def stop(self):

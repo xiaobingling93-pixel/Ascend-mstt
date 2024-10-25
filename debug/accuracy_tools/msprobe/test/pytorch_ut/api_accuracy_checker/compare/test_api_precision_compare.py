@@ -1,14 +1,9 @@
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 
-from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import (
-    CompareConfig,
-    BenchmarkStandard,
-    check_csv_columns,
-    check_error_rate,
-    get_api_checker_result,
-)
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import *
 from msprobe.core.common.const import CompareConst
 
 
@@ -44,6 +39,26 @@ class TestApiPrecisionCompare(unittest.TestCase):
             'MEAN_REL_ERR': ['0.1', '0.1'],
             'EB': ['0.1', '0.1']
         })
+        
+        self.api_name = "test_api"
+        self.npu_precision = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0', ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0', ApiPrecisionCompareColumn.ERROR_RATE: '0', 
+            ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', ApiPrecisionCompareColumn.RMSE: '0.1', 
+            ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', 
+            ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.1', 
+            ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.05'
+            }
+        self.gpu_precision = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0', ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0', ApiPrecisionCompareColumn.ERROR_RATE: '0', 
+            ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE: '0.01', ApiPrecisionCompareColumn.RMSE: '0.1', 
+            ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', 
+            ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', 
+            ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
+        
+        self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
+        self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
 
     def test_benchmark_standard_calc_ratio(self):
         column_name = "TEST_COLUMN"
@@ -53,6 +68,12 @@ class TestApiPrecisionCompare(unittest.TestCase):
 
         result = BenchmarkStandard._calc_ratio(column_name, '0', '0', default_value)
         self.assertEqual(result[0], 1.0)
+
+        result = BenchmarkStandard._calc_ratio(column_name, '1', '0', default_value)
+        self.assertEqual(result[0], default_value)
+
+        result = BenchmarkStandard._calc_ratio(column_name, 'nan', '0', default_value)
+        self.assertTrue(math.isnan(result[0]))
 
     def test_check_csv_columns(self):
         with self.assertRaises(Exception):
@@ -71,6 +92,97 @@ class TestApiPrecisionCompare(unittest.TestCase):
 
         result = get_api_checker_result([CompareConst.PASS, CompareConst.PASS])
         self.assertEqual(result, CompareConst.PASS)
+    
+    def test_print_test_success_success(self):
+        with patch('msprobe.pytorch.common.log.logger.info') as mock_info:
+            api_full_name = "test_api"
+            forward_result = CompareConst.PASS
+            backward_result = CompareConst.PASS
+            print_test_success(api_full_name, forward_result, backward_result)
+            mock_info.assert_called_once_with(f"running api_full_name {api_full_name} compare, "
+                                              f"is_fwd_success: True, "
+                                              f"is_bwd_success: True")
+
+    def test_print_test_success_forward_failure(self):
+        with patch('msprobe.pytorch.common.log.logger.info') as mock_info:
+            api_full_name = "test_api"
+            forward_result = CompareConst.ERROR
+            backward_result = CompareConst.PASS
+            print_test_success(api_full_name, forward_result, backward_result)
+            mock_info.assert_called_once_with(f"running api_full_name {api_full_name} compare, "
+                                              f"is_fwd_success: False, "
+                                              f"is_bwd_success: True")
+
+    def test_print_test_success_backward_failure(self):
+        with patch('msprobe.pytorch.common.log.logger.info') as mock_info:
+            api_full_name = "test_api"
+            forward_result = CompareConst.PASS
+            backward_result = CompareConst.ERROR
+            print_test_success(api_full_name, forward_result, backward_result)
+            mock_info.assert_called_once_with(f"running api_full_name {api_full_name} compare, "
+                                              f"is_fwd_success: True, "
+                                              f"is_bwd_success: False")
+
+        result = get_api_checker_result([])
+        self.assertEqual(result, CompareConst.SPACE)
+
+        result = get_api_checker_result([CompareConst.SKIP])
+        self.assertEqual(result, CompareConst.SKIP)
+
+    def test_write_detail_csv(self):
+        content = [1, 2, 3]
+        save_path = "path/"
+        create_directory(save_path)
+        details_csv_path = os.path.join(save_path, "details.csv")
+        write_detail_csv(content, details_csv_path)
+        self.assertTrue(os.path.exists(details_csv_path))
+        for filename in os.listdir(save_path):
+            os.remove(os.path.join(save_path, filename))
+        os.rmdir(save_path)
+        
+    def test_ulp_standard(self):
+        self.ulp_standard.get_result()
+        self.assertEqual(self.ulp_standard.ulp_err_status, CompareConst.PASS)
+
+        self.assertEqual(self.ulp_standard._get_ulp_status(torch.float32), CompareConst.PASS)
+
+    def test_benchmark_standard(self):
+        self.benchmark_standard.get_result()
+        self.assertEqual(self.benchmark_standard.final_result, CompareConst.PASS)
+
+        column_list = self.benchmark_standard.to_column_value()
+        expect_column_list = [1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass']
+        self.assertEqual(column_list, expect_column_list)
+        
+    def test_get_absolute_threshold_result_pass(self):
+        row_npu = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0',
+            ApiPrecisionCompareColumn.REL_ERR_RATIO: '0',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0'
+        }
+        result = get_absolute_threshold_result(row_npu)
+        self.assertEqual(result['inf_nan_error_ratio'], 0.0)
+        self.assertEqual(result['inf_nan_result'], CompareConst.PASS)
+        self.assertEqual(result['rel_err_ratio'], 0.0)
+        self.assertEqual(result['rel_err_result'], CompareConst.PASS)
+        self.assertEqual(result['abs_err_ratio'], 0.0)
+        self.assertEqual(result['abs_err_result'], CompareConst.PASS)
+        self.assertEqual(result['absolute_threshold_result'], CompareConst.PASS)
+
+    def test_get_absolute_threshold_result_error(self):
+        row_npu = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0',
+            ApiPrecisionCompareColumn.REL_ERR_RATIO: '0.1',
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: '0'
+        }
+        result = get_absolute_threshold_result(row_npu)
+        self.assertEqual(result['inf_nan_error_ratio'], 0.0)
+        self.assertEqual(result['inf_nan_result'], CompareConst.PASS)
+        self.assertEqual(result['rel_err_ratio'], 0.1)
+        self.assertEqual(result['rel_err_result'], CompareConst.ERROR)
+        self.assertEqual(result['abs_err_ratio'], 0.0)
+        self.assertEqual(result['abs_err_result'], CompareConst.PASS)
+        self.assertEqual(result['absolute_threshold_result'], CompareConst.ERROR)
 
 
 if __name__ == '__main__':

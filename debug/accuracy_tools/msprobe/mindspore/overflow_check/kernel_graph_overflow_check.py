@@ -1,9 +1,23 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
-import json
-from msprobe.core.common.utils import make_dump_path_if_not_exists
+
+from msprobe.core.common.file_utils import create_directory, save_json
+from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.core.common.log import logger
-from msprobe.core.common.file_check import FileOpen
 
 
 class KernelGraphOverflowCheck:
@@ -17,7 +31,7 @@ class KernelGraphOverflowCheck:
         self.dump_json["common_dump_settings"]["saved_data"] = "full"
         self.dump_json["common_dump_settings"]["input_output"] = 0
         self.dump_json["common_dump_settings"]["kernels"] = []
-        self.dump_json["common_dump_settings"]["support_device"] = [0,1,2,3,4,5,6,7]
+        self.dump_json["common_dump_settings"]["support_device"] = [0, 1, 2, 3, 4, 5, 6, 7]
         self.dump_json["common_dump_settings"]["op_debug_mode"] = 3
         self.dump_json["common_dump_settings"]["file_format"] = "npy"
 
@@ -35,10 +49,9 @@ class KernelGraphOverflowCheck:
         if os.getenv("GRAPH_OP_RUN") == "1":
             raise Exception("Must run in graph mode, not kbk mode")
         json_path = self.dump_json["common_dump_settings"]["path"]
-        make_dump_path_if_not_exists(json_path)
+        create_directory(json_path)
         json_path = os.path.join(json_path, "kernel_graph_overflow_check.json")
-        with FileOpen(json_path, 'w') as f:
-            json.dump(self.dump_json, f)
+        save_json(json_path, self.dump_json, indent=4)
         logger.info(json_path + " has been created.")
         os.environ["MINDSPORE_DUMP_CONFIG"] = json_path
         if "MS_ACL_DUMP_CFG_PATH" in os.environ:

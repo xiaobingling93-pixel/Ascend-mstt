@@ -79,7 +79,7 @@ class TestComputeElement(unittest.TestCase):
             "shape":[2, 3],
             "Max": 3.0,
             "Min": 1.0,
-            "data_name": "input.npy"
+            "data_name": "2_3_input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         self.assertTrue((compute_element.get_parameter(get_origin=True) == self.ms_tensor).all())
@@ -94,7 +94,7 @@ class TestComputeElement(unittest.TestCase):
             "shape":[2, 3],
             "Max": 3.0,
             "Min": 1.0,
-            "data_name": "input.npy"
+            "data_name": "2_3_input.npy"
         }
         compute_element = ComputeElement(compute_element_info=compute_element_info)
         parameter = compute_element.get_parameter(get_origin=True)
@@ -112,7 +112,7 @@ class TestComputeElement(unittest.TestCase):
                 "shape":[2, 3],
                 "Max": 3.0,
                 "Min": 1.0,
-                "data_name": "input.npy"
+                "data_name": "2_3_input.npy"
             },
             {
                 "type": "mindspore.Tensor",
@@ -120,7 +120,7 @@ class TestComputeElement(unittest.TestCase):
                 "shape":[2, 3],
                 "Max": 3.0,
                 "Min": 1.0,
-                "data_name": "input.npy"
+                "data_name": "2_3_input.npy"
             },
         ]
         compute_element = ComputeElement(compute_element_info=compute_element_info)
@@ -143,6 +143,18 @@ class TestComputeElement(unittest.TestCase):
         self.assertEqual(parameter, -1)
         self.assertEqual(compute_element.get_shape(), tuple())
         self.assertEqual(compute_element.get_dtype(), INT_TYPE_STR)
+
+    def test_init_with_compute_element_info_mindspore_dtype(self):
+        compute_element_info = {
+            "type": "mindspore.dtype",
+            "value": "Float32",
+        }
+        compute_element = ComputeElement(compute_element_info=compute_element_info)
+        ms_parameter = compute_element.get_parameter(tensor_platform=Const.MS_FRAMEWORK)
+        pt_parameter = compute_element.get_parameter(tensor_platform=Const.PT_FRAMEWORK)
+        self.assertEqual(ms_parameter, mindspore.float32)
+        self.assertEqual(pt_parameter, torch.float32)
+        
 
 
 if __name__ == '__main__':

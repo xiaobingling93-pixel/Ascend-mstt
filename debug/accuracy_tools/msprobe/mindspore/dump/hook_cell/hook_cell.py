@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
+
 from collections import defaultdict
 
 from mindspore import nn
+
 from msprobe.core.common.const import Const
 
 
@@ -30,8 +32,8 @@ class HOOKCell(nn.Cell):
         if not HOOKCell.g_stop_hook:
             HOOKCell.g_stop_hook = True
             self.changed_status = True
-            if hasattr(self, "prefix_op_name_"):
-                self.prefix = self.prefix_op_name_
+            if hasattr(self, "prefix_api_name"):
+                self.prefix = self.prefix_api_name
 
             HOOKCell.cell_count[self.prefix] += 1
             self.prefix = self.prefix + str(HOOKCell.cell_count[self.prefix] - 1) + Const.SEP

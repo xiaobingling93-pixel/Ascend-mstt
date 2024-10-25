@@ -1,11 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from abc import ABC, abstractmethod
 from collections import namedtuple
 import hashlib
+from functools import wraps
 import torch
 from msprobe.core.grad_probe.constant import GradConst
 
-CSV_header_input = namedtuple("CSV_header_input", ["bounds"])
-CSV_content_input = namedtuple("CSV_content_input", ["grad", "bounds"])
+CsvHeaderInput = namedtuple("CsvHeaderInput", ["bounds"])
+CsvContentInput = namedtuple("CsvContentInput", ["grad", "bounds"])
 
 
 class GradStatCsv:
@@ -15,7 +31,7 @@ class GradStatCsv:
     def generate_csv_header(level, bounds):
         header = ["param_name"]
         for key in level["header"]:
-            csv_header_input = CSV_header_input(bounds=bounds)
+            csv_header_input = CsvHeaderInput(bounds=bounds)
             header.extend(GradStatCsv.csv[key].generate_csv_header(csv_header_input))
         return header
 
@@ -23,7 +39,7 @@ class GradStatCsv:
     def generate_csv_line(param_name, level, grad, bounds):
         line = [param_name]
         for key in level["header"]:
-            csv_content_input = CSV_content_input(grad=grad, bounds=bounds)
+            csv_content_input = CsvContentInput(grad=grad, bounds=bounds)
             line.extend(GradStatCsv.csv[key].generate_csv_content(csv_content_input))
         return line
 
@@ -37,20 +53,24 @@ def register_csv_item(key, cls=None):
 
 
 class CsvItem(ABC):
+    @staticmethod
     @abstractmethod
     def generate_csv_header(csv_header_input):
         pass
 
+    @staticmethod
     @abstractmethod
     def generate_csv_content(csv_content_input):
         pass
 
 
 @register_csv_item(GradConst.MD5)
-class CSV_md5(CsvItem):
+class CsvMd5(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         return ["MD5"]
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         tensor_bytes = grad.cpu().detach().float().numpy().tobytes()
@@ -59,7 +79,8 @@ class CSV_md5(CsvItem):
 
 
 @register_csv_item(GradConst.DISTRIBUTION)
-class CSV_distribution(CsvItem):
+class CsvDistribution(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         bounds = csv_header_input.bounds
         intervals = []
@@ -73,6 +94,7 @@ class CSV_distribution(CsvItem):
     
         return intervals
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         bounds = csv_content_input.bounds
@@ -90,40 +112,48 @@ class CSV_distribution(CsvItem):
 
 
 @register_csv_item(GradConst.MAX)
-class CSV_max(CsvItem):
+class CsvMax(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         return ["max"]
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         return [torch.max(grad).cpu().detach().float().numpy().tolist()]
 
 
 @register_csv_item(GradConst.MIN)
-class CSV_max(CsvItem):
+class CsvMin(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         return ["min"]
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         return [torch.min(grad).cpu().detach().float().numpy().tolist()]
 
 
 @register_csv_item(GradConst.NORM)
-class CSV_max(CsvItem):
+class CsvNorm(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         return ["norm"]
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         return [torch.norm(grad).cpu().detach().float().numpy().tolist()]
     
 
 @register_csv_item(GradConst.SHAPE)
-class CSV_shape(CsvItem):
+class CsvShape(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_header_input):
         return ["shape"]
 
+    @staticmethod
     def generate_csv_content(csv_content_input):
         grad = csv_content_input.grad
         return [list(grad.shape)]

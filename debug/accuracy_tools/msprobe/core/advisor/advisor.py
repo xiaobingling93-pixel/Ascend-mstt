@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2022-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 
@@ -21,18 +19,20 @@ from msprobe.core.advisor.advisor_result import AdvisorResult
 from msprobe.core.advisor.advisor_const import AdvisorConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.file_check import FileChecker
+from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+
 
 class Advisor:
     """
     Class for generate advisor
     """
 
-    def __init__(self, input_data, out_path=""):
+    def __init__(self, input_data, out_path="", suffix=""):
         self.input_data = input_data
         self.out_path = os.path.realpath(out_path)
         self.file_type = None
+        self.suffix = suffix
 
     @staticmethod
     def deterministic_advisor(message, node_name):
@@ -103,7 +103,7 @@ class Advisor:
         else:
             result = self.gen_advisor_result(failing_data)
         message_list = result.print_advisor_log()
-        result.gen_summary_file(self.out_path, message_list)
+        result.gen_summary_file(self.out_path, message_list, suffix=self.suffix)
 
     def _parse_input_data(self):
         data_columns = self.input_data.columns.values

@@ -15,11 +15,13 @@ The following functionalities are added after forking:
 """
 import glob as py_glob
 import os
+import platform
 import tempfile
 
 from .. import utils
 from .base import BaseFileSystem, LocalPath, RemotePath, StatData
 from .utils import as_bytes, as_text, parse_blob_url
+from ..consts import MAX_FILE_SIZE, MAX_WINDOWS_PATH_LENGTH, MAX_LINUX_PATH_LENGTH
 
 logger = utils.get_logger()
 
@@ -85,6 +87,10 @@ def get_filesystem(filename):
 class LocalFileSystem(LocalPath, BaseFileSystem):
     def __init__(self):
         pass
+
+    @staticmethod
+    def islink(path):
+        return os.path.islink(path)
 
     def exists(self, filename):
         return os.path.exists(filename)
@@ -613,3 +619,40 @@ def stat(filename):
 def read(file):
     with File(file, 'rb') as f:
         return f.read()
+
+
+def is_link(path):
+    return LocalFileSystem.islink(path)
+
+
+def is_too_big_file(filepath):
+    return stat(filepath).length > MAX_FILE_SIZE
+
+
+def has_too_long_path(filepath):
+    if platform.system() == 'Windows' and len(filepath) > MAX_WINDOWS_PATH_LENGTH:
+        logger.warning(
+            f'The path length of the file "{filepath}" exceeds the maximum limit of {MAX_WINDOWS_PATH_LENGTH} '
+            f'and will be skipped.')
+        return True
+    elif len(filepath) > MAX_WINDOWS_PATH_LENGTH:
+        logger.warning(
+            f'The path length of the file "{filepath}" exceeds the maximum limit of {MAX_LINUX_PATH_LENGTH} '
+            f'and will be skipped.')
+        return True
+    else:
+        return False
+
+
+def check_file_valid(filepath):
+    if is_link(filepath):
+        logger.warning(f'File "{filepath}" is a soft link and will be skipped.')
+        return False
+    if is_too_big_file(filepath):
+        logger.warning(
+            f'File "{filepath}" exceeds the maximum limit size of 500MB and will be skipped.')
+        return False
+    if has_too_long_path(filepath):
+        return False
+    return True
+

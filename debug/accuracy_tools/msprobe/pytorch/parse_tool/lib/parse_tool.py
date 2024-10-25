@@ -23,7 +23,7 @@ from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.compare import Compare
 from msprobe.pytorch.parse_tool.lib.visualization import Visualization
 from msprobe.pytorch.parse_tool.lib.parse_exception import catch_exception, ParseException
-from msprobe.core.common.utils import create_directory
+from msprobe.core.common.file_utils import create_directory
 
 class ParseTool:
     def __init__(self):
@@ -110,6 +110,9 @@ class ParseTool:
         parser.add_argument('-al', '--atol', dest='atol', default=0.001, type=float, help='set rtol')
         parser.add_argument('-rl', '--rtol', dest='rtol', default=0.001, type=float, help='set atol')
         args = parser.parse_args(argv)
+        self.util.check_positive(args.count)
+        self.util.check_positive(args.rtol)
+        self.util.check_positive(args.atol)
         self.util.check_path_valid(args.my_dump_path)
         self.util.check_path_valid(args.golden_dump_path)
         self.util.check_file_path_format(args.my_dump_path, Const.NPY_SUFFIX)

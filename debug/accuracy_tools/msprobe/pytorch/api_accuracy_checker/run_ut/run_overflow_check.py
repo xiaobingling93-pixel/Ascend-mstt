@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import os
 import sys
@@ -12,8 +29,7 @@ import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
-from msprobe.core.common.utils import get_json_contents
-from msprobe.core.common.file_check import check_link
+from msprobe.core.common.file_utils import check_link
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.const import Const
@@ -25,8 +41,8 @@ def check_tensor_overflow(x):
             tensor_max = x.cpu().detach().float().numpy().tolist()
             tensor_min = tensor_max
         else:
-            tensor_max = torch._C._VariableFunctionsClass.max(x).cpu().detach().float().numpy().tolist()
-            tensor_min = torch._C._VariableFunctionsClass.min(x).cpu().detach().float().numpy().tolist()
+            tensor_max = torch.max(x).cpu().detach().float().numpy().tolist()
+            tensor_min = torch.min(x).cpu().detach().float().numpy().tolist()
         # inf
         if tensor_max == float('inf') or tensor_min == float('-inf'):
             return True
@@ -82,8 +98,8 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
         del kwargs["device"]
-    out = exec_api(api_type, api_name, args, kwargs)
-    npu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
+    npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
     if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return

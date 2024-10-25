@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import sys
-import traceback
-import shutil
-import pandas as pd
+
 from abc import abstractmethod
 
 from common_func.constant import Constant
@@ -36,6 +32,7 @@ class BaseAnalysis:
         self.collective_group_dict = param.get(Constant.COMM_DATA_DICT, {}).get(Constant.COLLECTIVE_GROUP)
         self.comm_ops_struct = {}
         self.adapter = DataTransferAdapter()
+        self.data_simplification = param.get(Constant.DATA_SIMPLIFICATION, False)
 
     @staticmethod
     def compute_ratio(dividend: float, divisor: float):
@@ -68,7 +65,7 @@ class BaseAnalysis:
         if self.data_type == Constant.TEXT:
             self.dump_json()
         else:
-            if len(self.data_map) >= self.MAX_RANKS:
+            if len(self.data_map) >= self.MAX_RANKS and not self.data_simplification:
                 print("[WARNING]The number of ranks is too large to dump to db, it will be dumped to json file.")
                 self.dump_json()
             else:

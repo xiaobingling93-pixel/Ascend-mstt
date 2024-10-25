@@ -1,4 +1,18 @@
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
 import psutil
 import torch
@@ -11,9 +25,7 @@ except ImportError:
 else:
     pta_cpu_device = torch.device("cpu")
 
-from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_check import change_mode
-from msprobe.core.common.log import logger
+from msprobe.core.common.const import CompareConst
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -34,24 +46,26 @@ COMPARE_LOGO = '''
                                                  |_|    
 '''
 
-CSV_COLUMN_NAME = [CompareConst.NPU_NAME,
-                   CompareConst.BENCH_NAME,
-                   CompareConst.NPU_DTYPE,
-                   CompareConst.BENCH_DTYPE,
-                   CompareConst.NPU_SHAPE,
-                   CompareConst.BENCH_SHAPE,
-                   CompareConst.NPU_MAX,
-                   CompareConst.NPU_MIN,
-                   CompareConst.NPU_MEAN,
-                   CompareConst.BENCH_MAX,
-                   CompareConst.BENCH_MIN,
-                   CompareConst.BENCH_MEAN,
-                   CompareConst.COSINE,
-                   CompareConst.MAX_ABS_ERR,
-                   CompareConst.MAX_RELATIVE_ERR,
-                   CompareConst.ACCURACY,
-                   CompareConst.STACK,
-                   CompareConst.ERROR_MESSAGE]
+CSV_COLUMN_NAME = [
+    CompareConst.NPU_NAME,
+    CompareConst.BENCH_NAME,
+    CompareConst.NPU_DTYPE,
+    CompareConst.BENCH_DTYPE,
+    CompareConst.NPU_SHAPE,
+    CompareConst.BENCH_SHAPE,
+    CompareConst.NPU_MAX,
+    CompareConst.NPU_MIN,
+    CompareConst.NPU_MEAN,
+    CompareConst.BENCH_MAX,
+    CompareConst.BENCH_MIN,
+    CompareConst.BENCH_MEAN,
+    CompareConst.COSINE,
+    CompareConst.MAX_ABS_ERR,
+    CompareConst.MAX_RELATIVE_ERR,
+    CompareConst.ACCURACY,
+    CompareConst.STACK,
+    CompareConst.ERROR_MESSAGE
+]
 
 FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
 BOOL_TYPE = [bool, np.uint8]
@@ -61,25 +75,9 @@ INT_TYPE = [np.int32, np.int64]
 def get_callstack():
     callstack = []
     for (_, path, line, func, code, _) in inspect.stack()[2:]:
-        if code:
-            stack_line = [path, str(line), func, code[0].strip() if code else code]
-        else:
-            stack_line = [path, str(line), func, code]
+        stack_line = [path, str(line), func, code[0].strip() if code else code]
         callstack.append(stack_line)
     return callstack
-
-
-def np_save_data(data, file_name, data_path):
-    try:
-        if hasattr(data, "numpy"):
-            data = data.numpy()
-        dump_path = os.path.join(data_path, f'{file_name}.npy')
-        np.save(dump_path, data)
-        change_mode(dump_path, FileCheckConst.DATA_FILE_AUTHORITY)
-    except Exception as e:
-        logger.error("save numpy failed, error: {}".format(e))
-    finally:
-        pass
 
 
 def data_to_cpu(data, deep, data_cpu):

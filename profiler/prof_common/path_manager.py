@@ -17,6 +17,8 @@ import re
 import shutil
 import platform
 
+from .constant import Constant
+
 
 class PathManager:
     MAX_PATH_LENGTH = 4096
@@ -78,12 +80,11 @@ class PathManager:
             msg = f"Invalid input path which is a soft link."
             raise RuntimeError(msg)
 
-        if platform.system().lower() == cls.WINDOWS:
-            pattern = r'(\.|:|\\|/|_|-|\s|[~0-9a-zA-Z\u4e00-\u9fa5])+'
-        else:
-            pattern = r'(\.|/|_|-|\s|[~0-9a-zA-Z])+'
+        pattern = r'(\.|:|\\|/|_|-|\s|[~0-9a-zA-Z\u4e00-\u9fa5])+'
         if not re.fullmatch(pattern, path):
-            msg = f"Invalid input path."
+            illegal_pattern = r'([^\.\:\\\/\_\-\s~0-9a-zA-Z\u4e00-\u9fa5])+'
+            invalid_obj = re.search(illegal_pattern, path).group()
+            msg = f"Invalid path which has illagal characters \"{invalid_obj}\"."
             raise RuntimeError(msg)
 
     @classmethod
@@ -149,6 +150,7 @@ class PathManager:
     def remove_path_safety(cls, path: str):
         base_name = os.path.basename(path)
         msg = f"Failed to remove path: {base_name}"
+        cls.check_path_writeable(path)
         if os.path.islink(path):
             raise RuntimeError(msg)
         if os.path.exists(path):
@@ -188,4 +190,15 @@ class PathManager:
         if os.path.islink(path):
             msg = f"Invalid input path which is a soft link."
             raise RuntimeError(msg)
-        return os.path.realpath(path)
+        return os.path.abspath(path)
+
+    @classmethod
+    def check_file_size(cls, file_path: str):
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"The file {file_path} does not exists.")
+        file_size = os.path.getsize(file_path)
+        if file_size > Constant.MAX_FILE_SIZE_5_GB:
+            check_msg = input(
+                f"The file({file_path}) size exceeds the preset max value. Continue reading the file? [y/n]")
+            if check_msg.lower() != "y":
+                raise RuntimeError(f"[WARNING] The user choose not to read the file: {file_path}")

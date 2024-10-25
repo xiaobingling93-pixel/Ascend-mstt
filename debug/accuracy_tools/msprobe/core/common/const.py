@@ -8,25 +8,31 @@ class Const:
     """
     Class for const
     """
+    TOOL_NAME = "msprobe"
+
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
     FLOAT_EPSILON = np.finfo(float).eps
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    NONE = None
     THREE_SEGMENT = 3
     FOUR_SEGMENT = 4
     SIX_SEGMENT = 6
     SEVEN_SEGMENT = 7
+    MAX_DEPTH = 10
 
     # dump mode
     ALL = "all"
@@ -75,6 +81,8 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
+    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
+    DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -92,11 +100,39 @@ class Const:
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    NPU_LOWERCASE = 'npu'
+    CPU_LOWERCASE = 'cpu'
+    CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+
+    # struct json param
+    ORIGIN_DATA = "origin_data"
+    SCOPE = "scope"
+    STACK = "stack"
+
+    ATEN = "Aten"
+    MODULE_WHITE_LIST = ["torch", "numpy"]
+
+    FUNC_SKIP_LIST = ["construct", "__call__"]
+
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+
+    STACK_FILE_INDEX = 0
+
+    STACK_FUNC_INDEX = 2
+
+    STACK_FUNC_ELE_INDEX = 1
+
+    CONSTRUCT_NAME_INDEX = -3
+
+    NAME_FIRST_POSSIBLE_INDEX = -4
+
+    NAME_SECOND_POSSIBLE_INDEX = -5
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
+        "all_gather_into_tensor", "reduce_scatter_tensor"
     ]
 
     CONVERT = {
@@ -106,6 +142,23 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
+    FILL_CHAR_NUMS = 50
+    TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
+    WITHOUT_CALL_STACK = "The call stack retrieval failed."
+    
+    STEP = "step"
+    RANK = "rank"
+    HYPHEN = "-"
+    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+
+    # data type const
+    FLOAT16 = "Float16"
+    FLOAT32 = "Float32"
+    BFLOAT16 = "BFloat16"
+    TORCH_FLOAT16 = "torch.float16"
+    TORCH_FLOAT32 = "torch.float32"
+    TORCH_BFLOAT16 = "torch.bfloat16"
 
 
 class CompareConst:
@@ -148,6 +201,13 @@ class CompareConst:
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
     MAGNITUDE = 0.5
+    OP_NAME = "op_name"
+    INPUT_STRUCT = "input_struct"
+    OUTPUT_STRUCT = "output_struct"
+    SUMMARY = "summary"
+    MAX_EXCEL_LENGTH = 1048576
+    YES = "Yes"
+    NO = "No"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -184,8 +244,12 @@ class CompareConst:
     PASS = 'pass'
     WARNING = 'Warning'
     ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
     SKIP = 'SKIP'
     N_A = 'N/A'
+    INF = 'inf'
+    NEG_INF = '-inf'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8
@@ -210,6 +274,10 @@ class CompareConst:
     RED = "FFFF0000"
     YELLOW = "FFFF00"
     BLUE = "0000FF"
+
+    # run_ut const
+    MAX_TOKENS = 65536
+    SPECIAL_SPARSE_MOED = 4
 
     # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
@@ -259,7 +327,8 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 10 * 1024 * 1024
+    MAX_YAML_SIZE = 1048576  # 1 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750
@@ -272,15 +341,16 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:
     """
     Class for Overflow
     """
-    OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
 
 class MsCompareConst:
     # api_info field
@@ -293,7 +363,7 @@ class MsCompareConst:
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
 
-    #detail_csv
+    # detail_csv
     DETAIL_CSV_API_NAME = "API Name"
     DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
     DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
@@ -302,21 +372,47 @@ class MsCompareConst:
     DETAIL_CSV_MESSAGE = "Message"
     DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
 
-    #result_csv
+    # result_csv
     RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
     RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
     RESULT_CSV_FILE_NAME = "accuracy_checking_result"
 
     EPSILON = 1e-8
 
+
 class MsgConst:
     """
     Class for log messages const
     """
+    MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
+    LOG_LEVEL_ENUM = ["0", "1", "2", "3", "4"]
+    LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
+    class LogLevel:
+        class DEBUG:
+            value = 0
+        class INFO:
+            value = 1
+        class WARNING:
+            value = 2
+        class ERROR:
+            value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+    NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
 
 
 class GraphMode:
     NPY_MODE = "NPY_MODE"
     STATISTIC_MODE = "STATISTIC_MODE"
     ERROR_MODE = "ERROR_MODE"
+
+
+class MonitorConst:
+    """
+    Class for monitor const
+    """
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
+    DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
+    DATABASE = "database"
+    EMAIL = "email"

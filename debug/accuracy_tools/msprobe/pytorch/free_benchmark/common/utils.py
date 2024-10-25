@@ -1,6 +1,20 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
-from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 
@@ -67,21 +81,32 @@ class Tools:
         if isinstance(origin, dict) and isinstance(perturbed, dict):
             output = dict()
             for key, value in origin.items():
-                # 此处取值异常将抛出由上层函数处理
+                if key not in perturbed:
+                    err_msg = f"'{key}' not in perturbed output."
+                    raise FreeBenchmarkException(
+                        FreeBenchmarkException.InvalidPerturbedOutput,
+                        error_info=err_msg,
+                    )
                 output[key] = Tools.convert_fuzz_output_to_origin(value, perturbed[key])
             return output
         if isinstance(origin, (tuple, list)) and isinstance(perturbed, (tuple, list)):
             result = list()
+            if len(perturbed) != len(origin):
+                err_msg = (
+                    f"length of perturbed output ({len(perturbed)}) is different "
+                    f"from the length of original output ({len(origin)})."
+                )
+                raise FreeBenchmarkException(
+                    FreeBenchmarkException.InvalidPerturbedOutput, error_info=err_msg
+                )
             for index_, value in enumerate(origin):
-                # 此处索引越界异常将抛出由上层函数处理
                 result.append(
                     Tools.convert_fuzz_output_to_origin(value, perturbed[index_])
                 )
             return type(origin)(result)
         err_msg = f"conversion of two outputs with types ({type(origin)}, {type(perturbed)}) is not supported."
-        logger.error_log_with_exp(
-            err_msg,
-            FreeBenchmarkException(FreeBenchmarkException.UnsupportedType, error_info=err_msg),
+        raise FreeBenchmarkException(
+            FreeBenchmarkException.UnsupportedType, error_info=err_msg
         )
 
 

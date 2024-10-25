@@ -268,7 +268,7 @@
 ###### 文件导入
   界面分为左侧边栏和右侧展示界面。点击左侧的Import Files或在左侧未勾选文件时点击右侧界面中心的Import Files字体，将会弹出系统文件资源管理窗，可以上传需要比对的模型网络训练日志文件。
 
-  <font color='red'>注：当前最多支持上传6个文件，单个文件大小不能超过50MB。</font>
+  **注：当前最多支持上传6个文件，单个文件大小不能超过50MB。**
   ![Alt text](./docs/images/accuracy.PNG)
 
 ###### 已上传文件操作
@@ -319,8 +319,8 @@
 
   * 比对方式有三种，通过Comparison Setting进行设定。
     * Comparison Normal：相同iteration，后选择文件的loss值减去先选择文件的loss值。
-    * Comparison Normal：相同iteration，两个文件的loss的差值的绝对值。
-    * Comparison Normal：相同iteration，两个文件的loss的差值的绝对值 / 先选择文件的loss值。
+    * Comparison Absolute：相同iteration，两个文件的loss的差值的绝对值。
+    * Comparison Relative：相同iteration，两个文件的loss的差值的绝对值 / 先选择文件的loss值。
 
 ### 公网URL说明
 

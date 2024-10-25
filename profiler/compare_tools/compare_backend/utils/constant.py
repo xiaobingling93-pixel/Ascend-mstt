@@ -5,6 +5,7 @@ class Constant(object):
     LIMIT_KERNEL = 3
     MAX_PATH_LENGTH = 4096
     MAX_FLOW_CAT_LEN = 20
+    MAX_OP_NAME_LEN = 200
     MAX_FILE_SIZE = 1024 * 1024 * 1024 * 5
     MAX_JSON_SIZE = 1024 * 1024 * 1024 * 10
     BYTE_TO_KB = 1024
@@ -92,10 +93,10 @@ class Constant(object):
 
     BWD_LIST = ["bwd", "backward", "back", "grad"]
 
-    CPU_OP_FA_MASK = ("flash_attention", "fusion_attention", "flashattn", "xformers_flash", "efficient_attention")
+    CPU_OP_FA_MASK = ("flash_attention", "fusion_attention", "flashattn", "xformers_flash", "efficient_attention", "flash2attn")
     CPU_OP_CONV = "aten::conv"
     CPU_OP_MATMUL_MASK = ("aten::addmm", "aten::bmm", "aten::mm", "aten::matmul")
-    KERNEL_CUBE_MASK = ("gemm", "conv", "cutlass", "wgrad")
+    KERNEL_CUBE_MASK = ("gemm", "conv", "cutlass", "wgrad", "gemvx")
     KERNEL_TRANS_MASK = ("cast", "transdata", "transpose")
 
     IS_BWD = "is_bwd"

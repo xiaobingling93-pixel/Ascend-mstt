@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os.path
 import struct
 import hashlib
@@ -8,7 +23,8 @@ from threading import Thread
 from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.ssl_config import cipher_list
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
+    struct_unpack_mode as unpack_mode, str_to_bytes_order as bytes_order
 
 
 class TCPServer:
@@ -24,14 +40,22 @@ class TCPServer:
     def run_reactor():
         reactor.run(installSignalHandlers=False)
 
+    def check_tls_path(self):
+        server_key = os.path.join(self.tls_path, "server.key")
+        server_crt = os.path.join(self.tls_path, "server.crt")
+        if not os.path.exists(server_key):
+            raise Exception(f"server_key: {server_key} is not exists.")
+        if not os.path.exists(server_crt):
+            raise Exception(f"server_crt: {server_crt} is not exists.")
+        return server_key, server_crt
+
     def start(self):
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
             from OpenSSL import SSL
             from twisted.internet import ssl
-            server_key = os.path.join(self.tls_path, "server.key")
-            server_crt = os.path.join(self.tls_path, "server.crt")
+            server_key, server_crt = self.check_tls_path()
             server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
             server_context_ = server_context_factory.getContext()
             server_context_.set_cipher_list(cipher_list)
@@ -100,9 +124,9 @@ class ServerProtocol(protocol.Protocol):
     def send_ack(self, ack_info):
         ack_message = b"".join([
             ack_info,
-            self.sequence_number.to_bytes(8, byteorder='big'),
-            self.rank.to_bytes(8, byteorder='big'),
-            self.step.to_bytes(8, byteorder='big')
+            self.sequence_number.to_bytes(8, byteorder=bytes_order),
+            self.rank.to_bytes(8, byteorder=bytes_order),
+            self.step.to_bytes(8, byteorder=bytes_order)
         ])
         self.transport.write(ack_message)
 
@@ -168,10 +192,10 @@ class ServerProtocol(protocol.Protocol):
         # The first data packet is packet header, it contains obj_length, sequence_number, rank, step
         if self.obj_length is None and len(self.buffer.getvalue()) >= self.length_width * 4:
             self.start_time = time.time()
-            self.obj_length = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.sequence_number = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.rank = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
-            self.step = struct.unpack('!Q', self.buffer.read(self.length_width))[0]
+            self.obj_length = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.sequence_number = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.rank = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
+            self.step = struct.unpack(unpack_mode, self.buffer.read(self.length_width))[0]
             self.tell += self.length_width * 4
             logger.debug(
                 f"流水号: {self.sequence_number}; RANK: {self.rank}; STEP: {self.step}; Length: {self.obj_length}")
@@ -210,7 +234,8 @@ class MessageServerFactory(protocol.ServerFactory):
     def __init__(self) -> None:
         """
         transport_dict: links that have not completed data transmission.
-        transport_list: Records all TCP links. Appends TCP link to the transport list when a new TCP link is established.
+        transport_list: Records all TCP links. Appends TCP link to the transport list
+                        when a new TCP link is established.
         """
         self.transport_dict = {}
         self.transport_list = []

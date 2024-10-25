@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import subprocess
 import json
 import os
@@ -14,9 +31,10 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validat
     get_validated_details_csv_path
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
-from msprobe.core.common.file_check import FileChecker, check_file_suffix, check_link, FileOpen, \
-    check_path_before_create, create_directory
 from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
+    check_path_before_create, create_directory
+from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.const import FileCheckConst
 
 
@@ -104,7 +122,7 @@ def run_parallel_ut(config):
                 if output == '':
                     break
                 if '[ERROR]' in output:
-                    print(output, end='')
+                    logger.warning(output, end='')
                     sys.stdout.flush()
         except ValueError as e:
             logger.warning(f"An error occurred while reading subprocess output: {e}")
@@ -118,7 +136,8 @@ def run_parallel_ut(config):
 
     for api_info in config.api_files:
         cmd = create_cmd(api_info, next(device_id_cycle))
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, bufsize=1, shell=False)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, 
+                                   text=True, bufsize=1, shell=False)
         processes.append(process)
         threading.Thread(target=read_process_output, args=(process,), daemon=True).start()
 
@@ -136,7 +155,7 @@ def run_parallel_ut(config):
         for file in config.api_files:
             check_link(file)
             try:
-                os.remove(file)
+                remove_path(file)
             except FileNotFoundError:
                 logger.warning(f"File not found and could not be deleted: {file}")
 
@@ -149,7 +168,8 @@ def run_parallel_ut(config):
         logger.error(f"An unexpected error occurred: {e}")
     finally:
         if progress_bar.n < config.total_items:
-            logger.warning("The UT task has not been completed. The parameter '-csv_path' along with the path to the result CSV file will be utilized to resume the UT task.")
+            logger.warning("The UT task has not been completed. The parameter '-csv_path' along with the path to " \
+                           "the result CSV file will be utilized to resume the UT task.")
         clean_up()
         progress_bar_thread.join()
     try:
@@ -172,7 +192,8 @@ def prepare_config(args):
     out_path = out_path_checker.common_check()
     split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
     config_path = os.path.realpath(args.config_path) if args.config_path else None
-    result_csv_path = args.result_csv_path or os.path.join(out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
+    result_csv_path = args.result_csv_path or os.path.join(
+                      out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:
         details_csv_path = os.path.join(out_path, f"accuracy_checking_details_{time.strftime('%Y%m%d%H%M%S')}.csv")
         comparator = Comparator(result_csv_path, details_csv_path, False)
@@ -189,7 +210,8 @@ def prepare_config(args):
 def main():
     parser = argparse.ArgumentParser(description='Run UT in parallel')
     _run_ut_parser(parser)
-    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, help='Number of splits for parallel processing. Range: 1-64')
+    parser.add_argument('-n', '--num_splits', type=int, choices=range(1, 65), default=8, 
+                        help='Number of splits for parallel processing. Range: 1-64')
     args = parser.parse_args()
     config = prepare_config(args)
     run_parallel_ut(config)

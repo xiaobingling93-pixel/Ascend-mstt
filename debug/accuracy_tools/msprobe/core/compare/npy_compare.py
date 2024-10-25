@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import abc
 import numpy as np
 from msprobe.core.common.utils import format_value
@@ -78,10 +93,8 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
 
 def npy_data_check(n_value, b_value):
     error_message = ""
-    if n_value is None or b_value is None:
-        error_message += "Dump file not found.\n"
-    if n_value == "" or b_value == "":
-        error_message += "Dump file not found.\n"
+    if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
+        error_message += "Dump file is not ndarray.\n"
 
     # 检查 n_value 和 b_value 是否为空
     if not error_message and (n_value.size == 0 or b_value.size == 0):
@@ -97,7 +110,8 @@ def npy_data_check(n_value, b_value):
 
     if not error_message:
         n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有 nan/inf 数据
-        if CompareConst.NAN in (n_value, b_value):
+        # handle_inf_nan 会返回'Nan'或ndarray类型，使用类型判断是否存在无法处理的nan/inf数据
+        if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
             error_message += "The position of inf or nan in NPU and bench Tensor do not match.\n"
     if error_message == "":
         error_flag = False
@@ -273,7 +287,8 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
             return CompareConst.NAN, ""
-        return format_value(np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
+        return format_value(
+            np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
 
 
 class CompareOps:

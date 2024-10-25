@@ -1,22 +1,35 @@
-import copy
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import zlib
 from dataclasses import asdict
 from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
+from msprobe.pytorch.common.utils import save_pt, load_pt
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.pytorch.common.utils import save_pt
 
+is_gpu = False
 try:
     import torch_npu
-    is_gpu = False
 except ImportError:
     is_gpu = True
 
@@ -91,13 +104,14 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
             return float('nan')
+
         finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
+            finite_values = getattr(torch._C._TensorBase, "__getitem__")(data_clone, finite_mask)
             return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(finite_values).item()
         else:
-            data_no_nan = data_clone[~data_nan]
+            data_no_nan = getattr(torch._C._TensorBase, "__getitem__")(data_clone, ~data_nan)
             return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
@@ -155,7 +169,7 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        saved_tensor = tensor.contiguous().detach()
+        saved_tensor = tensor.clone().contiguous().detach()
         save_pt(saved_tensor, file_path)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
@@ -167,87 +181,78 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
+        self.has_overflow = False
+        self.support_inf_nan = None
+        self.cached_inplace_api_info = {}
         self.cached_tensors_and_file_paths = {}
         self.bits_for_overflow = 8
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
-        self.forward_inplace_inputs = None
-        self.is_support_inf_nan = self.is_support_inf_nan()
 
     @property
     def is_terminated(self):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 
-    @staticmethod
-    def is_support_inf_nan():
-        return is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan())
-
-    @staticmethod
-    def overflow_debug_mode_enable():
-        overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
-        return overflow_mode == Const.ENV_ENABLE
-
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
-        self.forward_inplace_inputs = copy.deepcopy(module_input_output)
+        self.has_overflow = False
+        self._is_support_inf_nan()
+        self.cached_inplace_api_info = super().analyze_pre_forward_inplace(name, module_input_output)
         return None
 
     def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
-        module_input_output.output = module_input_output.concat_args_and_kwargs()
-        module_input_output.args = self.forward_inplace_inputs.args
-        module_input_output.kwargs = self.forward_inplace_inputs.kwargs
-        # release memory used by forward inputs
-        self.forward_inplace_inputs = None
-        return self.analyze_forward(name, None, module_input_output)
+        self._is_support_inf_nan()
+        api_info_struct = super().analyze_forward_inplace(name, module_input_output)
+        if name in self.cached_inplace_api_info and name in api_info_struct:
+            self.cached_inplace_api_info[name].update(api_info_struct[name])
+        elif name in api_info_struct:
+            self.cached_inplace_api_info = api_info_struct
+        self.handle_overflow()
+        return self.cached_inplace_api_info if self.has_overflow else None
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
+        self._is_support_inf_nan()
         api_info_struct = super().analyze_forward(name, module, module_input_output)
         self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
+        self._is_support_inf_nan()
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
     def handle_overflow(self):
-        if not self.is_support_inf_nan:
+        if not self.support_inf_nan:
             self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_pt(tensor, file_path)
             self.real_overflow_nums += 1
+            if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
+                logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
+                            f"current overflow times: {self.real_overflow_nums}.")
         self.cached_tensors_and_file_paths = {}
 
-    def check_overflow_npu(self):
-        if self.overflow_debug_mode_enable():
-            float_status = torch.zeros(self.bits_for_overflow).npu()
-            result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
-            if result.cpu()[0] != 0:
-                return True
-            else:
-                return False
-        else:
-            return torch_npu._C._check_overflow_npu()
-
-    def clear_overflow_npu(self):
-        if self.overflow_debug_mode_enable():
-            float_status = torch.zeros(self.bits_for_overflow).npu()
-            torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
-        else:
-            torch_npu._C._clear_overflow_npu()
+    def _is_support_inf_nan(self):
+        if self.support_inf_nan is not None:
+            return
+        try:
+            self.support_inf_nan = is_gpu or torch_npu.npu.utils.is_support_inf_nan()
+        except Exception:
+            logger.warning(f"Unable to determine if the current device supports inf/nan mode, default not supported.")
+            self.support_inf_nan = False
 
     def _analyze_maybe_overflow_flag(self):
         try:
-            self.has_overflow = self.check_overflow_npu()
+            self.has_overflow = torch_npu.npu.utils.get_npu_overflow_flag()
             if self.has_overflow:
-                self.clear_overflow_npu()
+                torch_npu.npu.utils.clear_npu_overflow_flag()
         except Exception as e:
             logger.error(f"Overflow check failed, the current environment may be abnormal.")
             raise RuntimeError(f"overflow check failed") from e
@@ -256,7 +261,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if tensor_json['Max'] is None or tensor_json['Min'] is None:
             return
         self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
@@ -266,7 +271,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             logger.warning(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
-        if not self.has_overflow and self.is_support_inf_nan:
+        if not self.has_overflow and self.support_inf_nan:
             self._analyze_maybe_overflow_tensor(single_arg)
         return single_arg
 
@@ -361,7 +366,8 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
         if not KernelDumpDataProcessor.forward_init_status:
             KernelDumpDataProcessor.forward_init_status = True
             output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            grad = torch.load(grad_path).to("npu").requires_grad_()
+            pt = load_pt(grad_path)
+            grad = pt.to("npu").requires_grad_()
             torch_npu.npu.init_dump()
             torch_npu.npu.set_dump(self.config.acl_config)
             torch_npu.npu.synchronize()

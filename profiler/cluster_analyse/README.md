@@ -36,7 +36,7 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
 
 1. 参见《[性能工具](../README.md)》完成工具安装。建议安装最新版本。
 
-2. 将所有卡的数据拷贝并汇集到一个目录下，在本目录下运行以下命令即可生成cluster_analysis_output文件夹。
+2. 将所有卡的数据拷贝并汇集到一个目录下，运行以下命令，在该目录下即可生成cluster_analysis_output文件夹。
 
    ```bash
    msprof-analyze cluster -d {cluster profiling data path} -m {mode}
@@ -52,9 +52,10 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
    
    | 参数名                | 说明                                                         | 是否必选 |
    | --------------------- | ------------------------------------------------------------ | -------- |
-   | --collection_path或-d | 性能数据汇集目录，运行分析脚本之后会在该目录下自动创建cluster_analysis_output文件夹，保存分析数据。 | 是       |
+   | --profiling_path或-d  | 性能数据汇集目录。未配置-o参数时，运行分析脚本之后会在该目录下自动创建cluster_analysis_output文件夹，保存分析数据。 | 是       |
+   | --output_path或-o     | 自定义输出路径，运行分析脚本之后会在该目录下自动创建cluster_analysis_output文件夹，保存分析数据。 | 否       |
    | --mode或-m            | 数据解析模式，取值详见“**--mode参数说明**”表。               | 否       |
-
+   | --data_simplification | 数据精简模式。对于数据量过大的性能数据db文件，可以通过配置该参数将数据精简，并提高工具分析效率。 | 否       |
    
    --mode参数说明：
    
@@ -63,7 +64,7 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
    | communication_matrix | 解析通信矩阵数据。                                           | 否       |
    | communication_time   | 解析通信耗时数据。                                           | 否       |
    | all                  | 同时解析通信矩阵communication_matrix和通信耗时数据communication_time，--mode参数默认值为all。 | 否       |
-
+   
    
 
 ### 交付件
@@ -132,9 +133,9 @@ O列：TP Index，指集群数据按照并行策略切分后所属TP组的索引
 ```
 **Tips**：可以根据rank互联的带宽以及链路类型，判断是否有慢链路的问题。
 
-- "LOCAL"是片内拷贝，速率非常快，不需要考虑。
-- “HCCS”或“PCIE”是节点内片间拷贝，速度在18GB左右或以上比较正常。
-- “RDMA”是节点间拷贝，910A速度在12GB左右或以上。
+- "LOCAL"是片内拷贝，速度最高。
+- “HCCS”或“PCIE”是节点内片间拷贝，速度居中。
+- “RDMA”是节点间拷贝，速度最低。
 
 #### cluster_communication.json
 
@@ -146,6 +147,6 @@ O列：TP Index，指集群数据按照并行策略切分后所属TP组的索引
 
 解析analysis.db或ascend_pytorch_profiler_{rank_id}.db生成的交付件，根据数据解析模式不同而解析不同的数据，可以使用MindStudio Insight工具展示。
 
+#### communication_group.json
 
-
-
+记录通信域信息，解析analysis.db生成的交付件，collective表示集合通信域，P2P表示点对点通信，用户无须关注该文件。

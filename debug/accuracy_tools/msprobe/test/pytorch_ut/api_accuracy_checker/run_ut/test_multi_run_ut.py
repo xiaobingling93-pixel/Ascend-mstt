@@ -28,12 +28,12 @@ class TestMultiRunUT(unittest.TestCase):
         self.assertEqual(len(split_files), num_splits)
         self.assertEqual(total_items, len(self.test_data.get('data')))
 
-
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.remove_path')
     @patch('subprocess.Popen')
     @patch('os.path.exists', return_value=True)
     @patch('builtins.open', new_callable=mock_open)
     @patch('json.load', side_effect=lambda f: {'key1': 'TRUE', 'key2': 'TRUE'})
-    def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen):
+    def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen, _):
         mock_process = MagicMock()
         mock_process.poll.side_effect = [None, None, 1]
         mock_process.stdout.readline.side_effect = ['[ERROR] Test Error Message\n', '']

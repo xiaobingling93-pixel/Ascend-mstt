@@ -1,11 +1,29 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # 进行比对及结果展示
 import os
 from collections import namedtuple
 
 import numpy as np
-from msprobe.core.common.utils import write_csv, get_json_contents, CompareException
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import get_json_contents, write_csv
 import torch
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.const import CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
     get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
     get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
@@ -126,8 +144,12 @@ class Comparator:
         return test_rows
 
     def write_csv_title(self):
-        summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS,
-                              self.COLUMN_BACKWARD_SUCCESS, "Message"]]
+        summary_test_rows = [
+            [self.COLUMN_API_NAME, 
+             self.COLUMN_FORWARD_SUCCESS,
+             self.COLUMN_BACKWARD_SUCCESS,
+             "Message"]
+            ]
         for save_path, detail_save_path in zip(self.save_path_list, self.detail_save_path_list):
             if not os.path.exists(save_path):
                 write_csv(summary_test_rows, save_path)
@@ -239,13 +261,15 @@ class Comparator:
     def _compare_core(self, api_name, bench_output, device_output):
         compare_column = CompareColumn()
         if not isinstance(bench_output, type(device_output)):
-            return CompareConst.ERROR, compare_column, "bench and npu output type is different."
+            status = CompareConst.ERROR
+            message = "bench and npu output type is different."
         elif isinstance(bench_output, dict):
             b_keys, n_keys = set(bench_output.keys()), set(device_output.keys())
             if b_keys != n_keys:
-                return CompareConst.ERROR, compare_column, "bench and npu output dict keys are different."
+                status = CompareConst.ERROR
+                message = "bench and npu output dict keys are different."
             else:
-                status, compare_result, message = self._compare_core(api_name, list(bench_output.values()),
+                status, compare_column, message = self._compare_core(api_name, list(bench_output.values()),
                                                                      list(device_output.values()))
         elif isinstance(bench_output, torch.Tensor):
             copy_bench_out = bench_output.detach().clone()
@@ -253,19 +277,20 @@ class Comparator:
             compare_column.bench_type = str(copy_bench_out.dtype)
             compare_column.npu_type = str(copy_device_output.dtype)
             compare_column.shape = tuple(device_output.shape)
-            status, compare_result, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
+            status, compare_column, message = self._compare_torch_tensor(api_name, copy_bench_out, copy_device_output,
                                                                          compare_column)
         elif isinstance(bench_output, (bool, int, float, str)):
             compare_column.bench_type = str(type(bench_output))
             compare_column.npu_type = str(type(device_output))
-            status, compare_result, message = self._compare_builtin_type(bench_output, device_output, compare_column)
+            status, compare_column, message = self._compare_builtin_type(bench_output, device_output, compare_column)
         elif bench_output is None:
-            return CompareConst.SKIP, compare_column, "Bench output is None, skip this test."
+            status = CompareConst.SKIP
+            message = "Bench output is None, skip this test."
         else:
-            return CompareConst.PASS, compare_column,
-        "Unexpected output type in compare_core: {}".format(type(bench_output))
+            status = CompareConst.ERROR
+            message = "Unexpected output type in compare_core: {}".format(type(bench_output))
 
-        return status, compare_result, message
+        return status, compare_column, message
 
     def _compare_torch_tensor(self, api_name, bench_output, device_output, compare_column):
         cpu_shape = bench_output.shape
@@ -274,7 +299,7 @@ class Comparator:
         if npu_dtype == torch.bfloat16:
             bench_output = bench_output.to(torch.float32)
             device_output = device_output.to(torch.float32)
-        bench_output = bench_output.numpy()
+        bench_output = bench_output.cpu().numpy()
         device_output = device_output.cpu().numpy()
         if cpu_shape != npu_shape:
             return CompareConst.ERROR, compare_column, f"The shape of bench{str(cpu_shape)} " \
@@ -329,21 +354,23 @@ class Comparator:
                     compare_column.max_ulp_error = np.max(ulp_err)
                     compare_column.mean_ulp_error = np.mean(ulp_err)
                     if dtype == torch.float32:
-                        compare_column.ulp_error_proportion = np.sum(ulp_err > CompareConst.ULP_FLOAT32_THRESHOLD) / bench_output.size
+                        compare_column.ulp_error_proportion = \
+                        np.sum(ulp_err > CompareConst.ULP_FLOAT32_THRESHOLD) / bench_output.size
                     else:
-                        compare_column.ulp_error_proportion = np.sum(ulp_err > CompareConst.ULP_FLOAT16_THRESHOLD) / bench_output.size
+                        compare_column.ulp_error_proportion = \
+                            np.sum(ulp_err > CompareConst.ULP_FLOAT16_THRESHOLD) / bench_output.size
             else:
                 dtype_config = precision_configs.get(dtype)
                 small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
                 abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
                 compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
                 rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-                compare_column.RMSE = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
-                compare_column.EB = get_error_balance(bench_output, device_output)
+                compare_column.rmse = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
+                compare_column.eb = get_error_balance(bench_output, device_output)
                 if rel_err.size == 0:
                     return CompareConst.ERROR, compare_column, "Relative error result list is empty."
-                compare_column.Max_rel_error = get_max_rel_err(rel_err)
-                compare_column.Mean_rel_error = get_mean_rel_err(rel_err)
+                compare_column.max_rel_error = get_max_rel_err(rel_err)
+                compare_column.mean_rel_error = get_mean_rel_err(rel_err)
 
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
         compare_column.cosine_sim = cos_res
@@ -362,7 +389,8 @@ class Comparator:
             hundred_res, hundred_status = get_rel_err_ratio(rel_err_orign, CompareConst.HUNDRED_RATIO_THRESHOLD)
             compare_column.rel_err_hundredth = hundred_res
             if not hundred_status:
-                message += "Relative error is greater than 0.01, consider as error, skip other check and set to SPACE.\n"
+                message += "Relative error is greater than 0.01, consider as error, " \
+                           "skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
         thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
         compare_column.rel_err_thousandth = thousand_res
@@ -372,14 +400,17 @@ class Comparator:
                 return CompareConst.PASS, compare_column, message
             message += "Relative error is greater than 0.001, consider as warning, skip other check and set to SPACE.\n"
             return CompareConst.WARNING, compare_column, message
-        ten_thousand_res, ten_thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.TEN_THOUSAND_RATIO_THRESHOLD)
+        ten_thousand_res, ten_thousand_status = get_rel_err_ratio(
+                                                rel_err_orign, CompareConst.TEN_THOUSAND_RATIO_THRESHOLD)
         compare_column.rel_err_ten_thousandth = ten_thousand_res
         if dtype in [torch.float32, torch.float64]:
             if not thousand_status:
-                message += "Relative error is greater than 0.001, consider as error, skip other check and set to SPACE.\n"
+                message += "Relative error is greater than 0.001, consider as error, " \
+                           "skip other check and set to SPACE.\n"
                 return CompareConst.ERROR, compare_column, message
             if not ten_thousand_status:
-                message += "Relative error is greater than 0.0001, consider as warning, skip other check and set to SPACE.\n"
+                message += "Relative error is greater than 0.0001, consider as warning, " \
+                           "skip other check and set to SPACE.\n"
                 return CompareConst.WARNING, compare_column, message
             message += "Relative error is less than 0.0001, consider as pass.\n"
         return CompareConst.PASS, compare_column, message

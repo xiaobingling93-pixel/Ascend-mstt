@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
@@ -85,13 +100,15 @@ class GradSaver:
             )
 
     def check_grad_input(self, origin_grad, new_grad_index):
-        if (
-            self.perturbed_grad_input is None
-            or len(self.perturbed_grad_input) <= new_grad_index
-        ):
+        if self.perturbed_grad_input is None:
             raise FreeBenchmarkException(
-                FreeBenchmarkException.InvalidGrad,
-                f"grad not exists : {self.api_name}.",
+                FreeBenchmarkException.InvalidPerturbedOutput,
+                f"perturbed grad not exists for {self.api_name}.",
+            )
+        if len(self.perturbed_grad_input) <= new_grad_index:
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.InvalidPerturbedOutput,
+                f"perturbed grad index {new_grad_index} is out of bounds for {self.api_name}.",
             )
         with torch.no_grad():
             perturbed_grad = self.perturbed_grad_input[new_grad_index].to(
@@ -99,7 +116,7 @@ class GradSaver:
             )
         if origin_grad.shape != perturbed_grad.shape:
             raise FreeBenchmarkException(
-                FreeBenchmarkException.InvalidGrad,
+                FreeBenchmarkException.InvalidPerturbedOutput,
                 f"grad shapes are inconsistent. api:{self.handler_params.api_name}."
                 f"origin:{origin_grad.shape}, perturbation: {perturbed_grad.shape}",
             )
@@ -152,12 +169,10 @@ class GradSaver:
             index_ = 0
             for object_ in inner_args:
                 if object_ is CommonField.HOLD_PLACE:
-                    try:
-                        _real_input.append(inputs[index_])
-                    except (TypeError, IndexError) as e:
+                    if index_ >= len(inputs):
                         err_msg = (
-                            f"[msprobe] Free benchmark: When getting input from vjp "
-                            f" the indexing of inputs failed because of error: {e}"
+                            f"[msprobe] Free benchmark: When getting input from vjp, "
+                            f" the input index ({index_}) is out of bounds ({len(inputs)})."
                         )
                         logger.error_log_with_exp(
                             err_msg,
@@ -166,6 +181,7 @@ class GradSaver:
                                 error_info=err_msg,
                             ),
                         )
+                    _real_input.append(inputs[index_])
                     index_ += 1
                 else:
                     _real_input.append(object_)

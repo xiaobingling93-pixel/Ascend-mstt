@@ -1,14 +1,27 @@
-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import mindspore
 import torch
 from mindspore import ops
-
-from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
 from msprobe.core.common.const import Const, MsCompareConst
 from msprobe.core.common.exceptions import ApiAccuracyCheckerException
-from msprobe.core.common.log import logger
+from msprobe.mindspore.api_accuracy_checker.compute_element import ComputeElement
+from msprobe.mindspore.api_accuracy_checker.type_mapping import float_dtype_str_list, torch_dtype_to_dtype_str
 from msprobe.mindspore.api_accuracy_checker.utils import convert_to_tuple
+from msprobe.mindspore.common.log import logger
 
 
 class ApiInputAggregation:
@@ -23,12 +36,14 @@ class ApiInputAggregation:
         self.kwargs = kwargs
         self.gradient_inputs = gradient_inputs
 
+
 api_parent_module_mapping = {
     (MsCompareConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
     (MsCompareConst.MINT, Const.PT_FRAMEWORK): torch,
     (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
     (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
 }
+
 
 class ApiRunner:
     def __call__(self, api_input_aggregation, api_name_str, forward_or_backward=Const.FORWARD,
@@ -113,7 +128,7 @@ class ApiRunner:
         gradient_inputs = api_input_aggregation.gradient_inputs
 
         if forward_or_backward == Const.FORWARD:
-            forward_result = api_instance(*inputs, **kwargs) # can be single tensor or tuple
+            forward_result = api_instance(*inputs, **kwargs)  # can be single tensor or tuple
             forward_result_tuple = convert_to_tuple(forward_result)
             res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in forward_result_tuple]
         else:
@@ -125,25 +140,29 @@ class ApiRunner:
             if api_platform == Const.MS_FRAMEWORK:
                 if len(gradient_inputs) == 1:
                     gradient_inputs = gradient_inputs[0]
+
                 def api_with_kwargs(*forward_inputs):
                     return api_instance(*forward_inputs, **kwargs)
+
                 grad_func = ops.GradOperation(get_all=True, sens_param=True)(api_with_kwargs)
-                backward_result = grad_func(*inputs, gradient_inputs) # can be single tensor or tuple
+                backward_result = grad_func(*inputs, gradient_inputs)  # can be single tensor or tuple
                 backward_result_tuple = convert_to_tuple(backward_result)
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_tuple]
             else:
-                #set requires_grad
-                for tensor in inputs:
-                    if hasattr(tensor, "requires_grad"):
+                # set requires_grad
+                requires_grad_index = []
+                for index, tensor in enumerate(inputs):
+                    if isinstance(tensor, torch.Tensor) and \
+                            torch_dtype_to_dtype_str.get(tensor.dtype) in float_dtype_str_list:
                         setattr(tensor, "requires_grad", True)
+                        requires_grad_index.append(index)
                 forward_results = api_instance(*inputs, **kwargs)
                 forward_results = convert_to_tuple(forward_results)
                 for forward_res, gradient_in in zip(forward_results, gradient_inputs):
                     forward_res.backward(gradient_in)
                 backward_result_list = []
-                for tensor in inputs:
-                    if hasattr(tensor, "grad"):
-                        backward_result_list.append(getattr(tensor, "grad"))
+                for index in requires_grad_index:
+                    backward_result_list.append(getattr(inputs[index], "grad"))
                 res_compute_element_list = [ComputeElement(parameter=api_res) for api_res in backward_result_list]
 
         return res_compute_element_list

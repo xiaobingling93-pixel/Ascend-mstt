@@ -1,9 +1,30 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
+from collections import defaultdict
+
 from mindspore import Tensor
-from mindspore.common.api import _MindsporeFunctionExecutor
 from mindspore._c_expression import PyNativeExecutor_
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from mindspore.common.api import _MindsporeFunctionExecutor
+
+from msprobe.core.common.log import logger
+from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
+from msprobe.core.common.const import Const
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs
+from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 
 def dump_jit(name, in_feat, out_feat, is_forward):
@@ -12,33 +33,50 @@ def dump_jit(name, in_feat, out_feat, is_forward):
     index = ori_args.find("<")
     if index != 0 and index != -1:
         result = ori_args[0:index]
+    elif name is not None and "<" not in str(name):
+        result = str(name)
     else:
         result = "JitFunction"
-    if is_forward:
-        name_template = "Jit." + result + ".forward"
-    else:
-        name_template = "Jit." + result + ".backward"
-    JitDump.data_collector.visit_and_clear_overflow_status(name_template)
-    if JitDump.data_collector:
-        module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
-        JitDump.data_collector.forward_data_collect(name_template, {}, pid, module_input_output)
+    if JitDump.need_dump():
+        if is_forward:
+            JitDump.jit_count[result] += 1
+            name_template = Const.JIT + Const.SEP + result + Const.SEP + str(JitDump.jit_count[result]) + Const.SEP + \
+                            Const.FORWARD
+            JitDump.data_collector.update_api_or_module_name(name_template)
+            module_input_output = ModuleForwardInputsOutputs(args=in_feat, kwargs={}, output=out_feat)
+            JitDump.data_collector.forward_data_collect(name_template, None, pid, module_input_output)
+        else:
+            name_template = Const.JIT + Const.SEP + result + Const.SEP + str(JitDump.jit_count[result]) + Const.SEP + \
+                            Const.BACKWARD
+            JitDump.data_collector.update_api_or_module_name(name_template)
+            module_input_output = ModuleBackwardInputsOutputs(grad_input=in_feat ,grad_output=out_feat)
+            JitDump.data_collector.backward_data_collect(name_template, None, pid, module_input_output)
 
 
 class JitDump(_MindsporeFunctionExecutor):
     dump_config = None
     jit_enable = False
+    jit_dump_switch = True
+    jit_count = defaultdict(int)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.name = None
+        if len(args) > 0:
+            self.name = args[0].__name__
         self._executor = PyNativeExecutor_.get_instance()
 
     def __call__(self, *args, **kwargs):
         api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
-        if isinstance(args[0], Tensor):
-            dump_jit({}, args, out, True)
+        if JitDump.jit_dump_switch and len(args) > 0:
+            if self.name and self.name != "construct":
+                dump_jit(self.name, args, out, True)
+            else:
+                dump_jit(args[0], args, out, True)
+            JitDump.jit_enable = True
         else:
-            dump_jit(args[0], args[1:], out, True)
-        JitDump.jit_enable = True
+            logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
         api_register.api_set_hook_func()
         return out
 
@@ -50,11 +88,19 @@ class JitDump(_MindsporeFunctionExecutor):
     def set_data_collector(cls, value):
         cls.data_collector = value
 
-    def grad(self, obj, grad, weights, grad_position, *args,  **kwargs):
-        if JitDump.jit_enable:
+    @classmethod
+    def need_dump(cls):
+        if cls.dump_config.task != Const.TENSOR and cls.dump_config.task != Const.STATISTICS:
+            return False
+        if not cls.data_collector or cls.data_collector.data_processor.is_terminated:
+            return False
+        return True
+
+    def grad(self, obj, grad, weights, grad_position, *args, **kwargs):
+        if JitDump.jit_dump_switch and JitDump.jit_enable:
             api_register.api_set_ori_func()
         output = self._executor.grad(grad, obj, weights, grad_position, *args, *(kwargs.values()))
-        if JitDump.jit_enable:
+        if JitDump.jit_dump_switch and JitDump.jit_enable:
             dump_jit(obj, args, None, False)
             api_register.api_set_hook_func()
         return output
