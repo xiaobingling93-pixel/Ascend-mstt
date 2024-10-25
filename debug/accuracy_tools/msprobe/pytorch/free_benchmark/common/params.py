@@ -113,10 +113,21 @@ def make_unequal_row(
         row.max_rel = ratio - 1
     origin_tensor = data_params.original_result
     perturbed_tensor = data_params.perturbed_result
-    if index:
-        origin_tensor = origin_tensor[index]
-        perturbed_tensor = perturbed_tensor[index]
-        row.output_index = index
+    if index is not None:
+        try:
+            origin_tensor = origin_tensor[index]
+            perturbed_tensor = perturbed_tensor[index]
+            row.output_index = index
+        except TypeError as e:
+            logger.warning_on_rank_0(
+                f"[msprobe] Free benchmark: When generating unequal results "
+                f"for {handle_params.api_name}, the output format does not support indexing. {e}"
+            )
+        except IndexError as e:
+            logger.warning_on_rank_0(
+                f"[msprobe] Free benchmark: When generating unequal results "
+                f"for {handle_params.api_name}, the index of the value exceeded the range: {e}"
+            )
     if isinstance(origin_tensor, torch.Tensor):
         row.dtype = origin_tensor.dtype
         row.shape = origin_tensor.shape

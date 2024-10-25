@@ -1,4 +1,6 @@
 import torch
+from msprobe.core.common.exceptions import FreeBenchmarkException
+from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 
@@ -59,23 +61,30 @@ class Tools:
 
     @staticmethod
     def convert_fuzz_output_to_origin(origin, perturbed):
-        if isinstance(origin, torch.Tensor):
+        if isinstance(origin, torch.Tensor) and isinstance(perturbed, torch.Tensor):
             origin.data = perturbed.to(origin.dtype).to(origin.device)
             return origin
-        if isinstance(origin, dict):
+        if isinstance(origin, dict) and isinstance(perturbed, dict):
             output = dict()
             for key, value in origin.items():
+                # 此处取值异常将抛出由上层函数处理
                 output[key] = Tools.convert_fuzz_output_to_origin(value, perturbed[key])
             return output
-        if isinstance(origin, (tuple, list)):
+        if isinstance(origin, (tuple, list)) and isinstance(perturbed, (tuple, list)):
             result = list()
             for index_, value in enumerate(origin):
+                # 此处索引越界异常将抛出由上层函数处理
                 result.append(
                     Tools.convert_fuzz_output_to_origin(value, perturbed[index_])
                 )
             return type(origin)(result)
-        return origin
-    
+        err_msg = f"conversion of two outputs with types ({type(origin)}, {type(perturbed)}) is not supported."
+        logger.error_log_with_exp(
+            err_msg,
+            FreeBenchmarkException(FreeBenchmarkException.UnsupportedType, error_info=err_msg),
+        )
+
+
 class TorchC:
     sum = torch._C._VariableFunctionsClass.sum
     isinf = torch._C._VariableFunctionsClass.isinf
