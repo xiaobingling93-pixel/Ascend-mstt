@@ -48,8 +48,8 @@ class HeatmapVisualizer:
         cax = ax.matshow(self.histogram_sum_data_np, cmap='hot', aspect='auto')
         fig.colorbar(cax)
 
-        plt.yticks(ticks=range(self.histogram_bins_num), labels=[f'{self.histogram_edges[i]:.2f}' for i in range(
-            self.histogram_bins_num)])
+        lbs = [f'{self.histogram_edges[i]:.2f}' for i in range(self.histogram_bins_num)]
+        plt.yticks(ticks=range(self.histogram_bins_num), labels=lbs)
         ax.set_xlabel('Step')
         ax.set_ylabel('Value Range')
         plt.title(f'Total Step: {step}')
