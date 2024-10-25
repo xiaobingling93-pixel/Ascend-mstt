@@ -51,12 +51,6 @@ class TestModeAdapter(unittest.TestCase):
         result = self.adapter.prepare_real_data(self.node)
         self.assertFalse(result)
 
-    def test_compare_mode_methods(self):
-        self.adapter.compare_mode = GraphConst.SUMMARY_COMPARE
-        self.assertTrue(self.adapter.is_summary_compare())
-        self.assertFalse(self.adapter.is_md5_compare())
-        self.assertFalse(self.adapter.is_real_data_compare())
-
     def test_add_csv_data(self):
         compare_result_list = ['result1', 'result2']
         self.adapter.add_csv_data(compare_result_list)

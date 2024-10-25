@@ -145,15 +145,6 @@ class ModeAdapter:
             return True
         return False
     
-    def is_summary_compare(self):
-        return self.compare_mode == GraphConst.SUMMARY_COMPARE
-    
-    def is_md5_compare(self):
-        return self.compare_mode == GraphConst.MD5_COMPARE
-    
-    def is_real_data_compare(self):
-        return self.compare_mode == GraphConst.REAL_DATA_COMPARE
-    
     def add_csv_data(self, compare_result_list):
         if self.compare_mode != GraphConst.REAL_DATA_COMPARE:
             return
