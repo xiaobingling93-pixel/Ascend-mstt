@@ -346,7 +346,7 @@ def load_yaml(yaml_path):
 def load_npy(filepath):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath)
+        npy = np.load(filepath, allow_pickle=False)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
