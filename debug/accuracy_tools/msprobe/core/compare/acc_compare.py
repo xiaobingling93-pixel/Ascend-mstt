@@ -72,15 +72,15 @@ class Comparator:
                         relative = str(abs((diff / bench_val) * 100)) + '%'
                     else:
                         relative = CompareConst.N_A
-                    magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
-                    if magnitude_diff > 0.5:
+                    magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + CompareConst.EPSILON)
+                    if magnitude_diff > CompareConst.MAGNITUDE:
                         warning_flag = True
 
                 result_item[start_idx + i] = diff
-                result_item[start_idx + i + 4] = relative
+                result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = relative
             else:
                 result_item[start_idx + i] = CompareConst.N_A
-                result_item[start_idx + i + 4] = CompareConst.N_A
+                result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = CompareConst.N_A
         accuracy_check = CompareConst.WARNING if warning_flag else ""
         err_msg += "Need double check api accuracy." if warning_flag else ""
         for i in range(start_idx, len(result_item)):
