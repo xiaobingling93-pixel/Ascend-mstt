@@ -144,4 +144,4 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## ❓ FAQ
 
-[FAQ for PyTorch](./docs/FAQ_PyTorch.md)
+[FAQ for PyTorch](./docs/FAQ.md)
