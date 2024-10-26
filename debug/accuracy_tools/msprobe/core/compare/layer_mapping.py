@@ -88,11 +88,11 @@ def convert_scope(layer_trie, data_item, mapping=None):
         child_name = scope_list[idx + 1]
         type_name = cur_node.type_name
         prefix_mapping = mapping.get(type_name, {})
-        mapping_list = prefix_mapping.get(child_name, [(child_name, child_name, 1)])
+        mapping_list = prefix_mapping.get(child_name, [])
+        mapping_list.append((child_name, child_name, 1))
         step = 1
-        suffix_name = Const.SEP.join(scope_list[idx + 1:])
         for origin, target, level in mapping_list:
-            if suffix_name.startswith(origin):
+            if Const.SEP.join(scope_list[idx + 1: idx + level + 1]) == origin:
                 new_scope = new_scope + Const.SEP + target
                 step = level
                 break
