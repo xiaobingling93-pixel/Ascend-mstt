@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 import statistics
 
@@ -5,7 +22,7 @@ from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_z
 from msprobe.pytorch.monitor.utils import print_error_log
 
 
-def get_summary_writer_tag_name(module_or_param_name:str, tag:str, rank):
+def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
     if rank is None:
         return f"{module_or_param_name}/{tag}"
     else:
@@ -24,14 +41,17 @@ def register_config_metric(key, cls=None):
     config_metric_registry[key] = cls
     return cls
 
+
 class TensorMetrics:
     def __init__(self) -> None:
-        self.metrics = {} #tensor_tag --> []
+        # tensor_tag --> []
+        self.metrics = {}
         self.cur_idx = {}
 
     fun_map = {"norm": get_norm, "max": get_max, "min": get_min}
-    #get stats and insert into metrics dictionary
-    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank, eps=1e-8):
+
+    # get stats and insert into metrics dictionary
+    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank):
         prefix = get_summary_writer_tag_name(module_name, tensor_name, rank)
         for stat_op in stat_ops:
             y = TensorMetrics.fun_map[stat_op](tensor)
@@ -48,6 +68,7 @@ class TensorMetrics:
                 tb_writer.add_scalar(key, v.item(), global_step=self.cur_idx[key])
                 self.cur_idx[key] += 1
 
+
 class Metric(object):
     @staticmethod
     def get_metric_value(tensor, eps):
@@ -62,6 +83,7 @@ class Metric(object):
         for tag, tensor in tag2tensor.items():
             metrics_dict[tag] = self.get_metric_value(tensor, eps)
         return metrics_dict
+
 
 @register_config_metric("min")
 class MinMetric(Metric):
@@ -130,8 +152,8 @@ class ZerosMetric(Metric):
 @register_config_metric("nans")
 class NaNsMetric(Metric):
     @staticmethod
-    def get_metric_value(t, eps):
-        return get_nans(t)
+    def get_metric_value(tensor, eps):
+        return get_nans(tensor)
 
     @staticmethod
     def metric_tensorboard(metric_name, summary_writer, metric_value, step):
@@ -152,7 +174,8 @@ class IdentMetric(Metric):
         return tensor
 
     @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step): #metric_value is a dict, key is parameter name and value is a list of scalar tensor
+    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
+        # metric_value is a dict, key is parameter name and value is a list of scalar tensor
         try:
             if len(metric_value) == 1:
                 for key, value in metric_value[0][metric_name].items():
@@ -168,7 +191,9 @@ def get_metrics(metric_name, tag2tensor, eps):
         fun_metric = config_metric_registry[metric_name]
         return fun_metric().get_metrics(tag2tensor, eps)
     except KeyError as e:
-        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}") from e
+        raise ValueError(
+            f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: "
+            f"{metric_name}") from e
 
 
 def write_metrics_tensorboard(metric_name, summary_writer, metric_value, step):
@@ -176,4 +201,6 @@ def write_metrics_tensorboard(metric_name, summary_writer, metric_value, step):
         fun_metric = config_metric_registry[metric_name]
         return fun_metric.metric_tensorboard(metric_name, summary_writer, metric_value, step)
     except KeyError as e:
-        raise ValueError(f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: {metric_name}") from e
+        raise ValueError(
+            f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: "
+            f"{metric_name}") from e

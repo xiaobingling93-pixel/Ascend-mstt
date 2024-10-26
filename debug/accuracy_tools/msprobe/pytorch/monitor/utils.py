@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import time
 import sys
@@ -29,6 +46,7 @@ def filter_special_chars(func):
         for char in MsgConst.SPECIAL_CHAR:
             msg = msg.replace(char, '_')
         return func(msg)
+
     return func_level
 
 
@@ -66,6 +84,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+
 
 class FileCheckException(Exception):
     """
@@ -133,12 +152,14 @@ def print_warn_log(warn_msg):
     """
     _print_log("WARNING", warn_msg)
 
+
 def get_param_struct(param):
     if isinstance(param, tuple):
         return f"tuple[{len(param)}]"
     if isinstance(param, list):
         return f"list[{len(param)}]"
     return "tensor"
+
 
 def check_link(path):
     abs_path = os.path.abspath(path)
@@ -207,6 +228,7 @@ def change_mode(path, mode):
         print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
         raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
 
+
 def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")
@@ -221,6 +243,7 @@ def validate_ops(ops):
             valid_ops.append(op)
     return valid_ops
 
+
 def validate_ranks(ranks):
     world_size = dist.get_world_size()
     if not isinstance(ranks, list):
@@ -229,7 +252,8 @@ def validate_ranks(ranks):
         if not isinstance(rank, int) or isinstance(rank, bool):
             raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
         if rank < 0 or rank >= world_size:
-            print_warn_log(f"rank {rank} is beyond world size [0, {world_size-1}] and will be ignored")
+            print_warn_log(f"rank {rank} is beyond world size [0, {world_size - 1}] and will be ignored")
+
 
 def validate_targets(targets):
     if not isinstance(targets, dict):
@@ -239,6 +263,7 @@ def validate_targets(targets):
             raise TypeError('key of targets should be module_name[str] in config.json')
         if not isinstance(field, dict):
             raise TypeError('values of targets should be cared filed e.g. {"input": "tensor"} in config.json')
+
 
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
