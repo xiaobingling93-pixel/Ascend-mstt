@@ -62,8 +62,7 @@ class Comparator:
         start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
         warning_flag = False
         for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
-            if (isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)) and
-                    not type(npu_val) is bool and not type(bench_val) is bool):
+            if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [npu_val, bench_val]):
                 diff = npu_val - bench_val
                 if math.isnan(diff):
                     diff = CompareConst.NAN
