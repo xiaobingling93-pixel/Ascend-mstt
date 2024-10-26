@@ -15,6 +15,7 @@
 
 import multiprocessing
 import os
+import math
 import pandas as pd
 from tqdm import tqdm
 from msprobe.core.common.file_utils import load_json
@@ -61,19 +62,26 @@ class Comparator:
         start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
         warning_flag = False
         for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
-            if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
+            if (isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)) and
+                    not type(npu_val) is bool and not type(bench_val) is bool):
                 diff = npu_val - bench_val
-                if bench_val != 0:
-                    relative = str(abs((diff / bench_val) * 100)) + '%'
+                if math.isnan(diff):
+                    diff = CompareConst.NAN
+                    relative = CompareConst.NAN
                 else:
-                    relative = "N/A"
+                    if bench_val != 0:
+                        relative = str(abs((diff / bench_val) * 100)) + '%'
+                    else:
+                        relative = CompareConst.N_A
+                    magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
+                    if magnitude_diff > 0.5:
+                        warning_flag = True
+
                 result_item[start_idx + i] = diff
                 result_item[start_idx + i + 4] = relative
-                magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
-                if magnitude_diff > 0.5:
-                    warning_flag = True
             else:
-                result_item[start_idx + i] = CompareConst.NONE
+                result_item[start_idx + i] = CompareConst.N_A
+                result_item[start_idx + i + 4] = CompareConst.N_A
         accuracy_check = CompareConst.WARNING if warning_flag else ""
         err_msg += "Need double check api accuracy." if warning_flag else ""
         for i in range(start_idx, len(result_item)):

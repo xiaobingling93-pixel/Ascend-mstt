@@ -293,7 +293,7 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                             relative = CompareConst.NAN
                         else:
                             if bench_val != 0:
-                                relative = str(abs(diff / bench_val))
+                                relative = str(abs((diff / bench_val) * 100)) + '%'
                             else:
                                 relative = CompareConst.N_A
                             magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
