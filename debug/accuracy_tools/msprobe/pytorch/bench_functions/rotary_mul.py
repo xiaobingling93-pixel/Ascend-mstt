@@ -72,6 +72,6 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
                     r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
                     r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
     except Exception as e:
-        raise RuntimeError(f"Error in rotary_mul_backward: {e}")
+        raise RuntimeError(f"Error in rotary_mul_backward: {e}") from e
 
     return x.grad.cpu(), r1_grad.cpu(), r2_grad.cpu()
