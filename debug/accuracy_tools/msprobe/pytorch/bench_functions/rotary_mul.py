@@ -41,7 +41,8 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
     h = x.float()
     grad = dy_tensor.float()
     if len(r1_shape) < 4 or len(x_shape) < 4:
-        raise RuntimeError(f"Shape of r1 and x should be 4-dimension, but got r1 shape:{r1_shape}, x shape:{x_shape}")
+        raise RuntimeError(f"Shape of r1 and x should at least be 4-dimension, "
+                           f"but got r1 shape:{r1_shape}, x shape:{x_shape}")
     condition_1 = (r1_shape[0] == 1
                    and r1_shape[1] == x_shape[1]
                    and r1_shape[2] == 1
@@ -71,7 +72,7 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
                 for j in range(x_shape[2]):
                     r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
                     r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
-    except Exception as e:
+    except IndexError as e:
         raise RuntimeError(f"Error in rotary_mul_backward: {e}") from e
 
     return x.grad.cpu(), r1_grad.cpu(), r2_grad.cpu()

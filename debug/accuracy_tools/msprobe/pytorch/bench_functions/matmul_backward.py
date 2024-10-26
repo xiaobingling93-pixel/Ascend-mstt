@@ -18,7 +18,7 @@ import torch
 
 def matmul_backward(grad, self, other, mask):
     if len(mask) < 2:
-        raise RuntimeError("Mask size should be 2")
+        raise RuntimeError("Mask size at least 2")
 
     grad_self, grad_other = None, None
     dim_self = self.dim()
