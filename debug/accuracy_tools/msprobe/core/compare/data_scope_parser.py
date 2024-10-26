@@ -58,7 +58,7 @@ class DumpDataItem:
         self.api_type = data_name_list[Const.API_TYPE_INDEX]
         self.type_name = data_name_list[Const.TYPE_NAME_INDEX]
         if self.api_type == self.framework2layername.get(self.framework):
-            self.api_name = data_name_list[Const.TYPE_NAME_INDEX + Const.LEFT_MOVE_INDEX]
+            self.api_name = data_name_list[Const.LAYER_NAME_INDEX]
         else:
             self.api_name = self.type_name
 
@@ -71,7 +71,7 @@ class DumpDataItem:
         if self.api_type == self.framework2layername.get(self.framework):
             # remove api name
             data_list = self.data_name.split(Const.SEP)
-            data_list = data_list[:Const.TYPE_NAME_INDEX + Const.LEFT_MOVE_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
+            data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
         else:
             data_list = construct_info.split(Const.SEP)
         self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
@@ -80,8 +80,7 @@ class DumpDataItem:
 
     def set_stack_scope(self, stack_info: str) -> None:
         # Cell/Module has no stack info
-        ignore = self.framework2layername.get(self.framework)
-        if self.api_type == ignore:
+        if self.api_type == self.framework2layername.get(self.framework):
             return
 
         if self.api_type in Const.DATA_TYPE_SKIP_LIST or not stack_info:

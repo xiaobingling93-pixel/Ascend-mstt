@@ -24,7 +24,7 @@ from msprobe.core.compare.data_scope_parser import get_dump_data_items
 
 
 class LayerTrie:
-    def __init__(self, type_name=None, framework=None):
+    def __init__(self, type_name, framework=None):
         self.type_name = type_name
         self.data_items = []
         self.children = {}
@@ -43,31 +43,10 @@ class LayerTrie:
 
         for name in scope_name_list:
             if name not in node.children:
-                node.children[name] = LayerTrie(name)
+                node.children[name] = LayerTrie(name, data_item.framework)
             node = node.children[name]
         node.data_items.append(data_item)
         node.type_name = data_item.type_name
-
-    def query_scope(self, data_item, mapping=None):
-        if not mapping:
-            mapping = {}
-        new_scope = Const.TOP_LAYER
-        scope_list = data_item.full_scope.split(Const.SEP)
-        node = self
-
-        for idx in range(len(scope_list) - 1):
-            type_name = node.type_name
-            name_mapping = mapping.get(type_name, {})
-            child_node_name = scope_list[idx + 1]
-            converted_name = name_mapping.get(child_node_name, child_node_name)
-            new_scope = new_scope + Const.SEP + converted_name
-            child_node = node.get(child_node_name)
-            node = child_node
-        index = -1
-        for idx, child in enumerate(node.data_items):
-            if data_item.data_name == child.data_name:
-                index = idx
-        return new_scope, index
 
     def query_data(self, scope, index, default_value=None):
         parts = scope.split(Const.SEP)
@@ -83,9 +62,8 @@ class LayerTrie:
         return node.data_items[index]
 
     def save_to_yaml(self, output_path):
-        result = {
-            f"{self.type_name} @ {self}": self.convert_to_dict(self)}
-        file_name = add_time_with_yaml(f"{self.framework}_tree.yaml")
+        result = {f"{self.type_name} @ {self}": self.convert_to_dict(self)}
+        file_name = add_time_with_yaml(f"{self.framework}_tree")
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         save_yaml(file_path, result)
 
@@ -98,12 +76,43 @@ class LayerTrie:
         return result
 
 
+def convert_scope(layer_trie, data_item, mapping=None):
+    if not mapping:
+        mapping = {}
+    new_scope = Const.TOP_LAYER
+    scope_list = data_item.full_scope.split(Const.SEP)
+    cur_node = layer_trie
+
+    idx = 0
+    while idx < len(scope_list) - 1:
+        child_name = scope_list[idx + 1]
+        type_name = cur_node.type_name
+        prefix_mapping = mapping.get(type_name, {})
+        mapping_list = prefix_mapping.get(child_name, [(child_name, child_name, 1)])
+        step = 1
+        suffix_name = Const.SEP.join(scope_list[idx + 1:])
+        for origin, target, level in mapping_list:
+            if suffix_name.startswith(origin):
+                new_scope = new_scope + Const.SEP + target
+                step = level
+                break
+        for _ in range(step):
+            child_node = cur_node.get(scope_list[idx + 1])
+            cur_node = child_node
+            idx += 1
+    index = -1
+    for idx, child in enumerate(cur_node.data_items):
+        if data_item.data_name == child.data_name:
+            index = idx
+    return new_scope, index
+
+
 def get_data_items_and_tree(dump_json_path, output_path):
     framework = detect_framework_by_dump_json(dump_json_path)
     stack, construct = get_stack_construct_by_dump_json_path(dump_json_path)
     dump = load_json(dump_json_path)
     dump_data_items = get_dump_data_items(dump, stack, construct, framework, output_path)
-    root = LayerTrie(type_name=Const.TOP_LAYER, framework=framework)
+    root = LayerTrie(Const.TOP_LAYER, framework)
     for data_item in dump_data_items:
         root.insert(data_item)
     if output_path:
@@ -112,7 +121,7 @@ def get_data_items_and_tree(dump_json_path, output_path):
 
 
 def convert_data_item(npu_tree, bench_tree, npu_data_item, mapping):
-    new_scope, index = npu_tree.query_scope(npu_data_item, mapping)
+    new_scope, index = convert_scope(npu_tree, npu_data_item, mapping)
     bench_data_item = bench_tree.query_data(new_scope, index)
     return bench_data_item
 
@@ -128,8 +137,41 @@ def update_keys_in_place(d):
         d[Const.TOP_LAYER] = cell_value
 
 
-def convert_data_items(npu_tree, bench_tree, npu_data_items, mapping):
+def preprocess_layer_mapping(mapping):
+    """
+    before:
+        {'A': {'a.b.c': 'new_c',
+               'a.demo': 'new_demo',
+               'z': 'new_z',
+               'd.e': 'e'}}
+    after:
+        {'A': {'a': [('a.b.c', 'new_c', 3), ('a.demo', 'new_demo', 2)],
+               'z': [('z', 'new_z', 1)],
+               'd': [('d.e', 'e', 2)]}}
+    """
     update_keys_in_place(mapping)
+    final_mapping = {}
+
+    for type_name, name_map in mapping.items():
+        final_mapping[type_name] = {}
+
+        for key, value in name_map.items():
+            key_list = key.split('.')
+            prefix = key_list[0]  # 取前缀
+            key_len = len(key_list)
+            if prefix not in final_mapping[type_name]:
+                final_mapping[type_name][prefix] = []
+            final_mapping[type_name][prefix].append((key, value, key_len))
+
+        # 前缀映射列表按规则长度排序
+        for prefix in final_mapping[type_name]:
+            final_mapping[type_name][prefix].sort(key=lambda x: -x[-1])
+
+    return final_mapping
+
+
+def convert_data_items(npu_tree, bench_tree, npu_data_items, mapping):
+    mapping = preprocess_layer_mapping(mapping)
     api_mapping = {}
     for npu_data_item in npu_data_items:
         bench_data_item = convert_data_item(npu_tree, bench_tree, npu_data_item, mapping)
@@ -145,7 +187,7 @@ def generate_api_mapping_by_layer_mapping(npu_json_path, bench_json_path, layer_
     mapping = load_yaml(layer_mapping_path)
     api_mapping = convert_data_items(npu_root, bench_root, npu_data_items, mapping)
     if output_path:
-        file_name = add_time_with_yaml("api_mapping.yaml")
+        file_name = add_time_with_yaml("api_mapping")
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         save_yaml(file_path, api_mapping)
     return api_mapping
@@ -153,12 +195,12 @@ def generate_api_mapping_by_layer_mapping(npu_json_path, bench_json_path, layer_
 
 def generate_index_set(item, prefix="", depth=0, max_depth=10):
     if depth > max_depth:
-        logger.error(f"parse index exceeds the recursion limit.")
+        logger.error("parse index exceeds the recursion limit.")
         raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
     result = set()
     if isinstance(item, list):
         for idx, value in enumerate(item):
-            pre =  f"{prefix}.{idx}" if prefix else str(idx)
+            pre = f"{prefix}.{idx}" if prefix else str(idx)
             result.update(generate_index_set(value, pre, depth+1, max_depth))
     else:
         result.add(prefix)
