@@ -22,7 +22,11 @@ def npu_confusion_transpose(data, perm, shape, transpose_first):
 
 
 def npu_confusion_transpose_backward(grad, perm, shape, transpose_first):
-    shape_cal = shape if transpose_first else [shape[perm_dim] for perm_dim in perm]
+    try:
+        shape_cal = shape if transpose_first else [shape[perm_dim] for perm_dim in perm]
+    except IndexError as e:
+        raise IndexError("npu_confusion_transpose_backward: Invalid perm index for shape") from e
+
     perm_cal = [0] * len(perm)
     for i, perm_dim in enumerate(perm):
         perm_cal[perm_dim] = i

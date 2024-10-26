@@ -319,6 +319,10 @@ def get_input_layout(*args, **kwargs):
 
 
 def npu_fusion_attention_forward_patch(*args, **kwargs):
+
+    if len(args) < 2:
+        raise RuntimeError("Length of args should greater than 2.")
+
     # query, key, value, head_num, input_layout
     head_num = get_head_num(*args, **kwargs)
     input_layout = get_input_layout(*args, **kwargs)
