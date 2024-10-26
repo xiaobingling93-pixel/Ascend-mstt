@@ -190,7 +190,14 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
     last_api_name, last_state = None, None
     num, last_len = 0, 0
     for res_i in result:
-        api_name, state = get_name_and_state(res_i[0])
+        try:
+            api_full_name = res_i[0]
+            api_name, state = get_name_and_state(api_full_name)
+        except IndexError:
+            err_msg = f"index out of bounds error occurs when find compare result error rows, please check!\n" \
+                      f"result_item is {res_i}"
+            logger.warning(err_msg)
+            continue
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
