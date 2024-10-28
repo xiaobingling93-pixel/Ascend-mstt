@@ -49,7 +49,11 @@ def main():
     _compare_parser(compare_cmd_parser)
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
-    if is_torch_available:
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+    framework_args = parser.parse_args(sys.argv[1:3])
+    if framework_args.framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import _run_ut_parser, run_ut_command
         from msprobe.pytorch.parse_tool.cli import parse as cli_parse
         from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import prepare_config, run_parallel_ut
@@ -66,13 +70,10 @@ def main():
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
         _graph_service_parser(graph_service_cmd_parser)
-    elif is_mindspore_available:
+    elif framework_args.framework == Const.MS_FRAMEWORK:
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
 
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(0)
     args = parser.parse_args(sys.argv[1:])
     if sys.argv[2] == Const.PT_FRAMEWORK:
         if not is_torch_available:
