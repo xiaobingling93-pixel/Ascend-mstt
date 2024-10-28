@@ -232,7 +232,7 @@ def detect_framework_by_dump_json(file_path):
 
 def get_stack_construct_by_dump_json_path(dump_json_path):
     if not dump_json_path:
-        logger.error("Please check the json path is valid.")
+        logger.error("The path is empty. Please enter a valid path.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     directory = os.path.dirname(dump_json_path)
     check_file_or_directory_path(directory, True)
