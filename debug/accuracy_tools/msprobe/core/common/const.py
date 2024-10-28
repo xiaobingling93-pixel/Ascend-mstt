@@ -1,3 +1,17 @@
+"""
+# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
 import os
 import stat
 
@@ -146,7 +160,7 @@ class Const:
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
-    
+
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
@@ -232,6 +246,12 @@ class CompareConst:
     MD5_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
+
+    HEAD_OF_COMPARE_MODE = {
+        Const.ALL: COMPARE_RESULT_HEADER,
+        Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
+        Const.MD5: MD5_COMPARE_RESULT_HEADER
+    }
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -395,13 +415,17 @@ class MsgConst:
     MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
     LOG_LEVEL_ENUM = ["0", "1", "2", "3", "4"]
     LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
+
     class LogLevel:
         class DEBUG:
             value = 0
+
         class INFO:
             value = 1
+
         class WARNING:
             value = 2
+
         class ERROR:
             value = 3
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]

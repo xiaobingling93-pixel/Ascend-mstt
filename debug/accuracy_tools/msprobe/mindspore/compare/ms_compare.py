@@ -20,7 +20,7 @@ import sys
 from itertools import zip_longest
 
 from msprobe.core.common.utils import check_compare_param, CompareException, check_configuration_param, \
-    task_dumppath_get, struct_json_get, add_time_with_yaml
+    struct_json_get, add_time_with_yaml, set_dump_path, get_dump_mode
 from msprobe.core.common.file_utils import create_directory, load_yaml, load_npy, load_json, save_yaml, FileOpen
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
@@ -347,10 +347,11 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
 
-        summary_compare, md5_compare = task_dumppath_get(input_param)
+        set_dump_path(input_param)
+        dump_mode = get_dump_mode(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
-        check_compare_param(input_param, output_path, summary_compare, md5_compare)
+        check_compare_param(input_param, output_path, dump_mode)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
@@ -370,5 +371,4 @@ def ms_compare(input_param, output_path, **kwargs):
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
     ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, summary_compare=summary_compare,
-                 md5_compare=md5_compare)
+                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)

@@ -159,7 +159,7 @@ class Service:
         if api_origin:
             api_register.api_modularity()
         if self.config.online_run_ut and torch_version_above_or_equal_2:
-            run_ut_dispatch(self.attl, True)
+            run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
         if self.config.level != "L2" and not self.config.online_run_ut:
@@ -177,7 +177,7 @@ class Service:
             return
         self.switch = False
         if self.config.online_run_ut and torch_version_above_or_equal_2:
-            run_ut_dispatch(self.attl, False)
+            run_ut_dispatch(self.attl, False, self.config.online_run_ut_recompute)
             return
         self.data_collector.write_json()
 

@@ -279,7 +279,7 @@ def rebuid_softmax_by_qkv(q, k, atten_mask, pse, scale):
     """
     logger.info("Using QKV to rebuild original softmax")
     qk = calculate_qk(q, k, atten_mask, pse, scale)
-    softmax_res, x_max, x_sum = softmax_forward(qk)
+    softmax_res, _, _ = softmax_forward(qk)
     return softmax_res
 
 
