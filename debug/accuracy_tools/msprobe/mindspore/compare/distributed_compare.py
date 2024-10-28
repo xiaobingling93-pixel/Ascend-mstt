@@ -15,7 +15,7 @@
 
 import os
 from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, task_dumppath_get
+    check_configuration_param, set_dump_path, get_dump_mode
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
@@ -54,17 +54,16 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'is_print_compare_log': is_print_compare_log
         }
         try:
-            summary_compare, md5_compare = task_dumppath_get(dump_result_param)
+            set_dump_path(dump_result_param)
+            dump_mode = get_dump_mode(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
             create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, 
-                                summary_compare=summary_compare, md5_compare=md5_compare)
+            check_compare_param(dump_result_param, output_path, dump_mode)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
         ms_comparator = MSComparator()
-        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', 
-                                   summary_compare=summary_compare, md5_compare=md5_compare, **kwargs)
+        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)
 
 
 def ms_graph_compare(inputs, outputs):

@@ -13,11 +13,13 @@ from msprobe.visualization.builder.msprobe_adapter import (
 )
 from msprobe.visualization.utils import GraphConst
 import torch
+from msprobe.core.common.const import Const
 
 
 class TestMsprobeAdapter(unittest.TestCase):
-    @patch('msprobe.visualization.builder.msprobe_adapter.task_dumppath_get', return_value=(True, False))
-    def test_get_compare_mode_summary(self, mock_task_dumppath_get):
+    @patch('msprobe.visualization.builder.msprobe_adapter.set_dump_path')
+    @patch('msprobe.visualization.builder.msprobe_adapter.get_dump_mode', return_value=Const.SUMMARY)
+    def test_get_compare_mode_summary(self, mock_get_dump_mode, mock_set_dump_path):
         mode = get_compare_mode("dummy_param")
         self.assertEqual(mode, GraphConst.SUMMARY_COMPARE)
 
@@ -59,7 +61,7 @@ class TestMsprobeAdapter(unittest.TestCase):
         data_dicts = [{'node1': {"input_args": [], "input_kwargs": {}, "output": {}}},
                       {'node2': {"input_args": [], "input_kwargs": {}, "output": {}}}]
         stack_json_data = {}
-        result = compare_node(node_ids, data_dicts, stack_json_data, False, False)
+        result = compare_node(node_ids, data_dicts, stack_json_data, GraphConst.REAL_DATA_COMPARE)
         mock_get_accuracy.assert_called_once()
         self.assertIsInstance(result, list)
 

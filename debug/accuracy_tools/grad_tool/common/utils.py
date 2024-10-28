@@ -132,7 +132,7 @@ def check_path_length(path, name_length=None):
         raise RuntimeError("The file path length exceeds limit.")
 
 
-def check_path_pattern_vaild(path):
+def check_path_pattern_valid(path):
     if not re.match(GradConst.FILE_VALID_PATTERN, path):
         raise RuntimeError("The file path contains special characters.")
 
@@ -188,14 +188,14 @@ def check_path_exists(path):
 
 def path_valid_check(path):
     check_path_length(path)
-    check_path_pattern_vaild(path)
+    check_path_pattern_valid(path)
 
 
 def check_file_or_directory_path(path, file_type=GradConst.FILE):
     check_link(path)
     check_path_exists(path)
     check_path_length(path)
-    check_path_pattern_vaild(path)
+    check_path_pattern_valid(path)
     check_path_owner_consistent(path)
     check_path_type(path, file_type)
     if file_type == GradConst.FILE:

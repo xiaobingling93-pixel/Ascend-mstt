@@ -8,6 +8,7 @@ from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_ite
     check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
     _compare_parser
 from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import Const
 
 
 # test_read_op_1
@@ -281,30 +282,30 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_get_accuracy(self):
         result = []
-        get_accuracy(result, npu_dict, bench_dict, highlight_dict)
+        get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
 
-    def test_get_un_match_accuracy_1(self):
+    def test_get_un_match_accuracy_md5(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=True, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
         self.assertEqual(result, o_result_unmatch_1)
 
-    def test_get_un_match_accuracy_2(self):
+    def test_get_un_match_accuracy_summary(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=True)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result_unmatch_2)
 
-    def test_get_un_match_accuracy_3(self):
+    def test_get_un_match_accuracy_all(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
         self.assertEqual(result, o_result_unmatch_3)
 
     def test_merge_tensor_summary(self):
-        op_dict = merge_tensor(tensor_list, True, False)
+        op_dict = merge_tensor(tensor_list, dump_mode=Const.SUMMARY)
         self.assertEqual(op_dict, result_op_dict)
 
     def test_merge_tensor_md5(self):
-        op_dict = merge_tensor(tensor_list_md5, False, True)
+        op_dict = merge_tensor(tensor_list_md5, dump_mode=Const.MD5)
         self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):
