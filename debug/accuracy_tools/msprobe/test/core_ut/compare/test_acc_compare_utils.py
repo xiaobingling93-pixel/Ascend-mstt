@@ -281,12 +281,15 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(item_list, o_result_api_special)
 
     def test_get_rela_diff_summary_mode_float_or_int(self):
-        result_item = []
+        result_item = [0] * 14
         err_msg = ''
         npu_summary_data = [1, 1, 1, 1]
         bench_summary_data = [1, 1, 1, 1]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_bool(self):
         result_item = []
@@ -295,6 +298,9 @@ class TestUtilsMethods(unittest.TestCase):
         bench_summary_data = [True, True, True, True]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_nan(self):
         result_item = []
@@ -303,6 +309,9 @@ class TestUtilsMethods(unittest.TestCase):
         bench_summary_data = [float('nan')]
         result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
                                                                           bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
 
 
     def test_get_accuracy(self):
