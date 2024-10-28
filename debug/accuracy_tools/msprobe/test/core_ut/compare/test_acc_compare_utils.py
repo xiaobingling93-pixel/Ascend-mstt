@@ -292,7 +292,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_bool(self):
-        result_item = []
+        result_item = [0] * 14
         err_msg = ''
         npu_summary_data = [True, True, True, True]
         bench_summary_data = [True, True, True, True]
@@ -303,7 +303,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, '')
 
     def test_get_rela_diff_summary_mode_nan(self):
-        result_item = []
+        result_item = [0] * 14
         err_msg = ''
         npu_summary_data = [float('nan')]
         bench_summary_data = [float('nan')]
