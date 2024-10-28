@@ -20,8 +20,9 @@ from typing import ClassVar, Dict, Optional, Tuple
 
 import yaml
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import save_yaml
-from msprobe.core.common.utils import add_time_with_yaml
+from msprobe.core.common.utils import add_time_with_yaml, CompareException
 
 
 @dataclass
@@ -55,6 +56,11 @@ class DumpDataItem:
     def set_name(self, data_name: str) -> None:
         self.data_name = data_name
         data_name_list = data_name.split(Const.SEP)
+        if not data_name_list or len(data_name_list) < abs(Const.LAYER_NAME_INDEX):
+            logger.error(
+                f"The dump data does not comply with the format specification and must contain no less than four fields. The current data is {data_name}")
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
+
         self.api_type = data_name_list[Const.API_TYPE_INDEX]
         self.type_name = data_name_list[Const.TYPE_NAME_INDEX]
         if self.api_type == self.framework2layername.get(self.framework):
@@ -67,16 +73,20 @@ class DumpDataItem:
         if not construct_info:
             self.layer_scope = self.framework2layername.get(self.framework)
             return
-
+        construct_info_list = construct_info.split(Const.SEP)
+        if len(construct_info_list) < abs(Const.LAYER_NAME_INDEX):
+            logger.error(
+                f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
         if self.api_type == self.framework2layername.get(self.framework):
             # remove api name
             data_list = self.data_name.split(Const.SEP)
             data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
         else:
-            data_list = construct_info.split(Const.SEP)
+            data_list = construct_info_list
         self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
         self.scope_id = data_list[Const.SCOPE_ID_INDEX]
-        self.scope_direction = data_list[Const.SCOPE_DIRECTION_INDEX]
+        self.scope_direction = construct_info_list[Const.SCOPE_DIRECTION_INDEX]
 
     def set_stack_scope(self, stack_info: str) -> None:
         # Cell/Module has no stack info
