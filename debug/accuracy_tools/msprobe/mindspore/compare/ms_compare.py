@@ -13,18 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import os
 import re
-import copy
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import FileOpen, create_directory, load_npy, load_yaml
+from msprobe.core.common.file_utils import (FileOpen, create_directory,
+                                            load_npy, load_yaml)
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param
+from msprobe.core.common.utils import (CompareException, check_compare_param,
+                                       check_configuration_param,
+                                       get_dump_mode, set_dump_path)
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
+
 
 class MSComparator(Comparator):
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):

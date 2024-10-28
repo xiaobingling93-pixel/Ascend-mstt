@@ -15,14 +15,15 @@
 
 import os
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import ClassVar, Dict, Optional, Tuple
 
 import yaml
 from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import save_yaml
-from msprobe.core.common.utils import add_time_with_yaml, CompareException
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import CompareException, add_time_with_yaml
 
 
 @dataclass
@@ -158,7 +159,6 @@ def find_stack_func_list(lines):
 
 
 def dumpdata_representer(dumper, data):
-    from copy import deepcopy
     d = deepcopy(data.__dict__)
     d.pop("data_name")
     return dumper.represent_dict(d)
