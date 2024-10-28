@@ -16,6 +16,7 @@
 import os
 import re
 import numpy as np
+from dataclasses import dataclass
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
@@ -244,7 +245,6 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-
             n_name = n_dict['op_name'][n_start + index]
             b_name = b_dict['op_name'][b_start + index]
             n_struct = n_dict[key][index]
@@ -308,7 +308,13 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             else:
                 result_item.append(CompareConst.NONE)
             if all_mode_bool:
-                result_item.append(npu_data_name[n_start + index])
+                try:
+                    result_item.append(npu_data_name[n_start + index])
+                except IndexError as e:
+                    err_msg = f"index out of bounds error occurs when get_accuracy_core, please check!\n" \
+                              f"npu_data_name is {npu_data_name}"
+                    logger.error(err_msg)
+                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
             result.append(result_item)
 
@@ -432,7 +438,13 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
 
         if all_mode_bool:
             op_dict["data_name"].append(tensor['data_name'])
-            data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
+            try:
+                data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
+            except IndexError as e:
+                err_msg = f"index out of bounds error occurs when merge tensor, please check!\n" \
+                          f"data name of op_dict is {op_dict['data_name']}"
+                logger.error(err_msg)
+                raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
 
