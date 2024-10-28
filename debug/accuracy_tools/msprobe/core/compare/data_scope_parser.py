@@ -47,6 +47,17 @@ class DumpDataItem:
         Const.PT_FRAMEWORK: ("Template", r"in (for|back)ward,")
     }
 
+    @staticmethod
+    def check_stack_valid(stack_info):
+        if stack_info is not None:
+            if not isinstance(stack_info, list):
+                logger.error(f"stack is invalid, it should be a list[str], but got {stack_info}")
+                raise CompareException(CompareException.INVALID_DATA_ERROR)
+            for stack in stack_info:
+                if not isinstance(stack, str):
+                    logger.error(f"stack is invalid, it should be a list[str], but got {stack_info}")
+                    raise CompareException(CompareException.INVALID_DATA_ERROR)
+
     def set(self, data_name: str, construct_info: str, stack_info: str) -> None:
         self.set_name(data_name)
         self.set_layer_scope(construct_info)
@@ -98,6 +109,7 @@ class DumpDataItem:
             return
 
         start_sign, end_sign = self.framework2stack_sign.get(self.framework)
+        self.check_stack_valid(stack_info)
         start_pos, end_pos = find_regard_scope(stack_info, start_sign, end_sign)
         # 获取指定范围的代码
         regard_scope = stack_info[start_pos + 1:end_pos]

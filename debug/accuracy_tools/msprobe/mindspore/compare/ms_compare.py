@@ -21,8 +21,7 @@ from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import FileOpen, create_directory, load_npy, load_yaml
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import (CompareException, check_compare_param,
-                                       check_configuration_param, task_dumppath_get)
+from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
