@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import math
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.visualization.utils import ToolTip, GraphConst, str2float
 
@@ -53,6 +54,9 @@ class ModeAdapter:
                 headers = CompareConst.COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in GraphConst.REAL_DATA_INDEX_LIST]
                 ModeAdapter._match_data(value, compare_data, GraphConst.REAL_DATA_INDEX_LIST, id_list)
+                # 跳过scalar data，因为无法计算双千指标，会得到Nan
+                if not value.get(Const.SHAPE):
+                    continue
                 # 获取一个节点所有的输入或输出最小的双千指标
                 thousandth = value.get(CompareConst.ONE_THOUSANDTH_ERR_RATIO)
                 # 可能是None，可能是非数字内容str
