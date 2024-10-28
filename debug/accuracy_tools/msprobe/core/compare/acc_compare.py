@@ -15,7 +15,6 @@
 
 import multiprocessing
 import os
-import math
 import pandas as pd
 from tqdm import tqdm
 from msprobe.core.common.file_utils import load_json
