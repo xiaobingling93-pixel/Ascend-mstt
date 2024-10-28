@@ -127,23 +127,29 @@ class Comparator:
         return merge_list
     
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        a_op_name = npu_dict["op_name"]
-        b_op_name = bench_dict["op_name"]
-        graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
+        npu_op_name = npu_dict["op_name"]
+        bench_op_name = bench_dict["op_name"]
+        try:
+            graph_mode = check_graph_mode(npu_op_name[0], bench_op_name[0])
+        except IndexError as e:
+            err_msg = f"index out of bounds error occurs when check op, please check!\n" \
+                      f"npu_op_name is {npu_op_name}, bench_op_name is {bench_op_name}"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         
         frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
             if graph_mode:
-                return graph_mapping.match(a_op_name[0], b_op_name[0])
+                return graph_mapping.match(npu_op_name[0], bench_op_name[0])
         struct_match = check_struct_match(npu_dict, bench_dict)
         if not fuzzy_match:
-            return a_op_name == b_op_name and struct_match
+            return npu_op_name == bench_op_name and struct_match
         is_match = True
         try:
-            is_match = fuzzy_check_op(a_op_name, b_op_name)
+            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
-            logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
+            logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
             is_match = False
         return is_match and struct_match
     
@@ -323,7 +329,13 @@ class Comparator:
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
         npu_bench_name_list = op_name_mapping_dict[npu_op_name]
-        data_name = npu_bench_name_list[1]
+        try:
+            data_name = npu_bench_name_list[1]
+        except IndexError as e:
+            err_msg = f"index out of bounds error occurs when compare_by_op, please check!\n" \
+                      f"npu_bench_name_list is {npu_bench_name_list}"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         error_file, relative_err, error_flag = None, None, False
         if data_name == '-1' or data_name == -1:  # 没有真实数据路径
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
