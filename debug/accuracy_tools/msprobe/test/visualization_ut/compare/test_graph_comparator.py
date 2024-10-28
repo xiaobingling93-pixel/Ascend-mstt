@@ -73,8 +73,8 @@ class TestGraphComparator(unittest.TestCase):
         node.data.update.assert_not_called()
 
     @patch('msprobe.visualization.graph.node_colors.NodeColors.get_node_error_status')
-    @patch('msprobe.visualization.utils.get_csv_df')
-    @patch('msprobe.visualization.builder.msprobe_adapter.run_real_data')
+    @patch('msprobe.visualization.compare.graph_comparator.get_csv_df')
+    @patch('msprobe.visualization.compare.graph_comparator.run_real_data')
     @patch('msprobe.visualization.compare.graph_comparator.get_compare_mode')
     @patch('msprobe.visualization.compare.graph_comparator.load_json_file')
     @patch('msprobe.visualization.compare.graph_comparator.load_data_json_file')
@@ -90,7 +90,7 @@ class TestGraphComparator(unittest.TestCase):
         mock_get_node_error_status.return_value = True
         comparator = GraphComparator(self.graphs, self.dump_path_param, self.output_path)
         comparator.ma = MagicMock()
-        comparator.ma.is_real_data_compare.return_value = True
+        comparator.ma.compare_mode = GraphConst.REAL_DATA_COMPARE
         comparator._handle_api_collection_index = MagicMock()
         comparator.ma.compare_nodes = [MagicMock()]
         comparator.ma.parse_result = MagicMock(return_value=(0.9, None))

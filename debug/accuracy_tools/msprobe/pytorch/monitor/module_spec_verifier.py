@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import re
 import abc
 import torch
@@ -14,32 +31,32 @@ def register_config_validator(cls):
 
 class ConfigValidator(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def check_pattern_match(self, config_spec:str):
+    def check_pattern_match(self, config_spec: str):
         pass
 
     @abc.abstractmethod
-    def validate(self, actual_data, module_name:str, data_type:str, pattern_match):
+    def validate(self, actual_data, module_name: str, data_type: str, pattern_match):
         pass
 
 
 @register_config_validator
 class TensorValidator(ConfigValidator):
-    def check_pattern_match(self, config_spec:str):
+    def check_pattern_match(self, config_spec: str):
         pattern = re.compile(r"tensor")
-        return pattern.match(config_spec)    
+        return pattern.match(config_spec)
 
-    def validate(self, actual_data, module_name:str, data_type:str, pattern_match):
+    def validate(self, actual_data, module_name: str, data_type: str, pattern_match):
         if not torch.is_tensor(actual_data):
             raise ValueError(
                 f"Format of {module_name} {data_type} does not match the required format 'tensor' in config.")
 
 
-@register_config_validator    
+@register_config_validator
 class TupleValidator(ConfigValidator):
-    def check_pattern_match(self, config_spec:str):
+    def check_pattern_match(self, config_spec: str):
         pattern = re.compile(r"tuple\[(\d+)\]:(\d+)")
-        return pattern.match(config_spec)  
-    
+        return pattern.match(config_spec)
+
     def validate(self, actual_data, module_name: str, data_type: str, pattern_match):
         length, index = map(int, pattern_match.groups())
         if not (0 <= index < length):
@@ -56,7 +73,7 @@ class TupleValidator(ConfigValidator):
         return index
 
 
-def validate_config_spec(config_spec:str, actual_data, module_name:str, data_type:str):
+def validate_config_spec(config_spec: str, actual_data, module_name: str, data_type: str):
     for _, validator_cls in config_validator_registry.items():
         config_validator = validator_cls()
         pattern_match = config_validator.check_pattern_match(config_spec)

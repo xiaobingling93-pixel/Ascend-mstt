@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import logging
 import os
 import uuid
@@ -5,9 +22,6 @@ import json
 from collections import defaultdict
 from datetime import datetime
 import torch
-torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
-if not torch_version_above_or_equal_2:
-    raise ValueError("monitor require torch>=2.0")
 
 import torch.distributed as dist
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
@@ -25,6 +39,10 @@ from msprobe.pytorch.monitor.utils import print_warn_log, print_info_log, print_
 from msprobe.pytorch.monitor.file_check import FileOpen
 from msprobe.core.common.const import MonitorConst
 
+torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
+if not torch_version_above_or_equal_2:
+    raise ValueError("monitor require torch>=2.0")
+
 output_base_dir = os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
 
 
@@ -41,7 +59,7 @@ class ModuleHookContext:
         self.focused_out_col = 0
         self.ignore_in = False  # no need to care when no key 'input' or 'input_grad' found
 
-    def set_format_by_arg(self, key_name:str, target_config:dict):
+    def set_format_by_arg(self, key_name: str, target_config: dict):
         if key_name in target_config[self.module_name]:
             self.format_by_arg[key_name] = target_config[self.module_name][key_name]
         elif key_name in ['input', 'input_grad']:
@@ -54,7 +72,7 @@ class OptimizerContext:
     def __init__(self) -> None:
         self.step = 0
         self.param_effective_rank = defaultdict(float)
-        self.param_mg_direction  = defaultdict(float)
+        self.param_mg_direction = defaultdict(float)
         self.param_adam_update = defaultdict()
         self.param_adam_ratio = defaultdict()
         self.param_weight_grad = defaultdict()
@@ -82,8 +100,8 @@ class CommunicationContext:
     def aggregate(self):
         self.data = self._agg(self.data)
 
-class TrainerMon:
 
+class TrainerMon:
     tensor_metrics = TensorMetrics()
 
     def __init__(self, config_file_path, params_have_main_grad=True, opt_ty=None) -> None:
@@ -106,7 +124,7 @@ class TrainerMon:
         self.xy_distribution = self.config.get('xy_distribution', False)
         if not self.xy_distribution:
             print_rank_0("> module input/output input_grad/output_grad is not monitored. ")
-        
+
         # backward hook cause megatron-lm pipeline parallel schedule assert exception. 
         # TBD: backward hook cause output tensor is view of some base tensor. root cause invesigation pending.
         self.forward_only = self.config.get('forward_only', False)
@@ -137,7 +155,7 @@ class TrainerMon:
             api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
 
-        alert_setting = self.config.get('alert', {"rules":[]})
+        alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
 
         anomaly_inform = AnomalyInformFactory.create_informer(
@@ -160,7 +178,7 @@ class TrainerMon:
             self.summary_writer = SummaryWriterWithAD(cur_path, self.alert_rules, unique_id, anomaly_inform)
 
         full_path = os.path.realpath(cur_path)
-        change_mode(full_path,FileCheckConst.DATA_DIR_AUTHORITY)
+        change_mode(full_path, FileCheckConst.DATA_DIR_AUTHORITY)
 
         # A HeatmapVisualizer instance is associated with an image
         self.update_heatmap_visualizer = defaultdict(HeatmapVisualizer)
@@ -184,13 +202,13 @@ class TrainerMon:
     def __del__(self):
         if hasattr(self, "summary_writer"):
             self.summary_writer.close()
-    
+
     @staticmethod
     def set_wrapped_optimizer(_wrapped_optimizer):
         MixPrecsionOptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
 
     @staticmethod
-    def adhoc_check(target_tensor:torch.tensor, module_name:str, tensor_name:str, rank_list, ops_list):
+    def adhoc_check(target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
         rank = None
         if dist.is_initialized():
             rank = dist.get_rank()
@@ -228,7 +246,7 @@ class TrainerMon:
             metrics[key] = param_tensor[name]
         return metrics
 
-    def hook_modules(self, model:torch.nn.Module, grad_acc_steps):
+    def hook_modules(self, model: torch.nn.Module, grad_acc_steps):
         # fwd=0, bkd=1
         # targets is module name list like ["xx.xxx1", "xxx.xxx2"] which can be obtained when first run.
         if not isinstance(model, torch.nn.Module):
@@ -271,7 +289,8 @@ class TrainerMon:
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if not len(fwd_context.actv) == self.micro_batch_number:
                 print_warn_log(
-                    f"fwd_context.actv not equal to micro_batch_number: {len(fwd_context.actv)}, {self.micro_batch_number}")
+                    f"fwd_context.actv not equal to micro_batch_number: {len(fwd_context.actv)}, "
+                    f"{self.micro_batch_number}")
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, fwd_context.actv, step)
             fwd_context.actv.clear()
@@ -279,7 +298,8 @@ class TrainerMon:
         for _, bwd_context in self.module_bwd_hook_context_by_module.items():
             if not len(bwd_context.actvgrad) == self.micro_batch_number:
                 print_warn_log(
-                    f"bwd_context.actvgrad not equal to micro_batch_number: {len(bwd_context.actvgrad)}, {self.micro_batch_number}")
+                    f"bwd_context.actvgrad not equal to micro_batch_number: {len(bwd_context.actvgrad)}, "
+                    f"{self.micro_batch_number}")
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, bwd_context.actvgrad, step)
             bwd_context.actvgrad.clear()
@@ -313,7 +333,7 @@ class TrainerMon:
                     continue
                 if self.wg_distribution:
                     context.param_weight_grad[name] = grad
-                if self.mg_direction: 
+                if self.mg_direction:
                     if context.step == 0:
                         same_direction_ratio = torch.tensor(1.)
                     else:
@@ -351,10 +371,12 @@ class TrainerMon:
             if self.ur_distribution:
                 for param_name, _ in context.param_adam_update.items():
                     self.update_heatmap_visualizer[param_name].visualize(
-                        get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step, self.summary_writer)
+                        get_summary_writer_tag_name(param_name, 'adam_update', rank), context.step,
+                        self.summary_writer)
                 for param_name, _ in context.param_adam_ratio.items():
                     self.ratio_heatmap_visualizer[param_name].visualize(
-                        get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
+                        get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step,
+                        self.summary_writer)
 
             for metric_name in self.ops:
                 if not context.metric_list:
@@ -364,6 +386,7 @@ class TrainerMon:
             context.step += 1
 
             return
+
         if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
             register_optimizer_step_pre_hook(optimizer_pre_step_hook)
             register_optimizer_step_post_hook(optimizer_post_step_hook)
@@ -402,8 +425,10 @@ class TrainerMon:
                 context.set_format_by_arg('output', self.config['targets'])
             if not context.verified:
                 if not context.ignore_in:
-                    context.focused_in_col = validate_config_spec(context.format_by_arg['input'], module_input, context.module_name, 'input')
-                context.focused_out_col = validate_config_spec(context.format_by_arg['output'], module_output, context.module_name, 'output')
+                    context.focused_in_col = validate_config_spec(context.format_by_arg['input'], module_input,
+                                                                  context.module_name, 'input')
+                context.focused_out_col = validate_config_spec(context.format_by_arg['output'], module_output,
+                                                               context.module_name, 'output')
                 context.verified = True
             # expect output be tensor type
             tbtag_tensor_map = {}
@@ -454,7 +479,8 @@ class TrainerMon:
                 tbtag_tensor_map.update(
                     self.build_tbtag_tensor_map(context.module_name, 'input_grad', cared_input_grad))
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
-            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output_grad', cared_output_grad))
+            tbtag_tensor_map.update(self.build_tbtag_tensor_map(context.module_name, 'output_grad',
+                                                                cared_output_grad))
             metric_dict = {}
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)

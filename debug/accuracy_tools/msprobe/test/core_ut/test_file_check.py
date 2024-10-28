@@ -30,7 +30,7 @@ from msprobe.core.common.file_utils import (check_link,
                                             check_path_executable,
                                             check_other_user_writable,
                                             check_path_owner_consistent,
-                                            check_path_pattern_vaild,
+                                            check_path_pattern_valid,
                                             check_file_size,
                                             check_common_file_size,
                                             check_file_suffix,
@@ -156,13 +156,13 @@ class TestFileCheckUtil(TestCase):
                                              "because is does not belong to you.")
 
     @patch.object(logger, "error")
-    def test_check_path_pattern_vaild(self, mock_logger_error):
+    def test_check_path_pattern_valid(self, mock_logger_error):
         path = "path"
         mock_re_match = MagicMock()
         mock_re_match.return_value = False
         with patch("msprobe.core.common.file_utils.re.match", new=mock_re_match):
             with self.assertRaises(FileCheckException) as context:
-                check_path_pattern_vaild(path)
+                check_path_pattern_valid(path)
             self.assertEqual(str(context.exception),
                              FileCheckException.err_strs.get(FileCheckException.ILLEGAL_PATH_ERROR))
         mock_logger_error.assert_called_with(f"The file path {path} contains special characters.")

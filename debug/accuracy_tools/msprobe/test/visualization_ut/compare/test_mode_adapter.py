@@ -44,19 +44,12 @@ class TestModeAdapter(unittest.TestCase):
         self.assertEqual(other_dict, {})
 
     def test_prepare_real_data(self):
-        self.adapter.is_real_data_compare = MagicMock(return_value=True)
         result = self.adapter.prepare_real_data(self.node)
         self.assertTrue(result)
 
-        self.adapter.is_real_data_compare = MagicMock(return_value=False)
+        self.adapter.compare_mode = GraphConst.SUMMARY_COMPARE
         result = self.adapter.prepare_real_data(self.node)
         self.assertFalse(result)
-
-    def test_compare_mode_methods(self):
-        self.adapter.compare_mode = GraphConst.SUMMARY_COMPARE
-        self.assertTrue(self.adapter.is_summary_compare())
-        self.assertFalse(self.adapter.is_md5_compare())
-        self.assertFalse(self.adapter.is_real_data_compare())
 
     def test_add_csv_data(self):
         compare_result_list = ['result1', 'result2']

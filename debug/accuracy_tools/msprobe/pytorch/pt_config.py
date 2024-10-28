@@ -38,6 +38,7 @@ class TensorConfig(BaseConfig):
         self.host = json_config.get("host", "")
         self.port = json_config.get("port", -1)
         self.tls_path = json_config.get("tls_path", "./")
+        self.online_run_ut_recompute = json_config.get("online_run_ut_recompute", False)
         self.check_config()
         self._check_file_format()
         self._check_tls_path_config()
