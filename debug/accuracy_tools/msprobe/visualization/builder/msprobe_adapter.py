@@ -16,7 +16,6 @@ import re
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
-from msprobe.pytorch.compare.pt_compare import PTComparator
 from msprobe.core.common.const import Const
 
 
