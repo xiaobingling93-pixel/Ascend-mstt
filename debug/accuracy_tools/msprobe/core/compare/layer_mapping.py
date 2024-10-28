@@ -210,7 +210,7 @@ def generate_index_set(item, prefix="", depth=0, max_depth=10):
     return result
 
 
-def generate_file_mapping(npu_json_path, bench_json_path, api_list, output_path=None):
+def generate_file_mapping(npu_json_path, bench_json_path, api_mapping, output_path=None):
     def get_input(data):
         input_list = data.get(Const.INPUT_ARGS)
         if not input_list:
@@ -241,7 +241,7 @@ def generate_file_mapping(npu_json_path, bench_json_path, api_list, output_path=
     npu_data = load_json(npu_json_path).get("data", {})
     bench_data = load_json(bench_json_path).get("data", {})
     data_mapping = {}
-    for npu_name, bench_name in api_list.items():
+    for npu_name, bench_name in api_mapping.items():
         if not bench_name or not npu_name:
             continue
         npu_input_index_set, npu_output_index_set = generate_input_output_index_set(npu_data, npu_name)
