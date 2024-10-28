@@ -20,7 +20,7 @@ from collections import namedtuple
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from msprobe.core.common.utils import get_header_index
+from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst
@@ -192,12 +192,12 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
     for res_i in result:
         try:
             api_full_name = res_i[0]
-            api_name, state = get_name_and_state(api_full_name)
-        except IndexError:
+        except IndexError as e:
             err_msg = f"index out of bounds error occurs when find compare result error rows, please check!\n" \
-                      f"result_item is {res_i}"
-            logger.warning(err_msg)
-            continue
+                      f"res_i is res_i"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+        api_name, state = get_name_and_state(api_full_name)
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
