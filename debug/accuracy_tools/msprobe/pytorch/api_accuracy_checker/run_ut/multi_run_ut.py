@@ -185,9 +185,9 @@ def run_parallel_ut(config):
 
 
 def prepare_config(args):
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
-    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info = api_info_file_checker.common_check()
     out_path = args.out_path if args.out_path else "./"
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
