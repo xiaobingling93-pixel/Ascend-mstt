@@ -181,10 +181,13 @@ def convert_data_items(npu_tree, bench_tree, npu_data_items, mapping):
     return api_mapping
 
 
-def generate_api_mapping_by_layer_mapping(npu_json_path, bench_json_path, layer_mapping_path, output_path=None):
+def generate_api_mapping_by_layer_mapping(npu_json_path, bench_json_path, layer_mapping_path=None, output_path=None):
     npu_data_items, npu_root = get_data_items_and_tree(npu_json_path, output_path)
     _, bench_root = get_data_items_and_tree(bench_json_path, output_path)
-    mapping = load_yaml(layer_mapping_path)
+    if isinstance(layer_mapping_path, str):
+        mapping = load_yaml(layer_mapping_path)
+    else:
+        mapping = {}
     api_mapping = convert_data_items(npu_root, bench_root, npu_data_items, mapping)
     if output_path:
         file_name = add_time_with_yaml("api_mapping")
@@ -255,7 +258,7 @@ def generate_file_mapping(npu_json_path, bench_json_path, api_list, output_path=
     return data_mapping
 
 
-def generate_data_mapping_by_layer_mapping(input_param, layer_mapping_path, output_path=None):
+def generate_data_mapping_by_layer_mapping(input_param, layer_mapping_path=None, output_path=None):
     npu_json_path = input_param.get("npu_json_path")
     bench_json_path = input_param.get("bench_json_path")
     api_mapping = generate_api_mapping_by_layer_mapping(
