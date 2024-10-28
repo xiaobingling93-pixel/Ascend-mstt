@@ -20,7 +20,7 @@ import sys
 from collections import namedtuple
 
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv
+from msprobe.core.common.file_utils import FileOpen, read_csv, write_csv
 from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
@@ -51,13 +51,6 @@ def get_json_contents(file_path):
         logger.error('Json file %s, content is not a dictionary!' % file_path)
         raise CompareException(CompareException.INVALID_FILE_ERROR)
     return json_obj
-
-
-def write_csv(data, filepath):
-    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 class Saver:
