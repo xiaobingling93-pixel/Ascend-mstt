@@ -358,7 +358,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
             npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
             bench_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
-            result_item = result_item_init(npu_info, bench_info, index, key, dump_mode)
+            result_item = result_item_init(npu_info, bench_info, dump_mode)
 
             if dump_mode == Const.MD5:
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
