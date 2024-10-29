@@ -284,8 +284,7 @@ def stack_column_process(result_item, has_stack, index, key, npu_stack_info):
     return result_item
 
 
-def result_item_init(n_info, b_info, index, key, dump_mode):
-    has_stack = n_info.stack_info and b_info.stack_info
+def result_item_init(n_info, b_info, dump_mode):
     try:
         if dump_mode == Const.MD5:
             result_item = [
@@ -293,7 +292,6 @@ def result_item_init(n_info, b_info, index, key, dump_mode):
                 n_info.struct[1], b_info.struct[1], n_info.struct[2], b_info.struct[2],
                 CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
             ]
-            result_item = stack_column_process(result_item, has_stack, index, key, n_info.stack_info)
         elif dump_mode == Const.SUMMARY:
             result_item = [
                 n_info.name, b_info.name,
@@ -517,7 +515,7 @@ def merge_tensor(tensor_list, dump_mode):
             try:
                 data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             except IndexError as e:
-                err_msg = f"index out of bounds error occurs when merge tensor, please check!\n" \
+                err_msg = "index out of bounds error occurs when merge tensor, please check!\n" \
                           f"data name of op_dict is {op_dict['data_name']}"
                 logger.error(err_msg)
                 raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
