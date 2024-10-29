@@ -15,6 +15,7 @@
 
 import os
 import re
+import math
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
@@ -231,6 +232,42 @@ def resolve_api_special_parameters(data_dict, full_op_name, item_list):
             item_list.append(parsed_item)
 
 
+def process_summary_data(summary_data):
+    """处理summary_data中的nan值，返回处理后的列表"""
+    return [CompareConst.NAN if isinstance(x, float) and math.isnan(x) else x for x in summary_data]
+
+
+def get_rela_diff_summary_mode(result_item, npu_summary_data, bench_summary_data, err_msg):
+    start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
+    warning_flag = False
+    for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
+        if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [npu_val, bench_val]):
+            diff = npu_val - bench_val
+            if math.isnan(diff):
+                diff = CompareConst.NAN
+                relative = CompareConst.NAN
+            else:
+                if bench_val != 0:
+                    relative = str(abs((diff / bench_val) * 100)) + '%'
+                else:
+                    relative = CompareConst.N_A
+                magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + CompareConst.EPSILON)
+                if magnitude_diff > CompareConst.MAGNITUDE:
+                    warning_flag = True
+            result_item[start_idx + i] = diff
+            result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = relative
+        else:
+            result_item[start_idx + i] = CompareConst.N_A
+            result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = CompareConst.N_A
+
+    accuracy_check = CompareConst.WARNING if warning_flag else ""
+    err_msg += "Need double check api accuracy." if warning_flag else ""
+    for i in range(start_idx, len(result_item)):
+        if str(result_item[i]) in ('inf', '-inf', 'nan'):
+            result_item[i] = f'{result_item[i]}\t'
+    return result_item, accuracy_check, err_msg
+
+
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -272,32 +309,13 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 ]
 
             npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-            result_item.extend(npu_summary_data)
             bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
-            result_item.extend(bench_summary_data)
+            result_item.extend(process_summary_data(npu_summary_data))
+            result_item.extend(process_summary_data(bench_summary_data))
 
             if dump_mode == Const.SUMMARY:
-                start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
-                warning_flag = False
-                for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
-                    if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
-                        diff = npu_val - bench_val
-                        if bench_val != 0:
-                            relative = str(abs((diff / bench_val) * 100)) + '%'
-                        else:
-                            relative = CompareConst.N_A
-                        result_item[start_idx + i] = diff
-                        result_item[start_idx + i + 4] = relative
-                        magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
-                        if magnitude_diff > 0.5:
-                            warning_flag = True
-                    else:
-                        result_item[start_idx + i] = CompareConst.NONE
-                accuracy_check = CompareConst.WARNING if warning_flag else ""
-                err_msg += "Need double check api accuracy." if warning_flag else ""
-                for i in range(start_idx, len(result_item)):
-                    if str(result_item[i]) in ('inf', '-inf', 'nan'):
-                        result_item[i] = f'{result_item[i]}\t'
+                result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                                  bench_summary_data, err_msg)
 
             result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
