@@ -411,7 +411,6 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 err_msg = ""
                 result_item.append(CompareConst.ACCURACY_CHECK_YES)
                 result_item.append(err_msg)
-
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
                     result_item = add_data_name(result_item, npu_data_name, n_start, index)
