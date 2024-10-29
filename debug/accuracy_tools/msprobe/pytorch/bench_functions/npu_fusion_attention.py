@@ -50,8 +50,8 @@ else:
 from msprobe.pytorch.common.utils import logger
 from msprobe.core.common.const import Const, CompareConst
 
-gtype = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
-softmax_build_mode = "QKV"  # "MAX_SUM"
+GTYPE = torch.float64  # arm host必须选择float64，x86环境选择float32即可，64也行。arm计算很慢，s=8k的场景建议使用x86
+SOFTMAX_BUILD_MODE = "QKV"  # "MAX_SUM"
 
 
 def softmax_forward(x):
@@ -199,7 +199,7 @@ def convert_to_bnsd(_input, n, input_layout):
         out = _input
     if out.dim() != 4:
         raise ValueError(f"convert qkv format failed with input_layout {input_layout}.")
-    return out.to(gtype)
+    return out.to(GTYPE)
 
 
 def generate_atten_mask(*args):
@@ -454,7 +454,7 @@ def npu_fusion_attention_grad(*args, **kwargs):
     value = convert_to_bnsd(value, n2, input_layout)
     k_new, v_new = generate_kv(key, value, n1, n2)
 
-    if softmax_build_mode == "QKV":
+    if SOFTMAX_BUILD_MODE == "QKV":
         softmax_res = rebuid_softmax_by_qkv(query, k_new, atten_mask, pse, scale_value)
     else:
         softmax_res = rebuild_softmax_by_max_sum(query, k_new, atten_mask, pse, scale_value, softmax_max, softmax_sum)
