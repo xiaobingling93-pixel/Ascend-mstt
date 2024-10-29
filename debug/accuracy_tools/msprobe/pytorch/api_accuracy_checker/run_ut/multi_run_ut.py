@@ -35,7 +35,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
     create_directory, load_json, save_json
 from msprobe.core.common.file_utils import remove_path
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 
 
@@ -188,7 +188,7 @@ def prepare_config(args):
     api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
                                             ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
     api_info = api_info_file_checker.common_check()
-    out_path = args.out_path if args.out_path else "./"
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
