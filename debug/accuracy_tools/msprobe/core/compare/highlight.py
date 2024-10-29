@@ -193,8 +193,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
         try:
             api_full_name = res_i[0]
         except IndexError as e:
-            err_msg = f"index out of bounds error occurs when find compare result error rows, please check!\n" \
-                      f"res_i is res_i"
+            err_msg = "index out of bounds error occurs when find compare result error rows, please check!\n" \
+                      f"res_i is {res_i}"
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         api_name, state = get_name_and_state(api_full_name)
