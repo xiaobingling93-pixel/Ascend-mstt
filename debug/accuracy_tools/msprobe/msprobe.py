@@ -49,7 +49,7 @@ def main():
     _compare_parser(compare_cmd_parser)
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
-    if len(sys.argv) == 1:
+    if len(sys.argv) < 4:
         parser.print_help()
         sys.exit(0)
     framework_args = parser.parse_args(sys.argv[1:3])
