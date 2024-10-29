@@ -62,7 +62,12 @@ class Advisor:
                             .format(item[CompareConst.NPU_NAME]))
 
     def gen_advisor_result(self, pd_data):
-        first_failing_data = pd_data.iloc[0]
+        try:
+            first_failing_data = pd_data.iloc[0]
+        except IndexError as e:
+            err_msg = "index out of bounds error occurs when gen_advisor_result, pd_data is empty, please check!"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         node_name = first_failing_data[CompareConst.NPU_NAME]
         index = first_failing_data['index']
         message = self.gen_advisor_message(node_name)
