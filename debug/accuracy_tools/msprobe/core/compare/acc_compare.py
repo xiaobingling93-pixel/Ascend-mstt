@@ -132,7 +132,7 @@ class Comparator:
         try:
             graph_mode = check_graph_mode(npu_op_name[0], bench_op_name[0])
         except IndexError as e:
-            err_msg = f"index out of bounds error occurs when check op, please check!\n" \
+            err_msg = "index out of bounds error occurs when check op, please check!\n" \
                       f"npu_op_name is {npu_op_name}, bench_op_name is {bench_op_name}"
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
@@ -341,7 +341,7 @@ class Comparator:
         try:
             data_name = npu_bench_name_list[1]
         except IndexError as e:
-            err_msg = f"index out of bounds error occurs when compare_by_op, please check!\n" \
+            err_msg = "index out of bounds error occurs when compare_by_op, please check!\n" \
                       f"npu_bench_name_list is {npu_bench_name_list}"
             logger.error(err_msg)
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
