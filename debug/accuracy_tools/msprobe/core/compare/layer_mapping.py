@@ -205,7 +205,7 @@ def generate_index_set(item, prefix="", depth=0, max_depth=10):
         for idx, value in enumerate(item):
             pre = f"{prefix}.{idx}" if prefix else str(idx)
             result.update(generate_index_set(value, pre, depth+1, max_depth))
-    else:
+    elif prefix:
         result.add(prefix)
     return result
 
