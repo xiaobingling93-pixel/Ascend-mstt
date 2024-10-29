@@ -269,6 +269,75 @@ def get_rela_diff_summary_mode(result_item, npu_summary_data, bench_summary_data
     return result_item, accuracy_check, err_msg
 
 
+@dataclass
+class ApiItemInfo:
+    name: str
+    struct: tuple
+    stack_info: list
+
+
+def stack_column_process(result_item, has_stack, index, key, npu_stack_info):
+    if has_stack and index == 0 and key == CompareConst.INPUT_STRUCT:
+        result_item.extend(npu_stack_info)
+    else:
+        result_item.append(CompareConst.NONE)
+    return result_item
+
+
+def result_item_init(n_info, b_info, index, key, dump_mode):
+    has_stack = n_info.stack_info and b_info.stack_info
+    try:
+        if dump_mode == Const.MD5:
+            result_item = [
+                n_info.name, b_info.name, n_info.struct[0], b_info.struct[0],
+                n_info.struct[1], b_info.struct[1], n_info.struct[2], b_info.struct[2],
+                CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
+            ]
+            result_item = stack_column_process(result_item, has_stack, index, key, n_info.stack_info)
+        elif dump_mode == Const.SUMMARY:
+            result_item = [
+                n_info.name, b_info.name,
+                n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1],
+                " ", " ", " ", " ", " ", " ", " ", " "
+            ]
+        else:
+            result_item = [
+                n_info.name, b_info.name,
+                n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1],
+                " ", " ", " ", " ", " "
+            ]
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs when result_item_init, please check!\n" \
+                  f"npu_info_struct is {n_info.struct}\n" \
+                  f"bench_info_struct is {b_info.struct}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    return result_item
+
+
+def add_data_name(result_item, npu_data_name, n_start, index):
+    try:
+        result_item.append(npu_data_name[n_start + index])
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs when add_data_name, please check!\n" \
+                  f"npu_data_name is {npu_data_name}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    return result_item
+
+
+def get_dict_value(dict, key, start_index, offset, dict_name="dictionary"):
+    """Fetches a value from a dictionary by key and index, handling IndexError."""
+    try:
+        return dict[key][start_index + offset]
+    except IndexError as e:
+        err_msg = "Index out of bounds error" \
+                  f"when accessing '{dict_name}' with key '{key}' at index {start_index + offset}.\n" \
+                  f"{dict_name} is {dict}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+
+
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -281,36 +350,23 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-            n_name = n_dict['op_name'][n_start + index]
-            b_name = b_dict['op_name'][b_start + index]
-            n_struct = n_dict[key][index]
-            b_struct = b_dict[key][index]
+            n_name = get_dict_value(n_dict, "op_name", n_start, index, "n_dict")
+            b_name = get_dict_value(b_dict, "op_name", b_start, index, "b_dict")
+            n_struct = get_dict_value(n_dict, key, 0, index, "n_dict")
+            b_struct = get_dict_value(b_dict, key, 0, index, "b_dict")
             err_msg = ""
+
+            npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+            bench_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+            result_item = result_item_init(npu_info, bench_info, index, key, dump_mode)
+
             if dump_mode == Const.MD5:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], n_struct[2], b_struct[2],
-                    CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF
-                ]
-                if has_stack and index == 0 and key == "input_struct":
-                    result_item.extend(npu_stack_info)
-                else:
-                    result_item.append(CompareConst.NONE)
+                result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 result.append(result_item)
                 continue
 
-            if dump_mode == Const.SUMMARY:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                    " ", " ", " ", " ", " ", " ", " ", " "
-                ]
-            else:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                    " ", " ", " ", " ", " "
-                ]
-
-            npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-            bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
+            npu_summary_data = get_dict_value(n_dict, CompareConst.SUMMARY, n_start, index, "n_dict")
+            bench_summary_data = get_dict_value(b_dict, CompareConst.SUMMARY, b_start, index, "b_dict")
             result_item.extend(process_summary_data(npu_summary_data))
             result_item.extend(process_summary_data(bench_summary_data))
 
@@ -320,51 +376,45 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
             result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
-            if has_stack and index == 0 and key == "input_struct":
-                result_item.extend(npu_stack_info)
-            else:
-                result_item.append(CompareConst.NONE)
+            result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
-                try:
-                    result_item.append(npu_data_name[n_start + index])
-                except IndexError as e:
-                    err_msg = f"index out of bounds error occurs when get_accuracy_core, please check!\n" \
-                              f"npu_data_name is {npu_data_name}"
-                    logger.error(err_msg)
-                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+                result_item = add_data_name(result_item, npu_data_name, n_start, index)
 
             result.append(result_item)
 
         if n_len > b_len:
             for index in range(b_len, n_len):
-                n_name = n_dict['op_name'][n_start + index]
-                n_struct = n_dict[key][index]
-                if dump_mode == Const.MD5:
+                try:
+                    n_name = n_dict['op_name'][n_start + index]
+                    n_struct = n_dict[key][index]
+                    if dump_mode == Const.MD5:
+                        result_item = [
+                            n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                            n_struct[2], CompareConst.NAN, CompareConst.NAN
+                        ]
+                        result.append(result_item)
+                        continue
                     result_item = [
                         n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                        n_struct[2], CompareConst.NAN, CompareConst.NAN
+                        " ", " ", " ", " ", " "
                     ]
-                    result.append(result_item)
-                    continue
-                result_item = [
-                    n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                    " ", " ", " ", " ", " "
-                ]
-                summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-                result_item.extend(summary_data)
-                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
-                result_item.extend(summary_data)
+                    summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
+                    result_item.extend(summary_data)
+                    summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
+                    result_item.extend(summary_data)
+                except IndexError as e:
+                    err_msg = "index out of bounds error occurs when get_accuracy_core, please check!\n" \
+                              f"n_dict is {n_dict}"
+                    logger.error(err_msg)
+                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
                 err_msg = ""
                 result_item.append(CompareConst.ACCURACY_CHECK_YES)
                 result_item.append(err_msg)
 
-                if has_stack and index == 0 and key == "input_struct":
-                    result_item.extend(npu_stack_info)
-                else:
-                    result_item.append(CompareConst.NONE)
+                result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
-                    result_item.append(npu_data_name[n_start + index])
+                    result_item = add_data_name(result_item, npu_data_name, n_start, index)
 
                 result.append(result_item)
 
@@ -389,12 +439,20 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
         if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = n_dict[CompareConst.INPUT_STRUCT][index]
+            n_struct = get_dict_value(n_dict, CompareConst.INPUT_STRUCT, 0, index, "n_dict")
         if Const.OUTPUT in name_ele_list:
-            n_struct = n_dict[CompareConst.OUTPUT_STRUCT][index_out]
+            n_struct = get_dict_value(n_dict, CompareConst.OUTPUT_STRUCT, 0, index_out, "n_dict")
             index_out += 1
 
-        result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
+        try:
+            result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
+        except IndexError as e:
+            err_msg = "index out of bounds error occurs when get_un_match_accuracy, please check!\n" \
+                      f"op_name of n_dict is {n_dict['op_name']}\n" \
+                      f"input_struct of n_dict is {n_dict[CompareConst.INPUT_STRUCT]}\n" \
+                      f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
             if npu_stack_info and index == 0:
@@ -407,7 +465,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
-        npu_summary_data = n_dict.get("summary")[index]
+        npu_summary_data = get_dict_value(n_dict, CompareConst.SUMMARY, 0, index, "n_dict")
         result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(bench_summary_data)
