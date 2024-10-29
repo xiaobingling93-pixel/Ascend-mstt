@@ -326,7 +326,7 @@ def add_data_name(result_item, npu_data_name, n_start, index):
     return result_item
 
 
-def get_dict_value(dict, key, start_index, offset, dict_name="dictionary"):
+def get_list_value_from_dict(dict, key, start_index, offset, dict_name="dictionary"):
     """Fetches a value from a dictionary by key and index, handling IndexError."""
     try:
         return dict[key][start_index + offset]
@@ -350,10 +350,10 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-            n_name = get_dict_value(n_dict, "op_name", n_start, index, "n_dict")
-            b_name = get_dict_value(b_dict, "op_name", b_start, index, "b_dict")
-            n_struct = get_dict_value(n_dict, key, 0, index, "n_dict")
-            b_struct = get_dict_value(b_dict, key, 0, index, "b_dict")
+            n_name = get_list_value_from_dict(n_dict, "op_name", n_start, index, "n_dict")
+            b_name = get_list_value_from_dict(b_dict, "op_name", b_start, index, "b_dict")
+            n_struct = get_list_value_from_dict(n_dict, key, 0, index, "n_dict")
+            b_struct = get_list_value_from_dict(b_dict, key, 0, index, "b_dict")
             err_msg = ""
 
             npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
@@ -365,8 +365,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result.append(result_item)
                 continue
 
-            npu_summary_data = get_dict_value(n_dict, CompareConst.SUMMARY, n_start, index, "n_dict")
-            bench_summary_data = get_dict_value(b_dict, CompareConst.SUMMARY, b_start, index, "b_dict")
+            npu_summary_data = get_list_value_from_dict(n_dict, CompareConst.SUMMARY, n_start, index, "n_dict")
+            bench_summary_data = get_list_value_from_dict(b_dict, CompareConst.SUMMARY, b_start, index, "b_dict")
             result_item.extend(process_summary_data(npu_summary_data))
             result_item.extend(process_summary_data(bench_summary_data))
 
@@ -438,9 +438,9 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
         if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = get_dict_value(n_dict, CompareConst.INPUT_STRUCT, 0, index, "n_dict")
+            n_struct = get_list_value_from_dict(n_dict, CompareConst.INPUT_STRUCT, 0, index, "n_dict")
         if Const.OUTPUT in name_ele_list:
-            n_struct = get_dict_value(n_dict, CompareConst.OUTPUT_STRUCT, 0, index_out, "n_dict")
+            n_struct = get_list_value_from_dict(n_dict, CompareConst.OUTPUT_STRUCT, 0, index_out, "n_dict")
             index_out += 1
 
         try:
@@ -464,7 +464,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
-        npu_summary_data = get_dict_value(n_dict, CompareConst.SUMMARY, 0, index, "n_dict")
+        npu_summary_data = get_list_value_from_dict(n_dict, CompareConst.SUMMARY, 0, index, "n_dict")
         result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(bench_summary_data)
