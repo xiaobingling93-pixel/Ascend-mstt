@@ -102,8 +102,13 @@ class GradSaver:
     def check_grad_input(self, origin_grad, new_grad_index):
         if self.perturbed_grad_input is None:
             raise FreeBenchmarkException(
-                FreeBenchmarkException.InvalidGrad,
-                f"grad not exists : {self.api_name}.",
+                FreeBenchmarkException.InvalidPerturbedOutput,
+                f"perturbed grad not exists for {self.api_name}.",
+            )
+        if len(self.perturbed_grad_input) <= new_grad_index:
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.InvalidPerturbedOutput,
+                f"perturbed grad index {new_grad_index} is out of bounds for {self.api_name}.",
             )
         with torch.no_grad():
             perturbed_grad = self.perturbed_grad_input[new_grad_index].to(
@@ -111,7 +116,7 @@ class GradSaver:
             )
         if origin_grad.shape != perturbed_grad.shape:
             raise FreeBenchmarkException(
-                FreeBenchmarkException.InvalidGrad,
+                FreeBenchmarkException.InvalidPerturbedOutput,
                 f"grad shapes are inconsistent. api:{self.handler_params.api_name}."
                 f"origin:{origin_grad.shape}, perturbation: {perturbed_grad.shape}",
             )
@@ -164,6 +169,18 @@ class GradSaver:
             index_ = 0
             for object_ in inner_args:
                 if object_ is CommonField.HOLD_PLACE:
+                    if index_ >= len(inputs):
+                        err_msg = (
+                            f"[msprobe] Free benchmark: When getting input from vjp, "
+                            f" the input index ({index_}) is out of bounds ({len(inputs)})."
+                        )
+                        logger.error_log_with_exp(
+                            err_msg,
+                            FreeBenchmarkException(
+                                FreeBenchmarkException.InvalidGrad,
+                                error_info=err_msg,
+                            ),
+                        )
                     _real_input.append(inputs[index_])
                     index_ += 1
                 else:

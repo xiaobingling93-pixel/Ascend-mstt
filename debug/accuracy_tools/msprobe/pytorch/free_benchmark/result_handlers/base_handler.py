@@ -113,6 +113,12 @@ class FuzzHandler(ABC):
         origin_output_chunks, perturbed_output_chunks = (
             self.tensor_split_for_error_calculate(origin_output, perturbed_output)
         )
+        if len(origin_output) != len(perturbed_output):
+            logger.warning(
+                f"[msprobe] Free Benchmark: For {self.params.api_name} "
+                f"The compare tensor chunks  is different: {len(origin_output)} != {len(perturbed_output)}"
+            )
+            return 1
         norm1 = -np.inf
         norm2 = -np.inf
         norm3 = np.inf
@@ -189,6 +195,7 @@ class FuzzHandler(ABC):
                 f"[msprobe] Free Benchmark: For {self.params.api_name} "
                 f"The compare for output type {type(perturbed_output)} is not supported"
             )
+            return True, 1
 
         threshold = self.get_threshold(Tools.get_first_tensor_dtype(origin_output))
         ratio = self.ratio_calculate(

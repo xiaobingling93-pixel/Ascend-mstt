@@ -87,9 +87,13 @@ class StepException(CodedException):
 class FreeBenchmarkException(CodedException):
     UnsupportedType = 0
     InvalidGrad = 1
+    InvalidPerturbedOutput = 2
+    OutputIndexError = 3
     err_strs = {
         UnsupportedType: "[msprobe] Free benchmark get unsupported type: ",
         InvalidGrad: "[msprobe] Free benchmark gradient invalid: ",
+        InvalidPerturbedOutput: "[msprobe] Free benchmark invalid perturbed output: ",
+        OutputIndexError: "[msprobe] Free benchmark output index out of bounds: ",
     }
 
 
