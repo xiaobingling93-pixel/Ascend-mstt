@@ -201,6 +201,11 @@ class MSComparator(Comparator):
                     if idx not in pt_para_list:
                         self.remove_element(bench_op_name, bench_struct_in, bench_summary, idx)
                 npu_op_name = self.api_replace(npu_op_name, ms_api_name, pt_api_name)
+                if len(npu_op_name) != len(bench_op_name):
+                    logger.warning(
+                        "The total number of input and output parameters of \
+                            npu_op_name and bench_op_name are not equal.")
+                    break
                 npu_op_name = self.para_sequence_update(npu_op_name, bench_op_name)
                 target_dict = api_dict
                 break
