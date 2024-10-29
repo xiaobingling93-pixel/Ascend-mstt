@@ -16,8 +16,10 @@
 import os
 import re
 import math
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
+
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
