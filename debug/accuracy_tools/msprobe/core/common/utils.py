@@ -379,3 +379,28 @@ def check_seed_all(seed, mode):
     if not isinstance(mode, bool):
         logger.error("seed_all mode must be bool.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+
+def safe_get_value(container, index, container_name, key=None):
+    """Fetches a value from a container (dict or list or numpy) by key/index, handling IndexError."""
+    try:
+        # 处理字典情况
+        if isinstance(container, dict):
+            return container[key][index]
+        # 处理列表情况
+        elif isinstance(container, list):
+            return container[index]
+        # 处理numpy情况
+        else:
+            return container[index]
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    except KeyError as e:
+        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
+                  f"{container_name} is {container}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e

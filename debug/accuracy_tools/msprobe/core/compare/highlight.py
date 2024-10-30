@@ -24,7 +24,7 @@ from msprobe.core.common.utils import get_header_index
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst, Const
-from msprobe.core.compare.utils import safe_get_value
+from msprobe.core.common.utils import safe_get_value
 
 
 class HighlightCheck(abc.ABC):
