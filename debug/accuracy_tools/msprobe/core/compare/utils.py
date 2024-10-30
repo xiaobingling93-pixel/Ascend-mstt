@@ -475,5 +475,5 @@ def _compare_parser(parser):
                         help="<optional> The api mapping file path.", required=False)    
     parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
                         help="<optional> The data mapping file path.", required=False)
-    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)

@@ -108,6 +108,7 @@ class Const:
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
     MS_FRAMEWORK = "mindspore"
+    UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
@@ -128,20 +129,24 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
-
     STACK_FUNC_INDEX = 2
-
     STACK_FUNC_ELE_INDEX = 1
 
-    CONSTRUCT_NAME_INDEX = -3
+    SCOPE_ID_INDEX = -1
+    SCOPE_DIRECTION_INDEX = -2
+    TYPE_NAME_INDEX = -3
+    LAYER_NAME_INDEX = -4
+    API_TYPE_INDEX = 0
+    LEFT_MOVE_INDEX = -1
+    RIGHT_MOVE_INDEX = 1
 
-    NAME_FIRST_POSSIBLE_INDEX = -4
-
-    NAME_SECOND_POSSIBLE_INDEX = -5
+    TOP_LAYER = "TopLayer"
+    CELL = "Cell"
+    MODULE = "Module"
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
