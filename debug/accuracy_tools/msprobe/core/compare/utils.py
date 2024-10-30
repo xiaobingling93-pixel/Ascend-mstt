@@ -302,7 +302,7 @@ def result_item_init(n_info, b_info, dump_mode):
         else:
             result_item.extend([" "] * 5)
     else:
-        err_msg = "index out of bounds error will occur when result_item_init, please check!\n" \
+        err_msg = "index out of bounds error will occur in result_item_init, please check!\n" \
                   f"npu_info_struct is {n_info.struct}\n" \
                   f"bench_info_struct is {b_info.struct}"
         logger.error(err_msg)
@@ -314,7 +314,7 @@ def add_data_name(result_item, npu_data_name, n_start, index):
     try:
         result_item.append(npu_data_name[n_start + index])
     except IndexError as e:
-        err_msg = "index out of bounds error occurs when add_data_name, please check!\n" \
+        err_msg = "index out of bounds error occurs, please check!\n" \
                   f"npu_data_name is {npu_data_name}"
         logger.error(err_msg)
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
@@ -326,7 +326,7 @@ def get_list_value_from_dict(dict, key, start_index, offset, dict_name="dictiona
     try:
         return dict[key][start_index + offset]
     except IndexError as e:
-        err_msg = "Index out of bounds error" \
+        err_msg = "index out of bounds error occurs, please check!\n" \
                   f"when accessing '{dict_name}' with key '{key}' at index {start_index + offset}.\n" \
                   f"{dict_name} is {dict}"
         logger.error(err_msg)
@@ -398,7 +398,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                     summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
                     result_item.extend(summary_data)
                 except IndexError as e:
-                    err_msg = "index out of bounds error occurs when get_accuracy_core, please check!\n" \
+                    err_msg = "index out of bounds error occurs, please check!\n" \
                               f"n_dict is {n_dict}"
                     logger.error(err_msg)
                     raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
@@ -441,7 +441,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
         try:
             result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
         except IndexError as e:
-            err_msg = "index out of bounds error occurs when get_un_match_accuracy, please check!\n" \
+            err_msg = "index out of bounds error occurs, please check!\n" \
                       f"op_name of n_dict is {n_dict['op_name']}\n" \
                       f"input_struct of n_dict is {n_dict[CompareConst.INPUT_STRUCT]}\n" \
                       f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
@@ -511,7 +511,7 @@ def merge_tensor(tensor_list, dump_mode):
             try:
                 data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             except IndexError as e:
-                err_msg = "index out of bounds error occurs when merge tensor, please check!\n" \
+                err_msg = "index out of bounds error occurs, please check!\n" \
                           f"data name of op_dict is {op_dict['data_name']}"
                 logger.error(err_msg)
                 raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
