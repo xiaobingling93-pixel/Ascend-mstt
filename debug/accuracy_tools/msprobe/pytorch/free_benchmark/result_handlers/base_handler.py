@@ -20,6 +20,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.enums import (
@@ -113,12 +114,14 @@ class FuzzHandler(ABC):
         origin_output_chunks, perturbed_output_chunks = (
             self.tensor_split_for_error_calculate(origin_output, perturbed_output)
         )
-        if len(origin_output) != len(perturbed_output):
-            logger.warning(
-                f"[msprobe] Free Benchmark: For {self.params.api_name} "
-                f"The compare tensor chunks  is different: {len(origin_output)} != {len(perturbed_output)}"
+        if len(origin_output_chunks) != len(perturbed_output_chunks):
+            err_msg = (
+                f"For {self.params.api_name}, the compare tensor chunks is different: "
+                f"{len(origin_output_chunks)} != {len(perturbed_output_chunks)}. please check!"
             )
-            return 1
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.OutputIndexError, err_msg
+            )
         norm1 = -np.inf
         norm2 = -np.inf
         norm3 = np.inf
