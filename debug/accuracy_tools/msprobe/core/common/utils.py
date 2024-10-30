@@ -308,6 +308,10 @@ def is_invalid_pattern(string):
     return re.search(pattern, string)
 
 
+def is_int(x):
+    return isinstance(x, int) and not isinstance(x, bool)
+
+
 def print_tools_ends_info():
     total_len = len(Const.TOOL_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
     logger.info('*' * total_len)
