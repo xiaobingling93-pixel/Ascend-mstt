@@ -24,6 +24,14 @@ def compare_cli(args):
     input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
+    stack_path = input_param.get("stack_path", None)
+    if not (npu_path and bench_path and stack_path):
+        err_msg = "path should not be None, please check path parameters in input_path.\n" \
+                  f"npu_path is {npu_path}\n" \
+                  f"bench_path is {bench_path}\n" \
+                  f"stack_path is {stack_path}\n"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
     frame_name = args.framework
     auto_analyze = not args.compare_only
     if frame_name == Const.PT_FRAMEWORK:
