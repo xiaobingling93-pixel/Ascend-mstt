@@ -116,7 +116,7 @@ class FuzzHandler(ABC):
         )
         if len(origin_output_chunks) != len(perturbed_output_chunks):
             err_msg = (
-                f"For {self.params.api_name}, the compare tensor chunks is different: "
+                f"For {self.params.api_name}, the number of compare tensor chunks is different: "
                 f"{len(origin_output_chunks)} != {len(perturbed_output_chunks)}. please check!"
             )
             raise FreeBenchmarkException(
