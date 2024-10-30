@@ -486,7 +486,10 @@ def safe_get_value(container, index, container_name, key=None):
         if isinstance(container, dict):
             return container[key][index]
         # 处理列表情况
-        if isinstance(container, list):
+        elif isinstance(container, list):
+            return container[index]
+        # 处理numpy情况
+        else:
             return container[index]
     except IndexError as e:
         err_msg = "index out of bounds error occurs, please check!\n" \
