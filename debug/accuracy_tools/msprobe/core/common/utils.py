@@ -243,7 +243,8 @@ def struct_json_get(input_param, framework):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    if not npu_path or not bench_path:
+    stack_path = input_param.get("stack_json_path", None)
+    if not (npu_path and bench_path and stack_path):
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
