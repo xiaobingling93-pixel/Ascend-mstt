@@ -460,3 +460,27 @@ def _compare_parser(parser):
                         help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
                         help="<optional> The layer mapping file path.", required=False)
+
+
+def safe_get_list_value_from_dict(dict, key, start_index, offset, dict_name="dictionary"):
+    """Fetches a value from a dictionary by key and index, handling IndexError."""
+    try:
+        return dict[key][start_index + offset]
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"when accessing '{dict_name}' with key '{key}' at index {start_index + offset}.\n" \
+                  f"{dict_name} is {dict}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+
+
+def safe_get_list_value(list, start_index, offset, list_name="list"):
+    """Fetches a value from a list by index, handling IndexError."""
+    try:
+        return list[start_index + offset]
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"when accessing '{list_name}'' at index {start_index + offset}.\n" \
+                  f"{list_name} is {list}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e

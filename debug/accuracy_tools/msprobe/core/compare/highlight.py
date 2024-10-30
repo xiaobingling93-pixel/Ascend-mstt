@@ -24,6 +24,7 @@ from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst
+from msprobe.core.compare.utils import safe_get_list_value
 
 
 class HighlightCheck(abc.ABC):
@@ -190,13 +191,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
     last_api_name, last_state = None, None
     num, last_len = 0, 0
     for res_i in result:
-        try:
-            api_full_name = res_i[0]
-        except IndexError as e:
-            err_msg = "index out of bounds error occurs when find compare result error rows, please check!\n" \
-                      f"res_i is {res_i}"
-            logger.error(err_msg)
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+        api_full_name = safe_get_list_value(res_i, 0, 0, "res_i")
         api_name, state = get_name_and_state(api_full_name)
         if last_api_name:
             if api_name == last_api_name:
