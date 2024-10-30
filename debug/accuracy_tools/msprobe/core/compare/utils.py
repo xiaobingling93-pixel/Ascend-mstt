@@ -287,31 +287,26 @@ def stack_column_process(result_item, has_stack, index, key, npu_stack_info):
 
 
 def result_item_init(n_info, b_info, dump_mode):
-    try:
+    n_len = len(n_info.struct)
+    b_len = len(b_info.struct)
+    struct_long_enough = (n_len > 2 and b_len > 2) if dump_mode == Const.MD5 else (n_len > 1 and b_len > 1)
+    if struct_long_enough:
+        result_item = [
+            n_info.name, b_info.name, n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1]
+        ]
         if dump_mode == Const.MD5:
-            result_item = [
-                n_info.name, b_info.name, n_info.struct[0], b_info.struct[0],
-                n_info.struct[1], b_info.struct[1], n_info.struct[2], b_info.struct[2],
-                CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
-            ]
+            md5_compare_result = CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
+            result_item.extend([n_info.struct[2], b_info.struct[2], md5_compare_result])
         elif dump_mode == Const.SUMMARY:
-            result_item = [
-                n_info.name, b_info.name,
-                n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1],
-                " ", " ", " ", " ", " ", " ", " ", " "
-            ]
+            result_item.extend([" "] * 8)
         else:
-            result_item = [
-                n_info.name, b_info.name,
-                n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1],
-                " ", " ", " ", " ", " "
-            ]
-    except IndexError as e:
-        err_msg = "index out of bounds error occurs when result_item_init, please check!\n" \
+            result_item.extend([" "] * 5)
+    else:
+        err_msg = "index out of bounds error will occur when result_item_init, please check!\n" \
                   f"npu_info_struct is {n_info.struct}\n" \
                   f"bench_info_struct is {b_info.struct}"
         logger.error(err_msg)
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
     return result_item
 
 
