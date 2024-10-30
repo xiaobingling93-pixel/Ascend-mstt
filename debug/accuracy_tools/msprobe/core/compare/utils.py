@@ -479,15 +479,15 @@ def _compare_parser(parser):
                         help="<optional> The layer mapping file path.", required=False)
 
 
-def safe_get_value(container, start_index, offset, container_name, key=None):
+def safe_get_value(container, index, container_name, key=None):
     """Fetches a value from a container (dict or list) by key/index, handling IndexError."""
     try:
         # 处理字典情况
         if isinstance(container, dict):
-            return container[key][start_index + offset]
+            return container[key][index]
         # 处理列表情况
         elif isinstance(container, list):
-            return container[start_index + offset]
+            return container[index]
     except IndexError as e:
         err_msg = "index out of bounds error occurs, please check!\n" \
                   f"{container_name} is {container}"
