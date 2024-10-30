@@ -56,23 +56,20 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
                    and r1_shape[2] == 1
                    and r1_shape[3] == x_shape[3])
 
-    try:
-        if condition_1:
-            for i in range(x_shape[0]):
-                for j in range(x_shape[2]):
-                    r2_grad[0, :, 0, :] += (x_new2[i, :, j, :] * grad[i, :, j, :])
-                    r1_grad[0, :, 0, :] += (h[i, :, j, :] * grad[i, :, j, :])
-        elif condition_2:
-            for i in range(x_shape[0]):
-                for j in range(x_shape[1]):
-                    r2_grad[0, 0, :, :] += (x_new2[i, j, :, :] * grad[i, j, :, :])
-                    r1_grad[0, 0, :, :] += (h[i, j, :, :] * grad[i, j, :, :])
-        elif condition_3:
-            for i in range(x_shape[1]):
-                for j in range(x_shape[2]):
-                    r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
-                    r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
-    except IndexError as e:
-        raise RuntimeError(f"Error in rotary_mul_backward: {e}") from e
+    if condition_1:
+        for i in range(x_shape[0]):
+            for j in range(x_shape[2]):
+                r2_grad[0, :, 0, :] += (x_new2[i, :, j, :] * grad[i, :, j, :])
+                r1_grad[0, :, 0, :] += (h[i, :, j, :] * grad[i, :, j, :])
+    elif condition_2:
+        for i in range(x_shape[0]):
+            for j in range(x_shape[1]):
+                r2_grad[0, 0, :, :] += (x_new2[i, j, :, :] * grad[i, j, :, :])
+                r1_grad[0, 0, :, :] += (h[i, j, :, :] * grad[i, j, :, :])
+    elif condition_3:
+        for i in range(x_shape[1]):
+            for j in range(x_shape[2]):
+                r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
+                r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
 
     return x.grad.cpu(), r1_grad.cpu(), r2_grad.cpu()
