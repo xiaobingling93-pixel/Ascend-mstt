@@ -15,10 +15,11 @@
 
 from typing import Any
 
+from msprobe.core.common.exceptions import FreeBenchmarkException
+from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.params import DataParams
 from msprobe.pytorch.free_benchmark.common.utils import Tools
 from msprobe.pytorch.free_benchmark.result_handlers.base_handler import FuzzHandler
-from msprobe.pytorch.free_benchmark import logger
 
 
 class FixHandler(FuzzHandler):
@@ -31,9 +32,9 @@ class FixHandler(FuzzHandler):
             return Tools.convert_fuzz_output_to_origin(
                 data_params.original_result, data_params.perturbed_result
             )
-        except Exception as e:
-            logger.warning_on_rank_0(
+        except FreeBenchmarkException as e:
+            logger.warning(
                 f"[msprobe] Free Benchmark: For {self.params.api_name} "
-                f"Fix output failed. "
+                f"Fix output failed because of: \n{e}"
             )
-        return data_params.original_result
+            return data_params.original_result
