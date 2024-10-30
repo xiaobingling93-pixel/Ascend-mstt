@@ -9,7 +9,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from collections import namedtuple
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, Const
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -80,7 +80,7 @@ class TestUtilsMethods(unittest.TestCase):
         api_out = {6: 0.6, 18: 1}
         num = 1
         info = (api_in, api_out, num)
-        CheckMaxRelativeDiff().apply(info, color_columns)
+        CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         red_lines, yellow_lines = [1], []
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
@@ -95,7 +95,7 @@ class TestUtilsMethods(unittest.TestCase):
         api_out = {6: 0.2, 18: 1}
         num = 1
         info = (api_in, api_out, num)
-        CheckMaxRelativeDiff().apply(info, color_columns)
+        CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         red_lines, yellow_lines = [], [1]
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
@@ -110,7 +110,7 @@ class TestUtilsMethods(unittest.TestCase):
         api_out = {6: 0.2, 18: 1}
         num = 1
         info = (api_in, api_out, num)
-        result = CheckMaxRelativeDiff().apply(info, color_columns)
+        result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
 
     def test_highlight_rows_xlsx_1(self):

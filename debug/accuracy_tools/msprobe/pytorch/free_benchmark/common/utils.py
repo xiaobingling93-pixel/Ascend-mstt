@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import torch
+from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 
@@ -74,22 +75,39 @@ class Tools:
 
     @staticmethod
     def convert_fuzz_output_to_origin(origin, perturbed):
-        if isinstance(origin, torch.Tensor):
+        if isinstance(origin, torch.Tensor) and isinstance(perturbed, torch.Tensor):
             origin.data = perturbed.to(origin.dtype).to(origin.device)
             return origin
-        if isinstance(origin, dict):
+        if isinstance(origin, dict) and isinstance(perturbed, dict):
             output = dict()
             for key, value in origin.items():
+                if key not in perturbed:
+                    err_msg = f"'{key}' not in perturbed output."
+                    raise FreeBenchmarkException(
+                        FreeBenchmarkException.InvalidPerturbedOutput,
+                        error_info=err_msg,
+                    )
                 output[key] = Tools.convert_fuzz_output_to_origin(value, perturbed[key])
             return output
-        if isinstance(origin, (tuple, list)):
+        if isinstance(origin, (tuple, list)) and isinstance(perturbed, (tuple, list)):
             result = list()
+            if len(perturbed) != len(origin):
+                err_msg = (
+                    f"length of perturbed output ({len(perturbed)}) is different "
+                    f"from the length of original output ({len(origin)})."
+                )
+                raise FreeBenchmarkException(
+                    FreeBenchmarkException.InvalidPerturbedOutput, error_info=err_msg
+                )
             for index_, value in enumerate(origin):
                 result.append(
                     Tools.convert_fuzz_output_to_origin(value, perturbed[index_])
                 )
             return type(origin)(result)
-        return origin
+        err_msg = f"conversion of two outputs with types ({type(origin)}, {type(perturbed)}) is not supported."
+        raise FreeBenchmarkException(
+            FreeBenchmarkException.UnsupportedType, error_info=err_msg
+        )
 
 
 class TorchC:

@@ -16,6 +16,7 @@
 """
 import json
 import os
+import tempfile
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
 
@@ -25,7 +26,8 @@ from msprobe.core.common.file_utils import (FileCheckConst,
                                             check_file_size,
                                             check_file_or_directory_path,
                                             get_json_contents,
-                                            get_file_content_bytes)
+                                            get_file_content_bytes,
+                                            save_json)
 from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
@@ -35,10 +37,11 @@ from msprobe.core.common.utils import (CompareException,
                                        _check_json,
                                        check_json_file,
                                        check_regex_prefix_format_valid,
-                                       task_dumppath_get, 
+                                       set_dump_path,
+                                       get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
-                                       struct_json_get)
+                                       get_stack_construct_by_dump_json_path)
 
 
 class TestUtils(TestCase):
@@ -100,7 +103,7 @@ class TestUtils(TestCase):
         ]
 
         with self.assertRaises(CompareException) as context:
-            check_compare_param("npu_path", "output_path")
+            check_compare_param("npu_path", "output_path", dump_mode=Const.ALL)
         self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
         mock_error.assert_called_with("Invalid input parameter 'input_param', "
                                       "the expected type dict but got <class 'str'>.")
@@ -110,8 +113,8 @@ class TestUtils(TestCase):
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
                 patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
                 patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
-            check_compare_param(params, "output_path")
-            check_compare_param(params, "output_path", summary_compare=False, md5_compare=True)
+            check_compare_param(params, "output_path", dump_mode=Const.ALL)
+            check_compare_param(params, "output_path", dump_mode=Const.MD5)
         for i in range(len(call_args)):
             self.assertEqual(mock_check_file_or_directory_path.call_args_list[i][0], call_args[i])
         self.assertEqual(len(mock_check_json_file.call_args[0]), 4)
@@ -180,7 +183,19 @@ class TestUtils(TestCase):
                                                  f"prefix pattern {Const.REGEX_PREFIX_PATTERN}")
 
     @patch.object(logger, "error")
-    def test_task_dumppath_get(self, mock_error):
+    def test_set_dump_path(self, mock_error):
+        input_param = {
+            "npu_json_path": None,
+            "bench_json_path": "bench_path"
+        }
+
+        with self.assertRaises(CompareException) as context:
+            set_dump_path(input_param)
+        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+        mock_error.assert_called_with("Please check the json path is valid.")
+
+    @patch.object(logger, "error")
+    def test_get_dump_mode(self, mock_error):
         input_param = {
             "npu_json_path": None,
             "bench_json_path": "bench_path"
@@ -191,30 +206,23 @@ class TestUtils(TestCase):
             "data": "data"
         }
 
-        with self.assertRaises(CompareException) as context:
-            task_dumppath_get(input_param)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_error.assert_called_with("Please check the json path is valid.")
-
         input_param["npu_json_path"] = "npu_path"
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
-            summary_compare, md5_compare = task_dumppath_get(input_param)
-        self.assertFalse(summary_compare)
-        self.assertFalse(md5_compare)
+            dump_mode = get_dump_mode(input_param)
+        self.assertEqual(dump_mode, Const.ALL)
 
         npu_json["task"] = Const.STATISTICS
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json), \
                 patch("msprobe.core.common.utils.md5_find", return_value=True):
-            summary_compare, md5_compare = task_dumppath_get(input_param)
-        self.assertFalse(summary_compare)
-        self.assertTrue(md5_compare)
+            dump_mode = get_dump_mode(input_param)
+        self.assertEqual(dump_mode, Const.MD5)
 
         npu_json["task"] = Const.OVERFLOW_CHECK
         with patch("msprobe.core.common.utils.load_json", return_value=npu_json):
             with self.assertRaises(CompareException) as context:
-                task_dumppath_get(input_param)
+                dump_mode = get_dump_mode(input_param)
             self.assertEqual(context.exception.code, CompareException.INVALID_TASK_ERROR)
-            mock_error.assert_called_with("Compare is not required for overflow_check or free_benchmark.")
+            mock_error.assert_called_with("Compare applies only to task is tensor or statistics")
 
     @patch('msprobe.core.common.file_utils.get_file_content_bytes')
     def test_get_json_contents_should_raise_exception(self, mock_get_file_content_bytes):
@@ -277,72 +285,30 @@ class TestUtils(TestCase):
         result = get_real_step_or_rank([10, "1-3", 3], "step")
         self.assertEqual(result, [1, 2, 3, 10])
 
-    def test_struct_json_get_invalid_framework_then_fail(self):
-        input_param = {
-            "bench_json_path": "./",
-            "npu_json_path": "./"
-        }
-        framework = "Invalid Framework"
+    def test_get_stack_construct_by_dump_json_path_when_dump_json_path_is_none_then_fail(self):
+        dump_json_path = None
         with self.assertRaises(CompareException) as context:
-            stack, construct = struct_json_get(input_param, framework)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PARAM_ERROR)
-
-    def test_struct_json_get_pt_invalid_path_then_fail(self):
-        input_param = {
-            "bench_json_path": None
-        }
-        framework = Const.PT_FRAMEWORK
-        with self.assertRaises(CompareException) as context:
-            stack, construct = struct_json_get(input_param, framework)
+            stack, construct = get_stack_construct_by_dump_json_path(dump_json_path)
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
 
-    def test_struct_json_get_ms_invalid_path_then_fail(self):
-        input_param = {
-            "npu_json_path": None
-        }
+    def test_get_stack_construct_by_dump_json_path_when_dump_json_path_invalid_then_fail(self):
+        dump_json_path = "./abc/dump.json"
         framework = Const.MS_FRAMEWORK
-        with self.assertRaises(CompareException) as context:
-            stack, construct = struct_json_get(input_param, framework)
-        self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
+        with self.assertRaises(FileCheckException) as context:
+            stack, construct = get_stack_construct_by_dump_json_path(dump_json_path)
+        self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
 
-    @patch('msprobe.core.common.utils.load_json')
-    def test_struct_json_get_pt_framework_valid_paths_then_pass(self, mock_load_json):
-        def load_json_side_effect(path):
-            if path.endswith("stack.json"):
-                return {'stack_key': 'stack_value'}
-            elif path.endswith("construct.json"):
-                return {'construct_key': 'construct_value'}
-            else:
-                raise FileNotFoundError
-        # 设置框架为PT_FRAMEWORK
-        input_param = {}
-        framework = Const.PT_FRAMEWORK
-        prefix = 'bench'
-        frame_json_path = './dump.json'
-        input_param[f'{prefix}_json_path'] = frame_json_path
-        mock_load_json.side_effect = load_json_side_effect
+    def test_get_stack_construct_by_dump_json_path_valid_paths_then_pass(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            stack_json_path = os.path.join(temp_dir, 'stack.json')
+            construct_json_path = os.path.join(temp_dir, 'construct.json')
+            dump_json_path = os.path.join(temp_dir, 'dump.json')
 
-        stack, construct = struct_json_get(input_param, framework)
-        self.assertEqual(stack, {'stack_key': 'stack_value'})
-        self.assertEqual(construct, {'construct_key': 'construct_value'})
+            save_json(stack_json_path, {'stack_key': 'stack_value'})
+            save_json(construct_json_path, {'construct_key': 'construct_value'})
+            save_json(dump_json_path, {'dump_key': 'dump_value'})
 
-    @patch('msprobe.core.common.utils.load_json')
-    def test_struct_json_get_ms_framework_valid_paths_then_pass(self, mock_load_json):
-        def load_json_side_effect(path):
-            if path.endswith("stack.json"):
-                return {'stack_key': 'stack_value'}
-            elif path.endswith("construct.json"):
-                return {'construct_key': 'construct_value'}
-            else:
-                raise FileNotFoundError
-        # 设置框架为PT_FRAMEWORK
-        input_param = {}
-        framework = Const.MS_FRAMEWORK
-        prefix = 'npu'
-        frame_json_path = './dump.json'
-        input_param[f'{prefix}_json_path'] = frame_json_path
-        mock_load_json.side_effect = load_json_side_effect
+            stack, construct = get_stack_construct_by_dump_json_path(dump_json_path)
 
-        stack, construct = struct_json_get(input_param, framework)
-        self.assertEqual(stack, {'stack_key': 'stack_value'})
-        self.assertEqual(construct, {'construct_key': 'construct_value'})
+            self.assertEqual(stack, {'stack_key': 'stack_value'})
+            self.assertEqual(construct, {'construct_key': 'construct_value'})

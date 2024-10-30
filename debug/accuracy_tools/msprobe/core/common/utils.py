@@ -99,7 +99,7 @@ class DumpException(MsprobeBaseException):
         return f"Dump Error Code {self.code}: {self.error_info}"
 
 
-def check_compare_param(input_param, output_path, summary_compare=False, md5_compare=False):
+def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -110,7 +110,7 @@ def check_compare_param(input_param, output_path, summary_compare=False, md5_com
     check_file_or_directory_path(input_param.get("npu_json_path"), False)
     check_file_or_directory_path(input_param.get("bench_json_path"), False)
     check_file_or_directory_path(input_param.get("stack_json_path"), False)
-    if not summary_compare and not md5_compare:
+    if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
@@ -217,20 +217,24 @@ def md5_find(data):
     return False
 
 
-def struct_json_get(input_param, framework):
-    if framework == Const.PT_FRAMEWORK:
-        prefix = "bench"
-    elif framework == Const.MS_FRAMEWORK:
-        prefix = "npu"
-    else:
-        logger.error("Error framework found.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def detect_framework_by_dump_json(file_path):
+    pattern_ms = r'"type":\s*"mindspore'
+    pattern_pt = r'"type":\s*"torch'
+    with FileOpen(file_path, 'r') as file:
+        for line in file:
+            if re.search(pattern_ms, line):
+                return Const.MS_FRAMEWORK
+            if re.search(pattern_pt, line):
+                return Const.PT_FRAMEWORK
+    logger.error(f"{file_path} must be based on the MindSpore or PyTorch framework.")
+    raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    frame_json_path = input_param.get(f"{prefix}_json_path", None)
-    if not frame_json_path:
-        logger.error(f"Please check the json path is valid.")
+
+def get_stack_construct_by_dump_json_path(dump_json_path):
+    if not dump_json_path:
+        logger.error("The path is empty. Please enter a valid path.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    directory = os.path.dirname(frame_json_path)
+    directory = os.path.dirname(dump_json_path)
     check_file_or_directory_path(directory, True)
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
@@ -240,39 +244,43 @@ def struct_json_get(input_param, framework):
     return stack, construct
 
 
-def task_dumppath_get(input_param):
+def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
     if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
+    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
+    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
+
+
+def get_dump_mode(input_param):
+    npu_path = input_param.get("npu_json_path", None)
+    bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
     if npu_json_data['task'] == Const.TENSOR:
-        summary_compare = False
-        md5_compare = False
+        dump_mode = Const.ALL
     elif npu_json_data['task'] == Const.STATISTICS:
         md5_compare = md5_find(npu_json_data['data'])
         if md5_compare:
-            summary_compare = False
+            dump_mode = Const.MD5
         else:
-            summary_compare = True
+            dump_mode = Const.SUMMARY
     else:
-        logger.error(f"Compare is not required for overflow_check or free_benchmark.")
+        logger.error(f"Compare applies only to task is tensor or statistics")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
-    input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
-    input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
-    return summary_compare, md5_compare
+    return dump_mode
 
 
-def get_header_index(header_name, summary_compare=False):
-    if summary_compare:
-        header = CompareConst.SUMMARY_COMPARE_RESULT_HEADER[:]
-    else:
-        header = CompareConst.COMPARE_RESULT_HEADER[:]
+def get_header_index(header_name, dump_mode):
+    header = CompareConst.HEAD_OF_COMPARE_MODE.get(dump_mode)
+    if not header:
+        logger.error(f"{dump_mode} not in {CompareConst.HEAD_OF_COMPARE_MODE}")
+        raise CompareException(CompareException.INVALID_PARAM_ERROR)
     if header_name not in header:
         logger.error(f"{header_name} not in data name")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)

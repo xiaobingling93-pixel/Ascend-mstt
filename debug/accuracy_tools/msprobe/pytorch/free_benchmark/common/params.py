@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import torch
+from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.enums import (
     DeviceType,
@@ -128,7 +129,13 @@ def make_unequal_row(
         row.max_rel = ratio - 1
     origin_tensor = data_params.original_result
     perturbed_tensor = data_params.perturbed_result
-    if index:
+    if index is not None:
+        if index >= len(origin_tensor) or index >= len(perturbed_tensor):
+            err_msg = f"When generating unequal results, index {index} of output is out of bounds. please check!"
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.OutputIndexError,
+                error_info=err_msg,
+            )
         origin_tensor = origin_tensor[index]
         perturbed_tensor = perturbed_tensor[index]
         row.output_index = index

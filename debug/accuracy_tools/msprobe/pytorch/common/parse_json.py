@@ -13,15 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
 from msprobe.core.common.exceptions import ParseJsonException
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import load_json
 
 
 def parse_json_info_forward_backward(json_path):
-    with FileOpen(json_path, 'r') as f:
-        dump_json = json.load(f)
+    dump_json = load_json(json_path)
 
     real_data_path = dump_json.get("dump_data_dir")
     dump_data = dump_json.get("data")

@@ -48,11 +48,12 @@ def save_json_file(file_path, data):
         f.write(json.dumps(data, indent=4))
 
 
-def get_csv_df(md5_compare, summary_compare, stack, csv_data):
+def get_csv_df(stack, csv_data, compare_mode):
     """
     调用acc接口写入csv
     """
-    return Comparator.make_result_table(csv_data, md5_compare, summary_compare, stack)
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
+    return Comparator.make_result_table(csv_data, stack, dump_mode)
 
 
 def str2float(percentage_str):
@@ -150,3 +151,15 @@ class GraphConst:
     DESCRIPTION = 'description'
     COLORS = 'Colors'
     MICRO_STEPS = 'MicroSteps'
+
+    DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING = {
+        Const.ALL: REAL_DATA_COMPARE,
+        Const.SUMMARY: SUMMARY_COMPARE,
+        Const.MD5: MD5_COMPARE
+    }
+
+    GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING = {
+        REAL_DATA_COMPARE: Const.ALL,
+        SUMMARY_COMPARE: Const.SUMMARY,
+        MD5_COMPARE: Const.MD5
+    }
