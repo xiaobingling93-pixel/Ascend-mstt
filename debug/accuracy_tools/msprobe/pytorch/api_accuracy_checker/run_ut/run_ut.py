@@ -99,7 +99,10 @@ def run_ut(config):
         run_api_online(config, compare)
     else:
         csv_df = read_csv(config.result_csv_path)
-        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        try:
+            api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        except IndexError:
+            logger.error(f"Read {config.result_csv_path} error")
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -278,7 +281,10 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             func_options = {
                 'real_data_path': real_data_path
             }
-            grad = gen_args(backward_args, api_name, func_options)[0]
+            try:
+                grad = gen_args(backward_args, api_name, func_options)[0]
+            except IndexError:
+                logger.error(f"Generate grad input for {api_full_name} error")
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -286,8 +292,14 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
-        out = out[0]
-        device_out = device_out[0]
+        try:
+            out = out[0]
+        except IndexError:
+            logger.error(f"API {api_name} bench output is empty, please check the output.")
+        try:
+            device_out = device_out[0]
+        except IndexError:
+            logger.error(f"API {api_name} device output is empty, please check the output.")
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
@@ -323,7 +335,10 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
-        out[grad_index].backward(grad)
+        try:
+            out[grad_index].backward(grad)
+        except IndexError:
+            logger.error(f"Run backward error when grad_index is {grad_index}")
     else:
         out.backward(grad)
     args_grad = []
