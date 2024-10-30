@@ -19,8 +19,9 @@ import os
 import re
 import subprocess
 import time
-import json
 from datetime import datetime, timezone
+
+import numpy as np
 
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
@@ -382,17 +383,18 @@ def check_seed_all(seed, mode):
 
 
 def safe_get_value(container, index, container_name, key=None):
-    """Fetches a value from a container (dict or list or numpy) by key/index, handling IndexError."""
+    """Fetches a value from a container by key/index, handling IndexError."""
     try:
         # 处理字典情况
         if isinstance(container, dict):
             return container[key][index]
-        # 处理列表情况
-        elif isinstance(container, list):
+        # 处理列表、元组、numpy情况
+        elif isinstance(container, (list, tuple, np.ndarray)):
             return container[index]
-        # 处理numpy情况
         else:
-            return container[index]
+            err_msg = f"Unsupported container type for '{container_name}': {type(container)}"
+            logger.error(err_msg)
+            raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
     except IndexError as e:
         err_msg = "index out of bounds error occurs, please check!\n" \
                   f"{container_name} is {container}\n" \
