@@ -490,6 +490,7 @@ def safe_get_value(container, index, container_name, key=None):
             return container[index]
     except IndexError as e:
         err_msg = "index out of bounds error occurs, please check!\n" \
-                  f"{container_name} is {container}"
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}"
         logger.error(err_msg)
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
