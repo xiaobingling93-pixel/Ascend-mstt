@@ -480,7 +480,7 @@ def _compare_parser(parser):
 
 
 def safe_get_value(container, index, container_name, key=None):
-    """Fetches a value from a container (dict or list) by key/index, handling IndexError."""
+    """Fetches a value from a container (dict or list or numpy) by key/index, handling IndexError."""
     try:
         # 处理字典情况
         if isinstance(container, dict):
@@ -497,3 +497,8 @@ def safe_get_value(container, index, container_name, key=None):
                   f"index is {index}"
         logger.error(err_msg)
         raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    except KeyError as e:
+        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
+                  f"{container_name} is {container}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INVALID_KEY_ERROR) from e

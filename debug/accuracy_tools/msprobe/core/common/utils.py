@@ -68,6 +68,7 @@ class MsprobeBaseException(Exception):
     FUNCTION_CALL_ERROR = 28
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
+    INVALID_KEY_ERROR = 31
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
