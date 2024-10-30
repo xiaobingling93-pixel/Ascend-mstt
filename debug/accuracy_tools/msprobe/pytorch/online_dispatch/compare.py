@@ -20,7 +20,7 @@ import sys
 from collections import namedtuple
 
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv
+from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv, get_json_contents
 from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
@@ -33,24 +33,6 @@ FLOAT_PRECISION = 14
 
 ResultInfo = namedtuple('ResultInfo', ['api_name', 'is_fwd_success', 'is_bwd_success',
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results'])
-
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
-
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file %s, content is not a dictionary!' % file_path)
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
 
 
 def write_csv(data, filepath):
