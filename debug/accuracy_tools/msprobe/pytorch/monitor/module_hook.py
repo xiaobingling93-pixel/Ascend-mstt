@@ -34,17 +34,19 @@ from msprobe.pytorch.monitor.anomaly_inform import AnomalyInformFactory
 from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, \
     TensorMetrics
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
-from msprobe.pytorch.monitor.utils import print_warn_log, print_info_log, print_rank_0, get_param_struct, \
-    check_path_length, check_path_pattern_valid, change_mode, FileCheckConst, validate_config, beijing_tz
-from msprobe.pytorch.monitor.file_check import FileOpen
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.log import logger
+from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, beijing_tz
+from msprobe.core.common.file_utils import check_path_length, change_mode, check_path_pattern_valid, load_json, \
+                                        FileChecker, check_file_or_directory_path
+from msprobe.core.common.const import MonitorConst, FileCheckConst
+from msprobe.core.common.exceptions import MsprobeException
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if not torch_version_above_or_equal_2:
     raise ValueError("monitor require torch>=2.0")
 
 output_base_dir = os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
-
+check_file_or_directory_path(output_base_dir)
 
 class ModuleHookContext:
     def __init__(self, module_name) -> None:
@@ -114,38 +116,47 @@ class TrainerMon:
         self.module_bwd_hook_context_by_module = defaultdict(ModuleHookContext)
         self.optimizer_context = defaultdict(OptimizerContext)
         self.cc_context = defaultdict(CommunicationContext)
-        self.params_have_main_grad = params_have_main_grad
-        with FileOpen(config_file_path, 'r') as f:
-            self.config = json.load(f)
+        if params_have_main_grad and not isinstance(params_have_main_grad, bool):
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 'Parameter params_have_main_grad must be bool.')
+        else:
+            self.params_have_main_grad = params_have_main_grad
+        if not config_file_path:
+            raise MsprobeException('Must pass the config as a parameter.', 0)
+        else:
+            if not isinstance(config_file_path, str):
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 'config_file_path must be a string.')
+            file_checker = FileChecker(file_path=config_file_path, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
+            file_checker.common_check()
+        self.config = load_json(config_file_path)
         validate_config(self.config)
         self.module_rank_list = self.config.get("module_ranks", [])
         self.eps = self.config.get('eps', 1e-8)
         self.ops = self.config.get('ops', [])
         self.xy_distribution = self.config.get('xy_distribution', False)
         if not self.xy_distribution:
-            print_rank_0("> module input/output input_grad/output_grad is not monitored. ")
+            logger.info_on_rank_0("> module input/output input_grad/output_grad is not monitored. ")
 
         # backward hook cause megatron-lm pipeline parallel schedule assert exception. 
         # TBD: backward hook cause output tensor is view of some base tensor. root cause invesigation pending.
         self.forward_only = self.config.get('forward_only', False)
         if self.forward_only:
-            print_rank_0("> only module forward is monitored. ")
+            logger.info_on_rank_0("> only module forward is monitored. ")
 
         self.ur_distribution = self.config.get('ur_distribution', False)
         if not self.ur_distribution:
-            print_rank_0("> update vector and ratio vector of adam is not monitored. ")
+            logger.info_on_rank_0("> update vector and ratio vector of adam is not monitored. ")
         self.mv_distribution = self.config.get("mv_distribution", False)
         if not self.mv_distribution:
-            print_rank_0("> momentum and variance of adam is not monitored. ")
+            logger.info_on_rank_0("> momentum and variance of adam is not monitored. ")
         self.wg_distribution = self.config.get("wg_distribution", False)
         if not self.wg_distribution:
-            print_rank_0("> weight grad of specified module is not monitored. ")
+            logger.info_on_rank_0("> weight grad of specified module is not monitored. ")
         self.mg_direction = self.config.get('mg_direction', False)
         if not self.mg_direction:
-            print_rank_0('> grad and momentum direction will not be compared.')
+            logger.info_on_rank_0('> grad and momentum direction will not be compared.')
         self.cc_distribution = self.config.get("cc_distribution", {})
         if not self.cc_distribution.get('enable', False):
-            print_rank_0("> cc operator is not monitored.")
+            logger.info_on_rank_0("> cc operator is not monitored.")
             self.cc_log_only = False
         else:
             self.cc_codeline = self.cc_distribution.get('cc_codeline', [])
@@ -194,6 +205,10 @@ class TrainerMon:
                 raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
             if self.mv_distribution:
                 raise Exception("mv_distribution cannot be enabled with unknown optimizer.")
+        else:
+            if opt_ty not in MonitorConst.OPT_TY:
+                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, \
+                                       'Parameter opt_ty must be Megatron_DistributedOptimizer or Megatron_Float16OptimizerWithFloat16Params.')
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
         self.module_struct = defaultdict(dict)
@@ -253,24 +268,26 @@ class TrainerMon:
             raise TypeError("model should be a nn.Module")
         if not isinstance(grad_acc_steps, int) or isinstance(grad_acc_steps, bool):
             raise TypeError("grad_acc_steps should be int")
-        print_rank_0("> module names:")
+        elif grad_acc_steps < 1:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, 'grad_acc_steps must be greater than or equal to 1')
+        logger.info_on_rank_0("> module names:")
         for name, _ in model.named_modules():
-            print_rank_0(f"\t{name}")
+            logger.info_on_rank_0(f"\t{name}")
 
         self.micro_batch_number = grad_acc_steps
 
         if not self.module_rank_list or (dist.is_initialized() and dist.get_rank() in self.module_rank_list):
             targets = [x for x, _ in model.named_modules()] if self.print_struct else self.config['targets'].keys()
             hooked_count = self._hook_module(targets, model, fwd_or_bkd=0)
-            print_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
+            logger.info_on_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
         else:
             return
 
         if not self.optimizer_hooked:
             self.optimizer_hooked = True
-            print_rank_0("> parameter names:")
+            logger.info_on_rank_0("> parameter names:")
             for name, param in model.named_parameters():
-                print_rank_0(f"\t{name}")
+                logger.info_on_rank_0(f"\t{name}")
                 for target_module, _ in self.config['targets'].items():
                     if name.startswith(target_module):
                         # name : language_model.encoder.layers.0.mlp.weight
@@ -288,18 +305,16 @@ class TrainerMon:
             return
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if not len(fwd_context.actv) == self.micro_batch_number:
-                print_warn_log(
-                    f"fwd_context.actv not equal to micro_batch_number: {len(fwd_context.actv)}, "
-                    f"{self.micro_batch_number}")
+                logger.warning(
+                    "fwd_context.actv not equal to micro_batch_number: %d, %d", len(fwd_context.actv), self.micro_batch_number)
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, fwd_context.actv, step)
             fwd_context.actv.clear()
 
         for _, bwd_context in self.module_bwd_hook_context_by_module.items():
             if not len(bwd_context.actvgrad) == self.micro_batch_number:
-                print_warn_log(
-                    f"bwd_context.actvgrad not equal to micro_batch_number: {len(bwd_context.actvgrad)}, "
-                    f"{self.micro_batch_number}")
+                logger.warning(
+                    "bwd_context.actvgrad not equal to micro_batch_number: %d, %d", len(bwd_context.actvgrad), self.micro_batch_number)
             for metric_name in self.ops:
                 write_metrics_tensorboard(metric_name, self.summary_writer, bwd_context.actvgrad, step)
             bwd_context.actvgrad.clear()
@@ -329,7 +344,7 @@ class TrainerMon:
                     context.param_effective_rank[name] = eff_rank(param.detach())
                 grad = param.main_grad if self.params_have_main_grad else param.grad
                 if grad is None:
-                    print_warn_log(f"grad is None: {name}, maybe something wrong happened.")
+                    logger.warning("grad is None: %s, maybe something wrong happened.", name)
                     continue
                 if self.wg_distribution:
                     context.param_weight_grad[name] = grad
@@ -396,12 +411,12 @@ class TrainerMon:
         if dist.is_initialized():
             if self.module_rank_list:
                 if dist.get_rank() == min(self.module_rank_list):
-                    print_info_log(msg)
+                    logger.info(msg)
             else:
                 if dist.get_rank() == 0:
-                    print_info_log(msg)
+                    logger.info(msg)
         else:
-            print_info_log(msg)
+            logger.info(msg)
 
     def _hook_module(self, target_names, module: torch.nn.Module, fwd_or_bkd):
         if '_modules' not in module.__dict__:
@@ -441,8 +456,8 @@ class TrainerMon:
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
             if context.micro_step == 0 and context.actv:
-                print_warn_log(f"actv context of {context.module_name} is not empty when first micro_step, "
-                               f"maybe something wrong happened. Now clear it.")
+                logger.warning("actv context of %s is not empty when first micro_step, \
+                               maybe something wrong happened. Now clear it.", context.module_name)
                 context.actv.clear()
             context.actv.append(metric_dict)
 
@@ -485,8 +500,8 @@ class TrainerMon:
             for metric_name in self.ops:
                 metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
             if context.micro_step == 0 and context.actvgrad:
-                print_warn_log(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
-                               f"maybe something wrong happened. Now clear it.")
+                logger.warning("actvgrad context of %s is not empty when first micro_step, \
+                               maybe something wrong happened. Now clear it.", context.module_name)
                 context.actvgrad.clear()
             context.actvgrad.append(metric_dict)
 
@@ -505,6 +520,6 @@ class TrainerMon:
                 if not self.forward_only:
                     submodule.register_full_backward_hook(bwd_hook_fun)
                     self.module_bwd_hook_context_by_module[submodule] = ModuleHookContext(name)
-                print_rank_0(f"> {name} is monitored successfully")
+                logger.info_on_rank_0(f"> {name} is monitored successfully")
                 hooked_count += 1
         return hooked_count

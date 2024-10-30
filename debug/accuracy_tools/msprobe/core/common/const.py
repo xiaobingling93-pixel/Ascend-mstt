@@ -455,3 +455,5 @@ class MonitorConst:
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
+    OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    RULE_NAME = ['AnomalyTurbulence']

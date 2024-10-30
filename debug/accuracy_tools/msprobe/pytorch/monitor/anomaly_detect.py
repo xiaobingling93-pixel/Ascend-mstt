@@ -24,8 +24,9 @@ from collections import defaultdict
 
 from torch.utils.tensorboard import SummaryWriter
 
-from msprobe.pytorch.monitor.utils import print_info_log, print_warn_log, print_error_log
-from msprobe.pytorch.monitor.file_check import check_path_before_create, change_mode, FileCheckConst, create_directory
+from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import check_path_before_create, change_mode, create_directory
+from msprobe.core.common.const import FileCheckConst
 
 
 class ScanRule(ABC):
@@ -63,21 +64,21 @@ class AnomalyScanner:
 
             # 检查必要的键是否存在
             if rule_cls_name is None or rule_args is None:
-                print_warn_log(f"Spec is missing required keys: {spec}")
+                logger.warning(f"Spec is missing required keys: {spec}")
                 continue
 
             cur_module = sys.modules[__name__]
             try:
                 rule_cls = getattr(cur_module, rule_cls_name)
             except AttributeError:
-                print_error_log(f"Rule class '{rule_cls_name}' not found in the current module.")
+                logger.error(f"Rule class '{rule_cls_name}' not found in the current module.")
                 continue
 
             try:
                 rule_instance = rule_cls(**rule_args)
                 alert_rules.append(rule_instance)
             except Exception as e:
-                print_error_log(f"Error creating instance of rule '{rule_cls_name}': {e}")
+                logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
                 continue
 
         return alert_rules
@@ -111,7 +112,7 @@ class SummaryWriterWithAD(SummaryWriter):
         try:
             super().__init__(path)
         except Exception as e:
-            print_error_log(f'error when init summary writer at {path}: {e}')
+            logger.error(f'error when init summary writer at {path}: {e}')
             raise ValueError("Init summary writer error.") from e
         for event in os.listdir(path):
             change_mode(os.path.join(path, event), FileCheckConst.DATA_FILE_AUTHORITY)
@@ -129,7 +130,7 @@ class SummaryWriterWithAD(SummaryWriter):
         self.tag2scalars[tag].append((scalar_value, new_avg))
         detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
-            print_info_log(
+            logger.info(
                 f"{BCOLORS.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
                 f"{BCOLORS.ENDC}")
             exception_message = (f"{BCOLORS.WARNING}> Rule {rule_name} reports anomaly signal in {tag} at step "

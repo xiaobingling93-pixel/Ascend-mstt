@@ -17,7 +17,7 @@
 
 import torch
 from torch.autograd.functional import jacobian
-from msprobe.pytorch.monitor.utils import print_info_log
+from msprobe.core.common.log import logger
 
 
 @torch.no_grad()
@@ -52,7 +52,7 @@ def get_sign_matches(x: torch.tensor, y: torch.tensor):
     try:
         same_direction_ratio = ((xs * ys).sum() / ys.numel() + 1) / 2
     except RuntimeError as e:
-        print_info_log(f"RuntimeError: {e}")
+        logger.info(f"RuntimeError: {e}")
         same_direction_ratio = torch.tensor(0.)
     return same_direction_ratio
 

@@ -19,7 +19,7 @@ import math
 import statistics
 
 from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
-from msprobe.pytorch.monitor.utils import print_error_log
+from msprobe.core.common.log import logger
 
 
 def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
@@ -98,7 +98,7 @@ class MinMetric(Metric):
                 min_value = min([item[metric_name][key].item() for item in metric_value])
                 summary_writer.add_scalar(f'{key}_min', min_value, step)
         except Exception as e:
-            print_error_log(f"min metric metric_tensorboard error: {e}")
+            logger.error(f"min metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("max")
@@ -114,7 +114,7 @@ class MaxMetric(Metric):
                 max_value = max([item[metric_name][key].item() for item in metric_value])
                 summary_writer.add_scalar(f'{key}_max', max_value, step)
         except Exception as e:
-            print_error_log(f"max metric metric_tensorboard error: {e}")
+            logger.error(f"max metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("norm")
@@ -130,7 +130,7 @@ class NormMetric(Metric):
                 norm_value = math.sqrt(sum([item[metric_name][key].item() for item in metric_value]))
                 summary_writer.add_scalar(f'{key}_norm', norm_value, step)
         except Exception as e:
-            print_error_log(f"norm metric metric_tensorboard error: {e}")
+            logger.error(f"norm metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("zeros")
@@ -146,7 +146,7 @@ class ZerosMetric(Metric):
                 zeros_value = statistics.mean([item[metric_name][key].item() for item in metric_value])
                 summary_writer.add_scalar(f'{key}_zeros', zeros_value, step)
         except Exception as e:
-            print_error_log(f"zeros metric metric_tensorboard error: {e}")
+            logger.error(f"zeros metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("nans")
@@ -162,7 +162,7 @@ class NaNsMetric(Metric):
                 nans_value = sum([v[metric_name][key].item() for v in metric_value])
                 summary_writer.add_scalar(f'{key}_nans', nans_value, step)
         except Exception as e:
-            print_error_log(f"nans metric metric_tensorboard error: {e}")
+            logger.error(f"nans metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("id")
@@ -183,7 +183,7 @@ class IdentMetric(Metric):
                         continue
                     summary_writer.add_scalar(f'{key}_identical', value.item(), step)
         except Exception as e:
-            print_error_log(f"id metric metric_tensorboard error: {e}")
+            logger.error(f"id metric metric_tensorboard error: {e}")
 
 
 def get_metrics(metric_name, tag2tensor, eps):
