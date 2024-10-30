@@ -256,21 +256,26 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
+
     if npu_json_data['task'] == Const.TENSOR:
-        dump_mode = Const.ALL
-    elif npu_json_data['task'] == Const.STATISTICS:
-        md5_compare = md5_find(npu_json_data['data'])
-        if md5_compare:
-            dump_mode = Const.MD5
+        return Const.ALL
+
+    if npu_json_data['task'] == Const.STATISTICS:
+        npu_md5_compare = md5_find(npu_json_data['data'])
+        bench_md5_compare = md5_find(bench_json_data['data'])
+        if npu_md5_compare == bench_md5_compare:
+            return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
-            dump_mode = Const.SUMMARY
-    else:
-        logger.error(f"Compare applies only to task is tensor or statistics")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
-    return dump_mode
+            logger.error(f"Please check the dump task is consistent, "
+                         f"dump mode of npu and bench should both be statistics or md5.")
+            raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    logger.error(f"Compare applies only to task is tensor or statistics")
+    raise CompareException(CompareException.INVALID_TASK_ERROR)
 
 
 def get_header_index(header_name, dump_mode):
