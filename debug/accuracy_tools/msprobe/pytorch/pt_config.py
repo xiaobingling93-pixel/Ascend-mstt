@@ -65,8 +65,7 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
 
-        ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
-        if not isinstance(self.host, str) or not re.match(ipv4_pattern, self.host):
+        if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")
 
         if not isinstance(self.port, int) or not (0 < self.port <= 65535):
