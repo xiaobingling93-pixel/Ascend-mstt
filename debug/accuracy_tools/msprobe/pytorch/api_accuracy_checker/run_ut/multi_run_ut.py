@@ -49,11 +49,10 @@ def split_json_file(input_file, num_splits, filter_api):
         backward_data[f"{data_name}.backward"] = backward_data.pop(data_name)
 
     input_data = load_json(input_file)
-    if input_data.get("data"):
+    try:
         input_data.pop("data")
-    else:
-        logger.error(f"The input file {input_file} does not contain 'data' field.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+    except KeyError:
+        logger.error("Invalid input file, 'data' field is missing")
 
     items = list(forward_data.items())
     total_items = len(items)
