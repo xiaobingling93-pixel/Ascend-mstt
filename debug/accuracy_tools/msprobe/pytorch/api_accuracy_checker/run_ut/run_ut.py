@@ -101,9 +101,9 @@ def run_ut(config):
         csv_df = read_csv(config.result_csv_path)
         try:
             api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
-        except IndexError:
+        except IndexError as e:
             logger.error(f"Read {config.result_csv_path} error")
-            raise Exception(f"Read {config.result_csv_path} error")
+            raise Exception(f"Read {config.result_csv_path} error") from e
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
