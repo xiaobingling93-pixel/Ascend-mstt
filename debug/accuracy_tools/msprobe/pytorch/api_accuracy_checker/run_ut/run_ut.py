@@ -462,7 +462,7 @@ def run_ut_command(args):
         rank_list = task_config.rank_list
         tls_path = task_config.tls_path
     
-    if not is_online and args.api_info_file is None:
+    if not is_online and not args.api_info_file:
         logger.error("Please provide api_info_file for offline run ut.")
         raise Exception("Please provide api_info_file for offline run ut.")
 
