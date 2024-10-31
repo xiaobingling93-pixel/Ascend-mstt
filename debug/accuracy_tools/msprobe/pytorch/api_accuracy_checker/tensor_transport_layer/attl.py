@@ -16,7 +16,6 @@
 import glob
 import os.path
 import time
-import re
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
 from dataclasses import dataclass
@@ -54,7 +53,6 @@ class ATTL:
         self.dequeue_list = []
         self.message_end = False
         self.kill_progress = False
-        self.check_attl_config()
         self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
@@ -71,18 +69,6 @@ class ATTL:
                                             self.session_config.check_sum,
                                             self.session_config.tls_path)
             self.socket_manager.start()
-
-    def check_attl_config(self):
-        if self.session_config.nfs_path:
-            if os.path.exists(self.session_config.nfs_path):
-                return
-            else:
-                raise Exception(f"nfs path {self.session_config.nfs_path} doesn't exists.")
-        ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
-        if not re.match(ipv4_pattern, self.session_config.connect_ip):
-            raise Exception(f"host {self.session_config.connect_ip} is invalid.")
-        if not (0 < self.session_config.connect_port <= 65535):
-            raise Exception(f"port {self.session_config.connect_port} is invalid.")
 
     def stop_serve(self):
         if isinstance(self.socket_manager, TCPServer):
