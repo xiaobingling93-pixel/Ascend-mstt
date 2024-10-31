@@ -26,7 +26,8 @@ from msprobe.core.common.file_utils import remove_path
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
                                         check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy
+from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
+    get_rela_diff_summary_mode
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
@@ -58,27 +59,8 @@ class Comparator:
     @staticmethod
     def calculate_summary_data(npu_summary_data, bench_summary_data, result_item):
         err_msg = ""
-        start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
-        warning_flag = False
-        for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
-            if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
-                diff = npu_val - bench_val
-                if bench_val != 0:
-                    relative = str(abs((diff / bench_val) * 100)) + '%'
-                else:
-                    relative = "N/A"
-                result_item[start_idx + i] = diff
-                result_item[start_idx + i + 4] = relative
-                magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
-                if magnitude_diff > 0.5:
-                    warning_flag = True
-            else:
-                result_item[start_idx + i] = CompareConst.NONE
-        accuracy_check = CompareConst.WARNING if warning_flag else ""
-        err_msg += "Need double check api accuracy." if warning_flag else ""
-        for i in range(start_idx, len(result_item)):
-            if str(result_item[i]) in ('inf', '-inf', 'nan'):
-                result_item[i] = f'{result_item[i]}\t'
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
         result_item.append(accuracy_check)
         result_item.append(err_msg)
     

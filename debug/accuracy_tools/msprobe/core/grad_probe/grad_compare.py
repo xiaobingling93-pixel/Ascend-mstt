@@ -48,6 +48,8 @@ class GradComparator:
 
     @classmethod
     def compare_distributed(cls, path1: str, path2: str, output_dir: str):
+        check_file_or_directory_path(path1, isdir=True)
+        check_file_or_directory_path(path2, isdir=True)
         ranks = cls._get_matched_dirs(path1, path2, "rank")
         logger.info(f"the following ranks will be compared: {ranks}")
         if not ranks:
