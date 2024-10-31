@@ -19,7 +19,11 @@ import torch
 def npu_swiglu(x, dim=-1):
     tensor_dtype = x.dtype
 
-    in_tensors = torch.chunk(x, 2, dim=dim)
+    try:
+        in_tensors = torch.chunk(x, 2, dim=dim)
+    except Exception as e:
+        raise RuntimeError(f"Invalid chunk x into 2 tensors with shape {x.shape} and dimension {dim}") from e
+
     if tensor_dtype == torch.float32:
         tensor_scalar = torch.sigmoid(torch.mul(in_tensors[0], 1.0))
         output_data = torch.mul(torch.mul(tensor_scalar, in_tensors[0]), in_tensors[1])
@@ -34,7 +38,11 @@ def npu_swiglu(x, dim=-1):
 
 def npu_swiglu_backward(grad, x, dim=-1):
     tensor_dtype = grad.dtype
-    in_tensors = torch.chunk(x, 2, dim=dim)
+    try:
+        in_tensors = torch.chunk(x, 2, dim=dim)
+    except Exception as e:
+        raise RuntimeError(f"Invalid chunk x into 2 tensors with shape {x.shape} and dimension {dim}") from e
+
     tensor_grad_out = grad
 
     if tensor_dtype == torch.float16:
