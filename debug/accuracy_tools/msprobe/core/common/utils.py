@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import collections
 import os
 import re
@@ -26,7 +25,6 @@ from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_pa
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -288,7 +286,7 @@ def get_header_index(header_name, dump_mode):
 
 
 def convert_tuple(data):
-    return data if isinstance(data, tuple) else (data, )
+    return data if isinstance(data, tuple) else (data,)
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):

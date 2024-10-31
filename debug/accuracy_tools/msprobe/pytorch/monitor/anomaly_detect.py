@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
@@ -66,7 +64,7 @@ class AnomalyScanner:
                 print_warn_log(f"Spec is missing required keys: {spec}")
                 continue
 
-            cur_module = sys.modules[__name__]
+            cur_module = sys.modules.get(__name__)
             try:
                 rule_cls = getattr(cur_module, rule_cls_name)
             except AttributeError:
