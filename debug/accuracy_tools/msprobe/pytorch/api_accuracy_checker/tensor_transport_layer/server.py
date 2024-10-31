@@ -24,7 +24,7 @@ from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
-    struct_unpack_mode as unpack_mode, str_to_bytes_order as bytes_order
+    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order
 
 
 class TCPServer:
