@@ -48,11 +48,12 @@ def save_json_file(file_path, data):
         f.write(json.dumps(data, indent=4))
 
 
-def get_csv_df(md5_compare, summary_compare, stack, csv_data):
+def get_csv_df(stack, csv_data, compare_mode):
     """
     调用acc接口写入csv
     """
-    return Comparator.make_result_table(csv_data, md5_compare, summary_compare, stack)
+    dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
+    return Comparator.make_result_table(csv_data, stack, dump_mode)
 
 
 def str2float(percentage_str):
@@ -91,9 +92,15 @@ class ToolTip:
     MD5 = '数据MD5信息，用于比较两个数据信息是否完全一致'
     ONE_THOUSANDTH_ERR_RATIO = 'Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之一的比例占总元素个数的比例，比例越接近1越好'
     FIVE_THOUSANDTHS_ERR_RATIO = 'Tensor中的元素逐个与对应的标杆数据对比，相对误差小于千分之五的比例占总元素个数的比例，比例越接近1越好'
-    COSINE = '通过计算两个向量的余弦值来判断其相似度，数值越接近于1说明计算出的两个张量越相似，实际可接受阈值为大于0.99。在计算中可能会存在nan，主要由于可能会出现其中一个向量为0'
+    COSINE = (
+        '通过计算两个向量的余弦值来判断其相似度，数值越接近于1说明计算出的两个张量越相似，实际可接受阈值为大于0.99。'
+        '在计算中可能会存在nan，主要由于可能会出现其中一个向量为0'
+    )
     MAX_ABS_ERR = '当最大绝对误差越接近0表示其计算的误差越小，实际可接受阈值为小于0.001'
-    MAX_RELATIVE_ERR = '当最大相对误差越接近0表示其计算的误差越小。当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
+    MAX_RELATIVE_ERR = (
+        '当最大相对误差越接近0表示其计算的误差越小。'
+        '当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
+    )
     SMALL_VALUE_TIP = '{} 小于1e-3，不计算相对误差'
 
 
@@ -103,7 +110,8 @@ class Suggestions:
     DUMP = 'msprobe工具的数据采集功能'
     DUMP_URL = 'https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/pytorch/doc/dump.md'
     API_ACCURACY_CHECKER = 'msprobe工具的预检功能'
-    API_ACCURACY_CHECKER_URL = 'https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/pytorch/doc/api_accuracy_checker.md'
+    API_ACCURACY_CHECKER_URL = \
+        'https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/pytorch/doc/api_accuracy_checker.md'
 
 
 class GraphConst:
@@ -150,3 +158,15 @@ class GraphConst:
     DESCRIPTION = 'description'
     COLORS = 'Colors'
     MICRO_STEPS = 'MicroSteps'
+
+    DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING = {
+        Const.ALL: REAL_DATA_COMPARE,
+        Const.SUMMARY: SUMMARY_COMPARE,
+        Const.MD5: MD5_COMPARE
+    }
+
+    GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING = {
+        REAL_DATA_COMPARE: Const.ALL,
+        SUMMARY_COMPARE: Const.SUMMARY,
+        MD5_COMPARE: Const.MD5
+    }

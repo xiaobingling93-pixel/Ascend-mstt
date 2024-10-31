@@ -16,7 +16,7 @@
 import json
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
@@ -134,8 +134,7 @@ def parse_task_config(task, json_config):
 def parse_json_config(json_file_path):
     if not json_file_path:
         raise Exception("json file path is None")
-    with FileOpen(json_file_path, 'r') as file:
-        json_config = json.load(file)
+    json_config = load_json(json_file_path)
     common_config = parse_common_config(json_config)
     if not common_config.task:
         common_config.task = Const.STATISTICS

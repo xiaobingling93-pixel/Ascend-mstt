@@ -40,5 +40,5 @@ cipher_list = ":".join(
      "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256"]
 ).encode()
 
-struct_unpack_mode = "!Q"
-str_to_bytes_order = "big"
+STRUCT_UNPACK_MODE = "!Q"
+STR_TO_BYTES_ORDER = "big"
