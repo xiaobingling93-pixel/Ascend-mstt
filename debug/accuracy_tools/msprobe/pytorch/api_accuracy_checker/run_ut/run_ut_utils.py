@@ -214,3 +214,11 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
 def record_skip_info(api_full_name, compare, compare_alg_results):
     result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [compare_alg_results], None, 0)
     compare.record_results(result_info)
+
+
+def is_unsupported_api(api_name):
+    split_name = api_name.split(Const.SEP)[0]
+    flag = split_name == Const.DISTRIBUTED
+    if flag:
+        logger.info(f"{split_name} api is not supported for run ut. SKIP.")
+    return flag

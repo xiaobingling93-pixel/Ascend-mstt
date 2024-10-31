@@ -28,7 +28,7 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, is_unsupported_api
 from msprobe.core.common.file_utils import check_link
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
@@ -74,6 +74,8 @@ def run_overflow_check(forward_file):
     logger.info("start UT test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
+        if is_unsupported_api(api_full_name):
+            continue
         try:
             run_torch_api(api_full_name, api_info_dict, real_data_path)
         except Exception as err:
