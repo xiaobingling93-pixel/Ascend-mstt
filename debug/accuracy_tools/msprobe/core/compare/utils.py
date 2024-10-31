@@ -322,10 +322,10 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-            n_name = safe_get_value(n_dict, "op_name", n_start + index, "n_dict")
-            b_name = safe_get_value(b_dict, "op_name", b_start + index, "b_dict")
-            n_struct = safe_get_value(n_dict, key, index, "n_dict")
-            b_struct = safe_get_value(b_dict, key, index, "b_dict")
+            n_name = safe_get_value(n_dict, n_start + index, "n_dict", key="op_name")
+            b_name = safe_get_value(b_dict, b_start + index, "b_dict", key="op_name")
+            n_struct = safe_get_value(n_dict, index, "n_dict", key=key)
+            b_struct = safe_get_value(b_dict, index, "b_dict", key=key)
             err_msg = ""
 
             npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
@@ -337,8 +337,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result.append(result_item)
                 continue
 
-            npu_summary_data = safe_get_value(n_dict, CompareConst.SUMMARY, n_start + index, "n_dict")
-            bench_summary_data = safe_get_value(b_dict, CompareConst.SUMMARY, b_start + index, "b_dict")
+            npu_summary_data = safe_get_value(n_dict, n_start + index, "n_dict", key=CompareConst.SUMMARY)
+            bench_summary_data = safe_get_value(b_dict, b_start + index, "b_dict", key=CompareConst.SUMMARY)
             result_item.extend(process_summary_data(npu_summary_data))
             result_item.extend(process_summary_data(bench_summary_data))
 
@@ -410,9 +410,9 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
         if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = safe_get_value(n_dict, CompareConst.INPUT_STRUCT, index, "n_dict")
+            n_struct = safe_get_value(n_dict, index, "n_dict", key=CompareConst.INPUT_STRUCT)
         if Const.OUTPUT in name_ele_list:
-            n_struct = safe_get_value(n_dict, CompareConst.OUTPUT_STRUCT, index_out, "n_dict")
+            n_struct = safe_get_value(n_dict, index_out, "n_dict", key=CompareConst.OUTPUT_STRUCT)
             index_out += 1
 
         try:
@@ -436,7 +436,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
-        npu_summary_data = safe_get_value(n_dict, CompareConst.SUMMARY, index, "n_dict")
+        npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
         result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(bench_summary_data)
