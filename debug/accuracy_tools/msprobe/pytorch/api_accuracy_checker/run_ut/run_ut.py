@@ -438,6 +438,34 @@ def _run_ut(parser=None):
 
 
 def run_ut_command(args):
+    white_list = msCheckerConfig.white_list
+    black_list = msCheckerConfig.black_list
+    error_data_path = msCheckerConfig.error_data_path
+    is_online = msCheckerConfig.is_online
+    nfs_path = msCheckerConfig.nfs_path
+    host = msCheckerConfig.host
+    port = msCheckerConfig.port
+    rank_list = msCheckerConfig.rank_list
+    tls_path = msCheckerConfig.tls_path
+    if args.config_path:
+        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        checked_config_path = config_path_checker.common_check()
+        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
+        white_list = task_config.white_list
+        black_list = task_config.black_list
+        error_data_path = task_config.error_data_path
+        is_online = task_config.is_online
+        nfs_path = task_config.nfs_path
+        host = task_config.host
+        port = task_config.port
+        rank_list = task_config.rank_list
+        tls_path = task_config.tls_path
+    
+    if not is_online and args.api_info_file is None:
+        logger.error("Please provide api_info_file for offline run ut.")
+        raise Exception("Please provide api_info_file for offline run ut.")
+
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     used_device = current_device + ":" + str(args.device_id[0])
@@ -474,29 +502,6 @@ def run_ut_command(args):
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-    white_list = msCheckerConfig.white_list
-    black_list = msCheckerConfig.black_list
-    error_data_path = msCheckerConfig.error_data_path
-    is_online = msCheckerConfig.is_online
-    nfs_path = msCheckerConfig.nfs_path
-    host = msCheckerConfig.host
-    port = msCheckerConfig.port
-    rank_list = msCheckerConfig.rank_list
-    tls_path = msCheckerConfig.tls_path
-    if args.config_path:
-        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
-                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
-        checked_config_path = config_path_checker.common_check()
-        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
-        white_list = task_config.white_list
-        black_list = task_config.black_list
-        error_data_path = task_config.error_data_path
-        is_online = task_config.is_online
-        nfs_path = task_config.nfs_path
-        host = task_config.host
-        port = task_config.port
-        rank_list = task_config.rank_list
-        tls_path = task_config.tls_path
 
     if save_error_data:
         if args.result_csv_path:
