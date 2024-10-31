@@ -37,8 +37,8 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
     if len(npu_ranks) != len(bench_ranks):
         logger.error('The number of ranks in the two runs are different. '
-                        'Unable to match the ranks. Please use another folder to compare '
-                        'or use compare() api and manually match the ranks.')
+                     'Unable to match the ranks. Please use another folder to compare '
+                     'or use compare() api and manually match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     for nr, br in zip(npu_ranks, bench_ranks):
         npu_data_dir = os.path.join(npu_dump_dir, nr)

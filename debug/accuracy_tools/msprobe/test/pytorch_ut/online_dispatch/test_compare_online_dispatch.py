@@ -22,7 +22,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import CompareException
-from msprobe.pytorch.online_dispatch.compare import get_json_contents, Saver, Comparator
+from msprobe.pytorch.online_dispatch.compare import Saver, Comparator
 from rich.table import Table
 from io import StringIO
 from rich.console import Console
@@ -40,22 +40,6 @@ class TestCompare(unittest.TestCase):
             os.remove(self.dict_json_path)
         if os.path.exists(self.list_json_path):
             os.remove(self.list_json_path)
-
-    def test_get_json_contents_when_get_json(self):
-        data = {"one": 1}
-        with FileOpen(self.dict_json_path, 'w') as f:
-            json.dump(data, f)
-        self.assertEqual(get_json_contents(self.dict_json_path), data)
-
-    @patch('msprobe.core.common.log.BaseLogger.error')
-    def test_get_json_contents_when_get_list(self, mock_error):
-        data = [1, 2]
-        with FileOpen(self.list_json_path, 'w') as f:
-            json.dump(data, f)
-        with self.assertRaises(CompareException) as context:
-            get_json_contents(self.list_json_path)
-            self.assertEqual(context.exception.code, CompareException.INVALID_FILE_ERROR)
-        mock_error.assert_called_once_with('Json file %s, content is not a dictionary!' % self.list_json_path)
 
 
 class TestSaver(unittest.TestCase):

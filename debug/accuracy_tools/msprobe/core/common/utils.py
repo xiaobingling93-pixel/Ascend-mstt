@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import collections
 import os
 import re
@@ -26,7 +25,6 @@ from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_pa
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -217,20 +215,24 @@ def md5_find(data):
     return False
 
 
-def struct_json_get(input_param, framework):
-    if framework == Const.PT_FRAMEWORK:
-        prefix = "bench"
-    elif framework == Const.MS_FRAMEWORK:
-        prefix = "npu"
-    else:
-        logger.error("Error framework found.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def detect_framework_by_dump_json(file_path):
+    pattern_ms = r'"type":\s*"mindspore'
+    pattern_pt = r'"type":\s*"torch'
+    with FileOpen(file_path, 'r') as file:
+        for line in file:
+            if re.search(pattern_ms, line):
+                return Const.MS_FRAMEWORK
+            if re.search(pattern_pt, line):
+                return Const.PT_FRAMEWORK
+    logger.error(f"{file_path} must be based on the MindSpore or PyTorch framework.")
+    raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    frame_json_path = input_param.get(f"{prefix}_json_path", None)
-    if not frame_json_path:
-        logger.error(f"Please check the json path is valid.")
+
+def get_stack_construct_by_dump_json_path(dump_json_path):
+    if not dump_json_path:
+        logger.error("The path is empty. Please enter a valid path.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    directory = os.path.dirname(frame_json_path)
+    directory = os.path.dirname(dump_json_path)
     check_file_or_directory_path(directory, True)
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
@@ -284,7 +286,7 @@ def get_header_index(header_name, dump_mode):
 
 
 def convert_tuple(data):
-    return data if isinstance(data, tuple) else (data, )
+    return data if isinstance(data, tuple) else (data,)
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
@@ -302,6 +304,10 @@ def check_op_str_pattern_valid(string, op_name=None, stack=False):
 def is_invalid_pattern(string):
     pattern = Const.STRING_BLACKLIST
     return re.search(pattern, string)
+
+
+def is_int(x):
+    return isinstance(x, int) and not isinstance(x, bool)
 
 
 def print_tools_ends_info():

@@ -41,8 +41,10 @@ def check_str(string, variable_name):
     if not isinstance(string, str):
         raise ValueError(f'The variable: "{variable_name}" is not a string.')
 
+
 def check_bounds_element(bound):
     return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
+
 
 def check_bounds(bounds):
     prev = GradConst.BOUNDS_MINIMUM - 1
@@ -54,6 +56,7 @@ def check_bounds(bounds):
         if prev >= element:
             raise Exception("bounds list is not ascending")
         prev = element
+
 
 class ListCache(list):
     threshold = 1000
