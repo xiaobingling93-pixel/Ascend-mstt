@@ -120,8 +120,8 @@ def validate_cc_distribution(cc_distribution):
             if not isinstance(value, bool):
                 raise TypeError('cc_distribution enable should be a bool')
         elif key == 'cc_codeline':
-            if not isinstance(value, str):
-                raise TypeError('cc_distribution cc_codeline should be a string')
+            if not isinstance(value, list):
+                raise TypeError('cc_distribution cc_codeline should be a list')
         elif key == 'cc_pre_hook':
             if not isinstance(value, bool):
                 raise TypeError('cc_distribution cc_pre_hook should be a bool')

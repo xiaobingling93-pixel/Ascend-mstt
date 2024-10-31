@@ -34,8 +34,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_ten
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate
 from msprobe.core.common.log import logger
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, beijing_tz
-from msprobe.core.common.file_utils import check_path_length, change_mode, check_path_pattern_valid, load_json, \
-                                        FileChecker, check_file_or_directory_path
+from msprobe.core.common.file_utils import check_path_length, change_mode, check_path_pattern_valid, load_json, FileChecker
 from msprobe.core.common.const import MonitorConst, FileCheckConst
 from msprobe.core.common.exceptions import MsprobeException
 
@@ -44,7 +43,6 @@ if not torch_version_above_or_equal_2:
     raise ValueError("monitor require torch>=2.0")
 
 output_base_dir = os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
-check_file_or_directory_path(output_base_dir)
 
 class ModuleHookContext:
     def __init__(self, module_name) -> None:
@@ -197,7 +195,6 @@ class TrainerMon:
         self.param_name_list = []
         self.param2name = defaultdict(str)
 
-        self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         if opt_ty is None:
             if self.ur_distribution:
                 raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
@@ -207,6 +204,7 @@ class TrainerMon:
             if opt_ty not in MonitorConst.OPT_TY:
                 raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, \
                                        'Parameter opt_ty must be Megatron_DistributedOptimizer or Megatron_Float16OptimizerWithFloat16Params.')
+        self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
         self.module_struct = defaultdict(dict)
