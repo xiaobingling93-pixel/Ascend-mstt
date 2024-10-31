@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,20 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import collections
 import os
 import re
 import subprocess
 import time
-import json
 from datetime import datetime, timezone
+
+import numpy as np
 
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -68,6 +67,7 @@ class MsprobeBaseException(Exception):
     FUNCTION_CALL_ERROR = 28
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
+    INVALID_KEY_ERROR = 31
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -217,20 +217,24 @@ def md5_find(data):
     return False
 
 
-def struct_json_get(input_param, framework):
-    if framework == Const.PT_FRAMEWORK:
-        prefix = "bench"
-    elif framework == Const.MS_FRAMEWORK:
-        prefix = "npu"
-    else:
-        logger.error("Error framework found.")
-        raise CompareException(CompareException.INVALID_PARAM_ERROR)
+def detect_framework_by_dump_json(file_path):
+    pattern_ms = r'"type":\s*"mindspore'
+    pattern_pt = r'"type":\s*"torch'
+    with FileOpen(file_path, 'r') as file:
+        for line in file:
+            if re.search(pattern_ms, line):
+                return Const.MS_FRAMEWORK
+            if re.search(pattern_pt, line):
+                return Const.PT_FRAMEWORK
+    logger.error(f"{file_path} must be based on the MindSpore or PyTorch framework.")
+    raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    frame_json_path = input_param.get(f"{prefix}_json_path", None)
-    if not frame_json_path:
-        logger.error(f"Please check the json path is valid.")
+
+def get_stack_construct_by_dump_json_path(dump_json_path):
+    if not dump_json_path:
+        logger.error("The path is empty. Please enter a valid path.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
-    directory = os.path.dirname(frame_json_path)
+    directory = os.path.dirname(dump_json_path)
     check_file_or_directory_path(directory, True)
     stack_json = os.path.join(directory, "stack.json")
     construct_json = os.path.join(directory, "construct.json")
@@ -284,7 +288,7 @@ def get_header_index(header_name, dump_mode):
 
 
 def convert_tuple(data):
-    return data if isinstance(data, tuple) else (data, )
+    return data if isinstance(data, tuple) else (data,)
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
@@ -302,6 +306,10 @@ def check_op_str_pattern_valid(string, op_name=None, stack=False):
 def is_invalid_pattern(string):
     pattern = Const.STRING_BLACKLIST
     return re.search(pattern, string)
+
+
+def is_int(x):
+    return isinstance(x, int) and not isinstance(x, bool)
 
 
 def print_tools_ends_info():
@@ -374,3 +382,28 @@ def check_seed_all(seed, mode):
     if not isinstance(mode, bool):
         logger.error("seed_all mode must be bool.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+
+def safe_get_value(container, index, container_name, key=None):
+    try:
+        # 处理字典情况
+        if isinstance(container, dict):
+            return container.get(key)[index]
+        # 处理列表、元组、numpy情况
+        elif isinstance(container, (list, tuple, np.ndarray)):
+            return container[index]
+        else:
+            err_msg = f"Unsupported container type for '{container_name}': {type(container)}"
+            logger.error(err_msg)
+            raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    except KeyError as e:
+        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
+                  f"{container_name} is {container}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e

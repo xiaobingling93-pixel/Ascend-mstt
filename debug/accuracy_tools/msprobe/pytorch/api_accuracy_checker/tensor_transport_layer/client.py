@@ -27,8 +27,8 @@ from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import struct_unpack_mode as unpack_mode, \
-    str_to_bytes_order as bytes_order
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import STRUCT_UNPACK_MODE as unpack_mode, \
+    STR_TO_BYTES_ORDER as bytes_order
 
 MAX_SENDING_QUEUE_SIZE = 20
 

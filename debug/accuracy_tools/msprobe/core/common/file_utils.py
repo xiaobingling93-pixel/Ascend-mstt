@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import csv
 import fcntl
 import os
@@ -217,7 +216,6 @@ def check_common_file_size(file_path):
                 check_file_size(file_path, max_size)
                 return
         check_file_size(file_path, FileCheckConst.COMMOM_FILE_SIZE)
-        
 
 
 def check_file_suffix(file_path, file_suffix):
@@ -365,11 +363,11 @@ def load_json(json_path):
     return data
 
 
-def save_json(json_path, data, indent=None):
+def save_json(json_path, data, indent=None, mode="w"):
     check_path_before_create(json_path)
     json_path = os.path.realpath(json_path)
     try:
-        with FileOpen(json_path, 'w') as f:
+        with FileOpen(json_path, mode) as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(data, f, indent=indent)
             fcntl.flock(f, fcntl.LOCK_UN)
@@ -469,7 +467,7 @@ def save_workbook(workbook, file_path):
 def write_csv(data, filepath, mode="a+", malicious_check=False):
     def csv_value_is_valid(value: str) -> bool:
         if not isinstance(value, str):
-            return True  
+            return True
         try:
             # -1.00 or +1.00 should be consdiered as digit numbers
             float(value)
@@ -477,7 +475,7 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
             # otherwise, they will be considered as formular injections
             return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
         return True
-    
+
     if malicious_check:
         for row in data:
             for cell in row:
@@ -544,6 +542,7 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
+
 
 # 对os.walk设置遍历深度
 def os_walk_for_files(path, depth):

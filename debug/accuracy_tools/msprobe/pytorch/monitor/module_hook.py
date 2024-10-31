@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
@@ -355,7 +353,7 @@ class TrainerMon:
                 c.aggregate()
                 cc_metrics = self.generate_cc_metrics(k, c)
                 for op, m in cc_metrics.items():
-                    metric_dict[op].update(m)
+                    metric_dict.get(op).update(m)
             if not metric_dict:
                 return
             context.metric_list.append(metric_dict)

@@ -154,7 +154,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
     if isinstance(item, dict):
         if 'type' not in item:
             for kwarg in item:
-                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth+1)
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth + 1)
                 item_list += kwarg_parsed_list
                 kwarg_parsed_list.clear()
         elif 'dtype' in item:
@@ -200,7 +200,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
         for j, item_spec in enumerate(item):
-            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth+1)
+            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth + 1)
     return item_list
 
 
@@ -537,8 +537,8 @@ def _compare_parser(parser):
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
-                        help="<optional> The api mapping file path.", required=False)    
+                        help="<optional> The api mapping file path.", required=False)
     parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
                         help="<optional> The data mapping file path.", required=False)
-    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)
