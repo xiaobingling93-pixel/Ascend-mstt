@@ -103,6 +103,7 @@ def run_ut(config):
             api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
         except IndexError:
             logger.error(f"Read {config.result_csv_path} error")
+            raise Exception(f"Read {config.result_csv_path} error")
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -284,7 +285,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             try:
                 grad = gen_args(backward_args, api_name, func_options)[0]
             except IndexError:
-                logger.error(f"Generate grad input for {api_full_name} error")
+                logger.error(f"Error when generating grad input for {api_full_name}")
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
