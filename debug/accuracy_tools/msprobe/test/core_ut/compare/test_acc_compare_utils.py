@@ -5,8 +5,8 @@ import shutil
 import unittest
 import argparse
 from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
-    check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
-    _compare_parser
+    check_and_return_dir_contents, resolve_api_special_parameters, get_rela_diff_summary_mode, \
+    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import Const
 
@@ -279,6 +279,40 @@ class TestUtilsMethods(unittest.TestCase):
         item_list = []
         resolve_api_special_parameters(data_dict, full_op_name, item_list)
         self.assertEqual(item_list, o_result_api_special)
+
+    def test_get_rela_diff_summary_mode_float_or_int(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [1, 1, 1, 1]
+        bench_summary_data = [1, 1, 1, 1]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
+    def test_get_rela_diff_summary_mode_bool(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [True, True, True, True]
+        bench_summary_data = [True, True, True, True]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
+    def test_get_rela_diff_summary_mode_nan(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [float('nan')]
+        bench_summary_data = [float('nan')]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
 
     def test_get_accuracy(self):
         result = []
