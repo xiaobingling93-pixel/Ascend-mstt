@@ -18,8 +18,9 @@ import os
 import re
 import subprocess
 import time
-import json
 from datetime import datetime, timezone
+
+import numpy as np
 
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
@@ -66,6 +67,7 @@ class MsprobeBaseException(Exception):
     FUNCTION_CALL_ERROR = 28
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
+    INVALID_KEY_ERROR = 31
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -380,3 +382,28 @@ def check_seed_all(seed, mode):
     if not isinstance(mode, bool):
         logger.error("seed_all mode must be bool.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+
+def safe_get_value(container, index, container_name, key=None):
+    try:
+        # 处理字典情况
+        if isinstance(container, dict):
+            return container.get(key)[index]
+        # 处理列表、元组、numpy情况
+        elif isinstance(container, (list, tuple, np.ndarray)):
+            return container[index]
+        else:
+            err_msg = f"Unsupported container type for '{container_name}': {type(container)}"
+            logger.error(err_msg)
+            raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    except KeyError as e:
+        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
+                  f"{container_name} is {container}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
