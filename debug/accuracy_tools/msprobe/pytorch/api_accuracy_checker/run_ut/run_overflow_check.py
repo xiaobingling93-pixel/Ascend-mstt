@@ -29,7 +29,8 @@ import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
-from msprobe.core.common.file_utils import check_link
+from msprobe.core.common.file_utils import FileChecker
+from msprobe.core.common.const import FileCheckConst
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.const import Const
@@ -135,8 +136,9 @@ def _run_overflow_check(parser=None):
 def _run_overflow_check_command(args):
     torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     npu_device = "npu:" + str(args.device_id)
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info = api_info_file_checker.common_check()
     try:
         torch.npu.set_device(npu_device)
     except Exception as error:
