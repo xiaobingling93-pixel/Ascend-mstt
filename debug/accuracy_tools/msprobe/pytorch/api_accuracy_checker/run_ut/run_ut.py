@@ -461,7 +461,7 @@ def checked_online_config(online_config):
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
         raise Exception(f"host: {online_config.host} is invalid.")
     if not isinstance(online_config.port, int) or not (0 < online_config.port <= 65535):
-        raise Exception(f"port: {online_config.port} is invalid.")
+        raise Exception(f"port: {online_config.port} is invalid, port range 0-65535.")
 
 
 def run_ut_command(args):

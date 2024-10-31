@@ -69,7 +69,7 @@ class TensorConfig(BaseConfig):
             raise Exception(f"host: {self.host} is invalid.")
 
         if not isinstance(self.port, int) or not (0 < self.port <= 65535):
-            raise Exception(f"port: {self.port} is invalid.")
+            raise Exception(f"port: {self.port} is invalid, port range 0-65535.")
 
 
 class StatisticsConfig(BaseConfig):

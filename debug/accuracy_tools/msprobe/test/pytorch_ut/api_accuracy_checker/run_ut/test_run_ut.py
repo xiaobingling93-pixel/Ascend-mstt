@@ -182,5 +182,5 @@ class TestRunUtOnlineConfig(unittest.TestCase):
         online_config.port = -1
         with self.assertRaises(Exception) as context:
             checked_online_config(online_config)
-        self.assertIn(str(context.exception), f"port: {online_config.port} is invalid.")
+        self.assertIn(str(context.exception), f"port: {online_config.port} is invalid, port range 0-65535.")
         online_config.port = 6123

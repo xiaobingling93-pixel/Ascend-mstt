@@ -148,7 +148,7 @@ class TestTensorConfig(unittest.TestCase):
         self.config.port = -1
         with self.assertRaises(Exception) as context:
             self.config._check_online_run_ut()
-        self.assertIn(str(context.exception), f"port: {self.config.port} is invalid.")
+        self.assertIn(str(context.exception), f"port: {self.config.port} is invalid, port range 0-65535.")
         self.config.port = 6123
 
         # all config right
