@@ -152,7 +152,7 @@ export const LineChart: React.FC<IProps> = (props) => {
           };
         } else if (graph.columns.length <= 6) {
           const datasetTitle = graph.columns.map((item) => item.name);
-          let mergedGERows = graph.row.GE.map(
+          let mergedGERows = graph.rows.GE.map(
             (item: Array<number | null>) => {
               return [item[0], null, null, item[1], item[2]];
             }
