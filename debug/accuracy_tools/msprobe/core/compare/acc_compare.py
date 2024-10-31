@@ -21,7 +21,7 @@ from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid, safe_get_value
 from msprobe.core.common.file_utils import remove_path
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
                                         check_stack_json_str
@@ -103,13 +103,8 @@ class Comparator:
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
         npu_op_name = npu_dict["op_name"]
         bench_op_name = bench_dict["op_name"]
-        try:
-            graph_mode = check_graph_mode(npu_op_name[0], bench_op_name[0])
-        except IndexError as e:
-            err_msg = "index out of bounds error occurs when check op, please check!\n" \
-                      f"npu_op_name is {npu_op_name}, bench_op_name is {bench_op_name}"
-            logger.error(err_msg)
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+        graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
+                                      safe_get_value(bench_op_name, 0, "bench_op_name"))
         
         frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
@@ -225,28 +220,27 @@ class Comparator:
                     input_or_output_list = input_or_output.split(Const.SEP)
                     data_name = merge_list.get('data_name')
                     data_name = data_name[index] if data_name else None
-                    try:
-                        if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
-                            ops_all[input_or_output] = {'struct': merge_list.get('input_struct')[input_index],
-                                                        'summary': merge_list.get('summary')[index],
-                                                        'data_name': data_name,
-                                                        'stack_info': merge_list.get('stack_info')}
-                            input_index += 1
+                    if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
+                        ops_all[input_or_output] = {
+                            CompareConst.STRUCT: safe_get_value(merge_list, input_index, "merge_list",
+                                                                key=CompareConst.INPUT_STRUCT),
+                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                                 key=CompareConst.SUMMARY),
+                            'data_name': data_name,
+                            'stack_info': merge_list.get('stack_info')
+                        }
+                        input_index += 1
 
-                        elif Const.OUTPUT in input_or_output_list:
-                            ops_all[input_or_output] = {'struct': merge_list.get('output_struct')[output_index],
-                                                        'summary': merge_list.get('summary')[index],
-                                                        'data_name': data_name,
-                                                        'stack_info': merge_list.get('stack_info')}
-                            output_index += 1
-                    except IndexError as e:
-                        err_msg = "index out of bounds error occurs when merge_data, please check!\n" \
-                                  f"length of 'op_name' is {len(merge_list['op_name'])}.\n" \
-                                  f"length of 'summary' is {len(merge_list['summary'])}.\n" \
-                                  f"length of 'input_struct' is {len(merge_list['input_struct'])}.\n" \
-                                  f"length of 'output_struct' is {len(merge_list['output_struct'])}.\n"
-                        logger.error(err_msg)
-                        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+                    elif Const.OUTPUT in input_or_output_list:
+                        ops_all[input_or_output] = {
+                            CompareConst.STRUCT: safe_get_value(merge_list, output_index, "merge_list",
+                                                                key=CompareConst.OUTPUT_STRUCT),
+                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                                 key=CompareConst.SUMMARY),
+                            'data_name': data_name,
+                            'stack_info': merge_list.get('stack_info')
+                        }
+                        output_index += 1
         return ops_all
 
     def get_accuracy(self, npu_ops_all, bench_ops_all, dump_mode):
@@ -309,13 +303,7 @@ class Comparator:
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
         npu_bench_name_list = op_name_mapping_dict[npu_op_name]
-        try:
-            data_name = npu_bench_name_list[1]
-        except IndexError as e:
-            err_msg = "index out of bounds error occurs when compare_by_op, please check!\n" \
-                      f"npu_bench_name_list is {npu_bench_name_list}"
-            logger.error(err_msg)
-            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+        data_name = safe_get_value(npu_bench_name_list, 1, "npu_bench_name_list")
         error_file, relative_err, error_flag = None, None, False
         if data_name == '-1' or data_name == -1:  # 没有真实数据路径
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
