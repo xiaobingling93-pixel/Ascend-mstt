@@ -29,6 +29,7 @@ import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.const import FileCheckConst
 from msprobe.pytorch.common.log import logger
@@ -91,7 +92,7 @@ def run_overflow_check(forward_file):
 
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
-    api_type, api_name, _ = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
