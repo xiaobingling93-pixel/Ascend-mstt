@@ -51,7 +51,7 @@ function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
   const rows: TableCellInfo[][] = [];
   let curr_row: TableCellInfo[] = [];
   rows.push(curr_row);
-  Object.keys(gpuInfo.data).forEach(function (node_name) {
+  Object.keys(gpuInfo.data).forEach((node_name) => {
     const node_cell = {
       content: node_name,
       rowspan: 0,
@@ -59,17 +59,17 @@ function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
     };
     const i = rows.length;
     curr_row.push(node_cell);
-    Object.keys(gpuInfo.data[node_name]).forEach(function (pid) {
+    Object.keys(gpuInfo.data[node_name]).forEach((pid) => {
       const pid_cell = { content: pid, rowspan: 0, cellType: 'pid' as const };
       const i = rows.length;
       curr_row.push(pid_cell);
-      Object.keys(gpuInfo.data[node_name][pid]).forEach(function (gpu) {
+      Object.keys(gpuInfo.data[node_name][pid]).forEach((gpu) => {
         const gpu_cell = { content: gpu, rowspan: 0, cellType: 'gpu' as const };
         const i = rows.length;
         curr_row.push(gpu_cell);
-        Object.keys(gpuInfo.data[node_name][pid][gpu]).forEach(function (
+        Object.keys(gpuInfo.data[node_name][pid][gpu]).forEach((
           key_name
-        ) {
+        ) => {
           curr_row.push({
             content: key_name,
             rowspan: 1,
@@ -117,9 +117,9 @@ export const GpuInfoTable: React.FC<IProps> = (props) => {
 
   const renderCell = function (info: TableCellInfo) {
     let cellClass = cellToClass[info.cellType];
-    let content = info.cellType == 'key' ? info.content + ':' : info.content;
+    let content = info.cellType === 'key' ? `${info.content}:` : info.content;
     return (
-      <td className={classes.td + ' ' + cellClass} rowSpan={info.rowspan}>
+      <td className={`${classes.td} ${cellClass}`} rowSpan={info.rowspan}>
         {content}
       </td>
     );

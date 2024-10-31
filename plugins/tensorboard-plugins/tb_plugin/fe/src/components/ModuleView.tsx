@@ -44,9 +44,11 @@ const getKeyedTableColumns = (columns: KeyedColumn[]) => {
 };
 
 const getTableRows = (key: number, rows: ModuleStats[]) => {
+  let initialKey = key;
   return rows.map((row) => {
+    const currentKey = initialKey++
     const data: any = {
-      key: key++,
+      key: currentKey,
       name: row.name,
       occurences: row.occurences,
       operators: row.operators,
@@ -81,7 +83,7 @@ const getFlameGraphData = (rows: ModuleStats[]) => {
 };
 
 const getTreeHeight = (row: ModuleStats): number => {
-  if (row.children && row.children.length) {
+  if (row.children?.length) {
     return 1 + Math.max(...row.children.map((child) => getTreeHeight(child)));
   } else {
     return 1;

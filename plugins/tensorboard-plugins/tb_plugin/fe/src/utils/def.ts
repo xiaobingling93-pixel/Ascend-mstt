@@ -13,6 +13,6 @@ export function assertDef<T>(v: T | undefined | null): asserts v is T {
 }
 
 export function firstOrUndefined<T>(v: T[] | undefined): T | undefined {
-  if (!v || !v.length) return undefined;
+  if (!v || !v.length) {return undefined;}
   return v[0];
 }
