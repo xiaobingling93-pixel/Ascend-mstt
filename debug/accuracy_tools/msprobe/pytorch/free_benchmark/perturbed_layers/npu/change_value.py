@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import torch
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
 from msprobe.pytorch.free_benchmark.common.params import DataParams
@@ -29,6 +30,7 @@ class ChangeValueLayer(NpuBaseLayer):
         self.head: int = 0
         self.tail: int = -1
 
+    @recursion_depth_decorator("FreeBenchmark: ChangeValueLayer.change_value")
     def change_value(self, tensor_obj):
         """
         交换张量首尾
