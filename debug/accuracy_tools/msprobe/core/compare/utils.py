@@ -310,17 +310,6 @@ def result_item_init(n_info, b_info, dump_mode):
     return result_item
 
 
-def add_data_name(result_item, npu_data_name, n_start, index):
-    try:
-        result_item.append(npu_data_name[n_start + index])
-    except IndexError as e:
-        err_msg = "index out of bounds error occurs, please check!\n" \
-                  f"npu_data_name is {npu_data_name}"
-        logger.error(err_msg)
-        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    return result_item
-
-
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -333,8 +322,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-            n_name = safe_get_value(n_dict, "op_name", n_start+index, "n_dict")
-            b_name = safe_get_value(b_dict, "op_name", b_start+index, "b_dict")
+            n_name = safe_get_value(n_dict, "op_name", n_start + index, "n_dict")
+            b_name = safe_get_value(b_dict, "op_name", b_start + index, "b_dict")
             n_struct = safe_get_value(n_dict, key, index, "n_dict")
             b_struct = safe_get_value(b_dict, key, index, "b_dict")
             err_msg = ""
@@ -348,8 +337,8 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result.append(result_item)
                 continue
 
-            npu_summary_data = safe_get_value(n_dict, CompareConst.SUMMARY, n_start+index, "n_dict")
-            bench_summary_data = safe_get_value(b_dict, CompareConst.SUMMARY, b_start+index, "b_dict")
+            npu_summary_data = safe_get_value(n_dict, CompareConst.SUMMARY, n_start + index, "n_dict")
+            bench_summary_data = safe_get_value(b_dict, CompareConst.SUMMARY, b_start + index, "b_dict")
             result_item.extend(process_summary_data(npu_summary_data))
             result_item.extend(process_summary_data(bench_summary_data))
 
@@ -361,7 +350,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             result_item.append(err_msg)
             result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
-                result_item = add_data_name(result_item, npu_data_name, n_start, index)
+                result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
 
             result.append(result_item)
 
@@ -396,7 +385,7 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
                 result_item.append(err_msg)
                 result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
-                    result_item = add_data_name(result_item, npu_data_name, n_start, index)
+                    result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
 
                 result.append(result_item)
 
