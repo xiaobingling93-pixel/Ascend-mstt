@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,20 +12,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import collections
 import os
 import re
 import subprocess
 import time
-import json
+from collections import defaultdict
 from datetime import datetime, timezone
+from functools import wraps
+
+import numpy as np
 
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -68,6 +69,7 @@ class MsprobeBaseException(Exception):
     FUNCTION_CALL_ERROR = 28
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
+    INVALID_KEY_ERROR = 31
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -288,7 +290,7 @@ def get_header_index(header_name, dump_mode):
 
 
 def convert_tuple(data):
-    return data if isinstance(data, tuple) else (data, )
+    return data if isinstance(data, tuple) else (data,)
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
@@ -355,7 +357,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
     real_step_or_rank = []
     for element in step_or_rank_input:
-        if not isinstance(element, (int, str)):
+        if not is_int(element) and not isinstance(element, str):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
@@ -372,7 +374,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 
 
 def check_seed_all(seed, mode):
-    if isinstance(seed, int):
+    if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
             logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
@@ -382,3 +384,56 @@ def check_seed_all(seed, mode):
     if not isinstance(mode, bool):
         logger.error("seed_all mode must be bool.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+
+
+def safe_get_value(container, index, container_name, key=None):
+    try:
+        # 处理字典情况
+        if isinstance(container, dict):
+            return container.get(key)[index]
+        # 处理列表、元组、numpy情况
+        elif isinstance(container, (list, tuple, np.ndarray)):
+            return container[index]
+        else:
+            err_msg = f"Unsupported container type for '{container_name}': {type(container)}"
+            logger.error(err_msg)
+            raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+    except IndexError as e:
+        err_msg = "index out of bounds error occurs, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+    except KeyError as e:
+        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
+                  f"{container_name} is {container}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
+
+# 记录工具函数递归的深度
+recursion_depth = defaultdict(int)
+
+# 装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。
+def recursion_depth_decorator(func_info):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func_id = id(func)
+            recursion_depth[func_id] += 1
+            if recursion_depth[func_id] > Const.MAX_DEPTH:
+                msg = f"call {func_info} exceeds the recursion limit."
+                logger.error_log_with_exp(
+                    msg,
+                    MsprobeException(
+                        MsprobeException.RECURSION_LIMIT_ERROR, msg
+                    ),
+                )
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                recursion_depth[func_id] -= 1
+            return result
+
+        return wrapper
+
+    return decorator
