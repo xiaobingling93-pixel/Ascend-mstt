@@ -383,11 +383,10 @@ def check_seed_all(seed, mode):
 
 
 def safe_get_value(container, index, container_name, key=None):
-    """Fetches a value from a container by key/index, handling IndexError."""
     try:
         # 处理字典情况
         if isinstance(container, dict):
-            return container[key][index]
+            return container.get(key)[index]
         # 处理列表、元组、numpy情况
         elif isinstance(container, (list, tuple, np.ndarray)):
             return container[index]
