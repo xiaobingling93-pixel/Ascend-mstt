@@ -18,10 +18,11 @@ from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
 from msprobe.core.common.const import Const
 
-
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
-    r'^(Module.|Cell.)',  # NodeOp.module
+    # NodeOp.module
+    r'^(Module.|Cell.)',
+    # NodeOp.function_api
     r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
 ]
 

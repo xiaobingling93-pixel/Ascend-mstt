@@ -260,10 +260,10 @@ class RunProfileData(object):
                     try:
                         trace_json = json.loads(fout.getvalue())
                         logger.warning('Get JSONDecodeError: %s, Re-encode it to temp file' % e.msg)
-                        json_reencode = True
                     except JSONDecodeError:
                         logger.error(f'File "{trace_path}" is not in a legal JSON format and will be skipped.')
                         return trace_path, {}
+                    json_reencode = True
 
         # work-around to remove the 'Record Window End' events to avoid the huge end timestamp
         if device_target == 'Ascend':

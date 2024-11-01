@@ -24,6 +24,7 @@ from msprobe.core.common.utils import get_header_index
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst, Const
+from msprobe.core.common.utils import safe_get_value
 
 
 class HighlightCheck(abc.ABC):
@@ -193,7 +194,8 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     last_api_name, last_state = None, None
     num, last_len = 0, 0
     for res_i in result:
-        api_name, state = get_name_and_state(res_i[0])
+        api_full_name = safe_get_value(res_i, 0, "res_i")
+        api_name, state = get_name_and_state(api_full_name)
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
@@ -234,7 +236,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     for i, row in enumerate(result_df.iterrows(), start=2):
         for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)):
+            if not isinstance(value, (float, int)) or isinstance(value, bool):
                 value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
             if not csv_value_is_valid(value):
                 raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "

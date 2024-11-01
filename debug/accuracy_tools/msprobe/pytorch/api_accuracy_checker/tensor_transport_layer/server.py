@@ -24,7 +24,7 @@ from twisted.internet import reactor, protocol, endpoints
 
 from msprobe.pytorch.common.utils import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import cipher_list, \
-    struct_unpack_mode as unpack_mode, str_to_bytes_order as bytes_order
+    STRUCT_UNPACK_MODE as unpack_mode, STR_TO_BYTES_ORDER as bytes_order
 
 
 class TCPServer:
@@ -40,22 +40,14 @@ class TCPServer:
     def run_reactor():
         reactor.run(installSignalHandlers=False)
 
-    def check_tls_path(self):
-        server_key = os.path.join(self.tls_path, "server.key")
-        server_crt = os.path.join(self.tls_path, "server.crt")
-        if not os.path.exists(server_key):
-            raise Exception(f"server_key: {server_key} is not exists.")
-        if not os.path.exists(server_crt):
-            raise Exception(f"server_crt: {server_crt} is not exists.")
-        return server_key, server_crt
-
     def start(self):
         self.factory.protocol = self.build_protocol
 
         if self.tls_path:
             from OpenSSL import SSL
             from twisted.internet import ssl
-            server_key, server_crt = self.check_tls_path()
+            server_key = os.path.join(self.tls_path, "server.key")
+            server_crt = os.path.join(self.tls_path, "server.crt")
             server_context_factory = ssl.DefaultOpenSSLContextFactory(server_key, server_crt, SSL.TLSv1_2_METHOD)
             server_context_ = server_context_factory.getContext()
             server_context_.set_cipher_list(cipher_list)

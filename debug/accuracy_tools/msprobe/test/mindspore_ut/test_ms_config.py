@@ -36,8 +36,7 @@ class TestMsConfig(unittest.TestCase):
                 "summary_mode": "statistics"
             }
         }
-        with patch("msprobe.mindspore.ms_config.FileOpen", mock_open(read_data='')), \
-             patch("msprobe.mindspore.ms_config.json.load", return_value=mock_json_data):
+        with patch("msprobe.mindspore.ms_config.load_json", return_value=mock_json_data):
             common_config, task_config = parse_json_config("./config.json")
         self.assertEqual(common_config.task, Const.STATISTICS)
         self.assertEqual(task_config.data_mode, ["all"])

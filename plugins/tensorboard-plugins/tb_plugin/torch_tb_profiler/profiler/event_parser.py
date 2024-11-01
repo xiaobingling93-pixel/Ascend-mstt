@@ -33,9 +33,6 @@ class ProfileRole(IntEnum):
 
 class NodeParserMixin:
     def __init__(self, *args, **kwargs):
-        """Please refer to https://stackoverflow.com/questions/9575409/calling-parent-class-init-with-multiple-inheritance-whats-the-right-way # noqa: E501
-        to see the reason why we need call super().__init__ like this way
-        """
         super().__init__(*args, **kwargs)
 
         self.communication_data: Dict[int, CommunicationNode] = {}
@@ -402,7 +399,7 @@ class StepParser:
 class EventParser(NodeParserMixin, StepParser):
     def __init__(self):
         super().__init__()
-        self.comm_node_list: Dict[CommunicationNode] = None
+        self.comm_node_list: List[CommunicationNode] = None
 
     def parse(self, events: Iterable[BaseEvent], fwd_bwd_map: Dict[int, int]) -> Dict[int, List[OperatorNode]]:
         with utils.timing('EventParser: parse nodes'):
@@ -439,10 +436,10 @@ class EventParser(NodeParserMixin, StepParser):
             header = f'[{ctx.tid}]' + '.'.join(ctx.name_stack[1:])  # omit the CallTreeRoot
             prefix_len = len(ctx.name_stack) * 4 - 4 - 1
             if len(ctx.name_stack) > 1:
-                print(header)
+                logger.info(header)
                 prefix = ' ' * prefix_len
-                print(prefix, node.name)
-                print(prefix, 'time:', node.start_time, '-->', node.end_time)
+                logger.info(prefix, node.name)
+                logger.info(prefix, 'time:', node.start_time, '-->', node.end_time)
 
         def push(node: OperatorNode):
             ctx.name_stack.append(node.name)
