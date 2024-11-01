@@ -1,4 +1,5 @@
 import os
+import shutil
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -86,8 +87,8 @@ class TestTensorConfig(unittest.TestCase):
 
     def setUp(self):
         self.json_config = {
-            "online_run_ut": True,
-            "host": "localhost",
+            "online_run_ut": False,
+            "host": "127.0.0.1",
             "port": 8080
         }
         self.config = TensorConfig(self.json_config)
@@ -105,24 +106,53 @@ class TestTensorConfig(unittest.TestCase):
             self.config._check_file_format()
         self.assertIn(str(context.exception), "file_format is invalid")
 
-    @patch('os.path.exists')
-    def test_check_tls_path_config_exists(self, mock_exists):
-        mock_exists.return_value = True
-        self.config.tls_path = "/valid/path"
-        try:
-            self.config._check_tls_path_config()
-        except Exception as e:
-            self.fail(f"Unexpected exception raised: {e}")
-        mock_exists.assert_called_once_with("/valid/path")
-
-    @patch('os.path.exists')
-    def test_check_tls_path_config_not_exists(self, mock_exists):
-        mock_exists.return_value = False
-        self.config.tls_path = "/invalid/path"
+    def test_check_online_run_ut(self):
+        self.config.online_run_ut = "True"
         with self.assertRaises(Exception) as context:
-            self.config._check_tls_path_config()
-        self.assertEqual(str(context.exception), "tls_path: /invalid/path does not exist")
-        mock_exists.assert_called_once_with("/invalid/path")
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), f"online_run_ut: {self.config.online_run_ut} is invalid.")
+        self.config.online_run_ut = True
+
+        self.config.online_run_ut_recompute = "True"
+        with self.assertRaises(Exception) as context:
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), f"online_run_ut_recompute: {self.config.online_run_ut} is invalid.")
+        self.config.online_run_ut_recompute = False
+
+        self.config.nfs_path = "./nfs_path"
+        with self.assertRaises(Exception) as context:
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), "[msprobe] 非法文件路径： ")
+        self.config.nfs_path = ""
+
+        self.config.tls_path = "./tls_path"
+        with self.assertRaises(Exception) as context:
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), "[msprobe] 非法文件路径： ")
+
+        os.makedirs(self.config.tls_path)
+        with open(os.path.join(self.config.tls_path, "client.key"), 'w') as file:
+            file.write("1")
+        with open(os.path.join(self.config.tls_path, "client.crt"), 'w') as file:
+            file.write("1")
+        self.config._check_online_run_ut()
+        shutil.rmtree(self.config.tls_path)
+        self.config.tls_path = ""
+
+        self.config.host = "invalid_host"
+        with self.assertRaises(Exception) as context:
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), f"host: {self.config.host} is invalid.")
+        self.config.host = "127.0.0.1"
+
+        self.config.port = -1
+        with self.assertRaises(Exception) as context:
+            self.config._check_online_run_ut()
+        self.assertIn(str(context.exception), f"port: {self.config.port} is invalid, port range 0-65535.")
+        self.config.port = 6123
+
+        # all config right
+        self.config._check_online_run_ut()
 
 
 class TestStatisticsConfig(unittest.TestCase):

@@ -1,6 +1,7 @@
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -11,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 import stat
 
@@ -24,6 +25,7 @@ class Const:
     """
     TOOL_NAME = "msprobe"
 
+    ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
@@ -108,6 +110,7 @@ class Const:
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
     MS_FRAMEWORK = "mindspore"
+    UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
@@ -128,20 +131,24 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
-
     STACK_FUNC_INDEX = 2
-
     STACK_FUNC_ELE_INDEX = 1
 
-    CONSTRUCT_NAME_INDEX = -3
+    SCOPE_ID_INDEX = -1
+    SCOPE_DIRECTION_INDEX = -2
+    TYPE_NAME_INDEX = -3
+    LAYER_NAME_INDEX = -4
+    API_TYPE_INDEX = 0
+    LEFT_MOVE_INDEX = -1
+    RIGHT_MOVE_INDEX = 1
 
-    NAME_FIRST_POSSIBLE_INDEX = -4
-
-    NAME_SECOND_POSSIBLE_INDEX = -5
+    TOP_LAYER = "TopLayer"
+    CELL = "Cell"
+    MODULE = "Module"
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
@@ -430,6 +437,7 @@ class MsgConst:
 
         class ERROR:
             value = 3
+
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
     NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
