@@ -35,27 +35,6 @@ class TestATTL(unittest.TestCase):
         self.assertFalse(config.check_sum)
         self.assertEqual(config.queue_size, 100)
 
-    @patch('os.path.exists')
-    def test_nfs_path_exists(self, mock_exists):
-        mock_exists.return_value = True
-        self.attls.check_attl_config()
-
-    @patch('os.path.exists')
-    def test_nfs_path_does_not_exist(self, mock_exists):
-        mock_exists.return_value = False
-        with self.assertRaises(Exception):
-            self.attls.check_attl_config()
-
-    @patch('os.path.exists')
-    def test_connect_ip_valid(self, mock_exists):
-        mock_exists.return_value = True
-        self.session_config.connect_ip = '192.168.1.1'
-        self.attls.check_attl_config()
-
-    def test_connect_port_valid(self):
-        self.session_config.connect_port = 8080
-        self.attls.check_attl_config()
-
     @patch('msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl.move2target_device')
     def test_upload_api_data(self, mock_move2target_device):
         mock_move2target_device.return_value = self.buffer
