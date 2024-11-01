@@ -117,7 +117,7 @@ def check_compare_param(input_param, output_path, dump_mode):
     npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
     bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
     stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
-    if not (npu_json_type_check, bench_json_type_check, stack_json_type_check):
+    if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
         logger.error("Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 

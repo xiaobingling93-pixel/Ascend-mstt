@@ -39,7 +39,8 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
-                                       struct_json_get)
+                                       struct_json_get,
+                                       is_json_file)
 
 
 class TestUtils(TestCase):
@@ -352,3 +353,9 @@ class TestUtils(TestCase):
         stack, construct = struct_json_get(input_param, framework)
         self.assertEqual(stack, {'stack_key': 'stack_value'})
         self.assertEqual(construct, {'construct_key': 'construct_value'})
+
+    def test_is_json_file(self):
+        file_path_true = 'step/rank/stack.json'
+        file_path_false = 1
+        self.assertTrue(is_json_file(file_path_true))
+        self.assertFalse(is_json_file(file_path_false))
