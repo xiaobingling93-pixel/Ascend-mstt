@@ -46,7 +46,7 @@ const getKeyedTableColumns = (columns: KeyedColumn[]) => {
 const getTableRows = (key: number, rows: ModuleStats[]) => {
   let initialKey = key;
   return rows.map((row) => {
-    const currentKey = initialKey++
+    const currentKey = initialKey++;
     const data: any = {
       key: currentKey,
       name: row.name,

@@ -89,7 +89,7 @@ export const SteppedAreaChart: React.FC<IProps> = (props) => {
       }),
     };
 
-    if(options) {
+    if (options) {
       chart.setOption(options, true);
     };
 

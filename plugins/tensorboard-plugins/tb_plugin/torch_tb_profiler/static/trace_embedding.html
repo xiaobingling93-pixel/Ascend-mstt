@@ -54,7 +54,6 @@ found in the LICENSE file.
 
             window.addEventListener('message', event => {
                 const data = event.data || {};
-                console.log(data);
                 name = data.name || 'unknown'
                 onResult(data.data)
             })

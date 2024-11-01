@@ -154,7 +154,7 @@ export const PieChart: React.FC<IProps> = (props) => {
       ],
     };
 
-    if(option) {
+    if (option) {
       chart.setOption(option, true);
     };
 
