@@ -170,23 +170,28 @@ class PtdbgDispatch(TorchDispatchMode):
         cpu_kwargs = []
         data_to_cpu(args, 0, cpu_args)
         data_to_cpu(kwargs, 0, cpu_kwargs)
-        try:
+        
+        if cpu_args:
             cpu_args = cpu_args[0]
-        except IndexError:
+        else:
             logger.error("The index of cpu_args is out of range, please check the input args!")
-        try:
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
+
+        if cpu_kwargs:
             cpu_kwargs = cpu_kwargs[0]
-        except IndexError:
+        else:
             logger.error("The index of cpu_kwargs is out of range, please check the input kwargs!")
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
 
         with TimeStatistics("NPU RUN", run_param):
             npu_out = func(*args, **kwargs)
         npu_out_cpu = []
         data_to_cpu(npu_out, 0, npu_out_cpu)
-        try:
+        if npu_out_cpu:
             npu_out_cpu = npu_out_cpu[0]
-        except IndexError:
+        else:
             logger.error("The index of npu_out_cpu is out of range, please check the output!")
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
 
         with TimeStatistics("CPU RUN", run_param):
             cpu_out = func(*cpu_args, **cpu_kwargs)
