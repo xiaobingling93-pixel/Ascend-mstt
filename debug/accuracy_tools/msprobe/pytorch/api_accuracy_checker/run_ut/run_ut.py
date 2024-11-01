@@ -282,10 +282,12 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             func_options = {
                 'real_data_path': real_data_path
             }
-            try:
-                grad = gen_args(backward_args, api_name, func_options)[0]
-            except IndexError:
+            grad = gen_args(backward_args, api_name, func_options)
+            if grad:
+                grad = grad[0]
+            else:
                 logger.error(f"Error when generating grad input for {api_full_name}")
+                raise IndexError("Error when generating grad input for %s" % api_full_name)
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -293,14 +295,16 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
-        try:
+        if out:
             out = out[0]
-        except IndexError:
+        else:
             logger.error(f"API {api_name} bench output is empty, please check the output.")
-        try:
+            raise IndexError(f"API {api_name} bench output is empty, please check the output.")
+        if device_out:
             device_out = device_out[0]
-        except IndexError:
+        else:
             logger.error(f"API {api_name} device output is empty, please check the output.")
+            raise IndexError(f"API {api_name} device output is empty, please check the output.")
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
@@ -340,6 +344,7 @@ def run_backward(args, grad, grad_index, out):
             out[grad_index].backward(grad)
         except IndexError:
             logger.error(f"Run backward error when grad_index is {grad_index}")
+            raise IndexError(f"Run backward error when grad_index is {grad_index}")
     else:
         out.backward(grad)
     args_grad = []
