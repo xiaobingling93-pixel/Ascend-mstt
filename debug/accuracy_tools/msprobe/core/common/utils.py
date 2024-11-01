@@ -99,6 +99,13 @@ class DumpException(MsprobeBaseException):
         return f"Dump Error Code {self.code}: {self.error_info}"
 
 
+def is_json_file(file_path):
+    if isinstance(file_path, str) and file_path.lower().endswith('.json'):
+        return True
+    else:
+        return False
+
+
 def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
@@ -106,6 +113,13 @@ def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(output_path, str):
         logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
+    bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
+    stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
+    if not (npu_json_type_check, bench_json_type_check, stack_json_type_check):
+        logger.error("Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     check_file_or_directory_path(input_param.get("npu_json_path"), False)
     check_file_or_directory_path(input_param.get("bench_json_path"), False)
@@ -243,8 +257,7 @@ def struct_json_get(input_param, framework):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    stack_path = input_param.get("stack_json_path", None)
-    if not (npu_path and bench_path and stack_path):
+    if not npu_path or not bench_path:
         logger.error(f"Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
