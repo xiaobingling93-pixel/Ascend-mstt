@@ -51,6 +51,8 @@ class GraphComparator:
         compare_out_dict = {}
         # input和output对比数据分开
         for item in compare_result_list:
+            if not isinstance(item, (list, tuple)) or not item:
+                continue
             if not node.stack_info and node.id in item[0]:
                 if isinstance(item[-1], list):
                     node.stack_info = item[-1]
