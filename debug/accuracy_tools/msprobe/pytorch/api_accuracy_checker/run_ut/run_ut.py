@@ -340,11 +340,10 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
-        try:
-            out[grad_index].backward(grad)
-        except IndexError:
+        if grad_index >= len(out):
             logger.error(f"Run backward error when grad_index is {grad_index}")
             raise IndexError(f"Run backward error when grad_index is {grad_index}")
+        out[grad_index].backward(grad)
     else:
         out.backward(grad)
     args_grad = []
