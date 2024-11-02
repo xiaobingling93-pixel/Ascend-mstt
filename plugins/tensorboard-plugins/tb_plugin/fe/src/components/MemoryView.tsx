@@ -108,7 +108,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
 
   // for backward compatability, old profile do not have events to show
   const showEvents = () => {
-    return memoryEventsData && Object.keys(memoryEventsData.rows).length != 0;
+    return memoryEventsData && Object.keys(memoryEventsData.rows).length !== 0;
   };
   const [memoryEventsData, setMemoryEventsData] = React.useState<
     MemoryEventsData | undefined
@@ -116,7 +116,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
 
   // for backward compatability, old profile do not have curve to show
   const showCurve = () => {
-    return memoryCurveData && Object.keys(memoryCurveData.rows).length != 0;
+    return memoryCurveData && Object.keys(memoryCurveData.rows).length !== 0;
   };
   const [memoryCurveData, setMemoryCurveData] = React.useState<
     MemoryCurveData | MemoryCurveDataAscend | undefined
@@ -158,7 +158,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
       return -1;
     }
     for (let i = 0; i < memoryStatsData.columns.length; i++) {
-      if (memoryStatsData.columns[i].name == memoryStatsData.metadata.search) {
+      if (memoryStatsData.columns[i].name === memoryStatsData.metadata.search) {
         return i;
       }
     }
@@ -166,7 +166,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
   };
 
   const getStep = (size: number, indexBias: number) => {
-    return 10 ** (Math.floor(Math.log10(size != 0 ? size : 1)) - indexBias);
+    return 10 ** (Math.floor(Math.log10(size !== 0 ? size : 1)) - indexBias);
   };
 
   const filterByEventSize = <T,>(
@@ -415,8 +415,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
     } else {
       let bias = memoryCurveData?.metadata.first_ts ?? 0;
       let scale = 1 / (memoryCurveData?.metadata.time_factor ?? 1);
-      startTs = Math.round(allDatas[realStart][0] * scale + bias);
-      endTs = Math.round(allDatas[realEnd][0] * scale + bias);
+      startTs = Math.round((allDatas[realStart][0] * scale) + bias);
+      endTs = Math.round((allDatas[realEnd][0] * scale) + bias);
     }
 
     setSelectedRange({ start, end, startTs, endTs });
