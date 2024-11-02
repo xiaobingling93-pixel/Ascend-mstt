@@ -8,7 +8,6 @@ from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
-# from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
 from msprobe.core.common.file_utils import check_file_or_directory_path

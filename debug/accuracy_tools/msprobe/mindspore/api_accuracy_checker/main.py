@@ -18,7 +18,7 @@ from msprobe.mindspore.api_accuracy_checker.cmd_parser import check
 
 
 def api_checker_main(args):
-    check(args) #对绝对/非绝对路径进行校验测试，是否软连接校验
+    check(args)
     api_accuracy_checker = ApiAccuracyChecker(args)
     api_accuracy_checker.parse(args.api_info_file)
     api_accuracy_checker.run_and_compare()
