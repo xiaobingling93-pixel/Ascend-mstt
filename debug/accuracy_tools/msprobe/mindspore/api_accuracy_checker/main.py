@@ -14,11 +14,15 @@
 # limitations under the License.
 
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker
+from msprobe.mindspore.api_accuracy_checker.cmd_parse import check
 
 
 def api_checker_main(args):
-    api_accuracy_checker = ApiAccuracyChecker()
+    check(args)
+    api_accuracy_checker = ApiAccuracyChecker(args)
     api_accuracy_checker.parse(args.api_info_file)
     api_accuracy_checker.run_and_compare()
-    api_accuracy_checker.to_detail_csv(args.out_path)
-    api_accuracy_checker.to_result_csv(args.out_path)
+    print("Final arguments after check:")
+    print(f"api_info_file: {args.api_info_file}")
+    print(f"out_path: {args.out_path}")
+    print(f"result_csv_path: {args.result_csv_path}")

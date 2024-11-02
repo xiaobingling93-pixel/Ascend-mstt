@@ -13,9 +13,39 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
+
+from msprobe.core.common.file_utils import check_file_or_directory_path
+
+
 def add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
                         help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.")
     parser.add_argument("-o", "--out_path", dest="out_path", default="./", type=str, required=False,
                         help="<optional> The ut task result out path.")
+    parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
+                        help="<optional> the exit csv for continue")
+
+
+def check(args):
+    if args.api_info_file is None:
+        raise ValueError("api_info_file is required")
+    args.api_info_file = os.path.abspath(args.api_info_file)
+    check_file_or_directory_path(args.api_info_file)
+    print(f"Updated api_info_file: {args.api_info_file}")  # 打印检查
+
+    if args.out_path is None:
+        args.out_path = "./"
+    args.out_path = os.path.abspath(args.out_path)
+    check_file_or_directory_path(args.out_path)
+    print(f"Updated out_path: {args.out_path}")  # 打印检查
+
+    if args.result_csv_path is None:
+        args.result_csv_path = ""
+    else:
+        args.result_csv_path = os.path.abspath(args.result_csv_path)
+        print(f"Updated result_csv_path: {args.result_csv_path}")  # 打印检查
+        check_file_or_directory_path(args.result_csv_path)
+#       后续考虑对文件内容做校验
