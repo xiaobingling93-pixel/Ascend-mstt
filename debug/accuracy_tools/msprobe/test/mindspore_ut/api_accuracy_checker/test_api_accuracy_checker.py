@@ -77,7 +77,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         modify_tensor_api_info_json(api_info_tensor_path, result_directory)
 
         # 初始化 Args 类，提供三个路径参数
-        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory)  
+        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory)
 
         api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_tensor_path)

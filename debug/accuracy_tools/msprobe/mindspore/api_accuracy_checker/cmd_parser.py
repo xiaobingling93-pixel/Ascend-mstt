@@ -34,18 +34,15 @@ def check(args):
         raise ValueError("api_info_file is required")
     args.api_info_file = os.path.abspath(args.api_info_file)
     check_file_or_directory_path(args.api_info_file)
-    print(f"Updated api_info_file: {args.api_info_file}")  # 打印检查
 
     if args.out_path is None:
         args.out_path = "./"
     args.out_path = os.path.abspath(args.out_path)
     check_file_or_directory_path(args.out_path, isdir=True)
-    print(f"Updated out_path: {args.out_path}")  # 打印检查
 
     if args.result_csv_path is None:
         args.result_csv_path = ""
     else:
         args.result_csv_path = os.path.abspath(args.result_csv_path)
-        print(f"Updated result_csv_path: {args.result_csv_path}")  # 打印检查
         check_file_or_directory_path(args.result_csv_path)
 #       后续考虑对文件内容做校验
