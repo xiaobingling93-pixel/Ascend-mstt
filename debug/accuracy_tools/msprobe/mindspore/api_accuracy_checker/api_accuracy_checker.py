@@ -50,8 +50,6 @@ class ResultCsvEntry:
 class ApiAccuracyChecker:
     def __init__(self, args):
         self.api_infos = dict()
-        # self.results = dict()
-        # self.is_first_write = True  # 仅用于首次写入时添加表头
         self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
 
     @staticmethod
@@ -167,11 +165,8 @@ class ApiAccuracyChecker:
     def run_and_compare(self):
         for api_name_str, api_info in self.api_infos.items():
             if not self.data_manager.is_unique_api(api_name_str):
-                logger.warning(f"Processing API1: {api_name_str}")
-                logger.warning(f"Processing api_info1: {api_info}")
                 continue
-            logger.warning(f"Processing API2: {api_name_str}")
-            logger.warning(f"Processing api_info2: {api_info}")
+
             if not api_info.check_forward_info():
                 logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
                 continue
@@ -188,17 +183,12 @@ class ApiAccuracyChecker:
             except Exception as e:
                 logger.warning(f"exception occurs when running and comparing {api_name_str} forward api. "
                                f"detailed exception information: {e}.")
-            # self.record(forward_output_list)
             self.data_manager.record(forward_output_list)
 
             if not api_info.check_backward_info():
+                self.data_manager.save_results(api_name_str)  # 不存在反向，则直接保存前向结果
+
                 logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
-
-                logger.info(f"Result summary for {api_name_str} written toqian1 .")
-
-                self.data_manager.save_results(api_name_str)
-
-                logger.warning(f"Detailed output for {api_name_str} written tqian2.")
                 continue
             try:
                 backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
@@ -213,24 +203,8 @@ class ApiAccuracyChecker:
             except Exception as e:
                 logger.warning(f"exception occurs when running and comparing {api_name_str} backward api. "
                                f"detailed exception information: {e}.")
-            # self.record(backward_output_list)
             self.data_manager.record(backward_output_list)
-            logger.info(f"Result summary for {api_name_str} written to3 .")
 
             self.data_manager.save_results(api_name_str)
 
-            logger.warning(f"Detailed output for {api_name_str} written t4.")
 
-            # # 每次API完成后立刻落盘
-            # logger.info("Starting to write detailed output to CSV.")
-            # # self.to_detail_csv(detail_out_path)
-            # self.data_manager.to_detail_csv(detail_out_path)
-            # logger.info(f"Detailed output for {api_name_str} written to {detail_out_path}.")
-
-            # logger.info("Starting to write result summary to CSV.")
-            # self.data_manager.to_result_csv(result_out_path)
-            # # self.to_result_csv(result_out_path)
-
-            # self.data_manager.clear_results()
-            # self.clear_results()
-            # 调用 save_results 落盘并清理

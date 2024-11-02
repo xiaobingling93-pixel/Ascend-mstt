@@ -11,6 +11,7 @@ from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compar
 # from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
+from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.mindspore.common.log import logger
 
 
@@ -25,12 +26,43 @@ class ResultCsvEntry:
         # 需要转换为绝对路径
 
 
+def write_csv_header_if_first_time(csv_path, header_func):
+    """如果是第一次写入，则写入 CSV 表头"""
+    header = header_func()  # 获取表头
+    logger.debug(f"Writing CSV header: {header}")
+    write_csv([header], csv_path, mode="a+")
+
+
+def get_result_csv_header():
+    """获取结果 CSV 文件的表头"""
+    return [
+        MsCompareConst.DETAIL_CSV_API_NAME,
+        MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
+        MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
+        MsCompareConst.DETAIL_CSV_MESSAGE,
+    ]
+
+
+def get_detail_csv_header():
+    """获取详细 CSV 文件的表头"""
+    detail_csv_header_basic_info = [
+        MsCompareConst.DETAIL_CSV_API_NAME,
+        MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
+        MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
+        MsCompareConst.DETAIL_CSV_SHAPE,
+    ]
+    detail_csv_header_compare_result = list(compare_algorithms.keys())
+    detail_csv_header_status = [
+        MsCompareConst.DETAIL_CSV_PASS_STATUS,
+        MsCompareConst.DETAIL_CSV_MESSAGE,
+    ]
+    return detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
+
+
 class DataManager:
     def __init__(self, csv_dir, result_csv_path):
         self.results = {}
         self.is_first_write = True  # 标记用于添加表头
-        # self.detail_out_path = None
-        # self.result_out_path = None
         self.csv_dir = csv_dir
         self.api_names_set = set()  # 存储已经出现的 API 名称的集合
         # 如果传入了 result_csv_path，则启用断点续检
@@ -49,18 +81,15 @@ class DataManager:
             reader = csv.reader(csv_file)
             headers = next(reader, None)  # 读取标题行
 
-            # 打印标题行内容以进行调试
-            print("Headers found in CSV:", headers)  # 调试输出
-            logger.info(f"Headers found in CSV: {headers}")
             # 获取 "API Name" 列的索引
             api_name_index = None
             for i, header in enumerate(headers):
-                if "API Name" in header:  # CSV 文件的标题行包含了字节顺序标记,所以直接使用通过包含方式来查找
+                if "API Name" in header:  # CSV 文件的标题行包含了字节顺序标记,所以使用通过包含方式来查找
                     api_name_index = i
                     break
 
             if api_name_index is None:
-                print("[ERROR] No column contains 'API Name'.")
+                logger.warning(f"{result_csv_path} No column contains 'API Name'.")  # 做测试
                 return
 
                 # 读取每一行的 API 名称
@@ -69,8 +98,7 @@ class DataManager:
                     api_name = row[api_name_index]
                     if api_name:
                         self.api_names_set.add(api_name)
-
-            logger.warning(f"Initialized API names set from existing CSV: {self.api_names_set}")
+            logger.debug(f"Initialized API names set from existing CSV: {self.api_names_set}")
 
     def is_unique_api(self, api_name):
         """检查 API 名称是否唯一，如果已经存在则返回 False，否则加入集合并返回 True"""
@@ -88,12 +116,9 @@ class DataManager:
         # 设置当前目录和输出路径，确保在首次写入时使用
         self.csv_dir = last_dir
         self.detail_out_path = os.path.join(last_dir, os.path.basename(result_csv_path).replace("result", "details"))
+        check_file_or_directory_path(self.detail_out_path)
         self.result_out_path = result_csv_path
-        self.is_first_write = False  # 设置为 False，避免重复写入表头
-
-        logger.info(f"Resuming from csv. Using last directory: {self.csv_dir}")
-        logger.info(f"Detail output path set to: {self.detail_out_path}")
-        logger.info(f"Result output path set to: {self.result_out_path}")
+        self.is_first_write = False
 
     def save_results(self, api_name_str):
         if self.is_first_write:
@@ -102,18 +127,18 @@ class DataManager:
 
             # 直接写入表头
             logger.info("Writing CSV headers for the first time.")
-            self.write_csv_header_if_first_time(self.detail_out_path, self.get_detail_csv_header)
-            self.write_csv_header_if_first_time(self.result_out_path, self.get_result_csv_header)
+            write_csv_header_if_first_time(self.detail_out_path, get_detail_csv_header)
+            write_csv_header_if_first_time(self.result_out_path, get_result_csv_header)
             self.is_first_write = False  # 写入后标记为 False，避免重复写入表头
 
         """写入详细输出和结果摘要并清理结果"""
-        logger.warning("Starting to write detailed output to CSV.")
+        logger.debug("Starting to write detailed output to CSV.")
         self.to_detail_csv(self.detail_out_path)
-        logger.warning(f"Detailed output for {api_name_str} written to {self.detail_out_path}.")
+        logger.debug(f"Detailed output for {api_name_str} written to {self.detail_out_path}.")
 
-        logger.warning("Starting to write result summary to CSV.")
+        logger.debug("Starting to write result summary to CSV.")
         self.to_result_csv(self.result_out_path)
-        logger.warning(f"Result summary for {api_name_str} written to {self.result_out_path}.")
+        logger.debug(f"Result summary for {api_name_str} written to {self.result_out_path}.")
 
         # 清理记录，准备下一次调用
         self.clear_results()
@@ -135,55 +160,11 @@ class DataManager:
         logger.debug("Clearing self.results data.")
         self.results.clear()
 
-    def get_detail_csv_header(self):
-        """获取详细 CSV 文件的表头"""
-        detail_csv_header_basic_info = [
-            MsCompareConst.DETAIL_CSV_API_NAME,
-            MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
-            MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
-            MsCompareConst.DETAIL_CSV_SHAPE,
-        ]
-        detail_csv_header_compare_result = list(compare_algorithms.keys())
-        detail_csv_header_status = [
-            MsCompareConst.DETAIL_CSV_PASS_STATUS,
-            MsCompareConst.DETAIL_CSV_MESSAGE,
-        ]
-        return detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
-
-    def get_result_csv_header(self):
-        """获取结果 CSV 文件的表头"""
-        return [
-            MsCompareConst.DETAIL_CSV_API_NAME,
-            MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
-            MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
-            MsCompareConst.DETAIL_CSV_MESSAGE,
-        ]
-
-    def write_csv_header_if_first_time(self, csv_path, header_func):
-        """如果是第一次写入，则写入 CSV 表头"""
-        header = header_func()  # 获取表头
-        logger.debug(f"Writing CSV header: {header}")
-        write_csv([header], csv_path, mode="a+")
-
     def to_detail_csv(self, csv_dir):
         logger.info("Preparing detail CSV headers and rows.")
         detail_csv = []
 
         detail_csv_header_compare_result = list(compare_algorithms.keys())
-        # if self.is_first_write:
-        #     detail_csv_header_basic_info = [
-        #         MsCompareConst.DETAIL_CSV_API_NAME,
-        #         MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
-        #         MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
-        #         MsCompareConst.DETAIL_CSV_SHAPE,
-        #     ]
-        #     detail_csv_header_status = [
-        #         MsCompareConst.DETAIL_CSV_PASS_STATUS,
-        #         MsCompareConst.DETAIL_CSV_MESSAGE,
-        #     ]
-        #     detail_csv_header = detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
-        #     detail_csv.append(detail_csv_header)
-        #     logger.debug(f"Detail CSV headers: {detail_csv_header}")
 
         for _, results in self.results.items():
             for res in results:
@@ -210,15 +191,6 @@ class DataManager:
     def to_result_csv(self, csv_dir):
         logger.info("Preparing result CSV data.")
         result_csv = []
-        # if self.is_first_write:
-        #     result_csv_header = [
-        #         MsCompareConst.DETAIL_CSV_API_NAME,
-        #         MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
-        #         MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
-        #         MsCompareConst.DETAIL_CSV_MESSAGE,
-        #     ]
-        #     result_csv.append(result_csv_header)
-        #     logger.debug(f"Result CSV headers: {result_csv_header}")
 
         result_csv_dict = {}
         for key, results in self.results.items():

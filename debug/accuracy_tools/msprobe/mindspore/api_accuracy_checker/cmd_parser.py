@@ -39,7 +39,7 @@ def check(args):
     if args.out_path is None:
         args.out_path = "./"
     args.out_path = os.path.abspath(args.out_path)
-    check_file_or_directory_path(args.out_path)
+    check_file_or_directory_path(args.out_path, isdir=True)
     print(f"Updated out_path: {args.out_path}")  # 打印检查
 
     if args.result_csv_path is None:
