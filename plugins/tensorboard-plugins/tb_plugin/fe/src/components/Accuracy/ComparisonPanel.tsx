@@ -238,7 +238,9 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
       },
     };
 
-    option && echart.setOption(option, true);
+    if(option) {
+      echart.setOption(option, true);
+    };
     return () => {
       echart.dispose();
     };

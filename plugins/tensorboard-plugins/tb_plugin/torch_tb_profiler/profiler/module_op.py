@@ -260,10 +260,3 @@ def get_module_tree(tid2tree: Dict[int, OperatorNode]):
             traverse_node(child, None)
 
     return modules
-
-
-def dump_modules(level: int, modules: Iterable[Union[Module, ModuleNode]]):
-    """testing purpose"""
-    for module in modules:
-        print(f"{'    ' * level}{module.name.replace('nn.Module: ', '')}_{module.module_id}")
-        dump_modules(level + 1, module.children)

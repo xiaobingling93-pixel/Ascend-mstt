@@ -27,8 +27,8 @@ from twisted.internet import reactor, protocol, endpoints
 from twisted.protocols.basic import FileSender
 
 from msprobe.pytorch.common.utils import logger
-from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import struct_unpack_mode as unpack_mode, \
-    str_to_bytes_order as bytes_order
+from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.utils import STRUCT_UNPACK_MODE as unpack_mode, \
+    STR_TO_BYTES_ORDER as bytes_order
 
 MAX_SENDING_QUEUE_SIZE = 20
 
@@ -84,15 +84,6 @@ class TCPClient:
     def run_reactor():
         reactor.run(installSignalHandlers=False)
 
-    def check_tls_path(self):
-        client_key = os.path.join(self.tls_path, "client.key")
-        client_crt = os.path.join(self.tls_path, "client.crt")
-        if not os.path.exists(client_key):
-            raise Exception(f"client_key: {client_key} is not exists.")
-        if not os.path.exists(client_crt):
-            raise Exception(f"client_crt: {client_crt} is not exists.")
-        return client_key, client_crt
-
     def start(self):
         def conn_callback(cur_protocol):
             if cur_protocol.transport and cur_protocol.transport.getPeer().host == self.host:
@@ -114,7 +105,8 @@ class TCPClient:
         self.factory.protocol = cur_protocol
         if self.tls_path:
             from twisted.internet import ssl
-            client_key, client_crt = self.check_tls_path()
+            client_key = os.path.join(self.tls_path, "client.key")
+            client_crt = os.path.join(self.tls_path, "client.crt")
             client_context_factory = ssl.DefaultOpenSSLContextFactory(client_key, client_crt)
             endpoint = endpoints.SSL4ClientEndpoint(reactor, self.host, self.port, client_context_factory)
         else:

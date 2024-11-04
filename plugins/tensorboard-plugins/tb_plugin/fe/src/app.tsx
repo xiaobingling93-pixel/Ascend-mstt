@@ -167,7 +167,6 @@ export const App = () => {
   const classes = useStyles();
 
   // #region - State
-
   const [selectedTab, setSelectedTab] = React.useState(0);
 
   const [run, setRun] = React.useState<string>('');
@@ -210,9 +209,7 @@ export const App = () => {
 
   const [topTab, setTopTab] = React.useState<number>(0);
   const [fileList, setFileList] = React.useState<FileInfo[]>([]);
-  const [uploadedCount, setUploadedCount] = React.useState<number>(0);
-
-  // #endregion
+  const [uploadedCount, setUploadedCount] = React.useState<number>(0);// #endregion
 
   React.useEffect(() => {
     setup()
@@ -245,9 +242,7 @@ export const App = () => {
     if (!run || !runs.includes(run)) {
       setRun(firstOrUndefined(runs) ?? '');
     }
-  }, [runs]);
-
-  // #region - Diff Left
+  }, [runs]);// #region - Diff Left
 
   React.useEffect(() => {
     if (diffLeftRun) {
@@ -266,7 +261,6 @@ export const App = () => {
   }, [diffLeftRun, diffLeftWorker]);
 
   // #endregion
-
   // #region - Diff Right
 
   React.useEffect(() => {
@@ -288,7 +282,6 @@ export const App = () => {
   }, [diffRightRun, diffRightWorker]);
 
   // #endregion
-
   // #region - normal
 
   React.useEffect(() => {
@@ -416,9 +409,7 @@ export const App = () => {
 
   const _changeUploadCount = (count: number) => {
     setUploadedCount(count);
-  };
-
-  // #endregion
+  };// #endregion
 
   const renderContent = () => {
     if (!runsLoading && runs.length == 0) {
@@ -609,8 +600,8 @@ export const App = () => {
                     className={classes.formControl}
                   >
                     <Select value={worker} onChange={handleWorkerChange}>
-                      {workers.map((worker) => (
-                        <MenuItem value={worker}>{worker}</MenuItem>
+                      {workers.map((worker1) => (
+                        <MenuItem value={worker1}>{worker1}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -638,8 +629,8 @@ export const App = () => {
                     value={diffLeftWorker}
                     onChange={handleDiffLeftWorkerChange}
                   >
-                    {diffLeftWorkerOptions.map((worker) => (
-                      <MenuItem value={worker}>{worker}</MenuItem>
+                    {diffLeftWorkerOptions.map((worker2) => (
+                      <MenuItem value={worker2}>{worker2}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -649,8 +640,8 @@ export const App = () => {
                     value={diffLeftSpan}
                     onChange={handleDiffLeftSpanChange}
                   >
-                    {diffLeftSpansOptions.map((span) => (
-                      <MenuItem value={span}>{span}</MenuItem>
+                    {diffLeftSpansOptions.map((span1) => (
+                      <MenuItem value={span1}>{span1}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -675,8 +666,8 @@ export const App = () => {
                     value={diffRightWorker}
                     onChange={handleDiffRightWorkerChange}
                   >
-                    {diffRightWorkerOptions.map((worker) => (
-                      <MenuItem value={worker}>{worker}</MenuItem>
+                    {diffRightWorkerOptions.map((worker3) => (
+                      <MenuItem value={worker3}>{worker3}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
@@ -686,8 +677,8 @@ export const App = () => {
                     value={diffRightSpan}
                     onChange={handleDiffRightSpanChange}
                   >
-                    {diffRightSpansOptions.map((span) => (
-                      <MenuItem value={span}>{span}</MenuItem>
+                    {diffRightSpansOptions.map((span2) => (
+                      <MenuItem value={span2}>{span2}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
