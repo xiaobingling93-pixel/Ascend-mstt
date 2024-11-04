@@ -374,7 +374,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
     real_step_or_rank = []
     for element in step_or_rank_input:
-        if not isinstance(element, (int, str)):
+        if not is_int(element) and not isinstance(element, str):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
@@ -391,7 +391,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 
 
 def check_seed_all(seed, mode):
-    if isinstance(seed, int):
+    if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
             logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
