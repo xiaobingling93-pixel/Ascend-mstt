@@ -41,7 +41,8 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
-                                       get_stack_construct_by_dump_json_path)
+                                       get_stack_construct_by_dump_json_path,
+                                       check_seed_all)
 
 
 class TestUtils(TestCase):
@@ -264,6 +265,9 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeException) as context:
             get_real_step_or_rank([1, 2, 3.5], "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([True, 1, 2], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         result = get_real_step_or_rank([1, 10, 50], "step")
         self.assertEqual(result, [1, 10, 50])
 
@@ -312,3 +316,20 @@ class TestUtils(TestCase):
 
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
+
+    def test_check_seed_all(self):
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(-1, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(Const.MAX_SEED_VALUE + 1, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all("1", True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(True, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(True, 1)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)

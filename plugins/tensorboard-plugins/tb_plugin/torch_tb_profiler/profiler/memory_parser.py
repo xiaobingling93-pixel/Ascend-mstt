@@ -25,7 +25,7 @@ class MemoryMetrics(IntEnum):
 class MemoryRecord:
     def __init__(self, scope: str, pid: int, tid: int, ts: int,
                  device_type: DeviceType, device_id: int,
-                 address: int, bytes: int, total_allocated: float, total_reserved: float):
+                 address: int, record_bytes: int, total_allocated: float, total_reserved: float):
         self.scope = scope
         self.tid = tid
         self.pid = pid
@@ -33,7 +33,7 @@ class MemoryRecord:
         self.device_type = device_type
         self.device_id = device_id
         self.addr = address
-        self.bytes = bytes
+        self.bytes = record_bytes
         self.total_allocated = total_allocated
         self.total_reserved = total_reserved
         self.op_name: Optional[str] = None
@@ -217,7 +217,8 @@ class MemoryParser:
                 """In the loop, one pass will process one record. The basic logic is:
                 It will search from the node that last visited since both the records and tree is ordered already
                 1. it current node contains the records, then find the exactly child which just embrace it.
-                2. otherwise, find the parent node and set the child_index, so that the parent node could continue from previous visited node. # noqa: E501
+                2. otherwise, find the parent node and set the child_index, so that the parent node could continue from 
+                previous visited node. # noqa: E501
                 3. if there is not any node contains the records, then all remaining records will be ignored.
                 """
                 record = records[record_index]

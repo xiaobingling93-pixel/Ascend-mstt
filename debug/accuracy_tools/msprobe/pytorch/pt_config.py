@@ -14,11 +14,13 @@
 # limitations under the License.
 
 import os
+import re
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_bounds
@@ -41,15 +43,34 @@ class TensorConfig(BaseConfig):
         self.online_run_ut_recompute = json_config.get("online_run_ut_recompute", False)
         self.check_config()
         self._check_file_format()
-        self._check_tls_path_config()
+        if self.online_run_ut:
+            self._check_online_run_ut()
 
     def _check_file_format(self):
         if self.file_format is not None and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
 
-    def _check_tls_path_config(self):
-        if self.tls_path and not os.path.exists(self.tls_path):
-            raise Exception("tls_path: %s does not exist" % self.tls_path)
+    def _check_online_run_ut(self):
+        if not isinstance(self.online_run_ut, bool):
+            raise Exception(f"online_run_ut: {self.online_run_ut} is invalid.")
+
+        if not isinstance(self.online_run_ut_recompute, bool):
+            raise Exception(f"online_run_ut_recompute: {self.online_run_ut_recompute} is invalid.")
+
+        if self.nfs_path:
+            check_file_or_directory_path(self.nfs_path, isdir=True)
+            return
+
+        if self.tls_path:
+            check_file_or_directory_path(self.tls_path, isdir=True)
+            check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
+            check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
+
+        if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
+            raise Exception(f"host: {self.host} is invalid.")
+
+        if not isinstance(self.port, int) or not (0 < self.port <= 65535):
+            raise Exception(f"port: {self.port} is invalid, port range 0-65535.")
 
 
 class StatisticsConfig(BaseConfig):
@@ -71,7 +92,7 @@ class OverflowCheckConfig(BaseConfig):
         self.check_overflow_config()
 
     def check_overflow_config(self):
-        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
+        if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
@@ -171,7 +192,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             )
 
     def _check_preheat_config(self):
-        if not isinstance(self.preheat_step, int):
+        if not is_int(self.preheat_step):
             msg = "preheat_step is invalid, it should be an integer"
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
@@ -181,7 +202,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
-        if not isinstance(self.max_sample, int):
+        if not is_int(self.max_sample):
             msg = "max_sample is invalid, it should be an integer"
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
