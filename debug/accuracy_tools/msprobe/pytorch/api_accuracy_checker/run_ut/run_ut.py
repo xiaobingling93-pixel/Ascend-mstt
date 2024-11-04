@@ -48,6 +48,7 @@ from msprobe.core.common.file_utils import FileChecker, change_mode, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.core.common.utils import safe_get_value
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
@@ -283,11 +284,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
                 'real_data_path': real_data_path
             }
             grad = gen_args(backward_args, api_name, func_options)
-            if grad:
-                grad = grad[0]
-            else:
-                logger.error(f"Error when generating grad input for {api_full_name}")
-                raise IndexError("Error when generating grad input for %s" % api_full_name)
+            grad = safe_get_value(grad, 0, "grad")
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -295,16 +292,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
-        if out:
-            out = out[0]
-        else:
-            logger.error(f"API {api_name} bench output is empty, please check the output.")
-            raise IndexError(f"API {api_name} bench output is empty, please check the output.")
-        if device_out:
-            device_out = device_out[0]
-        else:
-            logger.error(f"API {api_name} device output is empty, please check the output.")
-            raise IndexError(f"API {api_name} device output is empty, please check the output.")
+        out = safe_get_value(out, 0, "out")
+        device_out = safe_get_value(device_out, 0, "device_out")
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
