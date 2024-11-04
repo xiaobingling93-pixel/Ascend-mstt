@@ -84,9 +84,9 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_json_path": "npu_path",
-            "bench_json_path": "bench_path",
-            "stack_json_path": "stack_path",
+            "npu_json_path": "npu_path.json",
+            "bench_json_path": "bench_path.json",
+            "stack_json_path": "stack_path.json",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
