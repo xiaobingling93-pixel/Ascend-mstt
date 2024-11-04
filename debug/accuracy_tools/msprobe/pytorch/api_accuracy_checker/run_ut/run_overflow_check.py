@@ -74,7 +74,7 @@ def run_overflow_check(forward_file):
     logger.info("start UT test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
-        if is_unsupported_api(api_full_name):
+        if is_unsupported_api(api_full_name, is_overflow_check=True):
             continue
         try:
             run_torch_api(api_full_name, api_info_dict, real_data_path)
