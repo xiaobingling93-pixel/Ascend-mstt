@@ -92,15 +92,15 @@ class TestUtils(TestCase):
         }
 
         call_args = [
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("npu_dump_data_dir", True),
             ("bench_dump_data_dir", True),
             ("output_path", True),
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("output_path", True)
         ]
 
