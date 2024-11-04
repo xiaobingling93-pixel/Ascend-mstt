@@ -33,7 +33,7 @@ export const TableChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {return;}
 
     const data = new google.visualization.DataTable();
     graph.columns.forEach((column) => {

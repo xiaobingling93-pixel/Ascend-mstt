@@ -16,6 +16,7 @@ The following functionalities are added after forking:
 import glob as py_glob
 import os
 import platform
+import sys
 import tempfile
 
 from .. import utils
@@ -25,24 +26,23 @@ from ..consts import MAX_FILE_SIZE, MAX_WINDOWS_PATH_LENGTH, MAX_LINUX_PATH_LENG
 
 logger = utils.get_logger()
 
+S3_ENABLED = True
 try:
     import boto3
     import botocore.exceptions
-
-    S3_ENABLED = True
 except ImportError:
     S3_ENABLED = False
 
+BLOB_ENABLED = True
 try:
     from azure.storage.blob import ContainerClient
-    BLOB_ENABLED = True
 except ImportError:
     BLOB_ENABLED = False
 
+GS_ENABLED = True
 try:
     # Imports the Google Cloud client library
     from google.cloud import storage
-    GS_ENABLED = True
 except ImportError:
     GS_ENABLED = False
 
@@ -95,16 +95,16 @@ class LocalFileSystem(LocalPath, BaseFileSystem):
     def exists(self, filename):
         return os.path.exists(filename)
 
-    def read(self, filename, binary_mode=False, size=None, continue_from=None):
+    def read(self, file, binary_mode=False, size=None, continue_from=None):
         mode = "rb" if binary_mode else "r"
         encoding = None if binary_mode else "utf8"
-        if not self.exists(filename):
-            raise FileNotFoundError(filename)
+        if not self.exists(file):
+            raise FileNotFoundError(file)
 
         offset = None
         if continue_from is not None:
             offset = continue_from.get("opaque_offset", None)
-        with open(filename, mode, encoding=encoding) as f:
+        with open(file, mode, encoding=encoding) as f:
             if offset is not None:
                 f.seek(offset)
             data = f.read(size)
@@ -200,10 +200,10 @@ class S3FileSystem(RemotePath, BaseFileSystem):
             return True
         return False
 
-    def read(self, filename, binary_mode=False, size=None, continue_from=None):
+    def read(self, file, binary_mode=False, size=None, continue_from=None):
         """Reads contents of a file to a string."""
         s3 = boto3.resource("s3", endpoint_url=self._s3_endpoint)
-        bucket, path = self.bucket_and_path(filename)
+        bucket, path = self.bucket_and_path(file)
         args = {}
 
         # S3 use continuation tokens of the form: {byte_offset: number}
@@ -218,7 +218,7 @@ class S3FileSystem(RemotePath, BaseFileSystem):
         if offset != 0 or endpoint != "":
             args["Range"] = "bytes={}-{}".format(offset, endpoint)
 
-        logger.info("s3: starting reading file %s" % filename)
+        logger.info("s3: starting reading file %s" % file)
         try:
             stream = s3.Object(bucket, path).get(**args)["Body"].read()
         except botocore.exceptions.ClientError as exc:
@@ -240,7 +240,7 @@ class S3FileSystem(RemotePath, BaseFileSystem):
                 raise
 
         logger.info("s3: file %s download is done, size is %d" %
-                    (filename, len(stream)))
+                    (file, len(stream)))
         # `stream` should contain raw bytes here (i.e., there has been neither decoding nor newline translation),
         # so the byte offset increases by the expected amount.
         continuation_token = {"byte_offset": (offset + len(stream))}
@@ -320,14 +320,14 @@ class S3FileSystem(RemotePath, BaseFileSystem):
                     keys.append(key)
         return keys
 
-    def makedirs(self, dirname):
+    def makedirs(self, path):
         """Creates a directory and all parent/intermediate directories."""
-        if not self.exists(dirname):
+        if not self.exists(path):
             client = boto3.client("s3", endpoint_url=self._s3_endpoint)
-            bucket, path = self.bucket_and_path(dirname)
-            if not path.endswith("/"):
-                path += "/"
-            client.put_object(Body="", Bucket=bucket, Key=path)
+            bucket, dir_path = self.bucket_and_path(path)
+            if not dir_path.endswith("/"):
+                dir_path += "/"
+            client.put_object(Body="", Bucket=bucket, Key=dir_path)
 
     def stat(self, filename):
         """Returns file statistics for a given path."""

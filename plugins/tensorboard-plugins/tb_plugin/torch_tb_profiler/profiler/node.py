@@ -16,12 +16,12 @@ ExcludeOpName = ['DataParallel.forward', 'DistributedDataParallel.forward']
 
 
 class BaseNode(ABC):
-    def __init__(self, name: str, start_time: int, end_time: int, type: str, tid: int,
+    def __init__(self, name: str, start_time: int, end_time: int, node_type: str, tid: int,
                  external_id: Optional[int] = None):
         self.name = name
         self.start_time = start_time
         self.end_time = end_time
-        self.type = type
+        self.type = node_type
         self.tid = tid
         self.external_id = external_id  # For consistency check.
 
@@ -31,7 +31,7 @@ class BaseNode(ABC):
         kwargs['name'] = event.name
         kwargs['start_time'] = event.ts
         kwargs['end_time'] = event.ts + event.duration
-        kwargs['type'] = event.type
+        kwargs['node_type'] = event.type
         kwargs['tid'] = event.tid
 
         external_id = getattr(event, 'external_id', None)
@@ -84,7 +84,6 @@ class OperatorNode(HostNode):
         self.callstack = callstack
         self.self_host_duration = self_host_duration
         self.self_device_duration = self_device_duration
-        # self.parent_node = None
         self.tc_eligible = self.name in TC_OP_Allowlist
         self.tc_self_duration = 0  # Time of TC kernels launched by this op excluding its children operators.
         self.tc_total_duration = 0  # Time of TC kernels launched by this op including its children operators.
@@ -306,7 +305,7 @@ def create_operator_node(event: OperatorEvent):
 
 
 def is_operator_node(node: BaseNode):
-    return bool(type(node) is OperatorNode and node.type == EventTypes.OPERATOR and node.name not in ExcludeOpName
+    return bool(isinstance(node, OperatorNode) and node.type == EventTypes.OPERATOR and node.name not in ExcludeOpName
                 and not node.name.startswith("Optimizer."))  # exclude Optimizer.zero_grad
 
 

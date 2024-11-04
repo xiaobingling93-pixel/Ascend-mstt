@@ -30,6 +30,7 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
     fuzzy_match = kwargs.get('fuzzy_match', False)
+    is_print_compare_log = kwargs.get('is_print_compare_log', True)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
@@ -49,13 +50,12 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'npu_json_path': npu_path,
             'bench_json_path': bench_path,
             'stack_json_path': stack_path,
-            'is_print_compare_log': True
+            'is_print_compare_log': is_print_compare_log
         }
         try:
             set_dump_path(dump_result_param)
             dump_mode = get_dump_mode(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match,
-                                      dump_result_param.get('is_print_compare_log', True))
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, dump_mode)
         except (CompareException, FileCheckException) as error:
