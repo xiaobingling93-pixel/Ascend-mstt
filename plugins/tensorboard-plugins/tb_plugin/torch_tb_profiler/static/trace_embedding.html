@@ -52,9 +52,8 @@ found in the LICENSE file.
             // warning.
             window.__hideTraceViewerPolyfillWarning = true;
 
-            window.addEventListener("message", event => {
-                const data = event.data || {}
-                console.log(data)
+            window.addEventListener('message', event => {
+                const data = event.data || {};
                 name = data.name || 'unknown'
                 onResult(data.data)
             })
