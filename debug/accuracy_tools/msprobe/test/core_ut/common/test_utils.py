@@ -19,6 +19,7 @@ import os
 import tempfile
 from unittest import TestCase
 from unittest.mock import patch, MagicMock, mock_open
+import numpy as np
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import (FileCheckConst,
@@ -41,7 +42,10 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
-                                       get_stack_construct_by_dump_json_path)
+                                       get_stack_construct_by_dump_json_path,
+                                       safe_get_value,
+                                       MsprobeBaseException
+                                       )
 
 
 class TestUtils(TestCase):
@@ -312,3 +316,50 @@ class TestUtils(TestCase):
 
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
+
+    def test_safe_get_value_dict_valid_key_index(self):
+        # Test valid key and index in a dictionary
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        self.assertEqual(safe_get_value(dict_container, 1, 'dict_container', key='a'), 2)
+
+    def test_safe_get_value_invalid_key(self):
+        # Test invalid key in dictionary
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(dict_container, 1, 'dict_container', key='invalid_key')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+
+    def test_safe_get_value_valid_key_invalid_index(self):
+        # Test invalid index in dictionary[key]
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(dict_container, 5, 'dict_container', key='a')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_safe_get_value_list_valid_index(self):
+        # Test valid index in a list
+        list_container = [10, 20, 30]
+        self.assertEqual(safe_get_value(list_container, 1, 'list_container'), 20)
+
+    def test_safe_get_value_list_index_out_of_bounds(self):
+        # Test index out of bounds in a list
+        list_container = [10, 20, 30]
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(list_container, 10, 'list_container')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_safe_get_value_tuple_valid_index(self):
+        # Test valid index in a tuple
+        tuple_container = (100, 200, 300)
+        self.assertEqual(safe_get_value(tuple_container, 2, 'tuple_container'), 300)
+
+    def test_safe_get_value_array_valid_index(self):
+        # Test valid index in a numpy array
+        array_container = np.array([1000, 2000, 3000])
+        self.assertEqual(safe_get_value(array_container, 0, 'array_container'), 1000)
+
+    def test_safe_get_value_unsupported_container_type(self):
+        # Test unsupported container type (e.g., a string)
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value("unsupported_type", 0, 'string_container')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)

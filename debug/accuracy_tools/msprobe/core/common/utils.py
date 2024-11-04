@@ -407,3 +407,10 @@ def safe_get_value(container, index, container_name, key=None):
                   f"{container_name} is {container}"
         logger.error(err_msg)
         raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
+    except TypeError as e:
+        err_msg = "wrong type, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}\n" \
+                  f"key is {key}"
+        logger.error(err_msg)
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e

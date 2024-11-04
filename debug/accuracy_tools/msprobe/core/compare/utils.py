@@ -485,13 +485,7 @@ def merge_tensor(tensor_list, dump_mode):
 
         if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
-            try:
-                data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
-            except IndexError as e:
-                err_msg = "index out of bounds error occurs, please check!\n" \
-                          f"data name of op_dict is {op_dict['data_name']}"
-                logger.error(err_msg)
-                raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
+            data_name = safe_get_value(op_dict, -1, "op_dict", key="data_name").rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
 
