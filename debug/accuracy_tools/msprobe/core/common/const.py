@@ -109,6 +109,7 @@ class Const:
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
+    PT_SIMPLE_FRAMEWORK = "torch"
     MS_FRAMEWORK = "mindspore"
     UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
@@ -131,7 +132,7 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    FILE_SKIP_LIST = ["msprobe", "MindSpeed"]
     DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0

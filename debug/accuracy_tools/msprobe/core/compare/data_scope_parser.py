@@ -141,19 +141,23 @@ def find_regard_scope(lines, start_sign, end_sign):
 def find_stack_func_list(lines):
     res_list = []
     simplified = []
-    last_target_index = -1
-    for i, line in enumerate(lines):
+    last_target = None
+    no_entrance = True
+    for line in lines:
         ele_list = line.split(',')
         file_ele = ele_list[Const.STACK_FILE_INDEX]
-        if any(ii in file_ele for ii in Const.MS_FRAMEWORK):
-            last_target_index = i  # Update the last target index
-        elif last_target_index != -1:
-            simplified.append(lines[last_target_index])
-            last_target_index = -1
+        if Const.MS_FRAMEWORK in file_ele or Const.PT_SIMPLE_FRAMEWORK in file_ele and no_entrance:
+            last_target = line  # Update the last target index
+        elif last_target and no_entrance:
+            simplified.append(last_target)
+            last_target = None
+            no_entrance = False
+        else:
+            simplified.append(line)
 
-    # Check if the last string in the list contains "target"
-    if last_target_index != -1:
-        simplified.append(lines[last_target_index])
+    # Check if the last string in the list contains target str
+    if last_target and no_entrance:
+        simplified.append(last_target)
 
     # 过滤和处理 regard_scope
     for line in simplified:
@@ -164,9 +168,11 @@ def find_stack_func_list(lines):
 
         func_ele = ele_list[Const.STACK_FUNC_INDEX]
         if any(ii in func_ele for ii in Const.FUNC_SKIP_LIST):
-            continue            
+            continue
+
         in_func_name = func_ele.split()[Const.STACK_FUNC_ELE_INDEX]
         res_list.append(in_func_name)
+
     reversed_list = res_list[::-1]
     return reversed_list
 
