@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -95,7 +95,7 @@ class BaseConfig:
     def _check_data_mode(self):
         if self.data_mode is not None:
             if not isinstance(self.data_mode, list):
-                logger.error_log_with_exp(f"data_mode is invalid, it should be a list[str]",
+                logger.error_log_with_exp("data_mode is invalid, it should be a list[str]",
                                           MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
             if len(self.data_mode) > len(Const.DUMP_DATA_MODE_LIST):
@@ -106,7 +106,7 @@ class BaseConfig:
 
             for mode in self.data_mode:
                 if not isinstance(mode, str):
-                    logger.error_log_with_exp(f"data_mode is invalid, it should be a list[str]",
+                    logger.error_log_with_exp("data_mode is invalid, it should be a list[str]",
                                               MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
                 if mode not in Const.DUMP_DATA_MODE_LIST:
                     logger.error_log_with_exp(
