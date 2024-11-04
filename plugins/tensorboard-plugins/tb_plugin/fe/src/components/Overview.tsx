@@ -96,7 +96,7 @@ export const Overview: React.FC<IProps> = (props) => {
         key: item.name,
         dataIndex: item.name,
         sorter:
-          item.type == 'string'
+          item.type === 'string'
             ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
             : (a: any, b: any) => numberCompare(a[item.name], b[item.name]),
       };

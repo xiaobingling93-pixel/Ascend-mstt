@@ -56,7 +56,7 @@ export const PieChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {return;}
 
     const chart = echarts.init(element);
 
@@ -111,10 +111,8 @@ export const PieChart: React.FC<IProps> = (props) => {
         formatter: (name) => {
           // Show legends for datas with the same name.
           const index = name.indexOf('_');
-          if (index > -1) {
-            name = name.slice(index + 1);
-          }
-          return name.length > 36 ? name.slice(0, 34) + '...' : name;
+          const processedName = index > -1 ? name.slice(index + 1) : name; // 使用新变量处理
+          return processedName.length > 36 ? `${processedName.slice(0, 34)}...` : processedName;
         },
         tooltip: {
           show: true,
@@ -156,7 +154,9 @@ export const PieChart: React.FC<IProps> = (props) => {
       ],
     };
 
-    option && chart.setOption(option, true);
+    if (option) {
+      chart.setOption(option, true);
+    };
 
     return () => {
       chart.dispose();

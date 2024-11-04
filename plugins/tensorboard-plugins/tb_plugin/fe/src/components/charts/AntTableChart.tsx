@@ -29,16 +29,16 @@ const getTableColumns = function (
   tooltipClass: string
 ) {
   let i = 0;
-  return columns.map(function (col: any) {
-    const key = 'col' + i++;
+  return columns.map((col: any) => {
+    const key = `col${i++}`;
     const stringCompare = (a: any, b: any) => a[key].localeCompare(b[key]);
     const numberCompare = (a: any, b: any) => (a[key] || 0) - (b[key] || 0);
     return {
       dataIndex: key,
       key: key,
       title: col.name,
-      sorter: col.type == 'string' ? stringCompare : numberCompare,
-      defaultSortOrder: sort == col.name ? ('descend' as const) : undefined,
+      sorter: col.type === 'string' ? stringCompare : numberCompare,
+      defaultSortOrder: sort === col.name ? ('descend' as const) : undefined,
       showSorterTooltip: col.tooltip
         ? { title: col.tooltip, overlayClassName: tooltipClass }
         : true,
@@ -47,11 +47,11 @@ const getTableColumns = function (
 };
 
 const getTableRows = function (rows: any) {
-  return rows.map(function (row: any) {
+  return rows.map((row: any) => {
     let i = 0;
     const res: any = {};
-    row.forEach(function (entry: any) {
-      res['col' + i++] = entry;
+    row.forEach((entry: any) => {
+      res[`col${i++}`] = entry;
     });
     return res;
   });
@@ -69,7 +69,7 @@ export const AntTableChart: React.FC<IProps> = (props) => {
   );
 
   // key is used to reset the Table state (page and sort) if the columns change
-  const key = React.useMemo(() => Math.random() + '', [graph.columns]);
+  const key: string = React.useMemo(() => `${Math.random()}`, [graph.columns]);
 
   const [pageSize, setPageSize] = React.useState(initialPageSize ?? 30);
   const onShowSizeChange = (current: number, size: number) => {
