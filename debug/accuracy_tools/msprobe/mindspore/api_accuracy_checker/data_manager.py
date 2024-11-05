@@ -154,8 +154,10 @@ class DataManager:
                 self.csv_dir,
                 os.path.basename(self.result_out_path).replace("result", "details")
             )
-            check_file_or_directory_path(self.detail_out_path)
-            check_file_or_directory_path(self.result_out_path)
+            if self.detail_out_path:
+                check_file_or_directory_path(self.detail_out_path)
+            if self.result_out_path:
+                check_file_or_directory_path(self.result_out_path)
 
             # 直接写入表头
             logger.info("Writing CSV headers for the first time.")
