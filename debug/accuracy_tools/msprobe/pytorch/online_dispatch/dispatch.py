@@ -37,6 +37,7 @@ from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu, ge
     COMPARE_LOGO
 from msprobe.pytorch.online_dispatch.compare import Comparator
 from msprobe.core.common.file_utils import FileOpen, create_directory
+from msprobe.core.common.utils import check_str_param
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -65,6 +66,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.all_summary = []
         self.call_stack_list = []
         self.process_num = process_num
+        self.tag = tag
         self.check_param()
         self.filter_dump_api()
         dir_name = self.get_dir_name(tag)
@@ -275,6 +277,13 @@ class PtdbgDispatch(TorchDispatchMode):
         if not all(isinstance(item, str) for item in self.dump_api_list):
             logger.error('The type of parameter in "api_list" can only be str.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
+        if len(self.dump_api_list) > Const.STEP_RANK_MAXIMUM_VALUE:
+            logger.error('The length of parameter "api_list" should not be greater '
+                         f'than {Const.STEP_RANK_MAXIMUM_VALUE}.')
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
+        for item in self.dump_api_list:
+            check_str_param(item)
+        check_str_param(self.tag)
         if not isinstance(self.debug_flag, bool):
             logger.error('The type of parameter "debug" can only be bool.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
