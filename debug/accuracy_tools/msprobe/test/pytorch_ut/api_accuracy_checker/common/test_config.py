@@ -30,6 +30,9 @@ class TestConfig(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             self.cfg.validate('precision', -1)
+            
+        with self.assertRaises(ValueError):
+            self.cfg.validate('precision', True)
 
     def test_validate_white_list(self):
         validate_white_list = ['conv1d', 'max_pool1d', 'dropout', '__add__']
