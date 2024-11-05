@@ -18,17 +18,20 @@ import json
 import os
 import tempfile
 from unittest import TestCase
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import MagicMock, mock_open, patch
 import numpy as np
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import (FileCheckConst,
-                                            FileCheckException,
-                                            check_file_size,
-                                            check_file_or_directory_path,
-                                            get_json_contents,
-                                            get_file_content_bytes,
-                                            save_json)
+from msprobe.core.common.exceptions import MsprobeException
+from msprobe.core.common.file_utils import (
+    FileCheckConst,
+    FileCheckException,
+    check_file_or_directory_path,
+    check_file_size,
+    get_file_content_bytes,
+    get_json_contents,
+    save_json,
+)
 from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
@@ -45,7 +48,8 @@ from msprobe.core.common.utils import (CompareException,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
-                                       MsprobeBaseException
+                                       MsprobeBaseException,
+                                       recursion_depth_decorator
                                        )
 
 
@@ -321,6 +325,28 @@ class TestUtils(TestCase):
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
 
+    @patch.object(logger, "error")
+    def test_recursion_depth_decorator(self, mock_error):
+        # 测试递归深度限制函数
+        recursion_list = [[]]
+        temp_list = recursion_list[0] 
+        for _ in range(Const.MAX_DEPTH):
+            temp_list.append([])
+            temp_list = temp_list[0]
+        temp_list.append(0)
+        call_record = []
+        @recursion_depth_decorator("test func_info")
+        def recursion_func(test_list, call_record):
+            call_record.append(1)
+            if isinstance(test_list, list):
+                recursion_func(test_list[0], call_record)
+        with self.assertRaises(MsprobeException) as context:
+            recursion_func(recursion_list, call_record)
+        # 执行超过限制的递归函数会触发异常、且函数成功调用次数等于限制次数
+        self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
+        mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
+        self.assertEqual(len(call_record), Const.MAX_DEPTH)
+        
     def test_check_seed_all(self):
         with self.assertRaises(MsprobeException) as context:
             check_seed_all(-1, True)
@@ -337,7 +363,7 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeException) as context:
             check_seed_all(True, 1)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-
+        
     def test_safe_get_value_dict_valid_key_index(self):
         # Test valid key and index in a dictionary
         dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
