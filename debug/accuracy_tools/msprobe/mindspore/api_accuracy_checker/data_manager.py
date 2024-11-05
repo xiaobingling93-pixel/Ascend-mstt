@@ -1,5 +1,21 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import os
+import csv
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
@@ -21,8 +37,6 @@ class ResultCsvEntry:
         self.forward_err_msg = ""
         self.backward_err_msg = ""
         self.overall_err_msg = None
-
-        # 需要转换为绝对路径
 
 
 def write_csv_header_if_first_time(csv_path, header_func):
@@ -75,15 +89,23 @@ class DataManager:
 
     def initialize_api_names_set(self, result_csv_path):
         """读取现有的 CSV 文件并存储已经出现的 API 名称到集合中"""
-        import csv
-        with open(result_csv_path, mode='r', newline='') as csv_file:
+
+        with FileOpen(result_csv_path, mode='r') as csv_file:
             reader = csv.reader(csv_file)
             headers = next(reader, None)  # 读取标题行
+
+            # 校验表头是否包含所有必需的常量
+            required_constants = get_result_csv_header()
+            missing_constants = [const for const in required_constants if const not in headers]
+
+            if missing_constants:
+                logger.warning(f"{result_csv_path} 缺少以下必需的表头字段: {missing_constants}")
+                return
 
             # 获取 "API Name" 列的索引
             api_name_index = None
             for i, header in enumerate(headers):
-                if "API Name" in header:  # CSV 文件的标题行包含了字节顺序标记,所以使用通过包含方式来查找
+                if MsCompareConst.DETAIL_CSV_API_NAME in header:  # CSV 文件的标题行包含了字节顺序标记,所以使用通过包含方式来查找
                     api_name_index = i
                     break
 
@@ -121,8 +143,13 @@ class DataManager:
 
     def save_results(self, api_name_str):
         if self.is_first_write:
-            self.detail_out_path = os.path.join(self.csv_dir, add_time_as_suffix(MsCompareConst.DETAIL_CSV_FILE_NAME))
             self.result_out_path = os.path.join(self.csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
+            self.detail_out_path = os.path.join(
+                self.csv_dir,
+                os.path.basename(self.result_out_path).replace("result", "details")
+            )
+            check_file_or_directory_path(self.detail_out_path)
+            check_file_or_directory_path(self.result_out_path)
 
             # 直接写入表头
             logger.info("Writing CSV headers for the first time.")
@@ -159,8 +186,8 @@ class DataManager:
         logger.debug("Clearing self.results data.")
         self.results.clear()
 
-    def to_detail_csv(self, csv_dir):
-        logger.info("Preparing detail CSV headers and rows.")
+    def to_detail_csv(self, csv_path):
+        logger.debug("Preparing detail CSV headers and rows.")
         detail_csv = []
 
         detail_csv_header_compare_result = list(compare_algorithms.keys())
@@ -183,12 +210,12 @@ class DataManager:
                 detail_csv.append(csv_row)
                 logger.debug(f"Detail CSV row added: {csv_row}")
 
-        logger.info(f"Writing detail CSV to {csv_dir}.")
-        write_csv(detail_csv, csv_dir, mode="a+")
-        logger.info(f"Detail CSV written successfully to {csv_dir}.")
+        logger.debug(f"Writing detail CSV to {csv_path}.")
+        write_csv(detail_csv, csv_path, mode="a+")
+        logger.debug(f"Detail CSV written successfully to {csv_path}.")
 
-    def to_result_csv(self, csv_dir):
-        logger.info("Preparing result CSV data.")
+    def to_result_csv(self, csv_path):
+        logger.debug("Preparing result CSV data.")
         result_csv = []
 
         result_csv_dict = {}
@@ -227,9 +254,9 @@ class DataManager:
             result_csv.append(row)
             logger.debug(f"Result CSV row added: {row}")
 
-        logger.info(f"Writing result CSV to {csv_dir}.")
-        write_csv(result_csv, csv_dir, mode="a+")
-        logger.info(f"Result CSV written successfully to {csv_dir}.")
+        logger.debug(f"Writing result CSV to {csv_path}.")
+        write_csv(result_csv, csv_path, mode="a+")
+        logger.debug(f"Result CSV written successfully to {csv_path}.")
 
         # 设置标记为 False，防止后续重复添加表头
         self.is_first_write = False

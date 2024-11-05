@@ -59,8 +59,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_statistics_path)
         api_accuracy_checker.run_and_compare()
-        # api_accuracy_checker.to_detail_csv(result_directory)
-        # api_accuracy_checker.to_result_csv(result_directory)
+
         detail_csv = find_with_prefix(result_directory, "accuracy_checking_detail")
         assert len(detail_csv) == 1
         check_csv(detail_csv[0], 2)
