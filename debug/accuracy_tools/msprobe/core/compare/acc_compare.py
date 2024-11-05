@@ -21,7 +21,7 @@ from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid
+from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid, safe_get_value
 from msprobe.core.common.file_utils import remove_path
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
                                         check_stack_json_str
@@ -101,23 +101,24 @@ class Comparator:
         return merge_list
     
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        a_op_name = npu_dict["op_name"]
-        b_op_name = bench_dict["op_name"]
-        graph_mode = check_graph_mode(a_op_name[0], b_op_name[0])
+        npu_op_name = npu_dict["op_name"]
+        bench_op_name = bench_dict["op_name"]
+        graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
+                                      safe_get_value(bench_op_name, 0, "bench_op_name"))
         
         frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
             if graph_mode:
-                return graph_mapping.match(a_op_name[0], b_op_name[0])
+                return graph_mapping.match(npu_op_name[0], bench_op_name[0])
         struct_match = check_struct_match(npu_dict, bench_dict)
         if not fuzzy_match:
-            return a_op_name == b_op_name and struct_match
+            return npu_op_name == bench_op_name and struct_match
         is_match = True
         try:
-            is_match = fuzzy_check_op(a_op_name, b_op_name)
+            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
-            logger.warning("%s and %s can not fuzzy match." % (a_op_name, b_op_name))
+            logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
             is_match = False
         return is_match and struct_match
     
@@ -220,17 +221,25 @@ class Comparator:
                     data_name = merge_list.get('data_name')
                     data_name = data_name[index] if data_name else None
                     if Const.INPUT in input_or_output_list or Const.KWARGS in input_or_output_list:
-                        ops_all[input_or_output] = {'struct': merge_list.get('input_struct')[input_index],
-                                                    'summary': merge_list.get('summary')[index],
-                                                    'data_name': data_name,
-                                                    'stack_info': merge_list.get('stack_info')}
+                        ops_all[input_or_output] = {
+                            CompareConst.STRUCT: safe_get_value(merge_list, input_index, "merge_list",
+                                                                key=CompareConst.INPUT_STRUCT),
+                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                                 key=CompareConst.SUMMARY),
+                            'data_name': data_name,
+                            'stack_info': merge_list.get('stack_info')
+                        }
                         input_index += 1
 
                     elif Const.OUTPUT in input_or_output_list:
-                        ops_all[input_or_output] = {'struct': merge_list.get('output_struct')[output_index],
-                                                    'summary': merge_list.get('summary')[index],
-                                                    'data_name': data_name,
-                                                    'stack_info': merge_list.get('stack_info')}
+                        ops_all[input_or_output] = {
+                            CompareConst.STRUCT: safe_get_value(merge_list, output_index, "merge_list",
+                                                                key=CompareConst.OUTPUT_STRUCT),
+                            CompareConst.SUMMARY: safe_get_value(merge_list, index, "merge_list",
+                                                                 key=CompareConst.SUMMARY),
+                            'data_name': data_name,
+                            'stack_info': merge_list.get('stack_info')
+                        }
                         output_index += 1
         return ops_all
 
@@ -294,7 +303,7 @@ class Comparator:
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
         npu_bench_name_list = op_name_mapping_dict[npu_op_name]
-        data_name = npu_bench_name_list[1]
+        data_name = safe_get_value(npu_bench_name_list, 1, "npu_bench_name_list")
         error_file, relative_err, error_flag = None, None, False
         if data_name == '-1' or data_name == -1:  # 没有真实数据路径
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE

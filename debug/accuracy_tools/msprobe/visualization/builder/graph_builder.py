@@ -131,6 +131,10 @@ class GraphBuilder:
                                              id_accumulation=True)
                     api_collection_node = graph.get_node(node_id)
                     api_collection_node.subnodes = temp_nodes
+                    # 重新确立父子关系
+                    for node in temp_nodes:
+                        node.upnode = api_collection_node
+                    api_collection_node.upnode = graph.root
                     output.append(api_collection_node)
                 else:
                     # 如果连续的api节点不足2个，将它们原样添加到输出列表

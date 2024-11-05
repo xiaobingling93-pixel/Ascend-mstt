@@ -25,6 +25,7 @@ class Const:
     """
     TOOL_NAME = "msprobe"
 
+    ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
@@ -229,6 +230,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
@@ -457,3 +459,5 @@ class MonitorConst:
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
+    OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    RULE_NAME = ['AnomalyTurbulence']

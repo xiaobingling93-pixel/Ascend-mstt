@@ -56,8 +56,9 @@ class DiffNode:
     def compare_operator_nodes(
             left_nodes: List[OperatorNode],
             right_nodes: List[OperatorNode]) -> Generator['DiffNode', None, None]:
-        '''Given two OperatorNode lists, find the DataLoader/Module/Backward/Optimizer node and create the child list DiffNode
-        '''
+        """Given two OperatorNode lists, find the DataLoader/Module/Backward/Optimizer node and
+        create the child list DiffNode
+        """
         right_keys = [(type(r), r.name) for r in right_nodes]
 
         # find matching points in the two list
