@@ -230,6 +230,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
