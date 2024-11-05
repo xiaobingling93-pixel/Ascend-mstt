@@ -331,7 +331,7 @@ def get_step_or_rank_from_string(step_or_rank, obj):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f'The string parameter for {obj} only supports formats like "3-5". '
                                f'Now string parameter for {obj} is "{step_or_rank}".')
-    if all(Const.STEP_RANK_MAXIMUM_RANGE[0] <= b <= Const.STEP_RANK_MAXIMUM_RANGE[1] for b in borderlines):
+    if all(Const.STEP_RANK_MINIMUM_VALUE <= b <= Const.STEP_RANK_MAXIMUM_VALUE for b in borderlines):
         if borderlines[0] <= borderlines[1]:
             continual_step_or_rank = list(range(borderlines[0], borderlines[1] + 1))
         else:
@@ -341,7 +341,7 @@ def get_step_or_rank_from_string(step_or_rank, obj):
     else:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f"The boundaries must fall within the range of "
-                               f"[{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
+                               f"[{Const.STEP_RANK_MINIMUM_VALUE}, {Const.STEP_RANK_MAXIMUM_VALUE}].")
     return continual_step_or_rank
 
 
@@ -353,6 +353,10 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         return []
     if not isinstance(step_or_rank_input, list):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
+    if len(step_or_rank_input) > Const.STEP_RANK_MAXIMUM_VALUE:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f"{obj} is invalid, its length cannot exceed {Const.STEP_RANK_MAXIMUM_VALUE}")
+
     real_step_or_rank = []
     for element in step_or_rank_input:
         if not is_int(element) and not isinstance(element, str):
@@ -361,7 +365,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         if isinstance(element, int) and element < 0:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"Each element of {obj} must be non-negative, currently it is {element}.")
-        if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
+        if isinstance(element, int) and Const.STEP_RANK_MINIMUM_VALUE <= element <= Const.STEP_RANK_MAXIMUM_VALUE:
             real_step_or_rank.append(element)
         elif isinstance(element, str) and Const.HYPHEN in element:
             continual_step_or_rank = get_step_or_rank_from_string(element, obj)

@@ -171,7 +171,8 @@ class Const:
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
-    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
     FLOAT16 = "Float16"
