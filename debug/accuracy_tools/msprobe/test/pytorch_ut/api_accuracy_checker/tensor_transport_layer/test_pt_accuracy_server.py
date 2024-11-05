@@ -39,27 +39,6 @@ class TestTCPServer(unittest.TestCase):
         self.tcp_server.run_reactor()
         mock_reactor.run.assert_called_once_with(installSignalHandlers=False)
 
-    @patch("os.path.exists")
-    def test_check_tls_path(self, mock_path_exists):
-        mock_path_exists.side_effect = lambda path: True
-        server_key, server_crt = self.tcp_server.check_tls_path()
-
-        self.assertEqual(server_key, "/test/path/server.key")
-        self.assertEqual(server_crt, "/test/path/server.crt")
-
-    @patch("os.path.exists")
-    def test_check_tls_path_missing_key(self, mock_path_exists):
-        def side_effect(path):
-            if "server.key" in path:
-                return False
-            return True
-
-        mock_path_exists.side_effect = side_effect
-
-        with self.assertRaises(Exception) as context:
-            self.tcp_server.check_tls_path()
-        self.assertIn("/test/path/server.key is not exists", str(context.exception))
-
     def test_is_running(self):
         self.tcp_server.is_running()
         self.tcp_server.factory.is_all_connection_closed.assert_called_once_with()

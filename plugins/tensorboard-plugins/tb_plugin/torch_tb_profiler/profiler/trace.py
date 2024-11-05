@@ -56,8 +56,8 @@ EventTypeMap = {
 
 
 class BaseEvent(object):
-    def __init__(self, type, data):
-        self.type: str = type
+    def __init__(self, event_type, data):
+        self.type: str = event_type
         self.name: str = data.get('name')
         self.ts: int = data.get('ts')
         self.pid: int = data.get('pid')
@@ -66,8 +66,8 @@ class BaseEvent(object):
 
 
 class DurationEvent(BaseEvent):
-    def __init__(self, type, data):
-        super().__init__(type, data)
+    def __init__(self, event_type, data):
+        super().__init__(event_type, data)
         self.category: str = data.get('cat', '')
         self.duration: int = data.get('dur')
 
@@ -79,8 +79,8 @@ class DurationEvent(BaseEvent):
 
 
 class KernelEvent(DurationEvent):
-    def __init__(self, type, data):
-        super().__init__(type, data)
+    def __init__(self, event_type, data):
+        super().__init__(event_type, data)
         self.occupancy = self.args.get('est. achieved occupancy %')
         self.blocks_per_sm = self.args.get('blocks per SM')
         self.grid = self.args.get('grid')
@@ -91,8 +91,8 @@ class KernelEvent(DurationEvent):
 
 
 class OperatorEvent(DurationEvent):
-    def __init__(self, type, data):
-        super().__init__(type, data)
+    def __init__(self, event_type, data):
+        super().__init__(event_type, data)
         self.callstack = self.args.get('Call stack')
         self.input_type = self.args.get('Input type')
 
@@ -111,8 +111,8 @@ class ProfilerStepEvent(OperatorEvent):
 
 
 class MemoryEvent(BaseEvent):
-    def __init__(self, type, data):
-        super().__init__(type, data)
+    def __init__(self, event_type, data):
+        super().__init__(event_type, data)
         self.scope: str = data.get('s', '')
         self.device_id: int = self.args.get('Device Id')
         dtype = self.args.get('Device Type')
@@ -142,8 +142,8 @@ class MemoryEvent(BaseEvent):
 
 
 class PythonFunctionEvent(DurationEvent):
-    def __init__(self, type, data):
-        super().__init__(type, data)
+    def __init__(self, event_type, data):
+        super().__init__(event_type, data)
         self.python_id: int = self.args.get('Python id')
         self.python_parent_id: int = self.args.get('Python parent id')
 

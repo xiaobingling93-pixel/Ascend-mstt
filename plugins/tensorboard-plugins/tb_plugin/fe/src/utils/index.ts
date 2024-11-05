@@ -5,7 +5,7 @@
 import { ValueAndFormat } from '../api';
 
 export function firstOrUndefined<T>(v: T[] | undefined | null): T | undefined {
-  if (!v || !v.length) return undefined;
+  if (!v || !v.length) {return undefined;}
   return v[0];
 }
 

@@ -17,7 +17,7 @@
 
 import argparse
 import os
-import csv
+import re
 import sys
 import time
 import gc
@@ -44,7 +44,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
-    create_directory, get_json_contents, read_csv
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -436,6 +436,33 @@ def _run_ut(parser=None):
     run_ut_command(args)
 
 
+def checked_online_config(online_config):
+    if not online_config.is_online:
+        return
+    if not isinstance(online_config.is_online, bool):
+        raise ValueError("is_online must be bool type")
+    # rank_list
+    if not isinstance(online_config.rank_list, list):
+        raise ValueError("rank_list must be a list")
+    if online_config.rank_list and not all(isinstance(rank, int) for rank in online_config.rank_list):
+        raise ValueError("All elements in rank_list must be integers")
+
+    # nfs_path
+    if online_config.nfs_path:
+        check_file_or_directory_path(online_config.nfs_path, isdir=True)
+        return
+    # tls_path
+    if online_config.tls_path:
+        check_file_or_directory_path(online_config.tls_path, isdir=True)
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
+    # host and port
+    if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
+        raise Exception(f"host: {online_config.host} is invalid.")
+    if not isinstance(online_config.port, int) or not (0 < online_config.port <= 65535):
+        raise Exception(f"port: {online_config.port} is invalid, port range 0-65535.")
+
+
 def run_ut_command(args):
     if args.config_path:
         config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
@@ -494,6 +521,7 @@ def run_ut_command(args):
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(checker_config.error_data_path)
     online_config = checker_config.get_online_config()
+    checked_online_config(online_config)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
                                 args.result_csv_path, real_data_path, set(checker_config.white_list), 
                                 set(checker_config.black_list), error_data_path, online_config)

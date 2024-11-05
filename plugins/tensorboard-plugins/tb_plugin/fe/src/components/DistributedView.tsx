@@ -149,7 +149,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
     distributedGraph?: DistributedGraph,
     step?: string
   ) => {
-    if (!distributedGraph || !step) return undefined;
+    if (!distributedGraph || !step) {return undefined;}
     const barLabels = Object.keys(distributedGraph.data[step]);
     return {
       legends: distributedGraph.metadata.legends,

@@ -15,7 +15,7 @@
 
 import os
 
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
 from msprobe.core.common.utils import (add_time_with_yaml, detect_framework_by_dump_json,
@@ -219,22 +219,27 @@ def generate_file_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
 
     def generate_input_output_index_set(data, name):
         data_item = data.get(name)
+        if not data_item:
+            return set(), set()
         inputs = get_input(data_item)
         outputs = data_item.get(Const.OUTPUT)
         input_index_set = generate_index_set(inputs)
         output_index_set = generate_index_set(outputs)
         return input_index_set, output_index_set
 
-    def get_common_index_list(npu_index_set, bench_index_set):
+    def get_index_mapping(npu_index_set, bench_index_set):
         common_index = npu_index_set & bench_index_set
-        res = sorted(common_index, key=lambda x: [int(i) for i in x.split(Const.SEP)])
-        return res
+        npu_index_list = sorted(npu_index_set, key=lambda x: [int(i) for i in x.split(Const.SEP)])
+        index_mapping = {}
+        for index in npu_index_list:
+            index_mapping[index] =  index if index in common_index else ''
+        return index_mapping
 
-    def combine_data_name_and_index(npu_name, bench_name, index_list, input_output):
+    def combine_data_name_and_index(npu_name, bench_name, index_mapping, input_output):
         res = {}
-        for index in index_list:
-            k = Const.SEP.join([npu_name, input_output, index])
-            v = Const.SEP.join([bench_name, input_output, index])
+        for npu_index, bench_index in index_mapping.items():
+            k = Const.SEP.join([npu_name, input_output, npu_index])
+            v = Const.SEP.join([bench_name, input_output, bench_index]) if bench_index else CompareConst.N_A
             res[k] = v
         return res
 
@@ -242,15 +247,16 @@ def generate_file_mapping(npu_json_path, bench_json_path, api_mapping, output_pa
     bench_data = load_json(bench_json_path).get("data", {})
     data_mapping = {}
     for npu_name, bench_name in api_mapping.items():
-        if not bench_name or not npu_name:
+        if not npu_name:
             continue
         npu_input_index_set, npu_output_index_set = generate_input_output_index_set(npu_data, npu_name)
         bench_input_index_set, bench_output_index_set = generate_input_output_index_set(bench_data, bench_name)
-        common_input_index_list = get_common_index_list(npu_input_index_set, bench_input_index_set)
-        common_output_index_list = get_common_index_list(npu_output_index_set, bench_output_index_set)
 
-        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, common_input_index_list, Const.INPUT))
-        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, common_output_index_list, Const.OUTPUT))
+        input_index_mapping = get_index_mapping(npu_input_index_set, bench_input_index_set)
+        output_index_mapping = get_index_mapping(npu_output_index_set, bench_output_index_set)
+
+        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, input_index_mapping, Const.INPUT))
+        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, output_index_mapping, Const.OUTPUT))
     if output_path:
         file_name = add_time_with_yaml("data_mapping")
         file_path = os.path.join(os.path.realpath(output_path), file_name)
