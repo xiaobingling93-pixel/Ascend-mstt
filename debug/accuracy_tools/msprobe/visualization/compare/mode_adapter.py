@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import json
+import math
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.visualization.utils import ToolTip, GraphConst, str2float
 
@@ -23,7 +24,7 @@ class ModeAdapter:
         self.compare_mode = compare_mode
         self.csv_data = []
         self.compare_nodes = []
-    
+
     @staticmethod
     def _add_md5_compare_data(node_data, compare_data_dict):
         precision_index = GraphConst.MAX_INDEX_KEY
@@ -40,7 +41,7 @@ class ModeAdapter:
                     precision_index = GraphConst.MIN_INDEX_KEY
                 node_data[key] = value
         return precision_index
-    
+
     @staticmethod
     def _add_real_compare_data(node_data, compare_data_dict):
         min_thousandth = float(1)
@@ -53,6 +54,9 @@ class ModeAdapter:
                 headers = CompareConst.COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in GraphConst.REAL_DATA_INDEX_LIST]
                 ModeAdapter._match_data(value, compare_data, GraphConst.REAL_DATA_INDEX_LIST, id_list)
+                # 跳过scalar data，因为无法计算双千指标，会得到Nan
+                if not value.get(Const.SHAPE):
+                    continue
                 # 获取一个节点所有的输入或输出最小的双千指标
                 thousandth = value.get(CompareConst.ONE_THOUSANDTH_ERR_RATIO)
                 # 可能是None，可能是非数字内容str
@@ -69,9 +73,9 @@ class ModeAdapter:
         else:
             min_thousandth = min(numbers + [min_thousandth])
         return min_thousandth
-    
+
     @staticmethod
-    def _add_summary_compare_data( node_data, compare_data_dict):
+    def _add_summary_compare_data(node_data, compare_data_dict):
         max_relative_err = 0
         for key, value in node_data.items():
             if not isinstance(value, dict):
@@ -94,7 +98,7 @@ class ModeAdapter:
                 node_data[key] = value
         max_relative_err = 1 if max_relative_err > 1 else max_relative_err
         return max_relative_err
-    
+
     @staticmethod
     def _match_data(data_dict, compare_data, key_list, id_list):
         """
@@ -108,7 +112,7 @@ class ModeAdapter:
                 data_dict[key] = data
             else:
                 data_dict[key] = 'null'
-    
+
     def parse_result(self, node, compare_data_dict):
         """
         根据结果返回数据，分别是precision_index，和附加数据
@@ -135,7 +139,7 @@ class ModeAdapter:
             precision_index = GraphConst.MAX_INDEX_KEY \
                 if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
         return precision_index, other_dict
-    
+
     def prepare_real_data(self, node):
         """
         为真实数据比较模式准备节点信息
@@ -144,12 +148,12 @@ class ModeAdapter:
             self.compare_nodes.append(node)
             return True
         return False
-    
+
     def add_csv_data(self, compare_result_list):
         if self.compare_mode != GraphConst.REAL_DATA_COMPARE:
             return
         self.csv_data.extend(compare_result_list)
-    
+
     def add_error_key(self, node_data):
         """
         根据不同的模式进行提供不同错误信息
@@ -167,7 +171,7 @@ class ModeAdapter:
                 message = []
             value[GraphConst.ERROR_KEY] = message
             node_data[key] = value
-    
+
     def get_tool_tip(self):
         """
         用于前端展示字段的具体含义

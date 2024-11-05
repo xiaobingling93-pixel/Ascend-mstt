@@ -16,14 +16,14 @@ class GoogleBlobSystem(RemotePath, BaseFileSystem):
         if not storage:
             raise ImportError('google-cloud-storage must be installed for Google Cloud Blob support.')
 
-    def exists(self, dirname):
+    def exists(self, filename):
         """Returns whether the path is a directory or not."""
-        bucket_name, path = self.bucket_and_path(dirname)
+        bucket_name, path = self.bucket_and_path(filename)
         client = self.create_google_cloud_client()
         bucket = client.bucket(bucket_name)
         return bucket.blob(path).exists()
 
-    def read(self, filename, binary_mode=False, size=None, continue_from=None):
+    def read(self, file, binary_mode=False, size=None, continue_from=None):
         raise NotImplementedError
 
     def write(self, filename, file_content, binary_mode=False):
@@ -62,7 +62,7 @@ class GoogleBlobSystem(RemotePath, BaseFileSystem):
                 items.append(item)
         return items
 
-    def makedirs(self, dirname):
+    def makedirs(self, path):
         """No need create directory since the upload blob will automatically create"""
         pass
 

@@ -80,7 +80,7 @@ def statistic_data_read(statistic_file_list, statistic_file_path):
     data_list = []
     statistic_data_list = []
     header_index = {
-        'Data Type': None, 'Shape': None, 'Max Value': None, 
+        'Data Type': None, 'Shape': None, 'Max Value': None,
         'Min Value': None, 'Avg Value': None, 'L2Norm Value': None
     }
     for statistic_file in statistic_file_list:
@@ -228,7 +228,8 @@ class GraphMSComparator:
                 result_dict[CompareConst.MAX_RELATIVE_ERR] = result_dict[CompareConst.MAX_DIFF] / result_dict[
                     CompareConst.BENCH_MAX] if result_dict[CompareConst.BENCH_MAX] > 0 else 0
                 if not np.isnan(result_dict[CompareConst.MAX_RELATIVE_ERR]):
-                    result_dict[CompareConst.MAX_RELATIVE_ERR] = str(result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
+                    result_dict[CompareConst.MAX_RELATIVE_ERR] = str(
+                        result_dict[CompareConst.MAX_RELATIVE_ERR] * 100) + "%"
                 result_dict[CompareConst.MIN_RELATIVE_ERR] = result_dict[CompareConst.MIN_DIFF] / result_dict[
                     CompareConst.BENCH_MIN] if result_dict[CompareConst.BENCH_MIN] > 0 else 0
                 if not np.isnan(result_dict[CompareConst.MIN_RELATIVE_ERR]):
@@ -277,7 +278,7 @@ class GraphMSComparator:
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
             self.to_excel(compare_result_df, compare_result_path)
             logger.info(f"Compare rank: {rank_id} step: {step_id} finish. Compare result: {compare_result_path}.")
-    
+
     def to_excel(self, compare_result_df: pd.DataFrame, compare_result_path: str, slice_num=0, need_slice=False) -> int:
         size = len(compare_result_df)
         # sheet size cannot be larger than 1048576
@@ -287,8 +288,8 @@ class GraphMSComparator:
             save_excel(compare_result_path, compare_result_df)
             return slice_num + 1
         else:
-            slice_num = self.to_excel(compare_result_df.iloc[0: size//2], compare_result_path, slice_num, True)
-            return self.to_excel(compare_result_df.iloc[size//2:], compare_result_path, slice_num, True)
+            slice_num = self.to_excel(compare_result_df.iloc[0: size // 2], compare_result_path, slice_num, True)
+            return self.to_excel(compare_result_df.iloc[size // 2:], compare_result_path, slice_num, True)
 
     def compare_process(self, rank_id, step_id):
         # generate data_path
@@ -336,7 +337,7 @@ class GraphMSComparator:
             npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(float)
 
             bench_float_type = [
-                CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, 
+                CompareConst.BENCH_MAX, CompareConst.BENCH_MIN,
                 CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM
             ]
             bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)

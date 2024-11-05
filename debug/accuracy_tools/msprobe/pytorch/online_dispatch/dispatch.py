@@ -65,8 +65,8 @@ class PtdbgDispatch(TorchDispatchMode):
         self.all_summary = []
         self.call_stack_list = []
         self.process_num = process_num
-        self.filter_dump_api()
         self.check_param()
+        self.filter_dump_api()
         dir_name = self.get_dir_name(tag)
         self.root_path = os.path.join(os.path.realpath(dump_path), dir_name)
         self.root_cpu_path = os.path.join(self.root_path, f'cpu')
@@ -272,6 +272,9 @@ class PtdbgDispatch(TorchDispatchMode):
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.dump_api_list, list):
             logger.error('The type of parameter "api_list" can only be list.')
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
+        if not all(isinstance(item, str) for item in self.dump_api_list):
+            logger.error('The type of parameter in "api_list" can only be str.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.debug_flag, bool):
             logger.error('The type of parameter "debug" can only be bool.')

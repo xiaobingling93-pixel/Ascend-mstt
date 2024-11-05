@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,20 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import collections
 import os
 import re
 import subprocess
 import time
-import json
 from datetime import datetime, timezone
+
+import numpy as np
 
 from msprobe.core.common.file_utils import (FileOpen, check_file_or_directory_path, load_json)
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-
 
 device = collections.namedtuple('device', ['type', 'index'])
 prefixes = ['api_stack', 'list', 'range', 'acl']
@@ -68,6 +67,7 @@ class MsprobeBaseException(Exception):
     FUNCTION_CALL_ERROR = 28
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
+    INVALID_KEY_ERROR = 31
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -288,7 +288,7 @@ def get_header_index(header_name, dump_mode):
 
 
 def convert_tuple(data):
-    return data if isinstance(data, tuple) else (data, )
+    return data if isinstance(data, tuple) else (data,)
 
 
 def check_op_str_pattern_valid(string, op_name=None, stack=False):
@@ -306,6 +306,10 @@ def check_op_str_pattern_valid(string, op_name=None, stack=False):
 def is_invalid_pattern(string):
     pattern = Const.STRING_BLACKLIST
     return re.search(pattern, string)
+
+
+def is_int(x):
+    return isinstance(x, int) and not isinstance(x, bool)
 
 
 def print_tools_ends_info():
@@ -351,7 +355,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
     real_step_or_rank = []
     for element in step_or_rank_input:
-        if not isinstance(element, (int, str)):
+        if not is_int(element) and not isinstance(element, str):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
@@ -368,7 +372,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 
 
 def check_seed_all(seed, mode):
-    if isinstance(seed, int):
+    if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
             logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
@@ -398,8 +402,10 @@ def safe_get_value(container, index, container_name, key=None):
                   f"index is {index}"
         logger.error(err_msg)
         raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    except KeyError as e:
-        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
-                  f"{container_name} is {container}"
+    except TypeError as e:
+        err_msg = "wrong type, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}\n" \
+                  f"key is {key}"
         logger.error(err_msg)
-        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e

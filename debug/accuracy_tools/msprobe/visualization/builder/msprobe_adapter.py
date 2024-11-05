@@ -16,13 +16,14 @@ import re
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
-from msprobe.pytorch.compare.pt_compare import PTComparator
-
+from msprobe.core.common.const import Const
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
-    r'^(Module)', #NodeOp.module
-    r'^(Tensor|Torch|Functional|NPU|VF|Distributed|Aten)' #NodeOp.function_api
+    # NodeOp.module
+    r'^(Module.|Cell.)',
+    # NodeOp.function_api
+    r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
 ]
 
 
@@ -39,14 +40,20 @@ def get_compare_mode(dump_path_param):
     return compare_mode
 
 
-def run_real_data(dump_path_param, csv_path):
+def run_real_data(dump_path_param, csv_path, framework):
     """
     多进程运行生成真实数据
     Args:
         dump_path_param: 调用acc_compare接口所依赖的参数
         csv_path: 生成文件路径
+        framework: 框架类型, pytorch或mindspore
     """
-    return PTComparator()._do_multi_process(dump_path_param, csv_path)
+    if framework == Const.PT_FRAMEWORK:
+        from msprobe.pytorch.compare.pt_compare import PTComparator
+        return PTComparator()._do_multi_process(dump_path_param, csv_path)
+    else:
+        from msprobe.mindspore.compare.ms_compare import MSComparator
+        return MSComparator()._do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
@@ -201,6 +208,8 @@ def _format_data(data_dict):
             value = str(value)
         if value == GraphConst.NULL or key == GraphConst.ERROR_KEY:
             none_num += 1
+        if key == Const.SHAPE:
+            value = str(value)
         data_dict[key] = value
     # 字典里的value全null，只保留一个null
     if none_num == len(data_dict):
