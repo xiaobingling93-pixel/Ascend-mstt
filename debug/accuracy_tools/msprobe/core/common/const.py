@@ -171,7 +171,8 @@ class Const:
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
-    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
     FLOAT16 = "Float16"
@@ -230,6 +231,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
