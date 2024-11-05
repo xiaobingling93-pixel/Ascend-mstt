@@ -101,7 +101,7 @@ class DataManager:
     def initialize_api_names_set(self, result_csv_path):
         """读取现有的 CSV 文件并存储已经出现的 API 名称到集合中"""
 
-        with FileOpen(result_csv_path, mode='r', newline='') as csv_file:
+        with FileOpen(result_csv_path, mode='r') as csv_file:
         # with open(result_csv_path, mode='r', newline='', encoding='utf-8') as csv_file:
             reader = csv.reader(csv_file)
             headers = next(reader, None)  # 读取标题行
