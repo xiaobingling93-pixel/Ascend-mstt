@@ -17,7 +17,8 @@ import os
 
 
 from msprobe.core.common.file_utils import check_file_or_directory_path
-from msprobe.core.common.utils import Const, MsprobeBaseException
+from msprobe.core.common.utils import MsprobeBaseException
+
 
 def add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
@@ -43,4 +44,3 @@ def check(args):
     if args.result_csv_path:
         args.result_csv_path = os.path.abspath(args.result_csv_path)
         check_file_or_directory_path(args.result_csv_path)
-

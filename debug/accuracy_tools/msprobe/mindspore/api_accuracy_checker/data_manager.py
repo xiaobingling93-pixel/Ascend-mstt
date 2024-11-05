@@ -13,19 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
 import csv
 
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
 from msprobe.core.common.utils import add_time_as_suffix, MsprobeBaseException
 
-from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
-from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
-from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
-                                                          trim_output_compute_element_list)
 from msprobe.core.common.file_utils import check_file_or_directory_path
 from msprobe.mindspore.common.log import logger
 

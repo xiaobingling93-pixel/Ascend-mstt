@@ -18,7 +18,6 @@ import json
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
-from msprobe.core.common.utils import is_int
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
 from msprobe.core.grad_probe.constant import level_adp
@@ -64,7 +63,7 @@ class OverflowCheckConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.overflow_nums is not None and not is_int(self.overflow_nums):
+        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
             raise Exception("overflow_nums is invalid, it should be an integer")
         if self.overflow_nums is not None and self.overflow_nums != -1 and self.overflow_nums <= 0:
             raise Exception("overflow_nums should be -1 or positive integer")
