@@ -514,12 +514,13 @@ def run_ut_command(args):
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
 
+    error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
-        error_data_path = initialize_save_error_data(checker_config.error_data_path)
+        error_data_path = initialize_save_error_data(error_data_path)
     online_config = checker_config.get_online_config()
     checked_online_config(online_config)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
