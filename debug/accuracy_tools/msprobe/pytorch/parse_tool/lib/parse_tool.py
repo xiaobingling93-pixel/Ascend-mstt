@@ -132,8 +132,7 @@ class ParseTool:
                                 " '-m' and '-g'.")
             raise ParseException("My directory path and golden directory path is same.")
         output_path = self.util.path_strip(args.output_path) if args.output_path else Const.BATCH_COMPARE_DIR
-        if not os.path.isdir(output_path):
-            os.makedirs(output_path, mode=0o750)
+        create_directory(output_path)
         self.compare.compare_converted_dir(my_dump_dir, golden_dump_dir, output_path)
 
     @catch_exception
