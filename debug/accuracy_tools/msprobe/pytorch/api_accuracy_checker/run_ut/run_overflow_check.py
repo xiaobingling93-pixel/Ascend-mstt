@@ -80,7 +80,7 @@ def run_overflow_check(forward_file):
             _, api_name, _ = api_full_name.split(Const.SEP)
             if "not implemented for 'Half'" in str(err):
                 logger.warning(f"API {api_name} not support half tensor in CPU. This API does not support overflow "
-                               f"check, so it will be skipped..")
+                               f"check, so it will be skipped.")
             elif "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                f"'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
