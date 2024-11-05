@@ -23,7 +23,6 @@ import math
 import os
 import time
 from contextlib import contextmanager
-from math import pow
 
 from . import consts
 
@@ -83,10 +82,10 @@ class Canonicalizer:
         }
         # raw memory is in bytes
         memory_metric_to_factor = {
-            'B':  pow(1024, 0),
-            'KB': pow(1024, 1),
-            'MB': pow(1024, 2),
-            'GB': pow(1024, 3),
+            'B':  math.pow(1024, 0),
+            'KB': math.pow(1024, 1),
+            'MB': math.pow(1024, 2),
+            'GB': math.pow(1024, 3),
         }
 
         # canonicalize the memory metric to a string
@@ -124,7 +123,7 @@ class DisplayRounder:
 
     def __init__(self, ndigits):
         self.ndigits = ndigits
-        self.precision = pow(10, -ndigits)
+        self.precision = math.pow(10, -ndigits)
 
     def __call__(self, v: float):
         _v = abs(v)

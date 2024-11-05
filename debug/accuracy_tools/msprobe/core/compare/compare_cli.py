@@ -55,7 +55,8 @@ def compare_cli(args):
 
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        kwargs = {"stack_mode": args.stack_mode, "auto_analyze": auto_analyze, "fuzzy_match": args.fuzzy_match}
+        kwargs = {"stack_mode": args.stack_mode, "auto_analyze": auto_analyze, "fuzzy_match": args.fuzzy_match,
+                  "is_print_compare_log": input_param.get("is_print_compare_log", True)}
         if input_param.get("rank_id") is not None:
             ms_graph_compare(input_param, args.output_path)
             return

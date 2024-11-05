@@ -40,6 +40,7 @@ from msprobe.core.common.utils import (
     check_configuration_param,
     check_json_file,
     check_regex_prefix_format_valid,
+    check_seed_all,
     get_dump_mode,
     get_real_step_or_rank,
     get_stack_construct_by_dump_json_path,
@@ -269,6 +270,9 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeException) as context:
             get_real_step_or_rank([1, 2, 3.5], "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([True, 1, 2], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         result = get_real_step_or_rank([1, 10, 50], "step")
         self.assertEqual(result, [1, 10, 50])
 
@@ -339,7 +343,7 @@ class TestUtils(TestCase):
         self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
         mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
         self.assertEqual(len(call_record), Const.MAX_DEPTH)
-
+        
     def test_check_seed_all(self):
         with self.assertRaises(MsprobeException) as context:
             check_seed_all(-1, True)

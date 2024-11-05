@@ -45,7 +45,7 @@ export const LineChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {return;}
 
     const options = {
       title: graph.title,
@@ -70,8 +70,8 @@ export const LineChart: React.FC<IProps> = (props) => {
     });
 
     google.visualization.events.addListener(chart, 'ready', function () {
-      var zoomLast = getCoords();
-      var observer = new MutationObserver(function () {
+      let zoomLast = getCoords();
+      let observer = new MutationObserver(function () {
         var zoomCurrent = getCoords();
         if (JSON.stringify(zoomLast) !== JSON.stringify(zoomCurrent)) {
           zoomLast = getCoords();
@@ -89,8 +89,8 @@ export const LineChart: React.FC<IProps> = (props) => {
     });
 
     function getCoords() {
-      var chartLayout = chart.getChartLayoutInterface();
-      var chartBounds = chartLayout.getChartAreaBoundingBox();
+      let chartLayout = chart.getChartLayoutInterface();
+      let chartBounds = chartLayout.getChartAreaBoundingBox();
 
       return {
         x_min: chartLayout.getHAxisValue(chartBounds.left),
@@ -110,7 +110,7 @@ export const LineChart: React.FC<IProps> = (props) => {
               p: column.p,
             });
           });
-          data.addRows(graph.rows['PTA'] ?? graph.rows['GE']);
+          data.addRows(graph.rows.PTA ?? graph.rows.GE);
         } else if (graph.columns.length === 5) {
           const data2 = new google.visualization.DataTable();
           graph.columns.forEach((column, index) => {
@@ -131,8 +131,8 @@ export const LineChart: React.FC<IProps> = (props) => {
               });
             }
           });
-          data.addRows(graph.rows['PTA']);
-          data2.addRows(graph.rows['GE']);
+          data.addRows(graph.rows.PTA);
+          data2.addRows(graph.rows.GE);
           data = google.visualization.data.join(
             data,
             data2,
@@ -152,7 +152,7 @@ export const LineChart: React.FC<IProps> = (props) => {
               p: column.p,
             });
           });
-          data.addRows(graph.rows['Allocated'] ?? graph.rows['Reserved']);
+          data.addRows(graph.rows.Allocated ?? graph.rows.Reserved);
         } else if (graph.columns.length === 3) {
           const data2 = new google.visualization.DataTable();
           graph.columns.forEach((column, index) => {
@@ -173,8 +173,8 @@ export const LineChart: React.FC<IProps> = (props) => {
               });
             }
           });
-          data.addRows(graph.rows['Allocated']);
-          data2.addRows(graph.rows['Reserved']);
+          data.addRows(graph.rows.Allocated);
+          data2.addRows(graph.rows.Reserved);
           data = google.visualization.data.join(
             data,
             data2,
@@ -211,25 +211,25 @@ export const LineChart: React.FC<IProps> = (props) => {
       if (record) {
         if (deviceTarget === 'Ascend') {
           let startId = binarySearch(
-            graph.rows['Allocated'],
+            graph.rows.Allocated,
             record.col2,
             compare_fn
           );
           let endId = binarySearch(
-            graph.rows['Allocated'],
+            graph.rows.Allocated,
             record.col3,
             compare_fn
           );
           let selection = [];
-          if (startId >= 0) selection.push({ row: startId, column: 1 });
-          if (endId >= 0) selection.push({ row: endId, column: 1 });
+          if (startId >= 0) {selection.push({ row: startId, column: 1 });}
+          if (endId >= 0) {selection.push({ row: endId, column: 1 });}
           chartObj.setSelection(selection);
         } else {
           let startId = binarySearch(graph.rows, record.col2, compare_fn);
           let endId = binarySearch(graph.rows, record.col3, compare_fn);
           let selection = [];
-          if (startId >= 0) selection.push({ row: startId, column: 1 });
-          if (endId >= 0) selection.push({ row: endId, column: 1 });
+          if (startId >= 0) {selection.push({ row: startId, column: 1 });}
+          if (endId >= 0) {selection.push({ row: endId, column: 1 });}
           chartObj.setSelection(selection);
         }
       } else {
