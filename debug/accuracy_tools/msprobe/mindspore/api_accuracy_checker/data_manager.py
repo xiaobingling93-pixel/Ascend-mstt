@@ -143,7 +143,8 @@ class DataManager:
         # 设置当前目录和输出路径，确保在首次写入时使用
         self.csv_dir = last_dir
         self.detail_out_path = os.path.join(last_dir, os.path.basename(result_csv_path).replace("result", "details"))
-        check_file_or_directory_path(self.detail_out_path)
+        if self.detail_out_path and os.path.exists(self.detail_out_path):
+            check_file_or_directory_path(self.detail_out_path)
         self.result_out_path = result_csv_path
         self.is_first_write = False
 
@@ -154,9 +155,10 @@ class DataManager:
                 self.csv_dir,
                 os.path.basename(self.result_out_path).replace("result", "details")
             )
-            if self.detail_out_path:
+            if self.detail_out_path and os.path.exists(self.detail_out_path):
                 check_file_or_directory_path(self.detail_out_path)
-            if self.result_out_path:
+
+            if self.result_out_path and os.path.exists(self.result_out_path):
                 check_file_or_directory_path(self.result_out_path)
 
             # 直接写入表头
