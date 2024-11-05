@@ -16,7 +16,7 @@
 import json
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.file_utils import FileOpen
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
