@@ -327,7 +327,7 @@ class TestUtils(TestCase):
         # 测试递归深度限制函数
         recursion_list = [[]]
         temp_list = recursion_list[0] 
-        for i in range(Const.MAX_DEPTH):
+        for _ in range(Const.MAX_DEPTH):
             temp_list.append([])
             temp_list = temp_list[0]
         temp_list.append(0)
@@ -336,9 +336,9 @@ class TestUtils(TestCase):
         def recursion_func(test_list, call_record):
             call_record.append(1)
             if isinstance(test_list, list):
-                recursion_func(recursion_list[0], call_record)
+                recursion_func(test_list[0], call_record)
         with self.assertRaises(MsprobeException) as context:
-            recursion_func(temp_list, call_record)
+            recursion_func(recursion_list, call_record)
         # 执行超过限制的递归函数会触发异常、且函数成功调用次数等于限制次数
         self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
         mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
