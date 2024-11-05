@@ -74,7 +74,7 @@ def get_detail_csv_header():
 
 def check_csv_header(headers, required_constants, csv_path):
     """校验 CSV 文件表头是否包含所有必需的常量"""
-    missing_constants = [const for const in required_constants if const not in headers]
+    missing_constants = [const for const in required_constants if not any(const in header for header in headers)]
 
     if missing_constants:
         raise MsprobeBaseException(

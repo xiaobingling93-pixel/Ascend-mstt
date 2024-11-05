@@ -35,7 +35,7 @@ def check(args):
     args.api_info_file = os.path.abspath(args.api_info_file)
     check_file_or_directory_path(args.api_info_file)
 
-    if args.out_path is None:
+    if args.out_path == "":
         args.out_path = "./"
     args.out_path = os.path.abspath(args.out_path)
     check_file_or_directory_path(args.out_path, isdir=True)
