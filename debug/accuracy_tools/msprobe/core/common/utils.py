@@ -402,8 +402,10 @@ def safe_get_value(container, index, container_name, key=None):
                   f"index is {index}"
         logger.error(err_msg)
         raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    except KeyError as e:
-        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
-                  f"{container_name} is {container}"
+    except TypeError as e:
+        err_msg = "wrong type, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}\n" \
+                  f"key is {key}"
         logger.error(err_msg)
-        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e
