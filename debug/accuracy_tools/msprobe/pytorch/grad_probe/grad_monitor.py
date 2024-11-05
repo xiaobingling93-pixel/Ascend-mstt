@@ -1,15 +1,31 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from collections import defaultdict
 
 import torch
+from msprobe.core.common.file_utils import remove_path, save_npy, write_csv, create_directory
+from msprobe.core.grad_probe.constant import level_adp
+from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.common.utils import get_rank_id, print_rank_0
+from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
+
 if int(torch.__version__.split('.')[0]) >= 2:
     from torch.optim.optimizer import register_optimizer_step_pre_hook
-from msprobe.pytorch.grad_probe.grad_stat_csv import GradStatCsv
-from msprobe.core.grad_probe.utils import check_numeral_list_ascend, data_in_list_target
-from msprobe.core.grad_probe.constant import level_adp
-from msprobe.pytorch.common.log import logger
-from msprobe.core.common.file_utils import remove_path, save_npy, write_csv, create_directory
-from msprobe.pytorch.common.utils import get_rank_id, print_rank_0
 
 
 class GradientMonitor:
@@ -75,7 +91,7 @@ class GradientMonitor:
                 output_lines.append(grad_info)
                 if self._level_adp["have_grad_direction"]:
                     GradientMonitor.save_grad_direction(param_name, grad,
-                                                    f'{self._output_path}/rank{self._rank}/step{self._step}')
+                                                        f'{self._output_path}/rank{self._rank}/step{self._step}')
             output_dirpath = os.path.join(self._output_path, f"rank{getattr(self, '_rank')}")
             if not os.path.isdir(output_dirpath):
                 create_directory(output_dirpath)
@@ -87,5 +103,6 @@ class GradientMonitor:
             output_lines.insert(0, header_result)
             write_csv(output_lines, output_path)
             logger.info(f"write grad data to {output_path}")
+
         if int(torch.__version__.split('.')[0]) >= 2:
             register_optimizer_step_pre_hook(optimizer_pre_step_hook)

@@ -17,7 +17,7 @@
 
 import argparse
 import os
-import csv
+import re
 import sys
 import time
 import gc
@@ -34,8 +34,8 @@ else:
 import torch
 from tqdm import tqdm
 
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, hf_32_standard_api, UtDataInfo, \
-    get_validated_result_csv_path, get_validated_details_csv_path, exec_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, UtDataInfo, \
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
@@ -43,8 +43,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.file_utils import FileOpen, FileChecker, \
-    change_mode, check_path_before_create, create_directory, get_json_contents, read_csv
+from msprobe.core.common.file_utils import FileChecker, change_mode, \
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -115,17 +115,23 @@ def run_api_offline(config, compare, api_name_set):
         if api_full_name in api_name_set:
             continue
         if is_unsupported_api(api_full_name):
+            skip_message = f"API {api_full_name} not support for run ut. SKIP."
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         _, api_name = extract_basic_api_segments(api_full_name)
         if not api_name:
             err_message = f"API {api_full_name} not support for run ut. SKIP."
             logger.error(err_message)
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
-            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
-            compare.record_results(result_info)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, err_message)
+            record_skip_info(api_full_name, compare, compare_alg_results)
             continue
         try:
             if blacklist_and_whitelist_filter(api_name, config.black_list, config.white_list):
+                skip_message = f"API {api_name} in black list or not in white list. SKIP."
+                logger.info(skip_message)
+                compare_alg_results = err_column.to_column_value(CompareConst.SKIP, skip_message)
+                record_skip_info(api_full_name, compare, compare_alg_results)
                 continue
             data_info = run_torch_api(api_full_name, config.real_data_path, config.backward_content, api_info_dict)
             is_fwd_success, is_bwd_success = compare.compare_output(api_full_name, data_info)
@@ -137,9 +143,8 @@ def run_api_offline(config, compare, api_name_set):
                                f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
-            fwd_compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
-            result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [fwd_compare_alg_results], None, 0)
-            compare.record_results(result_info)
+            compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
+            record_skip_info(api_full_name, compare, compare_alg_results)
         finally:
             if is_gpu:
                 torch.cuda.empty_cache()
@@ -331,7 +336,6 @@ def run_backward(args, grad, grad_index, out):
 
 
 def initialize_save_error_data(error_data_path):
-    check_path_before_create(error_data_path)
     create_directory(error_data_path)
     error_data_path_checker = FileChecker(error_data_path, FileCheckConst.DIR,
                                           ability=FileCheckConst.WRITE_ABLE)
@@ -433,6 +437,33 @@ def _run_ut(parser=None):
     run_ut_command(args)
 
 
+def checked_online_config(online_config):
+    if not online_config.is_online:
+        return
+    if not isinstance(online_config.is_online, bool):
+        raise ValueError("is_online must be bool type")
+    # rank_list
+    if not isinstance(online_config.rank_list, list):
+        raise ValueError("rank_list must be a list")
+    if online_config.rank_list and not all(isinstance(rank, int) for rank in online_config.rank_list):
+        raise ValueError("All elements in rank_list must be integers")
+
+    # nfs_path
+    if online_config.nfs_path:
+        check_file_or_directory_path(online_config.nfs_path, isdir=True)
+        return
+    # tls_path
+    if online_config.tls_path:
+        check_file_or_directory_path(online_config.tls_path, isdir=True)
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
+        check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
+    # host and port
+    if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
+        raise Exception(f"host: {online_config.host} is invalid.")
+    if not isinstance(online_config.port, int) or not (0 < online_config.port <= 65535):
+        raise Exception(f"port: {online_config.port} is invalid, port range 0-65535.")
+
+
 def run_ut_command(args):
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
@@ -459,8 +490,7 @@ def run_ut_command(args):
             forward_content = preprocess_forward_content(forward_content)
             logger.info("Finish filtering the api in the api_info_file.")
 
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
-    check_path_before_create(out_path)
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
@@ -502,6 +532,7 @@ def run_ut_command(args):
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
     online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
+    checked_online_config(online_config)
     run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
                                 args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
                                 online_config)

@@ -26,7 +26,7 @@ except ImportError:
 else:
     current_device = "npu"
 
-from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -186,11 +186,13 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
             logger.error("The depth of arg_in is too large, please check the arg_in.")
             raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(arg_in, (list, tuple)):
-            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs, depth=depth+1) for arg in arg_in))
+            return set().union(*tuple(recursive_find_dtypes(arg, kwargs, check_kwargs=check_kwargs, depth=depth+1) for
+                                      arg in arg_in))
         elif isinstance(arg_in, torch.Tensor) and is_tensor_with_raise_precision(arg_in, check_kwargs):
             return set([arg_in.dtype])
         elif isinstance(arg_in, dict) and check_kwargs:
-            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True, depth=depth+1) for v in arg_in.values()))
+            return set().union(*tuple(recursive_find_dtypes(v, kwargs, check_kwargs=True, depth=depth+1) for
+                                      v in arg_in.values()))
         return set()
 
     raise_dtype = None
@@ -204,5 +206,11 @@ def generate_cpu_params(input_args, input_kwargs, need_backward, api_name):
     raise_dtype = None if api_name in not_raise_dtype_set else raise_dtype
     is_detach = api_name not in not_detach_set
     cpu_args = recursive_arg_to_cpu(input_args, is_detach, raise_dtype=raise_dtype)
-    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for key, value in input_kwargs.items()}
+    cpu_kwargs = {key: recursive_arg_to_cpu(value, key != "out" and is_detach, raise_dtype=raise_dtype) for
+                  key, value in input_kwargs.items()}
     return cpu_args, cpu_kwargs
+
+
+def record_skip_info(api_full_name, compare, compare_alg_results):
+    result_info = (api_full_name, CompareConst.SKIP, CompareConst.SKIP, [compare_alg_results], None, 0)
+    compare.record_results(result_info)

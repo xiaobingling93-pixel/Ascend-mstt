@@ -5,14 +5,25 @@ import os
 import shutil
 import json
 import torch
+import threading
 from msprobe.core.compare.utils import get_accuracy
 from msprobe.core.compare.highlight import find_error_rows, find_compare_result_error_rows
 from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.pytorch.compare.pt_compare import PTComparator
 
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+                        'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
+           'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
+                             ('torch.float32', [16])],
+            'output_struct': [('torch.float32', [1, 16, 28, 28])],
+            'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
+                        [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
+                        [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
+                        [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
+
+npu_dict2 = {'op_name': ['Functional.conv2d.1.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                         'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output'],
            'input_struct': [('torch.float32', [1, 1, 28, 28]), ('torch.float32', [16, 1, 5, 5]),
                              ('torch.float32', [16])],
@@ -212,6 +223,9 @@ op_result = [
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data')
+base_dir2 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data2')
+base_dir3 = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_acc_compare_data3')
+pt_dir = os.path.join(base_dir3, f'dump_data_dir')
 
 
 def generate_dump_json(base_dir):
@@ -258,27 +272,38 @@ class TestUtilsMethods(unittest.TestCase):
 
     def setUp(self):
         os.makedirs(base_dir, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir2, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir3, mode=0o750, exist_ok=True)
+        os.makedirs(pt_dir, mode=0o750, exist_ok=True)
+
+        self.lock = threading.Lock()
 
     def tearDown(self):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
+        if os.path.exists(base_dir2):
+            shutil.rmtree(base_dir2)
+        if os.path.exists(pt_dir):
+            shutil.rmtree(pt_dir)
+        if os.path.exists(base_dir3):
+            shutil.rmtree(base_dir3)
 
     def test_get_accuracy_graph_mode(self):
         result = []
-        get_accuracy(result, npu_dict_aten, bench_dict_functional, highlight_dict)
+        get_accuracy(result, npu_dict_aten, bench_dict_functional, dump_mode=Const.SUMMARY)
         self.assertEqual(result, aten_result)
 
     def test_find_error_rows(self):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        find_error_rows(summary_result, 0, 1, highlight_dict, summary_compare=True)
+        find_error_rows(summary_result, 0, 1, highlight_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(highlight_dict, {'red_rows': [], 'yellow_rows': []})
 
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        find_compare_result_error_rows(result_df, highlight_dict, False, False)
+        find_compare_result_error_rows(result_df, highlight_dict, dump_mode=Const.ALL)
         self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
 
     def test_calculate_summary_data(self):
@@ -311,19 +336,13 @@ class TestUtilsMethods(unittest.TestCase):
 
         stack_mode = True
 
-        md5_compare = True
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_md5, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_md5, stack_mode, dump_mode=Const.MD5)
         self.assertTrue(result_df.equals(result_table_md5_true))
 
-        md5_compare = False
-        summary_mode = True
-        result_df = Comparator().make_result_table(result_summary, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_summary, stack_mode, dump_mode=Const.SUMMARY)
         self.assertTrue(result_df.equals(result_table_summary_true))
 
-        md5_compare = False
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_all, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_all, stack_mode, dump_mode=Const.ALL)
         self.assertTrue(result_df.equals(result_table_all_true))
 
     def test_make_result_table_stack_mode_False(self):
@@ -353,24 +372,17 @@ class TestUtilsMethods(unittest.TestCase):
 
         stack_mode = False
 
-        md5_compare = True
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_md5_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_md5_test, stack_mode, dump_mode=Const.MD5)
         self.assertTrue(result_df.equals(result_table_md5_true))
 
-        md5_compare = False
-        summary_mode = True
-        result_df = Comparator().make_result_table(result_summary_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_summary_test, stack_mode, dump_mode=Const.SUMMARY)
         self.assertTrue(result_df.equals(result_table_summary_true))
 
-        md5_compare = False
-        summary_mode = False
-        result_df = Comparator().make_result_table(result_all_test, md5_compare, summary_mode, stack_mode)
+        result_df = Comparator().make_result_table(result_all_test, stack_mode, dump_mode=Const.ALL)
         self.assertTrue(result_df.equals(result_table_all_true))
 
     def test_gen_merge_list(self):
-        md5_compare = False
-        summary_compare = True
+        dump_mode = Const.SUMMARY
         op_data = {
             'input_args': [
                 {
@@ -391,11 +403,41 @@ class TestUtilsMethods(unittest.TestCase):
             'stack_info': [['File']],
             'summary': [[1, 1, 1, 1]]
         }
-        result = Comparator().gen_merge_list(json_data, op_name, stack_json_data, summary_compare, md5_compare)
+        result = Comparator().gen_merge_list(json_data, op_name, stack_json_data, dump_mode)
         self.assertEqual(result, merge_list)
 
-    # test_check_op in test_pt_compare.py
-    # test_match_op in test_pt_compare.py
+    def test_check_op_fuzzy_false(self):
+        fuzzy_match = False
+        pt_comparator = PTComparator()
+        result = pt_comparator.check_op(npu_dict, bench_dict, fuzzy_match)
+        self.assertEqual(result, True)
+
+    def test_check_op_fuzzy_true(self):
+        fuzzy_match = True
+        pt_comparator = PTComparator()
+        result = pt_comparator.check_op(npu_dict2, bench_dict, fuzzy_match)
+        self.assertEqual(result, True)
+
+    def test_match_op_both_last_element(self):
+        fuzzy_match = False
+        pt_comparator = PTComparator()
+        a, b = pt_comparator.match_op([npu_dict], [bench_dict], fuzzy_match)
+        self.assertEqual(a, 0)
+        self.assertEqual(b, 0)
+
+    def test_match_op_only_npu_last_element(self):
+        fuzzy_match = False
+        pt_comparator = PTComparator()
+        a, b = pt_comparator.match_op([npu_dict], [bench_dict, 1], fuzzy_match)
+        self.assertEqual(a, 0)
+        self.assertEqual(b, 0)
+
+    def test_match_op_only_bench_last_element(self):
+        fuzzy_match = False
+        pt_comparator = PTComparator()
+        a, b = pt_comparator.match_op([npu_dict, npu_dict2], [bench_dict], fuzzy_match)
+        self.assertEqual(a, 0)
+        self.assertEqual(b, 0)
 
     def test_compare_process(self):
         generate_dump_json(base_dir)
@@ -403,9 +445,8 @@ class TestUtilsMethods(unittest.TestCase):
         file_lists = [os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'dump.json'), os.path.join(base_dir, 'stack.json')]
         stack_mode = True
         fuzzy_match = False
-        summary_compare = True
-        md5_compare = False
-        result = PTComparator().compare_process(file_lists, stack_mode, fuzzy_match, summary_compare, md5_compare)
+        dump_mode = Const.SUMMARY
+        result = PTComparator().compare_process(file_lists, stack_mode, fuzzy_match, dump_mode)
         o_data = [
             ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
              'torch.float32', 'torch.float32', [2, 2], [2, 2], 0, 0, 0, 0, '0.0%', 'N/A', '0.0%', '0.0%',
@@ -417,8 +458,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(result.equals(o_result))
 
     def test_merge_data(self):
-        summary_compare = True
-        md5_compare = False
+        dump_mode = Const.SUMMARY
         op_data = {
             'input_args': [
                 {
@@ -431,7 +471,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         json_data = {'data': {'Functional.linear.0.forward': op_data}}
         stack_json_data = {'Functional.linear.0.forward': ['File']}
-        result = Comparator().merge_data(json_data, stack_json_data, summary_compare, md5_compare)
+        result = Comparator().merge_data(json_data, stack_json_data, dump_mode)
         ops_all = {
             'Functional.linear.0.forward.input.0': {
                 'data_name': None, 'stack_info': [['File']],
@@ -439,6 +479,41 @@ class TestUtilsMethods(unittest.TestCase):
             }
         }
         self.assertEqual(result, ops_all)
+
+    def test_compare_core_basic(self):
+        generate_dump_json(base_dir2)
+        generate_stack_json(base_dir2)
+        input_params = {
+            "npu_json_path": os.path.join(base_dir2, "dump.json"),
+            "bench_json_path": os.path.join(base_dir2, "dump.json"),
+            "stack_json_path": os.path.join(base_dir2, "stack.json"),
+        }
+        output_path = base_dir2
+
+        PTComparator().compare_core(input_params, output_path, dump_mode=Const.SUMMARY)
+
+        output_files = os.listdir(output_path)
+        self.assertTrue(any(f.endswith(".xlsx") for f in output_files))
+
+    def test_compare_ops(self):
+        generate_dump_json(base_dir3)
+        generate_stack_json(base_dir3)
+        generate_pt(pt_dir)
+        dump_path = os.path.join(base_dir3, 'dump.json')
+        stack_path = os.path.join(base_dir3, 'stack.json')
+        input_param = {'npu_json_path': dump_path, 'bench_json_path': dump_path, 'stack_json_path': stack_path,
+                       'is_print_compare_log': True, 'npu_dump_data_dir': pt_dir, 'bench_dump_data_dir': pt_dir}
+        dump_path_dict = {'Functional.linear.0.forward.input.0': ['Functional.linear.0.forward.input.0.pt',
+                                                                  'Functional.linear.0.forward.input.0.pt']}
+        result_df = pd.DataFrame({
+            'NPU Name': ['Functional.linear.0.forward.input.0'],
+            'Bench Name': ['Functional.linear.0.forward.input.0']
+        })
+        updated_df = PTComparator().compare_ops(idx=0, dump_path_dict=dump_path_dict, result_df=result_df, lock=self.lock,
+                                              input_param=input_param)
+
+        self.assertEqual(updated_df.loc[0, CompareConst.COSINE], 1.0)
+        self.assertEqual(updated_df.loc[0, CompareConst.MAX_ABS_ERR], 0)
 
     def test_do_multi_process(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',

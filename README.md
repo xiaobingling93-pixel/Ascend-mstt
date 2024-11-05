@@ -4,11 +4,6 @@
 
 **2. 本代码仓 URL 变更为 [https://gitee.com/ascend/mstt](https://gitee.com/ascend/mstt)，原 URL 仍然可用（2024.07.04 ）。**
 
-**3. 不再维护：[api_accuracy_checker](./debug/accuracy_tools/api_accuracy_checker/) （2024.09.30下线）和[ ptdbg_ascend](./debug/accuracy_tools/ptdbg_ascend/)
-（2024.09.30下线）**
-
-**相关目录 mstt/debug/accuracy_tools/api_accuracy_checker 和 mstt/debug/accuracy_tools/ptdbg_ascend 将于 2024.09.30 删除。新版本的预检和 ptdbg 已经合到 mstt/debug/accuracy_tools/msprobe 目录下。**
-
 ---
 
 # 🧰 MindStudio Training Tools

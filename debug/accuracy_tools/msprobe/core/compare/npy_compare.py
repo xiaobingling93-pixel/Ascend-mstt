@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import abc
 import numpy as np
 from msprobe.core.common.utils import format_value
@@ -152,7 +167,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ''
             if n_value == CompareConst.NAN:
-                return "N/A", ''
+                return CompareConst.N_A, ''
 
         if not n_value.shape:
             return CompareConst.UNSUPPORTED, ''
@@ -190,10 +205,13 @@ class GetMaxAbsErr(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
+        if np.isnan(max_value):
+            message = 'Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data.'
+            return CompareConst.NAN, message
         return format_value(max_value), ""
 
 
@@ -220,13 +238,13 @@ class GetMaxRelativeErr(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ''
             if n_value == CompareConst.NAN:
-                return "N/A", ''
+                return CompareConst.N_A, ''
 
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
         max_relative_err = np.max(np.abs(relative_err))
         if np.isnan(max_relative_err):
-            message = 'Cannot compare by MaxRelativeError, the data contains nan in dump data.'
+            message = 'Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data.'
             return CompareConst.NAN, message
         return format_value(max_relative_err), ''
 
@@ -242,7 +260,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         if not n_value.shape:
             return CompareConst.NAN, ""
@@ -264,7 +282,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             if n_value == CompareConst.SHAPE_UNMATCH:
                 return CompareConst.SHAPE_UNMATCH, ""
             if n_value == CompareConst.NAN:
-                return "N/A", ""
+                return CompareConst.N_A, ""
 
         if not n_value.shape:
             return CompareConst.NAN, ""
@@ -272,7 +290,8 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
             return CompareConst.NAN, ""
-        return format_value(np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
+        return format_value(
+            np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
 
 
 class CompareOps:

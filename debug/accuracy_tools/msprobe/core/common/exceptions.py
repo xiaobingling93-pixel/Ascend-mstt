@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 class CodedException(Exception):
     def __init__(self, code, error_info=''):
         super().__init__()
@@ -73,9 +88,13 @@ class StepException(CodedException):
 class FreeBenchmarkException(CodedException):
     UnsupportedType = 0
     InvalidGrad = 1
+    InvalidPerturbedOutput = 2
+    OutputIndexError = 3
     err_strs = {
         UnsupportedType: "[msprobe] Free benchmark get unsupported type: ",
         InvalidGrad: "[msprobe] Free benchmark gradient invalid: ",
+        InvalidPerturbedOutput: "[msprobe] Free benchmark invalid perturbed output: ",
+        OutputIndexError: "[msprobe] Free benchmark output index out of bounds: ",
     }
 
 
@@ -86,6 +105,7 @@ class DistributedNotInitializedError(Exception):
 
     def __str__(self):
         return self.msg
+
 
 class ApiAccuracyCheckerException(CodedException):
     ParseJsonFailed = 0

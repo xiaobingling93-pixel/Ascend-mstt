@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 
 
@@ -25,6 +40,9 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
     x_shape = x.shape
     h = x.float()
     grad = dy_tensor.float()
+    if len(r1_shape) < 4 or len(x_shape) < 4:
+        raise RuntimeError(f"Shape of r1 and x should at least be 4-dimension, "
+                           f"but got r1 shape:{r1_shape}, x shape:{x_shape}")
     condition_1 = (r1_shape[0] == 1
                    and r1_shape[1] == x_shape[1]
                    and r1_shape[2] == 1
@@ -53,4 +71,5 @@ def npu_rotary_mul_backward(dy_tensor, x, r1, r2):
             for j in range(x_shape[2]):
                 r2_grad[:, 0, 0, :] += (x_new2[:, i, j, :] * grad[:, i, j, :])
                 r1_grad[:, 0, 0, :] += (h[:, i, j, :] * grad[:, i, j, :])
+
     return x.grad.cpu(), r1_grad.cpu(), r2_grad.cpu()

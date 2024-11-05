@@ -15,51 +15,51 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * Modifications: Add visualization of PyTorch Ascend profiling.
  *--------------------------------------------------------------------------------------------*/
 
-import Box from '@material-ui/core/Box'
-import Card from '@material-ui/core/Card'
-import CardContent from '@material-ui/core/CardContent'
-import CardHeader from '@material-ui/core/CardHeader'
-import ClickAwayListener from '@material-ui/core/ClickAwayListener'
-import CssBaseline from '@material-ui/core/CssBaseline'
-import Divider from '@material-ui/core/Divider'
-import Drawer from '@material-ui/core/Drawer'
-import Fab from '@material-ui/core/Fab'
-import FormControl from '@material-ui/core/FormControl'
-import IconButton from '@material-ui/core/IconButton'
-import ListSubheader from '@material-ui/core/ListSubheader'
-import MenuItem from '@material-ui/core/MenuItem'
-import Select, { SelectProps } from '@material-ui/core/Select'
-import { makeStyles } from '@material-ui/core/styles'
-import Tab from '@material-ui/core/Tab'
-import Tabs from '@material-ui/core/Tabs'
-import Typography from '@material-ui/core/Typography'
-import ChevronLeftIcon from '@material-ui/icons/ChevronLeft'
-import ChevronRightIcon from '@material-ui/icons/ChevronRight'
-import 'antd/es/button/style/css'
-import 'antd/es/list/style/css'
-import 'antd/es/table/style/css'
-import clsx from 'clsx'
-import * as React from 'react'
-import * as api from './api'
-import { AccuracyLeftPanel } from './components/Accuracy/AccuracyLeftPanel'
-import { FileInfo } from './components/Accuracy/entity'
-import { LossComparison } from './components/Accuracy/LossComparison'
-import { DiffOverview } from './components/DiffOverview'
-import { DistributedView } from './components/DistributedView'
-import { FullCircularProgress } from './components/FullCircularProgress'
-import { Kernel } from './components/Kernel'
-import { MemoryView } from './components/MemoryView'
-import { ModuleView } from './components/ModuleView'
-import { Operator } from './components/Operator'
-import { Overview } from './components/Overview'
-import { TraceView } from './components/TraceView'
-import { setup } from './setup'
-import './styles.css'
-import { firstOrUndefined, sleep } from './utils'
+import Box from '@material-ui/core/Box';
+import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
+import CardHeader from '@material-ui/core/CardHeader';
+import ClickAwayListener from '@material-ui/core/ClickAwayListener';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import Divider from '@material-ui/core/Divider';
+import Drawer from '@material-ui/core/Drawer';
+import Fab from '@material-ui/core/Fab';
+import FormControl from '@material-ui/core/FormControl';
+import IconButton from '@material-ui/core/IconButton';
+import ListSubheader from '@material-ui/core/ListSubheader';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select, { SelectProps } from '@material-ui/core/Select';
+import { makeStyles } from '@material-ui/core/styles';
+import Tab from '@material-ui/core/Tab';
+import Tabs from '@material-ui/core/Tabs';
+import Typography from '@material-ui/core/Typography';
+import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
+import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import 'antd/es/button/style/css';
+import 'antd/es/list/style/css';
+import 'antd/es/table/style/css';
+import clsx from 'clsx';
+import * as React from 'react';
+import * as api from './api';
+import { AccuracyLeftPanel } from './components/Accuracy/AccuracyLeftPanel';
+import { FileInfo } from './components/Accuracy/entity';
+import { LossComparison } from './components/Accuracy/LossComparison';
+import { DiffOverview } from './components/DiffOverview';
+import { DistributedView } from './components/DistributedView';
+import { FullCircularProgress } from './components/FullCircularProgress';
+import { Kernel } from './components/Kernel';
+import { MemoryView } from './components/MemoryView';
+import { ModuleView } from './components/ModuleView';
+import { Operator } from './components/Operator';
+import { Overview } from './components/Overview';
+import { TraceView } from './components/TraceView';
+import { setup } from './setup';
+import './styles.css';
+import { firstOrUndefined, sleep } from './utils';
 
 export enum Views {
   Overview = 'Overview',
@@ -69,7 +69,7 @@ export enum Views {
   Distributed = 'Distributed',
   Memory = 'Memory',
   Module = 'Module',
-  Lightning = 'Lightning'
+  Lightning = 'Lightning',
 }
 
 const ViewNames = {
@@ -80,61 +80,61 @@ const ViewNames = {
   [Views.Distributed]: Views.Distributed,
   [Views.Memory]: Views.Memory,
   [Views.Module]: Views.Module,
-  [Views.Lightning]: Views.Lightning
-}
+  [Views.Lightning]: Views.Lightning,
+};
 
-const accViews = ['Loss Comparison']
+const accViews = ['Loss Comparison'];
 
-const drawerWidth = 340
+const drawerWidth = 340;
 const useStyles = makeStyles((theme) => ({
   root: {
     display: 'flex',
-    height: '100%'
+    height: '100%',
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
     transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
-    })
+      duration: theme.transitions.duration.leavingScreen,
+    }),
   },
   appBarShift: {
     marginLeft: drawerWidth,
     width: `calc(100% - ${drawerWidth}px)`,
     transition: theme.transitions.create(['width', 'margin'], {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   menuButton: {
-    marginRight: 36
+    marginRight: 36,
   },
   hide: {
-    display: 'none'
+    display: 'none',
   },
   drawer: {
     width: drawerWidth,
     flexShrink: 0,
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
   },
   drawerOpen: {
     width: drawerWidth,
     zIndex: 999,
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.enteringScreen
-    })
+      duration: theme.transitions.duration.enteringScreen,
+    }),
   },
   drawerClose: {
     transition: theme.transitions.create('width', {
       easing: theme.transitions.easing.sharp,
-      duration: theme.transitions.duration.leavingScreen
+      duration: theme.transitions.duration.leavingScreen,
     }),
     overflowX: 'hidden',
     width: 0,
     [theme.breakpoints.up('sm')]: {
-      width: 0
-    }
+      width: 0,
+    },
   },
   toolbar: {
     display: 'flex',
@@ -142,129 +142,125 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: 'flex-end',
     padding: theme.spacing(0, 1),
     // necessary for content to be below app bar
-    ...theme.mixins.toolbar
+    ...theme.mixins.toolbar,
   },
   content: {
     flexGrow: 1,
     padding: theme.spacing(3),
-    overflowX: 'hidden'
+    overflowX: 'hidden',
   },
   formControl: {
     margin: theme.spacing(1),
-    minWidth: 120
+    minWidth: 120,
   },
   fab: {
     marginLeft: theme.spacing(1),
     marginTop: theme.spacing(1),
-    position: 'absolute'
+    position: 'absolute',
   },
   iconButton: {
-    padding: '8px'
-  }
-}))
+    padding: '8px',
+  },
+}));
 
 export const App = () => {
-  const classes = useStyles()
+  const classes = useStyles();
 
   // #region - State
+  const [selectedTab, setSelectedTab] = React.useState(0);
 
-  const [selectedTab, setSelectedTab] = React.useState(0)
+  const [run, setRun] = React.useState<string>('');
+  const [runs, setRuns] = React.useState<string[]>([]);
+  const [runsLoading, setRunsLoading] = React.useState(true);
 
-  const [run, setRun] = React.useState<string>('')
-  const [runs, setRuns] = React.useState<string[]>([])
-  const [runsLoading, setRunsLoading] = React.useState(true)
+  const [workers, setWorkers] = React.useState<string[]>([]);
+  const [worker, setWorker] = React.useState<string>('');
 
-  const [workers, setWorkers] = React.useState<string[]>([])
-  const [worker, setWorker] = React.useState<string>('')
+  const [spans, setSpans] = React.useState<string[]>([]);
+  const [span, setSpan] = React.useState<string | ''>('');
 
-  const [spans, setSpans] = React.useState<string[]>([])
-  const [span, setSpan] = React.useState<string | ''>('')
-
-  const [views, setViews] = React.useState<Views[]>([])
-  const [view, setView] = React.useState<Views | ''>('')
-  const [loaded, setLoaded] = React.useState(false)
-  const iframeRef = React.useRef<HTMLIFrameElement>(null)
-  const [deviceTarget, setDeviceTarget] = React.useState<string>('GPU')
+  const [views, setViews] = React.useState<Views[]>([]);
+  const [view, setView] = React.useState<Views | ''>('');
+  const [loaded, setLoaded] = React.useState(false);
+  const iframeRef = React.useRef<HTMLIFrameElement>(null);
+  const [deviceTarget, setDeviceTarget] = React.useState<string>('GPU');
 
   const [diffLeftWorkerOptions, setDiffLeftWorkerOptions] = React.useState<
     string[]
-  >([])
+  >([]);
   const [diffLeftSpansOptions, setDiffLeftSpansOptions] = React.useState<
     string[]
-  >([])
-  const [diffLeftRun, setDiffLeftRun] = React.useState<string>('')
-  const [diffLeftWorker, setDiffLeftWorker] = React.useState<string>('')
-  const [diffLeftSpan, setDiffLeftSpan] = React.useState<string | ''>('')
+  >([]);
+  const [diffLeftRun, setDiffLeftRun] = React.useState<string>('');
+  const [diffLeftWorker, setDiffLeftWorker] = React.useState<string>('');
+  const [diffLeftSpan, setDiffLeftSpan] = React.useState<string | ''>('');
 
   const [diffRightWorkerOptions, setDiffRightWorkerOptions] = React.useState<
     string[]
-  >([])
+  >([]);
   const [diffRightSpansOptions, setDiffRightSpansOptions] = React.useState<
     string[]
-  >([])
-  const [diffRightRun, setDiffRightRun] = React.useState<string>('')
-  const [diffRightWorker, setDiffRightWorker] = React.useState<string>('')
-  const [diffRightSpan, setDiffRightSpan] = React.useState<string | ''>('')
+  >([]);
+  const [diffRightRun, setDiffRightRun] = React.useState<string>('');
+  const [diffRightWorker, setDiffRightWorker] = React.useState<string>('');
+  const [diffRightSpan, setDiffRightSpan] = React.useState<string | ''>('');
 
-  const [open, setOpen] = React.useState(true)
+  const [open, setOpen] = React.useState(true);
 
-  const [topTab, setTopTab] = React.useState<number>(0)
-  const [fileList, setFileList] = React.useState<FileInfo[]>([])
-  const [uploadedCount, setUploadedCount] = React.useState<number>(0)
-
-  // #endregion
+  const [topTab, setTopTab] = React.useState<number>(0);
+  const [fileList, setFileList] = React.useState<FileInfo[]>([]);
+  const [uploadedCount, setUploadedCount] = React.useState<number>(0);// #endregion
 
   React.useEffect(() => {
-    setup().catch(() => {
-      console.log('google chart is not supported offline')
-    }).finally(() => {
-      setLoaded(true)
-    })
-  }, [])
+    setup()
+      .catch(() => {
+        console.log('google chart is not supported offline');
+      })
+      .finally(() => {
+        setLoaded(true);
+      });
+  }, []);
 
   const continuouslyFetchRuns = async () => {
     while (true) {
       try {
-        const runs = await api.defaultApi.runsGet()
-        setRuns(runs.runs)
-        setRunsLoading(runs.loading)
+        const runs = await api.defaultApi.runsGet();
+        setRuns(runs.runs);
+        setRunsLoading(runs.loading);
       } catch (e) {
-        console.info('Cannot fetch runs: ', e)
+        console.info('Cannot fetch runs: ', e);
       }
-      await sleep(5000)
+      await sleep(5000);
     }
-  }
+  };
 
   React.useEffect(() => {
-    continuouslyFetchRuns()
-  }, [])
+    continuouslyFetchRuns();
+  }, []);
 
   React.useEffect(() => {
     if (!run || !runs.includes(run)) {
-      setRun(firstOrUndefined(runs) ?? '')
+      setRun(firstOrUndefined(runs) ?? '');
     }
-  }, [runs])
-
-  // #region - Diff Left
+  }, [runs]);// #region - Diff Left
 
   React.useEffect(() => {
     if (diffLeftRun) {
       api.defaultApi.workersGet(diffLeftRun, Views.Overview).then((workers) => {
-        setDiffLeftWorkerOptions(workers)
-      })
+        setDiffLeftWorkerOptions(workers);
+      });
     }
-  }, [diffLeftRun])
+  }, [diffLeftRun]);
 
   React.useEffect(() => {
     if (diffLeftRun && diffLeftWorker) {
       api.defaultApi.spansGet(diffLeftRun, diffLeftWorker).then((spans) => {
-        setDiffLeftSpansOptions(spans)
-      })
+        setDiffLeftSpansOptions(spans);
+      });
     }
-  }, [diffLeftRun, diffLeftWorker])
+  }, [diffLeftRun, diffLeftWorker]);
 
   // #endregion
-
   // #region - Diff Right
 
   React.useEffect(() => {
@@ -272,21 +268,20 @@ export const App = () => {
       api.defaultApi
         .workersGet(diffRightRun, Views.Overview)
         .then((workers) => {
-          setDiffRightWorkerOptions(workers)
-        })
+          setDiffRightWorkerOptions(workers);
+        });
     }
-  }, [diffRightRun])
+  }, [diffRightRun]);
 
   React.useEffect(() => {
     if (diffRightRun && diffRightWorker) {
       api.defaultApi.spansGet(diffRightRun, diffRightWorker).then((spans) => {
-        setDiffRightSpansOptions(spans)
-      })
+        setDiffRightSpansOptions(spans);
+      });
     }
-  }, [diffRightRun, diffRightWorker])
+  }, [diffRightRun, diffRightWorker]);
 
   // #endregion
-
   // #region - normal
 
   React.useEffect(() => {
@@ -294,154 +289,166 @@ export const App = () => {
       api.defaultApi.viewsGet(run).then((rawViews) => {
         const views = rawViews.views
           .map((v) => Views[Views[v as Views]])
-          .filter(Boolean)
-        setDeviceTarget(rawViews.device_target)
-        setViews(views)
-      })
+          .filter(Boolean);
+        setDeviceTarget(rawViews.device_target);
+        setViews(views);
+      });
     }
-  }, [run])
+  }, [run]);
 
   React.useEffect(() => {
-    setView(firstOrUndefined(views) ?? '')
-  }, [views])
+    setView(firstOrUndefined(views) ?? '');
+  }, [views]);
 
   React.useEffect(() => {
     if (run && view) {
       api.defaultApi.workersGet(run, view).then((workers) => {
-        setWorkers(workers)
-      })
+        setWorkers(workers);
+      });
     }
-  }, [run, view])
+  }, [run, view]);
 
   React.useEffect(() => {
-    setWorker(firstOrUndefined(workers) ?? '')
-  }, [workers])
+    setWorker(firstOrUndefined(workers) ?? '');
+  }, [workers]);
 
   React.useEffect(() => {
     if (run && worker) {
       api.defaultApi.spansGet(run, worker).then((spans) => {
-        setSpans(spans)
-      })
+        setSpans(spans);
+      });
     }
-  }, [run, worker])
+  }, [run, worker]);
 
   React.useEffect(() => {
-    setSpan(firstOrUndefined(spans) ?? '')
-  }, [spans])
+    setSpan(firstOrUndefined(spans) ?? '');
+  }, [spans]);
 
   // #endregion
 
   // #region - Event Handler
   const handleTabChange = (event: React.ChangeEvent<{}>, value: any) => {
-    setSelectedTab(value as number)
-  }
+    setSelectedTab(value as number);
+  };
 
   const handleTopTabChange = (event: React.ChangeEvent<{}>, value: any) => {
-    setTopTab(value as number)
-  }
+    setTopTab(value as number);
+  };
 
   const handleRunChange: SelectProps['onChange'] = (event) => {
-    setRun(event.target.value as string)
-    setView('')
-    setWorker('')
-    setSpan('')
-  }
+    setRun(event.target.value as string);
+    setView('');
+    setWorker('');
+    setSpan('');
+  };
 
   const handleViewChange: SelectProps['onChange'] = (event) => {
-    setView(event.target.value as Views)
-    setWorker('')
-    setSpan('')
-  }
+    setView(event.target.value as Views);
+    setWorker('');
+    setSpan('');
+  };
 
   const handleWorkerChange: SelectProps['onChange'] = (event) => {
-    setWorker(event.target.value as string)
-    setSpan('')
-  }
+    setWorker(event.target.value as string);
+    setSpan('');
+  };
 
   const handleSpanChange: SelectProps['onChange'] = (event) => {
-    setSpan(event.target.value as string)
-  }
+    setSpan(event.target.value as string);
+  };
 
   const handleDiffLeftRunChange: SelectProps['onChange'] = (event) => {
-    setDiffLeftRun(event.target.value as string)
-    setDiffLeftWorker('')
-    setDiffLeftSpan('')
-  }
+    setDiffLeftRun(event.target.value as string);
+    setDiffLeftWorker('');
+    setDiffLeftSpan('');
+  };
 
   const handleDiffLeftWorkerChange: SelectProps['onChange'] = (event) => {
-    setDiffLeftWorker(event.target.value as string)
-    setDiffLeftSpan('')
-  }
+    setDiffLeftWorker(event.target.value as string);
+    setDiffLeftSpan('');
+  };
 
   const handleDiffLeftSpanChange: SelectProps['onChange'] = (event) => {
-    setDiffLeftSpan(event.target.value as string)
-  }
+    setDiffLeftSpan(event.target.value as string);
+  };
 
   const handleDiffRightRunChange: SelectProps['onChange'] = (event) => {
-    setDiffRightRun(event.target.value as string)
-    setDiffRightWorker('')
-    setDiffRightSpan('')
-  }
+    setDiffRightRun(event.target.value as string);
+    setDiffRightWorker('');
+    setDiffRightSpan('');
+  };
 
   const handleDiffRightWorkerChange: SelectProps['onChange'] = (event) => {
-    setDiffRightWorker(event.target.value as string)
-    setDiffRightSpan('')
-  }
+    setDiffRightWorker(event.target.value as string);
+    setDiffRightSpan('');
+  };
 
   const handleDiffRightSpanChange: SelectProps['onChange'] = (event) => {
-    setDiffRightSpan(event.target.value as string)
-  }
+    setDiffRightSpan(event.target.value as string);
+  };
 
   const handleDrawerOpen = () => {
-    setOpen(true)
-    SetIframeActive()
-  }
+    setOpen(true);
+    SetIframeActive();
+  };
 
   const handleDrawerClose = () => {
-    setOpen(false)
-    SetIframeActive()
-  }
+    setOpen(false);
+    SetIframeActive();
+  };
 
   const SetIframeActive = () => {
-    iframeRef.current?.focus()
-  }
+    iframeRef.current?.focus();
+  };
 
   const _changeFileList = (files: FileInfo[]) => {
     if (JSON.stringify(files) !== JSON.stringify(fileList)) {
-      setFileList(files)
+      setFileList(files);
     }
-  }
+  };
 
   const _changeUploadCount = (count: number) => {
-    setUploadedCount(count)
-  }
-
-  // #endregion
+    setUploadedCount(count);
+  };// #endregion
 
   const renderContent = () => {
     if (!runsLoading && runs.length == 0) {
       return (
-        <Card variant="outlined">
-          <CardHeader title="No Runs Found"></CardHeader>
+        <Card variant='outlined'>
+          <CardHeader title='No Runs Found'></CardHeader>
           <CardContent>
             <Typography>There are not any runs in the log folder.</Typography>
           </CardContent>
         </Card>
-      )
+      );
     }
 
     if (!loaded || !run || !worker || !view || !span) {
-      return <FullCircularProgress />
+      return <FullCircularProgress />;
     }
 
     if (selectedTab === 0) {
       switch (view) {
         case Views.Overview:
-          return <Overview run={run} worker={worker} span={span} />
+          return <Overview run={run} worker={worker} span={span} />;
         case Views.Operator:
-          return <Operator run={run} worker={worker} span={span} deviceTarget={deviceTarget} />
+          return (
+            <Operator
+              run={run}
+              worker={worker}
+              span={span}
+              deviceTarget={deviceTarget}
+            />
+          );
         case Views.Kernel:
-          return <Kernel run={run} worker={worker} span={span} deviceTarget={deviceTarget} />
+          return (
+            <Kernel
+              run={run}
+              worker={worker}
+              span={span}
+              deviceTarget={deviceTarget}
+            />
+          );
         case Views.Trace:
           return (
             <TraceView
@@ -450,14 +457,21 @@ export const App = () => {
               span={span}
               iframeRef={iframeRef}
             />
-          )
+          );
         case Views.Distributed:
-          return <DistributedView run={run} worker={worker} span={span} />
+          return <DistributedView run={run} worker={worker} span={span} />;
         case Views.Memory:
-          return <MemoryView run={run} worker={worker} span={span} deviceTarget={deviceTarget} />
+          return (
+            <MemoryView
+              run={run}
+              worker={worker}
+              span={span}
+              deviceTarget={deviceTarget}
+            />
+          );
         case Views.Module:
         case Views.Lightning:
-          return <ModuleView run={run} worker={worker} span={span} />
+          return <ModuleView run={run} worker={worker} span={span} />;
       }
     } else {
       return (
@@ -469,16 +483,16 @@ export const App = () => {
           expWorker={diffRightWorker}
           expSpan={diffRightSpan}
         />
-      )
+      );
     }
-  }
+  };
 
   const spanComponent = () => {
     const spanFragment = (
       <React.Fragment>
         <ListSubheader>Spans</ListSubheader>
         <ClickAwayListener onClickAway={SetIframeActive}>
-          <FormControl variant="outlined" className={classes.formControl}>
+          <FormControl variant='outlined' className={classes.formControl}>
             <Select value={span} onChange={handleSpanChange}>
               {spans.map((span) => (
                 <MenuItem value={span}>{span}</MenuItem>
@@ -487,30 +501,30 @@ export const App = () => {
           </FormControl>
         </ClickAwayListener>
       </React.Fragment>
-    )
+    );
 
     if (!spans || spans.length <= 1) {
-      return <div className={classes.hide}>{spanFragment}</div>
+      return <div className={classes.hide}>{spanFragment}</div>;
     } else {
-      return spanFragment
+      return spanFragment;
     }
-  }
+  };
 
   return (
     <div className={classes.root}>
       <CssBaseline />
       <Drawer
-        variant="permanent"
-        anchor="left"
+        variant='permanent'
+        anchor='left'
         className={clsx(classes.drawer, {
           [classes.drawerOpen]: open,
-          [classes.drawerClose]: !open
+          [classes.drawerClose]: !open,
         })}
         classes={{
           paper: clsx({
             [classes.drawerOpen]: open,
-            [classes.drawerClose]: !open
-          })
+            [classes.drawerClose]: !open,
+          }),
         }}
         onClick={SetIframeActive}
       >
@@ -527,10 +541,10 @@ export const App = () => {
           <Tabs
             value={topTab}
             onChange={handleTopTabChange}
-            aria-label="top tabs example"
+            aria-label='top tabs example'
           >
-            <Tab label="Profiling" />
-            <Tab label="Accuracy" />
+            <Tab label='Profiling' />
+            <Tab label='Accuracy' />
           </Tabs>
         </Box>
         {topTab === 0 ? (
@@ -539,17 +553,20 @@ export const App = () => {
               <Tabs
                 value={selectedTab}
                 onChange={handleTabChange}
-                aria-label="basic tabs example"
+                aria-label='basic tabs example'
               >
-                <Tab label="Normal" />
-                <Tab label="Diff" />
+                <Tab label='Normal' />
+                <Tab label='Diff' />
               </Tabs>
             </Box>
             {selectedTab == 0 ? (
               <>
                 <ListSubheader>Runs</ListSubheader>
                 <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl variant="outlined" className={classes.formControl}>
+                  <FormControl
+                    variant='outlined'
+                    className={classes.formControl}
+                  >
                     <Select value={run} onChange={handleRunChange}>
                       {runs.map((run) => (
                         <MenuItem value={run}>{run}</MenuItem>
@@ -559,22 +576,32 @@ export const App = () => {
                 </ClickAwayListener>
                 <ListSubheader>Views</ListSubheader>
                 <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl variant="outlined" className={classes.formControl}>
+                  <FormControl
+                    variant='outlined'
+                    className={classes.formControl}
+                  >
                     <Select value={view} onChange={handleViewChange}>
                       {views.map((view) => (
-                        <MenuItem value={view}>{view === Views.Kernel ? (
-                          deviceTarget === 'Ascend' ? `NPU ${ViewNames[view]}` : `GPU ${ViewNames[view]}`
-                        ) : ViewNames[view]}</MenuItem>
+                        <MenuItem value={view}>
+                          {view === Views.Kernel
+                            ? deviceTarget === 'Ascend'
+                              ? `NPU ${ViewNames[view]}`
+                              : `GPU ${ViewNames[view]}`
+                            : ViewNames[view]}
+                        </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
                 </ClickAwayListener>
                 <ListSubheader>Workers</ListSubheader>
                 <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl variant="outlined" className={classes.formControl}>
+                  <FormControl
+                    variant='outlined'
+                    className={classes.formControl}
+                  >
                     <Select value={worker} onChange={handleWorkerChange}>
-                      {workers.map((worker) => (
-                        <MenuItem value={worker}>{worker}</MenuItem>
+                      {workers.map((worker1) => (
+                        <MenuItem value={worker1}>{worker1}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -583,93 +610,106 @@ export const App = () => {
               </>
             ) : (
               <>
-                <Typography variant="h6">&nbsp;&nbsp;Baseline</Typography>
+                <Typography variant='h6'>&nbsp;&nbsp;Baseline</Typography>
                 <ListSubheader>Runs</ListSubheader>
-                <FormControl variant="outlined" className={classes.formControl}>
-                  <Select value={diffLeftRun} onChange={handleDiffLeftRunChange}>
-                    {runs.map((run) => (
-                      <MenuItem value={run}>{run}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <ListSubheader>Workers</ListSubheader>
-
-                  <FormControl variant="outlined" className={classes.formControl}>
-                    <Select
-                      value={diffLeftWorker}
-                      onChange={handleDiffLeftWorkerChange}
-                    >
-                      {diffLeftWorkerOptions.map((worker) => (
-                        <MenuItem value={worker}>{worker}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <ListSubheader>Spans</ListSubheader>
-                  <FormControl variant="outlined" className={classes.formControl}>
-                    <Select value={diffLeftSpan} onChange={handleDiffLeftSpanChange}>
-                      {diffLeftSpansOptions.map((span) => (
-                        <MenuItem value={span}>{span}</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <Divider />
-
-                <Typography variant="h6">&nbsp;&nbsp;Experimental</Typography>
-                <ListSubheader>Runs</ListSubheader>
-                <FormControl variant="outlined" className={classes.formControl}>
-                  <Select value={diffRightRun} onChange={handleDiffRightRunChange}>
-                    {runs.map((run) => (
-                      <MenuItem value={run}>{run}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <ListSubheader>Workers</ListSubheader>
-                <FormControl variant="outlined" className={classes.formControl}>
+                <FormControl variant='outlined' className={classes.formControl}>
                   <Select
-                    value={diffRightWorker}
-                    onChange={handleDiffRightWorkerChange}
+                    value={diffLeftRun}
+                    onChange={handleDiffLeftRunChange}
                   >
-                    {diffRightWorkerOptions.map((worker) => (
-                      <MenuItem value={worker}>{worker}</MenuItem>
+                    {runs.map((run) => (
+                      <MenuItem value={run}>{run}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <ListSubheader>Workers</ListSubheader>
+
+                <FormControl variant='outlined' className={classes.formControl}>
+                  <Select
+                    value={diffLeftWorker}
+                    onChange={handleDiffLeftWorkerChange}
+                  >
+                    {diffLeftWorkerOptions.map((worker2) => (
+                      <MenuItem value={worker2}>{worker2}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <ListSubheader>Spans</ListSubheader>
-                <FormControl variant="outlined" className={classes.formControl}>
+                <FormControl variant='outlined' className={classes.formControl}>
+                  <Select
+                    value={diffLeftSpan}
+                    onChange={handleDiffLeftSpanChange}
+                  >
+                    {diffLeftSpansOptions.map((span1) => (
+                      <MenuItem value={span1}>{span1}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <Divider />
+
+                <Typography variant='h6'>&nbsp;&nbsp;Experimental</Typography>
+                <ListSubheader>Runs</ListSubheader>
+                <FormControl variant='outlined' className={classes.formControl}>
+                  <Select
+                    value={diffRightRun}
+                    onChange={handleDiffRightRunChange}
+                  >
+                    {runs.map((run) => (
+                      <MenuItem value={run}>{run}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <ListSubheader>Workers</ListSubheader>
+                <FormControl variant='outlined' className={classes.formControl}>
+                  <Select
+                    value={diffRightWorker}
+                    onChange={handleDiffRightWorkerChange}
+                  >
+                    {diffRightWorkerOptions.map((worker3) => (
+                      <MenuItem value={worker3}>{worker3}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <ListSubheader>Spans</ListSubheader>
+                <FormControl variant='outlined' className={classes.formControl}>
                   <Select
                     value={diffRightSpan}
                     onChange={handleDiffRightSpanChange}
                   >
-                    {diffRightSpansOptions.map((span) => (
-                      <MenuItem value={span}>{span}</MenuItem>
+                    {diffRightSpansOptions.map((span2) => (
+                      <MenuItem value={span2}>{span2}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
               </>
             )}
           </>
-        ) :
+        ) : (
           <AccuracyLeftPanel
             onChangeCheckedFileList={_changeFileList}
             onChangeUploadedCount={_changeUploadCount}
           />
-        }
+        )}
       </Drawer>
       {!open && (
         <Fab
           className={classes.fab}
-          size="small"
-          color="primary"
-          aria-label="show menu"
+          size='small'
+          color='primary'
+          aria-label='show menu'
           onClick={handleDrawerOpen}
         >
           <ChevronRightIcon />
         </Fab>
       )}
       <main className={classes.content}>
-        {topTab === 0 ? renderContent() : <LossComparison fileList={fileList} fileCount={uploadedCount} />}
+        {topTab === 0 ? (
+          renderContent()
+        ) : (
+          <LossComparison fileList={fileList} fileCount={uploadedCount} />
+        )}
       </main>
-    </div >
-  )
-}
+    </div>
+  );
+};

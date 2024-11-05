@@ -1,16 +1,31 @@
-# 进行比对及结果展示
-import os
-import sys
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import csv
 import json
+import os
+import sys
 from collections import namedtuple
-from rich.table import Table
-from rich.console import Console
+
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv
-from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv, get_json_contents
 from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
+from rich.console import Console
+from rich.table import Table
 
 ELEMENT_NUM_THRESHOLD = 100
 ZERO_NUM_THRESHOLD = 0.1
@@ -18,23 +33,6 @@ FLOAT_PRECISION = 14
 
 ResultInfo = namedtuple('ResultInfo', ['api_name', 'is_fwd_success', 'is_bwd_success',
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results'])
-
-def get_file_content_bytes(file):
-    with FileOpen(file, 'rb') as file_handle:
-        return file_handle.read()
-
-
-def get_json_contents(file_path):
-    ops = get_file_content_bytes(file_path)
-    try:
-        json_obj = json.loads(ops)
-    except ValueError as error:
-        logger.error('Failed to load "%s". %s' % (file_path, str(error)))
-        raise CompareException(CompareException.INVALID_FILE_ERROR) from error
-    if not isinstance(json_obj, dict):
-        logger.error('Json file %s, content is not a dictionary!' % file_path)
-        raise CompareException(CompareException.INVALID_FILE_ERROR)
-    return json_obj
 
 
 def write_csv(data, filepath):
@@ -62,14 +60,15 @@ class Saver:
         }
 
     def write_csv_title(self):
-        summary_test_rows = [[self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, self.COLUMN_BACKWARD_SUCCESS, "Message"]]
+        summary_test_rows = [
+            [self.COLUMN_API_NAME, self.COLUMN_FORWARD_SUCCESS, self.COLUMN_BACKWARD_SUCCESS, "Message"]]
         write_csv(summary_test_rows, self.save_path)
 
         detail_test_rows = [[
             "Npu Name", "Bench Dtype", "NPU Dtype", "Shape",
             "error_balance", "max_abs_diff", "max_abs_idx",
             "max_rel_diff", "max_rel_idx", "eb_thd",
-            "error_thd", "Status","Message"
+            "error_thd", "Status", "Message"
         ]]
         write_csv(detail_test_rows, self.detail_save_path)
 
@@ -106,7 +105,7 @@ class Saver:
         console.print(table_detail)
 
     def get_statistics_from_result_csv(self):
-        checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.NA, CompareConst.SKIP]
+        checklist = [CompareConst.TRUE, CompareConst.FALSE, CompareConst.N_A, CompareConst.SKIP]
         data = read_csv(self.save_path)
         result_csv_name = os.path.basename(self.save_path)
         for _, row in data.iterrows():
@@ -121,7 +120,7 @@ class Saver:
             if column1 == CompareConst.SKIP:
                 continue
             self.test_result_cnt["total_num"] += 1
-            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, 'N/A']:
+            if column1 == CompareConst.TRUE and column2 in [CompareConst.TRUE, CompareConst.N_A]:
                 self.test_result_cnt['success_num'] += 1
             elif column1 == CompareConst.FALSE and column2 == CompareConst.FALSE:
                 self.test_result_cnt['forward_and_backward_fail_num'] += 1
@@ -228,8 +227,8 @@ class Comparator:
             is_bwd_success, bwd_compare_alg_results = True, None
         if is_bwd_success and bwd_compare_alg_results is None:
             self.saver.record_results(ResultInfo(api_name, is_fwd_success, CompareConst.NAN, fwd_compare_alg_results,
-                                      bwd_compare_alg_results))
+                                                 bwd_compare_alg_results))
         else:
             self.saver.record_results(ResultInfo(api_name, is_fwd_success, is_bwd_success, fwd_compare_alg_results,
-                                      bwd_compare_alg_results))
+                                                 bwd_compare_alg_results))
         return is_fwd_success, is_bwd_success

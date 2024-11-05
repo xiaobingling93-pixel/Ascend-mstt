@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2023. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import csv
 import fcntl
 import os
@@ -67,7 +66,7 @@ class FileChecker:
         self.check_path_ability()
         if self.is_script:
             check_path_owner_consistent(self.file_path)
-        check_path_pattern_vaild(self.file_path)
+        check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
         return self.file_path
@@ -122,7 +121,7 @@ class FileOpen:
         self.file_path = os.path.realpath(self.file_path)
         check_path_length(self.file_path)
         self.check_ability_and_owner()
-        check_path_pattern_vaild(self.file_path)
+        check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
 
@@ -193,7 +192,7 @@ def check_path_owner_consistent(path):
         raise FileCheckException(FileCheckException.FILE_PERMISSION_ERROR)
 
 
-def check_path_pattern_vaild(path):
+def check_path_pattern_valid(path):
     if not re.match(FileCheckConst.FILE_VALID_PATTERN, path):
         logger.error('The file path %s contains special characters.' % (path))
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR)
@@ -215,7 +214,8 @@ def check_common_file_size(file_path):
         for suffix, max_size in FileCheckConst.FILE_SIZE_DICT.items():
             if file_path.endswith(suffix):
                 check_file_size(file_path, max_size)
-                break
+                return
+        check_file_size(file_path, FileCheckConst.COMMOM_FILE_SIZE)
 
 
 def check_file_suffix(file_path, file_suffix):
@@ -237,8 +237,8 @@ def check_path_type(file_path, file_type):
 
 
 def make_dir(dir_path):
-    dir_path = os.path.realpath(dir_path)
     check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
     if os.path.isdir(dir_path):
         return
     try:
@@ -260,8 +260,9 @@ def create_directory(dir_path):
     Exception Description:
         when invalid data throw exception
     """
-    dir_path = os.path.realpath(dir_path)
+    check_link(dir_path)
     check_path_before_create(dir_path)
+    dir_path = os.path.realpath(dir_path)
     parent_dir = os.path.dirname(dir_path)
     if not os.path.isdir(parent_dir):
         create_directory(parent_dir)
@@ -269,6 +270,7 @@ def create_directory(dir_path):
 
 
 def check_path_before_create(path):
+    check_link(path)
     if path_len_exceeds_limit(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR, 'The file path length exceeds limit.')
 
@@ -323,7 +325,7 @@ def check_file_type(path):
     elif os.path.isfile(path):
         return FileCheckConst.FILE
     else:
-        logger.error('Neither a file nor a directory.')
+        logger.error(f'{path} does not exist, please check!')
         raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
@@ -342,7 +344,7 @@ def load_yaml(yaml_path):
 def load_npy(filepath):
     check_file_or_directory_path(filepath)
     try:
-        npy = np.load(filepath)
+        npy = np.load(filepath, allow_pickle=False)
     except Exception as e:
         logger.error(f"The numpy file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Load numpy file {filepath} failed.") from e
@@ -361,11 +363,11 @@ def load_json(json_path):
     return data
 
 
-def save_json(json_path, data, indent=None):
-    json_path = os.path.realpath(json_path)
+def save_json(json_path, data, indent=None, mode="w"):
     check_path_before_create(json_path)
+    json_path = os.path.realpath(json_path)
     try:
-        with FileOpen(json_path, 'w') as f:
+        with FileOpen(json_path, mode) as f:
             fcntl.flock(f, fcntl.LOCK_EX)
             json.dump(data, f, indent=indent)
             fcntl.flock(f, fcntl.LOCK_UN)
@@ -376,8 +378,8 @@ def save_json(json_path, data, indent=None):
 
 
 def save_yaml(yaml_path, data):
-    yaml_path = os.path.realpath(yaml_path)
     check_path_before_create(yaml_path)
+    yaml_path = os.path.realpath(yaml_path)
     try:
         with FileOpen(yaml_path, 'w') as f:
             fcntl.flock(f, fcntl.LOCK_EX)
@@ -387,6 +389,21 @@ def save_yaml(yaml_path, data):
         logger.error(f'Save yaml file "{os.path.basename(yaml_path)}" failed.')
         raise RuntimeError(f"Save yaml file {yaml_path} failed.") from e
     change_mode(yaml_path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
+def save_excel(path, data):
+    check_path_before_create(path)
+    path = os.path.realpath(path)
+    try:
+        if isinstance(data, pd.DataFrame):
+            data.to_excel(path, index=False)
+        else:
+            logger.error(f'unsupported data type.')
+            return
+    except Exception as e:
+        logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
+        raise RuntimeError(f"Save excel file {path} failed.") from e
+    change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def move_file(src_path, dst_path):
@@ -401,8 +418,8 @@ def move_file(src_path, dst_path):
 
 
 def save_npy(data, filepath):
-    filepath = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    filepath = os.path.realpath(filepath)
     try:
         np.save(filepath, data)
     except Exception as e:
@@ -423,6 +440,7 @@ def save_npy_to_txt(data, dst_file='', align=0):
         pad_array = np.zeros((align - data.size % align,))
         data = np.append(data, pad_array)
     check_path_before_create(dst_file)
+    dst_file = os.path.realpath(dst_file)
     try:
         np.savetxt(dst_file, data.reshape((-1, align)), delimiter=' ', fmt='%g')
     except Exception as e:
@@ -436,8 +454,8 @@ def save_workbook(workbook, file_path):
     workbook: 要保存的工作簿对象
     file_path: 文件保存路径
     """
-    file_path = os.path.realpath(file_path)
     check_path_before_create(file_path)
+    file_path = os.path.realpath(file_path)
     try:
         workbook.save(file_path)
     except Exception as e:
@@ -449,7 +467,7 @@ def save_workbook(workbook, file_path):
 def write_csv(data, filepath, mode="a+", malicious_check=False):
     def csv_value_is_valid(value: str) -> bool:
         if not isinstance(value, str):
-            return True  
+            return True
         try:
             # -1.00 or +1.00 should be consdiered as digit numbers
             float(value)
@@ -457,16 +475,16 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
             # otherwise, they will be considered as formular injections
             return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
         return True
-    
+
     if malicious_check:
         for row in data:
             for cell in row:
                 if not csv_value_is_valid(cell):
-                    raise RuntimeError(f"Malicious value [{cell}] is not allowed " \
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
                                        f"to be written into the csv: {filepath}.")
 
-    file_path = os.path.realpath(filepath)
     check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
     try:
         with FileOpen(filepath, mode, encoding='utf-8-sig') as f:
             writer = csv.writer(f)
@@ -477,10 +495,15 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def read_csv(filepath):
+def read_csv(filepath, as_pd=True):
     check_file_or_directory_path(filepath)
     try:
-        csv_data = pd.read_csv(filepath)
+        if as_pd:
+            csv_data = pd.read_csv(filepath)
+        else:
+            with FileOpen(filepath, 'r', encoding='utf-8-sig') as f:
+                csv_reader = csv.reader(f, delimiter=',')
+                csv_data = list(csv_reader)
     except Exception as e:
         logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Read csv file {filepath} failed.") from e
@@ -519,3 +542,16 @@ def get_json_contents(file_path):
 def get_file_content_bytes(file):
     with FileOpen(file, 'rb') as file_handle:
         return file_handle.read()
+
+
+# 对os.walk设置遍历深度
+def os_walk_for_files(path, depth):
+    res = []
+    for root, _, files in os.walk(path, topdown=True):
+        check_file_or_directory_path(root, isdir=True)
+        if root.count(os.sep) - path.count(os.sep) >= depth:
+            _[:] = []
+        else:
+            for file in files:
+                res.append({"file": file, "root": root})
+    return res

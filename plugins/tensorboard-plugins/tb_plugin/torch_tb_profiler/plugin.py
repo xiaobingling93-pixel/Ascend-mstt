@@ -1,6 +1,5 @@
 # -------------------------------------------------------------------------
-# Copyright (c) Microsoft Corporation. All rights reserved.
-#
+# Copyright (c) Microsoft Corporation.
 # Copyright(c) 2023 Huawei Technologies.
 # All rights reserved
 #
@@ -344,14 +343,17 @@ class TorchProfilerPlugin(base_plugin.TBPlugin):
                 end_ts = float(end_ts)
             for key in operator_memory_events:
                 if start_ts is not None and end_ts is not None:
-                    operator_memory_events[key] = [i for i in operator_memory_events[key] if
-                                                   i[2] and start_ts <= i[2] <= end_ts]
+                    operator_memory_events[key] = [
+                        i for i in operator_memory_events[key] if i[2] and start_ts <= i[2] <= end_ts
+                    ]
                 elif start_ts is not None:
-                    operator_memory_events[key] = [i for i in operator_memory_events[key] if
-                                                   i[2] and start_ts <= i[2]]
+                    operator_memory_events[key] = [
+                        i for i in operator_memory_events[key] if i[2] and start_ts <= i[2]
+                    ]
                 elif end_ts is not None:
-                    operator_memory_events[key] = [i for i in operator_memory_events[key] if
-                                                   i[2] and end_ts >= i[2]]
+                    operator_memory_events[key] = [
+                        i for i in operator_memory_events[key] if i[2] and end_ts >= i[2]
+                    ]
             return self.respond_as_json(temp_memory_events, True)
         else:
             if start_ts is not None:
@@ -473,9 +475,8 @@ class TorchProfilerPlugin(base_plugin.TBPlugin):
 
     def _monitor_runs(self):
         logger.info('Monitor runs begin')
-
+        touched = set()
         try:
-            touched = set()
             while True:
                 try:
                     logger.debug('Scan run dir')

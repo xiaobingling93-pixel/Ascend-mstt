@@ -1,6 +1,21 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import os
 import re
+import math
 import numpy as np
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
@@ -59,7 +74,11 @@ def check_and_return_dir_contents(dump_dir, prefix):
 
 def rename_api(npu_name, process):
     npu_split = npu_name.split(process)
-    torch_func_index, in_out = npu_split[0], npu_split[1]
+    try:
+        torch_func_index, in_out = npu_split[0], npu_split[1]
+    except IndexError as error:
+        logger.error(f'{npu_name} can not be split with {process}, please check!')
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
     torch_func_split = torch_func_index.rsplit(Const.SEP, 2)
     torch_func = str(torch_func_split[0]) + str(in_out)
     return torch_func
@@ -111,11 +130,15 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
         item_list = []
     if item is None or (isinstance(item, dict) and not item):
         if not top_bool:
-            tmp = {'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
-                   'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
+                'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'
+            }
         else:
-            tmp = {'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
-                   'shape': None, 'md5': None, 'data_name': '-1'}
+            tmp = {
+                'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
+                'shape': None, 'md5': None, 'data_name': '-1'
+            }
         item_list.append(tmp)
         return item_list
     if index is None:
@@ -128,7 +151,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
     if isinstance(item, dict):
         if 'type' not in item:
             for kwarg in item:
-                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth+1)
+                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth + 1)
                 item_list += kwarg_parsed_list
                 kwarg_parsed_list.clear()
         elif 'dtype' in item:
@@ -174,7 +197,7 @@ def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
             resolve_api_special_parameters(item, full_op_name, item_list)
     else:
         for j, item_spec in enumerate(item):
-            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth+1)
+            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth + 1)
     return item_list
 
 
@@ -209,29 +232,64 @@ def resolve_api_special_parameters(data_dict, full_op_name, item_list):
             item_list.append(parsed_item)
 
 
-def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=False):
+def process_summary_data(summary_data):
+    """处理summary_data中的nan值，返回处理后的列表"""
+    return [CompareConst.NAN if isinstance(x, float) and math.isnan(x) else x for x in summary_data]
+
+
+def get_rela_diff_summary_mode(result_item, npu_summary_data, bench_summary_data, err_msg):
+    start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
+    warning_flag = False
+    for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
+        if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [npu_val, bench_val]):
+            diff = npu_val - bench_val
+            if math.isnan(diff):
+                diff = CompareConst.NAN
+                relative = CompareConst.NAN
+            else:
+                if bench_val != 0:
+                    relative = str(abs((diff / bench_val) * 100)) + '%'
+                else:
+                    relative = CompareConst.N_A
+                magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + CompareConst.EPSILON)
+                if magnitude_diff > CompareConst.MAGNITUDE:
+                    warning_flag = True
+            result_item[start_idx + i] = diff
+            result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = relative
+        else:
+            result_item[start_idx + i] = CompareConst.N_A
+            result_item[start_idx + i + CompareConst.STATISTICS_INDICATOR_NUM] = CompareConst.N_A
+
+    accuracy_check = CompareConst.WARNING if warning_flag else ""
+    err_msg += "Need double check api accuracy." if warning_flag else ""
+    for i in range(start_idx, len(result_item)):
+        if str(result_item[i]) in ('inf', '-inf', 'nan'):
+            result_item[i] = f'{result_item[i]}\t'
+    return result_item, accuracy_check, err_msg
+
+
+def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
         npu_stack_info = n_dict.get("stack_info", None)
         bench_stack_info = b_dict.get("stack_info", None)
         has_stack = npu_stack_info and bench_stack_info
 
-        all_mode_bool = not (summary_compare or md5_compare)
-        if all_mode_bool:
+        if dump_mode == Const.ALL:
             npu_data_name = n_dict.get("data_name", None)
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-
             n_name = n_dict['op_name'][n_start + index]
             b_name = b_dict['op_name'][b_start + index]
             n_struct = n_dict[key][index]
             b_struct = b_dict[key][index]
             err_msg = ""
-            if md5_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               n_struct[2], b_struct[2],
-                               CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF]
+            if dump_mode == Const.MD5:
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], n_struct[2], b_struct[2],
+                    CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF
+                ]
                 if has_stack and index == 0 and key == "input_struct":
                     result_item.extend(npu_stack_info)
                 else:
@@ -239,48 +297,33 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                 result.append(result_item)
                 continue
 
-            if summary_compare:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " ", " ", " ", " "]
+            if dump_mode == Const.SUMMARY:
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " ", " ", " ", " "
+                ]
             else:
-                result_item = [n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                               " ", " ", " ", " ", " "]
+                result_item = [
+                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
+                    " ", " ", " ", " ", " "
+                ]
 
-            npu_summary_data = n_dict.get("summary")[n_start + index]
-            result_item.extend(npu_summary_data)
-            bench_summary_data = b_dict.get("summary")[b_start + index]
-            result_item.extend(bench_summary_data)
+            npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
+            bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
+            result_item.extend(process_summary_data(npu_summary_data))
+            result_item.extend(process_summary_data(bench_summary_data))
 
-            if summary_compare:
-                start_idx = CompareConst.SUMMARY_COMPARE_RESULT_HEADER.index(CompareConst.MAX_DIFF)
-                warning_flag = False
-                for i, (npu_val, bench_val) in enumerate(zip(npu_summary_data, bench_summary_data)):
-                    if isinstance(npu_val, (float, int)) and isinstance(bench_val, (float, int)):
-                        diff = npu_val - bench_val
-                        if bench_val != 0:
-                            relative = str(abs((diff / bench_val) * 100)) + '%'
-                        else:
-                            relative = "N/A"
-                        result_item[start_idx + i] = diff
-                        result_item[start_idx + i + 4] = relative
-                        magnitude_diff = abs(diff) / (max(abs(npu_val), abs(bench_val)) + 1e-10)
-                        if magnitude_diff > 0.5:
-                            warning_flag = True
-                    else:
-                        result_item[start_idx + i] = CompareConst.NONE
-                accuracy_check = CompareConst.WARNING if warning_flag else ""
-                err_msg += "Need double check api accuracy." if warning_flag else ""
-                for i in range(start_idx, len(result_item)):
-                    if str(result_item[i]) in ('inf', '-inf', 'nan'):
-                        result_item[i] = f'{result_item[i]}\t'
+            if dump_mode == Const.SUMMARY:
+                result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                                  bench_summary_data, err_msg)
 
-            result_item.append(accuracy_check if summary_compare else CompareConst.ACCURACY_CHECK_YES)
+            result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
             if has_stack and index == 0 and key == "input_struct":
                 result_item.extend(npu_stack_info)
             else:
                 result_item.append(CompareConst.NONE)
-            if all_mode_bool:
+            if dump_mode == Const.ALL:
                 result_item.append(npu_data_name[n_start + index])
 
             result.append(result_item)
@@ -289,16 +332,20 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
             for index in range(b_len, n_len):
                 n_name = n_dict['op_name'][n_start + index]
                 n_struct = n_dict[key][index]
-                if md5_compare:
-                    result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                                   n_struct[1], CompareConst.NAN, n_struct[2], CompareConst.NAN, CompareConst.NAN]
+                if dump_mode == Const.MD5:
+                    result_item = [
+                        n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                        n_struct[2], CompareConst.NAN, CompareConst.NAN
+                    ]
                     result.append(result_item)
                     continue
-                result_item = [n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN,
-                               n_struct[1], CompareConst.NAN, " ", " ", " ", " ", " "]
-                summary_data = n_dict.get("summary")[n_start + index]
+                result_item = [
+                    n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                    " ", " ", " ", " ", " "
+                ]
+                summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
                 result_item.extend(summary_data)
-                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get("summary")[0]))]
+                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
                 result_item.extend(summary_data)
 
                 err_msg = ""
@@ -309,22 +356,24 @@ def get_accuracy(result, n_dict, b_dict, summary_compare=False, md5_compare=Fals
                     result_item.extend(npu_stack_info)
                 else:
                     result_item.append(CompareConst.NONE)
-                if all_mode_bool:
+                if dump_mode == Const.ALL:
                     result_item.append(npu_data_name[n_start + index])
 
                 result.append(result_item)
 
     n_num = len(n_dict['op_name'])
     b_num = len(b_dict['op_name'])
-    n_num_input = len([name for name in n_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
-    b_num_input = len([name for name in b_dict['op_name'] if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    n_num_input = len([name for name in n_dict['op_name']
+                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
+    b_num_input = len([name for name in b_dict['op_name']
+                       if Const.INPUT in name.split(Const.SEP) or Const.KWARGS in name.split(Const.SEP)])
     n_num_output = n_num - n_num_input
     b_num_output = b_num - b_num_input
     get_accuracy_core(0, n_num_input, 0, b_num_input, 'input_struct')
     get_accuracy_core(n_num_input, n_num_output, b_num_input, b_num_output, 'output_struct')
 
 
-def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
+def get_un_match_accuracy(result, n_dict, dump_mode):
     index_out = 0
     npu_stack_info = n_dict.get("stack_info", None)
     bench_name, bench_type, bench_shape = CompareConst.N_A, CompareConst.N_A, CompareConst.N_A
@@ -332,14 +381,14 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
     accuracy_check_res = CompareConst.N_A
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
-        if "input" in name_ele_list:
-            n_struct = n_dict["input_struct"][index]
-        else:
-            n_struct = n_dict["output_struct"][index_out]
+        if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
+            n_struct = n_dict[CompareConst.INPUT_STRUCT][index]
+        if Const.OUTPUT in name_ele_list:
+            n_struct = n_dict[CompareConst.OUTPUT_STRUCT][index_out]
             index_out += 1
 
         result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
-        if md5_compare:
+        if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
             if npu_stack_info and index == 0:
                 result_item.extend(npu_stack_info)
@@ -347,7 +396,7 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
                 result_item.append(CompareConst.NONE)
             result.append(result_item)
             continue
-        if summary_compare:
+        if dump_mode == Const.SUMMARY:
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
@@ -361,22 +410,21 @@ def get_un_match_accuracy(result, n_dict, md5_compare, summary_compare):
             result_item.extend(npu_stack_info)
         else:
             result_item.append(CompareConst.NONE)
-        if not md5_compare and not summary_compare and result_item[1] == CompareConst.N_A:
+        if dump_mode == Const.ALL and result_item[1] == CompareConst.N_A:
             result_item.extend(["-1"])
         result.append(result_item)
 
 
-def merge_tensor(tensor_list, summary_compare, md5_compare):
+def merge_tensor(tensor_list, dump_mode):
     op_dict = {}
     op_dict["op_name"] = []
-    op_dict["input_struct"] = []
-    op_dict["kwargs_struct"] = []
-    op_dict["output_struct"] = []
-    op_dict["summary"] = []
+    op_dict[CompareConst.INPUT_STRUCT] = []
+    op_dict[CompareConst.KWARGS_STRUCT] = []
+    op_dict[CompareConst.OUTPUT_STRUCT] = []
+    op_dict[Const.SUMMARY] = []
     op_dict["stack_info"] = []
 
-    all_mode_bool = not (summary_compare or md5_compare)
-    if all_mode_bool:
+    if dump_mode == Const.ALL:
         op_dict["data_name"] = []
 
     for tensor in tensor_list:
@@ -385,36 +433,34 @@ def merge_tensor(tensor_list, summary_compare, md5_compare):
             break
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
-        if not md5_compare:
-            if "input" in name_ele_list:
-                op_dict["input_struct"].append((tensor['dtype'], tensor['shape']))
-            elif "kwarg" in name_ele_list:
-                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape']))
-            elif "output" in name_ele_list:    
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape']))
-        else:
-            if "input" in name_ele_list:
-                op_dict["input_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            if "kwarg" in name_ele_list:    
-                op_dict["kwargs_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-            elif "output" in name_ele_list:
-                op_dict["output_struct"].append((tensor['dtype'], tensor['shape'], tensor['md5']))
-        op_dict["summary"].append([tensor['Max'], tensor['Min'], tensor['Mean'], tensor['Norm']])
+        name_to_struct_mapping = {
+            Const.INPUT: CompareConst.INPUT_STRUCT,
+            Const.KWARGS: CompareConst.KWARGS_STRUCT,
+            Const.OUTPUT: CompareConst.OUTPUT_STRUCT
+        }
+        for name_key, struct_key in name_to_struct_mapping.items():
+            if name_key in name_ele_list:
+                if dump_mode == Const.MD5:
+                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE], tensor[Const.MD5]))
+                else:
+                    op_dict.get(struct_key).append((tensor[Const.DTYPE], tensor[Const.SHAPE]))
+                break
+        op_dict[Const.SUMMARY].append([tensor[Const.MAX], tensor[Const.MIN], tensor[Const.MEAN], tensor[Const.NORM]])
 
-        if all_mode_bool:
+        if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
             data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
 
-    if not op_dict["kwargs_struct"]:
-        del op_dict["kwargs_struct"]
+    if not op_dict[CompareConst.KWARGS_STRUCT]:
+        del op_dict[CompareConst.KWARGS_STRUCT]
     return op_dict if op_dict["op_name"] else {}
 
 
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
-                        help="<Required> The compare input path, a dict json.",  required=True)
+                        help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
@@ -426,8 +472,8 @@ def _compare_parser(parser):
     parser.add_argument("-cm", "--cell_mapping", dest="cell_mapping", type=str, nargs='?', const=True,
                         help="<optional> The cell mapping file path.", required=False)
     parser.add_argument("-am", "--api_mapping", dest="api_mapping", type=str, nargs='?', const=True,
-                        help="<optional> The api mapping file path.", required=False)    
+                        help="<optional> The api mapping file path.", required=False)
     parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
                         help="<optional> The data mapping file path.", required=False)
-    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str, nargs='?', const=True,
                         help="<optional> The layer mapping file path.", required=False)

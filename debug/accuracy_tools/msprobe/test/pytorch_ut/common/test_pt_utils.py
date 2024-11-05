@@ -8,10 +8,10 @@ import torch
 import torch.distributed as dist
 
 from msprobe.core.common.file_utils import FileCheckConst
-from msprobe.core.common.log import logger 
 from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.utils import parameter_adapter, get_rank_if_initialized, \
-    get_tensor_rank, get_rank_id, print_rank_0, load_pt, save_pt, save_api_data, load_api_data
+    get_tensor_rank, get_rank_id, print_rank_0, load_pt, save_pt, save_api_data, load_api_data, save_pkl, load_pkl
 
 
 class TestParameterAdapter(unittest.TestCase):
@@ -160,14 +160,14 @@ class TestLoadPt(unittest.TestCase):
         mock_load.return_value = torch.tensor([1, 2, 3])
         result = load_pt(self.temp_file.name, to_cpu=True)
         self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
-        mock_load.assert_called_once_with(self.temp_file.name, map_location=torch.device("cpu"))
+        mock_load.assert_called_once_with(self.temp_file.name, map_location=torch.device("cpu"), weights_only=True)
 
     @patch('torch.load')
     def test_load_pt_nogpu(self, mock_load):
         mock_load.return_value = torch.tensor([1, 2, 3])
         result = load_pt(self.temp_file.name, to_cpu=False)
         self.assertTrue(torch.equal(result, torch.tensor([1, 2, 3])))
-        mock_load.assert_called_once_with(self.temp_file.name)
+        mock_load.assert_called_once_with(self.temp_file.name, weights_only=True)
 
     @patch('torch.load')
     def test_load_pt_failure(self, mock_load):
@@ -258,3 +258,44 @@ class TestLoadApiData(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             load_api_data(invalid_bytes)
         self.assertIn("load api_data from bytes failed", str(context.exception))
+
+
+class TestSavePkl(unittest.TestCase):
+
+    def setUp(self):
+        self.tensor = torch.tensor([1, 2, 3])
+        self.filepath = 'temp_tensor.pt'
+
+    def test_save_pkl_success(self):
+        save_pkl(self.tensor, self.filepath)
+        self.assertTrue(os.path.exists(self.filepath))
+        os.remove(self.filepath)
+
+    @patch('pickle.dump', side_effect=Exception("Save failed"))
+    def test_save_pt_failure(self, pickle_dump):
+        with self.assertRaises(RuntimeError) as context:
+            save_pkl(self.tensor, self.filepath)
+        expected_errmsg = f"save pt file {os.path.realpath(self.filepath)} failed"
+        self.assertIn(expected_errmsg, str(context.exception))
+
+    def test_load_pkl_success(self):
+        # test str
+        save_pkl("this is a test", self.filepath)
+        res = load_pkl(self.filepath)
+        self.assertIsNotNone(res)
+        os.remove(self.filepath)
+
+        # test ApiData
+        api_data = ApiData("test_api_name", tuple([torch.tensor([1, 2, 3, 4])]), {}, {}, 0, 0)
+        save_pkl(api_data, self.filepath)
+        res = load_pkl(self.filepath)
+        self.assertIsNotNone(res)
+
+    def test_load_pkl_failure(self):
+        # mock command injection.
+        with open(self.filepath, "wb") as f:
+            f.write(b"cos\nsystem\n(S'echo hello world'\ntR.")
+        with self.assertRaises(RuntimeError) as context:
+            load_pkl(self.filepath)
+        self.assertIn("Unsupported object type: os.system", str(context.exception))
+        os.remove(self.filepath)

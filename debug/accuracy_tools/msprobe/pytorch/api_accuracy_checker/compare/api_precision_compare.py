@@ -34,7 +34,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
-from msprobe.core.common.file_utils import FileChecker, change_mode, check_path_before_create, create_directory
+from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
@@ -336,6 +336,7 @@ def online_api_precision_compare(online_config):
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
     last_api_name, last_api_dtype, last_api_full_name = None, None, None
+    last_api_skip_message = ''
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
@@ -379,16 +380,16 @@ def analyse_csv(npu_data, gpu_data, config):
                 message = UNSUPPORTED_MESSAGE
                 write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
                 print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
-                forward_status, backward_status = [], []
-                message = ''
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
                 message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+                message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 print_test_success(last_api_name, forward_result, backward_result)
-                forward_status, backward_status = [], []
-                message = ''
+                last_api_skip_message = ''
+            forward_status, backward_status = [], []
+            message = ''
 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
         last_api_name = api_full_name
@@ -399,6 +400,8 @@ def analyse_csv(npu_data, gpu_data, config):
 
         if direction_status == 'forward':
             forward_status.append(new_status)
+            last_api_skip_message = str(row_npu[ApiPrecisionCompareColumn.MESSAGE]) if new_status == CompareConst.SKIP \
+                                    else ''
         elif direction_status == 'backward':
             backward_status.append(new_status)
         else:
@@ -413,8 +416,10 @@ def analyse_csv(npu_data, gpu_data, config):
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
             message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+            message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
             print_test_success(last_api_name, forward_result, backward_result)
+            last_api_skip_message = ''
 
 
 def get_api_status(row_npu, row_gpu, api_name, compare_column):
@@ -597,8 +602,7 @@ def _api_precision_compare(parser=None):
 def _api_precision_compare_command(args):
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
-    check_path_before_create(out_path)
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()

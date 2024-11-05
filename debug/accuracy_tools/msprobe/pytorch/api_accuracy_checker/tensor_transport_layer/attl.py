@@ -1,7 +1,21 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import glob
 import os.path
 import time
-import re
 from multiprocessing import Queue
 from typing import Optional, Union, Dict, Any
 from dataclasses import dataclass
@@ -11,9 +25,8 @@ import torch
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.client import TCPClient
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.server import TCPServer
-from msprobe.pytorch.common.utils import logger
 from msprobe.core.common.file_utils import remove_path
-from msprobe.pytorch.common.utils import save_api_data, load_api_data, save_pt, load_pt
+from msprobe.pytorch.common.utils import logger, save_api_data, load_api_data, save_pkl, load_pkl
 
 BufferType = Union[ApiData, Dict[str, Any], str]  # Union[Tensor, Tuple[Optional[Tensor]]]
 
@@ -40,7 +53,6 @@ class ATTL:
         self.dequeue_list = []
         self.message_end = False
         self.kill_progress = False
-        self.check_attl_config()
         self.nfs_path = None
         if self.session_config.nfs_path:
             self.nfs_path = self.session_config.nfs_path
@@ -57,18 +69,6 @@ class ATTL:
                                             self.session_config.check_sum,
                                             self.session_config.tls_path)
             self.socket_manager.start()
-
-    def check_attl_config(self):
-        if self.session_config.nfs_path:
-            if os.path.exists(self.session_config.nfs_path):
-                return
-            else:
-                raise Exception(f"nfs path {self.session_config.nfs_path} doesn't exists.")
-        ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
-        if not re.match(ipv4_pattern, self.session_config.connect_ip):
-            raise Exception(f"host {self.session_config.connect_ip} is invalid.")
-        if not (0 < self.session_config.connect_port <= 65535):
-            raise Exception(f"port {self.session_config.connect_port} is invalid.")
 
     def stop_serve(self):
         if isinstance(self.socket_manager, TCPServer):
@@ -145,7 +145,7 @@ class ATTL:
             file_path = os.path.join(self.session_config.nfs_path, buffer + f"_{int(time.time())}")
 
         try:
-            save_pt(buffer, file_path)
+            save_pkl(buffer, file_path)
         except Exception as e:
             self.logger.warning("there is something error in save_pt. please check it. %s", e)
 
@@ -161,7 +161,7 @@ class ATTL:
 
         if cur_file is not None:
             try:
-                buffer = load_pt(cur_file)
+                buffer = load_pkl(cur_file)
             except Exception as e:
                 self.logger.warning("there is something error. please check it. %s", e)
             remove_path(cur_file)

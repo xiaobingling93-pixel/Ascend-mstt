@@ -1,20 +1,35 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import zlib
 from dataclasses import asdict
 from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_utils import path_len_exceeds_limit, change_mode
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
-from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 from msprobe.pytorch.common.utils import save_pt, load_pt
+from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
 
+is_gpu = False
 try:
     import torch_npu
-    is_gpu = False
 except ImportError:
     is_gpu = True
 
@@ -64,8 +79,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data_clone.numel() == 0:
             return tensor_stat
         elif data_clone.dtype == torch.bool:
-            tensor_stat.max = True in data_clone
-            tensor_stat.min = False not in data_clone
+            tensor_stat.max = torch._C._VariableFunctionsClass.any(data_clone).item()
+            tensor_stat.min = torch._C._VariableFunctionsClass.all(data_clone).item()
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
         elif torch.is_complex(data_clone):
@@ -89,13 +104,14 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
             return float('nan')
+
         finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
+            finite_values = getattr(torch._C._TensorBase, "__getitem__")(data_clone, finite_mask)
             return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(finite_values).item()
         else:
-            data_no_nan = data_clone[~data_nan]
+            data_no_nan = getattr(torch._C._TensorBase, "__getitem__")(data_clone, ~data_nan)
             return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
@@ -245,7 +261,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         if tensor_json['Max'] is None or tensor_json['Min'] is None:
             return
         self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
-            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
+                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)

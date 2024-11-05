@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2022-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2022-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import os
 
@@ -23,6 +21,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.const import Const, CompareConst, FileCheckConst
+
 
 class Advisor:
     """
@@ -63,7 +62,12 @@ class Advisor:
                             .format(item[CompareConst.NPU_NAME]))
 
     def gen_advisor_result(self, pd_data):
-        first_failing_data = pd_data.iloc[0]
+        try:
+            first_failing_data = pd_data.iloc[0]
+        except IndexError as e:
+            err_msg = "index out of bounds error occurs, pd_data is empty, please check!"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         node_name = first_failing_data[CompareConst.NPU_NAME]
         index = first_failing_data['index']
         message = self.gen_advisor_message(node_name)
@@ -88,7 +92,7 @@ class Advisor:
         return message
 
     def analysis(self):
-        self._check_path_vaild()
+        self._check_path_valid()
         analyze_data = self._parse_input_data()
         logger.info("Start analyzing the comparison result: %s" % self.file_type)
         self.analyze_unmatched(analyze_data)
@@ -120,6 +124,6 @@ class Advisor:
         df = self.input_data.reset_index()
         return df
 
-    def _check_path_vaild(self):
+    def _check_path_valid(self):
         out_path_checker = FileChecker(self.out_path, FileCheckConst.DIR, FileCheckConst.WRITE_ABLE)
         out_path_checker.common_check()

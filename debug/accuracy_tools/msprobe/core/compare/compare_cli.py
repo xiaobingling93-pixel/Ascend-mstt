@@ -1,13 +1,27 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type
+from msprobe.core.common.file_utils import check_file_type, load_json
 from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.common.log import logger
 
 
 def compare_cli(args):
-    with FileOpen(args.input_path, "r") as file:
-        input_param = json.load(file)
+    input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
     frame_name = args.framework
@@ -41,7 +55,8 @@ def compare_cli(args):
 
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        kwargs = {"stack_mode": args.stack_mode, "auto_analyze": auto_analyze, "fuzzy_match": args.fuzzy_match}
+        kwargs = {"stack_mode": args.stack_mode, "auto_analyze": auto_analyze, "fuzzy_match": args.fuzzy_match,
+                  "is_print_compare_log": input_param.get("is_print_compare_log", True)}
         if input_param.get("rank_id") is not None:
             ms_graph_compare(input_param, args.output_path)
             return

@@ -2,54 +2,54 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  *--------------------------------------------------------------------------------------------*/
 
-import Card from '@material-ui/core/Card'
-import CardContent from '@material-ui/core/CardContent'
-import CardHeader from '@material-ui/core/CardHeader'
-import Grid from '@material-ui/core/Grid'
-import InputLabel from '@material-ui/core/InputLabel'
-import MenuItem from '@material-ui/core/MenuItem'
-import Select, { SelectProps } from '@material-ui/core/Select'
-import { makeStyles } from '@material-ui/core/styles'
-import { Table } from 'antd'
-import { ColumnsType } from 'antd/es/table'
-import * as React from 'react'
-import * as api from '../api'
-import { DistributedGraph, GpuInfo, Graph } from '../api'
-import { firstOrUndefined } from '../utils'
-import { ColumnChart } from './charts/ColumnChart'
-import { DataLoading } from './DataLoading'
-import { GpuInfoTable } from './GpuInfoTable'
-import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers'
+import Card from '@material-ui/core/Card';
+import CardContent from '@material-ui/core/CardContent';
+import CardHeader from '@material-ui/core/CardHeader';
+import Grid from '@material-ui/core/Grid';
+import InputLabel from '@material-ui/core/InputLabel';
+import MenuItem from '@material-ui/core/MenuItem';
+import Select, { SelectProps } from '@material-ui/core/Select';
+import { makeStyles } from '@material-ui/core/styles';
+import { Table } from 'antd';
+import { ColumnsType } from 'antd/es/table';
+import * as React from 'react';
+import * as api from '../api';
+import { DistributedGraph, GpuInfo, Graph } from '../api';
+import { firstOrUndefined } from '../utils';
+import { ColumnChart } from './charts/ColumnChart';
+import { DataLoading } from './DataLoading';
+import { GpuInfoTable } from './GpuInfoTable';
+import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers';
 import {
   DistributedCommopsTableTooltip,
   DistributedGpuInfoTableTooltip,
   DistributedOverlapGraphTooltip,
-  DistributedWaittimeGraphTooltip
-} from './TooltipDescriptions'
+  DistributedWaittimeGraphTooltip,
+} from './TooltipDescriptions';
 
 export interface IProps {
-  run: string
-  worker: string
-  span: string
+  run: string;
+  worker: string;
+  span: string;
 }
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    flexGrow: 1
+    flexGrow: 1,
   },
   verticalInput: {
     display: 'flex',
-    alignItems: 'center'
+    alignItems: 'center',
   },
   inputWidth: {
-    width: '4em'
+    width: '4em',
   },
   inputWidthOverflow: {
     minWidth: '15em',
-    whiteSpace: 'nowrap'
+    whiteSpace: 'nowrap',
   },
   description: {
-    marginLeft: theme.spacing(1)
+    marginLeft: theme.spacing(1),
   },
   table: {
     height: '100%',
@@ -58,154 +58,156 @@ const useStyles = makeStyles((theme) => ({
       height: 20,
       fontSize: '10pt',
       '& > td': {
-        padding: '0 8px!important'
-      }
-    }
-  }
-}))
+        padding: '0 8px!important',
+      },
+    },
+  },
+}));
 
 export const DistributedView: React.FC<IProps> = (props) => {
-  const tooltipCommonClasses = useTooltipCommonStyles()
+  const tooltipCommonClasses = useTooltipCommonStyles();
   const chartHeaderRenderer = React.useMemo(
     () => makeChartHeaderRenderer(tooltipCommonClasses),
     [tooltipCommonClasses]
-  )
+  );
 
-  let { run, worker, span } = props
-  const classes = useStyles()
+  let { run, worker, span } = props;
+  const classes = useStyles();
 
   const [overlapGraph, setOverlapGraph] = React.useState<
     DistributedGraph | undefined
-  >(undefined)
+  >(undefined);
   const [waittimeGraph, setWaittimeGraph] = React.useState<
     DistributedGraph | undefined
-  >(undefined)
+  >(undefined);
   const [commopsTableData, setCommopsTableData] = React.useState<
     any | undefined
-  >(undefined)
-  const [gpuInfo, setGpuInfo] = React.useState<GpuInfo | undefined>(undefined)
-  const [commopsTableTitle, setCommopsTableTitle] = React.useState('')
-  const [commopsWorkers, setCommopsWorkers] = React.useState<string[]>([])
-  const [overlapSteps, setOverlapSteps] = React.useState<string[]>([])
-  const [waittimeSteps, setWaittimeSteps] = React.useState<string[]>([])
-  const [overlapStep, setOverlapStep] = React.useState('')
-  const [waittimeStep, setWaittimeStep] = React.useState('')
-  const [commopsWorker, setCommopsWorker] = React.useState('')
-  const [columns, setColumns] = React.useState<ColumnsType<any>>([])
-  const [pageSize, setPageSize] = React.useState(30)
+  >(undefined);
+  const [gpuInfo, setGpuInfo] = React.useState<GpuInfo | undefined>(undefined);
+  const [commopsTableTitle, setCommopsTableTitle] = React.useState('');
+  const [commopsWorkers, setCommopsWorkers] = React.useState<string[]>([]);
+  const [overlapSteps, setOverlapSteps] = React.useState<string[]>([]);
+  const [waittimeSteps, setWaittimeSteps] = React.useState<string[]>([]);
+  const [overlapStep, setOverlapStep] = React.useState('');
+  const [waittimeStep, setWaittimeStep] = React.useState('');
+  const [commopsWorker, setCommopsWorker] = React.useState('');
+  const [columns, setColumns] = React.useState<ColumnsType<any>>([]);
+  const [pageSize, setPageSize] = React.useState(30);
 
   React.useEffect(() => {
     if (waittimeSteps.includes('all')) {
-      setWaittimeStep('all')
+      setWaittimeStep('all');
     } else {
-      setWaittimeStep(firstOrUndefined(waittimeSteps) ?? '')
+      setWaittimeStep(firstOrUndefined(waittimeSteps) ?? '');
     }
-  }, [waittimeSteps])
+  }, [waittimeSteps]);
 
   React.useEffect(() => {
     if (overlapSteps.includes('all')) {
-      setOverlapStep('all')
+      setOverlapStep('all');
     } else {
-      setOverlapStep(firstOrUndefined(overlapSteps) ?? '')
+      setOverlapStep(firstOrUndefined(overlapSteps) ?? '');
     }
-  }, [overlapSteps])
+  }, [overlapSteps]);
 
   React.useEffect(() => {
-    setCommopsWorker(firstOrUndefined(commopsWorkers) ?? '')
-  }, [commopsWorkers])
+    setCommopsWorker(firstOrUndefined(commopsWorkers) ?? '');
+  }, [commopsWorkers]);
 
   React.useEffect(() => {
     api.defaultApi.distributedOverlapGet(run, 'All', span).then((resp) => {
-      setOverlapGraph(resp)
-      setOverlapSteps(Object.keys(resp.data))
-    })
+      setOverlapGraph(resp);
+      setOverlapSteps(Object.keys(resp.data));
+    });
     api.defaultApi.distributedWaittimeGet(run, 'All', span).then((resp) => {
-      setWaittimeGraph(resp)
-      setWaittimeSteps(Object.keys(resp.data))
-    })
+      setWaittimeGraph(resp);
+      setWaittimeSteps(Object.keys(resp.data));
+    });
     api.defaultApi.distributedCommopsGet(run, 'All', span).then((resp) => {
-      setCommopsTableData(resp.data)
-      setCommopsWorkers(Object.keys(resp.data))
-      setCommopsTableTitle(resp.metadata.title)
-    })
+      setCommopsTableData(resp.data);
+      setCommopsWorkers(Object.keys(resp.data));
+      setCommopsTableTitle(resp.metadata.title);
+    });
     api.defaultApi.distributedGpuinfoGet(run, 'All', span).then((resp) => {
-      setGpuInfo(resp)
-    })
-  }, [run, worker, span])
+      setGpuInfo(resp);
+    });
+  }, [run, worker, span]);
 
   const onCommopsWorkerChanged: SelectProps['onChange'] = (event) => {
-    setCommopsWorker(event.target.value as string)
-  }
+    setCommopsWorker(event.target.value as string);
+  };
 
   const onOverlapStepChanged: SelectProps['onChange'] = (event) => {
-    setOverlapStep(event.target.value as string)
-  }
+    setOverlapStep(event.target.value as string);
+  };
 
   const onWaittimeStepChanged: SelectProps['onChange'] = (event) => {
-    setWaittimeStep(event.target.value as string)
-  }
+    setWaittimeStep(event.target.value as string);
+  };
 
   const getColumnChartData = (
     distributedGraph?: DistributedGraph,
     step?: string
   ) => {
-    if (!distributedGraph || !step) return undefined
-    const barLabels = Object.keys(distributedGraph.data[step])
+    if (!distributedGraph || !step) {return undefined;}
+    const barLabels = Object.keys(distributedGraph.data[step]);
     return {
       legends: distributedGraph.metadata.legends,
       barLabels,
-      barHeights: barLabels.map((label) => distributedGraph.data[step][label])
-    }
-  }
+      barHeights: barLabels.map((label) => distributedGraph.data[step][label]),
+    };
+  };
   const overlapData = React.useMemo(
     () => getColumnChartData(overlapGraph, overlapStep),
     [overlapGraph, overlapStep]
-  )
+  );
   const waittimeData = React.useMemo(
     () => getColumnChartData(waittimeGraph, waittimeStep),
     [waittimeGraph, waittimeStep]
-  )
+  );
 
   const getTableData = (tableData?: any, worker?: string) => {
     if (!tableData || !worker) {
-      return []
+      return [];
     }
-    let dataInfo: api.Graph = tableData[worker]
-    const stringCompare = (a: string, b: string) => a.localeCompare(b)
-    const numberCompare = (a: number, b: number) => a - b
-    let column: any[] = dataInfo.columns.map(item => {
+    let dataInfo: api.Graph = tableData[worker];
+    const stringCompare = (a: string, b: string) => a.localeCompare(b);
+    const numberCompare = (a: number, b: number) => a - b;
+    let column: any[] = dataInfo.columns.map((item) => {
       return {
         title: item.name,
         key: item.name,
         dataIndex: item.name,
-        sorter: item.type == 'string' ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
-          : (a: any, b: any) => numberCompare(a[item.name], b[item.name])
-      }
-    })
-    setColumns(column)
+        sorter:
+          item.type == 'string'
+            ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
+            : (a: any, b: any) => numberCompare(a[item.name], b[item.name]),
+      };
+    });
+    setColumns(column);
     return dataInfo.rows.map((row, index) => {
       if (row.length !== dataInfo.columns.length) {
-        return null
+        return null;
       }
-      const dataRow: { [column: string]: number | string } = { key: index }
+      const dataRow: { [column: string]: number | string } = { key: index };
       dataInfo.columns.forEach((column, index) => {
-        dataRow[column.name] = row[index] as string | number
-      })
-      return dataRow
-    })
-  }
+        dataRow[column.name] = row[index] as string | number;
+      });
+      return dataRow;
+    });
+  };
   const commopsTable: any[] = React.useMemo(() => {
-    return getTableData(commopsTableData, commopsWorker)
-  }, [commopsTableData, commopsWorker])
+    return getTableData(commopsTableData, commopsWorker);
+  }, [commopsTableData, commopsWorker]);
 
   const onShowSizeChange = (current: number, size: number) => {
-    setPageSize(size)
-  }
+    setPageSize(size);
+  };
 
   return (
     <div className={classes.root}>
-      <Card variant="outlined">
-        <CardHeader title="Distributed View" />
+      <Card variant='outlined'>
+        <CardHeader title='Distributed View' />
         <CardContent>
           <Grid container spacing={1}>
             {gpuInfo && (
@@ -228,13 +230,13 @@ export const DistributedView: React.FC<IProps> = (props) => {
                 {(chartData) => (
                   <Card elevation={0}>
                     <CardContent>
-                      <Grid container spacing={1} alignItems="center">
+                      <Grid container spacing={1} alignItems='center'>
                         <Grid item>
-                          <InputLabel id="overlap-step">Step</InputLabel>
+                          <InputLabel id='overlap-step'>Step</InputLabel>
                         </Grid>
                         <Grid item>
                           <Select
-                            labelId="overlap-step"
+                            labelId='overlap-step'
                             value={overlapStep}
                             onChange={onOverlapStepChanged}
                           >
@@ -266,13 +268,13 @@ export const DistributedView: React.FC<IProps> = (props) => {
                 {(chartData) => (
                   <Card elevation={0}>
                     <CardContent>
-                      <Grid container spacing={1} alignItems="center">
+                      <Grid container spacing={1} alignItems='center'>
                         <Grid item>
-                          <InputLabel id="waittime-step">Step</InputLabel>
+                          <InputLabel id='waittime-step'>Step</InputLabel>
                         </Grid>
                         <Grid item>
                           <Select
-                            labelId="waittime-step"
+                            labelId='waittime-step'
                             value={waittimeStep}
                             onChange={onWaittimeStepChanged}
                           >
@@ -301,7 +303,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
               </DataLoading>
             </Grid>
             <Grid item sm={12}>
-              <Grid container direction="column" spacing={0}>
+              <Grid container direction='column' spacing={0}>
                 <CardHeader
                   title={chartHeaderRenderer(
                     commopsTableTitle,
@@ -310,13 +312,13 @@ export const DistributedView: React.FC<IProps> = (props) => {
                 />
                 <Card elevation={0}>
                   <CardContent>
-                    <Grid item container spacing={1} alignItems="center">
+                    <Grid item container spacing={1} alignItems='center'>
                       <Grid item>
-                        <InputLabel id="table-worker">Worker</InputLabel>
+                        <InputLabel id='table-worker'>Worker</InputLabel>
                       </Grid>
                       <Grid item>
                         <Select
-                          labelId="table-worker"
+                          labelId='table-worker'
                           value={commopsWorker}
                           onChange={onCommopsWorkerChanged}
                         >
@@ -338,7 +340,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
                       pageSize,
                       pageSizeOptions: ['20', '30', '50', '100'],
                       hideOnSinglePage: true,
-                      onShowSizeChange
+                      onShowSizeChange,
                     }}
                   />
                 </Grid>
@@ -348,5 +350,5 @@ export const DistributedView: React.FC<IProps> = (props) => {
         </CardContent>
       </Card>
     </div>
-  )
-}
+  );
+};

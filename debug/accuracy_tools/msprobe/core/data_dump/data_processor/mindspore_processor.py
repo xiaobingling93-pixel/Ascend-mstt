@@ -17,6 +17,7 @@ import zlib
 
 import mindspore as ms
 from mindspore import mint, ops
+from mindspore._c_expression.typing import Number
 import numpy as np
 
 from msprobe.core.common.const import Const
@@ -29,7 +30,7 @@ from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 
 
 class MindsporeDataProcessor(BaseDataProcessor):
-    mindspore_special_type = tuple([ms.Tensor])
+    mindspore_special_type = tuple([ms.Tensor, Number])
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -40,7 +41,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def get_md5_for_tensor(x):
         x = convert_bf16_to_fp32(x)
-        tensor_bytes = x.asnumpy().tobytes()
+        tensor_bytes = x.contiguous().asnumpy().tobytes()
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
 
@@ -57,13 +58,13 @@ class MindsporeDataProcessor(BaseDataProcessor):
         if data.numel() == 0:
             return tensor_stat
         elif data.dtype == ms.bool_:
-            data_np = data.asnumpy()
+            data_np = data.contiguous().asnumpy()
             tensor_stat.max = np.max(data_np).item()
             tensor_stat.min = np.min(data_np).item()
         elif not data.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data.item()
         elif data.dtype == ms.complex64 or data.dtype == ms.complex128:
-            data_abs = np.abs(data.asnumpy())
+            data_abs = np.abs(data.contiguous().asnumpy())
             tensor_stat.max = np.max(data_abs).item()
             tensor_stat.min = np.min(data_abs).item()
             tensor_stat.mean = np.mean(data_abs).item()
@@ -93,9 +94,10 @@ class MindsporeDataProcessor(BaseDataProcessor):
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)
+        if isinstance(element, Number):
+            return self.analyze_dtype_in_kwargs(element)
         if isinstance(element, ms.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
