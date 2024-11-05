@@ -49,6 +49,140 @@ class RunGenerator(object):
         self.component_curve_data = {}
         self.process_data = {}
 
+    @staticmethod
+    def check_overlap_data(title):
+        # csv: step / compute time / communication_not_overlap / overlap / communication / free time
+        length = len(title)
+        if length < 5:
+            return []
+        key = ["computing", "overlapped", "communication(not overlapped)", "free"]
+        get_key = list()
+        for j in key:
+            for i in range(length):
+                if j == title[i]:
+                    get_key.append(i)
+        if len(get_key) < 4:
+            return []
+        return get_key
+
+    @staticmethod
+    def get_table_head(name: str, input_shape: str, call_stack: str, value: list):
+        if name is None:
+            return {}
+        temp = {
+                'name': name, 'calls': 0, 'host_self_duration': 0,
+                'host_total_duration': 0, 'device_self_duration': 0, 'device_total_duration': 0,
+                'tc_self_ratio': 0, 'tc_total_ratio': 0, 'tc_eligible': 'Yes'
+        }
+        if input_shape is not None:
+            temp['input_shape'] = input_shape
+            if call_stack is not None:
+                temp['call_stack'] = call_stack
+            else:
+                temp['has_call_stack'] = False
+        else:
+            if call_stack is not None:
+                temp['call_stack'] = call_stack
+            else:
+                temp['has_call_stack'] = False
+        for vl in iter(value):
+            if 'has_call_stack' in temp and vl[2]:
+                temp['has_call_stack'] = True
+            temp['calls'] += 1
+            temp['host_self_duration'] = round(temp['host_self_duration'] + vl[3], 2)
+            temp['host_total_duration'] = round(temp['host_total_duration'] + vl[4], 2)
+            temp['device_self_duration'] = round(temp['device_self_duration'] + vl[5], 2)
+            temp['device_total_duration'] = round(temp['device_total_duration'] + vl[6], 2)
+            temp['tc_self_ratio'] = round(temp['tc_self_ratio'] + vl[7], 2)
+            temp['tc_total_ratio'] = round(temp['tc_total_ratio'] + vl[8], 2)
+        temp['tc_eligible'] = 'Yes' if temp['tc_self_ratio'] > 0 or temp['tc_total_ratio'] > 0 else 'No'
+        temp['tc_self_ratio'] = 0 if temp['device_self_duration'] == 0 \
+            else round(temp['tc_self_ratio'] / temp['device_self_duration'] * 100, 2)
+        temp['tc_total_ratio'] = 0 if temp['device_total_duration'] == 0 \
+            else round(temp['tc_total_ratio'] / temp['device_total_duration'] * 100, 2)
+        return temp
+
+    @staticmethod
+    def get_wait_table_by_ops(op, ops):
+        total_trans = 0
+        total_synchronize = 0
+        for key, data in op.items():
+            if str(key) == "Total Op Info" and data.get("Communication Time Info"):
+                total_trans += float(data.get("Communication Time Info").get("Transit Time(ms)"))
+                total_synchronize += float(data.get("Communication Time Info").get("Synchronization Time(ms)"))
+                continue
+            k = re.sub(r'[0-9]+', ' ', key).split(" ")[0]
+            if k not in ops:
+                ops[k] = [0, 0, 0, 0]
+            ops[k][0] += 1
+            for _, band in data.get("Communication Bandwidth Info").items():
+                ops[k][1] += float(band.get("Transit Size(MB)"))
+            if data.get("Communication Time Info") is not None:
+                ops[k][2] += data.get("Communication Time Info").get("Elapse Time(ms)")
+                ops[k][3] += data.get("Communication Time Info").get("Transit Time(ms)")
+        return total_trans, total_synchronize
+
+    @staticmethod
+    def trans_shape(shape: str):
+        result = list()
+        if ';' not in shape:
+            result.append('[' + shape.strip() + ']')
+            return '[' + ', '.join(result) + ']'
+        if len(shape.strip()) <= 1:
+            result.append('[]')
+            return '[' + ', '.join(result) + ']'
+        shape_spl = shape.split("\n")
+        for shape_div in iter(shape_spl):
+            result.append('[' + str(shape_div.replace(';', '')) + ']')
+        return '[' + ', '.join(result) + ']'
+
+    @staticmethod
+    def get_process_peaks_and_devices_type(process_data: dict, memory_metric: str):
+        devices_type = []
+        peaks = {}
+        for device in process_data:
+            devices_type.append(device)
+            reserved_list = process_data.get(device).get('Allocated')
+            if reserved_list is not None:
+                max_reserved = 0
+                for array_value in reserved_list:
+                    max_reserved = max(array_value[1], max_reserved)
+                peaks[device] = f'Peak Memory Usage: {max_reserved:.1f}{memory_metric}'
+        return devices_type, peaks
+
+    @staticmethod
+    def get_pta_ge_peaks_and_devices_type(process_data: dict, memory_metric: str):
+        devices_type = []
+        peaks = {}
+        for device in process_data:
+            devices_type.append(device)
+            peaks[device] = 'Reserved Peak Memory Usage:'
+            for component in process_data.get(device):
+                max_reserved = 0
+                for array_value in process_data.get(device).get(component):
+                    max_reserved = max(array_value[2], max_reserved)
+                peaks[device] += f' {component}-{max_reserved:.1f}{memory_metric} |'
+        return devices_type, peaks
+
+    @staticmethod
+    def check_csv_columns(columns: list, column_idxs: dict):
+        column_exist_count = 0
+        for idx, column in enumerate(columns):
+            if column in column_idxs:
+                column_idxs[column] = idx
+                column_exist_count += 1
+        return column_idxs.values(), column_exist_count
+
+    @staticmethod
+    def get_csv_data(path: str):
+        if path is None:
+            return []
+        datas = []
+        with open(path, encoding='utf-8-sig') as f:
+            for row in csv.reader(f, skipinitialspace=True):
+                datas.append(row)
+        return datas
+
     def generate_run_profile(self):
         profile_run = RunProfile(self.worker, self.span)
         profile_run.is_pytorch_lightning = self.profile_data.is_pytorch_lightning
@@ -85,7 +219,7 @@ class RunGenerator(object):
 
             profile_run.gpu_metrics = self.profile_data.gpu_metrics_parser.get_gpu_metrics()
 
-            gpu_infos = {gpu_id: RunGenerator._get_gpu_info(self.profile_data.device_props, gpu_id)
+            gpu_infos = {gpu_id: RunGenerator.get_gpu_info(self.profile_data.device_props, gpu_id)
                          for gpu_id in self.profile_data.gpu_metrics_parser.gpu_ids}
             gpu_infos = {gpu_id: gpu_info for gpu_id, gpu_info in gpu_infos.items() if gpu_info is not None}
 
@@ -140,11 +274,11 @@ class RunGenerator(object):
     def _npu_get_overlap(self):
         path = self.profile_data.distributed_csv_path
         overlap_by_steps: Dict[str, List[float]] = OrderedDict()
-        data = RunGenerator._get_csv_data(path)
+        data = RunGenerator.get_csv_data(path)
         if len(data) <= 1:
             return overlap_by_steps
         title = [x.lower() for x in data[0]]
-        title_name = RunGenerator._check_overlap_data(title)
+        title_name = RunGenerator.check_overlap_data(title)
         if not title_name:
             logger.error(f"Incomplete content of CSV file {path}.")
             return overlap_by_steps
@@ -165,22 +299,6 @@ class RunGenerator(object):
             except (ValueError, IndexError):
                 logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
         return overlap_by_steps
-
-    @staticmethod
-    def _check_overlap_data(title):
-        # csv: step / compute time / communication_not_overlap / overlap / communication / free time
-        length = len(title)
-        if length < 5:
-            return []
-        key = ["computing", "overlapped", "communication(not overlapped)", "free"]
-        get_key = list()
-        for j in key:
-            for i in range(length):
-                if j == title[i]:
-                    get_key.append(i)
-        if len(get_key) < 4:
-            return []
-        return get_key
 
     def _npu_get_wait_table(self):
         path = self.profile_data.communication_json_path
@@ -216,9 +334,9 @@ class RunGenerator(object):
             collection_ops = data.get("collective")
             p2p_ops = data.get("p2p")
             try:
-                coll_total_trans, coll_total_synchronize = RunGenerator._get_wait_table_by_ops(collection_ops,
-                                                                                               table_ops)
-                p2p_total_trans, p2p_total_synchronize = RunGenerator._get_wait_table_by_ops(p2p_ops, table_ops)
+                coll_total_trans, coll_total_synchronize = RunGenerator.get_wait_table_by_ops(collection_ops,
+                                                                                              table_ops)
+                p2p_total_trans, p2p_total_synchronize = RunGenerator.get_wait_table_by_ops(p2p_ops, table_ops)
             except ValueError:
                 logger.error(f'Time and size info must be number, please check file "{path}"')
                 return wait_by_step, table_ops
@@ -229,41 +347,21 @@ class RunGenerator(object):
             }
         return wait_by_step, table_ops
 
-    @staticmethod
-    def _get_wait_table_by_ops(op, ops):
-        total_trans = 0
-        total_synchronize = 0
-        for key, data in op.items():
-            if str(key) == "Total Op Info" and data.get("Communication Time Info"):
-                total_trans += float(data.get("Communication Time Info").get("Transit Time(ms)"))
-                total_synchronize += float(data.get("Communication Time Info").get("Synchronization Time(ms)"))
-                continue
-            k = re.sub(r'[0-9]+', ' ', key).split(" ")[0]
-            if k not in ops:
-                ops[k] = [0, 0, 0, 0]
-            ops[k][0] += 1
-            for _, band in data.get("Communication Bandwidth Info").items():
-                ops[k][1] += float(band.get("Transit Size(MB)"))
-            if data.get("Communication Time Info") is not None:
-                ops[k][2] += data.get("Communication Time Info").get("Elapse Time(ms)")
-                ops[k][3] += data.get("Communication Time Info").get("Transit Time(ms)")
-        return total_trans, total_synchronize
-
     def _get_operator_details_by_name(self):
         operator_by_name = defaultdict(list)
         operator_by_name_and_input_shapes = defaultdict(list)
         path = self.profile_data.operator_path
-        datas = RunGenerator._get_csv_data(path)
+        datas = RunGenerator.get_csv_data(path)
         if len(datas) <= 1:
             return operator_by_name, operator_by_name_and_input_shapes
         for idx, ls in enumerate(datas[1:]):
             try:
                 temp: list = [
-                            ls[0], RunGenerator._trans_shape(str(ls[1])), ls[2], float(ls[3]), float(ls[4]),
+                            ls[0], RunGenerator.trans_shape(str(ls[1])), ls[2], float(ls[3]), float(ls[4]),
                             float(ls[5]), float(ls[6]), float(ls[7]), float(ls[8])
                 ]
                 operator_by_name[ls[0]].append(temp)
-                key = "{}###{}".format(str(ls[0]), RunGenerator._trans_shape(str(ls[1])))
+                key = "{}###{}".format(str(ls[0]), RunGenerator.trans_shape(str(ls[1])))
                 operator_by_name_and_input_shapes[key].append(temp)
             except (ValueError, IndexError):
                 logger.error(f'File "{path}" has wrong data format in row {idx + 2} and will skip it.')
@@ -313,9 +411,9 @@ class RunGenerator(object):
             if group_by_input_shape:
                 name = name_key.split("###")[0]
                 shape = name_key.split("###")[1]
-                result.append(RunGenerator._get_table_head(name, shape, None, values))
+                result.append(RunGenerator.get_table_head(name, shape, None, values))
             else:
-                result.append(RunGenerator._get_table_head(name_key, None, None, values))
+                result.append(RunGenerator.get_table_head(name_key, None, None, values))
         return result
 
     def _set_name_callstack_data(self, group_by_input_shape=False):
@@ -350,23 +448,9 @@ class RunGenerator(object):
                 'data': []
             }
             for callstack_key, value in values.items():
-                table['data'].append(RunGenerator._get_table_head(name, shape, callstack_key, value))
+                table['data'].append(RunGenerator.get_table_head(name, shape, callstack_key, value))
             result[name_key] = table
         return result
-
-    @staticmethod
-    def _trans_shape(shape: str):
-        result = list()
-        if ';' not in shape:
-            result.append('[' + shape.strip() + ']')
-            return '[' + ', '.join(result) + ']'
-        if len(shape.strip()) <= 1:
-            result.append('[]')
-            return '[' + ', '.join(result) + ']'
-        shape_spl = shape.split("\n")
-        for shape_div in iter(shape_spl):
-            result.append('[' + str(shape_div.replace(';', '')) + ']')
-        return '[' + ', '.join(result) + ']'
 
     def _get_call_stack_by_name(self):
         result = dict()
@@ -384,46 +468,9 @@ class RunGenerator(object):
                 'data': []
             }
             for callstack_key, value in values.items():
-                table['data'].append(RunGenerator._get_table_head(name_key, None, callstack_key, value))
+                table['data'].append(RunGenerator.get_table_head(name_key, None, callstack_key, value))
             result[name_key] = table
         return result
-
-    @staticmethod
-    def _get_table_head(name: str, input_shape: str, call_stack: str, value: list):
-        if name is None:
-            return {}
-        temp = {
-                'name': name, 'calls': 0, 'host_self_duration': 0,
-                'host_total_duration': 0, 'device_self_duration': 0, 'device_total_duration': 0,
-                'tc_self_ratio': 0, 'tc_total_ratio': 0, 'tc_eligible': 'Yes'
-        }
-        if input_shape is not None:
-            temp['input_shape'] = input_shape
-            if call_stack is not None:
-                temp['call_stack'] = call_stack
-            else:
-                temp['has_call_stack'] = False
-        else:
-            if call_stack is not None:
-                temp['call_stack'] = call_stack
-            else:
-                temp['has_call_stack'] = False
-        for vl in iter(value):
-            if 'has_call_stack' in temp and vl[2]:
-                temp['has_call_stack'] = True
-            temp['calls'] += 1
-            temp['host_self_duration'] = round(temp['host_self_duration'] + vl[3], 2)
-            temp['host_total_duration'] = round(temp['host_total_duration'] + vl[4], 2)
-            temp['device_self_duration'] = round(temp['device_self_duration'] + vl[5], 2)
-            temp['device_total_duration'] = round(temp['device_total_duration'] + vl[6], 2)
-            temp['tc_self_ratio'] = round(temp['tc_self_ratio'] + vl[7], 2)
-            temp['tc_total_ratio'] = round(temp['tc_total_ratio'] + vl[8], 2)
-        temp['tc_eligible'] = 'Yes' if temp['tc_self_ratio'] > 0 or temp['tc_total_ratio'] > 0 else 'No'
-        temp['tc_self_ratio'] = 0 if temp['device_self_duration'] == 0 \
-            else round(temp['tc_self_ratio'] / temp['device_self_duration'] * 100, 2)
-        temp['tc_total_ratio'] = 0 if temp['device_total_duration'] == 0 \
-            else round(temp['tc_total_ratio'] / temp['device_total_duration'] * 100, 2)
-        return temp
 
     def _get_memory_event(self, peak_memory_events: dict):
         display_columns = ('Name', 'Size(KB)', 'Allocation Time(us)', 'Release Time(us)', 'Duration(us)')
@@ -438,15 +485,16 @@ class RunGenerator(object):
             'columns': [],
             'rows': {}
         }
-        datas = RunGenerator._get_csv_data(path)
+        datas = RunGenerator.get_csv_data(path)
         if len(datas) < 1:
             return {
                 'operator': table,
                 'component': peak_memory_events
             }
+        device_type_form_idx = -1
         for idx, column in enumerate(datas[0]):
             if column == 'Device Type':
-                self.device_type_form_idx = idx
+                device_type_form_idx = idx
             if column in display_columns:
                 if column == 'Name':
                     table['columns'].append({'name': column, 'type': 'string'})
@@ -457,11 +505,11 @@ class RunGenerator(object):
                     table['columns'].append({'name': column.replace('(us)', '(ms)'), 'type': 'number'})
         required_column_idxs = {key: -1 for key in display_columns}
         (name_idx, size_idx, allocation_idx, release_idx, duration_idx), column_exist_count = \
-            RunGenerator._check_csv_columns(datas[0], required_column_idxs)
-        if column_exist_count < len(required_column_idxs):
-            logger.error('Required column is missing in file "operator_memory.csv"')
+            RunGenerator.check_csv_columns(datas[0], required_column_idxs)
+        if device_type_form_idx < 0 or column_exist_count < len(required_column_idxs):
+            raise ValueError('Required column is missing in file "operator_memory.csv"')
         for idx, ls in enumerate(datas[1:]):
-            device_type = ls[self.device_type_form_idx]
+            device_type = ls[device_type_form_idx]
             # convert time metric 'us' to 'ms'
             # some operators may not have the following columns
             try:
@@ -489,8 +537,8 @@ class RunGenerator(object):
         time_metric: str = 'ms'
         memory_metric: str = 'MB'
         cano = Canonicalizer(time_metric, memory_metric)
-        process_devices_type, process_peaks = RunGenerator._get_process_peaks_and_devices_type(self.process_data,
-                                                                                               memory_metric)
+        process_devices_type, process_peaks = RunGenerator.get_process_peaks_and_devices_type(self.process_data,
+                                                                                              memory_metric)
         total_result = {
             'metadata': {
                 'devices': process_devices_type,
@@ -517,8 +565,8 @@ class RunGenerator(object):
             if len(total_result['columns'][device]) > 0:
                 total_result['columns'][device].insert(0, {'name': f'Time ({cano.time_metric})', 'type': 'number',
                                                            'tooltip': 'Time since profiler starts.'})
-        pta_ge_devices_type, pta_ge_peaks = RunGenerator._get_pta_ge_peaks_and_devices_type(self.component_curve_data,
-                                                                                            memory_metric)
+        pta_ge_devices_type, pta_ge_peaks = RunGenerator.get_pta_ge_peaks_and_devices_type(self.component_curve_data,
+                                                                                           memory_metric)
         component_curve_result = {
             'metadata': {
                 'devices': pta_ge_devices_type,
@@ -562,48 +610,11 @@ class RunGenerator(object):
             'ptaGe': component_curve_result
         }
 
-    @staticmethod
-    def _get_process_peaks_and_devices_type(process_data: dict, memory_metric: str):
-        devices_type = []
-        peaks = {}
-        for device in process_data:
-            devices_type.append(device)
-            reserved_list = process_data.get(device).get('Allocated')
-            if reserved_list is not None:
-                max_reserved = 0
-                for array_value in reserved_list:
-                    max_reserved = max(array_value[1], max_reserved)
-                peaks[device] = f'Peak Memory Usage: {max_reserved:.1f}{memory_metric}'
-        return devices_type, peaks
-
-    @staticmethod
-    def _get_pta_ge_peaks_and_devices_type(process_data: dict, memory_metric: str):
-        devices_type = []
-        peaks = {}
-        for device in process_data:
-            devices_type.append(device)
-            peaks[device] = 'Reserved Peak Memory Usage:'
-            for component in process_data.get(device):
-                max_reserved = 0
-                for array_value in process_data.get(device).get(component):
-                    max_reserved = max(array_value[2], max_reserved)
-                peaks[device] += f' {component}-{max_reserved:.1f}{memory_metric} |'
-        return devices_type, peaks
-
-    @staticmethod
-    def _check_csv_columns(columns: list, column_idxs: dict):
-        column_exist_count = 0
-        for idx, column in enumerate(columns):
-            if column in column_idxs:
-                column_idxs[column] = idx
-                column_exist_count += 1
-        return column_idxs.values(), column_exist_count
-
     def _handle_memory_data(self):
         process_data = defaultdict()
         pta_or_ge_data = defaultdict()
         path = self.profile_data.memory_curve_path
-        datas = RunGenerator._get_csv_data(path)
+        datas = RunGenerator.get_csv_data(path)
         required_column_idxs = {
             'Component': -1,
             'Device Type': -1,
@@ -612,7 +623,7 @@ class RunGenerator(object):
             'Total Allocated(MB)': -1
         }
         (tag_type_idx, device_type_idx, time_idx, reserved_idx, allocated_idx), column_exist_count = \
-            RunGenerator._check_csv_columns(datas[0], required_column_idxs)
+            RunGenerator.check_csv_columns(datas[0], required_column_idxs)
         if column_exist_count < len(required_column_idxs):
             logger.error('Required column is missing in file "memory_record.csv"')
         else:
@@ -653,7 +664,7 @@ class RunGenerator(object):
         }
         peak_memory_rows = defaultdict(list)
         path = self.profile_data.memory_component_path
-        component_datas = RunGenerator._get_csv_data(path)
+        component_datas = RunGenerator.get_csv_data(path)
         if component_datas:
             required_column_idxs = {
                 'Component': -1,
@@ -662,7 +673,7 @@ class RunGenerator(object):
                 'Device': -1
             }
             (tag_type_idx, time_idx, reserved_idx, device_type_idx), column_exist_count = \
-                RunGenerator._check_csv_columns(component_datas[0], required_column_idxs)
+                RunGenerator.check_csv_columns(component_datas[0], required_column_idxs)
             if column_exist_count < len(required_column_idxs):
                 logger.error(f'Required column is missing in file "{path}"')
             else:
@@ -734,8 +745,7 @@ class RunGenerator(object):
         data['steps']['columns'].extend(['DataLoader', 'CPU Exec', 'Other'])
 
         data['steps']['rows'] = []
-        for i in range(len(self.profile_data.steps_costs)):
-            costs = self.profile_data.steps_costs[i]
+        for i, costs in enumerate(self.profile_data.steps_costs):
             step_name = self.profile_data.steps_names[i]
             row = [{'value': step_name}]
             if show_gpu:
@@ -1063,14 +1073,14 @@ class RunGenerator(object):
             'data': table
         }
         path = self.profile_data.kernel_file_path
-        datas = RunGenerator._get_csv_data(path)
+        datas = RunGenerator.get_csv_data(path)
         required_column_idxs = {
             'Name': -1,
             'Duration(us)': -1,
             'Accelerator Core': -1
         }
         (name_idx, duration_idx, core_type_idx), column_exist_count = \
-            RunGenerator._check_csv_columns(datas[0], required_column_idxs)
+            RunGenerator.check_csv_columns(datas[0], required_column_idxs)
         if column_exist_count < 3:
             logger.error('Required column is missing in file "kernel_details.csv"')
         else:
@@ -1084,16 +1094,6 @@ class RunGenerator(object):
         table['rows'] = datas[1:]
         return result
 
-    @staticmethod
-    def _get_csv_data(path: str):
-        if path is None:
-            return []
-        datas = []
-        with open(path, encoding='utf-8-sig') as f:
-            for row in csv.reader(f, skipinitialspace=True):
-                datas.append(row)
-        return datas
-
     def _generate_tc_pie_npu(self):
         pie = {'columns': [{'type': 'string', 'name': 'name'}, {'type': 'number', 'name': 'value'}], 'rows': []}
         for key, val in self.accelerator_data.items():
@@ -1102,7 +1102,7 @@ class RunGenerator(object):
         return data
 
     @staticmethod
-    def _get_gpu_info(device_props, gpu_id):
+    def get_gpu_info(device_props, gpu_id):
         if (device_props is None) or (gpu_id >= len(device_props)) or (gpu_id < 0):
             return None
 
@@ -1203,7 +1203,7 @@ class DistributedRunGenerator(object):
             process_id = 'Process ' + str(process_id)
             result[node][process_id] = OrderedDict()
             for used_device in data.used_devices:
-                gpu_info = RunGenerator._get_gpu_info(data.device_props, used_device)
+                gpu_info = RunGenerator.get_gpu_info(data.device_props, used_device)
                 if gpu_info is not None:
                     result[node][process_id]['GPU' + str(used_device)] = gpu_info
 
@@ -1254,7 +1254,8 @@ class DistributedRunGenerator(object):
                 round(costs.other, 3)
             ]
             steps_to_overlap['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[step_name][data.worker])
+                sum(x)
+                for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[step_name][data.worker])
             ]
 
     @staticmethod
@@ -1267,7 +1268,8 @@ class DistributedRunGenerator(object):
             steps_to_overlap[k][data.worker] = list(
                 [round(v[0] - v[1], 3), round(v[1], 3), round(v[2], 3), round(v[3], 3)])
             steps_to_overlap['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[k][data.worker])
+                sum(x)
+                for x in zip(steps_to_overlap['all'][data.worker], steps_to_overlap[k][data.worker])
             ]
 
     @staticmethod
@@ -1283,7 +1285,8 @@ class DistributedRunGenerator(object):
             wait = round(v.get('Synchronize') * 1000, 3)  # 1ms = 1000us
             steps_to_wait[k][data.worker] = list([trans, wait])
             steps_to_wait['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[k][data.worker])
+                sum(x)
+                for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[k][data.worker])
             ]
         steps_to_wait['all'][data.worker] = [x / step_number for x in steps_to_wait['all'][data.worker]]
 
@@ -1298,7 +1301,8 @@ class DistributedRunGenerator(object):
                 round(comm_stats[0] - comm_stats[1], 3)
             ]
             steps_to_wait['all'][data.worker] = [
-                sum(x) for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[step][data.worker])
+                sum(x)
+                for x in zip(steps_to_wait['all'][data.worker], steps_to_wait[step][data.worker])
             ]
         steps_to_wait['all'][data.worker] = [int(x / step_number) for x in steps_to_wait['all'][data.worker]]
 

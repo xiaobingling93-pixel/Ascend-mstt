@@ -20,9 +20,8 @@ import sys
 from collections import namedtuple
 
 from msprobe.core.common.const import CompareConst, FileCheckConst
-from msprobe.core.common.file_utils import FileOpen, change_mode, read_csv, get_json_contents
-from msprobe.core.common.utils import CompareException, check_op_str_pattern_valid
-from msprobe.pytorch.common.log import logger
+from msprobe.core.common.file_utils import read_csv, get_json_contents, write_csv
+from msprobe.core.common.utils import check_op_str_pattern_valid
 from msprobe.pytorch.online_dispatch.single_compare import single_benchmark_compare_wrap
 from rich.console import Console
 from rich.table import Table
@@ -33,13 +32,6 @@ FLOAT_PRECISION = 14
 
 ResultInfo = namedtuple('ResultInfo', ['api_name', 'is_fwd_success', 'is_bwd_success',
                                        'fwd_compare_alg_results', 'bwd_compare_alg_results'])
-
-
-def write_csv(data, filepath):
-    with FileOpen(filepath, 'a', encoding='utf-8-sig') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 class Saver:
