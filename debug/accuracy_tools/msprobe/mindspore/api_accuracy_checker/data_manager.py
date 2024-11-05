@@ -19,7 +19,7 @@ import csv
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
-from msprobe.core.common.utils import add_time_as_suffix
+from msprobe.core.common.utils import add_time_as_suffix, MsprobeBaseException
 
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
@@ -72,6 +72,17 @@ def get_detail_csv_header():
     return detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
 
 
+def check_csv_header(headers, required_constants, csv_path):
+    """校验 CSV 文件表头是否包含所有必需的常量"""
+    missing_constants = [const for const in required_constants if const not in headers]
+
+    if missing_constants:
+        raise MsprobeBaseException(
+            MsprobeBaseException.MISSING_HEADER_ERROR,
+            f"{csv_path} 缺少以下必需的表头字段: {missing_constants}"
+        )
+    return True
+
 class DataManager:
     def __init__(self, csv_dir, result_csv_path):
         self.results = {}
@@ -94,13 +105,8 @@ class DataManager:
             reader = csv.reader(csv_file)
             headers = next(reader, None)  # 读取标题行
 
-            # 校验表头是否包含所有必需的常量
-            required_constants = get_result_csv_header()
-            missing_constants = [const for const in required_constants if const not in headers]
-
-            if missing_constants:
-                logger.warning(f"{result_csv_path} 缺少以下必需的表头字段: {missing_constants}")
-                return
+            # 使用提取的表头校验函数
+            check_csv_header(headers, get_result_csv_header(), result_csv_path)
 
             # 获取 "API Name" 列的索引
             api_name_index = None
