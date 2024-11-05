@@ -15,6 +15,8 @@
 
 import multiprocessing
 import os
+from copy import deepcopy
+
 import pandas as pd
 from tqdm import tqdm
 from msprobe.core.common.file_utils import load_json
@@ -63,7 +65,22 @@ class Comparator:
                                                                           bench_summary_data, err_msg)
         result_item.append(accuracy_check)
         result_item.append(err_msg)
-    
+
+    @staticmethod
+    def _generate_na_data(ops_all):
+        if not ops_all:
+            return {}
+        key = next(iter(ops_all))
+        value = deepcopy(ops_all[key])
+        for k, v in value.items():
+            if isinstance(v, tuple):
+                value[k] = tuple(CompareConst.N_A for _ in range(len(v)))
+            elif isinstance(v, list):
+                value[k] = [CompareConst.N_A] * len(v)
+            else:
+                value[k] = CompareConst.N_A
+        return value
+
     @classmethod
     def make_result_table(cls, result, stack_mode, dump_mode):
         header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode][:]
@@ -245,6 +262,7 @@ class Comparator:
 
     def get_accuracy(self, npu_ops_all, bench_ops_all, dump_mode):
         result = []
+        bench_ops_all[CompareConst.N_A] = self._generate_na_data(bench_ops_all)
         for ms_op_name, bench_op_name in self.data_mapping_dict.items():
             if ms_op_name in npu_ops_all and bench_op_name in bench_ops_all:
                 npu_stack_info = npu_ops_all.get(ms_op_name).get("stack_info", None)
