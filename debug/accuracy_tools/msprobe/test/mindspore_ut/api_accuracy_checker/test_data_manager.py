@@ -1,7 +1,6 @@
 import unittest
 from unittest.mock import patch, mock_open, MagicMock
 import os
-import stat
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import DataManager
 from msprobe.core.common.const import MsCompareConst, CompareConst
 
@@ -18,10 +17,8 @@ class TestDataManager(unittest.TestCase):
         if not os.path.exists(self.csv_dir):
             os.makedirs(self.csv_dir)
 
-        # 确保 result.csv 文件存在，并写入正确的表头
-        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL  # 文件创建时的标志
-        mode = stat.S_IWUSR | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH  # 设置文件权限，允许组内用户和所有用户读取
-        with os.fdopen(os.open(self.result_csv_path, flags, mode), 'w') as f:
+        # 确保文件存在，并写入正确的表头
+        with open(self.result_csv_path, 'w') as f:
             f.write("API Name,Forward Test Success,Backward Test Success,Message\n")  # 写入必需的表头字段
             # 写入一些示例数据
             f.write("API1,pass,pass,All tests passed\n")
@@ -29,7 +26,7 @@ class TestDataManager(unittest.TestCase):
             f.write("api_name,pass,pass,Backward test failed\n")
 
         # 确保 details.csv 文件存在，并写入一些默认数据
-        with os.fdopen(os.open(self.result_csv_path, flags, mode), 'w') as f:
+        with open(self.details_csv_path, 'w') as f:
             f.write("api_name,details\n")  # 表头
             f.write("API1,Detail for API1\n")
             f.write("API2,Detail for API2\n")
