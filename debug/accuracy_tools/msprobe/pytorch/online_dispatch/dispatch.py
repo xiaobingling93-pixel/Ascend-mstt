@@ -28,7 +28,7 @@ except ImportError:
 else:
     is_npu = True
 
-from msprobe.core.common.file_utils import check_file_or_directory_path, load_yaml
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_yaml, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, \
@@ -36,7 +36,7 @@ from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, disp
 from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu, get_sys_info, DispatchException, \
     COMPARE_LOGO
 from msprobe.pytorch.online_dispatch.compare import Comparator
-from msprobe.core.common.file_utils import FileOpen, create_directory
+from msprobe.core.common.utils import safe_get_value
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -170,14 +170,15 @@ class PtdbgDispatch(TorchDispatchMode):
         cpu_kwargs = []
         data_to_cpu(args, 0, cpu_args)
         data_to_cpu(kwargs, 0, cpu_kwargs)
-        cpu_args = cpu_args[0]
-        cpu_kwargs = cpu_kwargs[0]
+        
+        cpu_args = safe_get_value(cpu_args, 0, "cpu_args")
+        cpu_kwargs = safe_get_value(cpu_kwargs, 0, "cpu_kwargs")
 
         with TimeStatistics("NPU RUN", run_param):
             npu_out = func(*args, **kwargs)
         npu_out_cpu = []
         data_to_cpu(npu_out, 0, npu_out_cpu)
-        npu_out_cpu = npu_out_cpu[0]
+        npu_out_cpu = safe_get_value(npu_out_cpu, 0, "npu_out_cpu")
 
         with TimeStatistics("CPU RUN", run_param):
             cpu_out = func(*cpu_args, **cpu_kwargs)
