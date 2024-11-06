@@ -77,6 +77,7 @@ def check_csv_header(headers, required_constants, csv_path):
         )
     return True
 
+
 class DataManager:
     def __init__(self, csv_dir, result_csv_path):
         self.results = {}
