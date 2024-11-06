@@ -520,9 +520,17 @@ def run_ut_command(args):
         error_data_path = initialize_save_error_data(error_data_path)
     online_config = checker_config.get_online_config()
     checked_online_config(online_config)
-    run_ut_config = checker_config.get_run_ut_config(forward_content, backward_content, result_csv_path, 
-                                                     details_csv_path, save_error_data,
-                                                     args.result_csv_path, real_data_path, error_data_path)
+    config_params = {
+        'forward_content': forward_content,
+        'backward_content': backward_content,
+        'result_csv_path': result_csv_path,
+        'details_csv_path': details_csv_path,
+        'save_error_data': save_error_data,
+        'is_continue_run_ut': args.result_csv_path,
+        'real_data_path': real_data_path,
+        'error_data_path': error_data_path
+    }
+    run_ut_config = checker_config.get_run_ut_config(**config_params)
     run_ut(run_ut_config)
 
 

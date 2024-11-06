@@ -104,26 +104,28 @@ class TestConfig(unittest.TestCase):
         save_error_data = True
         api_result_csv_path = '/path/to/api_result.csv'
         real_data_path = '/path/to/real_data'
-        white_list = {'api1', 'api2'}
-        black_list = {'api3'}
         error_data_path = '/path/to/error_data'
-        online_config = {'is_online': True, 'nfs_path': '/path/to/nfs'}
 
         checker_config = CheckerConfig()
+        
+        config_params = {
+            'forward_content': forward_content,
+            'backward_content': backward_content,
+            'result_csv_path': result_csv_path,
+            'details_csv_path': details_csv_path,
+            'save_error_data': save_error_data,
+            'is_continue_run_ut': api_result_csv_path,
+            'real_data_path': real_data_path,
+            'error_data_path': error_data_path
+        }
 
-        run_ut_config = checker_config.get_run_ut_config(
-            forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-            api_result_csv_path, real_data_path, white_list, black_list, error_data_path, online_config
-        )
+        run_ut_config = checker_config.get_run_ut_config(**config_params)
 
         self.assertEqual(run_ut_config.forward_content, forward_content)
         self.assertEqual(run_ut_config.backward_content, backward_content)
         self.assertEqual(run_ut_config.result_csv_path, result_csv_path)
         self.assertEqual(run_ut_config.details_csv_path, details_csv_path)
         self.assertEqual(run_ut_config.save_error_data, save_error_data)
-        self.assertEqual(run_ut_config.api_result_csv_path, api_result_csv_path)
+        self.assertEqual(run_ut_config.is_continue_run_ut, api_result_csv_path)
         self.assertEqual(run_ut_config.real_data_path, real_data_path)
-        self.assertEqual(run_ut_config.white_list, white_list)
-        self.assertEqual(run_ut_config.black_list, black_list)
         self.assertEqual(run_ut_config.error_data_path, error_data_path)
-        self.assertEqual(run_ut_config.online_config, online_config)

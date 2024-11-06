@@ -113,18 +113,17 @@ class CheckerConfig:
             tls_path=self.tls_path
         )
 
-    def get_run_ut_config(self, forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                          is_continue_run_ut, real_data_path, error_data_path):
+    def get_run_ut_config(self, **config_params):
         return RunUtConfig(
-            forward_content=forward_content,
-            backward_content=backward_content,
-            result_csv_path=result_csv_path,
-            details_csv_path=details_csv_path,
-            save_error_data=save_error_data,
-            is_continue_run_ut=is_continue_run_ut,
-            real_data_path=real_data_path,
+            forward_content=config_params.get('forward_content'),
+            backward_content=config_params.get('backward_content'),
+            result_csv_path=config_params('result_csv_path'),
+            details_csv_path=config_params('details_csv_path'),
+            save_error_data=config_params('save_error_data'),
+            is_continue_run_ut=config_params('is_continue_run_ut'),
+            real_data_path=config_params('real_data_path'),
             white_list=self.white_list,
             black_list=self.black_list,
-            error_data_path=error_data_path,
+            error_data_path=config_params('error_data_path'),
             online_config=self.get_online_config()
         )
