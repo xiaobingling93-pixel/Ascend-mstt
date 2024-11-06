@@ -103,13 +103,13 @@ class GlobalContext:
         if value and isinstance(value, list):
             for val in value:
                 if not isinstance(val, dtype):
-                    logger.warning(f"Invalid {name} which must be None or list of {type_str}")
+                    logger.warning(f"Invalid {name} which must be None or list of {type_str}, use default value.")
                     return
                 elif isinstance(val, int) and not is_int(val):
-                    logger.warning(f"Invalid {name} which must be None or list of int")
+                    logger.warning(f"Invalid {name} which must be None or list of int, use default value.")
                     return
                 if element_check and not element_check(val):
-                    logger.warning(f"Given {name} violates some rules.")
+                    logger.warning(f"Given {name} violates some rules, use default value.")
                     return
 
             self._setting[name] = value
