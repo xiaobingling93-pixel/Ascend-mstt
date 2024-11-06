@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import os
+from tqdm import tqdm
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json
@@ -160,9 +161,9 @@ class ApiAccuracyChecker:
                 self.api_infos[api_name].load_backward_info(api_info)
 
     def run_and_compare(self):
-        for api_name_str, api_info in self.api_infos.items():
+        for api_name_str, api_info in tqdm(self.api_infos.items()):
             if not api_info.check_forward_info():
-                logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
+                logger.debug(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
                 continue
             try:
                 forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
@@ -180,7 +181,7 @@ class ApiAccuracyChecker:
             self.record(forward_output_list)
 
             if not api_info.check_backward_info():
-                logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
+                logger.debug(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
                 continue
             try:
                 backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
