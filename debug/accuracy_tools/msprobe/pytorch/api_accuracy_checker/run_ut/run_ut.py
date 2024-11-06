@@ -57,9 +57,6 @@ current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
-RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
-                                         'black_list', 'error_data_path', 'online_config'])
 
 
 not_backward_list = ['repeat_interleave']
@@ -523,9 +520,9 @@ def run_ut_command(args):
         error_data_path = initialize_save_error_data(error_data_path)
     online_config = checker_config.get_online_config()
     checked_online_config(online_config)
-    run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path, set(checker_config.white_list), 
-                                set(checker_config.black_list), error_data_path, online_config)
+    run_ut_config = checker_config.get_run_ut_config(forward_content, backward_content, result_csv_path, 
+                                                     details_csv_path, save_error_data,
+                                                     args.result_csv_path, real_data_path, error_data_path)
     run_ut(run_ut_config)
 
 
