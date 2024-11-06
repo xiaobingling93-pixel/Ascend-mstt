@@ -166,7 +166,7 @@ def gen_op_item(op_data, op_name):
             op_item['Mean'] = op_data.get('value')
             op_item['Norm'] = op_data.get('value')
     if not op_item['md5']:
-        op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '').encode())):08x}"
+        op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
     
     return op_item
 
