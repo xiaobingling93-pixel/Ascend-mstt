@@ -223,6 +223,7 @@ class Comparator:
             get_accuracy(result, n_match_data, b_match_data, dump_mode)
             del npu_ops_queue[0: n_match_point + 1]
             del bench_ops_queue[0: b_match_point + 1]
+        progress_bar.close()
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, dump_mode)
@@ -421,10 +422,8 @@ class Comparator:
         if dump_mode == Const.ALL:
             result_df = self._do_multi_process(input_parma, result_df)
 
-        logger.info("Highlight suspicious API/Module start.")
         find_compare_result_error_rows(result_df, highlight_dict, dump_mode)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        logger.info("Highlight suspicious API/Module finish.")
 
         if auto_analyze:
             advisor = Advisor(result_df, output_path, suffix)
