@@ -111,7 +111,7 @@ class DataManager:
                     break
 
             if api_name_index is None:
-                logger.warning(f"{result_csv_path} No column contains 'API Name'.")  # 做测试
+                logger.warning(f"{result_csv_path} No column contains 'API Name'.")  
                 return
 
                 # 读取每一行的 API 名称
