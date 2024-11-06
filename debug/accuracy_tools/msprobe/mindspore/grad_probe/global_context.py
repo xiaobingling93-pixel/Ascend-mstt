@@ -17,9 +17,10 @@ import os
 import threading
 from typing import Dict, Union, Tuple
 
+from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import create_directory, check_path_before_create
 from msprobe.core.grad_probe.constant import GradConst
-from msprobe.core.grad_probe.utils import check_str, check_bounds_element
+from msprobe.core.grad_probe.utils import check_str, check_bounds_element, check_param_element
 from msprobe.mindspore.common.log import logger
 
 
@@ -51,10 +52,10 @@ class GlobalContext:
         else:
             raise ValueError("Invalid level set in config yaml file, level option: L0, L1, L2")
 
-        self._set_input_list(config_dict, GradConst.PARAM_LIST, str)
+        self._set_input_list(config_dict, GradConst.PARAM_LIST, (str,), element_check=check_param_element)
         self._set_input_list(config_dict, GradConst.BOUNDS, (float, int), element_check=check_bounds_element)
-        self._set_input_list(config_dict, GradConst.STEP, int)
-        self._set_input_list(config_dict, GradConst.RANK, int)
+        self._set_input_list(config_dict, GradConst.STEP, (int,))
+        self._set_input_list(config_dict, GradConst.RANK, (int,))
 
         output_path = config_dict.get(GradConst.OUTPUT_PATH)
         check_str(output_path, variable_name="output_path in yaml")
@@ -104,9 +105,13 @@ class GlobalContext:
                 if not isinstance(val, dtype):
                     logger.warning(f"Invalid {name} which must be None or list of {type_str}")
                     return
+                elif isinstance(val, int) and not is_int(val):
+                    logger.warning(f"Invalid {name} which must be None or list of int")
+                    return
                 if element_check and not element_check(val):
                     logger.warning(f"Given {name} violates some rules.")
                     return
+
             self._setting[name] = value
         else:
             logger.warning(f"{name} is None or not a list with valid items, use default value.")
