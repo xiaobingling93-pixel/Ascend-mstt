@@ -33,7 +33,7 @@ class ResultCsvEntry:
         self.overall_err_msg = None
 
 
-def write_csv_header_if_first_time(csv_path, header_func):
+def write_csv_header(csv_path, header_func):
     """如果是第一次写入，则写入 CSV 表头"""
     header = header_func()  # 获取表头
     logger.debug(f"Writing CSV header: {header}")
@@ -125,9 +125,8 @@ class DataManager:
         """检查 API 名称是否唯一，如果已经存在则返回 False，否则加入集合并返回 True"""
         if api_name in self.api_names_set:
             return False
-        else:
-            self.api_names_set.add(api_name)
-            return True
+        self.api_names_set.add(api_name)
+        return True
 
     def resume_from_last_csv(self, result_csv_path):
         """从上次运行的 result_csv_path 恢复断点"""
@@ -157,8 +156,8 @@ class DataManager:
 
             # 直接写入表头
             logger.info("Writing CSV headers for the first time.")
-            write_csv_header_if_first_time(self.detail_out_path, get_detail_csv_header)
-            write_csv_header_if_first_time(self.result_out_path, get_result_csv_header)
+            write_csv_header(self.detail_out_path, get_detail_csv_header)
+            write_csv_header(self.result_out_path, get_result_csv_header)
             self.is_first_write = False  # 写入后标记为 False，避免重复写入表头
 
         """写入详细输出和结果摘要并清理结果"""
