@@ -420,4 +420,4 @@ class TestUtils(TestCase):
         invalid_param = "invalid$tring&with^special*chars()"
         with self.assertRaises(MsprobeBaseException) as context:
             check_str_param(invalid_param)
-        self.assertEqual(context.exception.error_code, MsprobeBaseException.INVALID_CHAR_ERROR)
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_CHAR_ERROR)
