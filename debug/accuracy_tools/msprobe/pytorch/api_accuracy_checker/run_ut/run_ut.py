@@ -141,7 +141,7 @@ def run_api_offline(config, compare, api_name_set):
         except Exception as err:
             if "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
-                               f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
+                               "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
             compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
