@@ -84,4 +84,13 @@ class TestDataManager(unittest.TestCase):
         # 测试生成结果 CSV
         data_manager = DataManager(csv_dir="fake_dir", result_csv_path="fake_path")
         data_manager.results = {
-            ("API1", "FORWARD"): [(MagicMock(api_name="API1", status=CompareConst
+            ("API1", "FORWARD"): [(MagicMock(api_name="API1", status=CompareConst.PASS, err_msg=""), {})]
+        }
+        data_manager.to_result_csv("fake_path")
+
+        # 检查写入是否成功
+        mock_write_csv.assert_called()
+
+
+if __name__ == "__main__":
+    unittest.main()
