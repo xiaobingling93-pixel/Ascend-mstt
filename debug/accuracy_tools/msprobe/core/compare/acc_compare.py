@@ -43,16 +43,19 @@ class Comparator:
 
     @staticmethod
     def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
-        result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
-                       bench_ops_all.get(bench_op_name).get('struct')[0],
-                       npu_ops_all.get(ms_op_name).get('struct')[1],
-                       bench_ops_all.get(bench_op_name).get('struct')[1],
-                       npu_ops_all.get(ms_op_name).get('struct')[2],
-                       bench_ops_all.get(bench_op_name).get('struct')[2],
-                       CompareConst.PASS if npu_ops_all.get(ms_op_name).get('struct')[2]
-                                            == bench_ops_all.get(bench_op_name).get('struct')[2]
-                       else CompareConst.DIFF]
-        if args[0]:
+        npu_struct = npu_ops_all.get(ms_op_name).get('struct', [])
+        bench_struct = bench_ops_all.get(bench_op_name).get('struct', [])
+
+        if len(npu_struct) < 3 or len(bench_struct) < 3:
+            logger.error(f"The length of npu_struct and bench_struct must be >= 3, "
+                         f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. Please check!")
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+ 
+        result_item = [ms_op_name, bench_op_name, npu_struct[0], bench_struct[0],
+                        npu_struct[1], bench_struct[1], npu_struct[2], bench_struct[2],
+                        CompareConst.PASS if npu_struct[2] == bench_struct[2] else CompareConst.DIFF]
+
+        if len(args) >= 2 and args[0]:
             result_item.extend(args[1])
         else:
             result_item.append(CompareConst.NONE)
@@ -272,18 +275,28 @@ class Comparator:
                     result.append(self.get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all,
                                                               bench_ops_all, has_stack, npu_stack_info))
                     continue
+
+                npu_struct = npu_ops_all.get(ms_op_name).get('struct', [])
+                bench_struct = bench_ops_all.get(bench_op_name).get('struct', [])
+
+                if len(npu_struct) < 2 or len(bench_struct) < 2:
+                    logger.error(f"The length of npu_struct and bench_struct must be >= 2, "
+                                 f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. Please check!")
+                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+                base_result_item = [
+                    ms_op_name, bench_op_name,
+                    npu_struct[0],  
+                    bench_struct[0],
+                    npu_struct[1],
+                    bench_struct[1]
+                ]
+                
                 if dump_mode == Const.SUMMARY:
-                    result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
-                                   bench_ops_all.get(bench_op_name).get('struct')[0],
-                                   npu_ops_all.get(ms_op_name).get('struct')[1],
-                                   bench_ops_all.get(bench_op_name).get('struct')[1],
-                                   " ", " ", " ", " ", " ", " ", " ", " "]
+                    result_item = base_result_item + [" "] * 8
                 else:
-                    result_item = [ms_op_name, bench_op_name, npu_ops_all.get(ms_op_name).get('struct')[0],
-                                   bench_ops_all.get(bench_op_name).get('struct')[0],
-                                   npu_ops_all.get(ms_op_name).get('struct')[1],
-                                   bench_ops_all.get(bench_op_name).get('struct')[1],
-                                   " ", " ", " ", " ", " "]
+                    result_item = base_result_item + [" "] * 5
+
                 npu_summary_data = npu_ops_all.get(ms_op_name).get("summary")
                 result_item.extend(npu_summary_data)
                 bench_summary_data = bench_ops_all.get(bench_op_name).get("summary")

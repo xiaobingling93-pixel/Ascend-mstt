@@ -35,7 +35,7 @@ import torch
 from tqdm import tqdm
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, UtDataInfo, \
-    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info, is_unsupported_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
@@ -48,6 +48,7 @@ from msprobe.core.common.file_utils import FileChecker, change_mode, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.core.common.utils import safe_get_value
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
@@ -99,7 +100,11 @@ def run_ut(config):
         run_api_online(config, compare)
     else:
         csv_df = read_csv(config.result_csv_path)
-        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        try:
+            api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        except IndexError:
+            logger.error(f"Read {config.result_csv_path} error, api_name_set is empty.")
+            api_name_set = set()
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -220,14 +225,6 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
     return False
 
 
-def is_unsupported_api(api_name):
-    split_name = api_name.split(Const.SEP)[0]
-    flag = split_name == Const.DISTRIBUTED
-    if flag:
-        logger.info(f"{split_name} api is not supported for run ut. SKIP.")
-    return flag
-
-
 def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
         processor = UtDataProcessor(error_data_path)
@@ -278,7 +275,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             func_options = {
                 'real_data_path': real_data_path
             }
-            grad = gen_args(backward_args, api_name, func_options)[0]
+            grad = gen_args(backward_args, api_name, func_options)
+            grad = safe_get_value(grad, 0, "grad")
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -286,8 +284,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
-        out = out[0]
-        device_out = device_out[0]
+        out = safe_get_value(out, 0, "out")
+        device_out = safe_get_value(device_out, 0, "device_out")
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
@@ -323,6 +321,9 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
+        if grad_index >= len(out):
+            logger.error(f"Run backward error when grad_index is {grad_index}")
+            raise IndexError(f"Run backward error when grad_index is {grad_index}")
         out[grad_index].backward(grad)
     else:
         out.backward(grad)

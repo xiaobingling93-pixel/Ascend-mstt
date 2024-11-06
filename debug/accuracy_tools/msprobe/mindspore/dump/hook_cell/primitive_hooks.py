@@ -1,4 +1,5 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,18 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
 import os
 
-import mindspore as ms
-from mindspore.common.tensor import Tensor
 from mindspore import ops
+from mindspore.common.tensor import Tensor
 
-from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const, DumpException
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
-    ModuleBackwardInputs, ModuleBackwardOutputs
+from msprobe.core.data_dump.data_processor.base import (ModuleBackwardInputs, ModuleBackwardOutputs,
+                                                        ModuleForwardInputsOutputs)
+from msprobe.mindspore.common.log import logger
 
 
 class PrimitiveHookService:
@@ -202,4 +201,3 @@ class PrimitiveHookService:
             self.primitive_counters[primitive_name] = 0
         else:
             self.primitive_counters[primitive_name] += 1
-

@@ -171,14 +171,15 @@ class PtdbgDispatch(TorchDispatchMode):
         cpu_kwargs = []
         data_to_cpu(args, 0, cpu_args)
         data_to_cpu(kwargs, 0, cpu_kwargs)
-        cpu_args = cpu_args[0]
-        cpu_kwargs = cpu_kwargs[0]
+        
+        cpu_args = safe_get_value(cpu_args, 0, "cpu_args")
+        cpu_kwargs = safe_get_value(cpu_kwargs, 0, "cpu_kwargs")
 
         with TimeStatistics("NPU RUN", run_param):
             npu_out = func(*args, **kwargs)
         npu_out_cpu = []
         data_to_cpu(npu_out, 0, npu_out_cpu)
-        npu_out_cpu = npu_out_cpu[0]
+        npu_out_cpu = safe_get_value(npu_out_cpu, 0, "npu_out_cpu")
 
         with TimeStatistics("CPU RUN", run_param):
             cpu_out = func(*cpu_args, **cpu_kwargs)
