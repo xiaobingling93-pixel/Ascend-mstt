@@ -111,6 +111,8 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [PyTorch 场景的分级可视化构图比对](./docs/21.visualization_PyTorch.md)
 
+[MindSpore 场景的分级可视化构图比对](./docs/22.visualization_MindSpore.md)
+
 ## 🌟 新版本特性
 
 若查看历史版本特性，请点击[安装](./docs/01.installation.md)。
@@ -144,4 +146,4 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## ❓ FAQ
 
-[FAQ for PyTorch](./docs/FAQ_PyTorch.md)
+[FAQ for PyTorch](./docs/FAQ.md)

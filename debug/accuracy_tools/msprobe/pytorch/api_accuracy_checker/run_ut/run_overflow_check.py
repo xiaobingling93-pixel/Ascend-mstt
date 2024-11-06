@@ -28,11 +28,12 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
-from msprobe.core.common.file_utils import check_link
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, is_unsupported_api
+from msprobe.core.common.file_utils import check_link, FileChecker
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.const import Const
 
 
 def check_tensor_overflow(x):
@@ -74,6 +75,8 @@ def run_overflow_check(forward_file):
     logger.info("start UT test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
+        if is_unsupported_api(api_full_name, is_overflow_check=True):
+            continue
         try:
             run_torch_api(api_full_name, api_info_dict, real_data_path)
         except Exception as err:
@@ -90,7 +93,7 @@ def run_overflow_check(forward_file):
 
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
-    api_type, api_name, _ = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
@@ -135,8 +138,9 @@ def _run_overflow_check(parser=None):
 def _run_overflow_check_command(args):
     torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     npu_device = "npu:" + str(args.device_id)
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info = api_info_file_checker.common_check()
     try:
         torch.npu.set_device(npu_device)
     except Exception as error:

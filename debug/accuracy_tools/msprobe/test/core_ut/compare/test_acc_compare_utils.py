@@ -5,9 +5,11 @@ import shutil
 import unittest
 import argparse
 from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
-    check_and_return_dir_contents, resolve_api_special_parameters, get_accuracy, get_un_match_accuracy, merge_tensor, \
-    _compare_parser
+    check_and_return_dir_contents, resolve_api_special_parameters, get_rela_diff_summary_mode, \
+    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser, stack_column_process, result_item_init, \
+    ApiItemInfo
 from msprobe.core.common.utils import CompareException
+from msprobe.core.common.const import Const, CompareConst
 
 
 # test_read_op_1
@@ -279,32 +281,66 @@ class TestUtilsMethods(unittest.TestCase):
         resolve_api_special_parameters(data_dict, full_op_name, item_list)
         self.assertEqual(item_list, o_result_api_special)
 
+    def test_get_rela_diff_summary_mode_float_or_int(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [1, 1, 1, 1]
+        bench_summary_data = [1, 1, 1, 1]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, '0.0%', '0.0%', '0.0%', '0.0%'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
+    def test_get_rela_diff_summary_mode_bool(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [True, True, True, True]
+        bench_summary_data = [True, True, True, True]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
+    def test_get_rela_diff_summary_mode_nan(self):
+        result_item = [0] * 14
+        err_msg = ''
+        npu_summary_data = [float('nan')]
+        bench_summary_data = [float('nan')]
+        result_item, accuracy_check, err_msg = get_rela_diff_summary_mode(result_item, npu_summary_data,
+                                                                          bench_summary_data, err_msg)
+        self.assertEqual(result_item, [0, 0, 0, 0, 0, 0, 'Nan', 0, 0, 0, 'Nan', 0, 0, 0])
+        self.assertEqual(accuracy_check, '')
+        self.assertEqual(err_msg, '')
+
+
     def test_get_accuracy(self):
         result = []
-        get_accuracy(result, npu_dict, bench_dict, highlight_dict)
+        get_accuracy(result, npu_dict, bench_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result)
 
-    def test_get_un_match_accuracy_1(self):
+    def test_get_un_match_accuracy_md5(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=True, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.MD5)
         self.assertEqual(result, o_result_unmatch_1)
 
-    def test_get_un_match_accuracy_2(self):
+    def test_get_un_match_accuracy_summary(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=True)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.SUMMARY)
         self.assertEqual(result, o_result_unmatch_2)
 
-    def test_get_un_match_accuracy_3(self):
+    def test_get_un_match_accuracy_all(self):
         result = []
-        get_un_match_accuracy(result, npu_dict, md5_compare=False, summary_compare=False)
+        get_un_match_accuracy(result, npu_dict, dump_mode=Const.ALL)
         self.assertEqual(result, o_result_unmatch_3)
 
     def test_merge_tensor_summary(self):
-        op_dict = merge_tensor(tensor_list, True, False)
+        op_dict = merge_tensor(tensor_list, dump_mode=Const.SUMMARY)
         self.assertEqual(op_dict, result_op_dict)
 
     def test_merge_tensor_md5(self):
-        op_dict = merge_tensor(tensor_list_md5, False, True)
+        op_dict = merge_tensor(tensor_list_md5, dump_mode=Const.MD5)
         self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):
@@ -332,3 +368,71 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertIsNone(args.api_mapping)  # 默认值应为 None
         self.assertEqual(args.data_mapping, "data_mapping.txt")
         self.assertEqual(args.layer_mapping, "layer_mapping.txt")
+
+    def test_stack_column_process_stack_info(self):
+        result_item = []
+        has_stack = True
+        index = 0
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['abc'])
+
+    def test_stack_column_process_None(self):
+        result_item = []
+        has_stack = True
+        index = 1
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['None'])
+
+    def test_result_item_init_all_and_summary(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.ALL
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' '])
+
+        dump_mode = Const.SUMMARY
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
+
+    def test_result_item_init_md5(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96], 'e87000dc')
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96], 'e87000dc')
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], 'e87000dc', 'e87000dc', 'pass'])
+
+    def test_result_item_init_md5_index_error(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        with self.assertRaises(CompareException) as context:
+            result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)

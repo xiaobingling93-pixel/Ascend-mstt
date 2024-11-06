@@ -19,13 +19,15 @@ from msprobe.visualization.utils import (GraphConst, load_json_file, load_data_j
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
+from msprobe.core.common.const import Const
 
 
 class GraphComparator:
-    def __init__(self, graphs, dump_path_param, output_path, mapping_config=None):
+    def __init__(self, graphs, dump_path_param, output_path, framework=Const.PT_FRAMEWORK, mapping_config=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, output_path)
+        self.framework = framework
         self.mapping_config = mapping_config
 
     def compare(self):
@@ -49,8 +51,11 @@ class GraphComparator:
         compare_out_dict = {}
         # input和output对比数据分开
         for item in compare_result_list:
+            if not isinstance(item, (list, tuple)) or not item:
+                continue
             if not node.stack_info and node.id in item[0]:
-                node.stack_info = item[-1]
+                if isinstance(item[-1], list):
+                    node.stack_info = item[-1]
             if '.output.' in item[0]:
                 compare_out_dict[item[0]] = item
             else:
@@ -74,10 +79,10 @@ class GraphComparator:
 
     def _postcompare(self):
         self._handle_api_collection_index()
-        if not self.ma.is_real_data_compare():
+        if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
-        df = get_csv_df(self.ma.is_md5_compare(), self.ma.is_summary_compare(), True, self.ma.csv_data)
-        df = run_real_data(self.dump_path_param, df)
+        df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
+        df = run_real_data(self.dump_path_param, df, self.framework)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
@@ -88,13 +93,18 @@ class GraphComparator:
 
     def _handle_api_collection_index(self):
         """
-        api集合的指标使用集合中所有api最小的指标
+        api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
+        md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
         """
         for node in self.graph_n.root.subnodes:
             if node.op == NodeOp.api_collection:
-                precision_index = 1
+                precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                    else GraphConst.MIN_INDEX_KEY
                 for api in node.subnodes:
-                    precision_index = min(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, 1))
+                    precision_index = min(precision_index,
+                                          api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
+                        if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                        else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
                 node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
     def _compare_nodes(self, node_n):
@@ -118,8 +128,7 @@ class GraphComparator:
             # 真实数据比对只会得到基本信息，并没有精度指标，需要调用多进程对比接口
             compare_result_list = compare_node([node_n.id, node_b.id],
                                                [self.data_n_dict, self.data_b_dict],
-                                               self.stack_json_data, self.ma.is_summary_compare(),
-                                               self.ma.is_md5_compare())
+                                               self.stack_json_data, self.ma.compare_mode)
             if compare_result_list:
                 self.ma.add_csv_data(compare_result_list)
                 self.add_compare_result_to_node(node_n, compare_result_list)

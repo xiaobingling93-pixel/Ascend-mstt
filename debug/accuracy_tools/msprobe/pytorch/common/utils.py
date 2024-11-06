@@ -76,7 +76,7 @@ def parameter_adapter(func):
                 else:
                     res = [input_tensor[tensor_index] for tensor_index in indices]
                     return getattr(torch._C._VariableFunctionsClass, "stack")(res, 0)
-        if self.op_name_ == "__eq__" and args[1] is None:
+        if self.op_name_ == "__eq__" and len(args) > 1 and args[1] is None:
             return False
         return func(self, *args, **kwargs)
 
@@ -270,9 +270,9 @@ def load_pt(pt_path, to_cpu=False):
     check_file_or_directory_path(pt_path)
     try:
         if to_cpu:
-            pt = torch.load(pt_path, map_location=torch.device("cpu"))
+            pt = torch.load(pt_path, map_location=torch.device("cpu"), weights_only=True)
         else:
-            pt = torch.load(pt_path)
+            pt = torch.load(pt_path, weights_only=True)
     except Exception as e:
         raise RuntimeError(f"load pt file {pt_path} failed") from e
     return pt

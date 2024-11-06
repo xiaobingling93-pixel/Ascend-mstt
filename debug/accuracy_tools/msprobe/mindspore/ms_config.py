@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
-from msprobe.core.common_config import CommonConfig, BaseConfig
-from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import Const
-from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.mindspore.common.log import logger
+from msprobe.core.common.file_utils import load_json
+from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend
+from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.mindspore.common.log import logger
 
 
 class TensorConfig(BaseConfig):
@@ -33,9 +31,6 @@ class TensorConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.data_mode is not None and len(self.data_mode) > 0:
-            if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
-                raise Exception("data_mode must be all, input or output")
         if self.file_format and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
 
@@ -49,9 +44,6 @@ class StatisticsConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.data_mode is not None and len(self.data_mode) > 0:
-            if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
-                raise Exception("data_mode must be all, input or output")
         if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
             raise Exception("summary_mode is invalid")
 
@@ -134,8 +126,7 @@ def parse_task_config(task, json_config):
 def parse_json_config(json_file_path):
     if not json_file_path:
         raise Exception("json file path is None")
-    with FileOpen(json_file_path, 'r') as file:
-        json_config = json.load(file)
+    json_config = load_json(json_file_path)
     common_config = parse_common_config(json_config)
     if not common_config.task:
         common_config.task = Const.STATISTICS

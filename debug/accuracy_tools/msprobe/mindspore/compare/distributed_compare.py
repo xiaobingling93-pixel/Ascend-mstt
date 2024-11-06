@@ -15,7 +15,7 @@
 
 import os
 from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, task_dumppath_get
+    check_configuration_param, set_dump_path, get_dump_mode
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
@@ -31,13 +31,14 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
     fuzzy_match = kwargs.get('fuzzy_match', False)
+    is_print_compare_log = kwargs.get('is_print_compare_log', True)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
     if len(npu_ranks) != len(bench_ranks):
         logger.error('The number of ranks in the two runs are different. '
-                        'Unable to match the ranks. Please use another folder to compare '
-                        'or use compare() api and manually match the ranks.')
+                     'Unable to match the ranks. Please use another folder to compare '
+                     'or use compare() api and manually match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     for nr, br in zip(npu_ranks, bench_ranks):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
@@ -50,21 +51,19 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'npu_json_path': npu_path,
             'bench_json_path': bench_path,
             'stack_json_path': stack_path,
-            'is_print_compare_log': True
+            'is_print_compare_log': is_print_compare_log
         }
         try:
-            summary_compare, md5_compare = task_dumppath_get(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, 
-                                      dump_result_param.get('is_print_compare_log', True))
+            set_dump_path(dump_result_param)
+            dump_mode = get_dump_mode(dump_result_param)
+            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
             create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, 
-                                summary_compare=summary_compare, md5_compare=md5_compare)
+            check_compare_param(dump_result_param, output_path, dump_mode)
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
         ms_comparator = MSComparator()
-        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', 
-                                   summary_compare=summary_compare, md5_compare=md5_compare, **kwargs)
+        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)
 
 
 def ms_graph_compare(inputs, outputs):

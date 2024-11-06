@@ -79,8 +79,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data_clone.numel() == 0:
             return tensor_stat
         elif data_clone.dtype == torch.bool:
-            tensor_stat.max = True in data_clone
-            tensor_stat.min = False not in data_clone
+            tensor_stat.max = torch._C._VariableFunctionsClass.any(data_clone).item()
+            tensor_stat.min = torch._C._VariableFunctionsClass.all(data_clone).item()
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
         elif torch.is_complex(data_clone):

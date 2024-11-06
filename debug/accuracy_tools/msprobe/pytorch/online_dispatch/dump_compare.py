@@ -19,7 +19,7 @@ import os
 from datetime import datetime, timezone
 
 import torch
-from msprobe.core.common.file_utils import FileOpen, save_npy
+from msprobe.core.common.file_utils import FileOpen, save_npy, save_json
 from msprobe.pytorch.common.log import logger
 
 
@@ -107,10 +107,8 @@ def dump_data(data, prefix, dump_path):
 def save_temp_summary(api_index, single_api_summary, path, lock):
     summary_path = os.path.join(path, f'summary.json')
     lock.acquire()
-    with FileOpen(summary_path, "a") as f:
-        json.dump([api_index, single_api_summary], f)
-        f.write('\n')
-    lock.release()
+    data = [api_index, single_api_summary]
+    save_json(summary_path, data, mode='a')
 
 
 def dispatch_workflow(run_param: DispatchRunParam, data_info: DisPatchDataInfo):

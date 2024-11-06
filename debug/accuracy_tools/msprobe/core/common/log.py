@@ -1,8 +1,33 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import time
 import sys
 from functools import wraps
 from msprobe.core.common.const import MsgConst
+
+
+def filter_special_chars(func):
+    @wraps(func)
+    def func_level(self, msg, **kwargs):
+        for char in MsgConst.SPECIAL_CHAR:
+            msg = msg.replace(char, '_')
+        return func(self, msg, **kwargs)
+
+    return func_level
 
 
 class BaseLogger:
@@ -21,14 +46,6 @@ class BaseLogger:
     def get_rank(self):
         return self.rank
 
-    def filter_special_chars(func):
-        @wraps(func)
-        def func_level(self, msg, **kwargs):
-            for char in MsgConst.SPECIAL_CHAR:
-                msg = msg.replace(char, '_')
-            return func(self, msg, **kwargs)
-        return func_level
-    
     @filter_special_chars
     def error(self, msg):
         if self.level <= MsgConst.LogLevel.ERROR.value:
@@ -56,6 +73,7 @@ class BaseLogger:
                 return func(*args, **kwargs)
             else:
                 return None
+
         return func_rank_0
 
     def info_on_rank_0(self, msg):
@@ -66,7 +84,7 @@ class BaseLogger:
 
     def warning_on_rank_0(self, msg):
         return self.on_rank_0(self.warning)(msg)
-    
+
     def error_log_with_exp(self, msg, exception):
         self.error(msg)
         raise exception

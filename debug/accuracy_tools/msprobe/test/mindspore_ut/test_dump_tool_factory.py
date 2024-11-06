@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,12 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 from unittest import TestCase
 from unittest.mock import patch
 
-from msprobe.mindspore.common.const import Const
 from msprobe.core.common_config import CommonConfig, BaseConfig
+from msprobe.core.common.const import Const as CoreConst
+from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.mindspore.dump.dump_tool_factory import DumpToolFactory
 
@@ -38,6 +38,17 @@ class TestDumpToolFactory(TestCase):
         task_config = BaseConfig(json_config)
         config = DebuggerConfig(common_config, task_config)
 
+        config.data_mode = [CoreConst.INPUT, CoreConst.OUTPUT]
+        with self.assertRaises(Exception) as context:
+            DumpToolFactory.create(config)
+        self.assertEqual(str(context.exception), "data_mode must be one of all, input, output.")
+
+        config.data_mode = [CoreConst.FORWARD]
+        with self.assertRaises(Exception) as context:
+            DumpToolFactory.create(config)
+        self.assertEqual(str(context.exception), "data_mode must be one of all, input, output.")
+
+        config.data_mode = [CoreConst.ALL]
         config.level = "module"
         with self.assertRaises(Exception) as context:
             DumpToolFactory.create(config)

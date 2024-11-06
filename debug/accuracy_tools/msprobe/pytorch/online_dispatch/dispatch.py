@@ -28,7 +28,7 @@ except ImportError:
 else:
     is_npu = True
 
-from msprobe.core.common.file_utils import check_file_or_directory_path, load_yaml
+from msprobe.core.common.file_utils import check_file_or_directory_path, load_yaml, FileOpen, create_directory
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, dispatch_multiprocess, error_call, \
@@ -36,7 +36,7 @@ from msprobe.pytorch.online_dispatch.dump_compare import dispatch_workflow, disp
 from msprobe.pytorch.online_dispatch.utils import get_callstack, data_to_cpu, get_sys_info, DispatchException, \
     COMPARE_LOGO
 from msprobe.pytorch.online_dispatch.compare import Comparator
-from msprobe.core.common.file_utils import FileOpen, create_directory
+from msprobe.core.common.utils import safe_get_value
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
@@ -65,8 +65,8 @@ class PtdbgDispatch(TorchDispatchMode):
         self.all_summary = []
         self.call_stack_list = []
         self.process_num = process_num
-        self.filter_dump_api()
         self.check_param()
+        self.filter_dump_api()
         dir_name = self.get_dir_name(tag)
         self.root_path = os.path.join(os.path.realpath(dump_path), dir_name)
         self.root_cpu_path = os.path.join(self.root_path, f'cpu')
@@ -79,7 +79,7 @@ class PtdbgDispatch(TorchDispatchMode):
         self.comparator = Comparator(self.result_csv_path, self.detail_csv_path, False)
 
         self.aten_ops_blacklist = []
-        self.npu_adjust_autogard = []
+        self.npu_adjust_autograd = []
         yaml_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "torch_ops_config.yaml")
         self.get_ops(yaml_path)
 
@@ -146,7 +146,7 @@ class PtdbgDispatch(TorchDispatchMode):
             logger.error(f"Please check the func name {func.__name__}!")
             return func(*args, **kwargs)
 
-        self.enable_autogard(aten_api)
+        self.enable_autograd(aten_api)
         if aten_api in self.aten_ops_blacklist:
             npu_out = func(*args, **kwargs)
             return npu_out
@@ -170,14 +170,15 @@ class PtdbgDispatch(TorchDispatchMode):
         cpu_kwargs = []
         data_to_cpu(args, 0, cpu_args)
         data_to_cpu(kwargs, 0, cpu_kwargs)
-        cpu_args = cpu_args[0]
-        cpu_kwargs = cpu_kwargs[0]
+        
+        cpu_args = safe_get_value(cpu_args, 0, "cpu_args")
+        cpu_kwargs = safe_get_value(cpu_kwargs, 0, "cpu_kwargs")
 
         with TimeStatistics("NPU RUN", run_param):
             npu_out = func(*args, **kwargs)
         npu_out_cpu = []
         data_to_cpu(npu_out, 0, npu_out_cpu)
-        npu_out_cpu = npu_out_cpu[0]
+        npu_out_cpu = safe_get_value(npu_out_cpu, 0, "npu_out_cpu")
 
         with TimeStatistics("CPU RUN", run_param):
             cpu_out = func(*cpu_args, **cpu_kwargs)
@@ -228,7 +229,7 @@ class PtdbgDispatch(TorchDispatchMode):
     def get_ops(self, file_path):
         yaml_file = load_yaml(file_path)
         self.aten_ops_blacklist = yaml_file.get('aten_ops_blacklist')
-        self.npu_adjust_autogard = yaml_file.get('npu_adjust_autogard')
+        self.npu_adjust_autograd = yaml_file.get('npu_adjust_autograd')
 
     def filter_dump_api(self):
         if self.dump_mode != Const.LIST or not self.dump_api_list:
@@ -272,6 +273,9 @@ class PtdbgDispatch(TorchDispatchMode):
         if not isinstance(self.dump_api_list, list):
             logger.error('The type of parameter "api_list" can only be list.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
+        if not all(isinstance(item, str) for item in self.dump_api_list):
+            logger.error('The type of parameter in "api_list" can only be str.')
+            raise DispatchException(DispatchException.INVALID_PARAMETER)
         if not isinstance(self.debug_flag, bool):
             logger.error('The type of parameter "debug" can only be bool.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
@@ -279,6 +283,6 @@ class PtdbgDispatch(TorchDispatchMode):
             logger.error('The type of parameter "process_num" can only be int and it should not be less than 0.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
 
-    def enable_autogard(self, aten_api):
-        if aten_api in self.npu_adjust_autogard:
+    def enable_autograd(self, aten_api):
+        if aten_api in self.npu_adjust_autograd:
             torch._C._dispatch_tls_set_dispatch_key_excluded(torch._C.DispatchKey.AutogradFunctionality, False)

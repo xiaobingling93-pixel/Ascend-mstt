@@ -28,9 +28,9 @@ class Config(ABC):
     用以提供参数配置
     """
 
-    def __init__(self, handler_type, preheat_config):
+    def __init__(self, preheat_config):
         self.fuzz_stage = Const.FORWARD
-        self.handler_type = handler_type
+        self.handler_type = HandlerType.CHECK
         self.fuzz_device = DeviceType.NPU
         self.fuzz_level = FuzzLevel.BASE_LEVEL
         self.pert_mode = PerturbationMode.IMPROVE_PRECISION
@@ -64,7 +64,7 @@ class TestFuzzHandler(TestCase):
     def test_result_handler_check(self):
         # 对于check处理类，扰动前后输出不一致的情况会有UnequalRow对象生成
         for _ in range(2):
-            config = Config(HandlerType.CHECK, {PreheatConfig.IF_PREHEAT: False})
+            config = Config({PreheatConfig.IF_PREHEAT: False})
             handler_params = make_handler_params(self.api_name, config, self.step)
             handler = FuzzHandlerFactory.create(handler_params)
             handler.handle(self.data_params)
@@ -73,7 +73,7 @@ class TestFuzzHandler(TestCase):
     @patch.object(logger, "warning_on_rank_0")
     def test_check_handler_with_iterable_results(self, mock_logger):
         # 对可迭代对象检测（list类型），扰动前后不一致会检测出异常值，且输出在迭代对象中index
-        config = Config(HandlerType.CHECK, {PreheatConfig.IF_PREHEAT: False})
+        config = Config({PreheatConfig.IF_PREHEAT: False})
         handler_params = make_handler_params(self.api_name, config, self.step)
         handler = FuzzHandlerFactory.create(handler_params)
         self.data_params.original_result = [
@@ -96,7 +96,7 @@ class TestFuzzHandler(TestCase):
 
     def test_check_handler_with_cpu_benchmark(self):
         # 以cpu为bench做检测，扰动前后不一致也会被检测为异常, 包含字典和list形式
-        config = Config(HandlerType.CHECK, {PreheatConfig.IF_PREHEAT: False})
+        config = Config({PreheatConfig.IF_PREHEAT: False})
         config.fuzz_device = DeviceType.CPU
         handler_params = make_handler_params(self.api_name, config, self.step)
         handler = FuzzHandlerFactory.create(handler_params)
@@ -115,57 +115,9 @@ class TestFuzzHandler(TestCase):
         handler.handle(self.data_params)
         self.assertEqual(len(handler.get_unequal_rows()), 1)
 
-    def test_result_handler_fix(self):
-        # 对于fix处理类，扰动后输出会替代原始输出, dtype和原始输出一致，但值为新输出值
-        config = Config(HandlerType.FIX, {PreheatConfig.IF_PREHEAT: False})
-        handler_params = make_handler_params(self.api_name, config, self.step)
-        handler = FuzzHandlerFactory.create(handler_params)
-        self.data_params.original_result = [
-            self.data_params.original_result,
-            {"res": self.data_params.original_result},
-        ]
-        self.data_params.perturbed_result = [
-            self.data_params.perturbed_result,
-            {"res": self.data_params.perturbed_result},
-        ]
-        result = handler.handle(self.data_params)
-        self.assertEqual(result[0].dtype, torch.float16)
-        self.assertEqual(result[0].device, self.data_params.original_result[0].device)
-        self.assertAlmostEqual(
-            result[1]["res"][0],
-            self.data_params.perturbed_result[1]["res"].to(torch.float16)[0],
-        )
-        self.assertAlmostEqual(
-            result[1]["res"][1],
-            self.data_params.perturbed_result[1]["res"].to(torch.float16)[1],
-        )
-
-    @patch.object(logger, "warning_on_rank_0")
-    def test_fix_handler_with_fix_exception(self, mock_logger):
-        # 对于fix处理类，扰动后输出替代原始输出失败会捕获并打印异常
-        config = Config(HandlerType.FIX, {PreheatConfig.IF_PREHEAT: False})
-        handler_params = make_handler_params(self.api_name, config, self.step)
-        handler = FuzzHandlerFactory.create(handler_params)
-        self.data_params.original_result = [
-            self.data_params.original_result,
-            {"res": self.data_params.original_result},
-            # 原始输出多出一个张量
-            torch.as_tensor(3, dtype=torch.float16),
-        ]
-        self.data_params.original_result = [
-            self.data_params.perturbed_result,
-            {"res": self.data_params.perturbed_result},
-        ]
-        result = handler.handle(self.data_params)
-        mock_logger.assert_called_with(
-            f"[msprobe] Free Benchmark: For {self.api_name} Fix output failed. "
-        )
-        self.assertAlmostEqual(result[1], self.data_params.original_result[1])
-
     def test_result_handler_preheat(self):
         # 对于preheat处理类，在预热阶段后的阈值会根据CPU调整
         config = Config(
-            HandlerType.CHECK,
             {
                 PreheatConfig.IF_PREHEAT: True,
                 PreheatConfig.PREHEAT_STEP: 4,

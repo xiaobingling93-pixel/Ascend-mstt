@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import re
 import inspect
@@ -18,7 +33,7 @@ PREFIX_POST = "post"
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
 WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
- 
+
 StackBlackListPath = os.path.join(os.path.dirname(__file__), "stack_blacklist.yaml")
 StackBlackList = load_yaml(StackBlackListPath).get("stack", [])
 
@@ -87,6 +102,7 @@ class ApiRegistry:
                 if args[0] in PENDING_ASYNC_CC_BY_HANDLE:
                     store_func = PENDING_ASYNC_CC_BY_HANDLE.pop(args[0])
                     store_func()
+
             return wrapped_wait
 
         dist.Work.wait = wrapped_wait(dist.Work)
@@ -100,7 +116,7 @@ class ApiRegistry:
         self.set_api_attr(dist, self.distributed_attr_origin)
         self.set_api_attr(dist.distributed_c10d, self.distributed_attr_origin)
         setattr(dist.Work, 'wait', ORIGIN_WAIT)
-   
+
     def initialize_hook(self, pre_hooks, post_hooks):
         self.store_ori_attr(dist, get_distributed_ops(), self.distributed_attr_origin)
         for op_name in get_distributed_ops():
@@ -113,13 +129,15 @@ def stack_filter(stack):
             return False
     return True
 
+
 def get_callstack():
     callstack = []
     for (_, path, line, func, _, _) in inspect.stack():
         stack_line = f'{path}[{line}]'
         if stack_filter(stack_line):
-            callstack.append(stack_line+'   '+func)
+            callstack.append(stack_line + '   ' + func)
     return callstack
+
 
 @torch.no_grad()
 def op_aggregate(op, tensorlist):
@@ -137,6 +155,7 @@ def op_aggregate(op, tensorlist):
         return sum(tensorlist) / len(tensorlist) if len(tensorlist) != 0 else 0
     return torch.nan
 
+
 def update_data(old, new):
     for op, tag2tensorlist in new.items():
         if op not in old:
@@ -147,7 +166,7 @@ def update_data(old, new):
             else:
                 old[op][tag].append(tensor)
     return old
-    
+
 
 def is_target_line(codeline):
     stack = get_callstack()
@@ -158,6 +177,7 @@ def is_target_line(codeline):
         if re.search(pattern, whole_stack):
             return True
     return False
+
 
 @torch.no_grad()
 def catch_data(cc_context, ops, args, prefix):
@@ -171,14 +191,17 @@ def catch_data(cc_context, ops, args, prefix):
             elif isinstance(arg[0], dist.P2POp):
                 stacked_arg = torch.stack([op.tensor for op in arg])
             tensor_args[f'{prefix}_{len(tensor_args)}'] = stacked_arg
-            
+
     new_data = {op: get_metrics(op, tensor_args, 1e-8) for op in ops}
-    cc_context.data=update_data(cc_context.data, new_data)
+    cc_context.data = update_data(cc_context.data, new_data)
+
 
 def create_async_callback_func(context, ops, args, prefix):
     def store_data():
         catch_data(context, ops, args, prefix)
+
     return store_data
+
 
 def get_tensor_dtype(args):
     dtypes = []
@@ -188,6 +211,7 @@ def get_tensor_dtype(args):
         else:
             dtypes.append(None)
     return dtypes
+
 
 def get_group_members(args):
     group = None
@@ -200,7 +224,6 @@ def get_group_members(args):
 
 
 def create_hooks(context, monitor):
-
     def cc_log_hook(module, args, kwargs):
         all_args = args + tuple(kwargs.values())
         dtypes = '|'.join([str(i) if i else '' for i in get_tensor_dtype(all_args)])
@@ -208,8 +231,8 @@ def create_hooks(context, monitor):
         group_members = '|'.join([str(i) for i in get_group_members(all_args)])
         monitor.cc_logged_stack[module.op_name_].add(';'.join([dtypes, group_members, stack]))
         return
-        
-    def cc_pre_hook(module, args, kwargs): 
+
+    def cc_pre_hook(module, args, kwargs):
         if not is_target_line(monitor.cc_codeline):
             return
         args = args + tuple(kwargs.values())
@@ -220,31 +243,33 @@ def create_hooks(context, monitor):
         if not is_target_line(monitor.cc_codeline):
             return out
         args = args + tuple(kwargs.values())
-        if out: # async
+        if out:  # async
             if isinstance(out, dist.Work):
-                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], monitor.ops, args, PREFIX_POST)
-            elif isinstance(out, list): # batch_isend_irecv
-                for o in out:
-                    PENDING_ASYNC_CC_BY_HANDLE[o] = create_async_callback_func(context[module.op_name_], monitor.ops, args, PREFIX_POST)
+                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], monitor.ops,
+                                                                             args, PREFIX_POST)
+            elif isinstance(out, list):  # batch_isend_irecv
+                for _out in out:
+                    PENDING_ASYNC_CC_BY_HANDLE[_out] = create_async_callback_func(context[module.op_name_], monitor.ops,
+                                                                                  args, PREFIX_POST)
             return out
         catch_data(context[module.op_name_], monitor.ops, args, PREFIX_POST)
         return out
-    
+
     pre_hooks = []
     hooks = []
-    if (dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []):
+    if dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []:
         return [pre_hooks, hooks]
-    
+
     pre_hooks.append(cc_log_hook)
     if monitor.cc_log_only:
         return [pre_hooks, hooks]
-    
+
     if monitor.cc_pre_hook:
         pre_hooks.append(cc_pre_hook)
-    
+
     hooks.append(cc_hook)
-    
+
     return [pre_hooks, hooks]
 
-api_register = ApiRegistry()
 
+api_register = ApiRegistry()

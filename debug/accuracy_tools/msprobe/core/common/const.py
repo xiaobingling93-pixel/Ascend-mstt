@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import stat
 
@@ -10,6 +25,7 @@ class Const:
     """
     TOOL_NAME = "msprobe"
 
+    ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
@@ -94,6 +110,7 @@ class Const:
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
     MS_FRAMEWORK = "mindspore"
+    UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
@@ -114,20 +131,24 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch"]
+    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
-
     STACK_FUNC_INDEX = 2
-
     STACK_FUNC_ELE_INDEX = 1
 
-    CONSTRUCT_NAME_INDEX = -3
+    SCOPE_ID_INDEX = -1
+    SCOPE_DIRECTION_INDEX = -2
+    TYPE_NAME_INDEX = -3
+    LAYER_NAME_INDEX = -4
+    API_TYPE_INDEX = 0
+    LEFT_MOVE_INDEX = -1
+    RIGHT_MOVE_INDEX = 1
 
-    NAME_FIRST_POSSIBLE_INDEX = -4
-
-    NAME_SECOND_POSSIBLE_INDEX = -5
+    TOP_LAYER = "TopLayer"
+    CELL = "Cell"
+    MODULE = "Module"
 
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
@@ -146,11 +167,12 @@ class Const:
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
     WITHOUT_CALL_STACK = "The call stack retrieval failed."
-    
+
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
-    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
     FLOAT16 = "Float16"
@@ -209,6 +231,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
@@ -216,6 +239,8 @@ class CompareConst:
     MAX_EXCEL_LENGTH = 1048576
     YES = "Yes"
     NO = "No"
+    STATISTICS_INDICATOR_NUM = 4
+    EPSILON = 1e-10
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -232,6 +257,12 @@ class CompareConst:
     MD5_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
+
+    HEAD_OF_COMPARE_MODE = {
+        Const.ALL: COMPARE_RESULT_HEADER,
+        Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
+        Const.MD5: MD5_COMPARE_RESULT_HEADER
+    }
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -395,15 +426,20 @@ class MsgConst:
     MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
     LOG_LEVEL_ENUM = ["0", "1", "2", "3", "4"]
     LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
+
     class LogLevel:
         class DEBUG:
             value = 0
+
         class INFO:
             value = 1
+
         class WARNING:
             value = 2
+
         class ERROR:
             value = 3
+
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
 
     NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
@@ -424,3 +460,5 @@ class MonitorConst:
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
+    OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    RULE_NAME = ['AnomalyTurbulence']
