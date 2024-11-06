@@ -31,8 +31,6 @@ def add_api_accuracy_checker_argument(parser):
 
 
 def check(args):
-    if args.api_info_file is None:
-        raise MsprobeBaseException(MsprobeBaseException.INVALID_FILE_ERROR, "api_info_file is required")  # 测试
     args.api_info_file = os.path.abspath(args.api_info_file)
     check_file_or_directory_path(args.api_info_file)
 
