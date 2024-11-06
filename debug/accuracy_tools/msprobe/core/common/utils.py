@@ -443,3 +443,9 @@ def recursion_depth_decorator(func_info):
         return wrapper
 
     return decorator
+
+
+def check_str_param(param):
+    if not re.match(Const.REGEX_PREFIX_PATTERN, param):
+        logger.error('The parameter {} contains special characters.'.format(param))
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_CHAR_ERROR)

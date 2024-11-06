@@ -49,7 +49,8 @@ from msprobe.core.common.utils import (CompareException,
                                        check_seed_all,
                                        safe_get_value,
                                        MsprobeBaseException,
-                                       recursion_depth_decorator
+                                       recursion_depth_decorator,
+                                       check_str_param
                                        )
 
 
@@ -410,3 +411,13 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeBaseException) as context:
             safe_get_value("unsupported_type", 0, 'string_container')
         self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+
+    def test_valid_str_param(self):
+        valid_param = "valid_string_without_special_chars"
+        check_str_param(valid_param)
+
+    def test_invalid_str_param(self):
+        invalid_param = "invalid$tring&with^special*chars()"
+        with self.assertRaises(MsprobeBaseException) as context:
+            check_str_param(invalid_param)
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_CHAR_ERROR)
