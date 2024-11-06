@@ -95,3 +95,35 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(online_config.port, self.task_config.get('port'))
         self.assertEqual(online_config.rank_list, self.task_config.get('rank_list'))
         self.assertEqual(online_config.tls_path, self.task_config.get('tls_path'))
+
+    def test_get_run_ut_config(self):
+        forward_content = {'api1': 'data1', 'api2': 'data2'}
+        backward_content = {'api3': 'data3'}
+        result_csv_path = '/path/to/result.csv'
+        details_csv_path = '/path/to/details.csv'
+        save_error_data = True
+        api_result_csv_path = '/path/to/api_result.csv'
+        real_data_path = '/path/to/real_data'
+        white_list = {'api1', 'api2'}
+        black_list = {'api3'}
+        error_data_path = '/path/to/error_data'
+        online_config = {'is_online': True, 'nfs_path': '/path/to/nfs'}
+
+        checker_config = CheckerConfig()
+
+        run_ut_config = checker_config.get_run_ut_config(
+            forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
+            api_result_csv_path, real_data_path, white_list, black_list, error_data_path, online_config
+        )
+
+        self.assertEqual(run_ut_config.forward_content, forward_content)
+        self.assertEqual(run_ut_config.backward_content, backward_content)
+        self.assertEqual(run_ut_config.result_csv_path, result_csv_path)
+        self.assertEqual(run_ut_config.details_csv_path, details_csv_path)
+        self.assertEqual(run_ut_config.save_error_data, save_error_data)
+        self.assertEqual(run_ut_config.api_result_csv_path, api_result_csv_path)
+        self.assertEqual(run_ut_config.real_data_path, real_data_path)
+        self.assertEqual(run_ut_config.white_list, white_list)
+        self.assertEqual(run_ut_config.black_list, black_list)
+        self.assertEqual(run_ut_config.error_data_path, error_data_path)
+        self.assertEqual(run_ut_config.online_config, online_config)
