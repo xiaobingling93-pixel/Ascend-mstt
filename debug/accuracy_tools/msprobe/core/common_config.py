@@ -98,9 +98,15 @@ class BaseConfig:
                 logger.error_log_with_exp("data_mode is invalid, it should be a list[str]",
                                           MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
 
-            if len(self.data_mode) > len(Const.DUMP_DATA_MODE_LIST):
+            if Const.ALL in self.data_mode and len(self.data_mode) != 1:
                 logger.error_log_with_exp(
-                    f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST)}.",
+                    "'all' cannot be combined with other options in data_mode.",
+                    MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+                )
+
+            if len(self.data_mode) >= len(Const.DUMP_DATA_MODE_LIST):
+                logger.error_log_with_exp(
+                    f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST) - 1}.",
                     MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
                 )
 
