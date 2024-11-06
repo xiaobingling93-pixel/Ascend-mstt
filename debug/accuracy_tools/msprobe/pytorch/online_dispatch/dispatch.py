@@ -283,7 +283,8 @@ class PtdbgDispatch(TorchDispatchMode):
             raise DispatchException(DispatchException.INVALID_PARAMETER)
         for item in self.dump_api_list:
             check_str_param(item)
-        check_str_param(self.tag)
+        if self.tag is not None:
+            check_str_param(self.tag)
         if not isinstance(self.debug_flag, bool):
             logger.error('The type of parameter "debug" can only be bool.')
             raise DispatchException(DispatchException.INVALID_PARAMETER)
