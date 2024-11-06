@@ -16,7 +16,7 @@
 import os
 import csv
 
-from msprobe.core.common.const import CompareConst, MsCompareConst
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
 from msprobe.core.common.utils import add_time_as_suffix, MsprobeBaseException
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms

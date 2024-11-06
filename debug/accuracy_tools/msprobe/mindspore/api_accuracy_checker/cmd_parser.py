@@ -17,7 +17,7 @@ import os
 
 
 from msprobe.core.common.file_utils import check_file_or_directory_path
-from msprobe.core.common.utils import MsprobeBaseException
+from msprobe.core.common.utils import Const, MsprobeBaseException
 
 
 def add_api_accuracy_checker_argument(parser):
