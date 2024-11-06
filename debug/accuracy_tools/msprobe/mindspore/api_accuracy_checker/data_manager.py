@@ -17,7 +17,7 @@ import os
 import csv
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, read_csv
 from msprobe.core.common.utils import add_time_as_suffix, MsprobeBaseException
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
 from msprobe.core.common.file_utils import check_file_or_directory_path
@@ -97,7 +97,7 @@ class DataManager:
         """读取现有的 CSV 文件并存储已经出现的 API 名称到集合中"""
         with FileOpen(result_csv_path, mode='r') as csv_file:
 
-            reader = csv.reader(csv_file)
+            reader = read_csv(csv_file)
             headers = next(reader, None)  # 读取标题行
 
             # 使用提取的表头校验函数
@@ -111,7 +111,7 @@ class DataManager:
                     break
 
             if api_name_index is None:
-                logger.warning(f"{result_csv_path} No column contains 'API Name'.")  
+                logger.warning(f"{result_csv_path} No column contains 'API Name'.")
                 return
 
                 # 读取每一行的 API 名称
