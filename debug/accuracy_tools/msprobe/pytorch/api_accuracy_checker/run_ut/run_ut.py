@@ -41,7 +41,7 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preproces
     initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
     create_directory, get_json_contents, read_csv, check_file_or_directory_path
@@ -58,11 +58,7 @@ current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
-RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
-                                         'black_list', 'error_data_path', 'online_config'])
 
-OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
 
 not_backward_list = ['repeat_interleave']
 
@@ -466,6 +462,19 @@ def checked_online_config(online_config):
 
 
 def run_ut_command(args):
+    if args.config_path:
+        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        checked_config_path = config_path_checker.common_check()
+        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
+        checker_config = CheckerConfig(task_config)
+    else:
+        checker_config = CheckerConfig()
+    
+    if not checker_config.is_online and not args.api_info_file:
+        logger.error("Please provide api_info_file for offline run ut.")
+        raise Exception("Please provide api_info_file for offline run ut.")
+
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     used_device = current_device + ":" + str(args.device_id[0])
@@ -502,41 +511,27 @@ def run_ut_command(args):
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-    white_list = msCheckerConfig.white_list
-    black_list = msCheckerConfig.black_list
-    error_data_path = msCheckerConfig.error_data_path
-    is_online = msCheckerConfig.is_online
-    nfs_path = msCheckerConfig.nfs_path
-    host = msCheckerConfig.host
-    port = msCheckerConfig.port
-    rank_list = msCheckerConfig.rank_list
-    tls_path = msCheckerConfig.tls_path
-    if args.config_path:
-        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
-                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
-        checked_config_path = config_path_checker.common_check()
-        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
-        white_list = task_config.white_list
-        black_list = task_config.black_list
-        error_data_path = task_config.error_data_path
-        is_online = task_config.is_online
-        nfs_path = task_config.nfs_path
-        host = task_config.host
-        port = task_config.port
-        rank_list = task_config.rank_list
-        tls_path = task_config.tls_path
 
+    error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
-    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
+    online_config = checker_config.get_online_config()
     checked_online_config(online_config)
-    run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
-                                online_config)
+    config_params = {
+        'forward_content': forward_content,
+        'backward_content': backward_content,
+        'result_csv_path': result_csv_path,
+        'details_csv_path': details_csv_path,
+        'save_error_data': save_error_data,
+        'is_continue_run_ut': args.result_csv_path,
+        'real_data_path': real_data_path,
+        'error_data_path': error_data_path
+    }
+    run_ut_config = checker_config.get_run_ut_config(**config_params)
     run_ut(run_ut_config)
 
 

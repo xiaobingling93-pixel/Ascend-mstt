@@ -2,7 +2,7 @@ import unittest
 import os
 from unittest.mock import patch
 
-from msprobe.pytorch.api_accuracy_checker.common.config import Config
+from msprobe.pytorch.api_accuracy_checker.common.config import Config, CheckerConfig, OnlineConfig, msCheckerConfig
 
 
 class TestConfig(unittest.TestCase):
@@ -11,6 +11,17 @@ class TestConfig(unittest.TestCase):
         self.input_dir = os.path.join(self.base_test_dir, 'resources')
         self.yaml_file = os.path.join(self.input_dir, "config.yaml")
         self.cfg = Config(self.yaml_file)
+        self.task_config = {
+            'white_list': ['api1', 'api2'],
+            'black_list': ['api3'],
+            'error_data_path' : '/path/to/error_data',
+            'is_online': True,
+            'nfs_path': '/path/to/nfs',
+            'host': 'localhost',
+            'port': 8080,
+            'rank_list': [0, 1, 2],
+            'tls_path': '/path/to/tls'
+        }
 
     def test_validate_valid_data(self):
         for key, val in self.cfg.config.items():
@@ -40,3 +51,84 @@ class TestConfig(unittest.TestCase):
 
         with self.assertRaises(Exception):
             self.cfg.validate('white_list', ['invalid_api1', 'invalid_api2'])
+
+    def test_CheckerConfig_init_with_defaults(self):
+        checker_config = CheckerConfig()
+        self.assertEqual(checker_config.white_list, msCheckerConfig.white_list)
+        self.assertEqual(checker_config.black_list, msCheckerConfig.black_list)
+        self.assertEqual(checker_config.error_data_path, msCheckerConfig.error_data_path)
+        self.assertEqual(checker_config.is_online, msCheckerConfig.is_online)
+        self.assertEqual(checker_config.nfs_path, msCheckerConfig.nfs_path)
+        self.assertEqual(checker_config.host, msCheckerConfig.host)
+        self.assertEqual(checker_config.port, msCheckerConfig.port)
+        self.assertEqual(checker_config.rank_list, msCheckerConfig.rank_list)
+        self.assertEqual(checker_config.tls_path, msCheckerConfig.tls_path)
+
+
+    def test_init_with_task_config(self):
+        checker_config = CheckerConfig(self.task_config)
+        self.assertEqual(checker_config.white_list, self.task_config.get('white_list'))
+        self.assertEqual(checker_config.black_list, self.task_config.get('black_list'))
+        self.assertEqual(checker_config.error_data_path, self.task_config.get('error_data_path'))
+        self.assertEqual(checker_config.is_online, self.task_config.get('is_online'))
+        self.assertEqual(checker_config.nfs_path, self.task_config.get('nfs_path'))
+        self.assertEqual(checker_config.host, self.task_config.get('host'))
+        self.assertEqual(checker_config.port, self.task_config.get('port'))
+        self.assertEqual(checker_config.rank_list, self.task_config.get('rank_list'))
+        self.assertEqual(checker_config.tls_path, self.task_config.get('tls_path'))
+
+    def test_load_config(self):
+        checker_config = CheckerConfig()
+        checker_config.load_config(self.task_config)
+        self.assertEqual(checker_config.is_online, self.task_config.get('is_online'))
+        self.assertEqual(checker_config.nfs_path, self.task_config.get('nfs_path'))
+        self.assertEqual(checker_config.host, self.task_config.get('host'))
+        self.assertEqual(checker_config.port, self.task_config.get('port'))
+        self.assertEqual(checker_config.rank_list, self.task_config.get('rank_list'))
+        self.assertEqual(checker_config.tls_path, self.task_config.get('tls_path'))
+
+    def test_get_online_config(self):
+        checker_config = CheckerConfig()
+        checker_config.load_config(self.task_config)
+        online_config = checker_config.get_online_config()
+        self.assertIsInstance(online_config, OnlineConfig)
+        self.assertEqual(online_config.is_online, self.task_config['is_online'])
+        self.assertEqual(online_config.nfs_path, self.task_config['nfs_path'])
+        self.assertEqual(online_config.host, self.task_config.get('host'))
+        self.assertEqual(online_config.port, self.task_config.get('port'))
+        self.assertEqual(online_config.rank_list, self.task_config.get('rank_list'))
+        self.assertEqual(online_config.tls_path, self.task_config.get('tls_path'))
+
+    def test_get_run_ut_config(self):
+        forward_content = {'api1': 'data1', 'api2': 'data2'}
+        backward_content = {'api3': 'data3'}
+        result_csv_path = '/path/to/result.csv'
+        details_csv_path = '/path/to/details.csv'
+        save_error_data = True
+        api_result_csv_path = '/path/to/api_result.csv'
+        real_data_path = '/path/to/real_data'
+        error_data_path = '/path/to/error_data'
+
+        checker_config = CheckerConfig()
+        
+        config_params = {
+            'forward_content': forward_content,
+            'backward_content': backward_content,
+            'result_csv_path': result_csv_path,
+            'details_csv_path': details_csv_path,
+            'save_error_data': save_error_data,
+            'is_continue_run_ut': api_result_csv_path,
+            'real_data_path': real_data_path,
+            'error_data_path': error_data_path
+        }
+
+        run_ut_config = checker_config.get_run_ut_config(**config_params)
+
+        self.assertEqual(run_ut_config.forward_content, forward_content)
+        self.assertEqual(run_ut_config.backward_content, backward_content)
+        self.assertEqual(run_ut_config.result_csv_path, result_csv_path)
+        self.assertEqual(run_ut_config.details_csv_path, details_csv_path)
+        self.assertEqual(run_ut_config.save_error_data, save_error_data)
+        self.assertEqual(run_ut_config.is_continue_run_ut, api_result_csv_path)
+        self.assertEqual(run_ut_config.real_data_path, real_data_path)
+        self.assertEqual(run_ut_config.error_data_path, error_data_path)
