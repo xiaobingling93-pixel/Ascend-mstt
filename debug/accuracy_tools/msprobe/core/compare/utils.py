@@ -17,7 +17,10 @@ import os
 import re
 import math
 import zlib
+from dataclasses import dataclass
+
 import numpy as np
+
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
 from msprobe.core.common.file_utils import check_file_or_directory_path
@@ -95,7 +98,7 @@ def read_op(op_data, op_name):
 
     op_parsed_list = []
     for name in io_name_mapping:
-        if name in op_name:
+        if name in op_data:
             op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping[name]))
     return op_parsed_list
 
@@ -139,19 +142,15 @@ def is_tensor(op_data):
 def gen_op_item(op_data, op_name):
     op_item = {
         'full_op_name': op_name,
-        'type': op_data.get('type', None),
-        'Max': op_data.get('Max', None),
-        'Min': op_data.get('Min', None),
-        'Mean': op_data.get('Mean', None),
-        'Norm': op_data.get('Norm', None),
-        'dtype': op_data.get('dtype', None),
-        'shape': op_data.get('shape', None),
-        'md5': op_data.get('md5', None),
-        'value': op_data.get('value', None),
         'data_name': op_data.get('data_name', '-1')
     }
+    op_item.update(op_data)
+    params = ['Max', 'Min', 'Mean', 'Norm']
+    for i in params:
+        if i not in op_item:
+            op_item[i] = None
     
-    if not op_item['dtype']:
+    if not op_item.get('dtype'):
         if op_item['type'] == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = str(op_data.get('value'))
@@ -161,11 +160,9 @@ def gen_op_item(op_data, op_name):
         else:
             op_item['dtype'] = str(type(op_data.get('value')))
             op_item['shape'] = '[]'
-            op_item['Max'] = op_data.get('value')
-            op_item['Min'] = op_data.get('value')
-            op_item['Mean'] = op_data.get('value')
-            op_item['Norm'] = op_data.get('value')
-    if not op_item['md5']:
+            for i in params:
+                op_item[i] = op_data.get('value')
+    if not op_item.get('md5'):
         op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
     
     return op_item
