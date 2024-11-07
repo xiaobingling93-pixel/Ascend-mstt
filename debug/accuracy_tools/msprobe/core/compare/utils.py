@@ -495,6 +495,13 @@ def merge_tensor(tensor_list, dump_mode):
     return op_dict if op_dict["op_name"] else {}
 
 
+def print_compare_ends_info():
+    total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
+    logger.info('*' * total_len)
+    logger.info(f"*{CompareConst.COMPARE_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
+    logger.info('*' * total_len)
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
