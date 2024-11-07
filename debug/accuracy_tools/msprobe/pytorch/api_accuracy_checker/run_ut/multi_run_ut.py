@@ -33,9 +33,10 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.common import parse_json_info_forward_backward
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import FileChecker, check_file_suffix, check_link, FileOpen, \
-    create_directory
+    create_directory, load_json, save_json
 from msprobe.core.common.file_utils import remove_path
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.const import FileCheckConst, Const
+from msprobe.core.common.utils import CompareException
 
 
 def split_json_file(input_file, num_splits, filter_api):
@@ -47,9 +48,11 @@ def split_json_file(input_file, num_splits, filter_api):
     for data_name in list(backward_data.keys()):
         backward_data[f"{data_name}.backward"] = backward_data.pop(data_name)
 
-    with FileOpen(input_file, 'r') as file:
-        input_data = json.load(file)
-        input_data.pop("data")
+    input_data = load_json(input_file)
+    if input_data.get("data") is None:
+        logger.error("Invalid input file, 'data' field is missing")
+        raise CompareException("Invalid input file, 'data' field is missing")
+    input_data.pop("data")
 
     items = list(forward_data.items())
     total_items = len(items)
@@ -69,8 +72,7 @@ def split_json_file(input_file, num_splits, filter_api):
             }
         }
         split_filename = f"temp_part{i}.json"
-        with FileOpen(split_filename, 'w') as split_file:
-            json.dump(temp_data, split_file)
+        save_json(split_filename, temp_data)
         split_files.append(split_filename)
 
     return split_files, total_items
@@ -182,15 +184,19 @@ def run_parallel_ut(config):
 
 
 def prepare_config(args):
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
-    check_file_suffix(api_info, FileCheckConst.JSON_SUFFIX)
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info = api_info_file_checker.common_check()
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
     split_files, total_items = split_json_file(api_info, args.num_splits, args.filter_api)
-    config_path = os.path.realpath(args.config_path) if args.config_path else None
+    config_path = args.config_path if args.config_path else None
+    if config_path:
+        config_path_checker = FileChecker(config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        config_path = config_path_checker.common_check()
     result_csv_path = args.result_csv_path or os.path.join(
                       out_path, f"accuracy_checking_result_{time.strftime('%Y%m%d%H%M%S')}.csv")
     if not args.result_csv_path:

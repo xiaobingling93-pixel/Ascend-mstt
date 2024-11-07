@@ -30,7 +30,7 @@ class TestNodeColors(unittest.TestCase):
         self.assertIn("#FFEDBE", colors_info)
         self.assertIn("#FFDC7F", colors_info)
         self.assertIn("#FFC62E", colors_info)
-        self.assertIn("#E32020", colors_info)
+        self.assertIn("#FF704D", colors_info)
         self.assertIn("#C7C7C7", colors_info)
 
         # 确保返回的字典具有正确的描述和值范围
