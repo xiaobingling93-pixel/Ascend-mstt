@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import os
+from tqdm import tqdm
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json
 from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
@@ -127,8 +127,7 @@ class ApiAccuracyChecker:
         return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
 
     def parse(self, api_info_path):
-        with FileOpen(api_info_path, "r") as f:
-            api_info_dict = json.load(f)
+        api_info_dict = load_json(api_info_path)
 
         # init global context
         task = check_and_get_from_json_dict(api_info_dict, MsCompareConst.TASK_FIELD,
@@ -163,12 +162,12 @@ class ApiAccuracyChecker:
                 self.api_infos[api_name].load_backward_info(api_info)
 
     def run_and_compare(self):
-        for api_name_str, api_info in self.api_infos.items():
+        for api_name_str, api_info in tqdm(self.api_infos.items()):
             if not self.data_manager.is_unique_api(api_name_str):
                 continue
 
             if not api_info.check_forward_info():
-                logger.warning(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
+                logger.debug(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
                 continue
             try:
                 forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
@@ -188,7 +187,7 @@ class ApiAccuracyChecker:
             if not api_info.check_backward_info():
                 self.data_manager.save_results(api_name_str)  # 不存在反向，则直接保存前向结果
 
-                logger.warning(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
+                logger.debug(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
                 continue
             try:
                 backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)

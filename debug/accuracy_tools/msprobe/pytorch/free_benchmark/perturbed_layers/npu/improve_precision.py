@@ -15,6 +15,7 @@
 
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import CommonField
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
@@ -26,6 +27,9 @@ from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import 
 
 class ImprovePrecisionLayer(NpuBaseLayer):
 
+    @recursion_depth_decorator(
+        "FreeBenchmark: ImprovePrecisionLayer.improve_tensor_precision"
+    )
     def improve_tensor_precision(self, tensor_obj):
         if (
             isinstance(tensor_obj, torch.Tensor)

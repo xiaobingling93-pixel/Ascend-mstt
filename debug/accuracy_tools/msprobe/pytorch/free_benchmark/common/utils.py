@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import torch
 from msprobe.core.common.exceptions import FreeBenchmarkException
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark.common.enums import DeviceType
 
 
@@ -52,6 +54,7 @@ class Tools:
         return api_name.rsplit(".", 2)[0]
 
     @staticmethod
+    @recursion_depth_decorator("FreeBenchmark: Tools.convert_device_and_dtype")
     def convert_device_and_dtype(
         tensor_seq, device: str = DeviceType.CPU, change_dtype: bool = False
     ):
@@ -74,6 +77,7 @@ class Tools:
         return tensor_seq
 
     @staticmethod
+    @recursion_depth_decorator("FreeBenchmark: Tools.convert_fuzz_output_to_origin")
     def convert_fuzz_output_to_origin(origin, perturbed):
         if isinstance(origin, torch.Tensor) and isinstance(perturbed, torch.Tensor):
             origin.data = perturbed.to(origin.dtype).to(origin.device)
