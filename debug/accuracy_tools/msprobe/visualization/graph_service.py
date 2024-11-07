@@ -15,8 +15,6 @@
 
 import os
 import time
-import argparse
-import sys
 import json
 from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory
 from msprobe.core.common.const import FileCheckConst
@@ -31,9 +29,11 @@ from msprobe.visualization.graph.node_colors import NodeColors
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def compare_graph(dump_path_n, dump_path_b, out_path, is_print_compare_log=True, mapping_file=None):
+def _compare_graph(input_param, args, mapping_file=None):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
+    dump_path_n = input_param.get('npu_path')
+    dump_path_b = input_param.get('bench_path')
     construct_path_n = os.path.join(dump_path_n, GraphConst.CONSTRUCT_FILE)
     construct_path_b = os.path.join(dump_path_b, GraphConst.CONSTRUCT_FILE)
     data_path_n = os.path.join(dump_path_n, GraphConst.DUMP_FILE)
@@ -47,21 +47,21 @@ def compare_graph(dump_path_n, dump_path_b, out_path, is_print_compare_log=True,
         'npu_json_path': data_path_n,
         'bench_json_path': data_path_b,
         'stack_json_path': stack_path,
-        'is_print_compare_log': is_print_compare_log
+        'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
-    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, out_path,
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path,
                                        mapping_config=MappingConfig(mapping_file) if mapping_file else None)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
-    create_directory(out_path)
-    output_path = os.path.join(out_path, f'compare_{current_time}.vis')
+    create_directory(args.output_path)
+    output_path = os.path.join(args.output_path, f'compare_{current_time}.vis')
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps)
     GraphBuilder.to_json(output_path, export_config)
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def build_graph(dump_path, out_path):
+def _build_graph(dump_path, out_path):
     logger.info('Start building model graph...')
     construct_path = os.path.join(dump_path, GraphConst.CONSTRUCT_FILE)
     data_path = os.path.join(dump_path, GraphConst.DUMP_FILE)
@@ -71,14 +71,6 @@ def build_graph(dump_path, out_path):
     micro_steps = graph.paging_by_micro_step()
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
-
-
-def _graph_service(parser=None):
-    if not parser:
-        parser = argparse.ArgumentParser()
-    _graph_service_parser(parser)
-    args = parser.parse_args(sys.argv[1:])
-    _graph_service_command(args)
 
 
 def _graph_service_parser(parser):
@@ -93,11 +85,26 @@ def _graph_service_command(args):
         input_param = json.load(file)
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
-    is_print_compare_log = input_param.get("is_print_compare_log", True)
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
-        build_graph(npu_path, args.output_path)
+        _build_graph(npu_path, args.output_path)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        compare_graph(npu_path, bench_path, args.output_path, is_print_compare_log=is_print_compare_log)
+        _compare_graph(input_param, args)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
+
+
+def _pt_graph_service_parser(parser):
+    _graph_service_parser(parser)
+
+
+def _pt_graph_service_command(args):
+    _graph_service_command(args)
+
+
+def _ms_graph_service_parser(parser):
+    _graph_service_parser(parser)
+
+
+def _ms_graph_service_command(args):
+    _graph_service_command(args)

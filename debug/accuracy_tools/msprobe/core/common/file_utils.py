@@ -19,6 +19,9 @@ import os
 import json
 import re
 import shutil
+from datetime import datetime, timezone
+from dateutil import parser
+import OpenSSL
 import yaml
 import numpy as np
 import pandas as pd
@@ -555,3 +558,33 @@ def os_walk_for_files(path, depth):
             for file in files:
                 res.append({"file": file, "root": root})
     return res
+
+
+def check_crt_valid(pem_path):
+    """
+    Check the validity of the SSL certificate.
+
+    Load the SSL certificate from the specified path, parse and check its validity period.
+    If the certificate is expired or invalid, raise a RuntimeError.
+
+    Parameters:
+    pem_path (str): The file path of the SSL certificate.
+
+    Raises:
+    RuntimeError: If the SSL certificate is invalid or expired.
+    """
+    try:
+        with FileOpen(pem_path, "r") as f:
+            pem_data = f.read()
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
+        pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
+        logger.info(f"The SSL certificate passes the verification and the validity period "
+                    f"starts from {pem_start} ends at {pem_end}.")
+    except Exception as e:
+        logger.error("Failed to parse the SSL certificate. Check the certificate.")
+        raise RuntimeError(f"The SSL certificate is invalid, {pem_path}") from e
+
+    now_utc = datetime.now(tz=timezone.utc)
+    if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
+        raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")

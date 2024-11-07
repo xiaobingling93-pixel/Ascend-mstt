@@ -22,6 +22,7 @@ from functools import wraps
 from torch import distributed as dist
 
 from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.log import logger
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
@@ -48,183 +49,12 @@ def filter_special_chars(func):
     return func_level
 
 
-class FileCheckConst:
-    """
-    Class for file check const
-    """
-    READ_ABLE = "read"
-    WRITE_ABLE = "write"
-    READ_WRITE_ABLE = "read and write"
-    DIRECTORY_LENGTH = 4096
-    FILE_NAME_LENGTH = 255
-    FILE_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
-    PKL_SUFFIX = ".pkl"
-    NUMPY_SUFFIX = ".npy"
-    JSON_SUFFIX = ".json"
-    PT_SUFFIX = ".pt"
-    CSV_SUFFIX = ".csv"
-    YAML_SUFFIX = ".yaml"
-    MAX_PKL_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_NUMPY_SIZE = 10 * 1024 * 1024 * 1024
-    MAX_JSON_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_PT_SIZE = 10 * 1024 * 1024 * 1024
-    MAX_CSV_SIZE = 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 10 * 1024 * 1024
-    DIR = "dir"
-    FILE = "file"
-    DATA_DIR_AUTHORITY = 0o750
-    DATA_FILE_AUTHORITY = 0o640
-    FILE_SIZE_DICT = {
-        PKL_SUFFIX: MAX_PKL_SIZE,
-        NUMPY_SUFFIX: MAX_NUMPY_SIZE,
-        JSON_SUFFIX: MAX_JSON_SIZE,
-        PT_SUFFIX: MAX_PT_SIZE,
-        CSV_SUFFIX: MAX_CSV_SIZE,
-        YAML_SUFFIX: MAX_YAML_SIZE
-    }
-
-
-class FileCheckException(Exception):
-    """
-    Class for File Check Exception
-    """
-    NONE_ERROR = 0
-    INVALID_PATH_ERROR = 1
-    INVALID_FILE_TYPE_ERROR = 2
-    INVALID_PARAM_ERROR = 3
-    INVALID_PERMISSION_ERROR = 3
-
-    def __init__(self, code, error_info: str = ""):
-        super(FileCheckException, self).__init__()
-        self.code = code
-        self.error_info = error_info
-
-    def __str__(self):
-        return self.error_info
-
-
-def print_rank_0(message):
-    if dist.is_initialized():
-        if dist.get_rank() == 0:
-            print(message)
-    else:
-        print(message)
-
-
-def _print_log(level, msg, end='\n'):
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(time.time())))
-    pid = os.getgid()
-    print(current_time + "(" + str(pid) + ")-[" + level + "]" + msg, end=end)
-    sys.stdout.flush()
-
-
-@filter_special_chars
-def print_info_log(info_msg):
-    """
-    Function Description:
-        print info log.
-    Parameter:
-        info_msg: the info message.
-    """
-    _print_log("INFO", info_msg)
-
-
-@filter_special_chars
-def print_error_log(error_msg):
-    """
-    Function Description:
-        print error log.
-    Parameter:
-        error_msg: the error message.
-    """
-    _print_log("ERROR", error_msg)
-
-
-@filter_special_chars
-def print_warn_log(warn_msg):
-    """
-    Function Description:
-        print warn log.
-    Parameter:
-        warn_msg: the warning message.
-    """
-    _print_log("WARNING", warn_msg)
-
-
 def get_param_struct(param):
     if isinstance(param, tuple):
         return f"tuple[{len(param)}]"
     if isinstance(param, list):
         return f"list[{len(param)}]"
     return "tensor"
-
-
-def check_link(path):
-    abs_path = os.path.abspath(path)
-    if os.path.islink(abs_path):
-        raise RuntimeError("The path is a soft link.")
-
-
-def check_path_length(path, name_length_limit=None):
-    file_max_name_length = name_length_limit if name_length_limit else FILE_NAME_MAX_LENGTH
-    if len(path) > DIRECTORY_MAX_LENGTH or \
-            len(os.path.basename(path)) > file_max_name_length:
-        raise RuntimeError("The file path length exceeds limit.")
-
-
-def check_path_pattern_valid(path):
-    if not re.match(FILE_NAME_VALID_PATTERN, path):
-        raise RuntimeError("The file path contains special characters.")
-
-
-def check_path_readability(path):
-    if not os.access(path, os.R_OK):
-        raise RuntimeError("The file path is not readable.")
-
-
-def check_path_writability(path):
-    if not os.access(path, os.W_OK):
-        raise RuntimeError("The file path is not writable.")
-
-
-def check_file_size(file_path, max_size=FILE_MAX_SIZE):
-    file_size = os.path.getsize(file_path)
-    if file_size >= max_size:
-        raise RuntimeError("The file size excess limit.")
-
-
-def check_path_exists(path):
-    if not os.path.exists(path):
-        raise RuntimeError("The file path does not exist.")
-
-
-def check_file_valid(path):
-    check_path_exists(path)
-    check_link(path)
-    real_path = os.path.realpath(path)
-    check_path_length(real_path)
-    check_path_pattern_valid(real_path)
-    check_file_size(real_path)
-
-
-def check_file_valid_readable(path):
-    check_file_valid(path)
-    check_path_readability(path)
-
-
-def check_file_valid_writable(path):
-    check_file_valid(path)
-    check_path_writability(path)
-
-
-def change_mode(path, mode):
-    if not os.path.exists(path) or os.path.islink(path):
-        return
-    try:
-        os.chmod(path, mode)
-    except PermissionError as ex:
-        print_error_log('Failed to change {} authority. {}'.format(path, str(ex)))
-        raise FileCheckException(FileCheckException.INVALID_PERMISSION_ERROR) from ex
 
 
 def validate_ops(ops):
@@ -250,7 +80,7 @@ def validate_ranks(ranks):
         if not isinstance(rank, int) or isinstance(rank, bool):
             raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
         if rank < 0 or rank >= world_size:
-            print_warn_log(f"rank {rank} is beyond world size [0, {world_size - 1}] and will be ignored")
+            logger.warning(f"rank {rank} is beyond world size [0, {world_size - 1}] and will be ignored")
 
 
 def validate_targets(targets):
@@ -262,6 +92,59 @@ def validate_targets(targets):
         if not isinstance(field, dict):
             raise TypeError('values of targets should be cared filed e.g. {"input": "tensor"} in config.json')
 
+def validate_print_struct(print_struct):
+    if not isinstance(print_struct, bool):
+        raise TypeError("print_struct should be a bool")
+    
+def validate_ur_distribution(ur_distribution):
+    if not isinstance(ur_distribution, bool):
+        raise TypeError('ur_distribution should be a bool')
+
+def validate_xy_distribution(xy_distribution):
+    if not isinstance(xy_distribution, bool):
+        raise TypeError('xy_distribution should be a bool')
+
+def validate_wg_distribution(wg_distribution):
+    if not isinstance(wg_distribution, bool):
+        raise TypeError('wg_distribution should be a bool')
+
+def validate_mg_distribution(mg_distribution):
+    if not isinstance(mg_distribution, bool):
+        raise TypeError('mg_distribution should be a bool')
+
+def validate_cc_distribution(cc_distribution):
+    if not isinstance(cc_distribution, dict):
+        raise TypeError('cc_distribution should be a dictionary')
+    for key, value in cc_distribution.items():
+        if key == 'enable':
+            if not isinstance(value, bool):
+                raise TypeError('cc_distribution enable should be a bool')
+        elif key == 'cc_codeline':
+            if not isinstance(value, list):
+                raise TypeError('cc_distribution cc_codeline should be a list')
+        elif key == 'cc_pre_hook':
+            if not isinstance(value, bool):
+                raise TypeError('cc_distribution cc_pre_hook should be a bool')
+        elif key == 'cc_log_only':
+            if not isinstance(value, bool):
+                raise TypeError('cc_distribution cc_log_only should be a bool')
+        else:
+            raise TypeError(f'{key} of cc_distribution is not supported.')
+
+def validate_alert(alert):
+    if not isinstance(alert, dict):
+        raise TypeError('alert should be a dictionary')
+    for key, value in alert.items():
+        if key == 'rules':
+            if len(value) == 0:
+                continue
+            elif value[0]['rule_name'] not in MonitorConst.RULE_NAME:
+                raise TypeError(f"{value[0]['rule_name']} is not supported") 
+            elif not isinstance(value[0]['args']['threshold'], float) or value[0]['args']['threshold'] < 0:
+                raise TypeError('threshold must be float and not less than 0')
+        else:
+            if len(value) > 0 and value['recipient'] not in ['database', 'email']:
+                raise TypeError('recipient must be database or email')
 
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
@@ -275,3 +158,24 @@ def validate_config(config):
 
     targets = config.get("targets", {})
     validate_targets(targets)
+
+    print_struct = config.get('print_struct', False)
+    validate_print_struct(print_struct)
+
+    ur_distribution = config.get('ur_distribution', False)
+    validate_ur_distribution(ur_distribution)
+
+    xy_distribution = config.get('xy_distribution', False)
+    validate_xy_distribution(xy_distribution)
+
+    wg_distribution = config.get('wg_distribution', False)
+    validate_wg_distribution(wg_distribution)
+
+    mg_distribution = config.get('mg_distribution', False)
+    validate_mg_distribution(mg_distribution)
+
+    cc_distribution = config.get('cc_distribution', {})
+    validate_cc_distribution(cc_distribution)
+
+    alert = config.get('alert', {})
+    validate_alert(alert)

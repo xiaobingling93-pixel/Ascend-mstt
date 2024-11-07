@@ -70,15 +70,23 @@ def str2float(percentage_str):
         return 0
 
 
+def is_integer(s):
+    try:
+        int(s)
+        return True
+    except Exception:
+        return False
+
 def process_kwargs_parameter(parameter):
     """
-    转换kwargs参数命名
+    转换kwargs参数命名, 不处理后缀是0.0, 0.1, 0.0.0等数据，例如Primitive.conv2d.0.forward.input.0.0
     Args:
         parameter: 'Module.module.Float16Module.forward.0.input.labels.0'
     Returns: 'Module.module.Float16Module.forward.0.kwargs.labels'
     """
     parts = parameter.split(Const.SEP)
-    if parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT:
+    if len(parts) >= GraphConst.OUTPUT_MIN_LEN and parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT \
+            and not is_integer(parts[GraphConst.OUTPUT_INDEX_TWO]):
         parts[GraphConst.OUTPUT_INDEX_THREE] = 'kwargs'
         return Const.SEP.join(parts[:-1])
     return parameter

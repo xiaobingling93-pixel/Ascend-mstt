@@ -6,9 +6,10 @@ import unittest
 import argparse
 from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
     check_and_return_dir_contents, resolve_api_special_parameters, get_rela_diff_summary_mode, \
-    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser
+    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser, stack_column_process, result_item_init, \
+    ApiItemInfo
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 
 
 # test_read_op_1
@@ -369,3 +370,71 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertIsNone(args.api_mapping)  # 默认值应为 None
         self.assertEqual(args.data_mapping, "data_mapping.txt")
         self.assertEqual(args.layer_mapping, "layer_mapping.txt")
+
+    def test_stack_column_process_stack_info(self):
+        result_item = []
+        has_stack = True
+        index = 0
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['abc'])
+
+    def test_stack_column_process_None(self):
+        result_item = []
+        has_stack = True
+        index = 1
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['None'])
+
+    def test_result_item_init_all_and_summary(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.ALL
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' '])
+
+        dump_mode = Const.SUMMARY
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
+
+    def test_result_item_init_md5(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96], 'e87000dc')
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96], 'e87000dc')
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], 'e87000dc', 'e87000dc', 'pass'])
+
+    def test_result_item_init_md5_index_error(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        with self.assertRaises(CompareException) as context:
+            result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
