@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, mock_open, patch
 import numpy as np
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import (
     FileCheckConst,
     FileCheckException,
@@ -32,7 +31,6 @@ from msprobe.core.common.file_utils import (
     get_json_contents,
     save_json,
 )
-from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
@@ -48,10 +46,10 @@ from msprobe.core.common.utils import (CompareException,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
-                                       MsprobeBaseException,
                                        recursion_depth_decorator,
-                                       check_str_param
-                                       )
+                                       MsprobeBaseException,
+                                       check_str_param,
+                                       is_json_file)
 
 
 class TestUtils(TestCase):
@@ -421,3 +419,9 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeBaseException) as context:
             check_str_param(invalid_param)
         self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_CHAR_ERROR)
+
+    def test_is_json_file(self):
+        file_path_true = 'step/rank/stack.json'
+        file_path_false = 1
+        self.assertTrue(is_json_file(file_path_true))
+        self.assertFalse(is_json_file(file_path_false))
