@@ -125,13 +125,13 @@ def op_item_parse(op_data, op_name: str) -> list:
     
     item_list = []
     if isinstance(op_data, list):
-        for i in range(len(op_data)):
-            item_list.extend(op_item_parse(op_data[i], op_name + '.' + str(i)))
+        for i, data in enumerate(op_data):
+            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i)))
     elif isinstance(op_data, dict):
         if is_tensor(op_data):
             return [gen_op_item(op_data, op_name)]
-        for k, v in op_data.items():
-            item_list.extend(op_item_parse(v, op_name + '.' + str(k)))
+        for sub_name, sub_data in op_data.items():
+            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name)))
     return item_list
 
 
