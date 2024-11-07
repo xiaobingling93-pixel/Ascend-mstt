@@ -16,6 +16,7 @@
 import math
 
 import torch
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.utils import TorchC
@@ -67,6 +68,7 @@ class SingleCompare:
                 return False
         return True
 
+    @recursion_depth_decorator("FreeBenchmark: SingleCompare.compare_seq")
     def compare_seq(self, actual, golden):
         if isinstance(golden, torch.Tensor):
             return self.compare_tensor_seq(actual, golden)
