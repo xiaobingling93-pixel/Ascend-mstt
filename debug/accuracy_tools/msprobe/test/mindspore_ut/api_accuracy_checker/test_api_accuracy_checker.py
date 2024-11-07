@@ -38,17 +38,28 @@ def find_with_prefix(directory, prefix):
     target_files = [os.path.join(directory, entry) for entry in entries if entry.startswith(prefix) and os.path.isfile(os.path.join(directory, entry))]
     return target_files
 
+
+class Args:
+    def __init__(self, api_info_file=None, out_path=None, result_csv_path=None):
+        self.api_info_file = api_info_file if api_info_file is not None else os.path.join(directory, "files", "api_info_statistics.json")
+        self.out_path = out_path if out_path is not None else os.path.join(directory, "files")
+        self.result_csv_path = result_csv_path if result_csv_path is not None else ""
+
+
 class TestApiAccuracyChecker(unittest.TestCase):
 
     def test_statistics_mode(self):
         api_info_statistics_path = os.path.join(directory, "files", "api_info_statistics.json")
         result_directory = os.path.join(directory, "files")
+
+        # 初始化 Args 类，提供三个路径参数
+        args = Args(api_info_file=api_info_statistics_path, out_path=result_directory)  # 在这里传入自定义的路径参数
+
         delete_files_with_prefix(result_directory, "accuracy_checking")
-        api_accuracy_checker = ApiAccuracyChecker()
+        api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_statistics_path)
         api_accuracy_checker.run_and_compare()
-        api_accuracy_checker.to_detail_csv(result_directory)
-        api_accuracy_checker.to_result_csv(result_directory)
+
         detail_csv = find_with_prefix(result_directory, "accuracy_checking_detail")
         assert len(detail_csv) == 1
         check_csv(detail_csv[0], 2)
@@ -63,11 +74,13 @@ class TestApiAccuracyChecker(unittest.TestCase):
         result_directory = os.path.join(directory, "files")
         delete_files_with_prefix(result_directory, "accuracy_checking")
         modify_tensor_api_info_json(api_info_tensor_path, result_directory)
-        api_accuracy_checker = ApiAccuracyChecker()
+
+        args = Args(api_info_file=api_info_tensor_path, out_path=result_directory)
+
+        api_accuracy_checker = ApiAccuracyChecker(args)
         api_accuracy_checker.parse(api_info_tensor_path)
         api_accuracy_checker.run_and_compare()
-        api_accuracy_checker.to_detail_csv(result_directory)
-        api_accuracy_checker.to_result_csv(result_directory)
+
         detail_csv = find_with_prefix(result_directory, "accuracy_checking_detail")
         assert len(detail_csv) == 1
         check_csv(detail_csv[0], 2)
