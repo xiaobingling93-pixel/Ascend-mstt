@@ -18,7 +18,7 @@ from msprobe.mindspore.api_accuracy_checker.cmd_parser import check_args
 
 
 def api_checker_main(args):
-    check(args)
+    check_args(args)
     api_accuracy_checker = ApiAccuracyChecker(args)
     api_accuracy_checker.parse(args.api_info_file)
     api_accuracy_checker.run_and_compare()
