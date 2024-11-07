@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -40,6 +40,8 @@ class DumpToolFactory:
 
     @staticmethod
     def create(config: DebuggerConfig):
+        if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
+            raise Exception("data_mode must be one of all, input, output.")
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
             raise Exception("Valid level is needed.")
