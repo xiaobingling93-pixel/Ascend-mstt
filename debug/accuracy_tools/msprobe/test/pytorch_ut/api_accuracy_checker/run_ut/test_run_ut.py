@@ -118,7 +118,9 @@ class TestRunUtMethods(unittest.TestCase):
 
 
 class TestRunUtOnlineConfig(unittest.TestCase):
-    def test_checked_online_config(self):
+
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.run_ut.check_crt_valid')
+    def test_checked_online_config(self, mock_check_crt_valid):
         class OnlineConfigClass:
             is_online = True
             rank_list = [0, 1]
@@ -126,6 +128,8 @@ class TestRunUtOnlineConfig(unittest.TestCase):
             tls_path = ""
             host = "127.0.0.1"
             port = 12345
+
+        mock_check_crt_valid.return_value = None
 
         online_config = OnlineConfigClass()
         res = checked_online_config(online_config)

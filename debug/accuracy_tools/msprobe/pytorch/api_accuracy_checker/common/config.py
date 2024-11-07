@@ -96,15 +96,15 @@ class CheckerConfig:
             self.load_config(task_config)
 
     def load_config(self, task_config):
-        self.white_list = task_config.get('white_list')
-        self.black_list = task_config.get('black_list')
-        self.error_data_path = task_config.get('error_data_path')
-        self.is_online = task_config.get('is_online')
-        self.nfs_path = task_config.get('nfs_path')
-        self.host = task_config.get('host')
-        self.port = task_config.get('port')
-        self.rank_list = task_config.get('rank_list')
-        self.tls_path = task_config.get('tls_path')
+        self.white_list = task_config.white_list
+        self.black_list = task_config.black_list
+        self.error_data_path = task_config.error_data_path
+        self.is_online = task_config.is_online
+        self.nfs_path = task_config.nfs_path
+        self.host = task_config.host
+        self.port = task_config.port
+        self.rank_list = task_config.rank_list
+        self.tls_path = task_config.tls_path
     
     def get_online_config(self):
         return OnlineConfig(
