@@ -140,21 +140,20 @@ def is_tensor(op_data):
 
 
 def gen_op_item(op_data, op_name):
-    op_item = {
-        'full_op_name': op_name,
-        'data_name': op_data.get('data_name', '-1')
-    }
+    op_item = {}
     op_item.update(op_data)
+    op_item['full_op_name'] = op_name
+    op_item['data_name'] = op_data.get('data_name', '-1')
     params = ['Max', 'Min', 'Mean', 'Norm']
     for i in params:
         if i not in op_item:
             op_item[i] = None
     
     if not op_item.get('dtype'):
-        if op_item['type'] == 'torch.Size':
+        if op_item.get('type') == 'torch.Size':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = str(op_data.get('value'))
-        elif op_item['type'] == 'slice':
+        elif op_item.get('type') == 'slice':
             op_item['dtype'] = op_data.get('type')
             op_item['shape'] = str(np.shape(np.array(op_data.get('value'))))
         else:
