@@ -5,7 +5,7 @@ from unittest.mock import patch
 from msprobe.pytorch.api_accuracy_checker.common.config import Config, CheckerConfig, OnlineConfig, msCheckerConfig
 
 
-class TestConfig():
+class TestUtConfig():
     def __init__(self):
         self.white_list = ['api1', 'api2']
         self.black_list =  ['api3']
@@ -24,7 +24,7 @@ class TestConfig(unittest.TestCase):
         self.input_dir = os.path.join(self.base_test_dir, 'resources')
         self.yaml_file = os.path.join(self.input_dir, "config.yaml")
         self.cfg = Config(self.yaml_file)
-        self.task_config = TestConfig()
+        self.task_config = TestUtConfig()
 
     def test_validate_valid_data(self):
         for key, val in self.cfg.config.items():
