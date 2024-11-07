@@ -161,7 +161,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
             if n_value == CompareConst.READ_NONE:
-                return CompareConst.NONE, ''
+                return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.NONE:
                 return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.SHAPE_UNMATCH:
@@ -199,7 +199,7 @@ class GetMaxAbsErr(TensorComparisonBasic):
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
             if n_value == CompareConst.READ_NONE:
-                return CompareConst.NONE, ""
+                return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
             if n_value == CompareConst.SHAPE_UNMATCH:
@@ -232,7 +232,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
             if n_value == CompareConst.READ_NONE:
-                return CompareConst.NONE, ''
+                return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.NONE:
                 return 0, ''
             if n_value == CompareConst.SHAPE_UNMATCH:
@@ -254,7 +254,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
             if n_value == CompareConst.READ_NONE:
-                return CompareConst.NONE, ""
+                return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
             if n_value == CompareConst.SHAPE_UNMATCH:
@@ -276,7 +276,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
             if n_value == CompareConst.READ_NONE:
-                return CompareConst.NONE, ""
+                return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
             if n_value == CompareConst.SHAPE_UNMATCH:
