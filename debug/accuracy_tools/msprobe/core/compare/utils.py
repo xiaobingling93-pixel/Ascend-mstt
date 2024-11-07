@@ -148,7 +148,7 @@ def gen_op_item(op_data, op_name):
         'shape': op_data.get('shape', None),
         'md5': op_data.get('md5', None),
         'value': op_data.get('value', None),
-        'data_name': '-1'
+        'data_name': op_data.get('data_name', '-1')
     }
     
     if not op_item['dtype']:
