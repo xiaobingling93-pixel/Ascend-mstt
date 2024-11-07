@@ -20,7 +20,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
 from msprobe.core.common.utils import (add_time_with_yaml, detect_framework_by_dump_json,
                                        get_stack_construct_by_dump_json_path, CompareException)
-from msprobe.core.compare.data_scope_parser import get_dump_data_items
+from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
 
 
 class LayerTrie:
