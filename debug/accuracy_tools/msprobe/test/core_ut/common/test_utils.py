@@ -22,7 +22,6 @@ from unittest.mock import MagicMock, mock_open, patch
 import numpy as np
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.file_utils import (
     FileCheckConst,
     FileCheckException,
@@ -32,7 +31,6 @@ from msprobe.core.common.file_utils import (
     get_json_contents,
     save_json,
 )
-from msprobe.core.common.inplace_op_checker import InplaceOpChecker
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
@@ -48,9 +46,10 @@ from msprobe.core.common.utils import (CompareException,
                                        get_stack_construct_by_dump_json_path,
                                        check_seed_all,
                                        safe_get_value,
+                                       recursion_depth_decorator,
                                        MsprobeBaseException,
-                                       recursion_depth_decorator
-                                       )
+                                       check_str_param,
+                                       is_json_file)
 
 
 class TestUtils(TestCase):
@@ -91,23 +90,23 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_json_path": "npu_path",
-            "bench_json_path": "bench_path",
-            "stack_json_path": "stack_path",
+            "npu_json_path": "npu_path.json",
+            "bench_json_path": "bench_path.json",
+            "stack_json_path": "stack_path.json",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
 
         call_args = [
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("npu_dump_data_dir", True),
             ("bench_dump_data_dir", True),
             ("output_path", True),
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("output_path", True)
         ]
 
@@ -410,3 +409,19 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeBaseException) as context:
             safe_get_value("unsupported_type", 0, 'string_container')
         self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+
+    def test_valid_str_param(self):
+        valid_param = "valid_string_without_special_chars"
+        check_str_param(valid_param)
+
+    def test_invalid_str_param(self):
+        invalid_param = "invalid$tring&with^special*chars()"
+        with self.assertRaises(MsprobeBaseException) as context:
+            check_str_param(invalid_param)
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_CHAR_ERROR)
+
+    def test_is_json_file(self):
+        file_path_true = 'step/rank/stack.json'
+        file_path_false = 1
+        self.assertTrue(is_json_file(file_path_true))
+        self.assertFalse(is_json_file(file_path_false))

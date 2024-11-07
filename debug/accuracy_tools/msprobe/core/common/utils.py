@@ -101,6 +101,13 @@ class DumpException(MsprobeBaseException):
         return f"Dump Error Code {self.code}: {self.error_info}"
 
 
+def is_json_file(file_path):
+    if isinstance(file_path, str) and file_path.lower().endswith('.json'):
+        return True
+    else:
+        return False
+
+
 def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
@@ -108,6 +115,13 @@ def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(output_path, str):
         logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
+    bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
+    stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
+    if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
+        logger.error("Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     check_file_or_directory_path(input_param.get("npu_json_path"), False)
     check_file_or_directory_path(input_param.get("bench_json_path"), False)
@@ -261,21 +275,26 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
+
     if npu_json_data['task'] == Const.TENSOR:
-        dump_mode = Const.ALL
-    elif npu_json_data['task'] == Const.STATISTICS:
-        md5_compare = md5_find(npu_json_data['data'])
-        if md5_compare:
-            dump_mode = Const.MD5
+        return Const.ALL
+
+    if npu_json_data['task'] == Const.STATISTICS:
+        npu_md5_compare = md5_find(npu_json_data['data'])
+        bench_md5_compare = md5_find(bench_json_data['data'])
+        if npu_md5_compare == bench_md5_compare:
+            return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
-            dump_mode = Const.SUMMARY
-    else:
-        logger.error(f"Compare applies only to task is tensor or statistics")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
-    return dump_mode
+            logger.error(f"Please check the dump task is consistent, "
+                         f"dump mode of npu and bench should both be statistics or md5.")
+            raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    logger.error(f"Compare applies only to task is tensor or statistics")
+    raise CompareException(CompareException.INVALID_TASK_ERROR)
 
 
 def get_header_index(header_name, dump_mode):
@@ -443,3 +462,9 @@ def recursion_depth_decorator(func_info):
         return wrapper
 
     return decorator
+
+
+def check_str_param(param):
+    if not re.match(Const.REGEX_PREFIX_PATTERN, param):
+        logger.error('The parameter {} contains special characters.'.format(param))
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_CHAR_ERROR)

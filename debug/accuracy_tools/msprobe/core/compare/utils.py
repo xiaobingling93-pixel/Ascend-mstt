@@ -28,14 +28,15 @@ from msprobe.core.common.file_utils import check_file_or_directory_path
 def extract_json(dirname, stack_json=False):
     json_path = ''
     for fname in os.listdir(dirname):
-        if fname == "construct.json":
+        if fname == 'construct.json':
             continue
         full_path = os.path.join(dirname, fname)
         if full_path.endswith('.json'):
-            json_path = full_path
-            if not stack_json and 'stack' not in json_path:
+            if not stack_json and 'dump' in full_path:
+                json_path = full_path
                 break
-            if stack_json and 'stack' in json_path:
+            if stack_json and 'stack' in full_path:
+                json_path = full_path
                 break
 
     # Provide robustness on invalid directory inputs

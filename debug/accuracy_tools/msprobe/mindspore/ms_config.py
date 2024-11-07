@@ -15,6 +15,7 @@
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend
@@ -55,7 +56,7 @@ class OverflowCheckConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
+        if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_nums is invalid, it should be an integer")
         if self.overflow_nums is not None and self.overflow_nums != -1 and self.overflow_nums <= 0:
             raise Exception("overflow_nums should be -1 or positive integer")
