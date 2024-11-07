@@ -144,6 +144,7 @@ def gen_op_item(op_data, op_name):
     op_item.update(op_data)
     op_item['full_op_name'] = op_name
     op_item['data_name'] = op_data.get('data_name', '-1')
+    
     params = ['Max', 'Min', 'Mean', 'Norm']
     for i in params:
         if i not in op_item:
