@@ -67,7 +67,6 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(checker_config.rank_list, msCheckerConfig.rank_list)
         self.assertEqual(checker_config.tls_path, msCheckerConfig.tls_path)
 
-
     def test_init_with_task_config(self):
         checker_config = CheckerConfig(self.task_config)
         self.assertEqual(checker_config.white_list, self.task_config.white_list)
