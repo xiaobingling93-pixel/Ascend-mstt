@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker
-from msprobe.mindspore.api_accuracy_checker.cmd_parser import check
+from msprobe.mindspore.api_accuracy_checker.cmd_parser import check_args
 
 
 def api_checker_main(args):

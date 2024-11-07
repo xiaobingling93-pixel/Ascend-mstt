@@ -30,7 +30,7 @@ def add_api_accuracy_checker_argument(parser):
                         help="<optional> the exit csv for continue")
 
 
-def check(args):
+def check_args(args):
     args.api_info_file = os.path.abspath(args.api_info_file)
     check_file_or_directory_path(args.api_info_file)
 

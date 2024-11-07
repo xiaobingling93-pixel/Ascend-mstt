@@ -260,7 +260,6 @@ class DataManager:
             result_csv.append(row)
             logger.debug(f"Result CSV row added: {row}")
 
-        logger.debug(f"Writing result CSV to {csv_path}.")
         write_csv(result_csv, csv_path, mode="a+")
         logger.debug(f"Result CSV written successfully to {csv_path}.")
 
