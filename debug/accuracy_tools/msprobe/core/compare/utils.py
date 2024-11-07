@@ -103,7 +103,7 @@ def read_op(op_data, op_name):
     return op_parsed_list
 
 
-def op_item_parse(op_data, op_name: str) -> list:
+def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
     default_item = {
         'full_op_name': op_name,
         'type': None,
@@ -118,6 +118,10 @@ def op_item_parse(op_data, op_name: str) -> list:
         'data_name': '-1'
     }
 
+    if depth > Const.MAX_DEPTH:
+        logger.error(f'parse of api/module of {op_name} exceeds the recursion limit.')
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+
     if op_data is None:
         return [default_item]
     elif not op_data:
@@ -126,12 +130,12 @@ def op_item_parse(op_data, op_name: str) -> list:
     item_list = []
     if isinstance(op_data, list):
         for i, data in enumerate(op_data):
-            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i)))
+            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
     elif isinstance(op_data, dict):
         if is_tensor(op_data):
             return [gen_op_item(op_data, op_name)]
         for sub_name, sub_data in op_data.items():
-            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name)))
+            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), depth + 1))
     return item_list
 
 
@@ -144,7 +148,7 @@ def gen_op_item(op_data, op_name):
     op_item.update(op_data)
     op_item['full_op_name'] = op_name
     op_item['data_name'] = op_data.get('data_name', '-1')
-    
+
     params = ['Max', 'Min', 'Mean', 'Norm']
     for i in params:
         if i not in op_item:

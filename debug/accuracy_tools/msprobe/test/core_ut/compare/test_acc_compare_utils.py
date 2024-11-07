@@ -271,6 +271,11 @@ class TestUtilsMethods(unittest.TestCase):
     def test_op_item_parse(self):
         result = op_item_parse(parse_item, parse_op_name)
         self.assertEqual(result, o_result_parse)
+    
+    def test_op_item_parse_max_depth(self):
+        with self.assertRaises(CompareException) as context:
+            op_item_parse(parse_item, parse_op_name, depth=11)
+        self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
     def test_resolve_api_special_parameters(self):
         item_list = []
