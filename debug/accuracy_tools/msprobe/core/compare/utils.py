@@ -133,14 +133,14 @@ def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
         for i, data in enumerate(op_data):
             item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
     elif isinstance(op_data, dict):
-        if is_tensor(op_data):
+        if is_leaf_data(op_data):
             return [gen_op_item(op_data, op_name)]
         for sub_name, sub_data in op_data.items():
             item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), depth + 1))
     return item_list
 
 
-def is_tensor(op_data):
+def is_leaf_data(op_data):
     return 'type' in op_data and isinstance(op_data['type'], str)
 
 
