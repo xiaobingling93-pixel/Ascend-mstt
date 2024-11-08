@@ -41,6 +41,27 @@ class TestModifyMapping(unittest.TestCase):
             "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2462, \
             in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)"
         ]
+
+        self.frame_func_lines = [
+            "File /home/user/envs/python3.9/site-packages/mindspore/common/tensor.py, line 2465, \
+            in copy, x = x / 1.0",
+            "File /home/user/envs/python3.9/site-packages/mindformers/tensor_parallel/layers.py, line 1147, \
+            in construct, \n masked_input = input_.copy() = self.vocab_start_index",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 2455, \
+            in _backward_hook_construct, \n outputs = self.construct(outputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 494, \
+            in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+            "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 733, \
+            in __call__, \n return self._run_construct(*args, *kwargs)"
+        ]
+
+        self.simplified_lines = [
+            "File /home/user/envs/python3.9/site-packages/mindspore/common/tensor.py, line 2465, \
+            in copy, \n x = x / 1.0",
+            "File /home/user/envs/python3.9/site-packages/mindformers/tensor_parallel/layers.py, line 1147, \
+            in construct, \n masked_input = input_.copy() = self.vocab_start_index"
+        ]
+
         self.pt_construct = {
             "Functional.max_pool2d.0.forward": "Module.pool1.MaxPool2d.forward.0",
             "Functional.conv2d.1.forward": "Module.conv2.Conv2d.forward.0",
@@ -48,11 +69,13 @@ class TestModifyMapping(unittest.TestCase):
             "Module.conv1.Conv2d.backward.1": None,
             "Functional.conv2d.2.forward": None
         }
+
         self.ms_construct = {
             "Functional.add.0.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
             "Tensor.reshape.2.forward": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0",
             "Functional.add.4.forward": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0"
         }
+
         self.ms_dump = {
             "data": {"Functional.add.0.forward": "",
                      "Functional.add.4.forward": "",
@@ -68,6 +91,7 @@ class TestModifyMapping(unittest.TestCase):
                 "Module.conv1.Conv2d.backward.1": ""
             }
         }
+
         self.ms_stack = {
             "Functional.add.0.forward": [
                 "File /home/user/envs/python3.9/site-packages/mindspore/nn/cell.py, line 507, \
@@ -160,6 +184,7 @@ class TestModifyMapping(unittest.TestCase):
                 in _backward_hook_construct, \n outputs = self.construct(output, **kwargs)"
             ]
         }
+
         self.pt_stack = {
             "Functional.max_pool2d.0.forward": [
                 "File /home/user/envs/lib/python3.9/site-packages/msprobe/pytorch/hook_module/wrap_Functional.py, line 97, \
@@ -213,7 +238,7 @@ class TestModifyMapping(unittest.TestCase):
 
     def test_find_stack_func_list(self):
         result = find_stack_func_list(self.lines)
-        self.assertEqual(result, ['attn_mask_add'])
+        self.assertEqual(result, ([], ['attn_mask_add']))
 
     def test_get_dump_data_items_when_pt_valid_then_pass(self):
         result = get_dump_data_items(
@@ -272,3 +297,12 @@ class TestModifyMapping(unittest.TestCase):
         actual_values = [(res.data_name, res.construct_scope) for res in result]
         expect_values = [(item.get("data_name"), item.get("construct_scope")) for item in expected_result]
         self.assertListEqual(actual_values, expect_values)
+
+    def test_get_stack_in_lines_when_frame_func_then_pass(self):
+        result = get_stack_in_lines(self.simplified_lines)
+        expected_result = ["copy"]
+        self.assertEqual(result, expected_result)
+
+    def test_find_stack_func_list_when_frame_func_then_pass(self):
+        result = find_stack_func_list(self.frame_func_lines)
+        self.assertEqual(result, (["copy"], []))
