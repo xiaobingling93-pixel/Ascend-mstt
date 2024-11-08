@@ -138,28 +138,36 @@ def find_regard_scope(lines, start_sign, end_sign):
     return start_pos, end_pos
 
 
-def find_stack_func_list(lines):
+def find_stack_func_list(lines, keep_user=False):
     res_list = []
-    simplified = []
+    frame_stack = []
+    user_stack = []
     last_target = None
     no_entrance = True
     for line in lines:
         ele_list = line.split(',')
         file_ele = ele_list[Const.STACK_FILE_INDEX]
-        if Const.MS_FRAMEWORK in file_ele or Const.PT_SIMPLE_FRAMEWORK in file_ele and no_entrance:
+        # if framework func line and no framework entrance found yet
+        if any(ii in file_ele for ii in Const.FRAME_FILE_LIST) and no_entrance:
             last_target = line  # Update the last target index
         elif last_target and no_entrance:
-            simplified.append(last_target)
+            frame_stack.append(last_target)
             last_target = None
             no_entrance = False
-        else:
-            simplified.append(line)
+        elif keep_user:
+            user_stack.append(line)
 
     # Check if the last string in the list contains target str
     if last_target and no_entrance:
-        simplified.append(last_target)
+        frame_stack.append(last_target)
 
     # 过滤和处理 regard_scope
+    frame_func = get_stack_in_lines(frame_stack)
+    user_func = get_stack_in_lines(user_stack)
+    return (frame_func, user_func)
+
+def get_stack_in_lines(simplified):
+    res_list = []
     for line in simplified:
         ele_list = line.split(',')
         file_ele = ele_list[Const.STACK_FILE_INDEX]
@@ -172,7 +180,6 @@ def find_stack_func_list(lines):
 
         in_func_name = func_ele.split()[Const.STACK_FUNC_ELE_INDEX]
         res_list.append(in_func_name)
-
     reversed_list = res_list[::-1]
     return reversed_list
 

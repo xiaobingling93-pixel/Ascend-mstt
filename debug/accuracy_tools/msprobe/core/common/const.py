@@ -109,7 +109,6 @@ class Const:
     KERNEL_DUMP = "kernel_dump"
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
-    PT_SIMPLE_FRAMEWORK = "torch"
     MS_FRAMEWORK = "mindspore"
     UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
@@ -150,7 +149,7 @@ class Const:
     TOP_LAYER = "TopLayer"
     CELL = "Cell"
     MODULE = "Module"
-
+    FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
