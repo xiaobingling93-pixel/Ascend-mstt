@@ -64,7 +64,7 @@ def gen_data(info, api_name, need_grad, convert_type, real_data_path=None):
         if data_path:
             data = gen_real_tensor(data_path, convert_type)
         else:
-            data = gen_random_tensor(info, convert_type)
+            data = gen_random_tensor(info, convert_type, api_name)
         if api_name in hf_32_standard_api and data.dtype == torch.float32:
             data = fp32_to_hf32_to_fp32(data)
         if info.get('requires_grad') and need_grad:
@@ -120,13 +120,14 @@ def gen_real_tensor(data_path, convert_type):
     return data
 
 
-def gen_random_tensor(info, convert_type):
+def gen_random_tensor(info, convert_type, api_name):
     """
     Function Description:
         Based on API MAX and MIN, generate input parameters random data
     Parameter:
         info: API data info
         convert_type: convert ori_type to dist_type flag.
+        api_name: API name
     """
     check_object_type(info, dict)
 
@@ -140,8 +141,14 @@ def gen_random_tensor(info, convert_type):
     data_dtype = info.get('dtype')
     shape = tuple(info.get('shape'))
     if not isinstance(low, (int, float)) or not isinstance(high, (int, float)):
-        error_info = f'Data info Min: {low} , Max: {high}, info type must be int or float.'
-        raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
+        if api_name in Const.EMPTY_SHAPE_API_LIST:
+            low, low_origin = 0, 0
+            high, high_origin = 0, 0
+            low_info = [low, low_origin]
+            high_info = [high, high_origin]
+        else:
+            error_info = f'Data info Min: {low} , Max: {high}, info type must be int or float.'
+            raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     if data_dtype == "torch.bool":
         data = gen_bool_tensor(low, high, shape)
     else:

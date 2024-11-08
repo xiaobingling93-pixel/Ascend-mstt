@@ -121,6 +121,7 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+    EMPTY_SHAPE_API_LIST = ["cat"]
 
     # struct json param
     ORIGIN_DATA = "origin_data"
