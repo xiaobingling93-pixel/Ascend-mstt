@@ -33,6 +33,14 @@ class HighlightCheck(abc.ABC):
         raise NotImplementedError
 
 
+def add_highlight_row_info(color_list, num, highlight_err_msg):
+    for i, (existing_num, existing_err_msg) in enumerate(color_list):
+        if num == existing_num:
+            color_list[i][1].append(highlight_err_msg)
+            return
+    color_list.append((num, [highlight_err_msg]))
+
+
 class CheckOrderMagnitude(HighlightCheck):
     """检查Max diff的数量级差异"""
     def apply(self, info, color_columns, dump_mode):
@@ -44,7 +52,8 @@ class CheckOrderMagnitude(HighlightCheck):
         in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
         out_order = 0 if abs(api_out[max_diff_index]) < 1 else math.log10(abs(api_out[max_diff_index]))
         if out_order - in_order >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            # color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num, 'highlight magnitude')
 
 
 class CheckOneThousandErrorRatio(HighlightCheck):
@@ -57,9 +66,11 @@ class CheckOneThousandErrorRatio(HighlightCheck):
             return
         if (api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and
                 api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED):
-            color_columns.red.append(num)
+            # color_columns.red.append(num)
+            add_highlight_row_info(color_columns.red, num, 'highlight onethousand')
         elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            # color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num, 'highlight onethousand')
 
 
 class CheckCosineSimilarity(HighlightCheck):
@@ -70,7 +81,8 @@ class CheckCosineSimilarity(HighlightCheck):
         if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
             return
         if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            # color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num, 'highlight cosine')
 
 
 class CheckMaxRelativeDiff(HighlightCheck):
@@ -85,10 +97,12 @@ class CheckMaxRelativeDiff(HighlightCheck):
                                                                                    (float, int)):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
-            color_columns.red.append(num)
+            # color_columns.red.append(num)
+            add_highlight_row_info(color_columns.red, num, 'highlight maxrelativediff')
         elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
               input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
-            color_columns.yellow.append(num)
+            # color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num, 'highlight maxrelativediff')
 
 
 class CheckOverflow(HighlightCheck):
@@ -101,11 +115,13 @@ class CheckOverflow(HighlightCheck):
                                           else CompareConst.MAX_ABS_ERR, dump_mode)
         if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(
                 line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
-            color_columns.red.append(num)
+            # color_columns.red.append(num)
+            add_highlight_row_info(color_columns.red, num, 'highlight overflow')
             return
         # check if Max_Diff > 1e+10
         if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
-            color_columns.red.append(num)
+            # color_columns.red.append(num)
+            add_highlight_row_info(color_columns.red, num, 'highlight overflow')
 
 
 class HighlightRules:
@@ -172,8 +188,15 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
                 for rule in HighlightRules.compare_rules.values():
                     rule.apply(api_info, color_columns, dump_mode)
 
-    highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
-    highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+    # highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
+    # highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+
+    red_lines_num_set = {x[0] for x in red_lines}
+    yellow_lines_num_set = {x[0] for x in yellow_lines}
+    highlight_dict.get('red_rows', []).extend(list(red_lines_num_set))
+    highlight_dict.get('yellow_rows', []).extend(list(yellow_lines_num_set - red_lines_num_set))
+    highlight_dict.get('red_lines', []).extend(red_lines)
+    highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
 
 def get_name_and_state(name):
@@ -225,6 +248,8 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
     logger.info('Compare result is %s' % file_path)
 
+    update_highlight_err_msg(result_df, highlight_dict)     # add highlight err_msg
+
     wb = openpyxl.Workbook()
     ws = wb.active
 
@@ -251,6 +276,31 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
                                                             end_color=CompareConst.YELLOW, fill_type="solid")
 
     save_workbook(wb, file_path)
+
+
+def update_highlight_err_msg(result_df, highlight_dict):
+    if result_df.shape[1] <= 1:
+        return
+    err_msg = result_df.get('Err_message')
+    red_lines_num_set = set(highlight_dict.get('red_rows'))
+
+    for color in ['red', 'yellow']:
+        line_key = f'{color}_lines'
+        lines = highlight_dict.get(line_key, [])
+        for line_index, messages in lines:
+            if color == 'yellow' and line_index in red_lines_num_set:
+                continue  # 如果是 yellow 行，且已被 red 行覆盖，跳过
+
+            for msg in messages:
+                if err_msg[line_index] == '':
+                    err_msg[line_index] = msg
+                else:
+                    err_msg[line_index] += '\n' + msg
+
+            if color == 'red':
+                red_lines_num_set.add(line_index)
+
+    result_df['Err_message'] = err_msg
 
 
 def csv_value_is_valid(value: str) -> bool:
