@@ -59,7 +59,7 @@ def _compare_graph(input_param, args):
         mapping_config = MappingConfig(args.data_mapping, MappingInfo(DATA_MAPPING))
     elif args.layer_mapping:
         mapping_config = MappingConfig(args.layer_mapping, MappingInfo(LAYER_MAPPING, data_path_n, data_path_b))
-    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path,
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path, args.framework,
                                        mapping_config=mapping_config)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)

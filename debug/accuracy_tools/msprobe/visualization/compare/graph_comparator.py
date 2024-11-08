@@ -82,7 +82,7 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework)
+        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_config else False)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])

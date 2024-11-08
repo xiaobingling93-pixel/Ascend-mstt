@@ -40,20 +40,23 @@ def get_compare_mode(dump_path_param):
     return compare_mode
 
 
-def run_real_data(dump_path_param, csv_path, framework):
+def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
     """
     多进程运行生成真实数据
     Args:
         dump_path_param: 调用acc_compare接口所依赖的参数
         csv_path: 生成文件路径
         framework: 框架类型, pytorch或mindspore
+        is_cross_frame: 是否进行跨框架比对，仅支持mindspore比pytorch, 其中pytorch为标杆
     """
     if framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import PTComparator
         return PTComparator()._do_multi_process(dump_path_param, csv_path)
     else:
         from msprobe.mindspore.compare.ms_compare import MSComparator
-        return MSComparator()._do_multi_process(dump_path_param, csv_path)
+        ms_comparator = MSComparator()
+        ms_comparator.cross_frame = is_cross_frame
+        return ms_comparator._do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
