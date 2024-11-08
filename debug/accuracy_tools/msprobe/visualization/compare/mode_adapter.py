@@ -126,9 +126,9 @@ class ModeAdapter:
             other_result = CompareConst.PASS if precision_index == 1 else CompareConst.DIFF
             other_dict[CompareConst.RESULT] = other_result
         elif self.compare_mode == GraphConst.SUMMARY_COMPARE:
-            precision_index_in = ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict[0])
+            ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict[0])
             precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict[1])
-            precision_index = max(precision_index_in, precision_index_out)
+            precision_index = precision_index_out
         else:
             min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict[0])
             min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict[0])
