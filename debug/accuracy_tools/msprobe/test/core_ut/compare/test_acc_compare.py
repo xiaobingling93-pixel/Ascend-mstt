@@ -520,7 +520,7 @@ class TestUtilsMethods(unittest.TestCase):
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'None', 'None', 'None', 'None', 'None',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                    1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', '-1']]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
