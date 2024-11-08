@@ -76,10 +76,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             get_max_value = api_register.mint_ops_ori_attr.get("max", mint.max)
             get_min_value = api_register.mint_ops_ori_attr.get("min", mint.min)
             get_mean_value = api_register.mint_ops_ori_attr.get("mean", mint.mean)
-            if hasattr(mint, "norm"):
-                get_norm_value = api_register.mint_ops_ori_attr.get("norm", mint.norm)
-            else:
-                get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
+            get_norm_value = api_register.functional_ori_attr.get("norm", ops.norm)
             tensor_stat.max = get_max_value(data).item()
             tensor_stat.min = get_min_value(data).item()
             tensor_stat.mean = get_mean_value(data).item()

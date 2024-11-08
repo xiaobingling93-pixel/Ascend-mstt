@@ -16,6 +16,7 @@
 import os
 import re
 import math
+import zlib
 from dataclasses import dataclass
 
 import numpy as np
@@ -89,120 +90,87 @@ def rename_api(npu_name, process):
 
 
 def read_op(op_data, op_name):
+    io_name_mapping = {
+        Const.INPUT_ARGS: '.input',
+        Const.INPUT_KWARGS: '.input',
+        Const.INPUT: '.input',
+        Const.OUTPUT: '.output'
+    }
+
     op_parsed_list = []
-    if Const.FORWARD in op_name:
-        if Const.INPUT_ARGS in op_data:
-            input_item = op_data[Const.INPUT_ARGS]
-            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
-            op_parsed_list = input_parsed_list.copy()
-            input_parsed_list.clear()
-        if Const.INPUT_KWARGS in op_data:
-            kwargs_item = op_data[Const.INPUT_KWARGS]
-            if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
-                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '.input', None)
-                op_parsed_list += kwarg_parsed_list
-                kwarg_parsed_list.clear()
-            elif kwargs_item:
-                for kwarg in kwargs_item:
-                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '.input.' + kwarg, None)
-                    op_parsed_list += kwarg_parsed_list
-                    kwarg_parsed_list.clear()
-        if Const.OUTPUT in op_data:
-            output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
-            op_parsed_list += output_parsed_list
-            output_parsed_list.clear()
-    if Const.BACKWARD in op_name:
-        if Const.INPUT in op_data:
-            input_item = op_data[Const.INPUT]
-            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
-            op_parsed_list = input_parsed_list.copy()
-            input_parsed_list.clear()
-        if Const.OUTPUT in op_data:
-            output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
-            op_parsed_list += output_parsed_list
-            output_parsed_list.clear()
+    for name in io_name_mapping:
+        if name in op_data:
+            op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping[name]))
     return op_parsed_list
 
 
-def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
+def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
+    default_item = {
+        'full_op_name': op_name,
+        'type': None,
+        'Max': None,
+        'Min': None,
+        'Mean': None,
+        'Norm': None,
+        'dtype': None,
+        'shape': None,
+        'md5': None,
+        'value': None,
+        'data_name': '-1'
+    }
+
     if depth > Const.MAX_DEPTH:
-        logger.error(f"parse of api/module of {op_name} exceeds the recursion limit.")
+        logger.error(f'parse of api/module of {op_name} exceeds the recursion limit.')
         raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
-    if item_list is None:
-        item_list = []
-    if item is None or (isinstance(item, dict) and not item):
-        if not top_bool:
-            tmp = {
-                'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
-                'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'
-            }
-        else:
-            tmp = {
-                'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
-                'shape': None, 'md5': None, 'data_name': '-1'
-            }
-        item_list.append(tmp)
-        return item_list
-    if index is None:
-        if isinstance(item, dict):
-            full_op_name = op_name + '.0'
-        else:
-            full_op_name = op_name
-    else:
-        full_op_name = op_name + Const.SEP + str(index)
-    if isinstance(item, dict):
-        if 'type' not in item:
-            for kwarg in item:
-                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth + 1)
-                item_list += kwarg_parsed_list
-                kwarg_parsed_list.clear()
-        elif 'dtype' in item:
-            parsed_item = item
-            parsed_item['full_op_name'] = full_op_name
-            item_list.append(parsed_item)
-        elif 'type' in item:
-            parsed_item = {}
-            if item['type'] == 'torch.Size':
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = 'torch.Size'
-                parsed_item['shape'] = str(item['value'])
-                parsed_item['md5'] = None
-                parsed_item['Max'] = None
-                parsed_item['Min'] = None
-                parsed_item['Mean'] = None
-                parsed_item['Norm'] = None
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-            elif item['type'] == 'slice':
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = 'slice'
-                parsed_item['shape'] = str(np.shape(np.array(item['value'])))
-                parsed_item['md5'] = None
-                parsed_item['Max'] = None
-                parsed_item['Min'] = None
-                parsed_item['Mean'] = None
-                parsed_item['Norm'] = None
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-            else:
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = str(type(item['value']))
-                parsed_item['shape'] = '[]'
-                parsed_item['md5'] = None
-                parsed_item['Max'] = item['value']
-                parsed_item['Min'] = item['value']
-                parsed_item['Mean'] = item['value']
-                parsed_item['Norm'] = item['value']
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-        else:
-            resolve_api_special_parameters(item, full_op_name, item_list)
-    else:
-        for j, item_spec in enumerate(item):
-            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth + 1)
+
+    if op_data is None:
+        return [default_item]
+    elif not op_data:
+        return []
+    
+    item_list = []
+    if isinstance(op_data, list):
+        for i, data in enumerate(op_data):
+            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+    elif isinstance(op_data, dict):
+        if is_leaf_data(op_data):
+            return [gen_op_item(op_data, op_name)]
+        for sub_name, sub_data in op_data.items():
+            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), depth + 1))
     return item_list
+
+
+def is_leaf_data(op_data):
+    return 'type' in op_data and isinstance(op_data['type'], str)
+
+
+def gen_op_item(op_data, op_name):
+    op_item = {}
+    op_item.update(op_data)
+    op_item['full_op_name'] = op_name
+    op_item['data_name'] = op_data.get('data_name', '-1')
+
+    params = ['Max', 'Min', 'Mean', 'Norm']
+    for i in params:
+        if i not in op_item:
+            op_item[i] = None
+    
+    if not op_item.get('dtype'):
+        if op_item.get('type') == 'torch.Size':
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = str(op_data.get('value'))
+        elif op_item.get('type') == 'slice':
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = str(np.shape(np.array(op_data.get('value'))))
+        else:
+            op_item['dtype'] = str(type(op_data.get('value')))
+            op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = op_data.get('value')
+    if not op_item.get('md5'):
+        op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
+    
+    return op_item
 
 
 def resolve_api_special_parameters(data_dict, full_op_name, item_list):

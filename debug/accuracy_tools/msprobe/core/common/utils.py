@@ -70,6 +70,7 @@ class MsprobeBaseException(Exception):
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
     INVALID_KEY_ERROR = 31
+    MISSING_HEADER_ERROR = 32
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
