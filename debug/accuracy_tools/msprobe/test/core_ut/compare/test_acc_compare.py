@@ -545,7 +545,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', f'Dump file: {pt_path} not found.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', f'Dump file: {pt_path} not found.'])
 
         generate_pt(base_dir)
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
