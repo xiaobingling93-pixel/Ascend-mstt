@@ -535,7 +535,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'No bench data matched.'])
 
     def test_compare_by_op_2(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
