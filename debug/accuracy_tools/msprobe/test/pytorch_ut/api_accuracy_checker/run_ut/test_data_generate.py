@@ -93,7 +93,7 @@ class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_data_fp32_to_hf32_to_fp32(self):
         info = {'type': "torch.Tensor", 'Min': 0, 'Max': 1, 'dtype': "torch.float32", 'shape': (1, 2)}
         api_name = "conv2d"
-        input_tensor = gen_random_tensor(info, convert_type=None)
+        input_tensor = gen_random_tensor(info, convert_type=None, api_name=api_name)
         origin_result = gen_data(info, api_name, False, None)
         expect_result = fp32_to_hf32_to_fp32(input_tensor)
         self.assertTrue(torch.allclose(origin_result, expect_result, atol=1e-4))
@@ -146,12 +146,21 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertEqual(data.dtype, torch.int64)
 
     def test_gen_random_tensor_gen_bool_tensor(self):
+        api_name = "test_api"
         info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (1, 2)}
-        data = gen_random_tensor(info, convert_type=None)
+        data = gen_random_tensor(info, convert_type=None, api_name=api_name)
         self.assertEqual(data.dtype, torch.bool)
+    
+    def test_gen_random_tensor_gen_cat(self):
+        api_name = "cat"
+        info = {'Min': None, 'Max': None, 'dtype': "torch.float32", 'shape': (1, 0, 256)}
+        data = gen_random_tensor(info, None, api_name)
+        self.assertEqual(data.dtype, torch.float32)
+        self.assertEqual(data.shape, torch.Size([1, 0, 256]))
 
     def test_gen_random_tensor(self):
-        data = gen_random_tensor(api_info_dict.get('input_args')[0], None)
+        api_name = "test_api"
+        data = gen_random_tensor(api_info_dict.get('input_args')[0], None, api_name)
         max_diff = abs(data.max() - max_value)
         min_diff = abs(data.min() - min_value)
         self.assertEqual(data.dtype, torch.float16)
