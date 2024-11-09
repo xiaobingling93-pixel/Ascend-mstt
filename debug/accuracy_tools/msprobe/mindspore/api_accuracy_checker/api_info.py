@@ -82,8 +82,8 @@ class ApiInfo:
                 err_msg = "ApiInfo.get_kwargs failed: compute_element_dict key is not a string"
                 logger.error_log_with_exp(err_msg,
                                           ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
-            if not isinstance(compute_element_info, (list, dict)):
-                err_msg = "ApiInfo.get_kwargs failed: compute_element_dict value is not a list or dict"
+            if not (isinstance(compute_element_info, (list, dict)) or compute_element_info is None):
+                err_msg = "ApiInfo.get_kwargs failed: compute_element_dict value is not a list, dict or null"
                 logger.error_log_with_exp(err_msg,
                                           ApiAccuracyCheckerException(ApiAccuracyCheckerException.ParseJsonFailed))
         kwargs_compute_element_dict = {key_str: ComputeElement(compute_element_info=compute_element_info)
