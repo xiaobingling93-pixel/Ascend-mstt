@@ -17,13 +17,11 @@ class TestDatabase(TestCase):
         self.db.create_table()
         inspect_ = inspect(self.db.engine)
         table_names = inspect_.get_table_names()
-        print(table_names)
         self.assertIn("exception_message", table_names)
 
     def test_insert_batch(self):
         self.db.create_table()
         job_id = str(uuid.uuid4())
-        print(job_id)
         save_list = []
         exception_message_list = [
             '[93m> Rule AnomalyTurbulence reports anomaly signal in language_model.encoder.layers.0/1/input_zeros at step 1.[0m',
