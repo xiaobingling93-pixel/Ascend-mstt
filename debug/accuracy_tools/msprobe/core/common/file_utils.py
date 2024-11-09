@@ -513,6 +513,39 @@ def read_csv(filepath, as_pd=True):
     return csv_data
 
 
+def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be consdiered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("The data type of data is not supported. Only support pd.DataFrame.")
+
+    if malicious_check:
+        for i in range(len(data)):
+            for j in range(len(data.columns)):
+                cell = data.iloc[i, j]
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
+                                       f"to be written into the csv: {filepath}.")
+
+    check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
+    try:
+        data.to_csv(filepath, mode=mode, header=header, index=False)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def remove_path(path):
     if not os.path.exists(path):
         return
