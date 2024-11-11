@@ -40,21 +40,21 @@ class TestFileCheck(unittest.TestCase):
             os.remove(os.path.join(self.hard_path, file))
         os.rmdir(self.hard_path)
 
-    def test_npu_path_check(self):
+    def test_npu_path_soft_link_check(self):
         args = Args(npu_csv_path=self.soft_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             _api_precision_compare_command(args)
         self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
-    def test_gpu_path_check(self):
+    def test_gpu_path_soft_link_check(self):
         args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.soft_csv_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             _api_precision_compare_command(args)
         self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
-    def test_out_path_check(self):
+    def test_out_path_soft_link_check(self):
         args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.soft_path)
         
         with self.assertRaises(Exception) as context:

@@ -55,28 +55,28 @@ class TestFileCheck(unittest.TestCase):
             os.remove(os.path.join(self.hard_path, file))
         os.rmdir(self.hard_path)
 
-    def test_config_path_check(self):
+    def test_config_path_soft_link_check(self):
         args = Args(config_path=self.soft_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
-    def test_api_info_path_check(self):
+    def test_api_info_path_soft_link_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.soft_json_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
-    def test_out_path_check(self):
+    def test_out_path_soft_link_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.soft_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
     
-    def test_result_csv_path_check(self):
+    def test_result_csv_path_soft_link_check(self):
         args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
                     result_csv_path=self.csv_path)
         
