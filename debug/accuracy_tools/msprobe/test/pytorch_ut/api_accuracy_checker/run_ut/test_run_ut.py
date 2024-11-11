@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
 from msprobe.core.common.file_utils import get_json_contents, create_directory
+from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
@@ -39,7 +40,7 @@ class TestFileCheck(unittest.TestCase):
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
-        self.assertIn(str(context.exception), f"The file path {self.soft_path} is a soft link.")
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
 
 class TestRunUtMethods(unittest.TestCase):
