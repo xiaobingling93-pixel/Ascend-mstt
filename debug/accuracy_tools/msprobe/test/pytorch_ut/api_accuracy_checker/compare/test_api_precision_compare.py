@@ -26,19 +26,19 @@ class TestFileCheck(unittest.TestCase):
         self.soft_path = os.path.abspath(dst_path)
         csv_path = os.path.join(self.hard_path, 'test.csv')
         csv_data = [['1', '2', '3']]
-        write_csv(csv_path, csv_data)
+        write_csv(csv_data, csv_path)
         self.hard_csv_path = os.path.abspath(csv_path)
-        soft_csv_path = os.path.join(self.hard_path, 'soft.csv')
+        soft_csv_path = 'soft.csv'
         os.symlink(csv_path, soft_csv_path)
         self.soft_csv_path = os.path.abspath(soft_csv_path)
 
     def tearDown(self):
-        for file in os.listdir(self.hard_path):
-            os.remove(os.path.join(self.hard_path, file))
-        os.unlink(self.soft_path)
-        os.rmdir(self.hard_path)
         os.unlink(self.hard_csv_path)
         os.unlink(self.soft_csv_path)
+        os.unlink(self.soft_path)
+        for file in os.listdir(self.hard_path):
+            os.remove(os.path.join(self.hard_path, file))
+        os.rmdir(self.hard_path)
 
     def test_npu_path_check(self):
         args = Args(npu_csv_path=self.soft_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.hard_path)

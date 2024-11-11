@@ -29,59 +29,62 @@ class TestFileCheck(unittest.TestCase):
     def setUp(self):
         src_path = 'temp_path'
         create_directory(src_path)
-        dst_path = 'run_ut_soft_link'
+        dst_path = 'soft_link'
         os.symlink(src_path, dst_path)
         self.hard_path = os.path.abspath(src_path)
         self.soft_path = os.path.abspath(dst_path)
         json_path = os.path.join(self.hard_path, 'test.json')
         json_data = {'key': 'value'}
         save_json(json_path, json_data)
-        soft_json_path = os.path.join(self.hard_path, 'soft.json')
+        self.hard_json_path = json_path
+        soft_json_path = 'soft.json'
         os.symlink(json_path, soft_json_path)
-        self.json_path = os.path.abspath(soft_json_path)
+        self.soft_json_path = os.path.abspath(soft_json_path)
         csv_path = os.path.join(self.hard_path, 'test.csv')
         csv_data = [['1', '2', '3']]
-        write_csv(csv_path, csv_data)
-        soft_csv_path = os.path.join(self.hard_path, 'soft.csv')
+        write_csv(csv_data, csv_path)
+        soft_csv_path = 'soft.csv'
         os.symlink(csv_path, soft_csv_path)
         self.csv_path = os.path.abspath(soft_csv_path)
 
     def tearDown(self):
+        os.unlink(self.soft_json_path)
+        os.unlink(self.csv_path)
+        os.rmdir(self.hard_path)
         for file in os.listdir(self.hard_path):
             os.remove(os.path.join(self.hard_path, file))
         os.unlink(self.soft_path)
-        os.rmdir(self.hard_path)
-        os.unlink(self.json_path)
-        os.unlink(self.csv_path)
+        
+        
 
     def test_config_path_check(self):
-        args = Args(config_path=self.soft_path, api_info_path=self.json_path, out_path=self.hard_path)
+        args = Args(config_path=self.soft_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_api_info_path_check(self):
-        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.hard_path)
+        args = Args(config_path=self.hard_json_path, api_info_path=self.soft_json_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_out_path_check(self):
-        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.soft_path)
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.soft_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
     
     def test_result_csv_path_check(self):
-        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.hard_path, 
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
                     result_csv_path=self.csv_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
 
 class TestRunUtMethods(unittest.TestCase):
