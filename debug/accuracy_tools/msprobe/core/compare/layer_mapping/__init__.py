@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
@@ -15,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from .debugger.precision_debugger import PrecisionDebugger
-from .common.utils import seed_all
-from .compare.distributed_compare import compare_distributed
-from .compare.pt_compare import compare
-from .functional.module_dump import module_dump, module_dump_end
+from msprobe.core.compare.layer_mapping.layer_mapping import (
+    generate_data_mapping_by_layer_mapping,
+    generate_api_mapping_by_layer_mapping,
+)

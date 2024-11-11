@@ -219,7 +219,7 @@ class MSComparator(Comparator):
         for idx, _ in enumerate(npu_op_name):
             bench_op_name_list = bench_op_name[idx].rsplit(Const.SEP, 1)
             if len(bench_op_name_list) != 0:
-                npu_op_name[idx] = npu_op_name[idx][:-1] + bench_op_name_list[-1]
+                npu_op_name[idx] = npu_op_name[idx].rsplit(Const.SEP, 1)[0] + Const.SEP + bench_op_name_list[-1]
         return npu_op_name
 
     def reconstitution_bench_dict(self, npu_dict, del_bench_dict, api_dict):

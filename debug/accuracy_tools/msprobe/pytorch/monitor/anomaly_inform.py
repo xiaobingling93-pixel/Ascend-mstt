@@ -47,15 +47,15 @@ class AnomalyInform:
 
     def run(self, exception_message, job_id):
         if self.time != 0 and self.current_time == 0:
-            self.current_time = datetime.now(tz=beijing_tz)
+            self.current_time = datetime.now()
         if self.time == 0 or ((self.current_time - self.time) > timedelta(minutes=self.interval_time)):
             self.exception_message_list.append(exception_message)
             self.inform_fun(self.exception_message_list, job_id)
             self.exception_message_list = []
-            self.time = datetime.now(tz=beijing_tz)
+            self.time = datetime.now()
         elif (self.current_time - self.time) <= timedelta(minutes=self.interval_time):
             self.exception_message_list.append(exception_message)
-            self.current_time = datetime.now(tz=beijing_tz)
+            self.current_time = datetime.now()
 
 
 class DatabaseInform(AnomalyInform):
@@ -71,7 +71,7 @@ class DatabaseInform(AnomalyInform):
             item = {
                 'job_id': job_id,
                 'message': exception_message,
-                'create_time': datetime.now(tz=beijing_tz)
+                'create_time': datetime.now()
             }
             save_list.append(ExceptionMessage(**item))
         self.database.insert_batch(save_list)
