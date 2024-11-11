@@ -40,7 +40,7 @@ class TestFileCheck(unittest.TestCase):
         os.symlink(json_path, soft_json_path)
         self.json_path = os.path.abspath(soft_json_path)
         csv_path = os.path.join(self.hard_path, 'test.csv')
-        csv_data = [['1', '2', '3'], ['4', '5', '6']]
+        csv_data = [['1', '2', '3']]
         write_csv(csv_path, csv_data)
         soft_csv_path = os.path.join(self.hard_path, 'soft.csv')
         os.symlink(csv_path, soft_csv_path)
@@ -49,10 +49,10 @@ class TestFileCheck(unittest.TestCase):
     def tearDown(self):
         for file in os.listdir(self.hard_path):
             os.remove(os.path.join(self.hard_path, file))
-        os.rmdir(self.soft_path)
+        os.unlink(self.soft_path)
         os.rmdir(self.hard_path)
-        os.rmdir(self.json_path)
-        os.rmdir(self.csv_path)
+        os.unlink(self.json_path)
+        os.unlink(self.csv_path)
 
     def test_config_path_check(self):
         args = Args(config_path=self.soft_path, api_info_path=self.json_path, out_path=self.hard_path)
