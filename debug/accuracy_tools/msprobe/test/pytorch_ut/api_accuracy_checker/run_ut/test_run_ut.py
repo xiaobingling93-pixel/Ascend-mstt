@@ -29,7 +29,7 @@ class TestFileCheck(unittest.TestCase):
     def setUp(self):
         src_path = 'temp_path'
         create_directory(src_path)
-        dst_path = 'soft_link'
+        dst_path = 'run_ut_soft_link'
         os.symlink(src_path, dst_path)
         self.hard_path = os.path.abspath(src_path)
         self.soft_path = os.path.abspath(dst_path)
