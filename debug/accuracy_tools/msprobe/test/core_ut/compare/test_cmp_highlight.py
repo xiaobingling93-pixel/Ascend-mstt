@@ -8,7 +8,8 @@ import openpyxl
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from collections import namedtuple
-from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
+from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid, \
+    add_highlight_row_info, update_highlight_err_msg
 from msprobe.core.common.const import CompareConst, Const
 
 
@@ -170,3 +171,60 @@ class TestUtilsMethods(unittest.TestCase):
         result = csv_value_is_valid("=1.00")
         self.assertFalse(result)
 
+    def test_add_highlight_row_info_existing(self):
+        color_list = [(1, ["a", "b"]), (5, ["c"])]
+        num = 5
+        highlight_err_msg = "highlight"
+        add_highlight_row_info(color_list, num, highlight_err_msg)
+        self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c", "highlight"])])
+
+    def test_add_highlight_row_info_new(self):
+        color_list = [(1, ["a", "b"]), (5, ["c"])]
+        num = 6
+        highlight_err_msg = "highlight"
+        add_highlight_row_info(color_list, num, highlight_err_msg)
+        self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c"]), (6, ["highlight"])])
+
+    def test_update_highlight_err_msg(self):
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                ]
+        columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {
+            'red_rows': set(1),
+            'yellow_rows': {1, 2},
+            'red_lines': [(1, ['a', 'b'])],
+            'yellow_lines': [(1, ['c']), (2, ['d'])]
+        }
+        update_highlight_err_msg(result_df, highlight_dict)
+
+        t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'a\nb', '-1'],
+                  ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
+                  ]
+        target_result_df = pd.DataFrame(t_data, columns=columns)
+        self.assertEqual(result_df, target_result_df)
+
+    def test_update_highlight_err_msg(self):
+        data = [
+            ['err_msg1'],
+            ['err_msg2']
+        ]
+        columns = ['Err_message']
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {
+            'red_rows': set(1),
+            'yellow_rows': {1, 2},
+            'red_lines': [(1, ['a', 'b'])],
+            'yellow_lines': [(1, ['c']), (2, ['d'])]
+        }
+        result = update_highlight_err_msg(result_df, highlight_dict)
+        self.assertEqual(result, None)

@@ -187,13 +187,10 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
                 for rule in HighlightRules.compare_rules.values():
                     rule.apply(api_info, color_columns, dump_mode)
 
-    # highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
-    # highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
-
     red_lines_num_set = {x[0] for x in red_lines}
     yellow_lines_num_set = {x[0] for x in yellow_lines}
-    highlight_dict.get('red_rows', []).extend(list(red_lines_num_set))
-    highlight_dict.get('yellow_rows', []).extend(list(yellow_lines_num_set - red_lines_num_set))
+    highlight_dict.get('red_rows', []).extend(red_lines_num_set)
+    highlight_dict.get('yellow_rows', []).extend(yellow_lines_num_set - red_lines_num_set)
     highlight_dict.get('red_lines', []).extend(red_lines)
     highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
@@ -281,7 +278,7 @@ def update_highlight_err_msg(result_df, highlight_dict):
     if result_df.shape[1] <= 1:
         return
     err_msg = result_df.get('Err_message')
-    red_lines_num_set = set(highlight_dict.get('red_rows'))
+    red_lines_num_set = highlight_dict.get('red_rows')
 
     for color in ['red', 'yellow']:
         line_key = f'{color}_lines'
