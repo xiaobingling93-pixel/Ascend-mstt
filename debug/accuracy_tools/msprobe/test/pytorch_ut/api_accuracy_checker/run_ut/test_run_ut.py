@@ -5,7 +5,7 @@ import shutil
 import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
-from msprobe.core.common.file_utils import get_json_contents, create_directory
+from msprobe.core.common.file_utils import get_json_contents, create_directory, save_json, write_csv
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 
@@ -33,10 +33,51 @@ class TestFileCheck(unittest.TestCase):
         os.symlink(src_path, dst_path)
         self.hard_path = os.path.abspath(src_path)
         self.soft_path = os.path.abspath(dst_path)
+        json_path = os.path.join(self.hard_path, 'test.json')
+        json_data = {'key': 'value'}
+        save_json(json_path, json_data)
+        soft_json_path = os.path.join(self.hard_path, 'soft.json')
+        os.symlink(json_path, soft_json_path)
+        self.json_path = os.path.abspath(soft_json_path)
+        csv_path = os.path.join(self.hard_path, 'test.csv')
+        csv_data = [['1', '2', '3'], ['4', '5', '6']]
+        write_csv(csv_path, csv_data)
+        soft_csv_path = os.path.join(self.hard_path, 'soft.csv')
+        os.symlink(csv_path, soft_csv_path)
+        self.csv_path = os.path.abspath(soft_csv_path)
+
+    def tearDown(self):
+        for file in os.listdir(self.hard_path):
+            os.remove(os.path.join(self.hard_path, file))
+        os.rmdir(self.soft_path)
+        os.rmdir(self.hard_path)
+        os.rmdir(self.json_path)
+        os.rmdir(self.csv_path)
 
     def test_config_path_check(self):
-        args = Args(config_path=self.soft_path, api_info_path=self.hard_path, out_path=self.hard_path, 
-                    result_csv_path=self.hard_path)  
+        args = Args(config_path=self.soft_path, api_info_path=self.json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_api_info_path_check(self):
+        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_out_path_check(self):
+        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.soft_path)
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+    
+    def test_result_csv_path_check(self):
+        args = Args(config_path=self.hard_path, api_info_path=self.json_path, out_path=self.hard_path, 
+                    result_csv_path=self.csv_path)
         
         with self.assertRaises(Exception) as context:
             run_ut_command(args)

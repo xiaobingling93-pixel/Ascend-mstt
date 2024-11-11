@@ -4,7 +4,62 @@ from unittest.mock import patch
 import pandas as pd
 
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import *
+from msprobe.core.common.exceptions import FileCheckException
+from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_command
 from msprobe.core.common.const import CompareConst
+
+
+class Args:
+    def __init__(self, npu_csv_path=None, gpu_csv_path=None, out_path=None):
+        self.npu_csv_path = npu_csv_path
+        self.gpu_csv_path = gpu_csv_path
+        self.out_path = out_path
+
+
+class TestFileCheck(unittest.TestCase):
+    def setUp(self):
+        src_path = 'temp_path'
+        create_directory(src_path)
+        dst_path = 'soft_link'
+        os.symlink(src_path, dst_path)
+        self.hard_path = os.path.abspath(src_path)
+        self.soft_path = os.path.abspath(dst_path)
+        csv_path = os.path.join(self.hard_path, 'test.csv')
+        csv_data = [['1', '2', '3'], ['4', '5', '6']]
+        write_csv(csv_path, csv_data)
+        self.hard_csv_path = os.path.abspath(csv_path)
+        soft_csv_path = os.path.join(self.hard_path, 'soft.csv')
+        os.symlink(csv_path, soft_csv_path)
+        self.soft_csv_path = os.path.abspath(soft_csv_path)
+
+    def tearDown(self):
+        for file in os.listdir(self.hard_path):
+            os.remove(os.path.join(self.hard_path, file))
+        os.rmdir(self.soft_path)
+        os.rmdir(self.hard_path)
+        os.rmdir(self.hard_csv_path)
+        os.rmdir(self.soft_csv_path)
+
+    def test_npu_path_check(self):
+        args = Args(npu_csv_path=self.soft_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_gpu_path_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.soft_csv_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_out_path_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.soft_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
 
 class TestApiPrecisionCompare(unittest.TestCase):
