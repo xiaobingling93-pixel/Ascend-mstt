@@ -15,7 +15,7 @@
 import re
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
-from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
+from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.const import Const
 
 # 用于将节点名字解析成对应的NodeOp的规则
@@ -77,7 +77,11 @@ def get_input_output(node_data, node_id):
                 GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
             output_data[full_op_name] = item
         else:
-            input_data[process_kwargs_parameter(full_op_name)] = item
+            name = item.get('data_name')
+            if isinstance(name, str) and name != '-1':
+                input_data[name.rsplit(Const.SEP, 1)[0]] = item
+            else:
+                input_data[full_op_name] = item
     return input_data, output_data
 
 
@@ -208,7 +212,7 @@ def _format_data(data_dict):
             value = str(value)
         if value == GraphConst.NULL or key == GraphConst.ERROR_KEY:
             none_num += 1
-        if key == Const.SHAPE:
+        if key == Const.SHAPE or key == 'value':
             value = str(value)
         data_dict[key] = value
     # 字典里的value全null，只保留一个null
