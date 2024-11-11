@@ -52,8 +52,9 @@ class CheckOrderMagnitude(HighlightCheck):
         in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
         out_order = 0 if abs(api_out[max_diff_index]) < 1 else math.log10(abs(api_out[max_diff_index]))
         if out_order - in_order >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
-            # color_columns.yellow.append(num)
-            add_highlight_row_info(color_columns.yellow, num, 'highlight magnitude')
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "maximum absolute error of both input and output exceed 1, "
+                                   "with the output larger by an order of magnitude")
 
 
 class CheckOneThousandErrorRatio(HighlightCheck):
@@ -66,11 +67,12 @@ class CheckOneThousandErrorRatio(HighlightCheck):
             return
         if (api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and
                 api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED):
-            # color_columns.red.append(num)
-            add_highlight_row_info(color_columns.red, num, 'highlight onethousand')
+            add_highlight_row_info(color_columns.red, num,
+                                   "The input's one thousandth err ratio exceeds 0.9, while the output's is below 0.6")
         elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
-            # color_columns.yellow.append(num)
-            add_highlight_row_info(color_columns.yellow, num, 'highlight onethousand')
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's one thousandth err ratio decreases by more than 0.1 "
+                                   "compared to the input's")
 
 
 class CheckCosineSimilarity(HighlightCheck):
@@ -81,8 +83,8 @@ class CheckCosineSimilarity(HighlightCheck):
         if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
             return
         if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
-            # color_columns.yellow.append(num)
-            add_highlight_row_info(color_columns.yellow, num, 'highlight cosine')
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's cosine decreases by more than 0.1 compared to the input's")
 
 
 class CheckMaxRelativeDiff(HighlightCheck):
@@ -97,12 +99,11 @@ class CheckMaxRelativeDiff(HighlightCheck):
                                                                                    (float, int)):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
-            # color_columns.red.append(num)
-            add_highlight_row_info(color_columns.red, num, 'highlight maxrelativediff')
+            add_highlight_row_info(color_columns.red, num, "maximum relative error exceeds 0.5")
         elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
               input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
-            # color_columns.yellow.append(num)
-            add_highlight_row_info(color_columns.yellow, num, 'highlight maxrelativediff')
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's maximum relative error exceeds 0.1, while the input's is below 0.01")
 
 
 class CheckOverflow(HighlightCheck):
@@ -115,13 +116,11 @@ class CheckOverflow(HighlightCheck):
                                           else CompareConst.MAX_ABS_ERR, dump_mode)
         if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(
                 line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
-            # color_columns.red.append(num)
-            add_highlight_row_info(color_columns.red, num, 'highlight overflow')
+            add_highlight_row_info(color_columns.red, num, "maximum or minimum is nan, -inf, or inf")
             return
         # check if Max_Diff > 1e+10
-        if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
-            # color_columns.red.append(num)
-            add_highlight_row_info(color_columns.red, num, 'highlight overflow')
+        if isinstance(line[max_diff_index], (float, int)) and abs(line[max_diff_index]) > CompareConst.MAX_DIFF_RED:
+            add_highlight_row_info(color_columns.red, num, "maximum absolute error exceeds 1e+10")
 
 
 class HighlightRules:
