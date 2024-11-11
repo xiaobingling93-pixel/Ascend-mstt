@@ -46,6 +46,7 @@ class TestFileCheck(unittest.TestCase):
         soft_csv_path = 'soft.csv'
         os.symlink(csv_path, soft_csv_path)
         self.csv_path = os.path.abspath(soft_csv_path)
+        self.empty_path = "empty_path"
 
     def tearDown(self):
         os.unlink(self.soft_json_path)
@@ -83,6 +84,58 @@ class TestFileCheck(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             run_ut_command(args)
             self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_config_path_empty_check(self):
+        args = Args(config_path=self.empty_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_api_info_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.empty_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_out_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.empty_path)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_result_csv_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+                    result_csv_path=self.empty_path)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_config_path_invalid_check(self):
+        args = Args(config_path=123, api_info_path=self.hard_json_path, out_path=self.hard_path)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_api_info_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path="123", out_path=self.hard_path)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_out_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=123)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_result_csv_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+                    result_csv_path=123)
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 class TestRunUtMethods(unittest.TestCase):

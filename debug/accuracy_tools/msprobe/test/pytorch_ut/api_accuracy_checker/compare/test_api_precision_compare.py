@@ -31,6 +31,7 @@ class TestFileCheck(unittest.TestCase):
         soft_csv_path = 'soft.csv'
         os.symlink(csv_path, soft_csv_path)
         self.soft_csv_path = os.path.abspath(soft_csv_path)
+        self.empty_path = "empty_path"
 
     def tearDown(self):
         os.unlink(self.hard_csv_path)
@@ -45,21 +46,62 @@ class TestFileCheck(unittest.TestCase):
         
         with self.assertRaises(Exception) as context:
             _api_precision_compare_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_gpu_path_soft_link_check(self):
         args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.soft_csv_path, out_path=self.hard_path)
         
         with self.assertRaises(Exception) as context:
             _api_precision_compare_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
 
     def test_out_path_soft_link_check(self):
         args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.soft_path)
         
         with self.assertRaises(Exception) as context:
             _api_precision_compare_command(args)
-        self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+    
+    def test_npu_path_empty_check(self):
+        args = Args(npu_csv_path=self.empty_path, gpu_csv_path=self.hard_csv_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_gpu_path_empty_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.empty_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_out_path_empty_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.hard_csv_path, out_path=self.empty_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_npu_path_invalid_type_check(self):
+        args = Args(npu_csv_path=123, gpu_csv_path=self.hard_csv_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.INVALID_FILE_ERROR)
+    
+    def test_gpu_path_invalid_type_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=123, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.INVALID_FILE_ERROR)
+    
+    def test_out_path_invalid_type_check(self):
+        args = Args(npu_csv_path=self.hard_csv_path, gpu_csv_path=self.hard_csv_path, out_path=123)
+        with self.assertRaises(Exception) as context:
+            _api_precision_compare_command(args)
+            self.assertEqual(context.exception.code, FileCheckException.INVALID_FILE_ERROR)
 
 
 class TestApiPrecisionCompare(unittest.TestCase):
