@@ -1,10 +1,11 @@
 # coding=utf-8
+import os
 import copy
 import shutil
 import unittest
 from unittest.mock import patch, DEFAULT
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import *
-from msprobe.core.common.file_utils import get_json_contents
+from msprobe.core.common.file_utils import get_json_contents, create_directory
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
@@ -13,6 +14,32 @@ forward_content = get_json_contents(forward_file)
 for api_full_name, api_info_dict in forward_content.items():
     api_full_name = api_full_name
     api_info_dict = api_info_dict
+
+
+class Args:
+    def __init__(self, config_path=None, api_info_path=None, out_path=None, result_csv_path=None):
+        self.config_path = config_path
+        self.api_info_path = api_info_path
+        self.out_path = out_path
+        self.result_csv_path = result_csv_path
+
+
+class TestFileCheck(unittest.TestCase):
+    def setUp(self):
+        src_path = 'temp_path'
+        create_directory(src_path)
+        dst_path = 'soft_link'
+        os.symlink(src_path, dst_path)
+        self.hard_path = os.path.abspath(src_path)
+        self.soft_path = os.path.abspath(dst_path)
+
+    def test_config_path_check(self):
+        args = Args(config_path=self.soft_path, api_info_path=self.hard_path, out_path=self.hard_path, 
+                    result_csv_path=self.hard_path)  
+        
+        with self.assertRaises(Exception) as context:
+            run_ut_command(args)
+        self.assertIn(str(context.exception), f"The file path {self.soft_path} is a soft link.")
 
 
 class TestRunUtMethods(unittest.TestCase):
