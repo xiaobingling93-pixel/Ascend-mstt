@@ -1,6 +1,5 @@
 import unittest
-from msprobe.core.compare.layer_mapping import *
-from msprobe.core.common.const import Const
+from msprobe.core.compare.layer_mapping.layer_mapping import generate_index_set
 
 
 class TestLayerMapping(unittest.TestCase):
