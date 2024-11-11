@@ -44,12 +44,10 @@ class TestFileCheck(unittest.TestCase):
     def tearDown(self):
         os.unlink(self.soft_json_path)
         os.unlink(self.csv_path)
-        os.rmdir(self.hard_path)
+        os.unlink(self.soft_path)
         for file in os.listdir(self.hard_path):
             os.remove(os.path.join(self.hard_path, file))
-        os.unlink(self.soft_path)
-        
-        
+        os.rmdir(self.hard_path)
 
     def test_config_path_check(self):
         args = Args(config_path=self.soft_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
