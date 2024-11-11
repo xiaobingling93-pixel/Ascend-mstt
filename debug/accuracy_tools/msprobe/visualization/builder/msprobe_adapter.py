@@ -121,7 +121,7 @@ def format_node_data(data_dict):
     """
     批量进行节点数据的输出
     """
-    del_list = ['requires_grad', 'data_name', 'full_op_name']
+    del_list = ['requires_grad', 'full_op_name']
     for _, value in data_dict.items():
         if not isinstance(value, dict):
             continue

@@ -136,6 +136,8 @@ class GraphConst:
     JSON_TIP_KEY = 'ToolTip'
     JSON_ROOT_KEY = 'root'
     JSON_NODE_KEY = 'node'
+    JSON_DATA_KEY = 'dump_data_dir'
+    JSON_TASK_KEY = 'task'
     DATA_KEY = 'data'
     REAL_DATA_TH = 0.1
     MAX_RELATIVE_ERR_TH = 0.5

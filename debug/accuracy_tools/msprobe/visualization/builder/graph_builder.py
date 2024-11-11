@@ -33,7 +33,7 @@ class GraphBuilder:
         """
         construct_dict = load_json_file(construct_path)
         data_dict = load_data_json_file(data_path)
-        graph = Graph(model_name)
+        graph = Graph(model_name, data_path=load_json_file(data_path).get('dump_data_dir', ''))
         GraphBuilder._init_nodes(graph, construct_dict, data_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
@@ -55,6 +55,8 @@ class GraphBuilder:
             result[GraphConst.COLORS] = config.node_colors
         if config.micro_steps:
             result[GraphConst.MICRO_STEPS] = config.micro_steps
+        if config.task:
+            result[GraphConst.JSON_TASK_KEY] = config.task
         save_json_file(filename, result)
 
     @staticmethod
@@ -148,9 +150,10 @@ class GraphBuilder:
 
 
 class GraphExportConfig:
-    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None):
+    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task=''):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
         self.node_colors = node_colors
         self.micro_steps = micro_steps
+        self.task = task
