@@ -295,16 +295,16 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_find_error_rows(self):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
-        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        find_error_rows(summary_result, 0, 1, highlight_dict, dump_mode=Const.SUMMARY)
-        self.assertEqual(highlight_dict, {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        find_error_rows(summary_result, 0, 1, highlight_dict_test, dump_mode=Const.SUMMARY)
+        self.assertEqual(highlight_dict_test, {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
 
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
-        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
-        find_compare_result_error_rows(result_df, highlight_dict, dump_mode=Const.ALL)
-        self.assertEqual(highlight_dict, {
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        find_compare_result_error_rows(result_df, highlight_dict_test, dump_mode=Const.ALL)
+        self.assertEqual(highlight_dict_test, {
             "red_rows": {1, 3},
             "yellow_rows": {2},
             "red_lines": [
