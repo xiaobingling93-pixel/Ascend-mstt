@@ -18,6 +18,7 @@ from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import load_json_file, load_data_json_file, save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
+from msprobe.core.common.file_utils import load_json
 
 
 class GraphBuilder:
@@ -33,7 +34,7 @@ class GraphBuilder:
         """
         construct_dict = load_json_file(construct_path)
         data_dict = load_data_json_file(data_path)
-        graph = Graph(model_name, data_path=load_json_file(data_path).get('dump_data_dir', ''))
+        graph = Graph(model_name, data_path=load_json(data_path).get('dump_data_dir', ''))
         GraphBuilder._init_nodes(graph, construct_dict, data_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
