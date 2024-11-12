@@ -295,16 +295,28 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_find_error_rows(self):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
-        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         find_error_rows(summary_result, 0, 1, highlight_dict, dump_mode=Const.SUMMARY)
-        self.assertEqual(highlight_dict, {'red_rows': [], 'yellow_rows': []})
+        self.assertEqual(highlight_dict, {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
 
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
-        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
         find_compare_result_error_rows(result_df, highlight_dict, dump_mode=Const.ALL)
-        self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
+        self.assertEqual(highlight_dict, {
+            "red_rows": {1, 3},
+            "yellow_rows": {2},
+            "red_lines": [
+                (1, ["maximum or minimum is nan, -inf, or inf"]),
+                (3, ["maximum absolute error exceeds 1e+10"])
+            ],
+            "yellow_lines": [
+                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input's"]),
+                (3, ["maximum absolute error of both input and output exceed 1, with the output larger by an order of magnitude",
+                     "The output's cosine decreases by more than 0.1 compared to the input's"])
+            ]
+        })
 
     def test_calculate_summary_data(self):
         npu_summary_data = [1, 1, 1, 1]
