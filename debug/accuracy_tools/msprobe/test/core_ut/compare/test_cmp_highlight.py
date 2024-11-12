@@ -82,7 +82,7 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [(1, "maximum relative error exceeds 0.5")], []
+        red_lines, yellow_lines = [(1, ["maximum relative error exceeds 0.5"])], []
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 
@@ -211,7 +211,7 @@ class TestUtilsMethods(unittest.TestCase):
                    '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
                   ]
         target_result_df = pd.DataFrame(t_data, columns=columns)
-        self.assertEqual(result_df.equals(target_result_df))
+        self.assertTrue(result_df.equals(target_result_df))
 
     def test_update_highlight_err_msg_fail(self):
         data = [
