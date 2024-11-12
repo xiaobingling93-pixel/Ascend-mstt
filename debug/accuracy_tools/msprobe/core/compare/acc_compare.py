@@ -404,7 +404,7 @@ class Comparator:
         file_name = add_time_with_xlsx("compare_result" + suffix)
         file_path = os.path.join(os.path.realpath(output_path), file_name)
         remove_path(file_path)
-        highlight_dict = {'red_rows': [], 'yellow_rows': []}
+        highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
 
         npu_json = input_parma.get("npu_json_path")
         bench_json = input_parma.get("bench_json_path")

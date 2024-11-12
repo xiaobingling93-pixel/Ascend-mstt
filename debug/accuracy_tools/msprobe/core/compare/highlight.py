@@ -189,8 +189,8 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
     red_lines_num_set = {x[0] for x in red_lines}
     yellow_lines_num_set = {x[0] for x in yellow_lines}
-    highlight_dict.get('red_rows', []).extend(red_lines_num_set)
-    highlight_dict.get('yellow_rows', []).extend(yellow_lines_num_set - red_lines_num_set)
+    highlight_dict.get('red_rows', set()).update(red_lines_num_set)
+    highlight_dict.get('yellow_rows', set()).update(yellow_lines_num_set - red_lines_num_set)
     highlight_dict.get('red_lines', []).extend(red_lines)
     highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
