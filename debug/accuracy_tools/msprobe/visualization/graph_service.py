@@ -23,8 +23,8 @@ from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
 from msprobe.core.common.log import logger
-from msprobe.visualization.mapping_config import MappingConfig, MappingInfo, DATA_MAPPING, LAYER_MAPPING
 from msprobe.visualization.graph.node_colors import NodeColors
+from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 
@@ -54,13 +54,15 @@ def _compare_graph(input_param, args):
         'stack_json_path': stack_path,
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
-    mapping_config = None
-    if args.data_mapping:
-        mapping_config = MappingConfig(args.data_mapping, MappingInfo(DATA_MAPPING))
-    elif args.layer_mapping:
-        mapping_config = MappingConfig(args.layer_mapping, MappingInfo(LAYER_MAPPING, data_path_n, data_path_b))
+    mapping_dict = None
+    if args.layer_mapping:
+        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
+        try:
+            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
+        except Exception:
+            logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
     graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path, args.framework,
-                                       mapping_config=mapping_config)
+                                       mapping_dict=mapping_dict)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     create_directory(args.output_path)

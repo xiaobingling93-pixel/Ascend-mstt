@@ -113,25 +113,27 @@ class ModeAdapter:
             else:
                 data_dict[key] = 'null'
 
-    def parse_result(self, node, compare_data_dict):
+    def parse_result(self, node, compare_data_dict_list):
         """
         根据结果返回数据，分别是precision_index，和附加数据
         """
+        if len(compare_data_dict_list) < 2:
+            raise ValueError("compare_data_dict_list must contain at least two items.")
         other_dict = {}
         if self.compare_mode == GraphConst.MD5_COMPARE:
-            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict[0])
-            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict[1])
+            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict_list[0])
+            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict_list[1])
             # 所有输入输出md5对比通过，这个节点才算通过
             precision_index = min(precision_index_in, precision_index_out)
             other_result = CompareConst.PASS if precision_index == GraphConst.MAX_INDEX_KEY else CompareConst.DIFF
             other_dict[CompareConst.RESULT] = other_result
         elif self.compare_mode == GraphConst.SUMMARY_COMPARE:
-            ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict[0])
-            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict[1])
+            ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict_list[0])
+            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict_list[1])
             precision_index = precision_index_out
         else:
-            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict[0])
-            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict[0])
+            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
+            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
             if min_thousandth_in is not None and min_thousandth_out is not None:
                 change_percentage = min_thousandth_in - min_thousandth_out
             else:
