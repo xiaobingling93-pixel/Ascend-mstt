@@ -117,24 +117,33 @@ def check_compare_param(input_param, output_path, dump_mode):
         logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
-    bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
-    stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
+    npu_json_path = input_param.get("npu_json_path")
+    bench_json_path = input_param.get("bench_json_path")
+    stack_json_path = input_param.get("stack_json_path")
+
+    npu_json_type_check = is_json_file(npu_json_path)
+    bench_json_type_check = is_json_file(bench_json_path)
+    stack_json_type_check = is_json_file(stack_json_path)
+    if not npu_json_type_check:
+        logger.error(f"Invalid npu_json_path: {npu_json_path}, please check!")
+    if not bench_json_type_check:
+        logger.error(f"Invalid bench_json_path: {bench_json_path}, please check!")
+    if not stack_json_type_check:
+        logger.error(f"Invalid stack_json_path: {stack_json_path}, please check!")
     if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
-        logger.error("Please check the json path is valid.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
-    check_file_or_directory_path(input_param.get("npu_json_path"), False)
-    check_file_or_directory_path(input_param.get("bench_json_path"), False)
-    check_file_or_directory_path(input_param.get("stack_json_path"), False)
+    check_file_or_directory_path(npu_json_path, False)
+    check_file_or_directory_path(bench_json_path, False)
+    check_file_or_directory_path(stack_json_path, False)
     if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
     check_file_or_directory_path(output_path, True)
 
-    with FileOpen(input_param.get("npu_json_path"), "r") as npu_json, \
-            FileOpen(input_param.get("bench_json_path"), "r") as bench_json, \
-            FileOpen(input_param.get("stack_json_path"), "r") as stack_json:
+    with FileOpen(npu_json_path, "r") as npu_json, \
+            FileOpen(bench_json_path, "r") as bench_json, \
+            FileOpen(stack_json_path, "r") as stack_json:
         check_json_file(input_param, npu_json, bench_json, stack_json)
 
 
