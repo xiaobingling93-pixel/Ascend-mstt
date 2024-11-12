@@ -37,7 +37,7 @@ def check_args(args):
     if args.out_path == "":
         args.out_path = "./"
     args.out_path = os.path.abspath(args.out_path)
-    create_directory(args.out_path, isdir=True)
+    create_directory(args.out_path)
 
     if args.result_csv_path:
         args.result_csv_path = os.path.abspath(args.result_csv_path)
