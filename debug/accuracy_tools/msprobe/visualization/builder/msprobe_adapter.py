@@ -78,6 +78,7 @@ def get_input_output(node_data, node_id):
             output_data[full_op_name] = item
         else:
             name = item.get('data_name')
+            # 节点参数名称尽量使用落盘数据的名称
             if isinstance(name, str) and name != '-1':
                 input_data[name.rsplit(Const.SEP, 1)[0]] = item
             else:
@@ -194,7 +195,7 @@ def _format_data(data_dict):
     格式化数据，小数保留6位，处理一些异常值
     """
     pattern = r'^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)$'
-    none_num = 0
+    all_null = False
     for key, value in data_dict.items():
         if isinstance(value, str):
             # 将单引号删掉，None换成null避免前端解析错误
@@ -208,14 +209,14 @@ def _format_data(data_dict):
         elif isinstance(value, float):
             value = round(value, GraphConst.ROUND_TH)
         # Inf会走入这里，确保转成Inf。另外给其他不符合预期的类型做兜底方案
-        if not isinstance(value, (list, tuple, dict, str)):
+        if key != GraphConst.ERROR_KEY:
+            # 除了error_key不转str，其他都转str, 避免前端解析错误
             value = str(value)
-        if value == GraphConst.NULL or key == GraphConst.ERROR_KEY:
-            none_num += 1
-        if key == Const.SHAPE or key == 'value':
-            value = str(value)
+        # max为null, 意味着这个参数值为null
+        if key == Const.MAX and value == GraphConst.NULL:
+            all_null = True
         data_dict[key] = value
     # 字典里的value全null，只保留一个null
-    if none_num == len(data_dict):
+    if all_null:
         data_dict.clear()
         data_dict[GraphConst.VALUE] = GraphConst.NULL
