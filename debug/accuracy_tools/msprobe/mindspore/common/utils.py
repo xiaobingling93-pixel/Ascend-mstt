@@ -19,6 +19,7 @@ import random
 import mindspore as ms
 
 from mindspore import ops
+from mindspore.mint import nn
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
@@ -115,7 +116,18 @@ class Dropout3D(ops.Dropout3D):
         super().__init__(1.)
 
 
+class DropoutExt(nn.Dropout):
+    def __init__(self, keep_prob=0.5):
+        super().__init__(1.)
+
+
+def dropout_ext(input, p=0.5, training=True):
+    return input
+
+
 def remove_dropout():
     ops.Dropout = Dropout
     ops.Dropout2D = Dropout2D
     ops.Dropout3D = Dropout3D
+    nn.Dropout = DropoutExt
+    nn.functional.dropout = dropout_ext

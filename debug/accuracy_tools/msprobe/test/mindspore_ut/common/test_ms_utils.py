@@ -28,6 +28,7 @@ from msprobe.mindspore.common.utils import (get_rank_if_initialized,
     convert_to_int,
     list_lowest_level_directories,
     seed_all,
+    remove_dropout,
     MsprobeStep)
 
 class MockCell:
@@ -125,6 +126,20 @@ class TestMsprobeFunctions(unittest.TestCase):
         mock_set_seed.assert_called_once_with(42)
         mock_random_seed.assert_called_once_with(42)
         mock_set_context.assert_called_once_with(deterministic="ON")
+
+    def test_remove_dropout(self):
+        remove_dropout()
+        from mindspore import Tensor
+        x = Tensor(np.ones([5, 5]), ms.float32)
+        from mindspore.ops import Dropout, Dropout2D, Dropout3D
+        self.assertEqual(Dropout(0.5)(x), x)
+        self.assertEqual(Dropout2D(0.5)(x), x)
+        self.assertEqual(Dropout3D(0.5)(x), x)
+
+        from mindspore.mint.nn import Dropout
+        from mindspore.mint.nn.functional import dropout
+        self.assertEqual(Dropout(0.5)(x), x)
+        self.assertEqual(dropout(x, p=0.5), x)
 
 
 
