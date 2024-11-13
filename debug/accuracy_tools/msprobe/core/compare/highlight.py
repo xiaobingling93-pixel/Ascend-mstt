@@ -277,6 +277,9 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 def update_highlight_err_msg(result_df, highlight_dict):
     if result_df.shape[1] <= 1:
         return
+
+    if CompareConst.NPU_MD5 in result_df.columns:
+        return
     err_msg = result_df.get('Err_message')
     red_lines_num_set = highlight_dict.get('red_rows')
 
