@@ -130,16 +130,18 @@ class TestMsprobeFunctions(unittest.TestCase):
     def test_remove_dropout(self):
         remove_dropout()
         from mindspore import Tensor
-        x = Tensor(np.ones([5, 5]), ms.float32)
+        x1d = Tensor(np.ones([5, 5]), ms.float32)
+        x2d = Tensor(np.ones([5, 5, 5, 5]), ms.float32)
+        x3d = Tensor(np.ones([5, 5, 5, 5, 5]), ms.float32)
         from mindspore.ops import Dropout, Dropout2D, Dropout3D
-        self.assertEqual(Dropout(0.5)(x), x)
-        self.assertEqual(Dropout2D(0.5)(x), x)
-        self.assertEqual(Dropout3D(0.5)(x), x)
+        self.assertEqual(Dropout(0.5)(x1d)[0], x1d)
+        self.assertEqual(Dropout2D(0.5)(x2d)[0], x2d)
+        self.assertEqual(Dropout3D(0.5)(x3d)[0], x3d)
 
         from mindspore.mint.nn import Dropout
         from mindspore.mint.nn.functional import dropout
-        self.assertEqual(Dropout(0.5)(x), x)
-        self.assertEqual(dropout(x, p=0.5), x)
+        self.assertEqual(Dropout(0.5)(x1d), x1d)
+        self.assertEqual(dropout(x1d, p=0.5), x1d)
 
 
 
