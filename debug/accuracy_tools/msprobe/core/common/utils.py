@@ -121,6 +121,10 @@ def check_compare_param(input_param, output_path, dump_mode):
     bench_json_path = input_param.get("bench_json_path")
     stack_json_path = input_param.get("stack_json_path")
 
+    check_file_or_directory_path(npu_json_path, False)
+    check_file_or_directory_path(bench_json_path, False)
+    check_file_or_directory_path(stack_json_path, False)
+
     npu_json_type_check = is_json_file(npu_json_path)
     bench_json_type_check = is_json_file(bench_json_path)
     stack_json_type_check = is_json_file(stack_json_path)
@@ -133,9 +137,6 @@ def check_compare_param(input_param, output_path, dump_mode):
     if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
         raise CompareException(CompareException.INVALID_PATH_ERROR)
 
-    check_file_or_directory_path(npu_json_path, False)
-    check_file_or_directory_path(bench_json_path, False)
-    check_file_or_directory_path(stack_json_path, False)
     if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
