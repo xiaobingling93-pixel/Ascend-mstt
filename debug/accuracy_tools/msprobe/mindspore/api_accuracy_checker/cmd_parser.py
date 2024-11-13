@@ -19,6 +19,16 @@ import os
 from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
 from msprobe.core.common.utils import Const, MsprobeBaseException
 
+class UniqueDeviceAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        unique_values = set(values)
+        if len(values) != len(unique_values):
+            parser.error("device id must be unique")
+        for device_id in values:
+            if not 0 <= device_id <= 4095:
+                parser.error(f"the argument 'device_id' must be in range [0, 4095], but got {device_id}")
+        setattr(namespace, self.dest, values)
+
 
 def add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
@@ -28,6 +38,11 @@ def add_api_accuracy_checker_argument(parser):
                         help="<optional> The ut task result out path.")
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
+
+    #以下属于多线程参数
+    parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
+                        help="<optional> set device id to run ut, must be unique and in range 0-7",
+                        default=[0], required=False, action=UniqueDeviceAction)
 
 
 def check_args(args):

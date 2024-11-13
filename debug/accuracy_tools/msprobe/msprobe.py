@@ -74,6 +74,9 @@ def main():
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         from msprobe.visualization.graph_service import _ms_graph_service_parser, _ms_graph_service_command
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
+        from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
+        add_api_accuracy_checker_argument(multi_run_ut_cmd_parser)
+
         _ms_graph_service_parser(graph_service_cmd_parser)
 
     args = parser.parse_args(sys.argv[1:])
@@ -108,6 +111,9 @@ def main():
         elif sys.argv[3] == "run_ut":
             from msprobe.mindspore.api_accuracy_checker.main import api_checker_main
             api_checker_main(args)
+        elif sys.argv[3] == "multi_run_ut":
+            from msprobe.mindspore.api_accuracy_checker.main import mul_api_checker_main
+            mul_api_checker_main(args)
         elif sys.argv[3] == "graph":
             _ms_graph_service_command(args)
 
