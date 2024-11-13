@@ -92,8 +92,6 @@ def _graph_service_parser(parser):
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
-    parser.add_argument("-dm", "--data_mapping", dest="data_mapping", type=str,
-                        help="<optional> The data mapping file path.", required=False)
     parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
                         help="<optional> The layer mapping file path.", required=False)
 
@@ -106,9 +104,6 @@ def _graph_service_command(args):
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
         _build_graph(npu_path, args.output_path)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        if args.data_mapping and args.layer_mapping:
-            raise RuntimeError('The command line parameters -dm(--data_mapping) and -lm(--layer_mapping) '
-                               'cannot be configured at the same time. Only one of them can be configured.')
         _compare_graph(input_param, args)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
