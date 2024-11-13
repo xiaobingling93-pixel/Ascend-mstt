@@ -42,7 +42,10 @@ def extract_json(dirname, stack_json=False):
 
     # Provide robustness on invalid directory inputs
     if not json_path:
-        logger.error(f'No file is found in dump dir {dirname}. ')
+        if stack_json:
+            logger.error(f'stack.json is not found in dump dir {dirname}.')
+        else:
+            logger.error(f'dump.json is not found in dump dir {dirname}.')
         raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
     return json_path
 
