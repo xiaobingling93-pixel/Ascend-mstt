@@ -19,6 +19,9 @@ import os
 import json
 import re
 import shutil
+from datetime import datetime, timezone
+from dateutil import parser
+import OpenSSL
 import yaml
 import numpy as np
 import pandas as pd
@@ -510,6 +513,39 @@ def read_csv(filepath, as_pd=True):
     return csv_data
 
 
+def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be consdiered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("The data type of data is not supported. Only support pd.DataFrame.")
+
+    if malicious_check:
+        for i in range(len(data)):
+            for j in range(len(data.columns)):
+                cell = data.iloc[i, j]
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
+                                       f"to be written into the csv: {filepath}.")
+
+    check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
+    try:
+        data.to_csv(filepath, mode=mode, header=header, index=False)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 def remove_path(path):
     if not os.path.exists(path):
         return
@@ -555,3 +591,33 @@ def os_walk_for_files(path, depth):
             for file in files:
                 res.append({"file": file, "root": root})
     return res
+
+
+def check_crt_valid(pem_path):
+    """
+    Check the validity of the SSL certificate.
+
+    Load the SSL certificate from the specified path, parse and check its validity period.
+    If the certificate is expired or invalid, raise a RuntimeError.
+
+    Parameters:
+    pem_path (str): The file path of the SSL certificate.
+
+    Raises:
+    RuntimeError: If the SSL certificate is invalid or expired.
+    """
+    try:
+        with FileOpen(pem_path, "r") as f:
+            pem_data = f.read()
+        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, pem_data)
+        pem_start = parser.parse(cert.get_notBefore().decode("UTF-8"))
+        pem_end = parser.parse(cert.get_notAfter().decode("UTF-8"))
+        logger.info(f"The SSL certificate passes the verification and the validity period "
+                    f"starts from {pem_start} ends at {pem_end}.")
+    except Exception as e:
+        logger.error("Failed to parse the SSL certificate. Check the certificate.")
+        raise RuntimeError(f"The SSL certificate is invalid, {pem_path}") from e
+
+    now_utc = datetime.now(tz=timezone.utc)
+    if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
+        raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")

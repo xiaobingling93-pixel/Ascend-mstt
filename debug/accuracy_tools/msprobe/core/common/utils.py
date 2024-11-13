@@ -18,7 +18,9 @@ import os
 import re
 import subprocess
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
+from functools import wraps
 
 import numpy as np
 
@@ -68,6 +70,7 @@ class MsprobeBaseException(Exception):
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
     INVALID_KEY_ERROR = 31
+    MISSING_HEADER_ERROR = 32
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -99,6 +102,13 @@ class DumpException(MsprobeBaseException):
         return f"Dump Error Code {self.code}: {self.error_info}"
 
 
+def is_json_file(file_path):
+    if isinstance(file_path, str) and file_path.lower().endswith('.json'):
+        return True
+    else:
+        return False
+
+
 def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
@@ -106,6 +116,13 @@ def check_compare_param(input_param, output_path, dump_mode):
     if not isinstance(output_path, str):
         logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
+
+    npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
+    bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
+    stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
+    if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
+        logger.error("Please check the json path is valid.")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
 
     check_file_or_directory_path(input_param.get("npu_json_path"), False)
     check_file_or_directory_path(input_param.get("bench_json_path"), False)
@@ -259,21 +276,26 @@ def get_dump_mode(input_param):
     bench_path = input_param.get("bench_json_path", None)
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
+
     if npu_json_data['task'] != bench_json_data['task']:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
+
     if npu_json_data['task'] == Const.TENSOR:
-        dump_mode = Const.ALL
-    elif npu_json_data['task'] == Const.STATISTICS:
-        md5_compare = md5_find(npu_json_data['data'])
-        if md5_compare:
-            dump_mode = Const.MD5
+        return Const.ALL
+
+    if npu_json_data['task'] == Const.STATISTICS:
+        npu_md5_compare = md5_find(npu_json_data['data'])
+        bench_md5_compare = md5_find(bench_json_data['data'])
+        if npu_md5_compare == bench_md5_compare:
+            return Const.MD5 if npu_md5_compare else Const.SUMMARY
         else:
-            dump_mode = Const.SUMMARY
-    else:
-        logger.error(f"Compare applies only to task is tensor or statistics")
-        raise CompareException(CompareException.INVALID_TASK_ERROR)
-    return dump_mode
+            logger.error(f"Please check the dump task is consistent, "
+                         f"dump mode of npu and bench should both be statistics or md5.")
+            raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    logger.error(f"Compare applies only to task is tensor or statistics")
+    raise CompareException(CompareException.INVALID_TASK_ERROR)
 
 
 def get_header_index(header_name, dump_mode):
@@ -331,7 +353,7 @@ def get_step_or_rank_from_string(step_or_rank, obj):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f'The string parameter for {obj} only supports formats like "3-5". '
                                f'Now string parameter for {obj} is "{step_or_rank}".')
-    if all(Const.STEP_RANK_MAXIMUM_RANGE[0] <= b <= Const.STEP_RANK_MAXIMUM_RANGE[1] for b in borderlines):
+    if all(Const.STEP_RANK_MINIMUM_VALUE <= b <= Const.STEP_RANK_MAXIMUM_VALUE for b in borderlines):
         if borderlines[0] <= borderlines[1]:
             continual_step_or_rank = list(range(borderlines[0], borderlines[1] + 1))
         else:
@@ -341,7 +363,7 @@ def get_step_or_rank_from_string(step_or_rank, obj):
     else:
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                f"The boundaries must fall within the range of "
-                               f"[{Const.STEP_RANK_MAXIMUM_RANGE[0]}, {Const.STEP_RANK_MAXIMUM_RANGE[1]}].")
+                               f"[{Const.STEP_RANK_MINIMUM_VALUE}, {Const.STEP_RANK_MAXIMUM_VALUE}].")
     return continual_step_or_rank
 
 
@@ -353,15 +375,19 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         return []
     if not isinstance(step_or_rank_input, list):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"{obj} is invalid, it should be a list")
+    if len(step_or_rank_input) > Const.STEP_RANK_MAXIMUM_VALUE:
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                               f"{obj} is invalid, its length cannot exceed {Const.STEP_RANK_MAXIMUM_VALUE}")
+
     real_step_or_rank = []
     for element in step_or_rank_input:
-        if not isinstance(element, (int, str)):
+        if not is_int(element) and not isinstance(element, str):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
         if isinstance(element, int) and element < 0:
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"Each element of {obj} must be non-negative, currently it is {element}.")
-        if isinstance(element, int) and Const.STEP_RANK_MAXIMUM_RANGE[0] <= element <= Const.STEP_RANK_MAXIMUM_RANGE[1]:
+        if isinstance(element, int) and Const.STEP_RANK_MINIMUM_VALUE <= element <= Const.STEP_RANK_MAXIMUM_VALUE:
             real_step_or_rank.append(element)
         elif isinstance(element, str) and Const.HYPHEN in element:
             continual_step_or_rank = get_step_or_rank_from_string(element, obj)
@@ -372,7 +398,7 @@ def get_real_step_or_rank(step_or_rank_input, obj):
 
 
 def check_seed_all(seed, mode):
-    if isinstance(seed, int):
+    if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
             logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
@@ -402,8 +428,44 @@ def safe_get_value(container, index, container_name, key=None):
                   f"index is {index}"
         logger.error(err_msg)
         raise MsprobeBaseException(MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR) from e
-    except KeyError as e:
-        err_msg = f"Key '{key}' not found in '{container_name}'.\n" \
-                  f"{container_name} is {container}"
+    except TypeError as e:
+        err_msg = "wrong type, please check!\n" \
+                  f"{container_name} is {container}\n" \
+                  f"index is {index}\n" \
+                  f"key is {key}"
         logger.error(err_msg)
-        raise MsprobeBaseException(MsprobeBaseException.INVALID_KEY_ERROR) from e
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e
+
+# 记录工具函数递归的深度
+recursion_depth = defaultdict(int)
+
+# 装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。
+def recursion_depth_decorator(func_info):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            func_id = id(func)
+            recursion_depth[func_id] += 1
+            if recursion_depth[func_id] > Const.MAX_DEPTH:
+                msg = f"call {func_info} exceeds the recursion limit."
+                logger.error_log_with_exp(
+                    msg,
+                    MsprobeException(
+                        MsprobeException.RECURSION_LIMIT_ERROR, msg
+                    ),
+                )
+            try:
+                result = func(*args, **kwargs)
+            finally:
+                recursion_depth[func_id] -= 1
+            return result
+
+        return wrapper
+
+    return decorator
+
+
+def check_str_param(param):
+    if not re.match(Const.REGEX_PREFIX_PATTERN, param):
+        logger.error('The parameter {} contains special characters.'.format(param))
+        raise MsprobeBaseException(MsprobeBaseException.INVALID_CHAR_ERROR)

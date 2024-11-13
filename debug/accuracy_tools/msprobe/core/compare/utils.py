@@ -16,23 +16,28 @@
 import os
 import re
 import math
+import zlib
+from dataclasses import dataclass
+
 import numpy as np
+
 from msprobe.core.common.const import Const, CompareConst
-from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger
+from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
 
 def extract_json(dirname, stack_json=False):
     json_path = ''
     for fname in os.listdir(dirname):
-        if fname == "construct.json":
+        if fname == 'construct.json':
             continue
         full_path = os.path.join(dirname, fname)
         if full_path.endswith('.json'):
-            json_path = full_path
-            if not stack_json and 'stack' not in json_path:
+            if not stack_json and 'dump' in full_path:
+                json_path = full_path
                 break
-            if stack_json and 'stack' in json_path:
+            if stack_json and 'stack' in full_path:
+                json_path = full_path
                 break
 
     # Provide robustness on invalid directory inputs
@@ -85,120 +90,87 @@ def rename_api(npu_name, process):
 
 
 def read_op(op_data, op_name):
+    io_name_mapping = {
+        Const.INPUT_ARGS: '.input',
+        Const.INPUT_KWARGS: '.input',
+        Const.INPUT: '.input',
+        Const.OUTPUT: '.output'
+    }
+
     op_parsed_list = []
-    if Const.FORWARD in op_name:
-        if Const.INPUT_ARGS in op_data:
-            input_item = op_data[Const.INPUT_ARGS]
-            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
-            op_parsed_list = input_parsed_list.copy()
-            input_parsed_list.clear()
-        if Const.INPUT_KWARGS in op_data:
-            kwargs_item = op_data[Const.INPUT_KWARGS]
-            if isinstance(kwargs_item, dict) and "type" in kwargs_item or isinstance(kwargs_item, list):
-                kwarg_parsed_list = op_item_parse(kwargs_item, op_name + '.input', None)
-                op_parsed_list += kwarg_parsed_list
-                kwarg_parsed_list.clear()
-            elif kwargs_item:
-                for kwarg in kwargs_item:
-                    kwarg_parsed_list = op_item_parse(kwargs_item[kwarg], op_name + '.input.' + kwarg, None)
-                    op_parsed_list += kwarg_parsed_list
-                    kwarg_parsed_list.clear()
-        if Const.OUTPUT in op_data:
-            output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
-            op_parsed_list += output_parsed_list
-            output_parsed_list.clear()
-    if Const.BACKWARD in op_name:
-        if Const.INPUT in op_data:
-            input_item = op_data[Const.INPUT]
-            input_parsed_list = op_item_parse(input_item, op_name + '.input', None)
-            op_parsed_list = input_parsed_list.copy()
-            input_parsed_list.clear()
-        if Const.OUTPUT in op_data:
-            output_item = op_data[Const.OUTPUT]
-            output_parsed_list = op_item_parse(output_item, op_name + '.output', None)
-            op_parsed_list += output_parsed_list
-            output_parsed_list.clear()
+    for name in io_name_mapping:
+        if name in op_data:
+            op_parsed_list.extend(op_item_parse(op_data[name], op_name + io_name_mapping[name]))
     return op_parsed_list
 
 
-def op_item_parse(item, op_name, index, item_list=None, top_bool=True, depth=0):
+def op_item_parse(op_data, op_name: str, depth: int = 0) -> list:
+    default_item = {
+        'full_op_name': op_name,
+        'type': None,
+        'Max': None,
+        'Min': None,
+        'Mean': None,
+        'Norm': None,
+        'dtype': None,
+        'shape': None,
+        'md5': None,
+        'value': None,
+        'data_name': '-1'
+    }
+
     if depth > Const.MAX_DEPTH:
-        logger.error(f"parse of api/module of {op_name} exceeds the recursion limit.")
+        logger.error(f'parse of api/module of {op_name} exceeds the recursion limit.')
         raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
-    if item_list is None:
-        item_list = []
-    if item is None or (isinstance(item, dict) and not item):
-        if not top_bool:
-            tmp = {
-                'full_op_name': op_name + '.' + str(index), 'Max': None, 'Min': None, 'Mean': None, 'Norm': None,
-                'dtype': None, 'shape': None, 'md5': None, 'data_name': '-1'
-            }
-        else:
-            tmp = {
-                'full_op_name': op_name + '.0', 'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'dtype': None,
-                'shape': None, 'md5': None, 'data_name': '-1'
-            }
-        item_list.append(tmp)
-        return item_list
-    if index is None:
-        if isinstance(item, dict):
-            full_op_name = op_name + '.0'
-        else:
-            full_op_name = op_name
-    else:
-        full_op_name = op_name + Const.SEP + str(index)
-    if isinstance(item, dict):
-        if 'type' not in item:
-            for kwarg in item:
-                kwarg_parsed_list = op_item_parse(item[kwarg], op_name + Const.SEP + kwarg, None, depth=depth + 1)
-                item_list += kwarg_parsed_list
-                kwarg_parsed_list.clear()
-        elif 'dtype' in item:
-            parsed_item = item
-            parsed_item['full_op_name'] = full_op_name
-            item_list.append(parsed_item)
-        elif 'type' in item:
-            parsed_item = {}
-            if item['type'] == 'torch.Size':
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = 'torch.Size'
-                parsed_item['shape'] = str(item['value'])
-                parsed_item['md5'] = None
-                parsed_item['Max'] = None
-                parsed_item['Min'] = None
-                parsed_item['Mean'] = None
-                parsed_item['Norm'] = None
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-            elif item['type'] == 'slice':
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = 'slice'
-                parsed_item['shape'] = str(np.shape(np.array(item['value'])))
-                parsed_item['md5'] = None
-                parsed_item['Max'] = None
-                parsed_item['Min'] = None
-                parsed_item['Mean'] = None
-                parsed_item['Norm'] = None
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-            else:
-                parsed_item['full_op_name'] = full_op_name
-                parsed_item['dtype'] = str(type(item['value']))
-                parsed_item['shape'] = '[]'
-                parsed_item['md5'] = None
-                parsed_item['Max'] = item['value']
-                parsed_item['Min'] = item['value']
-                parsed_item['Mean'] = item['value']
-                parsed_item['Norm'] = item['value']
-                parsed_item['data_name'] = '-1'
-                item_list.append(parsed_item)
-        else:
-            resolve_api_special_parameters(item, full_op_name, item_list)
-    else:
-        for j, item_spec in enumerate(item):
-            op_item_parse(item_spec, full_op_name, j, item_list=item_list, top_bool=False, depth=depth + 1)
+
+    if op_data is None:
+        return [default_item]
+    elif not op_data:
+        return []
+    
+    item_list = []
+    if isinstance(op_data, list):
+        for i, data in enumerate(op_data):
+            item_list.extend(op_item_parse(data, op_name + Const.SEP + str(i), depth + 1))
+    elif isinstance(op_data, dict):
+        if is_leaf_data(op_data):
+            return [gen_op_item(op_data, op_name)]
+        for sub_name, sub_data in op_data.items():
+            item_list.extend(op_item_parse(sub_data, op_name + Const.SEP + str(sub_name), depth + 1))
     return item_list
+
+
+def is_leaf_data(op_data):
+    return 'type' in op_data and isinstance(op_data['type'], str)
+
+
+def gen_op_item(op_data, op_name):
+    op_item = {}
+    op_item.update(op_data)
+    op_item['full_op_name'] = op_name
+    op_item['data_name'] = op_data.get('data_name', '-1')
+
+    params = ['Max', 'Min', 'Mean', 'Norm']
+    for i in params:
+        if i not in op_item:
+            op_item[i] = None
+    
+    if not op_item.get('dtype'):
+        if op_item.get('type') == 'torch.Size':
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = str(op_data.get('value'))
+        elif op_item.get('type') == 'slice':
+            op_item['dtype'] = op_data.get('type')
+            op_item['shape'] = str(np.shape(np.array(op_data.get('value'))))
+        else:
+            op_item['dtype'] = str(type(op_data.get('value')))
+            op_item['shape'] = '[]'
+            for i in params:
+                op_item[i] = op_data.get('value')
+    if not op_item.get('md5'):
+        op_item['md5'] = f"{zlib.crc32(str(op_data.get('value', '')).encode()):08x}"
+    
+    return op_item
 
 
 def resolve_api_special_parameters(data_dict, full_op_name, item_list):
@@ -268,6 +240,45 @@ def get_rela_diff_summary_mode(result_item, npu_summary_data, bench_summary_data
     return result_item, accuracy_check, err_msg
 
 
+@dataclass
+class ApiItemInfo:
+    name: str
+    struct: tuple
+    stack_info: list
+
+
+def stack_column_process(result_item, has_stack, index, key, npu_stack_info):
+    if has_stack and index == 0 and key == CompareConst.INPUT_STRUCT:
+        result_item.extend(npu_stack_info)
+    else:
+        result_item.append(CompareConst.NONE)
+    return result_item
+
+
+def result_item_init(n_info, b_info, dump_mode):
+    n_len = len(n_info.struct)
+    b_len = len(b_info.struct)
+    struct_long_enough = (n_len > 2 and b_len > 2) if dump_mode == Const.MD5 else (n_len > 1 and b_len > 1)
+    if struct_long_enough:
+        result_item = [
+            n_info.name, b_info.name, n_info.struct[0], b_info.struct[0], n_info.struct[1], b_info.struct[1]
+        ]
+        if dump_mode == Const.MD5:
+            md5_compare_result = CompareConst.PASS if n_info.struct[2] == b_info.struct[2] else CompareConst.DIFF
+            result_item.extend([n_info.struct[2], b_info.struct[2], md5_compare_result])
+        elif dump_mode == Const.SUMMARY:
+            result_item.extend([" "] * 8)
+        else:
+            result_item.extend([" "] * 5)
+    else:
+        err_msg = "index out of bounds error will occur in result_item_init, please check!\n" \
+                  f"npu_info_struct is {n_info.struct}\n" \
+                  f"bench_info_struct is {b_info.struct}"
+        logger.error(err_msg)
+        raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
+    return result_item
+
+
 def get_accuracy(result, n_dict, b_dict, dump_mode):
     def get_accuracy_core(n_start, n_len, b_start, b_len, key):
         min_len = min(n_len, b_len)
@@ -280,36 +291,23 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
             bench_data_name = b_dict.get("data_name", None)
 
         for index in range(min_len):
-            n_name = n_dict['op_name'][n_start + index]
-            b_name = b_dict['op_name'][b_start + index]
-            n_struct = n_dict[key][index]
-            b_struct = b_dict[key][index]
+            n_name = safe_get_value(n_dict, n_start + index, "n_dict", key="op_name")
+            b_name = safe_get_value(b_dict, b_start + index, "b_dict", key="op_name")
+            n_struct = safe_get_value(n_dict, index, "n_dict", key=key)
+            b_struct = safe_get_value(b_dict, index, "b_dict", key=key)
             err_msg = ""
+
+            npu_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+            bench_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+            result_item = result_item_init(npu_info, bench_info, dump_mode)
+
             if dump_mode == Const.MD5:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1], n_struct[2], b_struct[2],
-                    CompareConst.PASS if n_struct[2] == b_struct[2] else CompareConst.DIFF
-                ]
-                if has_stack and index == 0 and key == "input_struct":
-                    result_item.extend(npu_stack_info)
-                else:
-                    result_item.append(CompareConst.NONE)
+                result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 result.append(result_item)
                 continue
 
-            if dump_mode == Const.SUMMARY:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                    " ", " ", " ", " ", " ", " ", " ", " "
-                ]
-            else:
-                result_item = [
-                    n_name, b_name, n_struct[0], b_struct[0], n_struct[1], b_struct[1],
-                    " ", " ", " ", " ", " "
-                ]
-
-            npu_summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-            bench_summary_data = b_dict.get(CompareConst.SUMMARY)[b_start + index]
+            npu_summary_data = safe_get_value(n_dict, n_start + index, "n_dict", key=CompareConst.SUMMARY)
+            bench_summary_data = safe_get_value(b_dict, b_start + index, "b_dict", key=CompareConst.SUMMARY)
             result_item.extend(process_summary_data(npu_summary_data))
             result_item.extend(process_summary_data(bench_summary_data))
 
@@ -319,45 +317,44 @@ def get_accuracy(result, n_dict, b_dict, dump_mode):
 
             result_item.append(accuracy_check if dump_mode == Const.SUMMARY else CompareConst.ACCURACY_CHECK_YES)
             result_item.append(err_msg)
-            if has_stack and index == 0 and key == "input_struct":
-                result_item.extend(npu_stack_info)
-            else:
-                result_item.append(CompareConst.NONE)
+            result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
             if dump_mode == Const.ALL:
-                result_item.append(npu_data_name[n_start + index])
+                result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
 
             result.append(result_item)
 
         if n_len > b_len:
             for index in range(b_len, n_len):
-                n_name = n_dict['op_name'][n_start + index]
-                n_struct = n_dict[key][index]
-                if dump_mode == Const.MD5:
+                try:
+                    n_name = n_dict['op_name'][n_start + index]
+                    n_struct = n_dict[key][index]
+                    if dump_mode == Const.MD5:
+                        result_item = [
+                            n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
+                            n_struct[2], CompareConst.NAN, CompareConst.NAN
+                        ]
+                        result.append(result_item)
+                        continue
                     result_item = [
                         n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                        n_struct[2], CompareConst.NAN, CompareConst.NAN
+                        " ", " ", " ", " ", " "
                     ]
-                    result.append(result_item)
-                    continue
-                result_item = [
-                    n_name, CompareConst.NAN, n_struct[0], CompareConst.NAN, n_struct[1], CompareConst.NAN,
-                    " ", " ", " ", " ", " "
-                ]
-                summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
-                result_item.extend(summary_data)
-                summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
-                result_item.extend(summary_data)
+                    summary_data = n_dict.get(CompareConst.SUMMARY)[n_start + index]
+                    result_item.extend(summary_data)
+                    summary_data = [CompareConst.NAN for _ in range(len(n_dict.get(CompareConst.SUMMARY)[0]))]
+                    result_item.extend(summary_data)
+                except IndexError as e:
+                    err_msg = "index out of bounds error occurs, please check!\n" \
+                              f"n_dict is {n_dict}"
+                    logger.error(err_msg)
+                    raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
 
                 err_msg = ""
                 result_item.append(CompareConst.ACCURACY_CHECK_YES)
                 result_item.append(err_msg)
-
-                if has_stack and index == 0 and key == "input_struct":
-                    result_item.extend(npu_stack_info)
-                else:
-                    result_item.append(CompareConst.NONE)
+                result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
                 if dump_mode == Const.ALL:
-                    result_item.append(npu_data_name[n_start + index])
+                    result_item.append(safe_get_value(npu_data_name, n_start + index, "npu_data_name"))
 
                 result.append(result_item)
 
@@ -382,12 +379,20 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
     for index, n_name in enumerate(n_dict["op_name"]):
         name_ele_list = n_name.split(Const.SEP)
         if Const.INPUT in name_ele_list or Const.KWARGS in name_ele_list:
-            n_struct = n_dict[CompareConst.INPUT_STRUCT][index]
+            n_struct = safe_get_value(n_dict, index, "n_dict", key=CompareConst.INPUT_STRUCT)
         if Const.OUTPUT in name_ele_list:
-            n_struct = n_dict[CompareConst.OUTPUT_STRUCT][index_out]
+            n_struct = safe_get_value(n_dict, index_out, "n_dict", key=CompareConst.OUTPUT_STRUCT)
             index_out += 1
 
-        result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
+        try:
+            result_item = [n_name, bench_name, n_struct[0], bench_type, n_struct[1], bench_shape]
+        except IndexError as e:
+            err_msg = "index out of bounds error occurs, please check!\n" \
+                      f"op_name of n_dict is {n_dict['op_name']}\n" \
+                      f"input_struct of n_dict is {n_dict[CompareConst.INPUT_STRUCT]}\n" \
+                      f"output_struct of n_dict is {n_dict[CompareConst.OUTPUT_STRUCT]}"
+            logger.error(err_msg)
+            raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from e
         if dump_mode == Const.MD5:
             result_item.extend([CompareConst.N_A] * 3)
             if npu_stack_info and index == 0:
@@ -400,7 +405,7 @@ def get_un_match_accuracy(result, n_dict, dump_mode):
             result_item.extend([CompareConst.N_A] * 8)
         else:
             result_item.extend([CompareConst.N_A] * 5)
-        npu_summary_data = n_dict.get("summary")[index]
+        npu_summary_data = safe_get_value(n_dict, index, "n_dict", key=CompareConst.SUMMARY)
         result_item.extend(npu_summary_data)
         bench_summary_data = [CompareConst.N_A] * 4
         result_item.extend(bench_summary_data)
@@ -449,7 +454,7 @@ def merge_tensor(tensor_list, dump_mode):
 
         if dump_mode == Const.ALL:
             op_dict["data_name"].append(tensor['data_name'])
-            data_name = op_dict["data_name"][-1].rsplit(Const.SEP, 1)[0]
+            data_name = safe_get_value(op_dict, -1, "op_dict", key="data_name").rsplit(Const.SEP, 1)[0]
             if data_name != "-1":
                 op_dict["op_name"][-1] = data_name
 

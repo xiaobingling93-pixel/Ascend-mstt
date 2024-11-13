@@ -35,7 +35,6 @@ def main(rank, world_size):
     cc_context = monitor.cc_context
     try:
         for step in range(steps):
-            print('step: ', step)
             test_all_gather(cc_context['all_gather'], rank, world_size, async_op)
             test_all_reduce(cc_context['all_reduce'], rank, world_size, async_op)
             optimizer.step()

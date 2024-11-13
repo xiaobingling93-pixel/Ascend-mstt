@@ -18,7 +18,7 @@ import re
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
@@ -65,6 +65,7 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(self.tls_path, isdir=True)
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
+            check_crt_valid(os.path.join(self.tls_path, "client.crt"))
 
         if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")
@@ -92,7 +93,7 @@ class OverflowCheckConfig(BaseConfig):
         self.check_overflow_config()
 
     def check_overflow_config(self):
-        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
+        if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")

@@ -1,4 +1,5 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,16 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
-import os
 import copy
 import functools
+import os
 from collections import defaultdict
 
 import mindspore as ms
-from mindspore.common.tensor import Tensor
-from mindspore import ops
 from mindspore import nn
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
@@ -30,20 +28,18 @@ else:
     pijit_label = True
 
 
-from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.scope import BaseScope
-from msprobe.mindspore.common.utils import get_rank_if_initialized
+from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
-from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const, print_tools_ends_info
-from msprobe.core.common.exceptions import DistributedNotInitializedError
-from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
-    ModuleBackwardInputs, ModuleBackwardOutputs
-from msprobe.core.common.exceptions import MsprobeException
-from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs
+from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.utils import get_rank_if_initialized
+from msprobe.mindspore.dump.hook_cell.api_registry import api_register
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
+from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 
 
@@ -124,7 +120,6 @@ class Service:
             return backward_hook(cell, grad_input, grad_output)
 
         return wrap_forward_hook, wrap_backward_hook
-
 
     def update_primitive_counters(self, primitive_name):
         if primitive_name not in self.primitive_counters:

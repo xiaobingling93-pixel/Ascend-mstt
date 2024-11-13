@@ -171,7 +171,8 @@ class Const:
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
-    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
     FLOAT16 = "Float16"
@@ -230,6 +231,7 @@ class CompareConst:
     RESULT = "Result"
     MAGNITUDE = 0.5
     OP_NAME = "op_name"
+    STRUCT = "struct"
     INPUT_STRUCT = "input_struct"
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
@@ -364,7 +366,7 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 1 * 1024 * 1024
+    MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -453,8 +455,23 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
+    OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
+    RULE_NAME = ['AnomalyTurbulence']
+
+    VPP_SEP = ":"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
+
+    ANOMALY_JSON = "anomaly.json"
+    ANALYSE_JSON = "anomaly_analyse.json"
+    TENSORBOARD = "tensorboard"
+    CSV = "csv"
+    API = "api"
