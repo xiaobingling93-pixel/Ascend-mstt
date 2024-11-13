@@ -445,8 +445,10 @@ class Comparator:
             bench_op_name = result_df.iloc[i, 1]
             if is_print_compare_log:
                 logger.info("start compare: {}".format(npu_op_name))
+
             cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
                 self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
+
             if is_print_compare_log:
                 logger.info(
                     "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \
