@@ -38,7 +38,6 @@ from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.common.utils import get_rank_if_initialized
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
-from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
 
@@ -146,8 +145,6 @@ class Service:
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-        HOOKCell.cell_count = defaultdict(int)
-        CellProcessor.reset_cell_stats()
         self.primitive_hook_service.primitive_counters.clear()
         self.data_collector.data_writer.reset_cache()
         JitDump.jit_count = defaultdict(int)

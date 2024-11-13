@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Optional
 
 import mindspore as ms
-from mindspore import Tensor
+from mindspore import Tensor, ops
 
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.free_benchmark.common.config import Config
@@ -42,6 +42,14 @@ class Tools:
         if Config.pert_type == FreeBenchmarkConst.NO_CHANGE:
             return FreeBenchmarkConst.NO_CHANGE_ERROR_THRESHOLD
         return FreeBenchmarkConst.ERROR_THRESHOLD.get(dtype, FreeBenchmarkConst.ERROR_THRESHOLD.get(ms.float32))
+
+    @staticmethod
+    def get_grad_out(outputs):
+        if isinstance(outputs, Tensor):
+            return ops.ones_like(outputs)
+        if isinstance(outputs, (tuple, list)):
+            return type(outputs)([Tools.get_grad_out(v) for v in outputs])
+        return outputs
 
 
 @dataclass
@@ -73,10 +81,8 @@ def make_unequal_row(
     if isinstance(ratio, float):
         row.max_rel = ratio - 1
     original_tensor = params.original_result
-    fuzzed_tensor = params.fuzzed_result
     if index is not None:
         original_tensor = original_tensor[index]
-        fuzzed_tensor = fuzzed_tensor[index]
         row.output_index = index
     if isinstance(original_tensor, Tensor):
         row.dtype = original_tensor.dtype

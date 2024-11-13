@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -27,6 +27,5 @@ class HandlerParams:
     original_result: Optional[Any] = None
     fuzzed_result: Optional[Any] = None
     is_consistent: Optional[bool] = True
-    save_flag: Optional[bool] = True
     fuzzed_value: Optional[Any] = None
     original_func: Optional[Callable] = None

@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 from unittest.mock import patch
@@ -32,7 +30,7 @@ class TestAddNoisePerturbation(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.add_noise_pert = AddNoisePerturbation("mindspore.ops.add")
+        cls.add_noise_pert = AddNoisePerturbation("Mint.add.0")
 
     def test__get_noise(self):
         input = Tensor([1.0], dtype=ms.float32)
@@ -88,7 +86,7 @@ class TestAddNoisePerturbation(unittest.TestCase):
         params.args = input
         params.index = 0
         ret = self.add_noise_pert.handle(params)
-        mock_warning.assert_called_with("mindspore.ops.add can not add noise.")
+        mock_warning.assert_called_with("Mint.add.0 can not add noise.")
         self.assertFalse(self.add_noise_pert.is_fuzzed)
         self.assertFalse(ret)
 

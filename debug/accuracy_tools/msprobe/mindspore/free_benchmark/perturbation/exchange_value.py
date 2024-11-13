@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -41,7 +41,7 @@ class ExchangeValuePerturbation(BasePerturbation):
         """
         params.fuzzed_value = self.exchange_value(params.args[params.index])
         if not self.is_fuzzed:
-            logger.warning(f"{self.api_name} can not exchange value.")
+            logger.warning(f"{self.api_name_with_id} can not exchange value.")
             return False
         return self.get_fuzzed_result(params)
 
