@@ -42,7 +42,10 @@ def extract_json(dirname, stack_json=False):
 
     # Provide robustness on invalid directory inputs
     if not json_path:
-        logger.error(f'No file is found in dump dir {dirname}. ')
+        if stack_json:
+            logger.error(f'stack.json is not found in dump dir {dirname}.')
+        else:
+            logger.error(f'dump.json is not found in dump dir {dirname}.')
         raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
     return json_path
 
@@ -461,6 +464,13 @@ def merge_tensor(tensor_list, dump_mode):
     if not op_dict[CompareConst.KWARGS_STRUCT]:
         del op_dict[CompareConst.KWARGS_STRUCT]
     return op_dict if op_dict["op_name"] else {}
+
+
+def print_compare_ends_info():
+    total_len = len(CompareConst.COMPARE_ENDS_SUCCESSFULLY) + Const.FILL_CHAR_NUMS
+    logger.info('*' * total_len)
+    logger.info(f"*{CompareConst.COMPARE_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
+    logger.info('*' * total_len)
 
 
 def _compare_parser(parser):
