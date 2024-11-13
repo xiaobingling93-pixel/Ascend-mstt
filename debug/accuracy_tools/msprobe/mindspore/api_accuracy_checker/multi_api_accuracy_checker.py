@@ -72,7 +72,6 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
                 # 执行前向和后向检查
                 try:
-                    print(f"Executing forward check for {api_name_str}")
                     forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
                     forward_output_list = self.run_and_compare_helper(api_info, api_name_str,
                                                                       forward_inputs_aggregation, Const.FORWARD)
@@ -82,7 +81,6 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
                 if api_info.check_backward_info():
                     try:
-                        print(f"Executing backward check for {api_name_str}")
                         backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
                         backward_output_list = self.run_and_compare_helper(api_info, api_name_str,
                                                                            backward_inputs_aggregation, Const.BACKWARD)
