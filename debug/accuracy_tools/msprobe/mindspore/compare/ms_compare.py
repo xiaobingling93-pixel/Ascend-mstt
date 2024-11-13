@@ -108,18 +108,18 @@ class MSComparator(Comparator):
                                'md5_y': CompareConst.BENCH_MD5,
                                'data_name_x': CompareConst.DATA_NAME,
                                'stack_info_x': CompareConst.STACK}, inplace=True)
-        result[CompareConst.NPU_MAX] = result['summary_x'].apply(lambda row: row[0])
-        result[CompareConst.NPU_MIN] = result['summary_x'].apply(lambda row: row[1])
-        result[CompareConst.NPU_MEAN] = result['summary_x'].apply(lambda row: row[2])
-        result[CompareConst.NPU_NORM] = result['summary_x'].apply(lambda row: row[3])
-        result[CompareConst.BENCH_MAX] = result['summary_y'].apply(
-            lambda row: row[0] if row != CompareConst.N_A else row)
-        result[CompareConst.BENCH_MIN] = result['summary_y'].apply(
-            lambda row: row[1] if row != CompareConst.N_A else row)
-        result[CompareConst.BENCH_MEAN] = result['summary_y'].apply(
-            lambda row: row[2] if row != CompareConst.N_A else row)
-        result[CompareConst.BENCH_NORM] = result['summary_y'].apply(
-            lambda row: row[3] if row != CompareConst.N_A else row)
+        
+        def set_summary(row):
+            npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
+            for i, info in enumerate(npu_summary):
+                row[info] = row['summary_x'][i]
+            is_na = row['summary_y'] == CompareConst.N_A
+            bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM]
+            for i, info in enumerate(bench_summary):
+                row[info] = row['summary_y'] if is_na else row['summary_y'][i]
+            return row
+        
+        result = result.apply(set_summary, axis=1)
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
@@ -140,6 +140,8 @@ class MSComparator(Comparator):
         return mapping_dict
 
     def process_cell_mapping(self, npu_op_name):
+        if not npu_op_name:
+            return CompareConst.N_A
         npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
             # get cell name & class name from op_name
@@ -203,16 +205,16 @@ class MSComparator(Comparator):
         npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
         if self.cell_mapping:
-            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_cell_mapping(row['op_name']), axis=1)
+            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), axis=1)
         elif self.api_mapping:
-            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_internal_api_mapping(row['op_name']), axis=1)
+            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
             if isinstance(self.api_mapping, str):
                 self.modify_compare_data_with_user_mapping(npu_df, bench_df)
         else:
-            npu_df['compare_key'] = npu_df['op_name']
+            npu_df['compare_key'] = npu_df[CompareConst.OP_NAME]
         npu_df['compare_shape'] = npu_df[Const.SHAPE].apply(str)
         bench_df['compare_shape'] = bench_df[Const.SHAPE].apply(str)
-        bench_df['compare_key'] = bench_df['op_name']
+        bench_df['compare_key'] = bench_df[CompareConst.OP_NAME]
         match_result = pd.merge(npu_df, bench_df, on=['compare_key', 'compare_shape'], how='outer')
         match_result = match_result[self.gen_compare_condition(match_result)].fillna(CompareConst.N_A)
         return MSComparator.make_result_table(match_result, stack_mode, dump_mode)
@@ -220,7 +222,7 @@ class MSComparator(Comparator):
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
         def get_api_indices_dict(op_name_df):
             api_indices_dict = {}
-            for op_index, name in enumerate(op_name_df['op_name']):
+            for op_index, name in enumerate(op_name_df[CompareConst.OP_NAME]):
                 api = self.get_api_name(name.split(Const.SEP))
                 if api in api_indices_dict:
                     api_indices_dict[api].append(op_index)
@@ -241,7 +243,7 @@ class MSComparator(Comparator):
             if ms_api not in ms_api_indices_dict or pt_api not in pt_api_indices_dict:
                 continue
             for index in ms_api_indices_dict.get(ms_api):
-                op_name = npu_df.loc[index, 'op_name'].replace(ms_api, pt_api, 1)
+                op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
                 is_abandoned = True
                 if '.input.' in op_name:
                     for i, prefix in enumerate(mapping_dict.get('ms_args')):
@@ -277,7 +279,7 @@ class MSComparator(Comparator):
 
     def gen_data_df(self, data_json, stack_json, dump_mode):
         result = {
-            'op_name': [],
+            CompareConst.OP_NAME: [],
             Const.DTYPE: [],
             Const.SHAPE: [],
             Const.SUMMARY: [],
@@ -292,8 +294,8 @@ class MSComparator(Comparator):
             merge_list = self.gen_merge_list(data_json, data, stack_json, dump_mode)
             if not merge_list:
                 continue
-            for op_name in merge_list['op_name']:
-                result['op_name'].append(op_name)
+            for op_name in merge_list[CompareConst.OP_NAME]:
+                result[CompareConst.OP_NAME].append(op_name)
                 if Const.SEP + Const.INPUT + Const.SEP in op_name:
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
                 else:

@@ -121,8 +121,8 @@ class Comparator:
         return merge_list
     
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        npu_op_name = npu_dict["op_name"]
-        bench_op_name = bench_dict["op_name"]
+        npu_op_name = npu_dict[CompareConst.OP_NAME]
+        bench_op_name = bench_dict[CompareConst.OP_NAME]
         graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
                                       safe_get_value(bench_op_name, 0, "bench_op_name"))
         
@@ -236,7 +236,7 @@ class Comparator:
             merge_list = self.gen_merge_list(json_data, op_name, stack_json_data, dump_mode)
             if merge_list:
                 input_index, output_index = 0, 0
-                for index, input_or_output in enumerate(merge_list['op_name']):
+                for index, input_or_output in enumerate(merge_list[CompareConst.OP_NAME]):
                     input_or_output_list = input_or_output.split(Const.SEP)
                     data_name = merge_list.get('data_name')
                     data_name = data_name[index] if data_name else None
