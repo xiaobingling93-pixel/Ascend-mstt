@@ -76,26 +76,35 @@ class ModeAdapter:
 
     @staticmethod
     def _add_summary_compare_data(node_data, compare_data_dict):
-        max_relative_err = 0
-        for key, value in node_data.items():
-            if not isinstance(value, dict):
+        max_relative_err = GraphConst.MIN_INDEX_KEY
+        # data_info: {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [2, 536320], 'Max': 9.66036224, ...}
+        for key, data_info in node_data.items():
+            if not isinstance(data_info, dict):
                 continue
             compare_data = compare_data_dict.get(key)
             if compare_data:
+                dtype = data_info.get(Const.DTYPE)
                 # 对应比对结果csv的列
                 key_list = GraphConst.SUMMARY_INDEX_LIST
                 headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in key_list]
-                ModeAdapter._match_data(value, compare_data, key_list, id_list)
-                # 相对误差大于0.5疑似有精度问题，小值域1e-3不比较相对误差
+                ModeAdapter._match_data(data_info, compare_data, key_list, id_list)
                 for index, item in enumerate(key_list[4:]):
-                    value_diff = value.get(key_list[index])
-                    if isinstance(value_diff, float) and value_diff != 0 and abs(value_diff) < GraphConst.SMALL_VALUE:
-                        value[item] = ToolTip.SMALL_VALUE_TIP.format(key_list[index])
-                        continue
-                    relative_err = str2float(value.get(item))
+                    value = data_info.get(GraphConst.VALUE_INDEX_LIST[index])
+                    value_diff = data_info.get(key_list[index])
+                    relative_err = str2float(data_info.get(item))
+                    if isinstance(value, float) and dtype in GraphConst.SMALL_VALUES.keys():
+                        small_value = GraphConst.SMALL_VALUES.get(dtype)
+                        # 小值域
+                        if abs(value) <= small_value:
+                            data_info[item] = ToolTip.SMALL_VALUE_TIP.format(data_info.get(item),
+                                                                             GraphConst.VALUE_INDEX_LIST[index],
+                                                                             small_value)
+                            relative_err = GraphConst.MIN_INDEX_KEY \
+                                if abs(value_diff) <= GraphConst.SMALL_VALUES_ABS_ERROR.get(dtype) \
+                                else GraphConst.MAX_INDEX_KEY
                     max_relative_err = max(max_relative_err, relative_err)
-                node_data[key] = value
+                node_data[key] = data_info
         max_relative_err = 1 if max_relative_err > 1 else max_relative_err
         return max_relative_err
 
@@ -107,35 +116,35 @@ class ModeAdapter:
         if len(key_list) != len(id_list):
             return
         for id, key in zip(id_list, key_list):
-            data = compare_data[id]
-            if data is not None and 'nan' not in str(data) and str(data) != ' ':
-                data_dict[key] = data
-            else:
-                data_dict[key] = 'null'
+            data_dict[key] = compare_data[id]
 
-    def parse_result(self, node, compare_data_dict):
+    def parse_result(self, node, compare_data_dict_list):
         """
         根据结果返回数据，分别是precision_index，和附加数据
         """
+        if len(compare_data_dict_list) < 2:
+            raise ValueError("compare_data_dict_list must contain at least two items.")
         other_dict = {}
         if self.compare_mode == GraphConst.MD5_COMPARE:
-            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict[0])
-            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict[1])
+            precision_index_in = ModeAdapter._add_md5_compare_data(node.input_data, compare_data_dict_list[0])
+            precision_index_out = ModeAdapter._add_md5_compare_data(node.output_data, compare_data_dict_list[1])
             # 所有输入输出md5对比通过，这个节点才算通过
             precision_index = min(precision_index_in, precision_index_out)
-            other_result = CompareConst.PASS if precision_index == 1 else CompareConst.DIFF
+            other_result = CompareConst.PASS if precision_index == GraphConst.MAX_INDEX_KEY else CompareConst.DIFF
             other_dict[CompareConst.RESULT] = other_result
         elif self.compare_mode == GraphConst.SUMMARY_COMPARE:
-            precision_index_in = ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict[0])
-            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict[1])
-            precision_index = max(precision_index_in, precision_index_out)
+            ModeAdapter._add_summary_compare_data(node.input_data, compare_data_dict_list[0])
+            precision_index_out = ModeAdapter._add_summary_compare_data(node.output_data, compare_data_dict_list[1])
+            precision_index = precision_index_out
         else:
-            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict[0])
-            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict[0])
+            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
+            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
             if min_thousandth_in is not None and min_thousandth_out is not None:
-                change_percentage = abs(min_thousandth_in - min_thousandth_out)
+                change_percentage = min_thousandth_in - min_thousandth_out
             else:
-                change_percentage = 0
+                change_percentage = GraphConst.MIN_INDEX_KEY
+            change_percentage = GraphConst.MIN_INDEX_KEY if change_percentage < GraphConst.MIN_INDEX_KEY \
+                else change_percentage
             precision_index = GraphConst.MAX_INDEX_KEY \
                 if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
         return precision_index, other_dict
