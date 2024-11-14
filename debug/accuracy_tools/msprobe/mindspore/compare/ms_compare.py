@@ -68,14 +68,14 @@ class MSComparator(Comparator):
             if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [ms_val, pt_val]):
                 diff = ms_val - pt_val
                 if math.isnan(diff):
-                    row[diff_name] = CompareConst.N_A
-                    row[rel_err_name] = CompareConst.N_A
+                    row[diff_name] = CompareConst.NAN
+                    row[rel_err_name] = CompareConst.NAN
                 else:
                     row[diff_name] = diff
                     if pt_val != 0:
                         row[rel_err_name] = str(abs((diff / pt_val) * 100)) + '%'
                     else:
-                        row[rel_err_name] = CompareConst.N_A
+                        row[rel_err_name] = CompareConst.NAN
                     magnitude_diff = abs(diff) / (max(abs(ms_val), abs(pt_val)) + CompareConst.EPSILON)
                     need_warning = magnitude_diff > CompareConst.MAGNITUDE
             else:
