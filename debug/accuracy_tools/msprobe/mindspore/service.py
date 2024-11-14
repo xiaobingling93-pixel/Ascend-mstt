@@ -78,6 +78,8 @@ class Service:
     def build_hook(self, target_type, name):
         def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
+                if hasattr(cell, 'input_kwargs'):
+                    del cell.input_kwargs
                 return None
 
             if target_type == BaseScope.Module_Type_Module:
@@ -91,7 +93,7 @@ class Service:
             self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
-            if target_type == BaseScope.Module_Type_API:
+            if hasattr(cell, 'input_kwargs'):
                 del cell.input_kwargs
             return output
 

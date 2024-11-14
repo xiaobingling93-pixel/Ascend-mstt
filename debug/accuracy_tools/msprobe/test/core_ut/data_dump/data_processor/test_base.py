@@ -148,13 +148,28 @@ class TestBaseDataProcessor(unittest.TestCase):
 
     def test_is_dump_for_data_mode(self):
         self.config.data_mode = ["all"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["forward"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["backward"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertFalse(self.processor.is_dump_for_data_mode("forward", "input"))
+
+        self.config.data_mode = ["forward", "input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
+        self.assertFalse(self.processor.is_dump_for_data_mode("forward", "output"))
+
+        self.config.data_mode = ["forward", "input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
+        self.assertFalse(self.processor.is_dump_for_data_mode("backward", "input"))
 
     @patch.object(BaseDataProcessor, 'analyze_element')
     def test_analyze_forward(self, mock_analyze_element):
