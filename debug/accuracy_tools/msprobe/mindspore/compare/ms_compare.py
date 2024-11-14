@@ -85,7 +85,7 @@ class MSComparator(Comparator):
             pt_val = result_df['Bench ' + data_type]
             diff_name = data_type.capitalize() + ' diff'
             rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
-            condition_na = result_df[~(type_check(ms_val) | type_check(pt_val))]
+            condition_na = ~(type_check(ms_val) | type_check(pt_val))
             result_df.loc[condition_na, [diff_name, rel_err_name]] = CompareConst.N_A
             result_df.loc[~(condition_no_bench | condition_na), diff_name] = get_number(ms_val) - get_number(pt_val)
             condition_na_diff = ~condition_na & result_df[diff_name].isna()
