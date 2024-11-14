@@ -16,6 +16,7 @@
 import csv
 import fcntl
 import os
+import stat
 import json
 import re
 import shutil
@@ -69,6 +70,8 @@ class FileChecker:
         check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
+        if self.path_type == FileCheckConst.FILE:
+            check_dirpath_before_read(self.file_path)
         return self.file_path
 
     def check_path_ability(self):
@@ -124,6 +127,7 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
+            check_dirpath_before_read(self.file_path)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
@@ -236,6 +240,15 @@ def check_path_type(file_path, file_type):
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
+def check_others_writable(directory):
+    dir_stat = os.stat(directory)
+    is_writable = (
+        bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
+        bool(dir_stat.st_mode & stat.S_IWOTH)     # 其他用户可写
+    )
+    return is_writable
+
+
 def make_dir(dir_path):
     check_path_before_create(dir_path)
     dir_path = os.path.realpath(dir_path)
@@ -278,6 +291,17 @@ def check_path_before_create(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
 
+
+def check_dirpath_before_read(path):
+    path = os.path.realpath(path)
+    dirpath = os.path.dirname(path)
+    if check_others_writable(dirpath):
+        logger.warning(f"The directory is writable by others: {dirpath}.")
+    try:
+        check_path_owner_consistent(dirpath)
+    except FileCheckException:
+        logger.warning(f"The directory {dirpath} is not yours.")
+    
 
 def check_file_or_directory_path(path, isdir=False):
     """
