@@ -18,6 +18,8 @@ import random
 
 import mindspore as ms
 
+from mindspore import ops
+from mindspore.mint import nn
 from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import path_len_exceeds_limit, check_path_exists, save_npy
 from msprobe.core.common.log import logger
@@ -74,13 +76,15 @@ def list_lowest_level_directories(root_dir):
     return lowest_level_dirs
 
 
-def seed_all(seed=1234, mode=False):
+def seed_all(seed=1234, mode=False, rm_dropout=True):
     check_seed_all(seed, mode)
     os.environ['PYTHONHASHSEED'] = str(seed)
     ms.set_seed(seed)
     random.seed(seed)
     ms.set_context(deterministic="ON" if mode else "OFF")
     os.environ['HCCL_DETERMINISTIC'] = str(mode)
+    if rm_dropout:
+        remove_dropout()
 
 
 class MsprobeStep(ms.train.Callback):
@@ -95,3 +99,35 @@ class MsprobeStep(ms.train.Callback):
     def on_train_step_end(self, run_context):
         self.debugger.stop()
         self.debugger.step()
+
+
+class Dropout(ops.Dropout):
+    def __init__(self, keep_prob=0.5, Seed0=0, Seed1=1):
+        super().__init__(1., Seed0, Seed1)
+
+
+class Dropout2D(ops.Dropout2D):
+    def __init__(self, keep_prob=0.5):
+        super().__init__(1.)
+
+
+class Dropout3D(ops.Dropout3D):
+    def __init__(self, keep_prob=0.5):
+        super().__init__(1.)
+
+
+class DropoutExt(nn.Dropout):
+    def __init__(self, keep_prob=0.5):
+        super().__init__(1.)
+
+
+def dropout_ext(input, p=0.5, training=True):
+    return input
+
+
+def remove_dropout():
+    ops.Dropout = Dropout
+    ops.Dropout2D = Dropout2D
+    ops.Dropout3D = Dropout3D
+    nn.Dropout = DropoutExt
+    nn.functional.dropout = dropout_ext
