@@ -282,7 +282,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             ws.cell(row=i + 2, column=j).fill = red_fill
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i, column=j).fill = yellow_fill
+            ws.cell(row=i + 2, column=j).fill = yellow_fill
     logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
 
@@ -293,7 +293,8 @@ def update_highlight_err_msg(result_df, highlight_dict):
 
     if CompareConst.NPU_MD5 in result_df.columns:
         return
-    err_msg = result_df.get('Err_message')
+
+    err_msg = result_df.get(CompareConst.ERROR_MESSAGE)
     red_lines_num_set = highlight_dict.get('red_rows')
 
     for color in ['red', 'yellow']:
@@ -312,7 +313,7 @@ def update_highlight_err_msg(result_df, highlight_dict):
             if color == 'red':
                 red_lines_num_set.add(line_index)
 
-    result_df['Err_message'] = err_msg
+    result_df[CompareConst.ERROR_MESSAGE] = err_msg
 
 
 def csv_value_is_valid(value: str) -> bool:
