@@ -64,18 +64,23 @@ class MSComparator(Comparator):
             need_warning = False
             ms_val, pt_val = row['NPU ' + data_type], row['Bench ' + data_type]
             if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [ms_val, pt_val]):
+                diff_name = data_type.capitalize() + ' diff'
+                rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
                 diff = ms_val - pt_val
                 if math.isnan(diff):
-                    row[data_type.capitalize() + ' diff'] = CompareConst.NAN
-                    row[data_type.capitalize() + 'RelativeErr'] = CompareConst.NAN
+                    row[diff_name] = CompareConst.N_A
+                    row[rel_err_name] = CompareConst.N_A
                 else:
-                    row[data_type.capitalize() + ' diff'] = diff
+                    row[diff_name] = diff
                     if pt_val != 0:
-                        row[data_type.capitalize() + 'RelativeErr'] = str(abs((diff / pt_val) * 100)) + '%'
+                        row[rel_err_name] = str(abs((diff / pt_val) * 100)) + '%'
                     else:
-                        row[data_type.capitalize() + 'RelativeErr'] = CompareConst.N_A
+                        row[rel_err_name] = CompareConst.N_A
                     magnitude_diff = abs(diff) / (max(abs(ms_val), abs(pt_val)) + CompareConst.EPSILON)
                     need_warning = magnitude_diff > CompareConst.MAGNITUDE
+            else:
+                row[diff_name] = CompareConst.N_A
+                row[rel_err_name] = CompareConst.N_A
             return need_warning
 
         if dump_mode == Const.MD5:
@@ -115,7 +120,8 @@ class MSComparator(Comparator):
                                'stack_info_x': CompareConst.STACK}, inplace=True)
         
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM]
+        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, 
+                         CompareConst.BENCH_NORM]
         def set_summary(summary):
             return summary if summary != CompareConst.N_A else [CompareConst.N_A] * 4
         
@@ -206,15 +212,19 @@ class MSComparator(Comparator):
         npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
         if self.cell_mapping:
-            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), axis=1)
+            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), 
+                                                 axis=1)
         elif self.api_mapping:
-            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
+            npu_df['compare_key'] = npu_df.apply(
+                lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
             if isinstance(self.api_mapping, str):
                 self.modify_compare_data_with_user_mapping(npu_df, bench_df)
         else:
             npu_df['compare_key'] = npu_df[CompareConst.OP_NAME]
-        npu_df['compare_shape'] = npu_df[Const.SHAPE].apply(str)
-        bench_df['compare_shape'] = bench_df[Const.SHAPE].apply(str)
+        npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        npu_df['compare_shape'] = npu_df[Const.SHAPE]
+        bench_df['compare_shape'] = bench_df[Const.SHAPE]
         bench_df['compare_key'] = bench_df[CompareConst.OP_NAME]
         match_result = pd.merge(npu_df, bench_df, on=['compare_key', 'compare_shape'], how='outer')
         match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
