@@ -123,7 +123,9 @@ class MSComparator(Comparator):
         bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, 
                          CompareConst.BENCH_NORM]
         def set_summary(summary):
-            return summary if summary != CompareConst.N_A else [CompareConst.N_A] * 4
+            if summary == CompareConst.N_A:
+                return [CompareConst.N_A] * 4
+            return [CompareConst.N_A if i is None else i for i in summary]
         
         result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
         result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
