@@ -177,7 +177,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value_1 = CompareConst.READ_NONE
         op = GetCosineSimilarity()
         a_1, b_1 = op.apply(n_value_1, b_value, error_flag)
-        self.assertEqual(a_1, CompareConst.NONE)
+        self.assertEqual(a_1, CompareConst.UNSUPPORTED)
         self.assertEqual(b_1, '')
 
         n_value_2 = CompareConst.NONE
@@ -236,7 +236,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value_1 = CompareConst.READ_NONE
         op = GetMaxAbsErr()
         a_1, b_1 = op.apply(n_value_1, b_value, error_flag)
-        self.assertEqual(a_1, CompareConst.NONE)
+        self.assertEqual(a_1, CompareConst.UNSUPPORTED)
         self.assertEqual(b_1, '')
 
         n_value_2 = CompareConst.NONE
@@ -277,7 +277,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value_1 = CompareConst.READ_NONE
         op = GetMaxRelativeErr()
         a_1, b_1 = op.apply(n_value_1, b_value, error_flag)
-        self.assertEqual(a_1, CompareConst.NONE)
+        self.assertEqual(a_1, CompareConst.UNSUPPORTED)
         self.assertEqual(b_1, '')
 
         n_value_2 = CompareConst.NONE
@@ -312,7 +312,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value_1 = CompareConst.READ_NONE
         op = GetThousandErrRatio()
         a_1, b_1 = op.apply(n_value_1, b_value, error_flag)
-        self.assertEqual(a_1, CompareConst.NONE)
+        self.assertEqual(a_1, CompareConst.UNSUPPORTED)
         self.assertEqual(b_1, '')
 
         n_value_2 = CompareConst.NONE
@@ -347,7 +347,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value_1 = CompareConst.READ_NONE
         op = GetFiveThousandErrRatio()
         a_1, b_1 = op.apply(n_value_1, b_value, error_flag)
-        self.assertEqual(a_1, CompareConst.NONE)
+        self.assertEqual(a_1, CompareConst.UNSUPPORTED)
         self.assertEqual(b_1, '')
 
         n_value_2 = CompareConst.NONE

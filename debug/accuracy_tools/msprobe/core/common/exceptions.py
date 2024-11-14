@@ -58,7 +58,7 @@ class ParseJsonException(CodedException):
     InvalidDumpJson = 1
     err_strs = {
         UnexpectedNameStruct: "[msprobe] Unexpected name in json: ",
-        InvalidDumpJson: "[msprobe] json格式不正确: ",
+        InvalidDumpJson: "[msprobe] Invalid dump.json format: ",
     }
 
 

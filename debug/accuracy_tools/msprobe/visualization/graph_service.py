@@ -55,8 +55,9 @@ def _compare_graph(input_param, args, mapping_file=None):
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     create_directory(args.output_path)
     output_path = os.path.join(args.output_path, f'compare_{current_time}.vis')
+    task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
-                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps)
+                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
     GraphBuilder.to_json(output_path, export_config)
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
