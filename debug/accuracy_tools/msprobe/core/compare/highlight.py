@@ -261,7 +261,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
             ws.cell(row=i + 2, column=j).fill = red_fill
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i, column=j).fill = yellow_fill
+            ws.cell(row=i + 2, column=j).fill = yellow_fill
     logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
 
