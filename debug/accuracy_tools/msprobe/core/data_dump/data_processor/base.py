@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from typing import Tuple, Dict, Optional, Any
 
 import numpy as np
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import convert_tuple, CompareException
@@ -101,6 +102,8 @@ class BaseDataProcessor:
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
+        if hasattr(config, "data_mode"):
+            self.allowed_data_mode = self._get_allowed_data_mode(config.data_mode)
 
     @property
     def data_path(self):
@@ -182,6 +185,18 @@ class BaseDataProcessor:
     def _analyze_numpy(value, numpy_type):
         return {"type": numpy_type, "value": value}
 
+    @staticmethod
+    def _get_allowed_data_mode(data_mode):
+        if Const.ALL in data_mode:
+            allowed_data_mode = [Const.FORWARD, Const.BACKWARD, Const.INPUT, Const.OUTPUT]
+        else:
+            allowed_data_mode = list(set(data_mode))
+            if Const.FORWARD not in allowed_data_mode and Const.BACKWARD not in allowed_data_mode:
+                allowed_data_mode += [Const.FORWARD, Const.BACKWARD]
+            if Const.INPUT not in allowed_data_mode and Const.OUTPUT not in allowed_data_mode:
+                allowed_data_mode += [Const.INPUT, Const.OUTPUT]
+        return allowed_data_mode
+
     @classmethod
     def get_special_types(cls):
         return cls.special_type
@@ -239,9 +254,7 @@ class BaseDataProcessor:
         Return:
             bool: True if the parameters are in data_mode or data_mode is all, False otherwise.
         """
-        return (Const.ALL in self.config.data_mode or
-                forward_backward in self.config.data_mode or
-                input_output in self.config.data_mode)
+        return forward_backward in self.allowed_data_mode and input_output in self.allowed_data_mode
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
