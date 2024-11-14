@@ -18,6 +18,8 @@ import os
 import re
 import pandas as pd
 
+from collections import defaultdict
+
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import (FileOpen, create_directory, load_json,
@@ -30,7 +32,21 @@ from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
 
+INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+COMPARE_KEY = 'compare_key'
+COMPARE_SHAPE = 'compare_shape'
+INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+
+
 class MSComparator(Comparator):
+    """
+    用于mindspore动态图同框架/跨框架精度比对，支持md5/summary/all模式。
+    cell_mapping: mindspore在cell级别(L0)dump数据和pytorch的module之间的映射关系；
+    api_mapping: mindspore在api级别(L1)dump数据和pytorch的api之间的映射关系；
+    data_mapping: mindspore的cell或api的入参/出参和pytorch之间的映射关系；
+    is_cross_framework: 是否跨框架。
+    """
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
@@ -57,7 +73,7 @@ class MSComparator(Comparator):
     def calc_accuracy(cls, row, dump_mode, header):
         if row[CompareConst.BENCH_NAME] == CompareConst.N_A:
             row = row[header].fillna(CompareConst.N_A)
-            row[CompareConst.ERROR_MESSAGE] = 'No bench data matched.'
+            row[CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
             return row
         
         def calc_summary_diff(data_type: str):
@@ -99,6 +115,25 @@ class MSComparator(Comparator):
             row[CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
             row[CompareConst.ERROR_MESSAGE] = ''
         return row[header]
+    
+    @classmethod
+    def calc_accuracy_new(cls, result_df, dump_mode, header):
+        condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
+        result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
+        result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
+        if dump_mode == Const.MD5:
+            condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
+            result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
+            result_df.loc[~(condition_md5_equal & condition_no_bench), CompareConst.RESULT] = CompareConst.DIFF
+        elif dump_mode == Const.SUMMARY:
+            pass
+        else:
+            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR, 
+                         CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
+                         CompareConst.ERROR_MESSAGE]
+            result_df.loc[~condition_no_bench, fill_cols] = ''
+            result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
+        return result_df[header]
 
     @classmethod
     def make_result_table(cls, result, stack_mode, dump_mode):
@@ -138,7 +173,7 @@ class MSComparator(Comparator):
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_path = os.path.join(cur_path, "ms_to_pt_api.yaml")
+        yaml_path = os.path.abspath(os.path.join(cur_path, INTERNAL_API_MAPPING_FILE))
         return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
@@ -149,13 +184,13 @@ class MSComparator(Comparator):
         return mapping_dict
 
     def process_cell_mapping(self, npu_op_name):
-        if not npu_op_name:
+        if not npu_op_name or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
             return CompareConst.N_A
         npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
             # get cell name & class name from op_name
             # Cell.fc1.Dense.forward.0.input.0
-            cell_name = npu_op_name.split(Const.SEP, 1)[-1].rsplit(Const.SEP, 4)[0]
+            cell_name = re.split(r'\.(?:for|back)ward\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
             if cell_name in self.cell_mapping_dict:
                 npu_op_name = npu_op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return npu_op_name
@@ -214,33 +249,30 @@ class MSComparator(Comparator):
         npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
         if self.cell_mapping:
-            npu_df['compare_key'] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), 
+            npu_df[COMPARE_KEY] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), 
                                                  axis=1)
         elif self.api_mapping:
-            npu_df['compare_key'] = npu_df.apply(
+            npu_df[COMPARE_KEY] = npu_df.apply(
                 lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
             if isinstance(self.api_mapping, str):
                 self.modify_compare_data_with_user_mapping(npu_df, bench_df)
         else:
-            npu_df['compare_key'] = npu_df[CompareConst.OP_NAME]
+            npu_df[COMPARE_KEY] = npu_df[CompareConst.OP_NAME]
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
-        npu_df['compare_shape'] = npu_df[Const.SHAPE]
-        bench_df['compare_shape'] = bench_df[Const.SHAPE]
-        bench_df['compare_key'] = bench_df[CompareConst.OP_NAME]
-        match_result = pd.merge(npu_df, bench_df, on=['compare_key', 'compare_shape'], how='outer')
+        npu_df[COMPARE_SHAPE] = npu_df[Const.SHAPE]
+        bench_df[COMPARE_SHAPE] = bench_df[Const.SHAPE]
+        bench_df[COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
+        match_result = pd.merge(npu_df, bench_df, on=[COMPARE_KEY, COMPARE_SHAPE], how='outer')
         match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
         return MSComparator.make_result_table(match_result, stack_mode, dump_mode)
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
         def get_api_indices_dict(op_name_df):
-            api_indices_dict = {}
+            api_indices_dict = defaultdict(list)
             for op_index, name in enumerate(op_name_df[CompareConst.OP_NAME]):
                 api = self.get_api_name(name.split(Const.SEP))
-                if api in api_indices_dict:
-                    api_indices_dict[api].append(op_index)
-                else:
-                    api_indices_dict[api] = [op_index]
+                api_indices_dict[api].append(op_index)
             return api_indices_dict
 
         ms_api_indices_dict = get_api_indices_dict(npu_df)
@@ -258,22 +290,22 @@ class MSComparator(Comparator):
             for index in ms_api_indices_dict.get(ms_api):
                 op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
                 is_abandoned = True
-                if '.input.' in op_name:
+                if INPUT_PATTERN in op_name:
                     for i, prefix in enumerate(mapping_dict.get('ms_args')):
-                        if op_name.split('.input.')[1].startswith(str(prefix)):
-                            npu_df.loc[index, 'compare_key'] = (
-                                op_name.replace('.input.' + str(prefix),
-                                                '.input.' + str(mapping_dict.get('pt_args')[i])))
+                        if op_name.split(INPUT_PATTERN)[1].startswith(str(prefix)):
+                            npu_df.loc[index, COMPARE_KEY] = (
+                                op_name.replace(INPUT_PATTERN + str(prefix),
+                                                INPUT_PATTERN + str(mapping_dict.get('pt_args')[i])))
                             is_abandoned = False
                 else:
                     for i, prefix in enumerate(mapping_dict.get('ms_output')):
-                        if op_name.split('.output.')[1].startswith(str(prefix)):
-                            npu_df.loc[index, 'compare_key'] = (
-                                op_name.replace('.output.' + str(prefix),
-                                                '.output.' + str(mapping_dict.get('pt_output')[i])))
+                        if op_name.split(OUTPUT_PATTERN)[1].startswith(str(prefix)):
+                            npu_df.loc[index, COMPARE_KEY] = (
+                                op_name.replace(OUTPUT_PATTERN + str(prefix),
+                                                OUTPUT_PATTERN + str(mapping_dict.get('pt_output')[i])))
                             is_abandoned = False
                 if is_abandoned:
-                    npu_df.loc[index, 'compare_key'] = op_name + 'abandoned'
+                    npu_df.loc[index, COMPARE_KEY] = op_name + 'abandoned'
 
     def gen_data_df(self, data_json, stack_json, dump_mode):
         result = {
@@ -294,7 +326,7 @@ class MSComparator(Comparator):
                 continue
             for op_name in merge_list[CompareConst.OP_NAME]:
                 result[CompareConst.OP_NAME].append(op_name)
-                if Const.SEP + Const.INPUT + Const.SEP in op_name:
+                if INPUT_PATTERN in op_name:
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
                 else:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
