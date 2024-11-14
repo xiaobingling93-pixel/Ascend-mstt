@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 import os
 import re
+
+import numpy as np
 import pandas as pd
 
 from collections import defaultdict
@@ -68,65 +69,46 @@ class MSComparator(Comparator):
         else:
             raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
                             f"{type(self.data_mapping)}")
-
-    @classmethod
-    def calc_accuracy(cls, row, dump_mode, header):
-        if row[CompareConst.BENCH_NAME] == CompareConst.N_A:
-            row = row[header].fillna(CompareConst.N_A)
-            row[CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
-            return row
-        
-        def calc_summary_diff(data_type: str):
-            need_warning = False
-            ms_val, pt_val = row['NPU ' + data_type], row['Bench ' + data_type]
-            diff_name = data_type.capitalize() + ' diff'
-            rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
-            if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [ms_val, pt_val]):
-                diff = ms_val - pt_val
-                if math.isnan(diff):
-                    row[diff_name] = CompareConst.NAN
-                    row[rel_err_name] = CompareConst.NAN
-                else:
-                    row[diff_name] = diff
-                    if pt_val != 0:
-                        row[rel_err_name] = str(abs((diff / pt_val) * 100)) + '%'
-                    else:
-                        row[rel_err_name] = CompareConst.NAN
-                    magnitude_diff = abs(diff) / (max(abs(ms_val), abs(pt_val)) + CompareConst.EPSILON)
-                    need_warning = magnitude_diff > CompareConst.MAGNITUDE
-            else:
-                row[diff_name] = CompareConst.N_A
-                row[rel_err_name] = CompareConst.N_A
-            return need_warning
-
-        if dump_mode == Const.MD5:
-            row[CompareConst.RESULT] = CompareConst.PASS if row[CompareConst.NPU_MD5] == row[
-                CompareConst.BENCH_MD5] else CompareConst.DIFF
-        elif dump_mode == Const.SUMMARY:
-            warning_flag = any([calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']])
-            row[CompareConst.RESULT] = CompareConst.WARNING if warning_flag else ""
-            row[CompareConst.ERROR_MESSAGE] = "Need double check api accuracy." if warning_flag else ""
-        else:
-            row[CompareConst.COSINE] = ''
-            row[CompareConst.MAX_ABS_ERR] = ''
-            row[CompareConst.MAX_RELATIVE_ERR] = ''
-            row[CompareConst.ONE_THOUSANDTH_ERR_RATIO] = ''
-            row[CompareConst.FIVE_THOUSANDTHS_ERR_RATIO] = ''
-            row[CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
-            row[CompareConst.ERROR_MESSAGE] = ''
-        return row[header]
     
     @classmethod
-    def calc_accuracy_new(cls, result_df, dump_mode, header):
+    def calc_accuracy(cls, result_df, dump_mode, header):
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
         result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
+
+        def calc_summary_diff(data_type: str):
+            def type_check(val):
+                return pd.to_numeric(val.astype(str), errors='coerce').fillna(False).astype(bool)
+            def get_number(val):
+                return pd.to_numeric(val.astype(str), errors='coerce').fillna(0)
+            ms_val = result_df['NPU ' + data_type]
+            pt_val = result_df['Bench ' + data_type]
+            diff_name = data_type.capitalize() + ' diff'
+            rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
+            condition_na = result_df[~(type_check(ms_val) | type_check(pt_val))]
+            result_df.loc[condition_na, [diff_name, rel_err_name]] = CompareConst.N_A
+            result_df.loc[~(condition_no_bench | condition_na), diff_name] = get_number(ms_val) - get_number(pt_val)
+            condition_na_diff = ~condition_na & result_df[diff_name].isna()
+            result_df.loc[~condition_no_bench & condition_na_diff, [diff_name, rel_err_name]] = CompareConst.NAN
+            condition_pt_zero = pt_val == 0
+            result_df.loc[~condition_no_bench & ~condition_na_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
+            condition_ref_err = ~(condition_no_bench | condition_na_diff | condition_pt_zero)
+            result_df.loc[condition_ref_err, rel_err_name] = result_df.loc[condition_ref_err, diff_name] / pt_val[condition_ref_err] * 100
+            result_df.loc[condition_ref_err, rel_err_name] = result_df.loc[condition_ref_err, rel_err_name].abs().astype(str) + '%'
+            magnitude = get_number(result_df[diff_name]).abs() / (
+                    pd.Series(np.maximum(get_number(ms_val), get_number(pt_val))).abs() + CompareConst.EPSILON)
+            return magnitude > CompareConst.MAGNITUDE
+
         if dump_mode == Const.MD5:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
             result_df.loc[~(condition_md5_equal & condition_no_bench), CompareConst.RESULT] = CompareConst.DIFF
         elif dump_mode == Const.SUMMARY:
-            pass
+            warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
+            warning_flag = pd.DataFrame(warning_list).all(axis=1)
+            result_df[[CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
+            result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
+            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
         else:
             fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR, 
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
@@ -168,8 +150,7 @@ class MSComparator(Comparator):
         for h in header:
             if h in result.columns:
                 result_df[h] = result[h]
-        result_df = result_df.apply(lambda row: cls.calc_accuracy(row, dump_mode, header), axis=1)
-        return result_df
+        return cls.calc_accuracy(result_df, dump_mode, header)
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
