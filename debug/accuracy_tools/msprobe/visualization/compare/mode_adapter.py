@@ -54,6 +54,10 @@ class ModeAdapter:
                 headers = CompareConst.COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in GraphConst.REAL_DATA_INDEX_LIST]
                 ModeAdapter._match_data(value, compare_data, GraphConst.REAL_DATA_INDEX_LIST, id_list)
+                for item in GraphConst.VALUE_INDEX_LIST:
+                    if str(value.get(item)).lower() in \
+                            (CompareConst.NAN.lower(), CompareConst.INF, CompareConst.NEG_INF):
+                        return min_thousandth, True
                 # 跳过scalar data，因为无法计算双千指标，会得到Nan
                 if not value.get(Const.SHAPE):
                     continue
@@ -72,7 +76,7 @@ class ModeAdapter:
             min_thousandth = None
         else:
             min_thousandth = min(numbers + [min_thousandth])
-        return min_thousandth
+        return min_thousandth, False
 
     @staticmethod
     def _add_summary_compare_data(node_data, compare_data_dict):
@@ -91,6 +95,9 @@ class ModeAdapter:
                 ModeAdapter._match_data(data_info, compare_data, key_list, id_list)
                 for index, item in enumerate(key_list[4:]):
                     value = data_info.get(GraphConst.VALUE_INDEX_LIST[index])
+                    # 数据溢出，指标直接判定最差
+                    if str(value).lower() in (CompareConst.NAN.lower(), CompareConst.INF, CompareConst.NEG_INF):
+                        return GraphConst.MAX_INDEX_KEY
                     value_diff = data_info.get(key_list[index])
                     relative_err = str2float(data_info.get(item))
                     if isinstance(value, float) and dtype in GraphConst.SMALL_VALUES.keys():
@@ -144,16 +151,21 @@ class ModeAdapter:
             precision_index = precision_index_out
         else:
             ModeAdapter._check_list_len(compare_data_dict_list, 1)
-            min_thousandth_in = ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
-            min_thousandth_out = ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
-            if min_thousandth_in is not None and min_thousandth_out is not None:
-                change_percentage = min_thousandth_in - min_thousandth_out
+            min_thousandth_in, is_overflow_in = \
+                ModeAdapter._add_real_compare_data(node.input_data, compare_data_dict_list[0])
+            min_thousandth_out, is_overflow_out = \
+                ModeAdapter._add_real_compare_data(node.output_data, compare_data_dict_list[0])
+            if is_overflow_in or is_overflow_out:
+                precision_index = GraphConst.MAX_INDEX_KEY
             else:
-                change_percentage = GraphConst.MIN_INDEX_KEY
-            change_percentage = GraphConst.MIN_INDEX_KEY if change_percentage < GraphConst.MIN_INDEX_KEY \
-                else change_percentage
-            precision_index = GraphConst.MAX_INDEX_KEY \
-                if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
+                if min_thousandth_in is not None and min_thousandth_out is not None:
+                    change_percentage = min_thousandth_in - min_thousandth_out
+                else:
+                    change_percentage = GraphConst.MIN_INDEX_KEY
+                change_percentage = GraphConst.MIN_INDEX_KEY if change_percentage < GraphConst.MIN_INDEX_KEY \
+                    else change_percentage
+                precision_index = GraphConst.MAX_INDEX_KEY \
+                    if change_percentage > GraphConst.MAX_INDEX_KEY else change_percentage
         return precision_index, other_dict
 
     def prepare_real_data(self, node):
