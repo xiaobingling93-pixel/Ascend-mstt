@@ -27,7 +27,6 @@ from msprobe.core.common.utils import (CompareException, check_compare_param,
                                        check_configuration_param,
                                        get_dump_mode, set_dump_path, check_op_str_pattern_valid)
 from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
 
@@ -56,6 +55,11 @@ class MSComparator(Comparator):
 
     @classmethod
     def calc_accuracy(cls, row, dump_mode, header):
+        if row[CompareConst.BENCH_NAME] == CompareConst.N_A:
+            row = row[header].fillna(CompareConst.N_A)
+            row[CompareConst.ERROR_MESSAGE] = 'No bench data matched.'
+            return row
+        
         def calc_summary_diff(data_type: str):
             need_warning = False
             ms_val, pt_val = row['NPU ' + data_type], row['Bench ' + data_type]
@@ -65,6 +69,7 @@ class MSComparator(Comparator):
                     row[data_type.capitalize() + ' diff'] = CompareConst.NAN
                     row[data_type.capitalize() + 'RelativeErr'] = CompareConst.NAN
                 else:
+                    row[data_type.capitalize() + ' diff'] = diff
                     if pt_val != 0:
                         row[data_type.capitalize() + 'RelativeErr'] = str(abs((diff / pt_val) * 100)) + '%'
                     else:
@@ -109,17 +114,13 @@ class MSComparator(Comparator):
                                'data_name_x': CompareConst.DATA_NAME,
                                'stack_info_x': CompareConst.STACK}, inplace=True)
         
-        def set_summary(row):
-            npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-            for i, info in enumerate(npu_summary):
-                row[info] = row['summary_x'][i]
-            is_na = row['summary_y'] == CompareConst.N_A
-            bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM]
-            for i, info in enumerate(bench_summary):
-                row[info] = row['summary_y'] if is_na else row['summary_y'][i]
-            return row
+        npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
+        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM]
+        def set_summary(summary):
+            return summary if summary != CompareConst.N_A else [CompareConst.N_A] * 4
         
-        result = result.apply(set_summary, axis=1)
+        result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
+        result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
@@ -216,7 +217,7 @@ class MSComparator(Comparator):
         bench_df['compare_shape'] = bench_df[Const.SHAPE].apply(str)
         bench_df['compare_key'] = bench_df[CompareConst.OP_NAME]
         match_result = pd.merge(npu_df, bench_df, on=['compare_key', 'compare_shape'], how='outer')
-        match_result = match_result[self.gen_compare_condition(match_result)].fillna(CompareConst.N_A)
+        match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
         return MSComparator.make_result_table(match_result, stack_mode, dump_mode)
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
@@ -261,21 +262,6 @@ class MSComparator(Comparator):
                             is_abandoned = False
                 if is_abandoned:
                     npu_df.loc[index, 'compare_key'] = op_name + 'abandoned'
-
-    def gen_compare_condition(self, match_result):
-        match_result['compare_dtype'] = match_result['dtype_x']
-        if self.cross_frame:
-            match_result['compare_dtype'] = match_result['dtype_x'].apply(lambda row: dtype_mapping.get(row, row))
-        return (match_result['compare_dtype'] == match_result['dtype_y']) | \
-            ((match_result['compare_dtype'] == Const.FLOAT16) & (
-                match_result['dtype_y'].isin([Const.FLOAT32, Const.BFLOAT16]))) | \
-            ((match_result['dtype_y'] == Const.FLOAT16) & (
-                match_result['compare_dtype'].isin([Const.FLOAT32, Const.BFLOAT16]))) | \
-            ((match_result['compare_dtype'] == Const.TORCH_FLOAT16) & (
-                match_result['dtype_y'].isin([Const.TORCH_FLOAT32, Const.TORCH_BFLOAT16]))) | \
-            ((match_result['dtype_y'] == Const.TORCH_FLOAT16) & (
-                match_result['compare_dtype'].isin([Const.TORCH_FLOAT32, Const.TORCH_BFLOAT16]))) | \
-            (match_result['op_name_x'].notna() & match_result['op_name_y'].isna())
 
     def gen_data_df(self, data_json, stack_json, dump_mode):
         result = {
