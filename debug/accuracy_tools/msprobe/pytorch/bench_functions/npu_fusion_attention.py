@@ -202,6 +202,43 @@ def convert_to_bnsd(_input, n, input_layout):
     return out.to(GTYPE)
 
 
+def convert_from_bsnd(_input, input_layout):
+    if input_layout == "BSH":
+        # (B,S,N,D)=>(B,S,N*D)
+        out = rearrange(_input, 'b s n d -> b s (n d)').contiguous()
+    elif input_layout == "SBH":
+        # (B,S,N,D)=>(S,B,N*D)
+        out = rearrange(_input, 'b s n d -> s b (n d)').contiguous()
+    elif input_layout == "BNSD":
+        # (B,S,N,D)=>(B,N,S,D)
+        out = rearrange(_input, 'b s n d -> b s n d').contiguous()
+    elif input_layout == "TND":
+        raise ValueError(f"input_layout {input_layout} does not supported for now.")
+    else:
+        out = _input
+    return out
+
+
+def convert_to_bsnd(_input, n, input_layout):
+    # 默认"BSND"无需处理
+    if input_layout == "BSH":
+        # (B,S,N*D)=>(B,S,N,D)
+        out = rearrange(_input, 'b s (n d) -> b s n d', n=n)
+    elif input_layout == "SBH":
+        # (S,B,N*D)=>(B,S,N,D)
+        out = rearrange(_input, 's b (n d) -> b s n d', n=n)
+    elif input_layout == "BSND":
+        # (B,S,N,D)=>(B,S,N,D)
+        out = rearrange(_input, 'b s n d -> b s n d', n=n)
+    elif input_layout == "TND":
+        raise ValueError(f"input_layout {input_layout} does not supported for now.")
+    else:
+        out = _input
+    if out.dim() != 4:
+        raise ValueError(f"convert qkv format failed with input_layout {input_layout}.")
+    return out
+
+
 def generate_atten_mask(*args):
     """
     # 当sparse_mode=2、3、4时小算子到融合算子会走这个优化，反过来看就要拆解回原来的基本实现
@@ -535,8 +572,13 @@ def gpu_fusion_attention(*args, **kwargs):
     else:
         alibi_slopes = None
 
+    input_layout = get_input_layout(*args, **kwargs)
+    query = convert_to_bsnd(query, n1, input_layout)
+    key = convert_to_bsnd(key, n2, input_layout)
+    value = convert_to_bsnd(value, n2, input_layout)
     out = flash_attn_func(
         query, key, value, dropout_p=(1 - keep_prob), softmax_scale=scale, causal=causal_switch,
         window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic
     )
+    out = convert_from_bsnd(out, input_layout)
     return out, Const.NONE, Const.NONE
