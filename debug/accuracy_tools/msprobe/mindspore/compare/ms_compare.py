@@ -63,9 +63,9 @@ class MSComparator(Comparator):
         def calc_summary_diff(data_type: str):
             need_warning = False
             ms_val, pt_val = row['NPU ' + data_type], row['Bench ' + data_type]
+            diff_name = data_type.capitalize() + ' diff'
+            rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
             if all(isinstance(val, (float, int)) and not isinstance(val, bool) for val in [ms_val, pt_val]):
-                diff_name = data_type.capitalize() + ' diff'
-                rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
                 diff = ms_val - pt_val
                 if math.isnan(diff):
                     row[diff_name] = CompareConst.N_A
