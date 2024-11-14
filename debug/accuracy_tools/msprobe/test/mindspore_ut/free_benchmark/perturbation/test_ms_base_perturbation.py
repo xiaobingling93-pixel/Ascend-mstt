@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,25 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 
 import mindspore as ms
 from mindspore import Tensor
 
-from msprobe.mindspore.free_benchmark.perturbation.base_perturbation import BasePerturbation
-from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
-from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.core.common.const import Const
+from msprobe.mindspore.free_benchmark.common.config import Config
+from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
+from msprobe.mindspore.free_benchmark.perturbation.base_perturbation import BasePerturbation
 
 
 class TestBasePerturbation(unittest.TestCase):
     base_pert = None
 
     def test___init__(self):
-        TestBasePerturbation.base_pert = BasePerturbation("mindspore.ops.add")
-        self.assertEqual(TestBasePerturbation.base_pert.api_name, "mindspore.ops.add")
+        TestBasePerturbation.base_pert = BasePerturbation("Functional.add.0")
+        self.assertEqual(TestBasePerturbation.base_pert.api_name_with_id, "Functional.add.0")
         self.assertFalse(TestBasePerturbation.base_pert.is_fuzzed)
         self.assertIsNone(TestBasePerturbation.base_pert.perturbation_value)
 
@@ -42,6 +40,12 @@ class TestBasePerturbation(unittest.TestCase):
         params.fuzzed_value = Tensor([2.0], dtype=ms.float32)
         params.index = 0
         params.original_func = ms.ops.add
+
+        Config.stage = Const.BACKWARD
+        target = (Tensor([1.0], dtype=ms.float32), Tensor([1.0], dtype=ms.float32))
+        ret = self.base_pert.get_fuzzed_result(params)
+        self.assertTrue((ret[0] == target[0]).all())
+        self.assertTrue((ret[1] == target[1]).all())
 
         Config.stage = Const.FORWARD
         target = Tensor([7.0], dtype=ms.float32)
