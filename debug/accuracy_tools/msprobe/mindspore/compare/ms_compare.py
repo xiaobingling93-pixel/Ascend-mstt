@@ -106,7 +106,7 @@ class MSComparator(Comparator):
         elif dump_mode == Const.SUMMARY:
             warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
             warning_flag = pd.DataFrame(warning_list).all(axis=1)
-            result_df[[CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
+            result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
             result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
         else:
