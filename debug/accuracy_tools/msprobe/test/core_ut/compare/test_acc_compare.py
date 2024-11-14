@@ -520,7 +520,7 @@ class TestUtilsMethods(unittest.TestCase):
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'None', 'None', 'None', 'None', 'None',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                    1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', '-1']]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -535,7 +535,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'No bench data matched.'])
 
     def test_compare_by_op_2(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
@@ -545,7 +545,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', f'Dump file: {pt_path} not found.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', f'Dump file: {pt_path} not found.'])
 
         generate_pt(base_dir)
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)

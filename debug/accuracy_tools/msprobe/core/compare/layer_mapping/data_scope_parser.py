@@ -24,6 +24,7 @@ from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import save_yaml
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_yaml
+from msprobe.core.compare.layer_mapping.postprocess_pass import postprocess_pass
 
 
 @dataclass
@@ -82,23 +83,27 @@ class DumpDataItem:
 
     def set_layer_scope(self, construct_info: str) -> None:
         self.construct_scope = construct_info
-        if not construct_info:
-            self.layer_scope = self.framework2layername.get(self.framework)
-            return
-        construct_info_list = construct_info.split(Const.SEP)
-        if len(construct_info_list) < abs(Const.LAYER_NAME_INDEX):
-            logger.error(
-                f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
-            raise CompareException(CompareException.INVALID_DATA_ERROR)
         if self.api_type == self.framework2layername.get(self.framework):
             # remove api name
             data_list = self.data_name.split(Const.SEP)
             data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
+        elif construct_info:
+            data_list = construct_info.split(Const.SEP)
         else:
-            data_list = construct_info_list
-        self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
-        self.scope_id = data_list[Const.SCOPE_ID_INDEX]
-        self.scope_direction = construct_info_list[Const.SCOPE_DIRECTION_INDEX]
+            data_list = []
+
+        if data_list:
+            self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
+        else:
+            self.layer_scope = self.framework2layername.get(self.framework)
+        if construct_info:
+            construct_list = construct_info.split(Const.SEP)
+            if len(construct_list) < abs(Const.LAYER_NAME_INDEX):
+                logger.error(
+                    f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
+                raise CompareException(CompareException.INVALID_DATA_ERROR)
+            self.scope_id = construct_list[Const.SCOPE_ID_INDEX]
+            self.scope_direction = construct_list[Const.SCOPE_DIRECTION_INDEX]
 
     def set_stack_scope(self, stack_info: str) -> None:
         # Cell/Module has no stack info
@@ -179,16 +184,7 @@ def get_dump_data_items(dump, stack, construct, framework, output_path=None):
         name2item[data_name] = data_item
         data_items.append(data_item)
 
-    # 处理反向数据，反向无栈信息，沿用正向数据栈信息
-    for data_item in data_items:
-        data_name = data_item.data_name
-        if Const.BACKWARD in data_name:
-            forward_name = data_name.replace(Const.BACKWARD, Const.FORWARD)
-            forward_item = name2item.get(forward_name, None)
-            if not forward_item:
-                continue
-            data_item.stack_scope = forward_item.stack_scope
-            data_item.full_scope = forward_item.full_scope
+    postprocess_pass(data_items, name2item)
 
     if output_path:
         yaml.add_representer(DumpDataItem, dumpdata_representer)

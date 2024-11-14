@@ -17,6 +17,8 @@ import re
 import abc
 import torch
 
+from msprobe.core.common.log import logger
+
 # 用于存储所有validator实现类的注册表
 config_validator_registry = {}
 
@@ -52,11 +54,15 @@ class TensorValidator(ConfigValidator):
 @register_config_validator
 class TupleValidator(ConfigValidator):
     def check_pattern_match(self, config_spec: str):
-        pattern = re.compile(r"tuple\[(\d+)\]:(\d+)")
+        pattern = re.compile(r"tuple\[(\d+)\]:?(\d+)?")
         return pattern.match(config_spec)
 
     def validate(self, actual_data, module_name: str, data_type: str, pattern_match):
-        length, index = map(int, pattern_match.groups())
+        length, index = pattern_match.groups()
+        if index is None:
+            index = 0
+        length, index = int(length), int(index)
+
         if not (0 <= index < length):
             raise ValueError(
                 f"Format of {module_name} {data_type} in config.json does not match the required format 'tuple[x]:y'."
@@ -72,11 +78,16 @@ class TupleValidator(ConfigValidator):
 
 
 def validate_config_spec(config_spec: str, actual_data, module_name: str, data_type: str):
+    focused_col = None
     for _, validator_cls in config_validator_registry.items():
         config_validator = validator_cls()
         pattern_match = config_validator.check_pattern_match(config_spec)
         if pattern_match:
-            focused_col = config_validator.validate(actual_data, module_name, data_type, pattern_match)
+            try:
+                focused_col = config_validator.validate(actual_data, module_name, data_type, pattern_match)
+            except ValueError as e:
+                logger.warning(f"config spec validate failed: {str(e)}")
             return focused_col
-    raise ValueError(f"config spec in {module_name} {data_type} not supported, "
-                     f"expected spec:'tuple\[(\d+)\]:(\d+)' or 'tensor', actual spec: {config_spec}.")
+    logger.warning(f"config spec in {module_name} {data_type} not supported, "
+                   f"expected spec:'tuple\[(\d+)\]:(\d+)' or 'tensor', actual spec: {config_spec}.")
+    return focused_col

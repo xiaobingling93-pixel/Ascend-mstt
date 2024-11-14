@@ -29,6 +29,11 @@ def get_min(x: torch.tensor):
 
 
 @torch.no_grad()
+def get_mean(x: torch.tensor):
+    return torch.mean(x)
+
+
+@torch.no_grad()
 def get_norm(x: torch.tensor):
     return torch.norm(x, p=2)
 

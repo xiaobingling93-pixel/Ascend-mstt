@@ -29,7 +29,7 @@ from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuz
                                         check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
-    get_rela_diff_summary_mode
+    get_rela_diff_summary_mode, print_compare_ends_info
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
@@ -223,6 +223,7 @@ class Comparator:
             get_accuracy(result, n_match_data, b_match_data, dump_mode)
             del npu_ops_queue[0: n_match_point + 1]
             del bench_ops_queue[0: b_match_point + 1]
+        progress_bar.close()
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, dump_mode)
@@ -421,14 +422,14 @@ class Comparator:
         if dump_mode == Const.ALL:
             result_df = self._do_multi_process(input_parma, result_df)
 
-        logger.info("Highlight suspicious API/Module start.")
         find_compare_result_error_rows(result_df, highlight_dict, dump_mode)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        logger.info("Highlight suspicious API/Module finish.")
 
         if auto_analyze:
             advisor = Advisor(result_df, output_path, suffix)
             advisor.analysis()
+
+        print_compare_ends_info()
     
     def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
         cos_result = []
@@ -443,8 +444,10 @@ class Comparator:
             bench_op_name = result_df.iloc[i, 1]
             if is_print_compare_log:
                 logger.info("start compare: {}".format(npu_op_name))
+
             cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
                 self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
+
             if is_print_compare_log:
                 logger.info(
                     "[{}] Compare result: cosine {}, max_abs_err {}, max_relative_err {}, {}, \

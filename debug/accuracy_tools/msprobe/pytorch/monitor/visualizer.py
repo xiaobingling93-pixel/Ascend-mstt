@@ -25,7 +25,7 @@ class HeatmapVisualizer:
         self.min_val = -1
         self.max_val = 1
         self.histogram_edges = None
-        self.histogram_sum_data_np = None # matrix shape is [bins_num * total_step]
+        self.histogram_sum_data_np = None  # matrix shape is [bins_num * total_step]
         self.cur_step_histogram_data = None
         self.histogram_edges = torch.linspace(self.min_val, self.max_val, self.histogram_bins_num)
 
@@ -33,7 +33,7 @@ class HeatmapVisualizer:
         self.cur_step_histogram_data = cal_histc(tensor_cal=tensor, bins_total=self.histogram_bins_num,
                                                  min_val=self.min_val, max_val=self.max_val)
 
-    def visualize(self, tag_name:str, step, summary_writer):
+    def visualize(self, tag_name: str, step, summary_writer):
         if self.histogram_sum_data_np is None or self.histogram_sum_data_np.size == 0:
             self.histogram_sum_data_np = np.expand_dims(self.cur_step_histogram_data.cpu(), 0).T
         else:
@@ -41,7 +41,7 @@ class HeatmapVisualizer:
             # matrix shape is [bins_num * total_step]
             self.histogram_sum_data_np = np.concatenate((self.histogram_sum_data_np, np.expand_dims(
                 self.cur_step_histogram_data.cpu(), 1)), axis=1)
-         
+
         fig, ax = plt.subplots()
         cax = ax.matshow(self.histogram_sum_data_np, cmap='hot', aspect='auto')
         fig.colorbar(cax)

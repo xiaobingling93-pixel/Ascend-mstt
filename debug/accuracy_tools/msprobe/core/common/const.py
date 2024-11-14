@@ -241,6 +241,7 @@ class CompareConst:
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
     EPSILON = 1e-10
+    COMPARE_ENDS_SUCCESSFULLY = "msprobe compare ends successfully."
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -455,10 +456,23 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
+
+    VPP_SEP = ":"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
+
+    ANOMALY_JSON = "anomaly.json"
+    ANALYSE_JSON = "anomaly_analyse.json"
+    TENSORBOARD = "tensorboard"
+    CSV = "csv"
+    API = "api"

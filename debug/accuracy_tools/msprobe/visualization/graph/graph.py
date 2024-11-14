@@ -21,11 +21,12 @@ from msprobe.core.common.const import Const
 
 
 class Graph:
-    def __init__(self, model_name):
+    def __init__(self, model_name, data_path=''):
         self.node_map = {}
         self.node_id_map = {}
         self.add_node(NodeOp.module, model_name)
         self.root = self.get_node(model_name)
+        self.data_path = data_path
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -131,6 +132,7 @@ class Graph:
         """
         result = {}
         result[GraphConst.JSON_ROOT_KEY] = self.root.id if self.root else 'None'
+        result[GraphConst.JSON_DATA_KEY] = self.data_path
         result[GraphConst.JSON_NODE_KEY] = {}
         for node_id in self.node_map:
             info = self.node_map.get(node_id).to_dict()
