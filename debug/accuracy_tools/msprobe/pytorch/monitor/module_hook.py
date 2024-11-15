@@ -110,7 +110,7 @@ class OptimizerContext:
         self.exp_avg_metric = []
         self.param_exp_avg_sq = defaultdict()
         self.exp_avg_sq_metric = []
-        self.metric_list = []
+        self.metric_dict = {}
 
 
 class CommunicationContext:
@@ -477,8 +477,12 @@ class TrainerMon:
         if not self.wg_distribution:
             return
 
+        if self.enable_megatron:
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.pre, step, 'grad_unreduced')
+        else:
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.write_metrics(self.ops, self.summary_writer, self.grad_context.post, step, 'grad_reduced')
-        self.write_metrics(self.ops, self.summary_writer, self.grad_context.pre, step, 'grad_unreduced')
+        
 
     def hook_optimizer(self, optimizer=None):
         # in DDP by default use params_have_main_grad
@@ -854,6 +858,8 @@ class TrainerMon:
 
         if self.enable_megatron:
             Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)  # differ in different megatron version
+        else:
+            self._hook_weights()
 
     def _hook_weights(self):
         context = self.grad_context
