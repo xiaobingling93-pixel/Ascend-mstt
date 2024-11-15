@@ -3,7 +3,7 @@ import torch
 import unittest
 
 from msprobe.pytorch.bench_functions.npu_fusion_attention import npu_fusion_attention, npu_fusion_attention_grad, \
-    broadcast_kv, convert_from_bnsd, convert_to_bnsd, rearrange
+    broadcast_kv, convert_from_bsnd, convert_to_bsnd, rearrange
 
 
 class TestNpuFusionAttention(unittest.TestCase):
@@ -22,41 +22,41 @@ class TestNpuFusionAttention(unittest.TestCase):
         self.seq_len = 3
         self.num_heads = 4
         self.head_dim = 5
-        self.input_tensor = torch.randn(self.batch_size, self.num_heads, self.seq_len, self.head_dim)
+        self.input_tensor = torch.randn(self.batch_size, self.seq_len, self.num_heads, self.head_dim)
 
-    def test_convert_from_bnsd(self):
-        # 测试从 bnsd 转换到 BSH
-        converted_tensor = convert_from_bnsd(self.input_tensor, "BSH")
+    def test_convert_from_bsnd(self):
+        # 测试从 bsnd 转换到 BSH
+        converted_tensor = convert_from_bsnd(self.input_tensor, "BSH")
         self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads * self.head_dim))
 
-        # 测试从 bnsd 转换到 SBH
-        converted_tensor = convert_from_bnsd(self.input_tensor, "SBH")
+        # 测试从 bsnd 转换到 SBH
+        converted_tensor = convert_from_bsnd(self.input_tensor, "SBH")
         self.assertEqual(converted_tensor.shape, (self.seq_len, self.batch_size, self.num_heads * self.head_dim))
 
-        # 测试从 bnsd 转换到 BSND
-        converted_tensor = convert_from_bnsd(self.input_tensor, "BSND")
+        # 测试从 bsnd 转换到 BSND
+        converted_tensor = convert_from_bsnd(self.input_tensor, "BSND")
         self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
-    def test_convert_to_bnsd(self):
-        # 测试从 BSH 转换回 bnsd
-        converted_tensor = convert_to_bnsd(rearrange(self.input_tensor, 'b n s d -> b s (n d)'), self.num_heads, "BSH")
-        self.assertEqual(converted_tensor.shape, (self.batch_size, self.num_heads, self.seq_len, self.head_dim))
+    def test_convert_to_bsnd(self):
+        # 测试从 BSH 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> b s (n d)'), self.num_heads, "BSH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
-        # 测试从 SBH 转换回 bnsd
-        converted_tensor = convert_to_bnsd(rearrange(self.input_tensor, 'b n s d -> s b (n d)'), self.num_heads, "SBH")
-        self.assertEqual(converted_tensor.shape, (self.batch_size, self.num_heads, self.seq_len, self.head_dim))
+        # 测试从 SBH 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> s b (n d)'), self.num_heads, "SBH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
     def test_invalid_layout(self):
         # 测试不支持的布局
         with self.assertRaises(ValueError):
-            convert_from_bnsd(self.input_tensor, "INVALID_LAYOUT")
+            convert_from_bsnd(self.input_tensor, "INVALID_LAYOUT")
         with self.assertRaises(ValueError):
-            convert_to_bnsd(self.input_tensor, self.num_heads, "INVALID_LAYOUT")
+            convert_to_bsnd(self.input_tensor, self.num_heads, "INVALID_LAYOUT")
 
     def test_incorrect_dimensions(self):
         # 测试转换后维度不正确
         with self.assertRaises(ValueError):
-            convert_to_bnsd(torch.randn(self.batch_size, self.seq_len, self.num_heads), self.num_heads, "BSH")
+            convert_to_bsnd(torch.randn(self.batch_size, self.seq_len, self.num_heads), self.num_heads, "BSH")
 
     def test_basic_forward_input_layout_is_BSND(self):
         # 基本前向传播测试
