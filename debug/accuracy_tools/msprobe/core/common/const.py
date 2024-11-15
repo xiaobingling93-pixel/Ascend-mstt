@@ -465,6 +465,7 @@ class MonitorConst:
     DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
 
+    DOT = "."
     VPP_SEP = ":"
     ACTV_IN = "input"
     ACTV_OUT = "output"

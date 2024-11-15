@@ -726,9 +726,11 @@ class TrainerMon:
             del call_stack
             return False
 
-        def fwd_hook_fun(module, module_input, module_output):
+        def fwd_hook_fun(module, module_input, module_output, name):
             if _is_recomputation():
                 return
+            if module not in self.module_fwd_hook_context_by_module:
+                self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
                 context.struct = {MonitorConst.ACTV_IN: get_param_struct(module_input),
@@ -841,9 +843,8 @@ class TrainerMon:
                 if not name:
                     continue
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun)
+                    handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name))
                     self.handles['xy'].append(handle)
-                    self.module_fwd_hook_context_by_module[submodule] = ModuleHookContext(name)
                 if not self.forward_only:
                     handle = submodule.register_full_backward_hook(bwd_hook_fun)
                     self.handles['xy'].append(handle)
