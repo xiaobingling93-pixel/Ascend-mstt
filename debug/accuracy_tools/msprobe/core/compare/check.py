@@ -19,6 +19,25 @@ from msprobe.core.common.utils import check_op_str_pattern_valid, CompareExcepti
 from msprobe.core.common.const import Const
 
 
+dtype_mapping = {
+    "Int8": "torch.int8",
+    "UInt8": "torch.uint8",
+    "Int16": "torch.int16",
+    "UInt16": "torch.uint16",
+    "Int32": "torch.int32",
+    "UInt32": "torch.uint32",
+    "Int64": "torch.int64",
+    "UInt64": "torch.uint64",
+    "Float16": "torch.float16",
+    "Float32": "torch.float32",
+    "Float64": "torch.float64",
+    "Bool": "torch.bool",
+    "BFloat16": "torch.bfloat16",
+    "Complex64": "torch.complex64",
+    "Complex128": "torch.complex128"
+}
+
+
 def check_struct_match(npu_dict, bench_dict):
     npu_struct_in = npu_dict.get("input_struct")
     bench_struct_in = bench_dict.get("input_struct")

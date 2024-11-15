@@ -29,6 +29,7 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.utils import (CompareException, check_compare_param,
                                        check_configuration_param,
                                        get_dump_mode, set_dump_path, check_op_str_pattern_valid)
+from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
@@ -123,7 +124,7 @@ class MSComparator(Comparator):
         return result_df[header]
 
     @classmethod
-    def make_result_table(cls, result, stack_mode, dump_mode):
+    def make_result_df(cls, result, stack_mode, dump_mode):
         header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode]
 
         if stack_mode:
@@ -251,7 +252,24 @@ class MSComparator(Comparator):
         bench_df[COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
         match_result = pd.merge(npu_df, bench_df, on=[COMPARE_KEY, COMPARE_SHAPE], how='outer')
         match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
-        return MSComparator.make_result_table(match_result, stack_mode, dump_mode)
+
+        def gen_dtype_condition():
+            npu_dtype = match_result['dtype_x']
+            bench_dtype = match_result['dtype_y']
+            if self.cross_frame:
+                npu_dtype = npu_dtype.map(dtype_mapping).fillna(npu_dtype)
+            return ((npu_dtype == bench_dtype) |
+                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.FLOAT32)) |
+                    ((npu_dtype == Const.FLOAT32) & (bench_dtype == Const.FLOAT16)) |
+                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.BFLOAT16)) |
+                    ((npu_dtype == Const.BFLOAT16) & (bench_dtype == Const.FLOAT16)) |
+                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_FLOAT32)) |
+                    ((npu_dtype == Const.TORCH_FLOAT32) & (bench_dtype == Const.TORCH_FLOAT16)) |
+                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_BFLOAT16)) |
+                    ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
+        
+        match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
+        return MSComparator.make_result_df(match_result, stack_mode, dump_mode)
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
         def get_api_indices_dict(op_name_df):

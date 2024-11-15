@@ -330,7 +330,7 @@ class Comparator:
         bench_ops_all = self.merge_data(bench_json_data, stack_json_data, dump_mode)
 
         result = self.get_accuracy(npu_ops_all, bench_ops_all, dump_mode)
-        result_df = Comparator.make_result_table(result, stack_mode, dump_mode)
+        result_df = self.make_result_table(result, stack_mode, dump_mode)
         return result_df
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
