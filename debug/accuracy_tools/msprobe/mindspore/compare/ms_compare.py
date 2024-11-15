@@ -80,7 +80,8 @@ class MSComparator(Comparator):
         def calc_summary_diff(data_type: str):
             def type_check(val):
                 check_series = pd.Series(False, index=val.index)
-                check_series[~pd.to_numeric(val.astype(str), errors='coerce').isna()] = True
+                val_str = val.astype(str)
+                check_series[pd.to_numeric(val_str, errors='coerce').notna() | val_str.str.lower().eq('nan')] = True
                 return check_series
             
             def get_number(val):
