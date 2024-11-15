@@ -27,10 +27,9 @@ try:
 except ImportError:
     pass
 
-from api_accuracy_checker.compare.compare_utils import BinaryStandardApi, AbsoluteStandardApi, ULPStandardApi
-from msprobe.core.common.file_check import FileOpen
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, ulp_standard_api, thousandth_standard_api
+from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid
-from msprobe.core.common.file_check import create_directory
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import make_dir
@@ -115,7 +114,7 @@ class CommonConfig:
         if iter_t <= 0:
             raise ValueError("iter_times should be an integer bigger than zero!")
 
-        json_file = self.output_file
+        json_file = self.extract_api_path
         propagation = self.propagation
 
         with FileOpen(json_file, 'r') as f:
@@ -231,7 +230,7 @@ class OperatorScriptGenerator:
         internal_settings["ordinal_number"] = ordinal_number
         internal_settings["direction_status"] = self.common_config.propagation
         internal_settings["random_seed"] = self.common_config.random_seed
-        if self.common_config.mode == "real_data":
+        if self.common_config.data_mode == "real_data":
             internal_settings["iter_times"] = 1
         else:
             internal_settings["iter_times"] = self.common_config.iter_times
@@ -255,12 +254,14 @@ class OperatorScriptGenerator:
 
     @staticmethod
     def get_compare_standard(api_name):
-        if api_name in BinaryStandardApi:
+        if api_name in binary_standard_api:
             return "CompareStandard.BINARY_EQUALITY_STANDARD"
-        if api_name in AbsoluteStandardApi:
+        if api_name in absolute_standard_api:
             return "CompareStandard.ABSOLUTE_THRESHOLD_STANDARD"
-        if api_name in ULPStandardApi:
+        if api_name in ulp_standard_api:
             return "CompareStandard.ULP_ERROR_STANDARD"
+        if api_name in thousandth_standard_api:
+            return "CompareStandard.THOUSANDTH_STANDARD"
         return "CompareStandard.BENCHMARK_STANDARD"
 
     @staticmethod
@@ -421,7 +422,7 @@ def main():
     json_content = common_config.check_user_settings()
     api_info = APIInfo.from_json(json_content, common_config.propagation)
 
-    if cmd_args.propagation == Const.BACKWARD:
+    if common_config.propagation == Const.BACKWARD:
         # read and check json
         api_full_name_forward, api_info_dict_forward = api_info.api_full_name, api_info.api_info_dict
         api_full_name_backward, api_info_dict_backward = (api_info.backward_info.api_full_name,
