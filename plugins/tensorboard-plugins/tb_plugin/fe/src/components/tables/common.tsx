@@ -27,7 +27,7 @@ import { ClassNameMap } from '@material-ui/styles';
 export function getCommonOperationColumns<
   T extends OperationTableDataInner | CallStackTableDataInner
 >(
-  data: T[] | undefined,
+  data?: T[],
   deviceTarget?: string,
   defaultSort?: string,
   tooltips?: any,
@@ -146,7 +146,7 @@ export function getCommonOperationColumns<
       : undefined,
   ].filter(isDef);
   columns.forEach((column) => {
-    if (column.key == defaultSort) {
+    if (column.key === defaultSort) {
       column.defaultSortOrder = 'descend' as const;
     }
     if (tooltips[column.key as string]) {

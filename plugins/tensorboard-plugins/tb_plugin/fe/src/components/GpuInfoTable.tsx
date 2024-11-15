@@ -61,15 +61,13 @@ function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
     curr_row.push(node_cell);
     Object.keys(gpuInfo.data[node_name]).forEach((pid) => {
       const pid_cell = { content: pid, rowspan: 0, cellType: 'pid' as const };
-      const i = rows.length;
+      const j = rows.length;
       curr_row.push(pid_cell);
       Object.keys(gpuInfo.data[node_name][pid]).forEach((gpu) => {
         const gpu_cell = { content: gpu, rowspan: 0, cellType: 'gpu' as const };
-        const i = rows.length;
+        const k = rows.length;
         curr_row.push(gpu_cell);
-        Object.keys(gpuInfo.data[node_name][pid][gpu]).forEach((
-          key_name
-        ) => {
+        Object.keys(gpuInfo.data[node_name][pid][gpu]).forEach((key_name) => {
           curr_row.push({
             content: key_name,
             rowspan: 1,
@@ -84,9 +82,9 @@ function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
           curr_row = [];
           rows.push(curr_row);
         });
-        gpu_cell.rowspan = rows.length - i;
+        gpu_cell.rowspan = rows.length - k;
       });
-      pid_cell.rowspan = rows.length - i;
+      pid_cell.rowspan = rows.length - j;
     });
     node_cell.rowspan = rows.length - i;
   });
