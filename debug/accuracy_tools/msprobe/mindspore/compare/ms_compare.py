@@ -79,22 +79,27 @@ class MSComparator(Comparator):
         def calc_summary_diff(data_type: str):
             def type_check(val):
                 return pd.to_numeric(val.astype(str), errors='coerce').fillna(False).astype(bool)
+            
             def get_number(val):
                 return pd.to_numeric(val.astype(str), errors='coerce').fillna(0)
+            
             ms_val = result_df['NPU ' + data_type]
             pt_val = result_df['Bench ' + data_type]
             diff_name = data_type.capitalize() + ' diff'
             rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
-            condition_na = ~(type_check(ms_val) | type_check(pt_val))
+            condition_na = ~type_check(ms_val) | ~type_check(pt_val)
             result_df.loc[condition_na, [diff_name, rel_err_name]] = CompareConst.N_A
             result_df.loc[~(condition_no_bench | condition_na), diff_name] = get_number(ms_val) - get_number(pt_val)
-            condition_na_diff = ~condition_na & result_df[diff_name].isna()
-            result_df.loc[~condition_no_bench & condition_na_diff, [diff_name, rel_err_name]] = CompareConst.NAN
+            condition_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].isna()
+            result_df.loc[condition_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
             condition_pt_zero = pt_val == 0
-            result_df.loc[~condition_no_bench & ~condition_na_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
-            condition_ref_err = ~(condition_no_bench | condition_na_diff | condition_pt_zero)
-            result_df.loc[condition_ref_err, rel_err_name] = result_df.loc[condition_ref_err, diff_name] / pt_val[condition_ref_err] * 100
-            result_df.loc[condition_ref_err, rel_err_name] = result_df.loc[condition_ref_err, rel_err_name].abs().astype(str) + '%'
+            condition_not_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].notna()
+            result_df.loc[condition_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
+            condition_ref_err = condition_not_nan_diff & ~condition_pt_zero
+            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, diff_name] / 
+                                                              pt_val[condition_ref_err] * 100)
+            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, rel_err_name]
+                                                              .abs().astype(str) + '%')
             magnitude = get_number(result_df[diff_name]).abs() / (
                     pd.Series(np.maximum(get_number(ms_val), get_number(pt_val))).abs() + CompareConst.EPSILON)
             return magnitude > CompareConst.MAGNITUDE
@@ -105,7 +110,7 @@ class MSComparator(Comparator):
             result_df.loc[~(condition_md5_equal & condition_no_bench), CompareConst.RESULT] = CompareConst.DIFF
         elif dump_mode == Const.SUMMARY:
             warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
-            warning_flag = pd.DataFrame(warning_list).all(axis=1)
+            warning_flag = pd.DataFrame(warning_list).all()
             result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
             result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
