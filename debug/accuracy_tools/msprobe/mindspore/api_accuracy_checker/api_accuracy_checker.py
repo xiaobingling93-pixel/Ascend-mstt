@@ -141,8 +141,8 @@ class ApiAccuracyChecker:
         api_name_str_list = api_name_str.split(Const.SEP)
         if len(api_name_str_list) < MsCompareConst.API_NAME_STR_LENGTH:
             return False
-        api_type_str = api_name_str[0]
-        real_api_str = api_name_str[1:-2]
+        api_type_str = api_name_str_list[0]
+        real_api_str = Const.SEP.join(api_name_str_list[1:-2])
         api_list = load_yaml(yaml_path)
         supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
         if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL):
