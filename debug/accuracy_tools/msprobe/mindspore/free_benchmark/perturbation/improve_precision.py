@@ -47,12 +47,7 @@ class ImprovePrecisionPerturbation(BasePerturbation):
             return False
 
         if Config.stage == Const.BACKWARD:
-            def target_func(*inputs):
-                return params.original_func(*inputs, **kwargs)
-
-            outputs, vjp_fn = ms.vjp(target_func, *args)
-            values = Tools.get_grad_out(outputs)
-            fuzzed_result = vjp_fn(values)
+            fuzzed_result = Tools.get_grad(params.original_func, *args, **kwargs)
             if fuzzed_result is not None:
                 return fuzzed_result
             else:

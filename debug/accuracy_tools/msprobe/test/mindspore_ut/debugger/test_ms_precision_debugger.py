@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import unittest
+from collections import defaultdict
 from unittest.mock import patch, MagicMock
 
 from msprobe.core.common_config import CommonConfig, BaseConfig
@@ -110,9 +111,9 @@ class TestPrecisionDebugger(unittest.TestCase):
         self.assertEqual(Runtime.step_count, 1)
         Runtime.step_count = 0
 
-        HOOKCell.cell_count = 1
+        HOOKCell.cell_count["api"] = 1
         PrecisionDebugger.step()
-        self.assertEqual(HOOKCell.cell_count, 0)
+        self.assertEqual(HOOKCell.cell_count["api"], 0)
 
         with patch.object(CellProcessor, "reset_cell_stats") as mock_reset_cell:
             PrecisionDebugger.step()

@@ -51,6 +51,15 @@ class Tools:
             return type(outputs)([Tools.get_grad_out(v) for v in outputs])
         return outputs
 
+    @staticmethod
+    def get_grad(func, *args, **kwargs):
+        def target_func(*inputs):
+            return func(*inputs, **kwargs)
+
+        outputs, vjp_fn = ms.vjp(target_func, *args)
+        values = Tools.get_grad_out(outputs)
+        return vjp_fn(values)
+
 
 @dataclass
 class UnequalRow:

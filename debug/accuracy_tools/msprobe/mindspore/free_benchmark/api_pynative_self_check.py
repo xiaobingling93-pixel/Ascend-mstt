@@ -37,7 +37,7 @@ from msprobe.mindspore.free_benchmark.perturbation.perturbation_factory import P
 from msprobe.mindspore.runtime import Runtime
 
 
-class ApiPyNativeSelFCheck:
+class ApiPyNativeSelfCheck:
     def __init__(self, config: DebuggerConfig):
         Config.is_enable = True
         Config.handler_type = config.handler_type
@@ -64,7 +64,7 @@ class ApiPyNativeSelFCheck:
         api_register.api_set_hook_func()
 
     def build_hook(self, api_name_with_id):
-        def forward_hook(api_name_with_id, cell, input, output):
+        def forward_hook(api_name_with_id, cell, input_data, output_data):
             ret = None
 
             if not need_wrapper_func():
@@ -76,8 +76,8 @@ class ApiPyNativeSelFCheck:
             api_name = (MsConst.HOOK_MS_PREFIX_DICT.get(hook_prefix) +
                         api_name_with_id[api_name_with_id.find(Const.SEP) + 1:api_name_with_id.rfind(Const.SEP)])
             if api_name in self.api_list:
-                ret = check_self(api_name_with_id, output, self.ori_func.get(api_name),
-                                 *input, **cell.input_kwargs)
+                ret = check_self(api_name_with_id, output_data, self.ori_func.get(api_name),
+                                 *input_data, **cell.input_kwargs)
 
             del cell.input_kwargs
             return ret
@@ -87,8 +87,8 @@ class ApiPyNativeSelFCheck:
 
         forward_hook = functools.partial(forward_hook, api_name_with_id)
 
-        def wrap_forward_hook(cell, input, output):
-            return forward_hook(cell, input, output)
+        def wrap_forward_hook(cell, input_data, output_data):
+            return forward_hook(cell, input_data, output_data)
 
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
@@ -163,14 +163,10 @@ def check_self(api_name_with_id, output, ori_func, *args, **kwargs):
         perturbation = PerturbationFactory.create(api_name_with_id)
         params.fuzzed_result = perturbation.handle(params)
         if params.fuzzed_result is False:
+            api_register.api_set_hook_func()
             return ret
         if Config.stage == Const.BACKWARD:
-            def target_func(*inputs):
-                return params.original_func(*inputs, **params.kwargs)
-
-            outputs, vjp_fn = ms.vjp(target_func, *params.args)
-            values = Tools.get_grad_out(outputs)
-            params.original_result = vjp_fn(values)
+            params.original_result = Tools.get_grad(params.original_func, *params.args, **params.kwargs)
         else:
             params.original_result = output
         ret = deal_fuzzed_and_original_result(api_name_with_id, params)

@@ -327,9 +327,6 @@ ops:
   - sequence_mask
   - space_to_batch_nd
   - sparse_segment_mean
-  - squeeze
-  - stack
-  - strided_slice
   - sum
   - swapaxes
   - swapdims
@@ -340,8 +337,6 @@ ops:
   - unsorted_segment_min
   - unsorted_segment_prod
   - unsorted_segment_sum
-  - unsqueeze
-  - unstack
   - vsplit
   - vstack
   - cross
@@ -510,7 +505,6 @@ Tensor:
   - sort
   - sqrt
   - square
-  - squeeze
   - std
   - subtract
   - subtract
@@ -527,7 +521,6 @@ Tensor:
   - trunc
   - unbind
   - unique_consecutive
-  - unsqueeze
   - var
   - xlogy
   - from_numpy

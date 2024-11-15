@@ -15,8 +15,6 @@
 
 from typing import Any
 
-import mindspore as ms
-
 from msprobe.core.common.const import Const
 from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
@@ -33,13 +31,9 @@ class BasePerturbation:
     @staticmethod
     def get_fuzzed_result(params: HandlerParams):
         if Config.stage == Const.BACKWARD:
-            def target_func(*inputs):
-                return params.original_func(*inputs, **params.kwargs)
+            fuzzed_result = Tools.get_grad(params.original_func, *params.args[:params.index],
+                                           params.fuzzed_value, *params.args[params.index + 1:], **params.kwargs)
 
-            outputs, vjp_fn = ms.vjp(target_func, *params.args[:params.index],
-                                     params.fuzzed_value, *params.args[params.index + 1:])
-            values = Tools.get_grad_out(outputs)
-            fuzzed_result = vjp_fn(values)
             if fuzzed_result is None:
                 return False
         else:
