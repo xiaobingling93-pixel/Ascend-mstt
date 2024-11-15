@@ -79,7 +79,9 @@ class MSComparator(Comparator):
 
         def calc_summary_diff(data_type: str):
             def type_check(val):
-                return pd.to_numeric(val.astype(str), errors='coerce').fillna(False).astype(bool)
+                check_series = pd.Series(False, index=val.index)
+                check_series[~pd.to_numeric(val.astype(str), errors='coerce').isna()] = True
+                return check_series
             
             def get_number(val):
                 return pd.to_numeric(val.astype(str), errors='coerce').fillna(0)
@@ -92,9 +94,9 @@ class MSComparator(Comparator):
             result_df.loc[condition_na, [diff_name, rel_err_name]] = CompareConst.N_A
             result_df.loc[~(condition_no_bench | condition_na), diff_name] = get_number(ms_val) - get_number(pt_val)
             condition_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].isna()
+            condition_not_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].notna()
             result_df.loc[condition_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
             condition_pt_zero = pt_val == 0
-            condition_not_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].notna()
             result_df.loc[condition_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
             condition_ref_err = condition_not_nan_diff & ~condition_pt_zero
             result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, diff_name] / 
