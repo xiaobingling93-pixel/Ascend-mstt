@@ -460,10 +460,10 @@ class TrainerMon:
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if len(fwd_context.actv) == 0:
                 continue
-            self.write_metrics(self.ops, self.summary_writer, [fwd_context.actv], step, 'actv')
+            self.write_metrics(self.ops, self.summary_writer, fwd_context.actv, step, 'actv')
             fwd_context.actv.clear()
         if self.grad_context.actv:
-            self.write_metrics(self.ops, self.summary_writer, [self.grad_context.actv], step, 'actv_grad')
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.actv, step, 'actv_grad')
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
@@ -569,7 +569,7 @@ class TrainerMon:
                         get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
 
             if context.metric_dict:
-                self.write_metrics(self.ops, self.summary_writer, context.metric_list, context.step, 'other')
+                self.write_metrics(self.ops, self.summary_writer, context.metric_dict, context.step, 'other')
             context.metric_dict.clear()
             context.step += 1
             if self.anomaly_data_factory:
