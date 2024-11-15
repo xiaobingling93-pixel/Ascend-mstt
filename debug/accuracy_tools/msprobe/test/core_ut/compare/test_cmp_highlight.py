@@ -34,6 +34,18 @@ def generate_result_xlsx(base_dir):
             cell.fill = red_fill
     wb.save(data_path)
 
+    data_path_yellow = os.path.join(base_dir, 'target_result_yellow.xlsx')
+    result_df.to_excel(data_path_yellow, index=False, sheet_name='Sheet')
+    wb = load_workbook(data_path_yellow)
+    ws = wb.active
+    yellow_fill = PatternFill(start_color=CompareConst.YELLOW, end_color=CompareConst.YELLOW, fill_type='solid')
+    for row_index, row in enumerate(ws.iter_rows()):
+        if row_index == 0:
+            continue
+        for cell in row:
+            cell.fill = yellow_fill
+    wb.save(data_path_yellow)
+
 
 def compare_excel_files_with_highlight(file1, file2):
     wb1 = openpyxl.load_workbook(file1)
@@ -126,6 +138,19 @@ class TestUtilsMethods(unittest.TestCase):
         generate_result_xlsx(base_dir)
         self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result.xlsx')))
 
+    def test_highlight_rows_xlsx_yellow(self):
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                ]
+        columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {'yellow_rows': [0]}
+        file_path = os.path.join(base_dir, 'result.xlsx')
+        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+        generate_result_xlsx(base_dir)
+        self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result_yellow.xlsx')))
+
     def test_highlight_rows_xlsx_2(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
@@ -169,4 +194,3 @@ class TestUtilsMethods(unittest.TestCase):
     def test_csv_value_is_valid_3(self):
         result = csv_value_is_valid("=1.00")
         self.assertFalse(result)
-
