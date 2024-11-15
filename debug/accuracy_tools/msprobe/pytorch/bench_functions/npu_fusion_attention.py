@@ -166,6 +166,18 @@ def parse_bsnd_args(query, key, head_num, input_layout):
 
 
 def convert_from_bnsd(_input, input_layout):
+    """
+    transform qkv from bnsd to input_layout.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+       _input (torch.Tensor): tensor of shape (B,N,S,D)
+        input_layout (str): "BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+    """
     if input_layout == "BSH":
         # (B,N,S,D)=>(B,S,N*D)
         out = rearrange(_input, 'b n s d -> b s (n d)').contiguous()
@@ -183,7 +195,19 @@ def convert_from_bnsd(_input, input_layout):
 
 
 def convert_to_bnsd(_input, n, input_layout):
-    # 默认"BNSD"无需处理
+    """
+    transform qkv from input_layout to bnsd.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+        _input (torch.Tensor): tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+        n (int): num_heads
+        input_layout (str):"BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D)
+    """
     if input_layout == "BSH":
         # (B,S,N*D)=>(B,N,S,D)
         out = rearrange(_input, 'b s (n d) -> b n s d', n=n)
@@ -203,6 +227,18 @@ def convert_to_bnsd(_input, n, input_layout):
 
 
 def convert_from_bsnd(_input, input_layout):
+    """
+    transform qkv from bsnd to input_layout.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+       _input (torch.Tensor): tensor of shape (B,S,N,D)
+        input_layout (str): "BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+    """
     if input_layout == "BSH":
         # (B,S,N,D)=>(B,S,N*D)
         out = rearrange(_input, 'b s n d -> b s (n d)').contiguous()
@@ -220,7 +256,19 @@ def convert_from_bsnd(_input, input_layout):
 
 
 def convert_to_bsnd(_input, n, input_layout):
-    # 默认"BSND"无需处理
+    """
+    transform qkv from input_layout to bsnd.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+        _input (torch.Tensor): tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+        n (int): num_heads
+        input_layout (str):"BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,S,N,D)
+    """
     if input_layout == "BSH":
         # (B,S,N*D)=>(B,S,N,D)
         out = rearrange(_input, 'b s (n d) -> b s n d', n=n)
