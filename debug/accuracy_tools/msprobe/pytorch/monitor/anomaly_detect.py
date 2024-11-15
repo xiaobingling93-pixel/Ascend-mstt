@@ -270,6 +270,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         name = tag.split('/')[0]
         self.context_dict[name].append(round(scalar_value, self.ndigits))
 
+    def close(self):
+        pass
+
 
 class SummaryWriterWithAD(SummaryWriter, BaseWriterWithAD):
     def __init__(self, path, ad_rules, job_id, anomaly_inform=False, anomaly_factory=None, ndigits=6):

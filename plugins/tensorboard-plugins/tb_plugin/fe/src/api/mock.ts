@@ -20,11 +20,11 @@ export class MockAPI {
     ]);
   }
 
-  spansGet(run: string, view: string) {
+  spansGet(run: string, view: string): Promise<string[]> {
     return Promise.resolve(['1', '2']);
   }
 
-  workersGet(run: string, view: string) {
+  workersGet(run: string, view: string): Promise<string[]> {
     return Promise.resolve(['worker0']);
   }
 

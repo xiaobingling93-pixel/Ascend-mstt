@@ -1,7 +1,7 @@
 export function binarySearch(
   arr: Array<any>,
   key: any,
-  compare_fn: Function
+  compare_fn: (key: number, mid: Array<number>) => number
 ): number {
   let low = 0;
   let high = arr.length - 1;
