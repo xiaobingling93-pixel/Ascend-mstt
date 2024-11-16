@@ -155,7 +155,7 @@ class MSComparator(Comparator):
             for i in summary:
                 if i is None:
                     summary_list.append(CompareConst.N_A)
-                elif i == 'nan' or np.isnan(i):
+                elif str(i).lower() == 'nan':
                     summary_list.append(CompareConst.NAN)
                 else:
                     summary_list.append(i)
