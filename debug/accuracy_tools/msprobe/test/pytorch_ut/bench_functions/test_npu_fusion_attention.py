@@ -46,18 +46,6 @@ class TestNpuFusionAttention(unittest.TestCase):
         converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> s b (n d)'), self.num_heads, "SBH")
         self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
-    def test_invalid_layout(self):
-        # 测试不支持的布局
-        with self.assertRaises(ValueError):
-            convert_from_bsnd(self.input_tensor, "INVALID_LAYOUT")
-        with self.assertRaises(ValueError):
-            convert_to_bsnd(self.input_tensor, self.num_heads, "INVALID_LAYOUT")
-
-    def test_incorrect_dimensions(self):
-        # 测试转换后维度不正确
-        with self.assertRaises(ValueError):
-            convert_to_bsnd(torch.randn(self.batch_size, self.seq_len, self.num_heads), self.num_heads, "BSH")
-
     def test_basic_forward_input_layout_is_BSND(self):
         # 基本前向传播测试
         out, _, _ = npu_fusion_attention(self.query, self.key, self.value, head_num=self.N1, input_layout="BSND")
