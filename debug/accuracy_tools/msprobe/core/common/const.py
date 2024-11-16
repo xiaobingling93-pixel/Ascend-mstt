@@ -121,6 +121,8 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+    DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
+                   "Aten", "VF", "NPU", "Jit"]
 
     # struct json param
     ORIGIN_DATA = "origin_data"

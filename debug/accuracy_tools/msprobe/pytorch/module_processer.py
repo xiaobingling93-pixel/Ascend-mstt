@@ -17,7 +17,7 @@ from functools import wraps
 
 import torch
 from msprobe.core.common.const import Const
-from msprobe.core.data_dump.scope import ModuleRangeScope
+from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope
 from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -30,10 +30,7 @@ class ModuleProcesser:
     module_node = {}
 
     def __init__(self, scope):
-        if isinstance(scope, ModuleRangeScope):
-            self.scope = scope
-        else:
-            self.scope = None
+        self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)
