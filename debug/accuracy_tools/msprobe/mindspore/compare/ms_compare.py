@@ -111,7 +111,7 @@ class MSComparator(Comparator):
         if dump_mode == Const.MD5:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
-            result_df.loc[~(condition_md5_equal & condition_no_bench), CompareConst.RESULT] = CompareConst.DIFF
+            result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
         elif dump_mode == Const.SUMMARY:
             warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
             warning_flag = pd.DataFrame(warning_list).all()
