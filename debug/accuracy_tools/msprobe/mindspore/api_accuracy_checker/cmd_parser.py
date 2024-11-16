@@ -40,6 +40,14 @@ def add_api_accuracy_checker_argument(parser):
     parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
                         help="<optional> the exit csv for continue")
 
+def multi_add_api_accuracy_checker_argument(parser):
+    parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
+                        help="<Required> The api param tool result file: generate from api param tool, "
+                             "a json file.")
+    parser.add_argument("-o", "--out_path", dest="out_path", default="./", type=str, required=False,
+                        help="<optional> The ut task result out path.")
+    parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
+                        help="<optional> the exit csv for continue")
     #以下属于多线程参数
     parser.add_argument("-d", "--device", dest="device_id", nargs='+', type=int,
                         help="<optional> set device id to run ut, must be unique and in range 0-7",

@@ -18,6 +18,8 @@ import numpy as np
 import multiprocessing
 from multiprocessing import Manager
 from mindspore import context
+import signal
+import sys
 from tqdm import tqdm
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
@@ -25,6 +27,16 @@ from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccur
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 
+
+def handle_child_signal(signum, frame):
+    """处理子进程的退出信号"""
+    logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
+
+
+def handle_main_signal(signum, frame):
+    """处理主进程的退出信号"""
+    logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
+    sys.exit(0)
 
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
@@ -41,58 +53,37 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
         self.args = args  # 将 args 保存为类的属性
 
-    def process_on_device(self, device_id, partitioned_api_infos, index):
+    def process_on_device(self, device_id, api_infos, progress_queue):
         # 设置 MindSpore context 的 device_id
         context.set_context(device_id=device_id)
 
-        # 使用 numpy.array_split 来均匀分配任务
-        partitioned_api_infos_split = np.array_split(partitioned_api_infos, len(self.args.device_id))
+        # 遍历当前进程分配的任务
+        for idx, (api_name_str, api_info) in enumerate(api_infos):
+            # debug打印每个任务的基本信息
+            logger.debug(
+                f"Processing API: {api_name_str}, (Total tasks: {len(api_infos)}),"
+                f" Device: {device_id}")
 
-        # 获取当前进程要处理的任务
-        current_partition = partitioned_api_infos_split[index]
+            if not self.multi_data_manager.is_unique_api(api_name_str):
+                logger.debug(f"API {api_name_str} is not unique, skipping.")
+                progress_queue.put(1)
+                continue
 
-        # 使用 tqdm 进度条，每个进程单独显示
-        with tqdm(total=len(current_partition), desc=f"Device {device_id}", position=index) as pbar:
-            for idx, (api_name_str, api_info) in enumerate(current_partition):  # 只遍历当前进程分配的任务
-                # debug打印每个任务的基本信息
-                logger.debug(
-                    f"Processing API: {api_name_str}, Index: {idx} (Total tasks: {len(current_partition)}),"
-                    f" Device: {device_id}")
+            # 执行前向检查
+            forward_output_list = self.process_forward(api_name_str, api_info)
+            if forward_output_list is not None:
+                self.multi_data_manager.record(forward_output_list)
 
-                if not self.multi_data_manager.is_unique_api(api_name_str):
-                    logger.debug(f"API {api_name_str} is not unique, skipping.")
-                    pbar.update(1)
-                    continue
+            # 执行反向检查
+            backward_output_list = self.process_backward(api_name_str, api_info)
+            if backward_output_list is not None:
+                self.multi_data_manager.record(backward_output_list)
 
-                if not api_info.check_forward_info():
-                    logger.debug(
-                        f"api: {api_name_str} is lack of forward information, skipping forward and backward check.")
-                    pbar.update(1)
-                    continue
+            # 保存结果
+            self.multi_data_manager.save_results(api_name_str)
 
-                # 执行前向和后向检查
-                try:
-                    forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
-                    forward_output_list = self.run_and_compare_helper(api_info, api_name_str,
-                                                                      forward_inputs_aggregation, Const.FORWARD)
-                    self.multi_data_manager.record(forward_output_list)
-                except Exception as e:
-                    logger.warning(f"Error in forward check for {api_name_str}: {e}")
-
-                if api_info.check_backward_info():
-                    try:
-                        backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
-                        backward_output_list = self.run_and_compare_helper(api_info, api_name_str,
-                                                                           backward_inputs_aggregation, Const.BACKWARD)
-                        self.multi_data_manager.record(backward_output_list)
-                    except Exception as e:
-                        logger.warning(f"Error in backward check for {api_name_str}: {e}")
-
-                # 保存结果
-                self.multi_data_manager.save_results(api_name_str)
-
-                # 更新进度条
-                pbar.update(1)
+            # 向主进程报告进度更新
+            progress_queue.put(1)
 
     def run_and_compare(self):
         # 获取要使用的设备ID列表
@@ -101,16 +92,38 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         # 按设备数划分要处理的 API 项
         partitioned_api_infos = list(self.api_infos.items())
 
-        # 创建多进程
-        processes = []
-        for index, device_id in enumerate(device_ids):
-            process = multiprocessing.Process(target=self.process_on_device,
-                                              args=(device_id, partitioned_api_infos, index))
-            processes.append(process)
-            process.start()
+        # 在主进程中进行交叉任务切分（基于取模的方式）
+        partitioned_api_infos_split = [[] for _ in range(len(device_ids))]
+        for idx, api_info in enumerate(partitioned_api_infos):
+            device_index = idx % len(device_ids)  # 使用取模方法分配任务
+            partitioned_api_infos_split[device_index].append(api_info)
 
-        # 等待所有进程完成
-        for process in processes:
-            process.join()
+        # 创建一个共享进度队列
+        progress_queue = multiprocessing.Queue()
 
+        # 进度条
+        total_tasks = len(partitioned_api_infos)  # 计算总任务数
+        with tqdm(total=total_tasks, desc="Total Progress", ncols=100) as pbar:
+            # 创建多进程
+            processes = []
+            for index, device_id in enumerate(device_ids):
+                process = multiprocessing.Process(target=self.process_on_device,
+                                                  args=(device_id, partitioned_api_infos_split[index], progress_queue))
+                processes.append(process)
+                process.start()
 
+            # 主进程更新进度条
+            completed_tasks = 0
+            while completed_tasks < total_tasks:
+                completed_tasks += progress_queue.get()  # 从队列中获取进度更新
+                pbar.update(1)  # 更新进度条
+
+            # 等待所有进程完成，捕获异常
+            for process in processes:
+                try:
+                    process.join()  # 等待子进程结束
+                    if process.exitcode != 0:  # 检查子进程的退出状态
+                        logger.error(f"Process {process.pid} ended with exit code {process.exitcode}")
+                except Exception as e:
+                    logger.error(f"Error while joining process {process.pid}: {e}")
+                    continue  # 继续等待其他子进程
