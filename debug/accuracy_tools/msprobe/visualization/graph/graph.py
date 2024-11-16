@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.graph.base_node import BaseNode
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
@@ -20,13 +20,17 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 
 
+MAX_RECUR_LEVEL = 100
+
+
 class Graph:
-    def __init__(self, model_name, data_path=''):
+    def __init__(self, model_name, data_path='', dump_data=None):
         self.node_map = {}
         self.node_id_map = {}
         self.add_node(NodeOp.module, model_name)
         self.root = self.get_node(model_name)
         self.data_path = data_path
+        self.dump_data = dump_data
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -167,3 +171,27 @@ class Graph:
                         micro_step_id = 0
                     node.micro_step_id = micro_step_id
         return len(batches_n)
+
+    def overflow_check(self):
+        detector = AnomalyDetector(self.dump_data)
+        detector.analyze().filter()
+
+        def cb_func(_node: BaseNode):
+            if detector.has_overflow(_node.id):
+                lv = detector.get_overflow_level(_node.id)
+                _node.set_overflow_level(lv)
+
+        def dfs(_node, vis_func=None, level=0):
+            if level > MAX_RECUR_LEVEL:
+                logger.warning(f'reach max recur level for overflow check by dfs, current/max: '
+                               f'{level}/{MAX_RECUR_LEVEL}')
+                return
+            cur_level = level + 1
+            if vis_func:
+                vis_func(_node)
+            for ch in _node.subnodes:
+                # run dfs on child nodes
+                dfs(ch, vis_func, level=cur_level)
+
+        # run dfs on graph root
+        dfs(self.root, vis_func=cb_func)

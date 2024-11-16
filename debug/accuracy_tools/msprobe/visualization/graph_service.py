@@ -19,6 +19,7 @@ import json
 from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.utils import CompareException
+from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
@@ -29,7 +30,7 @@ from msprobe.visualization.graph.node_colors import NodeColors
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def _compare_graph(input_param, args, mapping_file=None):
+def _compare_graph(input_param, args, mapping_file=None, overflow_check=False):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
     dump_path_n = input_param.get('npu_path')
@@ -53,6 +54,11 @@ def _compare_graph(input_param, args, mapping_file=None):
                                        mapping_config=MappingConfig(mapping_file) if mapping_file else None)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
+    # 开启溢出检测
+    if overflow_check:
+        graph_n.overflow_check()
+        graph_b.overflow_check()
+
     create_directory(args.output_path)
     output_path = os.path.join(args.output_path, f'compare_{current_time}.vis')
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
@@ -62,7 +68,7 @@ def _compare_graph(input_param, args, mapping_file=None):
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def _build_graph(dump_path, out_path):
+def _build_graph(dump_path, out_path, overflow_check=False):
     logger.info('Start building model graph...')
     construct_path = os.path.join(dump_path, GraphConst.CONSTRUCT_FILE)
     data_path = os.path.join(dump_path, GraphConst.DUMP_FILE)
@@ -70,6 +76,9 @@ def _build_graph(dump_path, out_path):
     output_path = os.path.join(out_path, f'build_{current_time}.vis')
     graph = GraphBuilder.build(construct_path, data_path)
     micro_steps = graph.paging_by_micro_step()
+    # 开启溢出检测
+    if overflow_check:
+        graph.overflow_check()
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
 
@@ -79,6 +88,8 @@ def _graph_service_parser(parser):
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-oc", "--overflow_check", dest="overflow_check", action="store_true",
+                        help="<Optional> whether open overflow_check for graph.", required=False)
 
 
 def _graph_service_command(args):
@@ -87,9 +98,9 @@ def _graph_service_command(args):
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
-        _build_graph(npu_path, args.output_path)
+        _build_graph(npu_path, args.output_path, overflow_check=args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        _compare_graph(input_param, args)
+        _compare_graph(input_param, args, overflow_check=args.overflow_check)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
