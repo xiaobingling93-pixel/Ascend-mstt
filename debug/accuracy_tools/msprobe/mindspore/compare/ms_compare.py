@@ -85,7 +85,7 @@ class MSComparator(Comparator):
                 return check_series
             
             def get_number(val):
-                return pd.to_numeric(val.astype(str), errors='coerce').fillna(0)
+                return pd.to_numeric(val.astype(str), errors='coerce')
             
             ms_val = result_df['NPU ' + data_type]
             pt_val = result_df['Bench ' + data_type]
