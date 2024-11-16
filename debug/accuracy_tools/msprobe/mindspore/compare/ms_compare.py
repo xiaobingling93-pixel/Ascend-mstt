@@ -151,7 +151,15 @@ class MSComparator(Comparator):
         def set_summary(summary):
             if summary == CompareConst.N_A:
                 return [CompareConst.N_A] * 4
-            return [CompareConst.N_A if i is None else i for i in summary]
+            summary_list = []
+            for i in summary:
+                if i is None:
+                    summary_list.append(CompareConst.N_A)
+                elif i == 'nan' or np.isnan(i):
+                    summary_list.append(CompareConst.NAN)
+                else:
+                    summary_list.append(i)
+            return summary_list
         
         result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
         result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
