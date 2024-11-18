@@ -92,23 +92,6 @@ class CommonConfig:
         self.iter_times = json_config.get('iter_times')
         self._check_config()
 
-    def _check_config(self):
-        if self.dump_json_path:
-            check_file_or_directory_path(self.dump_json_path)
-        if self.api_name:
-            check_op_str_pattern_valid(self.api_name)
-            if len(self.api_name) > API_MAX_LENGTH:
-                raise ValueError(f'API name {self.api_name} is too long!')
-        make_dir(os.path.dirname(self.extract_api_path))
-        if self.propagation and self.propagation not in PROPAGATION_LIST:
-            raise ValueError(f'propagation is invalid, it should be one of {PROPAGATION_LIST}')
-        if self.data_mode and self.data_mode not in DATAMODE_LIST:
-            raise ValueError(f'data_mode is invalid, it should be one of {DATAMODE_LIST}')
-        if not isinstance(self.random_seed, int):
-            raise ValueError(f'random_seed is invalid, it should be an int')
-        if not isinstance(self.iter_times, int):
-            raise ValueError(f'iter_times is invalid, it should be an int')
-
 
     def check_user_settings(self):
         iter_t = self.iter_times
@@ -147,6 +130,24 @@ class CommonConfig:
         api_result = APIInfo.from_json(json_content, propagation)
 
         return json_content
+
+
+    def _check_config(self):
+        if self.dump_json_path:
+            check_file_or_directory_path(self.dump_json_path)
+        if self.api_name:
+            check_op_str_pattern_valid(self.api_name)
+            if len(self.api_name) > API_MAX_LENGTH:
+                raise ValueError(f'API name {self.api_name} is too long!')
+        make_dir(os.path.dirname(self.extract_api_path))
+        if self.propagation and self.propagation not in PROPAGATION_LIST:
+            raise ValueError(f'propagation is invalid, it should be one of {PROPAGATION_LIST}')
+        if self.data_mode and self.data_mode not in DATAMODE_LIST:
+            raise ValueError(f'data_mode is invalid, it should be one of {DATAMODE_LIST}')
+        if not isinstance(self.random_seed, int):
+            raise ValueError(f'random_seed is invalid, it should be an int')
+        if not isinstance(self.iter_times, int):
+            raise ValueError(f'iter_times is invalid, it should be an int')
 
 class APIExtractor:
     def __init__(self, api_name, dump_json_path, output_file):
@@ -195,6 +196,40 @@ class OperatorScriptGenerator:
         self.args_info_forward = args_info_forward
         self.kwargs_info_forward = kwargs_info_forward
         self.args_info_backward = args_info_backward
+
+    @staticmethod
+    def get_compare_standard(api_name):
+        if api_name in binary_standard_api:
+            return "CompareStandard.BINARY_EQUALITY_STANDARD"
+        if api_name in absolute_standard_api:
+            return "CompareStandard.ABSOLUTE_THRESHOLD_STANDARD"
+        if api_name in ulp_standard_api:
+            return "CompareStandard.ULP_ERROR_STANDARD"
+        if api_name in thousandth_standard_api:
+            return "CompareStandard.THOUSANDTH_STANDARD"
+        return "CompareStandard.BENCHMARK_STANDARD"
+
+    @staticmethod
+    def extract_detailed_api_segments(full_api_name):
+        """
+        Function Description:
+            Extract the name of the API.
+        Parameter:
+            full_api_name_with_direction_status: Full name of the API. Example: torch.matmul.0.forward.output.0
+        Return:
+            api_name: Name of api. Example: matmul, mul, etc.
+            full_api_name: Full name of api. Example: torch.matmul.0
+            direction_status: Direction status of api. Example: forward, backward, etc.
+        """
+        api_parts = full_api_name.split(Const.SEP)
+        api_parts_length = len(api_parts)
+        api_type, api_name, api_order = None, None, None
+        if api_parts_length == FOUR_SEGMENT:
+            api_type, api_name, api_order, _ = api_parts
+        elif api_parts_length == FIVE_SEGMENT:
+            api_type, prefix, api_name, api_order, _ = api_parts
+            api_name = Const.SEP.join([prefix, api_name])
+        return api_type, api_name, api_order
 
     def get_settings(self, api_full_name):
         '''
@@ -253,41 +288,6 @@ class OperatorScriptGenerator:
 
         return internal_settings
 
-    @staticmethod
-    def get_compare_standard(api_name):
-        if api_name in binary_standard_api:
-            return "CompareStandard.BINARY_EQUALITY_STANDARD"
-        if api_name in absolute_standard_api:
-            return "CompareStandard.ABSOLUTE_THRESHOLD_STANDARD"
-        if api_name in ulp_standard_api:
-            return "CompareStandard.ULP_ERROR_STANDARD"
-        if api_name in thousandth_standard_api:
-            return "CompareStandard.THOUSANDTH_STANDARD"
-        return "CompareStandard.BENCHMARK_STANDARD"
-
-    @staticmethod
-    def extract_detailed_api_segments(full_api_name):
-        """
-        Function Description:
-            Extract the name of the API.
-        Parameter:
-            full_api_name_with_direction_status: Full name of the API. Example: torch.matmul.0.forward.output.0
-        Return:
-            api_name: Name of api. Example: matmul, mul, etc.
-            full_api_name: Full name of api. Example: torch.matmul.0
-            direction_status: Direction status of api. Example: forward, backward, etc.
-        """
-        api_parts = full_api_name.split(Const.SEP)
-        api_parts_length = len(api_parts)
-        api_type, api_name, api_order = None, None, None
-        if api_parts_length == FOUR_SEGMENT:
-            api_type, api_name, api_order, _ = api_parts
-        elif api_parts_length == FIVE_SEGMENT:
-            api_type, prefix, api_name, api_order, _ = api_parts
-            api_name = Const.SEP.join([prefix, api_name])
-        return api_type, api_name, api_order
-
-
     def recursive_args_element_assignment(self, args_info, name_number):
         args_element_assignment = ""
         for index, arg in enumerate(args_info):
@@ -307,7 +307,7 @@ class OperatorScriptGenerator:
 
     def recursive_args_list(self, args_info, flag_device=False, flag_bench=False):
         args_list_generator = ""
-        for index, arg in enumerate(args_info):
+        for _, arg in enumerate(args_info):
             if isinstance(arg, (list, tuple)):
                 (left_bracket, right_bracket) = ("[", "]") if isinstance(arg, list) else ("(", ")")
                 args_list_generator += left_bracket
