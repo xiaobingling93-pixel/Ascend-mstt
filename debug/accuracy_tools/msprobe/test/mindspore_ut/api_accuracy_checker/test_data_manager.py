@@ -9,7 +9,7 @@ class TestDataManager(unittest.TestCase):
 
     def setUp(self):
         # 设置测试的CSV目录和结果路径
-        self.csv_dir = "./test_csv_dir"
+        self.csv_dir = "./test_data_manager_csv_dir"
         self.result_csv_path = os.path.join(self.csv_dir, "result.csv")
         self.details_csv_path = os.path.join(self.csv_dir, "details.csv")  # 新增 details.csv 路径
 
