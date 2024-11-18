@@ -213,6 +213,7 @@ class Service:
             return
         self.primitive_switch = False
         api_register.api_set_ori_func()
+        JitDump.jit_dump_switch = False
 
     def stop(self):
         if self.should_stop_service:
