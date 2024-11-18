@@ -13,47 +13,122 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-import multiprocessing
 import os
+import numpy as np
+import multiprocessing
+from multiprocessing import Manager
+from mindspore import context
+import signal
+import sys
+from tqdm import tqdm
+import random
+import time
 
-from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager, ResultCsvEntry, write_csv_header, get_result_csv_header, get_detail_csv_header, check_csv_header
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker, BasicInfoAndStatus
+from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 
+def handle_child_signal(signum, frame):
+    """处理子进程的退出信号"""
+    logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
 
-class MultiDataManager(DataManager):
-    def __init__(self, csv_dir, result_csv_path, shared_is_first_write):
-        super().__init__(csv_dir, result_csv_path)
-        # 创建锁对象，确保线程安全
-        # 使用共享的 is_first_write 变量来控制表头写入
-        self.is_first_write = True
-        self.shared_is_first_write = shared_is_first_write
-        self.lock = multiprocessing.Lock()
+def handle_main_signal(signum, frame):
+    """处理主进程的退出信号"""
+    logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
+    sys.exit(0)
 
-    def save_results(self, api_name_str):
-        """保存结果，线程安全操作"""
-        with self.lock:  # 确保保存操作不会被多个进程同时进行
+class MultiApiAccuracyChecker(ApiAccuracyChecker):
+    def __init__(self, args):
+        # 可以添加 MultiApiAccuracyChecker 特有的属性或方法
+        self.api_infos = dict()
 
-            if self.is_first_write and self.shared_is_first_write.value:
-                self.shared_is_first_write.value = False
+        # 使用 Manager 创建共享变量，确保进程间的同步
+        self.manager = Manager()
+        self.is_first_write = self.manager.Value('b', True)  # 创建共享变量
 
-                # 直接写入表头
-                logger.info("Writing CSV headers for the first time.")
-                write_csv_header(self.detail_out_path, get_detail_csv_header)
-                write_csv_header(self.result_out_path, get_result_csv_header)
-                self.is_first_write = False  # 写入后标记为 False，避免重复写入表头
+        # 初始化 DataManager 时传入共享的 is_first_write
+        self.multi_data_manager = MultiDataManager(args.out_path, args.result_csv_path, self.is_first_write)
 
-            """写入详细输出和结果摘要并清理结果"""
-            self.to_detail_csv(self.detail_out_path)
-            logger.debug(f"Detailed output for {api_name_str} written to {self.detail_out_path}.")
+        self.args = args  # 将 args 保存为类的属性
 
-            self.to_result_csv(self.result_out_path)
-            logger.debug(f"Result summary for {api_name_str} written to {self.result_out_path}.")
 
-            # 清理记录，准备下一次调用
-            self.clear_results()
+    def process_on_device(self, device_id, api_infos, progress_queue):
+        # 设置 MindSpore context 的 device_id
+        context.set_context(device_id=device_id)
 
-    def clear_results(self):
-        """清空 self.results 数据，线程安全操作"""
-        logger.debug("Clearing results data.")
-        self.results.clear()
+        # 遍历当前进程分配的任务
+        for idx, (api_name_str, api_info) in enumerate(api_infos):
+            logger.debug(f"Processing API: {api_name_str}, Device: {device_id}")
+
+            if not self.multi_data_manager.is_unique_api(api_name_str):
+                logger.debug(f"API {api_name_str} is not unique, skipping.")
+                progress_queue.put(1)
+                continue
+
+            # 处理前向
+            forward_output_list = self.process_forward(api_name_str, api_info)
+            if forward_output_list is not None:
+                self.multi_data_manager.record(forward_output_list)
+
+            # 处理反向
+            backward_output_list = self.process_backward(api_name_str, api_info)
+            if backward_output_list is not None:
+                self.multi_data_manager.record(backward_output_list)
+
+            # 保存结果
+            self.multi_data_manager.save_results(api_name_str)
+            progress_queue.put(1)  # 更新进度
+
+    def run_and_compare(self):
+        # 获取要使用的设备ID列表
+        device_ids = self.args.device_id
+
+        # 按设备数划分要处理的 API 项
+        partitioned_api_infos = list(self.api_infos.items())
+
+        # 在主进程中进行交叉任务切分（基于取模的方式）
+        partitioned_api_infos_split = [[] for _ in range(len(device_ids))]
+        for idx, api_info in enumerate(partitioned_api_infos):
+            device_index = idx % len(device_ids)  # 使用取模方法分配任务
+            partitioned_api_infos_split[device_index].append(api_info)
+
+        # 创建一个共享进度队列
+        progress_queue = multiprocessing.Queue()
+
+        # 进度条
+        total_tasks = len(partitioned_api_infos)  # 计算总任务数
+        with tqdm(total=total_tasks, desc="Total Progress", ncols=100) as pbar:
+            # 创建多进程
+            processes = []
+            for index, device_id in enumerate(device_ids):
+                process = multiprocessing.Process(target=self.process_on_device,
+                                                args=(device_id, partitioned_api_infos_split[index], progress_queue))
+                processes.append(process)
+                process.start()
+
+            # 主进程更新进度条
+            completed_tasks = 0
+            while completed_tasks < total_tasks:
+                try:
+                    completed_tasks += progress_queue.get(timeout=60)  # 设置超时时间（秒）
+                    pbar.update(1)
+                except multiprocessing.queues.Empty:
+                    logger.error("Timeout while waiting for progress updates. Skipping remaining tasks.")
+                    break
+
+                # 检查子进程状态
+                for process in processes:
+                    if not process.is_alive():
+                        if process.exitcode != 0:
+                            logger.error(f"Process {process.pid} exited with code {process.exitcode}.")
+                            total_tasks -= len(partitioned_api_infos_split[processes.index(process)])
+                        processes.remove(process)
+
+
+            # 确保所有子进程完成或终止
+            for process in processes:
+                process.join(timeout=60)
+                if process.is_alive():
+                    logger.error(f"Process {process.pid} did not terminate. Forcing termination.")
+                    process.terminate()

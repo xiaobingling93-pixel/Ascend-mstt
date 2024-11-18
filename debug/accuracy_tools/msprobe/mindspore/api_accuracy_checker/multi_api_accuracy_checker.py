@@ -21,23 +21,21 @@ from mindspore import context
 import signal
 import sys
 from tqdm import tqdm
+import time
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker, BasicInfoAndStatus
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 
-
 def handle_child_signal(signum, frame):
     """处理子进程的退出信号"""
     logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
-
 
 def handle_main_signal(signum, frame):
     """处理主进程的退出信号"""
     logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
     sys.exit(0)
-
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
     def __init__(self, args):
@@ -53,37 +51,33 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
         self.args = args  # 将 args 保存为类的属性
 
+
     def process_on_device(self, device_id, api_infos, progress_queue):
         # 设置 MindSpore context 的 device_id
         context.set_context(device_id=device_id)
 
         # 遍历当前进程分配的任务
         for idx, (api_name_str, api_info) in enumerate(api_infos):
-            # debug打印每个任务的基本信息
-            logger.debug(
-                f"Processing API: {api_name_str}, (Total tasks: {len(api_infos)}),"
-                f" Device: {device_id}")
+            logger.debug(f"Processing API: {api_name_str}, Device: {device_id}")
 
             if not self.multi_data_manager.is_unique_api(api_name_str):
                 logger.debug(f"API {api_name_str} is not unique, skipping.")
                 progress_queue.put(1)
                 continue
 
-            # 执行前向检查
+            # 处理前向
             forward_output_list = self.process_forward(api_name_str, api_info)
             if forward_output_list is not None:
                 self.multi_data_manager.record(forward_output_list)
 
-            # 执行反向检查
+            # 处理反向
             backward_output_list = self.process_backward(api_name_str, api_info)
             if backward_output_list is not None:
                 self.multi_data_manager.record(backward_output_list)
 
             # 保存结果
             self.multi_data_manager.save_results(api_name_str)
-
-            # 向主进程报告进度更新
-            progress_queue.put(1)
+            progress_queue.put(1)  # 更新进度
 
     def run_and_compare(self):
         # 获取要使用的设备ID列表
@@ -108,22 +102,32 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
             processes = []
             for index, device_id in enumerate(device_ids):
                 process = multiprocessing.Process(target=self.process_on_device,
-                                                  args=(device_id, partitioned_api_infos_split[index], progress_queue))
+                                                args=(device_id, partitioned_api_infos_split[index], progress_queue))
                 processes.append(process)
                 process.start()
 
             # 主进程更新进度条
             completed_tasks = 0
             while completed_tasks < total_tasks:
-                completed_tasks += progress_queue.get()  # 从队列中获取进度更新
-                pbar.update(1)  # 更新进度条
-
-            # 等待所有进程完成，捕获异常
-            for process in processes:
                 try:
-                    process.join()  # 等待子进程结束
-                    if process.exitcode != 0:  # 检查子进程的退出状态
-                        logger.error(f"Process {process.pid} ended with exit code {process.exitcode}")
-                except Exception as e:
-                    logger.error(f"Error while joining process {process.pid}: {e}")
-                    continue  # 继续等待其他子进程
+                    completed_tasks += progress_queue.get(timeout=60)  # 设置超时时间（秒）
+                    pbar.update(1)
+                except multiprocessing.queues.Empty:
+                    logger.error("Timeout while waiting for progress updates. Skipping remaining tasks.")
+                    break
+
+                # 检查子进程状态
+                for process in processes:
+                    if not process.is_alive():
+                        if process.exitcode != 0:
+                            logger.error(f"Process {process.pid} exited with code {process.exitcode}.")
+                            total_tasks -= len(partitioned_api_infos_split[processes.index(process)])
+                        processes.remove(process)
+
+
+            # 确保所有子进程完成或终止
+            for process in processes:
+                process.join(timeout=60)
+                if process.is_alive():
+                    logger.error(f"Process {process.pid} did not terminate. Forcing termination.")
+                    process.terminate()

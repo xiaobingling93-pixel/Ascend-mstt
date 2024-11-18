@@ -9,7 +9,7 @@ class TestDataManager(unittest.TestCase):
 
     def setUp(self):
         # 设置测试的CSV目录和结果路径
-        self.csv_dir = "/tmp/test_csv_dir"
+        self.csv_dir = "./test_csv_dir"
         self.result_csv_path = os.path.join(self.csv_dir, "result.csv")
         self.details_csv_path = os.path.join(self.csv_dir, "details.csv")  # 新增 details.csv 路径
 
@@ -67,6 +67,15 @@ class TestDataManager(unittest.TestCase):
         self.assertIn(("API1", "FORWARD"), self.data_manager.results)
         self.assertEqual(len(self.data_manager.results[("API1", "FORWARD")]), 1)
 
+    def tearDown(self):
+        # 清理创建的测试目录和文件
+        if os.path.exists(self.csv_dir):
+            for root, dirs, files in os.walk(self.csv_dir, topdown=False):
+                for file in files:
+                    os.remove(os.path.join(root, file))
+                for dir in dirs:
+                    os.rmdir(os.path.join(root, dir))
+            os.rmdir(self.csv_dir)
 
 if __name__ == "__main__":
     unittest.main()
