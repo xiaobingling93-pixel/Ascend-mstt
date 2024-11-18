@@ -14,19 +14,20 @@
 # limitations under the License.
 
 from msprobe.visualization.builder.msprobe_adapter import compare_node, get_compare_mode, run_real_data
-from msprobe.visualization.utils import (GraphConst, load_json_file, load_data_json_file, get_csv_df,
-                                         process_kwargs_parameter)
+from msprobe.visualization.utils import GraphConst, load_json_file, load_data_json_file, get_csv_df
 from msprobe.visualization.graph.graph import Graph, NodeOp
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.visualization.compare.mode_adapter import ModeAdapter
+from msprobe.core.common.const import Const
 
 
 class GraphComparator:
-    def __init__(self, graphs, dump_path_param, output_path, mapping_config=None):
+    def __init__(self, graphs, dump_path_param, output_path, framework=Const.PT_FRAMEWORK, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, output_path)
-        self.mapping_config = mapping_config
+        self.framework = framework
+        self.mapping_dict = mapping_dict
 
     def compare(self):
         """
@@ -49,12 +50,15 @@ class GraphComparator:
         compare_out_dict = {}
         # input和output对比数据分开
         for item in compare_result_list:
+            if not isinstance(item, (list, tuple)) or not item:
+                continue
             if not node.stack_info and node.id in item[0]:
-                node.stack_info = item[-1]
+                if isinstance(item[-1], list):
+                    node.stack_info = item[-1]
             if '.output.' in item[0]:
                 compare_out_dict[item[0]] = item
             else:
-                compare_in_dict[process_kwargs_parameter(item[0])] = item
+                compare_in_dict[item[0]] = item
         precision_index, other_dict = (
             self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
@@ -77,7 +81,7 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df)
+        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_dict else False)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
@@ -88,13 +92,18 @@ class GraphComparator:
 
     def _handle_api_collection_index(self):
         """
-        api集合的指标使用集合中所有api最小的指标
+        api集合的指标, md5模式使用集合中所有api最小的指标，statistics和tensor模式使用集合中所有api最大的指标
+        md5模式下指标为0代表最差，statistics和tensor模式下指标为1代表最差
         """
         for node in self.graph_n.root.subnodes:
             if node.op == NodeOp.api_collection:
-                precision_index = 1
+                precision_index = GraphConst.MAX_INDEX_KEY if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                    else GraphConst.MIN_INDEX_KEY
                 for api in node.subnodes:
-                    precision_index = min(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, 1))
+                    precision_index = min(precision_index,
+                                          api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MAX_INDEX_KEY)) \
+                        if self.ma.compare_mode == GraphConst.MD5_COMPARE \
+                        else max(precision_index, api.data.get(GraphConst.JSON_INDEX_KEY, GraphConst.MIN_INDEX_KEY))
                 node.data[GraphConst.JSON_INDEX_KEY] = precision_index
 
     def _compare_nodes(self, node_n):
@@ -102,8 +111,8 @@ class GraphComparator:
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
         这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
         """
-        if self.mapping_config:
-            node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_config)
+        if self.mapping_dict:
+            node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_dict)
             if node_b:
                 ancestors_n.append(node_n.id)
                 ancestors_b.append(node_b.id)

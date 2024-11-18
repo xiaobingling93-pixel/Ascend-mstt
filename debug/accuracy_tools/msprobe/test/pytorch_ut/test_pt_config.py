@@ -1,10 +1,9 @@
 import os
 import shutil
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.exceptions import MsprobeException
 from msprobe.pytorch.pt_config import parse_json_config, parse_task_config, TensorConfig, \
     StatisticsConfig, OverflowCheckConfig, FreeBenchmarkCheckConfig, RunUTConfig, GradToolConfig
 
@@ -106,7 +105,10 @@ class TestTensorConfig(unittest.TestCase):
             self.config._check_file_format()
         self.assertIn(str(context.exception), "file_format is invalid")
 
-    def test_check_online_run_ut(self):
+    @patch('msprobe.pytorch.pt_config.check_crt_valid')
+    def test_check_online_run_ut(self, mock_check_crt_valid):
+        mock_check_crt_valid.return_value = True
+
         self.config.online_run_ut = "True"
         with self.assertRaises(Exception) as context:
             self.config._check_online_run_ut()
@@ -195,8 +197,12 @@ class TestOverflowCheckConfig(unittest.TestCase):
             "overflow_nums": 2,
             "check_mode": "all"
         }
-        self.invalid_overflow_nums_config = {
+        self.invalid_overflow_nums_config_str = {
             "overflow_nums": "not_an_int",
+            "check_mode": "all"
+        }
+        self.invalid_overflow_nums_config_bool = {
+            "overflow_nums": bool,
             "check_mode": "all"
         }
         self.invalid_check_mode_config = {
@@ -209,9 +215,14 @@ class TestOverflowCheckConfig(unittest.TestCase):
         self.assertEqual(config.overflow_nums, 2)
         self.assertEqual(config.check_mode, Const.ALL)
 
-    def test_invalid_overflow_nums(self):
+    def test_invalid_overflow_nums_str_type(self):
         with self.assertRaises(Exception) as context:
-            OverflowCheckConfig(self.invalid_overflow_nums_config)
+            OverflowCheckConfig(self.invalid_overflow_nums_config_str)
+        self.assertEqual(str(context.exception), "overflow_num is invalid")
+
+    def test_invalid_overflow_nums_bool_type(self):
+        with self.assertRaises(Exception) as context:
+            OverflowCheckConfig(self.invalid_overflow_nums_config_bool)
         self.assertEqual(str(context.exception), "overflow_num is invalid")
 
     def test_invalid_check_mode(self):

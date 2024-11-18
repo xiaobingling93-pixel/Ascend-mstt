@@ -1,3 +1,4 @@
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 from msprobe.visualization.builder.graph_builder import GraphBuilder, Graph, GraphExportConfig
@@ -8,8 +9,8 @@ from msprobe.visualization.graph.base_node import BaseNode
 class TestGraphBuilder(unittest.TestCase):
 
     def setUp(self):
-        self.construct_path = "step/rank/construct.json"
-        self.data_path = "step/rank/dump.json"
+        self.construct_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "construct.json")
+        self.data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dump.json")
         self.model_name = "TestModel"
         self.graph = Graph(self.model_name)
         self.graph_b = Graph(self.model_name)

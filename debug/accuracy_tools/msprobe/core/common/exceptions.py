@@ -26,10 +26,12 @@ class CodedException(Exception):
 class MsprobeException(CodedException):
     INVALID_PARAM_ERROR = 0
     OVERFLOW_NUMS_ERROR = 1
+    RECURSION_LIMIT_ERROR = 2
 
     err_strs = {
         INVALID_PARAM_ERROR: "[msprobe] 无效参数：",
-        OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数："
+        OVERFLOW_NUMS_ERROR: "[msprobe] 超过预设溢出次数 当前溢出次数：",
+        RECURSION_LIMIT_ERROR: "[msprobe] 递归调用超过限制："
     }
 
 
@@ -56,7 +58,7 @@ class ParseJsonException(CodedException):
     InvalidDumpJson = 1
     err_strs = {
         UnexpectedNameStruct: "[msprobe] Unexpected name in json: ",
-        InvalidDumpJson: "[msprobe] json格式不正确: ",
+        InvalidDumpJson: "[msprobe] Invalid dump.json format: ",
     }
 
 
@@ -96,7 +98,6 @@ class FreeBenchmarkException(CodedException):
         InvalidPerturbedOutput: "[msprobe] Free benchmark invalid perturbed output: ",
         OutputIndexError: "[msprobe] Free benchmark output index out of bounds: ",
     }
-
 
 class DistributedNotInitializedError(Exception):
     def __init__(self, msg):

@@ -18,8 +18,9 @@ import re
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path
+from msprobe.core.common.file_utils import FileOpen, load_json, check_file_or_directory_path, check_crt_valid
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import is_int
 from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_bounds
@@ -64,6 +65,7 @@ class TensorConfig(BaseConfig):
             check_file_or_directory_path(self.tls_path, isdir=True)
             check_file_or_directory_path(os.path.join(self.tls_path, "client.key"))
             check_file_or_directory_path(os.path.join(self.tls_path, "client.crt"))
+            check_crt_valid(os.path.join(self.tls_path, "client.crt"))
 
         if not isinstance(self.host, str) or not re.match(Const.ipv4_pattern, self.host):
             raise Exception(f"host: {self.host} is invalid.")
@@ -91,7 +93,7 @@ class OverflowCheckConfig(BaseConfig):
         self.check_overflow_config()
 
     def check_overflow_config(self):
-        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
+        if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_num is invalid")
         if self.check_mode is not None and self.check_mode not in ["all", "aicore", "atomic"]:
             raise Exception("check_mode is invalid")
@@ -191,7 +193,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             )
 
     def _check_preheat_config(self):
-        if not isinstance(self.preheat_step, int):
+        if not is_int(self.preheat_step):
             msg = "preheat_step is invalid, it should be an integer"
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
@@ -201,7 +203,7 @@ class FreeBenchmarkCheckConfig(BaseConfig):
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)
             )
-        if not isinstance(self.max_sample, int):
+        if not is_int(self.max_sample):
             msg = "max_sample is invalid, it should be an integer"
             logger.error_log_with_exp(
                 msg, MsprobeException(MsprobeException.INVALID_PARAM_ERROR, msg)

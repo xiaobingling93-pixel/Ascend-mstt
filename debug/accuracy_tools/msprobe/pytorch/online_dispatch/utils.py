@@ -75,7 +75,10 @@ INT_TYPE = [np.int32, np.int64]
 def get_callstack():
     callstack = []
     for (_, path, line, func, code, _) in inspect.stack()[2:]:
-        stack_line = [path, str(line), func, code[0].strip() if code else code]
+        try:
+            stack_line = [path, str(line), func, code[0].strip() if code else code]
+        except IndexError:
+            logger.error("Failed to get callstack for code:{} index out of range".format(code))
         callstack.append(stack_line)
     return callstack
 
@@ -142,3 +145,9 @@ class DispatchException(Exception):
 
     def __str__(self):
         return self.err_msg
+
+
+def check_idx_valid(data, idx):
+    if data is not None and data.numel() > 0 and 0 <= idx < data.numel():
+        return True
+    return False

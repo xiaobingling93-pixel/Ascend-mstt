@@ -15,12 +15,13 @@
 
 import os
 
-from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import load_json, load_yaml, save_yaml
-from msprobe.core.common.utils import (add_time_with_yaml, detect_framework_by_dump_json,
-                                       get_stack_construct_by_dump_json_path, CompareException)
-from msprobe.core.compare.data_scope_parser import get_dump_data_items
+from msprobe.core.common.utils import (add_time_with_yaml,
+                                       detect_framework_by_dump_json,
+                                       get_stack_construct_by_dump_json_path)
+from msprobe.core.compare.layer_mapping.data_scope_parser import get_dump_data_items
+from msprobe.core.compare.utils import read_op
 
 
 class LayerTrie:
@@ -175,7 +176,7 @@ def convert_data_items(npu_tree, bench_tree, npu_data_items, mapping):
     api_mapping = {}
     for npu_data_item in npu_data_items:
         bench_data_item = convert_data_item(npu_tree, bench_tree, npu_data_item, mapping)
-        bench_name = bench_data_item.data_name if bench_data_item else ""
+        bench_name = bench_data_item.data_name if bench_data_item else CompareConst.N_A
         npu_name = npu_data_item.data_name
         api_mapping[npu_name] = bench_name
     return api_mapping
@@ -196,61 +197,34 @@ def generate_api_mapping_by_layer_mapping(npu_json_path, bench_json_path, layer_
     return api_mapping
 
 
-def generate_index_set(item, prefix="", depth=0, max_depth=10):
-    if depth > max_depth:
-        logger.error("parse index exceeds the recursion limit.")
-        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
-    result = set()
-    if isinstance(item, list):
-        for idx, value in enumerate(item):
-            pre = f"{prefix}.{idx}" if prefix else str(idx)
-            result.update(generate_index_set(value, pre, depth+1, max_depth))
-    elif prefix:
-        result.add(prefix)
-    return result
+def generate_data_mapping(npu_json_path, bench_json_path, api_mapping, output_path=None):
+    def read_full_op_names(data, op_name):
+        op_parsed_list = read_op(data.get(op_name, {}), op_name)
+        full_op_names = [op_parsed.get('full_op_name') for op_parsed in op_parsed_list]
+        return full_op_names
 
+    def generate_op_data_mapping(npu_op_name, npu_full_op_names, bench_op_name, bench_full_op_names):
+        suffix_to_full_op_name = {}
+        op_data_mapping = {}
+        for bench_full_op_name in bench_full_op_names:
+            suffix = bench_full_op_name[len(bench_op_name):]
+            suffix_to_full_op_name[suffix] = bench_full_op_name
 
-def generate_file_mapping(npu_json_path, bench_json_path, api_mapping, output_path=None):
-    def get_input(data):
-        input_list = data.get(Const.INPUT_ARGS)
-        if not input_list:
-            input_list = data.get(Const.INPUT)
-        return input_list
-
-    def generate_input_output_index_set(data, name):
-        data_item = data.get(name)
-        inputs = get_input(data_item)
-        outputs = data_item.get(Const.OUTPUT)
-        input_index_set = generate_index_set(inputs)
-        output_index_set = generate_index_set(outputs)
-        return input_index_set, output_index_set
-
-    def get_common_index_list(npu_index_set, bench_index_set):
-        common_index = npu_index_set & bench_index_set
-        res = sorted(common_index, key=lambda x: [int(i) for i in x.split(Const.SEP)])
-        return res
-
-    def combine_data_name_and_index(npu_name, bench_name, index_list, input_output):
-        res = {}
-        for index in index_list:
-            k = Const.SEP.join([npu_name, input_output, index])
-            v = Const.SEP.join([bench_name, input_output, index])
-            res[k] = v
-        return res
+        for npu_full_op_name in npu_full_op_names:
+            suffix = npu_full_op_name[len(npu_op_name):]
+            op_data_mapping[npu_full_op_name] = suffix_to_full_op_name.get(suffix, CompareConst.N_A)
+        return op_data_mapping
 
     npu_data = load_json(npu_json_path).get("data", {})
     bench_data = load_json(bench_json_path).get("data", {})
     data_mapping = {}
-    for npu_name, bench_name in api_mapping.items():
-        if not bench_name or not npu_name:
+    for npu_op_name, bench_op_name in api_mapping.items():
+        if not npu_op_name:
             continue
-        npu_input_index_set, npu_output_index_set = generate_input_output_index_set(npu_data, npu_name)
-        bench_input_index_set, bench_output_index_set = generate_input_output_index_set(bench_data, bench_name)
-        common_input_index_list = get_common_index_list(npu_input_index_set, bench_input_index_set)
-        common_output_index_list = get_common_index_list(npu_output_index_set, bench_output_index_set)
-
-        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, common_input_index_list, Const.INPUT))
-        data_mapping.update(combine_data_name_and_index(npu_name, bench_name, common_output_index_list, Const.OUTPUT))
+        npu_full_op_names = read_full_op_names(npu_data, npu_op_name)
+        bench_full_op_names = read_full_op_names(bench_data, bench_op_name)
+        mapping = generate_op_data_mapping(npu_op_name, npu_full_op_names, bench_op_name, bench_full_op_names)
+        data_mapping.update(mapping)
     if output_path:
         file_name = add_time_with_yaml("data_mapping")
         file_path = os.path.join(os.path.realpath(output_path), file_name)
@@ -263,6 +237,6 @@ def generate_data_mapping_by_layer_mapping(input_param, layer_mapping_path=None,
     bench_json_path = input_param.get("bench_json_path")
     api_mapping = generate_api_mapping_by_layer_mapping(
         npu_json_path, bench_json_path, layer_mapping_path)
-    data_mapping = generate_file_mapping(
+    data_mapping = generate_data_mapping(
         npu_json_path, bench_json_path, api_mapping, output_path)
     return data_mapping

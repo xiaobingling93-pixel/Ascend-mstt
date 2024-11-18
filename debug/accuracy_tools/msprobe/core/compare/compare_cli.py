@@ -24,6 +24,12 @@ def compare_cli(args):
     input_param = load_json(args.input_path)
     npu_path = input_param.get("npu_path", None)
     bench_path = input_param.get("bench_path", None)
+    if not npu_path:
+        logger.error(f"Missing npu_path in configuration file {args.input_path}, please check!")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    if not bench_path:
+        logger.error(f"Missing bench_path in configuration file {args.input_path}, please check!")
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
     frame_name = args.framework
     auto_analyze = not args.compare_only
     if frame_name == Const.PT_FRAMEWORK:
@@ -33,6 +39,9 @@ def compare_cli(args):
         from msprobe.mindspore.compare.ms_compare import ms_compare
         from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed, ms_graph_compare
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
+        if "stack_path" not in input_param:
+            logger.error(f"Missing stack_path in configuration file {args.input_path}, please check!")
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
         input_param["stack_json_path"] = input_param.pop("stack_path")

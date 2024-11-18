@@ -70,18 +70,12 @@ def str2float(percentage_str):
         return 0
 
 
-def process_kwargs_parameter(parameter):
-    """
-    转换kwargs参数命名
-    Args:
-        parameter: 'Module.module.Float16Module.forward.0.input.labels.0'
-    Returns: 'Module.module.Float16Module.forward.0.kwargs.labels'
-    """
-    parts = parameter.split(Const.SEP)
-    if parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT:
-        parts[GraphConst.OUTPUT_INDEX_THREE] = 'kwargs'
-        return Const.SEP.join(parts[:-1])
-    return parameter
+def is_integer(s):
+    try:
+        int(s)
+        return True
+    except Exception:
+        return False
 
 
 class ToolTip:
@@ -128,6 +122,8 @@ class GraphConst:
     JSON_TIP_KEY = 'ToolTip'
     JSON_ROOT_KEY = 'root'
     JSON_NODE_KEY = 'node'
+    JSON_DATA_KEY = 'dump_data_dir'
+    JSON_TASK_KEY = 'task'
     DATA_KEY = 'data'
     REAL_DATA_TH = 0.1
     MAX_RELATIVE_ERR_TH = 0.5

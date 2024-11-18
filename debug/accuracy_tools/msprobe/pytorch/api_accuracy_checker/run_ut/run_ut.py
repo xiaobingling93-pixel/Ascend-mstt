@@ -35,19 +35,20 @@ import torch
 from tqdm import tqdm
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMessage, UtDataInfo, \
-    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info
+    get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info, is_unsupported_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
     initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
-from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
+from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
-    create_directory, get_json_contents, read_csv, check_file_or_directory_path
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path, check_crt_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
+from msprobe.core.common.utils import safe_get_value
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params, generate_device_params
@@ -57,11 +58,7 @@ current_time = time.strftime("%Y%m%d%H%M%S")
 UT_ERROR_DATA_DIR = 'ut_error_data' + current_time
 RESULT_FILE_NAME = "accuracy_checking_result_" + current_time + ".csv"
 DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
-RunUTConfig = namedtuple('RunUTConfig', ['forward_content', 'backward_content', 'result_csv_path', 'details_csv_path',
-                                         'save_error_data', 'is_continue_run_ut', 'real_data_path', 'white_list',
-                                         'black_list', 'error_data_path', 'online_config'])
 
-OnlineConfig = namedtuple('OnlineConfig', ['is_online', 'nfs_path', 'host', 'port', 'rank_list', 'tls_path'])
 
 not_backward_list = ['repeat_interleave']
 
@@ -99,7 +96,11 @@ def run_ut(config):
         run_api_online(config, compare)
     else:
         csv_df = read_csv(config.result_csv_path)
-        api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        try:
+            api_name_set = {row[0] for row in csv_df.itertuples(index=False, name=None)}
+        except IndexError:
+            logger.error(f"Read {config.result_csv_path} error, api_name_set is empty.")
+            api_name_set = set()
         run_api_offline(config, compare, api_name_set)
     for result_csv_path, details_csv_path in zip(compare.save_path_list, compare.detail_save_path_list):
         change_mode(result_csv_path, FileCheckConst.DATA_FILE_AUTHORITY)
@@ -140,7 +141,7 @@ def run_api_offline(config, compare, api_name_set):
         except Exception as err:
             if "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
-                               f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
+                               "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
             compare_alg_results = err_column.to_column_value(CompareConst.SKIP, str(err))
@@ -220,14 +221,6 @@ def blacklist_and_whitelist_filter(api_name, black_list, white_list):
     return False
 
 
-def is_unsupported_api(api_name):
-    split_name = api_name.split(Const.SEP)[0]
-    flag = split_name == Const.DISTRIBUTED
-    if flag:
-        logger.info(f"{split_name} api is not supported for run ut. SKIP.")
-    return flag
-
-
 def do_save_error_data(api_full_name, data_info, error_data_path, is_fwd_success, is_bwd_success):
     if not is_fwd_success or not is_bwd_success:
         processor = UtDataProcessor(error_data_path)
@@ -253,7 +246,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         backward_message += BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        logger.warning("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
+        logger.info("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
         backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
@@ -278,7 +271,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
             func_options = {
                 'real_data_path': real_data_path
             }
-            grad = gen_args(backward_args, api_name, func_options)[0]
+            grad = gen_args(backward_args, api_name, func_options)
+            grad = safe_get_value(grad, 0, "grad")
             bench_grad, _ = generate_cpu_params(grad, {}, False, api_name)
             bench_grad_out = run_backward(cpu_args, bench_grad, grad_index, out)
             device_grad = grad.clone().detach().to(current_device)
@@ -286,8 +280,8 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         else:
             backward_message += BackwardMessage.MULTIPLE_BACKWARD_MESSAGE
     if api_name == "npu_fusion_attention":
-        out = out[0]
-        device_out = device_out[0]
+        out = safe_get_value(out, 0, "out")
+        device_out = safe_get_value(device_out, 0, "device_out")
 
     return UtDataInfo(bench_grad_out, device_grad_out, device_out, out, bench_grad, in_fwd_data_list, backward_message)
 
@@ -323,6 +317,9 @@ def need_to_backward(grad_index, out):
 
 def run_backward(args, grad, grad_index, out):
     if grad_index is not None:
+        if grad_index >= len(out):
+            logger.error(f"Run backward error when grad_index is {grad_index}")
+            raise IndexError(f"Run backward error when grad_index is {grad_index}")
         out[grad_index].backward(grad)
     else:
         out.backward(grad)
@@ -457,6 +454,8 @@ def checked_online_config(online_config):
         check_file_or_directory_path(online_config.tls_path, isdir=True)
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
+        check_crt_valid(os.path.join(online_config.tls_path, "server.crt"))
+
     # host and port
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
         raise Exception(f"host: {online_config.host} is invalid.")
@@ -465,6 +464,19 @@ def checked_online_config(online_config):
 
 
 def run_ut_command(args):
+    if args.config_path:
+        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
+                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
+        checked_config_path = config_path_checker.common_check()
+        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
+        checker_config = CheckerConfig(task_config)
+    else:
+        checker_config = CheckerConfig()
+    
+    if not checker_config.is_online and not args.api_info_file:
+        logger.error("Please provide api_info_file for offline run ut.")
+        raise Exception("Please provide api_info_file for offline run ut.")
+
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     used_device = current_device + ":" + str(args.device_id[0])
@@ -501,41 +513,27 @@ def run_ut_command(args):
     if args.result_csv_path:
         result_csv_path = get_validated_result_csv_path(args.result_csv_path, 'result')
         details_csv_path = get_validated_details_csv_path(result_csv_path)
-    white_list = msCheckerConfig.white_list
-    black_list = msCheckerConfig.black_list
-    error_data_path = msCheckerConfig.error_data_path
-    is_online = msCheckerConfig.is_online
-    nfs_path = msCheckerConfig.nfs_path
-    host = msCheckerConfig.host
-    port = msCheckerConfig.port
-    rank_list = msCheckerConfig.rank_list
-    tls_path = msCheckerConfig.tls_path
-    if args.config_path:
-        config_path_checker = FileChecker(args.config_path, FileCheckConst.FILE, 
-                                          FileCheckConst.READ_ABLE, FileCheckConst.JSON_SUFFIX)
-        checked_config_path = config_path_checker.common_check()
-        _, task_config = parse_json_config(checked_config_path, Const.RUN_UT)
-        white_list = task_config.white_list
-        black_list = task_config.black_list
-        error_data_path = task_config.error_data_path
-        is_online = task_config.is_online
-        nfs_path = task_config.nfs_path
-        host = task_config.host
-        port = task_config.port
-        rank_list = task_config.rank_list
-        tls_path = task_config.tls_path
 
+    error_data_path = checker_config.error_data_path
     if save_error_data:
         if args.result_csv_path:
             time_info = result_csv_path.split('.')[0].split('_')[-1]
             global UT_ERROR_DATA_DIR
             UT_ERROR_DATA_DIR = 'ut_error_data' + time_info
         error_data_path = initialize_save_error_data(error_data_path)
-    online_config = OnlineConfig(is_online, nfs_path, host, port, rank_list, tls_path)
+    online_config = checker_config.get_online_config()
     checked_online_config(online_config)
-    run_ut_config = RunUTConfig(forward_content, backward_content, result_csv_path, details_csv_path, save_error_data,
-                                args.result_csv_path, real_data_path, set(white_list), set(black_list), error_data_path,
-                                online_config)
+    config_params = {
+        'forward_content': forward_content,
+        'backward_content': backward_content,
+        'result_csv_path': result_csv_path,
+        'details_csv_path': details_csv_path,
+        'save_error_data': save_error_data,
+        'is_continue_run_ut': args.result_csv_path,
+        'real_data_path': real_data_path,
+        'error_data_path': error_data_path
+    }
+    run_ut_config = checker_config.get_run_ut_config(**config_params)
     run_ut(run_ut_config)
 
 

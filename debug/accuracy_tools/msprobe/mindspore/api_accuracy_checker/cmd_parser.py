@@ -13,9 +13,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+
+
+from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory
+from msprobe.core.common.utils import Const, MsprobeBaseException
+
+
 def add_api_accuracy_checker_argument(parser):
     parser.add_argument("-api_info", "--api_info_file", dest="api_info_file", type=str, required=True,
                         help="<Required> The api param tool result file: generate from api param tool, "
                              "a json file.")
     parser.add_argument("-o", "--out_path", dest="out_path", default="./", type=str, required=False,
                         help="<optional> The ut task result out path.")
+    parser.add_argument("-csv_path", "--result_csv_path", dest="result_csv_path", default="", type=str, required=False,
+                        help="<optional> the exit csv for continue")
+
+
+def check_args(args):
+    args.api_info_file = os.path.abspath(args.api_info_file)
+    check_file_or_directory_path(args.api_info_file)
+
+    if args.out_path == "":
+        args.out_path = "./"
+    args.out_path = os.path.abspath(args.out_path)
+    create_directory(args.out_path)
+
+    if args.result_csv_path:
+        args.result_csv_path = os.path.abspath(args.result_csv_path)
+        check_file_or_directory_path(args.result_csv_path)

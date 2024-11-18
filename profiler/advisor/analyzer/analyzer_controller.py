@@ -144,7 +144,7 @@ class AsyncParams:
 
 class AnalyzerController:
     CLUSTER_RANK_THRESHOLD = 2
-    SDMA_SUPPORT_SCOPES = [SupportedScopes.BANDWIDTH_CONTENTION_DETECTION]
+    SDMA_SUPPORT_SCOPES = [SupportedScopes.BANDWIDTH_CONTENTION_DETECTION, SupportedScopes.BYTE_ALIGNMENT_DETECTION]
     RDMA_SUPPORT_SCOPES = [SupportedScopes.PACKET]
     COMMUNICATION_MAPPING = {
         SlowLinkAnalyzer.SDMA: SDMA_SUPPORT_SCOPES,
@@ -291,7 +291,7 @@ class AnalyzerController:
 
                 PathManager.check_input_directory_path(output_path)
                 if os.path.exists(output_path):
-                    PathManager.check_path_owner_consistent(output_path)
+                    PathManager.check_path_owner_consistent([output_path])
                 else:
                     PathManager.make_dir_safety(output_path)
 

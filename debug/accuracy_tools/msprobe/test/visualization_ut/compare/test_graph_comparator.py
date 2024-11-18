@@ -117,7 +117,7 @@ class TestGraphComparator(unittest.TestCase):
         sub_nodes = [BaseNode(NodeOp.module, 'Module.a.0'), apis, BaseNode(NodeOp.module, 'Module.a.1')]
         comparator.graph_n.root.subnodes = sub_nodes
         comparator._handle_api_collection_index()
-        self.assertEqual(comparator.graph_n.root.subnodes[1].data.get(GraphConst.JSON_INDEX_KEY), 0.6)
+        self.assertEqual(comparator.graph_n.root.subnodes[1].data.get(GraphConst.JSON_INDEX_KEY), 0.9)
 
     @patch('msprobe.visualization.builder.msprobe_adapter.compare_node')
     @patch('msprobe.visualization.graph.graph.Graph.match')
@@ -135,11 +135,11 @@ class TestGraphComparator(unittest.TestCase):
         mock_mapping_match.return_value = (node_b, [], [])
         mock_compare_node.return_value = ['result']
         comparator = GraphComparator(self.graphs, self.dump_path_param, self.output_path)
-        comparator.mapping_config = True
+        comparator.mapping_dict = True
         comparator._compare_nodes(node_n)
         self.assertEqual(node_n.matched_node_link, ['Tensor.b.0'])
         self.assertEqual(node_b.matched_node_link, ['Tensor.a.0'])
-        comparator.mapping_config = False
+        comparator.mapping_dict = False
         node_n = BaseNode(NodeOp.function_api, 'Tensor.a.0')
         node_b = BaseNode(NodeOp.function_api, 'Tensor.a.0')
         mock_match.return_value = (node_b, [])
