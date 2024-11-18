@@ -465,11 +465,17 @@ class MonitorConst:
     DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
 
+    DOT = "."
     VPP_SEP = ":"
     ACTV_IN = "input"
     ACTV_OUT = "output"
     ACTVGRAD_IN = "input_grad"
     ACTVGRAD_OUT = "output_grad"
+    POST_GRAD = "post_grad"
+    PRE_GRAD = "pre_grad"
+    PREFIX_POST = "post"
+    PREFIX_PRE = "pre"
+
 
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"

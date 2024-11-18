@@ -200,8 +200,10 @@ class BaseWriterWithAD:
         self.anomalies.clear()
 
     def add_scalar(self, tag, scalar_value, global_step=None):
-        avg = self._update_tag2scalars(tag, scalar_value)
-        detected, rule_name = self._ad(scalar_value, history=avg)
+        detected = False
+        if self.ad_rules:
+            avg = self._update_tag2scalars(tag, scalar_value)
+            detected, rule_name = self._ad(scalar_value, history=avg)
         if detected:
             exception_message = f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
             logger.info(f"{BCOLORS.WARNING}> {exception_message}{BCOLORS.ENDC}")
@@ -260,15 +262,18 @@ class CSVWriterWithAD(BaseWriterWithAD):
                 new_data.append([name] + metric_value)
             else:
                 new_data.append(name.split(MonitorConst.VPP_SEP) + metric_value)
-        new_data = pd.DataFrame(new_data)
+        new_data = pd.DataFrame(new_data).round(self.ndigits)
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
 
     def add_scalar(self, tag, scalar_value, global_step):
         super().add_scalar(tag, scalar_value, global_step)
 
-        name = tag.split('/')[0]
-        self.context_dict[name].append(round(scalar_value, self.ndigits))
+        name = tag[0].split('/')[0]
+        self.context_dict[name].append(scalar_value.item())
+
+    def close(self):
+        pass
 
 
 class SummaryWriterWithAD(SummaryWriter, BaseWriterWithAD):
@@ -285,4 +290,5 @@ class SummaryWriterWithAD(SummaryWriter, BaseWriterWithAD):
 
     def add_scalar(self, tag, scalar_value, global_step):
         super(SummaryWriter, self).add_scalar(tag, scalar_value, global_step)
+        tag = f'{tag[0]}_{tag[1]}'
         super().add_scalar(tag, scalar_value, global_step)

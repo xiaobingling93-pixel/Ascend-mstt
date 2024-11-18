@@ -9,7 +9,7 @@ export const useOnResize = (cb: () => void) => {
   React.useEffect(() => {
     if (cbs.length === 0) {
       window.addEventListener('resize', () => {
-        cbs.forEach((cb) => cb());
+        cbs.forEach((callback) => callback());
       });
     }
     cbs.push(cb);

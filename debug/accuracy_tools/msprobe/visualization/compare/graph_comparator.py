@@ -22,12 +22,12 @@ from msprobe.core.common.const import Const
 
 
 class GraphComparator:
-    def __init__(self, graphs, dump_path_param, output_path, framework=Const.PT_FRAMEWORK, mapping_config=None):
+    def __init__(self, graphs, dump_path_param, output_path, framework=Const.PT_FRAMEWORK, mapping_dict=None):
         self.graph_n = graphs[0]
         self.graph_b = graphs[1]
         self._parse_param(dump_path_param, output_path)
         self.framework = framework
-        self.mapping_config = mapping_config
+        self.mapping_dict = mapping_dict
 
     def compare(self):
         """
@@ -81,7 +81,7 @@ class GraphComparator:
         if not self.ma.compare_mode == GraphConst.REAL_DATA_COMPARE:
             return
         df = get_csv_df(True, self.ma.csv_data, self.ma.compare_mode)
-        df = run_real_data(self.dump_path_param, df, self.framework)
+        df = run_real_data(self.dump_path_param, df, self.framework, True if self.mapping_dict else False)
         compare_data_dict = {row[0]: row.tolist() for _, row in df.iterrows()}
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
@@ -111,8 +111,8 @@ class GraphComparator:
         递归遍历NPU树中的节点，如果在Bench中找到具有相同名称的节点，检查他们的祖先和参数信息，检查一致则及逆行精度数据对比
         这里采用先序遍历，好处在于当这个节点被比较时，他的先序已经被匹配，这可以为后续的模糊匹配提供重要信息
         """
-        if self.mapping_config:
-            node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_config)
+        if self.mapping_dict:
+            node_b, ancestors_n, ancestors_b = Graph.mapping_match(node_n, self.graph_b, self.mapping_dict)
             if node_b:
                 ancestors_n.append(node_n.id)
                 ancestors_b.append(node_b.id)
