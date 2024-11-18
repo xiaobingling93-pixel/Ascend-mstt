@@ -8,7 +8,8 @@ import openpyxl
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from collections import namedtuple
-from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid
+from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid, \
+    add_highlight_row_info, update_highlight_err_msg
 from msprobe.core.common.const import CompareConst, Const
 
 
@@ -82,7 +83,7 @@ class TestUtilsMethods(unittest.TestCase):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
 
-    def test_CheckMaxRelativeDiff_1(self):
+    def test_CheckMaxRelativeDiff_red(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
         red_lines, yellow_lines = [], []
@@ -93,11 +94,11 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [1], []
+        red_lines, yellow_lines = [(1, ["maximum relative error exceeds 0.5"])], []
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 
-    def test_CheckMaxRelativeDiff_2(self):
+    def test_CheckMaxRelativeDiff_yellow(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
         red_lines, yellow_lines = [], []
@@ -108,11 +109,11 @@ class TestUtilsMethods(unittest.TestCase):
         num = 1
         info = (api_in, api_out, num)
         CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
-        red_lines, yellow_lines = [], [1]
+        red_lines, yellow_lines = [], [(1, ["The output's maximum relative error exceeds 0.1, while the input's is below 0.01"])]
         target_color_columns = ColorColumns(red=red_lines, yellow=yellow_lines)
         self.assertEqual(color_columns, target_color_columns)
 
-    def test_CheckMaxRelativeDiff_3(self):
+    def test_CheckMaxRelativeDiff_other_type(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
         red_lines, yellow_lines = [], []
@@ -194,3 +195,61 @@ class TestUtilsMethods(unittest.TestCase):
     def test_csv_value_is_valid_3(self):
         result = csv_value_is_valid("=1.00")
         self.assertFalse(result)
+
+    def test_add_highlight_row_info_existing(self):
+        color_list = [(1, ["a", "b"]), (5, ["c"])]
+        num = 5
+        highlight_err_msg = "highlight"
+        add_highlight_row_info(color_list, num, highlight_err_msg)
+        self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c", "highlight"])])
+
+    def test_add_highlight_row_info_new(self):
+        color_list = [(1, ["a", "b"]), (5, ["c"])]
+        num = 6
+        highlight_err_msg = "highlight"
+        add_highlight_row_info(color_list, num, highlight_err_msg)
+        self.assertEqual(color_list, [(1, ["a", "b"]), (5, ["c"]), (6, ["highlight"])])
+
+    def test_update_highlight_err_msg(self):
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
+                ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
+                ]
+        columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {
+            'red_rows': set([0]),
+            'yellow_rows': {0, 1},
+            'red_lines': [(0, ['a', 'b'])],
+            'yellow_lines': [(0, ['c']), (1, ['d'])]
+        }
+        update_highlight_err_msg(result_df, highlight_dict)
+
+        t_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'a\nb', '-1'],
+                  ['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                   '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', 'd', '-1']
+                  ]
+        target_result_df = pd.DataFrame(t_data, columns=columns)
+        self.assertTrue(result_df.equals(target_result_df))
+
+    def test_update_highlight_err_msg_fail(self):
+        data = [
+            ['err_msg1'],
+            ['err_msg2']
+        ]
+        columns = ['Err_message']
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {
+            'red_rows': set([0]),
+            'yellow_rows': {0, 1},
+            'red_lines': [(0, ['a', 'b'])],
+            'yellow_lines': [(0, ['c']), (1, ['d'])]
+        }
+        result = update_highlight_err_msg(result_df, highlight_dict)
+        self.assertEqual(result, None)
