@@ -471,6 +471,11 @@ class MonitorConst:
     ACTV_OUT = "output"
     ACTVGRAD_IN = "input_grad"
     ACTVGRAD_OUT = "output_grad"
+    POST_GRAD = "post_grad"
+    PRE_GRAD = "pre_grad"
+    PREFIX_POST = "post"
+    PREFIX_PRE = "pre"
+
 
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"
