@@ -3,6 +3,7 @@ from msprobe.core.compare.layer_mapping.data_scope_parser import (
     find_regard_scope,
     find_stack_func_list,
     get_dump_data_items,
+    get_stack_in_lines,
 )
 from msprobe.core.common.const import Const
 

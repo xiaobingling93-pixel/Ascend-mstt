@@ -158,10 +158,6 @@ def find_stack_func_list(lines, record_user=True):
         # if framework func line and no framework entrance found yet
         if any(ii in file_ele for ii in Const.FRAME_FILE_LIST) and no_entrance:
             frame_stack = line  # Update the last target index
-        elif frame_stack and no_entrance:
-            if record_user:
-                user_stack.append(line)
-            no_entrance = False
         else:
             if record_user:
                 user_stack.append(line)
