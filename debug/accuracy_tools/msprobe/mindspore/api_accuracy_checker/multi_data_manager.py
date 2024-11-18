@@ -24,26 +24,23 @@ from msprobe.mindspore.common.log import logger
 class MultiDataManager(DataManager):
     def __init__(self, csv_dir, result_csv_path, shared_is_first_write):
         super().__init__(csv_dir, result_csv_path)
+        self.is_first_write = True
         # 使用共享的 is_first_write 变量来控制表头写入
         self.shared_is_first_write = shared_is_first_write
-         # 创建锁对象，确保线程安全
+        # 创建锁对象，确保线程安全
         self.lock = multiprocessing.Lock()
-        print(f"Process ID: {os.getpid()}, Lock ID: {id(self.lock)}")
 
     def save_results(self, api_name_str):
         """保存结果，线程安全操作"""
-        print(f"Process ID: {os.getpid()}, Lock ID: {id(self.lock)}")
-        with self.lock:  # 确保保存操作不会被多个进程同时进行
-            print(f"Process ID: {os.getpid()}, is_first_write ID: {id(self.is_first_write)}, shared_is_first_write ID: {id(self.shared_is_first_write)}")
 
+        with self.lock:  # 确保保存操作不会被多个进程同时进行
             if self.is_first_write and self.shared_is_first_write.value:
                 self.shared_is_first_write.value = False
-
+                self.is_first_write = False  # 写入后标记为 False，避免重复写入表头
                 # 直接写入表头
                 logger.info("Writing CSV headers for the first time.")
                 write_csv_header(self.detail_out_path, get_detail_csv_header)
                 write_csv_header(self.result_out_path, get_result_csv_header)
-                self.is_first_write = False  # 写入后标记为 False，避免重复写入表头
 
             """写入详细输出和结果摘要并清理结果"""
             self.to_detail_csv(self.detail_out_path)

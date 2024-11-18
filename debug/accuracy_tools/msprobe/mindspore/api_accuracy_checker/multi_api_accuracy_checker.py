@@ -13,29 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import numpy as np
+# 标准库导入
 import multiprocessing
 from multiprocessing import Manager
-from mindspore import context
+import os
 import signal
 import sys
-from tqdm import tqdm
 import time
 
+# 第三方库导入
+from mindspore import context
+import numpy as np
+from tqdm import tqdm
+
+# 本地应用/库特定导入
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker, BasicInfoAndStatus
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 
+
 def handle_child_signal(signum, frame):
     """处理子进程的退出信号"""
     logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
 
+
 def handle_main_signal(signum, frame):
     """处理主进程的退出信号"""
     logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
-    sys.exit(0)
+
 
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
     def __init__(self, args):

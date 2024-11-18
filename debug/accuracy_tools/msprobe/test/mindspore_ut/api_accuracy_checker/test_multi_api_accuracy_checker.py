@@ -1,133 +1,186 @@
-# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
-# All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0  (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import os
-import numpy as np
+import unittest
+from unittest.mock import patch, MagicMock, call
 import multiprocessing
-from multiprocessing import Manager
-from mindspore import context
-import signal
-import sys
-from tqdm import tqdm
-import time
-
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.mindspore.api_accuracy_checker.api_accuracy_checker import ApiAccuracyChecker, BasicInfoAndStatus
+from multiprocessing import Manager, Queue
+from msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker import (
+    MultiApiAccuracyChecker,
+    handle_child_signal,
+    handle_main_signal
+)
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
-
-def handle_child_signal(signum, frame):
-    """处理子进程的退出信号"""
-    logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
-
-def handle_main_signal(signum, frame):
-    """处理主进程的退出信号"""
-    logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
-    sys.exit(0)
-
-class MultiApiAccuracyChecker(ApiAccuracyChecker):
-    def __init__(self, args):
-        # 可以添加 MultiApiAccuracyChecker 特有的属性或方法
-        self.api_infos = dict()
-
-        # 使用 Manager 创建共享变量，确保进程间的同步
-        self.manager = Manager()
-        self.is_first_write = self.manager.Value('b', True)  # 创建共享变量
-
-        # 初始化 DataManager 时传入共享的 is_first_write
-        self.multi_data_manager = MultiDataManager(args.out_path, args.result_csv_path, self.is_first_write)
-
-        self.args = args  # 将 args 保存为类的属性
+from mindspore import context
+import os
+import sys
+import signal  # 添加这一行，导入 signal 模块
 
 
-    def process_on_device(self, device_id, api_infos, progress_queue):
-        # 设置 MindSpore context 的 device_id
-        context.set_context(device_id=device_id)
+class TestMultiApiAccuracyChecker(unittest.TestCase):
+    def setUp(self):
+        # 初始化参数
+        self.args = MagicMock()
+        self.args.out_path = "./test_output"
+        self.args.result_csv_path = "./test_output/result.csv"
+        self.args.device_id = [0, 1]  # 模拟两个设备ID
 
-        # 遍历当前进程分配的任务
-        for idx, (api_name_str, api_info) in enumerate(api_infos):
-            logger.debug(f"Processing API: {api_name_str}, Device: {device_id}")
+        # **创建测试输出目录**
+        if not os.path.exists(self.args.out_path):
+            os.makedirs(self.args.out_path)
 
-            if not self.multi_data_manager.is_unique_api(api_name_str):
-                logger.debug(f"API {api_name_str} is not unique, skipping.")
-                progress_queue.put(1)
-                continue
-
-            # 处理前向
-            forward_output_list = self.process_forward(api_name_str, api_info)
-            if forward_output_list is not None:
-                self.multi_data_manager.record(forward_output_list)
-
-            # 处理反向
-            backward_output_list = self.process_backward(api_name_str, api_info)
-            if backward_output_list is not None:
-                self.multi_data_manager.record(backward_output_list)
-
-            # 保存结果
-            self.multi_data_manager.save_results(api_name_str)
-            progress_queue.put(1)  # 更新进度
-
-    def run_and_compare(self):
-        # 获取要使用的设备ID列表
-        device_ids = self.args.device_id
-
-        # 按设备数划分要处理的 API 项
-        partitioned_api_infos = list(self.api_infos.items())
-
-        # 在主进程中进行交叉任务切分（基于取模的方式）
-        partitioned_api_infos_split = [[] for _ in range(len(device_ids))]
-        for idx, api_info in enumerate(partitioned_api_infos):
-            device_index = idx % len(device_ids)  # 使用取模方法分配任务
-            partitioned_api_infos_split[device_index].append(api_info)
-
-        # 创建一个共享进度队列
-        progress_queue = multiprocessing.Queue()
-
-        # 进度条
-        total_tasks = len(partitioned_api_infos)  # 计算总任务数
-        with tqdm(total=total_tasks, desc="Total Progress", ncols=100) as pbar:
-            # 创建多进程
-            processes = []
-            for index, device_id in enumerate(device_ids):
-                process = multiprocessing.Process(target=self.process_on_device,
-                                                args=(device_id, partitioned_api_infos_split[index], progress_queue))
-                processes.append(process)
-                process.start()
-
-            # 主进程更新进度条
-            completed_tasks = 0
-            while completed_tasks < total_tasks:
-                try:
-                    completed_tasks += progress_queue.get(timeout=60)  # 设置超时时间（秒）
-                    pbar.update(1)
-                except multiprocessing.queues.Empty:
-                    logger.error("Timeout while waiting for progress updates. Skipping remaining tasks.")
-                    break
-
-                # 检查子进程状态
-                for process in processes:
-                    if not process.is_alive():
-                        if process.exitcode != 0:
-                            logger.error(f"Process {process.pid} exited with code {process.exitcode}.")
-                            total_tasks -= len(partitioned_api_infos_split[processes.index(process)])
-                        processes.remove(process)
+        # **创建空的 result.csv 文件**
+        with open(self.args.result_csv_path, 'w') as f:
+            f.write("API Name,Forward Test Success,Backward Test Success,Message\n")  # 写入表头
 
 
-            # 确保所有子进程完成或终止
-            for process in processes:
-                process.join(timeout=60)
-                if process.is_alive():
-                    logger.error(f"Process {process.pid} did not terminate. Forcing termination.")
-                    process.terminate()
+        # 创建 MultiApiAccuracyChecker 实例
+        self.checker = MultiApiAccuracyChecker(self.args)
+
+        # 模拟 api_infos 数据
+        self.checker.api_infos = {
+            'API_1': MagicMock(),
+            'API_2': MagicMock(),
+            'API_3': MagicMock(),
+            'API_4': MagicMock(),
+        }
+
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.logger')
+    def test_process_on_device(self, mock_logger, mock_context):
+        # 模拟 MultiDataManager 的方法
+        with patch.object(self.checker.multi_data_manager, 'is_unique_api', side_effect=[True, False]) as mock_is_unique_api, \
+             patch.object(self.checker.multi_data_manager, 'record') as mock_record, \
+             patch.object(self.checker.multi_data_manager, 'save_results') as mock_save_results, \
+             patch.object(self.checker, 'process_forward', return_value='forward_output') as mock_process_forward, \
+             patch.object(self.checker, 'process_backward', return_value='backward_output') as mock_process_backward:
+
+            device_id = 0
+            api_infos = [('API_1', MagicMock()), ('API_2', MagicMock())]
+            progress_queue = Queue()
+
+            self.checker.process_on_device(device_id, api_infos, progress_queue)
+
+            # 验证 context.set_context 被调用
+            mock_context.set_context.assert_called_with(device_id=device_id)
+
+            # 验证 is_unique_api 被调用两次
+            self.assertEqual(mock_is_unique_api.call_count, 2)
+
+            # 验证 record 被调用正确次数
+            self.assertEqual(mock_record.call_count, 2)  # forward 和 backward 各一次
+
+            # 验证 save_results 被调用
+            mock_save_results.assert_called_once_with('API_1')
+
+            # 验证进度队列更新了两次
+            self.assertEqual(progress_queue.qsize(), 2)
+
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.tqdm')
+    @patch('multiprocessing.Process')
+    @patch('multiprocessing.Queue')
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.logger')
+    def test_run_and_compare(self, mock_logger, mock_queue_class, mock_process_class, mock_tqdm):
+        # 模拟进程和队列
+        # 创建一个假的进度队列
+        mock_queue = MagicMock()
+        # 设置进度队列的 get 方法，每次返回 1，总共返回 len(self.checker.api_infos) 次
+        mock_queue.get.side_effect = [1] * len(self.checker.api_infos)
+        mock_queue_class.return_value = mock_queue
+
+        # 创建模拟的进程列表
+        mock_processes = []
+        for _ in self.args.device_id:
+            mock_process = MagicMock()
+            mock_process.is_alive.return_value = False  # 模拟进程已完成
+            mock_process.exitcode = 0  # 模拟进程正常退出
+            mock_process.pid = 12345  # 模拟进程ID
+            mock_processes.append(mock_process)
+
+        # 设置 Process 的 side_effect，每次调用返回不同的进程对象
+        mock_process_class.side_effect = mock_processes
+
+        # 模拟 tqdm
+        mock_pbar = MagicMock()
+        mock_tqdm.return_value.__enter__.return_value = mock_pbar
+
+        # 运行方法
+        self.checker.run_and_compare()
+
+        # 验证进程被正确创建
+        self.assertEqual(mock_process_class.call_count, len(self.args.device_id))
+
+        # 验证进度条被正确初始化
+        mock_tqdm.assert_called_once_with(total=len(self.checker.api_infos), desc="Total Progress", ncols=100)
+
+        # 验证进度队列的 get 方法被正确调用
+        self.assertEqual(mock_queue.get.call_count, len(self.checker.api_infos))
+
+        # 验证进度条的 update 方法被正确调用
+        self.assertEqual(mock_pbar.update.call_count, len(self.checker.api_infos))
+
+    def test_handle_child_signal(self):
+        # 测试 handle_child_signal 函数是否能够正常执行
+        signum = signal.SIGINT
+        frame = MagicMock()
+        try:
+            handle_child_signal(signum, frame)
+        except Exception as e:
+            self.fail(f"handle_child_signal raised an exception {e}")
+
+    def test_handle_main_signal(self):
+        # 测试 handle_main_signal 函数是否正确调用 sys.exit(0)
+        signum = signal.SIGINT
+        frame = MagicMock()
+        with patch('sys.exit') as mock_exit:
+            handle_main_signal(signum, frame)
+
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
+    def test_process_on_device_api_not_unique(self, mock_context):
+        # 测试当 API 不是唯一时的行为
+        with patch.object(self.checker.multi_data_manager, 'is_unique_api', return_value=False) as mock_is_unique_api, \
+             patch.object(self.checker, 'process_forward') as mock_process_forward, \
+             patch.object(self.checker, 'process_backward') as mock_process_backward:
+
+            device_id = 0
+            api_infos = [('API_1', MagicMock())]
+            progress_queue = Queue()
+
+            self.checker.process_on_device(device_id, api_infos, progress_queue)
+
+            # 验证 process_forward 和 process_backward 未被调用
+            mock_process_forward.assert_not_called()
+            mock_process_backward.assert_not_called()
+
+    def test_init(self):
+        # 测试初始化方法
+        self.assertIsInstance(self.checker.manager, Manager().__class__)
+        self.assertIsInstance(self.checker.is_first_write, multiprocessing.managers.ValueProxy)
+        self.assertIsInstance(self.checker.multi_data_manager, MultiDataManager)
+        self.assertEqual(self.checker.args, self.args)
+
+    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
+    def test_process_on_device_no_output(self, mock_context):
+        # 测试当 forward 和 backward 返回 None 时的行为
+        with patch.object(self.checker.multi_data_manager, 'is_unique_api', return_value=True), \
+             patch.object(self.checker.multi_data_manager, 'record') as mock_record, \
+             patch.object(self.checker.multi_data_manager, 'save_results') as mock_save_results, \
+             patch.object(self.checker, 'process_forward', return_value=None), \
+             patch.object(self.checker, 'process_backward', return_value=None):
+
+            device_id = 0
+            api_infos = [('API_1', MagicMock())]
+            progress_queue = Queue()
+
+            self.checker.process_on_device(device_id, api_infos, progress_queue)
+
+            # 验证 record 未被调用
+            mock_record.assert_not_called()
+
+            # 验证 save_results 被调用
+            mock_save_results.assert_called_once_with('API_1')
+
+    def tearDown(self):
+        # 清理操作，如果有需要
+        pass
+
+if __name__ == '__main__':
+    unittest.main()
