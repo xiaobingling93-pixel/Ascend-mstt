@@ -90,6 +90,7 @@ class CommonConfig:
         self.data_mode = json_config.get('data_mode')
         self.random_seed = json_config.get('random_seed')
         self.iter_times = json_config.get('iter_times')
+        self._check_config()
 
     def _check_config(self):
         if self.dump_json_path:
