@@ -22,8 +22,7 @@ import torch.nn as nn
 import torch.distributed as dist
 
 from msprobe.core.common.file_utils import load_yaml
-from msprobe.pytorch.monitor.module_metric import get_metrics
-
+from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name
 
 try:
@@ -31,8 +30,6 @@ try:
 except ImportError:
     pass
 
-PREFIX_POST = "post"
-PREFIX_PRE = "pre"
 RANK = None
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
@@ -231,7 +228,7 @@ def create_hooks(context, monitor):
         if not is_target_line(monitor.cc_codeline):
             return
         args = args + tuple(kwargs.values())
-        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, PREFIX_PRE)
+        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_PRE)
         return
 
     def cc_hook(module, args, kwargs, out=None):
@@ -242,14 +239,14 @@ def create_hooks(context, monitor):
             if isinstance(out, dist.Work):
                 PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], 
                                                                              module.op_name_, 
-                                                                             monitor.ops, args, PREFIX_POST)
+                                                                             monitor.ops, args, MonitorConst.PREFIX_POST)
             elif isinstance(out, list): # batch_isend_irecv
                 for o in out:
                     PENDING_ASYNC_CC_BY_HANDLE[o] = create_async_callback_func(context[module.op_name_], 
                                                                                module.op_name_, 
-                                                                               monitor.ops, args, PREFIX_POST)
+                                                                               monitor.ops, args, MonitorConst.PREFIX_POST)
             return out
-        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, PREFIX_POST)
+        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_POST)
         return out
 
     global RANK

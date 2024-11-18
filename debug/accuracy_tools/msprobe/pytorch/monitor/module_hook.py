@@ -402,7 +402,7 @@ class TrainerMon:
             if grad is None:
                 logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                 continue
-            tag = self.name2tag.get(name, {}).get('post')
+            tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
             grad_dict[tag] = grad
 
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
@@ -640,8 +640,8 @@ class TrainerMon:
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
                 self.name2tag[name] = {}
-                self.name2tag[name]['pre'] = get_summary_writer_tag_name(name, 'pre_grad', self.rank)
-                self.name2tag[name]['post'] = get_summary_writer_tag_name(name, 'post_grad', self.rank)
+                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank)
+                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
 
     def _register_param_name(self, model):
         if self.param_registered:
@@ -842,7 +842,7 @@ class TrainerMon:
                     if grad is None:
                         logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                         continue
-                    tag = self.name2tag.get(name,{}).get('pre')
+                    tag = self.name2tag.get(name,{}).get(MonitorConst.PRE_GRAD)
                     if tag is None:
                         continue
                     grad_dict[tag] = grad
