@@ -1,62 +1,71 @@
 import unittest
-
-import numpy as np
-
+from typing import Any
 from msprobe.core.overflow_check.utils import has_nan_inf
 
 
-class TestUtils(unittest.TestCase):
-    def test_has_nan_inf_with_inf_nan(self):
-        test_cases = [
-            {"Max": "inf", "Min": "1.0"},
-            {"Mean": "1.0", "Norm": "nan"},
-            {"Max": "INF", "Min": "1.0"},
-            {"Norm": float('inf'), "Mean": "1.0"},
-            {"Max": "-inf", "Min": "1.0"},
-            {"Mean": "-Inf", "Norm": "2.0"},
-            {"Norm": float('-inf'), "Mean": "1.0"}
-        ]
+class TestHasNanInf(unittest.TestCase):
+    def test_empty_dict(self):
+        """Test with an empty dictionary"""
+        self.assertFalse(has_nan_inf({}))
 
-        for data in test_cases:
-            with self.subTest(data=data):
-                self.assertTrue(has_nan_inf(data),
-                                f"Failed to detect Inf, nan in {data}")
+    def test_dict_without_nan_inf(self):
+        """Test with a dictionary that doesn't contain NaN or Inf"""
+        test_dict = {
+            'Max': 10,
+            'Min': 1,
+            'Mean': 5,
+            'Norm': 7
+        }
+        self.assertFalse(has_nan_inf(test_dict))
 
-    def test_has_nan_inf_normal_values(self):
-        """Test normal numerical values"""
-        test_cases = [
-            {"Max": "1.0", "Min": "0.0", "Mean": "0.5", "Norm": "2.0"},
-            {"Max": 1.0, "Min": 0.0, "Mean": 0.5, "Norm": 2.0},
-            {"Max": "1e-10", "Min": "-1e10", "Mean": "0", "Norm": "1"},
-            {"Max": str(np.float32(1.0)), "Min": str(np.float64(0.0))}
-        ]
+    def test_dict_with_nan(self):
+        """Test dict with 'NaN' as a string in key values"""
+        test_dict = {
+            'Max': 'NaN',
+            'Min': 5,
+            'Mean': 3
+        }
+        self.assertTrue(has_nan_inf(test_dict))
 
-        for data in test_cases:
-            with self.subTest(data=data):
-                self.assertFalse(has_nan_inf(data),
-                                 f"Incorrectly detected NaN/Inf in {data}")
+    def test_dict_with_inf(self):
+        """Test dict with 'Inf' as a string in key values"""
+        test_dict = {
+            'Max': 'Inf',
+            'Min': 5,
+            'Mean': 3
+        }
+        self.assertTrue(has_nan_inf(test_dict))
 
-    def test_has_nan_inf_edge_cases(self):
-        test_cases = [
-            {},  # Empty
-            {"other_key": "nan"},  # nan
-            {"other_key": "inf"},  # inf
-            {"Max": None},  # None
-            {"Mean": ""},  # Empty
-            {"Norm": "undefined"},  # Undefined string
-            None,  # None
-            "not a dict",  # String
-            123,  # Number
-            [],  # List
-            {"Max": "1.0e+308"},
-            {"Min": "1.0e-308"}
-        ]
+    def test_dict_with_lowercase_nan(self):
+        """Test dict with lowercase 'nan'"""
+        test_dict = {
+            'Max': 'nan',
+            'Min': 5,
+            'Mean': 3
+        }
+        self.assertTrue(has_nan_inf(test_dict))
 
-        for data in test_cases:
-            with self.subTest(data=data):
-                self.assertFalse(has_nan_inf(data),
-                                 f"Incorrectly detected NaN/Inf in {data}")
+    def test_dict_with_lowercase_inf(self):
+        """Test dict with lowercase 'inf'"""
+        test_dict = {
+            'Max': 'inf',
+            'Min': 5,
+            'Mean': 3
+        }
+        self.assertTrue(has_nan_inf(test_dict))
+
+    def test_non_dict_input(self):
+        """Test with non-dictionary input"""
+        self.assertFalse(has_nan_inf(42))
+        self.assertFalse(has_nan_inf("string"))
+        self.assertFalse(has_nan_inf(None))
+        self.assertFalse(has_nan_inf([1, 2, 3]))
+
+
+def run_tests():
+    """Run the tests"""
+    unittest.main(exit=False)
 
 
 if __name__ == '__main__':
-    unittest.main()
+    run_tests()

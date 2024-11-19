@@ -18,11 +18,10 @@ from typing import Any
 
 def has_nan_inf(value: Any) -> bool:
     """检查值是否包含NaN或Inf"""
-    # # TODO 判断数据类型
     if isinstance(value, dict):
         for k, v in value.items():
             if k in ['Max', 'Min', 'Mean', 'Norm'] and (
-                    str(v).lower() == 'nan' or str(v).lower() == 'inf'
+                    str(v).lower() == 'nan' or str(v).lower() == 'inf' or str(v).lower() == '-inf'
             ):
                 return True
     return False
