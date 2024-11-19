@@ -23,19 +23,21 @@ from msprobe.core.common.file_utils import load_json
 
 class GraphBuilder:
     @staticmethod
-    def build(construct_path, data_path, model_name='DefaultModel'):
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
         """
         GraphBuilder的对外提供的构图方法
         Args:
             construct_path: construct.json路径
             data_path: dump.json路径
+            stack_path: stack.json路径
             model_name: 模型名字，依赖外部输入
         Returns: Graph，代表图的数据结构
         """
         construct_dict = load_json_file(construct_path)
         data_dict = load_data_json_file(data_path)
+        stack_dict = load_json(stack_path)
         graph = Graph(model_name, data_path=load_json(data_path).get('dump_data_dir', ''))
-        GraphBuilder._init_nodes(graph, construct_dict, data_dict)
+        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
 
@@ -77,29 +79,31 @@ class GraphBuilder:
         return upnode_id
 
     @staticmethod
-    def _init_nodes(graph, construct_dict, data_dict):
+    def _init_nodes(graph, construct_dict, data_dict, stack_dict):
         for subnode_id, upnode_id in construct_dict.items():
             upnode_id = GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
             if upnode_id:
                 upnode_op = NodeOp.get_node_op(upnode_id)
-                upnode = GraphBuilder._create_or_get_node(graph, data_dict, upnode_op, upnode_id)
+                upnode = GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], upnode_op, upnode_id)
             else:
                 upnode = graph.root
             node_op = NodeOp.get_node_op(subnode_id)
-            GraphBuilder._create_or_get_node(graph, data_dict, node_op, subnode_id, upnode)
+            GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], node_op, subnode_id, upnode)
 
     @staticmethod
-    def _create_or_get_node(graph, data_dict, op, name, upnode=None):
+    def _create_or_get_node(graph, data_stack_list, op, name, upnode=None):
         if name in graph.node_map:
             node = graph.get_node(name)
         else:
             graph.add_node(op, name, upnode)
             node = graph.get_node(name)
-            node_data = data_dict.get(name, {})
+            node_data = data_stack_list[0].get(name, {})
+            node_stack_info = data_stack_list[1].get(name, [])
             # 添加输入输出数据
             input_data, output_data = get_input_output(node_data, node.id)
             # 更新数据
             node.set_input_output(input_data, output_data)
+            node.stack_info = node_stack_info
         # 添加节点
         node.add_upnode(upnode)
         return node

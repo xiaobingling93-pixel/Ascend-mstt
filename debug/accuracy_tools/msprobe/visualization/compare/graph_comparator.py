@@ -52,9 +52,6 @@ class GraphComparator:
         for item in compare_result_list:
             if not isinstance(item, (list, tuple)) or not item:
                 continue
-            if not node.stack_info and node.id in item[0]:
-                if isinstance(item[-1], list):
-                    node.stack_info = item[-1]
             if '.output.' in item[0]:
                 compare_out_dict[item[0]] = item
             else:

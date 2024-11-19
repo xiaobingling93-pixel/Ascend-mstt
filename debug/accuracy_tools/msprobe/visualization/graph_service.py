@@ -42,16 +42,18 @@ def _compare_graph(input_param, args):
                               FileCheckConst.READ_ABLE).common_check()
     data_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.DUMP_FILE), FileCheckConst.FILE,
                               FileCheckConst.READ_ABLE).common_check()
-    graph_n = GraphBuilder.build(construct_path_n, data_path_n)
-    graph_b = GraphBuilder.build(construct_path_b, data_path_b)
+    stack_path_n = FileChecker(os.path.join(dump_path_n, GraphConst.STACK_FILE), FileCheckConst.FILE,
+                             FileCheckConst.READ_ABLE).common_check()
+    stack_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.STACK_FILE), FileCheckConst.FILE,
+                             FileCheckConst.READ_ABLE).common_check()
+    graph_n = GraphBuilder.build(construct_path_n, data_path_n, stack_path_n)
+    graph_b = GraphBuilder.build(construct_path_b, data_path_b, stack_path_b)
     logger.info('Model graphs built successfully, start Comparing graphs...')
     # 基于graph、stack和data进行比较
-    stack_path = FileChecker(os.path.join(dump_path_n, GraphConst.STACK_FILE), FileCheckConst.FILE,
-                             FileCheckConst.READ_ABLE).common_check()
     dump_path_param = {
         'npu_json_path': data_path_n,
         'bench_json_path': data_path_b,
-        'stack_json_path': stack_path,
+        'stack_json_path': stack_path_n,
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
     mapping_dict = None
@@ -80,9 +82,11 @@ def _build_graph(dump_path, out_path):
                                  FileCheckConst.READ_ABLE).common_check()
     data_path = FileChecker(os.path.join(dump_path, GraphConst.DUMP_FILE), FileCheckConst.FILE,
                             FileCheckConst.READ_ABLE).common_check()
+    stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
+                             FileCheckConst.READ_ABLE).common_check()
     create_directory(out_path)
     output_path = os.path.join(out_path, f'build_{current_time}.vis')
-    graph = GraphBuilder.build(construct_path, data_path)
+    graph = GraphBuilder.build(construct_path, data_path, stack_path)
     micro_steps = graph.paging_by_micro_step()
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')

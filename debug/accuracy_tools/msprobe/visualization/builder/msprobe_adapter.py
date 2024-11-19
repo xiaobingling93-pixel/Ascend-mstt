@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import math
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
@@ -111,16 +112,18 @@ def compare_data(data_dict_list1, data_dict_list2):
 def compare_mapping_data(data_dict_list1, data_dict_list2):
     """
     node1映射node2，可能node1参数多于或少于node2参数，个别参数的shape的维度顺序不同，node1参数null对应node2参数其他值
-    工具要尽可能保证node的数据能够比对，进行数据的弱校验，仅校验参数的shape维度数值是否相同
+    工具要尽可能保证node的数据能够比对，进行数据的弱校验，仅校验参数的shape乘积是否相同，相当于reshape后的值
     """
     for x, y in zip(data_dict_list1.values(), data_dict_list2.values()):
-        x_shape = x.get('shape')
-        y_shape = y.get('shape')
+        x_shape = x.get(Const.SHAPE)
+        y_shape = y.get(Const.SHAPE)
         if x_shape is None or y_shape is None:
             continue
-        x_shape = sorted(x_shape) if isinstance(x_shape, list) else x_shape
-        y_shape = sorted(y_shape) if isinstance(y_shape, list) else y_shape
-        if x_shape != y_shape:
+        if x_shape == y_shape:
+            continue
+        if not isinstance(x_shape, (list, tuple)) or not isinstance(y_shape, (list, tuple)):
+            return False
+        if math.prod(x_shape) != math.prod(y_shape):
             return False
     return True
 
