@@ -34,13 +34,6 @@ from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
 
-INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
-OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
-COMPARE_KEY = 'compare_key'
-COMPARE_SHAPE = 'compare_shape'
-INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
-
-
 class MSComparator(Comparator):
     """
     用于mindspore动态图同框架/跨框架精度比对，支持md5/summary/all模式。
@@ -171,7 +164,7 @@ class MSComparator(Comparator):
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_path = os.path.abspath(os.path.join(cur_path, INTERNAL_API_MAPPING_FILE))
+        yaml_path = os.path.abspath(os.path.join(cur_path, CompareConst.INTERNAL_API_MAPPING_FILE))
         return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
@@ -247,21 +240,23 @@ class MSComparator(Comparator):
         npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
         if self.cell_mapping:
-            npu_df[COMPARE_KEY] = npu_df.apply(lambda row: self.process_cell_mapping(row[CompareConst.OP_NAME]), 
-                                                 axis=1)
+            npu_df[CompareConst.COMPARE_KEY] = npu_df.apply(lambda row:
+                                                            self.process_cell_mapping(row[CompareConst.OP_NAME]),
+                                                            axis=1)
         elif self.api_mapping:
-            npu_df[COMPARE_KEY] = npu_df.apply(
+            npu_df[CompareConst.COMPARE_KEY] = npu_df.apply(
                 lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
             if isinstance(self.api_mapping, str):
                 self.modify_compare_data_with_user_mapping(npu_df, bench_df)
         else:
-            npu_df[COMPARE_KEY] = npu_df[CompareConst.OP_NAME]
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME]
         npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
         bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
-        npu_df[COMPARE_SHAPE] = npu_df[Const.SHAPE]
-        bench_df[COMPARE_SHAPE] = bench_df[Const.SHAPE]
-        bench_df[COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
-        match_result = pd.merge(npu_df, bench_df, on=[COMPARE_KEY, COMPARE_SHAPE], how='outer')
+        npu_df[CompareConst.COMPARE_SHAPE] = npu_df[Const.SHAPE]
+        bench_df[CompareConst.COMPARE_SHAPE] = bench_df[Const.SHAPE]
+        bench_df[CompareConst.COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
+        match_result = pd.merge(npu_df, bench_df, on=[CompareConst.COMPARE_KEY, CompareConst.COMPARE_SHAPE],
+                                how='outer')
         match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
 
         def gen_dtype_condition():
@@ -305,22 +300,22 @@ class MSComparator(Comparator):
             for index in ms_api_indices_dict.get(ms_api):
                 op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
                 is_abandoned = True
-                if INPUT_PATTERN in op_name:
+                if CompareConst.INPUT_PATTERN in op_name:
                     for i, prefix in enumerate(mapping_dict.get('ms_args')):
-                        if op_name.split(INPUT_PATTERN)[1].startswith(str(prefix)):
-                            npu_df.loc[index, COMPARE_KEY] = (
-                                op_name.replace(INPUT_PATTERN + str(prefix),
-                                                INPUT_PATTERN + str(mapping_dict.get('pt_args')[i])))
+                        if op_name.split(CompareConst.INPUT_PATTERN)[1].startswith(str(prefix)):
+                            npu_df.loc[index, CompareConst.COMPARE_KEY] = (
+                                op_name.replace(CompareConst.INPUT_PATTERN + str(prefix),
+                                                CompareConst.INPUT_PATTERN + str(mapping_dict.get('pt_args')[i])))
                             is_abandoned = False
                 else:
                     for i, prefix in enumerate(mapping_dict.get('ms_output')):
-                        if op_name.split(OUTPUT_PATTERN)[1].startswith(str(prefix)):
-                            npu_df.loc[index, COMPARE_KEY] = (
-                                op_name.replace(OUTPUT_PATTERN + str(prefix),
-                                                OUTPUT_PATTERN + str(mapping_dict.get('pt_output')[i])))
+                        if op_name.split(CompareConst.OUTPUT_PATTERN)[1].startswith(str(prefix)):
+                            npu_df.loc[index, CompareConst.COMPARE_KEY] = (
+                                op_name.replace(CompareConst.OUTPUT_PATTERN + str(prefix),
+                                                CompareConst.OUTPUT_PATTERN + str(mapping_dict.get('pt_output')[i])))
                             is_abandoned = False
                 if is_abandoned:
-                    npu_df.loc[index, COMPARE_KEY] = op_name + 'abandoned'
+                    npu_df.loc[index, CompareConst.COMPARE_KEY] = op_name + 'abandoned'
 
     def gen_data_df(self, data_json, stack_json, dump_mode):
         result = {
@@ -334,14 +329,14 @@ class MSComparator(Comparator):
             result['data_name'] = []
         elif dump_mode == Const.MD5:
             result[Const.MD5] = []
-        for data in data_json['data']:
-            check_op_str_pattern_valid(data)
-            merge_list = self.gen_merge_list(data_json, data, stack_json, dump_mode)
+        for data_name in data_json['data']:
+            check_op_str_pattern_valid(data_name)
+            merge_list = self.gen_merge_list(data_json, data_name, stack_json, dump_mode)
             if not merge_list:
                 continue
             for op_name in merge_list[CompareConst.OP_NAME]:
                 result[CompareConst.OP_NAME].append(op_name)
-                if INPUT_PATTERN in op_name:
+                if CompareConst.INPUT_PATTERN in op_name:
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
                 else:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
