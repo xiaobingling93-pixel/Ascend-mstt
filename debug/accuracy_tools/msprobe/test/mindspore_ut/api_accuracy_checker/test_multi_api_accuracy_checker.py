@@ -16,6 +16,7 @@ from msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker import (
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 from mindspore import context
+from msprobe.core.common.const import Const
 
 
 class TestMultiApiAccuracyChecker(unittest.TestCase):
@@ -58,7 +59,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
 
         result = self.checker.process_forward("API_1", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.debug.assert_called_with(
             "[Device 0] API: API_1 lacks forward information, skipping forward check."
         )
@@ -75,7 +76,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
         with patch.object(self.checker, 'prepare_api_input_aggregation', side_effect=Exception("Test exception")):
             result = self.checker.process_forward("API_1", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.warning.assert_called_with(
             "[Device 0] Exception occurred while getting forward API inputs for API_1. Skipping forward check. Detailed exception information: Test exception."
         )
@@ -95,7 +96,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
              patch.object(self.checker, 'run_and_compare_helper', side_effect=Exception("Test exception")):
             result = self.checker.process_forward("API_1", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.warning.assert_called_with(
             "[Device 0] Exception occurred while running and comparing API_1 forward API. Detailed exception information: Test exception."
         )
@@ -128,7 +129,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
 
         result = self.checker.process_backward("API_2", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.debug.assert_called_with(
             "[Device 1] API: API_2 lacks backward information, skipping backward check."
         )
@@ -145,7 +146,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
         with patch.object(self.checker, 'prepare_api_input_aggregation', side_effect=Exception("Test exception")):
             result = self.checker.process_backward("API_2", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.warning.assert_called_with(
             "[Device 1] Exception occurred while getting backward API inputs for API_2. Skipping backward check. Detailed exception information: Test exception."
         )
@@ -165,7 +166,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
              patch.object(self.checker, 'run_and_compare_helper', side_effect=Exception("Test exception")):
             result = self.checker.process_backward("API_2", api_info)
 
-        self.assertIsNone(result)
+        self.assertEqual(result, Const.EXCEPTION_NONE)
         mock_logger.warning.assert_called_with(
             "[Device 1] Exception occurred while running and comparing API_2 backward API. Detailed exception information: Test exception."
         )
