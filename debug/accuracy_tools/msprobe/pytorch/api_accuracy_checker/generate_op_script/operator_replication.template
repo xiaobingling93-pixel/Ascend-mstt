@@ -359,21 +359,21 @@ def compare(out_device, out_bench, api_name):
         compare_element(out_device, out_bench, api_name)
     print("Compare finished.")
 
-
-device = get_device()
-api_name = "{api_name}"
-propagation = "{propagation}"
-compare_standard = {compare_standard}
-torch.manual_seed({random_seed})
-for i in range({iter_times}):
-    print(f"iter: {{i}}:")
-    if propagation == BACKWARD:
-        args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward = get_input(propagation)
-        output_device = exec_api_device(args_device, kwargs_device, args_device_backward, propagation)
-        output_bench = exec_api_bench(args_bench, kwargs_bench, args_bench_backward, propagation)
-        compare(output_device, output_bench, api_name)
-    else:
-        args_device, kwargs_device, args_bench, kwargs_bench = get_input(propagation)
-        output_device = exec_api_device(args_device, kwargs_device, None, propagation)
-        output_bench = exec_api_bench(args_bench, kwargs_bench, None, propagation)
-        compare(output_device, output_bench, api_name)
+if __name__ == "__main__":
+    device = get_device()
+    api_name = "{api_name}"
+    propagation = "{propagation}"
+    compare_standard = {compare_standard}
+    torch.manual_seed({random_seed})
+    for i in range({iter_times}):
+        print(f"iter: {{i}}:")
+        if propagation == BACKWARD:
+            args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward = get_input(propagation)
+            output_device = exec_api_device(args_device, kwargs_device, args_device_backward, propagation)
+            output_bench = exec_api_bench(args_bench, kwargs_bench, args_bench_backward, propagation)
+            compare(output_device, output_bench, api_name)
+        else:
+            args_device, kwargs_device, args_bench, kwargs_bench = get_input(propagation)
+            output_device = exec_api_device(args_device, kwargs_device, None, propagation)
+            output_bench = exec_api_bench(args_bench, kwargs_bench, None, propagation)
+            compare(output_device, output_bench, api_name)

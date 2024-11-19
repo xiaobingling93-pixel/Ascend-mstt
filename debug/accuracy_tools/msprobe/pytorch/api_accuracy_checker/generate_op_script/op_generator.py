@@ -22,17 +22,14 @@ import math
 import numpy as np
 import torch
 
-try:
-    import torch_npu
-except ImportError:
-    pass
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, ulp_standard_api, thousandth_standard_api
-from msprobe.core.common.file_utils import FileOpen
-from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid
+from msprobe.core.common.file_utils import FileOpen, load_json, save_json
+from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid, is_int
 from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import make_dir
+from msprobe.core.common.utils import recursion_depth_decorator
 
 TENSOR_DATA_LIST = ["torch.Tensor"]
 TORCH_BOOL_TYPE = ["torch.bool"]
@@ -101,18 +98,20 @@ class CommonConfig:
         json_file = self.extract_api_path
         propagation = self.propagation
 
-        with FileOpen(json_file, 'r') as f:
-            json_content = json.load(f)
+        json_content = load_json(json_file)
+
+        # ensure the dict is not empty
+        if not json_content:
+            raise ValueError(f'json file is empty!')
 
         # ensure json_content is of type dict
         if not isinstance(json_content, dict):
             raise ValueError(f'content of json file is not a dict!')
-        # ensure the dict is not empty
-        if not json_content:
-            raise ValueError(f'json file is empty!')
+
         # ensure the length of json_content is within allowed limits
         if len(json_content) > API_INFO:
             raise ValueError(f'json file has more than one API, the API only contains forward and backward info')
+
         # Retrieve the first API name and dictionary
         forward_item = next(iter(json_content.items()), None)
         if not forward_item or not isinstance(forward_item[1], dict):
@@ -127,7 +126,6 @@ class CommonConfig:
             backward_item = list(json_content.items())[1]
             if not isinstance(backward_item[1], dict):
                 raise ValueError(f'Invalid backward API data in json_content!')
-        api_result = APIInfo.from_json(json_content, propagation)
 
         return json_content
 
@@ -144,9 +142,9 @@ class CommonConfig:
             raise ValueError(f'propagation is invalid, it should be one of {PROPAGATION_LIST}')
         if self.data_mode and self.data_mode not in DATAMODE_LIST:
             raise ValueError(f'data_mode is invalid, it should be one of {DATAMODE_LIST}')
-        if not isinstance(self.random_seed, int):
+        if not is_int(self.random_seed):
             raise ValueError(f'random_seed is invalid, it should be an int')
-        if not isinstance(self.iter_times, int):
+        if not is_int(self.iter_times):
             raise ValueError(f'iter_times is invalid, it should be an int')
 
 class APIExtractor:
@@ -157,8 +155,7 @@ class APIExtractor:
         self.data = None
 
     def extract_op(self):
-        with FileOpen(self.dump_json_path, 'r') as file:
-            self.data = json.load(file)
+        self.data = load_json(self.dump_json_path)
         new_data = {}
         extract_key_pattern = re.compile(f"^{re.escape(self.api_name)}\..+")
         real_data_path = self.data.get('dump_data_dir', '')
@@ -170,10 +167,9 @@ class APIExtractor:
         if not new_data:
             logger.error(f"Error: The api '{self.api_name}' does not exist in the file.")
         else:
-            with FileOpen(self.output_file, 'w') as file:
-                json.dump(new_data, file, indent=4)
-                logger.info(
-                    f"The api '{self.api_name}' has been successfully extracted and saved in: {self.output_file}")
+            save_json(self.output_file, new_data, indent=4)
+            logger.info(
+                f"The api '{self.api_name}' has been successfully extracted and saved in: {self.output_file}")
 
     def load_real_data_path(self, value, dump_data_dir):
         parameters = [Const.INPUT_ARGS, Const.GRAD_INPUT, Const.INPUT, Const.OUTPUT, Const.GRAD_OUTPUT]
@@ -199,14 +195,15 @@ class OperatorScriptGenerator:
 
     @staticmethod
     def get_compare_standard(api_name):
-        if api_name in binary_standard_api:
-            return "CompareStandard.BINARY_EQUALITY_STANDARD"
-        if api_name in absolute_standard_api:
-            return "CompareStandard.ABSOLUTE_THRESHOLD_STANDARD"
-        if api_name in ulp_standard_api:
-            return "CompareStandard.ULP_ERROR_STANDARD"
-        if api_name in thousandth_standard_api:
-            return "CompareStandard.THOUSANDTH_STANDARD"
+        api_standard_map = {
+            "binary_standard_api": "CompareStandard.BINARY_EQUALITY_STANDARD",
+            "absolute_standard_api": "CompareStandard.ABSOLUTE_THRESHOLD_STANDARD",
+            "ulp_standard_api": "CompareStandard.ULP_ERROR_STANDARD",
+            "thousandth_standard_api": "CompareStandard.THOUSANDTH_STANDARD"
+        }
+        for standard_api, standard_value in api_standard_map.items():
+            if api_name in globals()[standard_api]:
+                return standard_value
         return "CompareStandard.BENCHMARK_STANDARD"
 
     @staticmethod
@@ -271,16 +268,16 @@ class OperatorScriptGenerator:
         else:
             internal_settings["iter_times"] = self.common_config.iter_times
         internal_settings["args_element_assignment"] = self.generate_args_element_assignment_code(self.args_info_forward)
-        internal_settings["args_list_generator_device"] = self.generate_args_list_device(self.args_info_forward)
-        internal_settings["args_list_generator_bench"] = self.generate_args_list_bench(self.args_info_forward)
+        internal_settings["args_list_generator_device"] = self.generate_args_list(self.args_info_forward, flag_device=True)
+        internal_settings["args_list_generator_bench"] = self.generate_args_list(self.args_info_forward, flag_device=False)
         internal_settings["kwargs_value_assignment"] = self.generate_kwargs_value_assignment_code(self.kwargs_info_forward)
-        internal_settings["kwargs_dict_generator_device"] = self.generate_kwargs_dict_device(self.kwargs_info_forward)
-        internal_settings["kwargs_dict_generator_bench"] = self.generate_kwargs_dict_bench(self.kwargs_info_forward)
+        internal_settings["kwargs_dict_generator_device"] = self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=True)
+        internal_settings["kwargs_dict_generator_bench"] = self.generate_kwargs_dict(self.kwargs_info_forward, flag_device=False)
         if self.common_config.propagation == Const.BACKWARD:
             internal_settings["args_element_assignment_backward"] = self.generate_args_element_assignment_code(
                 self.args_info_backward)
-            internal_settings["args_list_generator_device_backward"] = self.generate_args_list_device(self.args_info_backward)
-            internal_settings["args_list_generator_bench_backward"] = self.generate_args_list_bench(self.args_info_backward)
+            internal_settings["args_list_generator_device_backward"] = self.generate_args_list(self.args_info_backward, flag_device=True)
+            internal_settings["args_list_generator_bench_backward"] = self.generate_args_list(self.args_info_backward, flag_device=False)
         else:
             internal_settings["args_element_assignment_backward"] = ''
             internal_settings["args_list_generator_device_backward"] = ''
@@ -288,6 +285,7 @@ class OperatorScriptGenerator:
 
         return internal_settings
 
+    @recursion_depth_decorator("OpGenerator: OperatorScriptGenerator.recursive_args_element_assignment")
     def recursive_args_element_assignment(self, args_info, name_number):
         args_element_assignment = ""
         for index, arg in enumerate(args_info):
@@ -305,6 +303,7 @@ class OperatorScriptGenerator:
         args_element_assignment = self.recursive_args_element_assignment(args_info, "")
         return args_element_assignment
 
+    @recursion_depth_decorator("OpGenerator: OperatorScriptGenerator.recursive_args_list")
     def recursive_args_list(self, args_info, flag_device=False, flag_bench=False):
         args_list_generator = ""
         for _, arg in enumerate(args_info):
@@ -325,15 +324,14 @@ class OperatorScriptGenerator:
             args_list_generator += ", "
         return args_list_generator
 
-    def generate_args_list_device(self, args_info):
-        args_list_generator_device = self.recursive_args_list(args_info, flag_device=True)
-        return args_list_generator_device
+    def generate_args_list(self, args_info, flag_device):
+        if flag_device:
+            args_list_generator = self.recursive_args_list(args_info, flag_device=True)
+        else:
+            args_list_generator = self.recursive_args_list(args_info, flag_bench=True)
+        return args_list_generator
 
-    def generate_args_list_bench(self, args_info):
-        args_list_generator_bench = self.recursive_args_list(args_info, flag_bench=True)
-        return args_list_generator_bench
-
-
+    @recursion_depth_decorator("OpGenerator: OperatorScriptGenerator.recursive_kwargs_value_assignment")
     def recursive_kwargs_value_assignment(self, info, key_name, name_number):
         kwargs_value_assignment = ""
         if isinstance(info, dict):
@@ -355,7 +353,7 @@ class OperatorScriptGenerator:
             kwargs_value_assignment += self.recursive_kwargs_value_assignment(value, key, "")
         return kwargs_value_assignment
 
-
+    @recursion_depth_decorator("OpGenerator: OperatorScriptGenerator.recursive_kwargs_dict")
     def recursive_kwargs_dict(self, info, flag_device=False, flag_bench=False):
         kwargs_dict_generator = ""
         if isinstance(info, dict):
@@ -376,20 +374,16 @@ class OperatorScriptGenerator:
         return kwargs_dict_generator
 
 
-    def generate_kwargs_dict_device(self, kwargs_info):
-        kwargs_dict_generator_device = ""
+    def generate_kwargs_dict(self, kwargs_info, flag_device):
+        kwargs_dict_generator = ""
         for key, value in kwargs_info.items():
-            kwargs_dict_generator_device += '"' + key + '"' + ": "
-            kwargs_dict_generator_device += self.recursive_kwargs_dict(value, flag_device=True) + ", "
-        return kwargs_dict_generator_device
+            kwargs_dict_generator += '"' + key + '"' + ": "
+            if flag_device:
+                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_device=True) + ", "
+            else:
+                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_bench=True) + ", "
+        return kwargs_dict_generator
 
-
-    def generate_kwargs_dict_bench(self, kwargs_info):
-        kwargs_dict_generator_bench = ""
-        for key, value in kwargs_info.items():
-            kwargs_dict_generator_bench += '"' + key + '"' + ": "
-            kwargs_dict_generator_bench += self.recursive_kwargs_dict(value, flag_bench=True) + ", "
-        return kwargs_dict_generator_bench
 
 
 def op_generator_parser(parser):
@@ -403,8 +397,7 @@ def parse_json_config(json_file_path):
     if not json_file_path:
         config_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         json_file_path = os.path.join(config_dir, "config.json")
-    with FileOpen(json_file_path, "r") as file:
-        json_config = json.load(file)
+    json_config = load_json(json_file_path)
     common_config = CommonConfig(json_config)
     return common_config
 
