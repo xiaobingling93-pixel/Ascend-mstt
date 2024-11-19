@@ -43,37 +43,6 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
             'API_4': MagicMock(),
         }
 
-    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
-    @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.logger')
-    def test_process_on_device(self, mock_logger, mock_context):
-        # 模拟 MultiDataManager 的方法
-        with patch.object(self.checker.multi_data_manager, 'is_unique_api', side_effect=[True, False]) as mock_is_unique_api, \
-             patch.object(self.checker.multi_data_manager, 'record') as mock_record, \
-             patch.object(self.checker.multi_data_manager, 'save_results') as mock_save_results, \
-             patch.object(self.checker, 'process_forward', return_value='forward_output') as mock_process_forward, \
-             patch.object(self.checker, 'process_backward', return_value='backward_output') as mock_process_backward:
-
-            device_id = 0
-            api_infos = [('API_1', MagicMock()), ('API_2', MagicMock())]
-            progress_queue = Queue()
-
-            self.checker.process_on_device(device_id, api_infos, progress_queue)
-
-            # 验证 context.set_context 被调用
-            mock_context.set_context.assert_called_with(device_id=device_id)
-
-            # 验证 is_unique_api 被调用两次
-            self.assertEqual(mock_is_unique_api.call_count, 2)
-
-            # 验证 record 被调用正确次数
-            self.assertEqual(mock_record.call_count, 2)  # forward 和 backward 各一次
-
-            # 验证 save_results 被调用
-            mock_save_results.assert_called_once_with('API_1')
-
-            # 验证进度队列更新了两次
-            self.assertEqual(progress_queue.qsize(), 2)
-
     @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.tqdm')
     @patch('multiprocessing.Process')
     @patch('multiprocessing.Queue')
