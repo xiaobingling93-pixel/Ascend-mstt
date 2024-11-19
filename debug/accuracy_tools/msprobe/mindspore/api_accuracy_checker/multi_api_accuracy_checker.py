@@ -33,16 +33,6 @@ from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataM
 from msprobe.mindspore.common.log import logger
 
 
-def handle_child_signal(signum, frame):
-    """处理子进程的退出信号"""
-    logger.info(f"Child process received signal {signum} with PID {os.getpid()}")
-
-
-def handle_main_signal(signum, frame):
-    """处理主进程的退出信号"""
-    logger.info(f"Main process received signal {signum} with PID {os.getpid()}")
-
-
 class MultiApiAccuracyChecker(ApiAccuracyChecker):
     def __init__(self, args):
         # 可以添加 MultiApiAccuracyChecker 特有的属性或方法
@@ -77,7 +67,7 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         context.set_context(device_id=device_id)
 
         # 遍历当前进程分配的任务
-        for idx, (api_name_str, api_info) in enumerate(api_infos):
+        for _, (api_name_str, api_info) in enumerate(api_infos):
             logger.debug(f"Processing API: {api_name_str}, Device: {device_id}")
 
             if not self.multi_data_manager.is_unique_api(api_name_str):

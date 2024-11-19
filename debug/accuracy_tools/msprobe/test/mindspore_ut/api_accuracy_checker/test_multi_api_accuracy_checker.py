@@ -3,9 +3,7 @@ from unittest.mock import patch, MagicMock, call
 import multiprocessing
 from multiprocessing import Process, Manager, Queue
 from msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker import (
-    MultiApiAccuracyChecker,
-    handle_child_signal,
-    handle_main_signal
+    MultiApiAccuracyChecker
 )
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
@@ -226,16 +224,6 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
 
         # 验证进度条的 update 方法被正确调用
         self.assertEqual(mock_pbar.update.call_count, len(self.checker.api_infos))
-
-    def test_handle_child_signal(self):
-        # 测试 handle_child_signal 函数是否能够正常执行
-        signum = signal.SIGINT
-        frame = MagicMock()
-        try:
-            handle_child_signal(signum, frame)
-        except Exception as e:
-            self.fail(f"handle_child_signal raised an exception {e}")
-
 
     @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
     def test_process_on_device_api_not_unique(self, mock_context):
