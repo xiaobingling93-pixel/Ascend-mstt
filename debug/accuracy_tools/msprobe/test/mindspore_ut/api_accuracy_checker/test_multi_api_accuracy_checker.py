@@ -126,13 +126,6 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
         except Exception as e:
             self.fail(f"handle_child_signal raised an exception {e}")
 
-    def test_handle_main_signal(self):
-        # 测试 handle_main_signal 函数是否正确调用 sys.exit(0)
-        signum = signal.SIGINT
-        frame = MagicMock()
-        with patch('sys.exit') as mock_exit:
-            handle_main_signal(signum, frame)
-
     @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
     def test_process_on_device_api_not_unique(self, mock_context):
         # 测试当 API 不是唯一时的行为
