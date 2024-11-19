@@ -131,7 +131,7 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    FILE_SKIP_LIST = ["msprobe", "MindSpeed"]
     DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
@@ -149,7 +149,7 @@ class Const:
     TOP_LAYER = "TopLayer"
     CELL = "Cell"
     MODULE = "Module"
-
+    FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
@@ -241,6 +241,7 @@ class CompareConst:
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
     EPSILON = 1e-10
+    COMPARE_ENDS_SUCCESSFULLY = "msprobe compare ends successfully."
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -455,10 +456,29 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
+
+    DOT = "."
+    VPP_SEP = ":"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
+    POST_GRAD = "post_grad"
+    PRE_GRAD = "pre_grad"
+    PREFIX_POST = "post"
+    PREFIX_PRE = "pre"
+
+
+    ANOMALY_JSON = "anomaly.json"
+    ANALYSE_JSON = "anomaly_analyse.json"
+    TENSORBOARD = "tensorboard"
+    CSV = "csv"
+    API = "api"

@@ -246,7 +246,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         backward_message += BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        logger.warning("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
+        logger.info("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
         backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):

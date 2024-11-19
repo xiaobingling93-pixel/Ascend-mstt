@@ -13,12 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import time
-import sys
-import re
+from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
+
+import torch
 from torch import distributed as dist
 
 from msprobe.core.common.const import MonitorConst
@@ -27,9 +26,10 @@ from msprobe.core.common.log import logger
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
 DIRECTORY_MAX_LENGTH = 4096
-FILE_NAME_VALID_PATTERN = r"^[a-zA-Z0-9_.:/-]+$"
 
 beijing_tz = timezone(timedelta(hours=8))
+MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
+MV_Grad_Result = namedtuple('MV_Grad_Result', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
@@ -50,11 +50,18 @@ def filter_special_chars(func):
 
 
 def get_param_struct(param):
-    if isinstance(param, tuple):
-        return f"tuple[{len(param)}]"
-    if isinstance(param, list):
-        return f"list[{len(param)}]"
-    return "tensor"
+    res = {}
+    if isinstance(param, (tuple, list)):
+        res['config'] = f'{type(param).__name__}[{len(param)}]'
+        for i, x in enumerate(param):
+            res[i] = f'size={tuple(x.shape)}, dtype={x.dtype}' if torch.is_tensor(x) else x
+    elif torch.is_tensor(param):
+        res['config'] = 'tensor'
+        res['tensor'] = f'size={tuple(param.shape)}, dtype={param.dtype}'
+    else:
+        res['config'] = f'{type(param)}'
+        logger.warning(f'Not support type({type(param)}) now, please check the type of param {param}')
+    return res
 
 
 def validate_ops(ops):
@@ -66,7 +73,7 @@ def validate_ops(ops):
     valid_ops = []
     for op in ops:
         if op not in MonitorConst.OP_LIST:
-            raise ValueError(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
+            logger.warning(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
         else:
             valid_ops.append(op)
     return valid_ops
@@ -92,25 +99,31 @@ def validate_targets(targets):
         if not isinstance(field, dict):
             raise TypeError('values of targets should be cared filed e.g. {"input": "tensor"} in config.json')
 
+
 def validate_print_struct(print_struct):
     if not isinstance(print_struct, bool):
         raise TypeError("print_struct should be a bool")
-    
+
+
 def validate_ur_distribution(ur_distribution):
     if not isinstance(ur_distribution, bool):
         raise TypeError('ur_distribution should be a bool')
+
 
 def validate_xy_distribution(xy_distribution):
     if not isinstance(xy_distribution, bool):
         raise TypeError('xy_distribution should be a bool')
 
+
 def validate_wg_distribution(wg_distribution):
     if not isinstance(wg_distribution, bool):
         raise TypeError('wg_distribution should be a bool')
 
+
 def validate_mg_distribution(mg_distribution):
     if not isinstance(mg_distribution, bool):
         raise TypeError('mg_distribution should be a bool')
+
 
 def validate_cc_distribution(cc_distribution):
     if not isinstance(cc_distribution, dict):
@@ -131,20 +144,25 @@ def validate_cc_distribution(cc_distribution):
         else:
             raise TypeError(f'{key} of cc_distribution is not supported.')
 
+
 def validate_alert(alert):
     if not isinstance(alert, dict):
         raise TypeError('alert should be a dictionary')
-    for key, value in alert.items():
-        if key == 'rules':
-            if len(value) == 0:
-                continue
-            elif value[0]['rule_name'] not in MonitorConst.RULE_NAME:
-                raise TypeError(f"{value[0]['rule_name']} is not supported") 
-            elif not isinstance(value[0]['args']['threshold'], float) or value[0]['args']['threshold'] < 0:
-                raise TypeError('threshold must be float and not less than 0')
-        else:
-            if len(value) > 0 and value['recipient'] not in ['database', 'email']:
-                raise TypeError('recipient must be database or email')
+    rules = alert.get('rules')
+    if rules and isinstance(rules, list):
+        for rule in rules:
+            rule_name = rule.get("rule_name")
+            if rule_name and rule_name not in MonitorConst.RULE_NAME:
+                raise TypeError(f"{rule_name} is not supported")
+            args = rule.get("args")
+            if args and isinstance(args, dict):
+                threshold = args.get("threshold")
+                if not isinstance(threshold, float) or threshold < 0:
+                    raise TypeError('threshold must be float and not less than 0')
+    dump = alert.get('dump')
+    if dump and not isinstance(dump, bool):
+        raise TypeError('dump must be bool.')
+
 
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))

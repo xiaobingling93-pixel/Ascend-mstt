@@ -28,6 +28,7 @@ from msprobe.mindspore.common.utils import (get_rank_if_initialized,
     convert_to_int,
     list_lowest_level_directories,
     seed_all,
+    remove_dropout,
     MsprobeStep)
 
 class MockCell:
@@ -125,6 +126,22 @@ class TestMsprobeFunctions(unittest.TestCase):
         mock_set_seed.assert_called_once_with(42)
         mock_random_seed.assert_called_once_with(42)
         mock_set_context.assert_called_once_with(deterministic="ON")
+
+    def test_remove_dropout(self):
+        remove_dropout()
+        from mindspore import Tensor
+        x1d = Tensor(np.ones([5, 5]), ms.float32)
+        x2d = Tensor(np.ones([5, 5, 5, 5]), ms.float32)
+        x3d = Tensor(np.ones([5, 5, 5, 5, 5]), ms.float32)
+        from mindspore.ops import Dropout, Dropout2D, Dropout3D
+        self.assertTrue((Dropout(0.5)(x1d)[0].numpy() == x1d.numpy()).all())
+        self.assertTrue((Dropout2D(0.5)(x2d)[0].numpy() == x2d.numpy()).all())
+        self.assertTrue((Dropout3D(0.5)(x3d)[0].numpy() == x3d.numpy()).all())
+
+        from mindspore.mint.nn import Dropout
+        from mindspore.mint.nn.functional import dropout
+        self.assertTrue((Dropout(0.5)(x1d).numpy() == x1d.numpy()).all())
+        self.assertTrue((dropout(x1d, p=0.5).numpy() == x1d.numpy()).all())
 
 
 

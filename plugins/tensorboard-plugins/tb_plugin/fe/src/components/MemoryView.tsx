@@ -265,7 +265,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
         )
         .then((resp) => {
           setMemoryStatsData(resp);
-          if (!devices || devices.length == 0) {
+          if (!devices || devices.length === 0) {
             // setDevices only execute on view load. Since selection on curve
             // might filter all events later, some devices might is missing.
             setDevices(Object.keys(resp.rows));
@@ -293,7 +293,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
         }
         let curMaxSize: MaxEventSize = {};
         let curFilterEventSize: EventSizeFilter = {};
-        for (let deviceName in tempRes.rows) {
+        Object.keys(tempRes.rows).forEach((deviceName) => {
           curMaxSize[deviceName] = 0;
           for (let i = 0; i < tempRes.rows[deviceName].length; i++) {
             curMaxSize[deviceName] = Math.max(
@@ -306,7 +306,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
             curMaxSize[deviceName],
           ];
           curMaxSize[deviceName] = curMaxSize[deviceName];
-        }
+        });
         setMaxSize(curMaxSize);
         setFilterEventSize(curFilterEventSize);
         setMemoryEventsData(tempRes);
@@ -415,8 +415,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
     } else {
       let bias = memoryCurveData?.metadata.first_ts ?? 0;
       let scale = 1 / (memoryCurveData?.metadata.time_factor ?? 1);
-      startTs = Math.round((allDatas[realStart][0] * scale) + bias);
-      endTs = Math.round((allDatas[realEnd][0] * scale) + bias);
+      startTs = Math.round(allDatas[realStart][0] * scale + bias);
+      endTs = Math.round(allDatas[realEnd][0] * scale + bias);
     }
 
     setSelectedRange({ start, end, startTs, endTs });
@@ -440,8 +440,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                           value={device}
                           onChange={onDeviceChanged}
                         >
-                          {devices.map((device) => (
-                            <MenuItem value={device}>{device}</MenuItem>
+                          {devices.map((item) => (
+                            <MenuItem value={item}>{item}</MenuItem>
                           ))}
                         </Select>
                       </Grid>
@@ -455,8 +455,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                             value={tag}
                             onChange={onTagChanged}
                           >
-                            {tags.map((device) => (
-                              <MenuItem value={device}>{device}</MenuItem>
+                            {tags.map((item) => (
+                              <MenuItem value={item}>{item}</MenuItem>
                             ))}
                           </Select>
                         </Grid>

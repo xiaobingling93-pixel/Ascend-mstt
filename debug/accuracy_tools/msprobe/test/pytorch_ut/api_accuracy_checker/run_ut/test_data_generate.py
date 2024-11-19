@@ -149,6 +149,12 @@ class TestDataGenerateMethods(unittest.TestCase):
         info = {'Min': 0, 'Max': 1, 'dtype': "torch.bool", 'shape': (1, 2)}
         data = gen_random_tensor(info, convert_type=None)
         self.assertEqual(data.dtype, torch.bool)
+    
+    def test_gen_random_tensor_gen_cat(self):
+        info = {'Min': None, 'Max': None, 'dtype': "torch.float32", 'shape': (1, 0, 256)}
+        data = gen_random_tensor(info, None)
+        self.assertEqual(data.dtype, torch.float32)
+        self.assertEqual(data.shape, torch.Size([1, 0, 256]))
 
     def test_gen_random_tensor(self):
         data = gen_random_tensor(api_info_dict.get('input_args')[0], None)

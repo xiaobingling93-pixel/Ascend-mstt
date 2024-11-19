@@ -194,9 +194,17 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
   useLayoutEffect(() => {
     const element = chartRef.current;
     if (!element || !lineData) {
-      return;
+      return undefined;
     }
     const echart = echarts.init(element);
+    let dataSource: number[][] = [];
+    if (compareWay === 0) {
+      dataSource = lineData.normal;
+    } else if (compareWay === 1) {
+      dataSource = lineData.absolute;
+    } else {
+      dataSource = lineData.relative;
+    }
     const option: echarts.EChartsOption = {
       title: {
         text: 'Comparison Chart',
@@ -224,12 +232,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
         type: 'inside',
       },
       dataset: {
-        source:
-          compareWay === 0
-            ? lineData.normal
-            : compareWay === 1
-            ? lineData.absolute
-            : lineData.relative,
+        source: dataSource,
       },
       series: {
         type: 'line',
@@ -238,9 +241,9 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
       },
     };
 
-    if(option) {
+    if (option) {
       echart.setOption(option, true);
-    };
+    }
     return () => {
       echart.dispose();
     };

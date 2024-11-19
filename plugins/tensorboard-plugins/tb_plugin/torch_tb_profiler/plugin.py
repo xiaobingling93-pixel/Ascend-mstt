@@ -46,6 +46,7 @@ def decorate_headers(func):
         headers = func(*args, **kwargs)
         headers.extend(TorchProfilerPlugin.headers)
         return headers
+
     return wrapper
 
 
@@ -344,15 +345,21 @@ class TorchProfilerPlugin(base_plugin.TBPlugin):
             for key in operator_memory_events:
                 if start_ts is not None and end_ts is not None:
                     operator_memory_events[key] = [
-                        i for i in operator_memory_events[key] if i[2] and start_ts <= i[2] <= end_ts
+                        i
+                        for i in operator_memory_events[key]
+                        if i[2] and start_ts <= i[2] <= end_ts
                     ]
                 elif start_ts is not None:
                     operator_memory_events[key] = [
-                        i for i in operator_memory_events[key] if i[2] and start_ts <= i[2]
+                        i
+                        for i in operator_memory_events[key]
+                        if i[2] and start_ts <= i[2]
                     ]
                 elif end_ts is not None:
                     operator_memory_events[key] = [
-                        i for i in operator_memory_events[key] if i[2] and end_ts >= i[2]
+                        i
+                        for i in operator_memory_events[key]
+                        if i[2] and end_ts >= i[2]
                     ]
             return self.respond_as_json(temp_memory_events, True)
         else:

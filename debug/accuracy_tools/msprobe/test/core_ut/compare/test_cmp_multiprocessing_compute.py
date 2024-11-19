@@ -18,7 +18,7 @@ data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.inp
          'Yes', '', '-1']]
 o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
            'torch.float32', 'torch.float32', [2, 2], [2, 2],
-           'None', 'None', 'None', 'None', 'None',
+           'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
            1, 1, 1, 1, 1, 1, 1, 1,
            'None', 'No bench data matched.', '-1']]
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']

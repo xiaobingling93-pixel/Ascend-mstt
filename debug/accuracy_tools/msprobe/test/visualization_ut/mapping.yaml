@@ -1,2 +1,2 @@
-- vision_model: "language_model.vision_encoder"
-- vision_projection: "language_model.projection"
+NPU.npu_fusion_attention.4.forward.input.0: Function.attention.4.forward.input.0
+Module.module.language_model.embedding.word_embedding.VocabParallelEmbedding.forward.0.input.0: Module.module.language_model.embedding.word_embedding.VocabParallelEmbedding.forward.0.input.0

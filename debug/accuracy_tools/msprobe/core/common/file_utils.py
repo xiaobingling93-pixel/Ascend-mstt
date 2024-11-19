@@ -16,6 +16,7 @@
 import csv
 import fcntl
 import os
+import stat
 import json
 import re
 import shutil
@@ -72,6 +73,8 @@ class FileChecker:
         check_path_pattern_valid(self.file_path)
         check_common_file_size(self.file_path)
         check_file_suffix(self.file_path, self.file_type)
+        if self.path_type == FileCheckConst.FILE:
+            check_dirpath_before_read(self.file_path)
         return self.file_path
 
     def check_path_ability(self):
@@ -127,6 +130,7 @@ class FileOpen:
         check_path_pattern_valid(self.file_path)
         if os.path.exists(self.file_path):
             check_common_file_size(self.file_path)
+            check_dirpath_before_read(self.file_path)
 
     def check_ability_and_owner(self):
         if self.mode in self.SUPPORT_READ_MODE:
@@ -239,6 +243,15 @@ def check_path_type(file_path, file_type):
             raise FileCheckException(FileCheckException.INVALID_FILE_ERROR)
 
 
+def check_others_writable(directory):
+    dir_stat = os.stat(directory)
+    is_writable = (
+        bool(dir_stat.st_mode & stat.S_IWGRP) or  # 组可写
+        bool(dir_stat.st_mode & stat.S_IWOTH)     # 其他用户可写
+    )
+    return is_writable
+
+
 def make_dir(dir_path):
     check_path_before_create(dir_path)
     dir_path = os.path.realpath(dir_path)
@@ -281,6 +294,17 @@ def check_path_before_create(path):
         raise FileCheckException(FileCheckException.ILLEGAL_PATH_ERROR,
                                  'The file path {} contains special characters.'.format(path))
 
+
+def check_dirpath_before_read(path):
+    path = os.path.realpath(path)
+    dirpath = os.path.dirname(path)
+    if check_others_writable(dirpath):
+        logger.warning(f"The directory is writable by others: {dirpath}.")
+    try:
+        check_path_owner_consistent(dirpath)
+    except FileCheckException:
+        logger.warning(f"The directory {dirpath} is not yours.")
+    
 
 def check_file_or_directory_path(path, isdir=False):
     """
@@ -511,6 +535,39 @@ def read_csv(filepath, as_pd=True):
         logger.error(f"The csv file failed to load. Please check the path: {filepath}.")
         raise RuntimeError(f"Read csv file {filepath} failed.") from e
     return csv_data
+
+
+def write_df_to_csv(data, filepath, mode="w", header=True, malicious_check=False):
+    def csv_value_is_valid(value: str) -> bool:
+        if not isinstance(value, str):
+            return True
+        try:
+            # -1.00 or +1.00 should be consdiered as digit numbers
+            float(value)
+        except ValueError:
+            # otherwise, they will be considered as formular injections
+            return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+        return True
+
+    if not isinstance(data, pd.DataFrame):
+        raise ValueError("The data type of data is not supported. Only support pd.DataFrame.")
+
+    if malicious_check:
+        for i in range(len(data)):
+            for j in range(len(data.columns)):
+                cell = data.iloc[i, j]
+                if not csv_value_is_valid(cell):
+                    raise RuntimeError(f"Malicious value [{cell}] is not allowed "
+                                       f"to be written into the csv: {filepath}.")
+
+    check_path_before_create(filepath)
+    file_path = os.path.realpath(filepath)
+    try:
+        data.to_csv(filepath, mode=mode, header=header, index=False)
+    except Exception as e:
+        logger.error(f'Save csv file "{os.path.basename(file_path)}" failed')
+        raise RuntimeError(f"Save csv file {file_path} failed.") from e
+    change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
 def remove_path(path):
