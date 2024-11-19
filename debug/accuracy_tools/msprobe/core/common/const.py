@@ -17,6 +17,7 @@ import os
 import stat
 
 import numpy as np
+import torch
 
 
 class Const:
@@ -189,6 +190,12 @@ class Const:
     MEAN = 'Mean'
     NORM = 'Norm'
 
+    MEMORY_FORMAT = {
+            torch.contiguous_format: "contiguous_format",
+            torch.channels_last: "channels_last",
+            torch.channels_last_3d: "channels_last_3d",
+            torch.preserve_format: "preserve_format"
+        }
 
 class CompareConst:
     """
