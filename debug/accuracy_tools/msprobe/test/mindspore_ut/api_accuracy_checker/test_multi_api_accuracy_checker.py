@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock, call
 import multiprocessing
-from multiprocessing import Manager, Queue
+from multiprocessing import Process, Manager, Queue
 from msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker import (
     MultiApiAccuracyChecker,
     handle_child_signal,
@@ -42,6 +42,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
             'API_3': MagicMock(),
             'API_4': MagicMock(),
         }
+
 
     @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.tqdm')
     @patch('multiprocessing.Process')
@@ -95,6 +96,7 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
         except Exception as e:
             self.fail(f"handle_child_signal raised an exception {e}")
 
+
     @patch('msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker.context')
     def test_process_on_device_api_not_unique(self, mock_context):
         # 测试当 API 不是唯一时的行为
@@ -141,8 +143,17 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
             mock_save_results.assert_called_once_with('API_1')
 
     def tearDown(self):
-        # 清理操作，如果有需要
-        pass
+        # 清理资源
+        if hasattr(self.checker, 'manager'):
+            self.checker.manager.shutdown()
+        # 清理测试输出目录
+        if os.path.exists(self.args.out_path):
+            for root, dirs, files in os.walk(self.args.out_path, topdown=False):
+                for file in files:
+                    os.remove(os.path.join(root, file))
+                for dir in dirs:
+                    os.rmdir(os.path.join(root, dir))
+            os.rmdir(self.args.out_path)
 
 if __name__ == '__main__':
     unittest.main()
