@@ -139,7 +139,12 @@ def gen_random_tensor(info, convert_type):
     high_info = [high, high_origin]
     data_dtype = info.get('dtype')
     shape = tuple(info.get('shape'))
-    if not isinstance(low, (int, float)) or not isinstance(high, (int, float)):
+    if 0 in shape:
+        low, low_origin = 0, 0
+        high, high_origin = 0, 0
+        low_info = [low, low_origin]
+        high_info = [high, high_origin]
+    elif not isinstance(low, (int, float)) or not isinstance(high, (int, float)):
         error_info = f'Data info Min: {low} , Max: {high}, info type must be int or float.'
         raise CompareException(CompareException.INVALID_PARAM_ERROR, error_info)
     if data_dtype == "torch.bool":

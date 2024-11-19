@@ -7,7 +7,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Select, { SelectProps } from '@material-ui/core/Select';
 import { makeStyles } from '@material-ui/core/styles';
-import { Table } from 'antd';
+import { message, Table } from 'antd';
 import * as React from 'react';
 import { FlameGraph } from 'react-flame-graph';
 import {
@@ -149,7 +149,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
         }
       })
       .catch((e) => {
-        if (e.status == 404) {
+        if (e.status === 404) {
           setModules([]);
           setFlameData([]);
           setRows([]);
@@ -201,7 +201,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
         });
       }
     } catch (e) {
-      console.warn('Timeline in module view is not supported offline.');
+      message.warning('Timeline in module view is not supported offline.');
     }
   }, [run, worker, span]);
 

@@ -21,11 +21,12 @@ from msprobe.core.common.const import Const
 
 
 class Graph:
-    def __init__(self, model_name):
+    def __init__(self, model_name, data_path=''):
         self.node_map = {}
         self.node_id_map = {}
         self.add_node(NodeOp.module, model_name)
         self.root = self.get_node(model_name)
+        self.data_path = data_path
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -51,11 +52,11 @@ class Graph:
         return node_b, ancestors_n
 
     @staticmethod
-    def mapping_match(node_n, graph_b, mapping_config):
+    def mapping_match(node_n, graph_b, mapping_dict):
         """
         根据映射配置对节点进行匹配
         """
-        node_b = graph_b.node_map.get(mapping_config.get_mapping_string(node_n.id))
+        node_b = graph_b.node_map.get(mapping_dict.get(node_n.id, node_n.id))
         if not node_b or not node_n.compare_mapping_node(node_b):
             return None, [], []
         ancestors_n = node_n.get_ancestors()
@@ -131,6 +132,7 @@ class Graph:
         """
         result = {}
         result[GraphConst.JSON_ROOT_KEY] = self.root.id if self.root else 'None'
+        result[GraphConst.JSON_DATA_KEY] = self.data_path
         result[GraphConst.JSON_NODE_KEY] = {}
         for node_id in self.node_map:
             info = self.node_map.get(node_id).to_dict()

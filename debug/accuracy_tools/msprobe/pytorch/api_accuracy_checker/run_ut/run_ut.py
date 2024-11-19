@@ -44,7 +44,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareC
 from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
 from msprobe.core.common.file_utils import FileChecker, change_mode, \
-    create_directory, get_json_contents, read_csv, check_file_or_directory_path
+    create_directory, get_json_contents, read_csv, check_file_or_directory_path, check_crt_valid
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
@@ -246,7 +246,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         backward_message += BackwardMessage.UNSUPPORT_BACKWARD_MESSAGE
     if api_name in not_backward_list:
         need_grad = False
-        logger.warning("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
+        logger.info("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
         backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
@@ -454,6 +454,8 @@ def checked_online_config(online_config):
         check_file_or_directory_path(online_config.tls_path, isdir=True)
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.key"))
         check_file_or_directory_path(os.path.join(online_config.tls_path, "server.crt"))
+        check_crt_valid(os.path.join(online_config.tls_path, "server.crt"))
+
     # host and port
     if not isinstance(online_config.host, str) or not re.match(Const.ipv4_pattern, online_config.host):
         raise Exception(f"host: {online_config.host} is invalid.")

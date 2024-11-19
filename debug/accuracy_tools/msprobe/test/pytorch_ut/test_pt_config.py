@@ -105,7 +105,10 @@ class TestTensorConfig(unittest.TestCase):
             self.config._check_file_format()
         self.assertIn(str(context.exception), "file_format is invalid")
 
-    def test_check_online_run_ut(self):
+    @patch('msprobe.pytorch.pt_config.check_crt_valid')
+    def test_check_online_run_ut(self, mock_check_crt_valid):
+        mock_check_crt_valid.return_value = True
+
         self.config.online_run_ut = "True"
         with self.assertRaises(Exception) as context:
             self.config._check_online_run_ut()

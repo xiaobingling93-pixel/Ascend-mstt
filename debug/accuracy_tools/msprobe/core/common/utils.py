@@ -70,6 +70,7 @@ class MsprobeBaseException(Exception):
     FORWARD_DATA_COLLECTION_ERROR = 29
     BACKWARD_DATA_COLLECTION_ERROR = 30
     INVALID_KEY_ERROR = 31
+    MISSING_HEADER_ERROR = 32
 
     def __init__(self, code, error_info: str = ""):
         super(MsprobeBaseException, self).__init__()
@@ -116,16 +117,18 @@ def check_compare_param(input_param, output_path, dump_mode):
         logger.error(f"Invalid input parameter 'output_path', the expected type str but got {type(output_path)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
 
-    npu_json_type_check = is_json_file(input_param.get("npu_json_path"))
-    bench_json_type_check = is_json_file(input_param.get("bench_json_path"))
-    stack_json_type_check = is_json_file(input_param.get("stack_json_path"))
-    if not (npu_json_type_check and bench_json_type_check and stack_json_type_check):
-        logger.error("Please check the json path is valid.")
-        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    def check_json_path(json_path_str):
+        json_path = input_param.get(json_path_str)
+        check_file_or_directory_path(json_path, False)
+        json_type_check = is_json_file(json_path)
+        if not json_type_check:
+            logger.error(f"Invalid {json_path_str}: {json_path}, please check!")
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
 
-    check_file_or_directory_path(input_param.get("npu_json_path"), False)
-    check_file_or_directory_path(input_param.get("bench_json_path"), False)
-    check_file_or_directory_path(input_param.get("stack_json_path"), False)
+    check_json_path("npu_json_path")
+    check_json_path("bench_json_path")
+    check_json_path("stack_json_path")
+
     if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)
         check_file_or_directory_path(input_param.get("bench_dump_data_dir"), True)
