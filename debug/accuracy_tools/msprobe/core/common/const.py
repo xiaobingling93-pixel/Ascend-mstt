@@ -131,7 +131,7 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    FILE_SKIP_LIST = ["msprobe", "MindSpeed"]
     DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
@@ -149,7 +149,7 @@ class Const:
     TOP_LAYER = "TopLayer"
     CELL = "Cell"
     MODULE = "Module"
-
+    FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",

@@ -95,7 +95,7 @@ class ToolTip:
         '当最大相对误差越接近0表示其计算的误差越小。'
         '当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
     )
-    SMALL_VALUE_TIP = '{} 小于1e-3，不计算相对误差'
+    SMALL_VALUE_TIP = '{}, 由于{}小于{}, 此相对误差结果不作参考'
 
 
 class Suggestions:
@@ -146,6 +146,7 @@ class GraphConst:
     SUMMARY_INDEX_LIST = [CompareConst.MAX_DIFF, CompareConst.MIN_DIFF, CompareConst.MEAN_DIFF,
                           CompareConst.NORM_DIFF, CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
                           CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
+    VALUE_INDEX_LIST = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     NULL = 'null'
     NONE = 'None'
@@ -165,4 +166,20 @@ class GraphConst:
         REAL_DATA_COMPARE: Const.ALL,
         SUMMARY_COMPARE: Const.SUMMARY,
         MD5_COMPARE: Const.MD5
+    }
+    SMALL_VALUES = {
+        Const.TORCH_FLOAT32: 1e-6,
+        Const.TORCH_FLOAT16: 1e-3,
+        Const.TORCH_BFLOAT16: 1e-3,
+        Const.FLOAT32: 1e-6,
+        Const.FLOAT16: 1e-3,
+        Const.BFLOAT16: 1e-3
+    }
+    SMALL_VALUES_ABS_ERROR = {
+        Const.TORCH_FLOAT32: 1e-9,
+        Const.TORCH_FLOAT16: 1e-5,
+        Const.TORCH_BFLOAT16: 1e-5,
+        Const.FLOAT32: 1e-9,
+        Const.FLOAT16: 1e-5,
+        Const.BFLOAT16: 1e-5
     }
