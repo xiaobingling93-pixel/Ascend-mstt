@@ -17,6 +17,8 @@ from dataclasses import dataclass
 
 from typing import Dict, List
 
+from msprobe.core.common.const import Const
+
 
 @dataclass
 class APIInfo:
@@ -42,7 +44,7 @@ class APIInfo:
         if not api_name.strip():
             return ""
 
-        parts = api_name.split('.')
+        parts = api_name.split(Const.SEP)
 
         # Handle different cases based on number of parts
         if len(parts) == 0:
@@ -50,4 +52,4 @@ class APIInfo:
         elif len(parts) == 1:
             return parts[0].lower()
         else:
-            return '.'.join(parts[:2]).lower()
+            return Const.SEP.join(parts[:2]).lower()

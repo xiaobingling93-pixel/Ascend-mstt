@@ -28,24 +28,6 @@ class IgnoreFilter:
         self.rules = dict()
         self._load_rules(rule_path)
 
-    def _load_rules(self, rule_file_path):
-        if self.rules and len(self.rules):
-            return
-        data = load_yaml(rule_file_path)
-        self.rules = dict()
-        for rule_item in data.get('ignore_nan_inf', []):
-            rule = Rule(
-                api_name=rule_item.get('api_name', ''),
-                desc=rule_item.get('description', ''),
-                input_ignore=rule_item.get('input_ignore', []),
-                output_ignore=rule_item.get('output_ignore', [])
-            )
-            if not rule.verify_field():
-                continue
-            if self.has_api_rule(rule.api_name):
-                continue
-            self.rules[rule.api_name] = rule
-
     def has_api_rule(self, api_name: str) -> bool:
         return api_name in self.rules.keys()
 
@@ -65,6 +47,24 @@ class IgnoreFilter:
             return False
         return True
 
+    def _load_rules(self, rule_file_path):
+        if self.rules and len(self.rules):
+            return
+        data = load_yaml(rule_file_path)
+        self.rules = dict()
+        for rule_item in data.get('ignore_nan_inf', []):
+            rule = Rule(
+                api_name=rule_item.get('api_name', ''),
+                desc=rule_item.get('description', ''),
+                input_ignore=rule_item.get('input_ignore', []),
+                output_ignore=rule_item.get('output_ignore', [])
+            )
+            if not rule.verify_field():
+                continue
+            if self.has_api_rule(rule.api_name):
+                continue
+            self.rules[rule.api_name] = rule
+
 
 class Rule:
 
@@ -74,25 +74,6 @@ class Rule:
         self.input_ignore = IgnoreItem()
         self.output_ignore = IgnoreItem()
         self._init_ignore(input_ignore, output_ignore)
-
-    def _init_ignore(self, input_ignore=None, output_ignore=None):
-        """初始化忽略项"""
-        if input_ignore is None:
-            input_ignore = []
-        if output_ignore is None:
-            output_ignore = []
-
-        # 处理输入忽略规则
-        for item in input_ignore:
-            if 'index' in item:
-                self.input_ignore.add_index(item['index'])
-            if 'name' in item:
-                self.input_ignore.add_name(item['name'])
-
-        # 处理输出忽略规则
-        for item in output_ignore:
-            if 'index' in item:
-                self.output_ignore.add_index(item['index'])
 
     def __repr__(self):
         return (f'Rule(api_name={self.api_name}, desc={self.desc}, input_ignore={self.input_ignore}, output_ignore='
@@ -136,6 +117,25 @@ class Rule:
                     return False
 
         return True
+
+    def _init_ignore(self, input_ignore=None, output_ignore=None):
+        """初始化忽略项"""
+        if input_ignore is None:
+            input_ignore = []
+        if output_ignore is None:
+            output_ignore = []
+
+        # 处理输入忽略规则
+        for item in input_ignore:
+            if 'index' in item:
+                self.input_ignore.add_index(item['index'])
+            if 'name' in item:
+                self.input_ignore.add_name(item['name'])
+
+        # 处理输出忽略规则
+        for item in output_ignore:
+            if 'index' in item:
+                self.output_ignore.add_index(item['index'])
 
 
 @dataclass

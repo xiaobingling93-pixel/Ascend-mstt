@@ -15,11 +15,24 @@
 
 from typing import Dict, List, Optional, Any
 
+from msprobe.core.common.const import Const
+
 from msprobe.core.overflow_check.abnormal_scene import InputAnomalyOutputNormalScene, InputAnomalyOutputAnomalyScene, \
     InputNormalOutputAnomalyScene, NumericalMutationScene, AnomalyScene
 from msprobe.core.overflow_check.api_info import APIInfo
 from msprobe.core.overflow_check.filter import IgnoreFilter
 from msprobe.core.overflow_check.level import OverflowLevel
+
+
+class StatisticsFields:
+    """统计字段常量类"""
+    CRITICAL_APIS = 'critical_apis'
+    HIGH_PRIORITY_APIS = 'high_priority_apis'
+    MEDIUM_PRIORITY_APIS = 'medium_priority_apis'
+    ANOMALY_DETAILS = 'anomaly_details'
+
+    # 所有字段
+    ALL_FIELDS = [CRITICAL_APIS, HIGH_PRIORITY_APIS, MEDIUM_PRIORITY_APIS, ANOMALY_DETAILS]
 
 
 class AnomalyDetector:
@@ -49,29 +62,35 @@ class AnomalyDetector:
         """从原始数据创建APIInfo实例"""
         return APIInfo(
             api_name=api_name,
-            input_args=data.get('input_args', []),
-            input_kwargs=data.get('input_kwargs', {}),
-            output_data=data.get('output', [])
+            input_args=data.get(Const.INPUT_ARGS, []),
+            input_kwargs=data.get(Const.INPUT_KWARGS, {}),
+            output_data=data.get(Const.OUTPUT, [])
         )
 
     def get_statistics(self) -> Dict[str, List]:
-        """获取统计信息"""
-        stats = {
-            'critical_apis': [],
-            'high_priority_apis': [],
-            'medium_priority_apis': [],
-            'anomaly_details': []
-        }
-        for scene in self.anomaly_scenes.values():
-            details = scene.get_details()
-            stats['anomaly_details'].append(details)
+        """获取统计信息
 
-            if scene.rank == OverflowLevel.CRITICAL:
-                stats['critical_apis'].append(scene.api_name)
-            elif scene.rank == OverflowLevel.HIGH:
-                stats['high_priority_apis'].append(scene.api_name)
-            else:
-                stats['medium_priority_apis'].append(scene.api_name)
+        使用StatisticsFields类统一管理字段名称，避免硬编码
+
+        Returns:
+            Dict[str, List]: 包含各优先级API列表和异常详情的字典
+        """
+        stats = {field: [] for field in StatisticsFields.ALL_FIELDS}
+
+        # 定义rank到结果key的映射关系
+        rank_to_key = {
+            OverflowLevel.CRITICAL: StatisticsFields.CRITICAL_APIS,
+            OverflowLevel.HIGH: StatisticsFields.HIGH_PRIORITY_APIS,
+            OverflowLevel.MEDIUM: StatisticsFields.MEDIUM_PRIORITY_APIS
+        }
+
+        for scene in self.anomaly_scenes.values():
+            stats[StatisticsFields.ANOMALY_DETAILS].append(scene.get_details())
+            # 根据rank分类API
+            key = rank_to_key.get(scene.rank, None)
+            if not key:
+                stats[key].append(scene.api_name)
+
         return stats
 
     def analyze(self):

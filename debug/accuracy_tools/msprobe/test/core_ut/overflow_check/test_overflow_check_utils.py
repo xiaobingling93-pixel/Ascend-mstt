@@ -62,10 +62,5 @@ class TestHasNanInf(unittest.TestCase):
         self.assertFalse(has_nan_inf([1, 2, 3]))
 
 
-def run_tests():
-    """Run the tests"""
-    unittest.main(exit=False)
-
-
 if __name__ == '__main__':
-    run_tests()
+    unittest.main(exit=False)

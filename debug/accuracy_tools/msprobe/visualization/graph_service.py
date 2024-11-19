@@ -67,7 +67,7 @@ def _compare_graph(input_param, args):
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     # 开启溢出检测
-    if overflow_check:
+    if args.overflow_check:
         graph_n.overflow_check()
         graph_b.overflow_check()
 
@@ -80,7 +80,7 @@ def _compare_graph(input_param, args):
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def _build_graph(dump_path, out_path):
+def _build_graph(dump_path, out_path, overflow_check=False):
     logger.info('Start building model graph...')
     construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
                                  FileCheckConst.READ_ABLE).common_check()
@@ -114,7 +114,7 @@ def _graph_service_command(args):
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
-        _build_graph(npu_path, args.output_path)
+        _build_graph(npu_path, args.output_path, args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         _compare_graph(input_param, args)
     else:

@@ -101,7 +101,6 @@ class BaseNode:
         result = {
             'id': self.id,
             'node_type': self.op.value,
-            'data': self.data,
             'output_data': format_node_data(self.output_data),
             'input_data': format_node_data(self.input_data),
             'upnode': self.upnode.id if self.upnode else 'None',
@@ -114,10 +113,10 @@ class BaseNode:
             result['micro_step_id'] = self.micro_step_id
         # 是否存在overflow，并保存结果
         if self.overflow_level and isinstance(self.overflow_level, OverflowLevel):
-            if not self.data:
+            if self.data is None:
                 self.data = dict()
-            # 设置到self.data字段
             self.data['overflow_level'] = self.overflow_level.value
+        result['data'] = self.data
         return result
 
     def get_ancestors(self):

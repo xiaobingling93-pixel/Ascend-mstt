@@ -29,21 +29,15 @@ class AnomalyScene:
         self.api_name = api_info.api_name
         self.api_data = api_info
 
-    @staticmethod
-    def _has_anomaly(data: Union[Dict, Any]) -> bool:
-        """检查张量是否包含异常值"""
-        return has_nan_inf(data)
-
-    def _get_anomaly_indices_from_list(self, data_list: List[Dict]) -> List[int]:
-        return [i for i, data in enumerate(data_list) if self._has_anomaly(data)]
-
-    def _get_anomaly_keys_from_dict(self, data_dict: Dict) -> List[str]:
-        return [key for key, data in data_dict.items() if self._has_anomaly(data)]
-
     @property
     def rank(self) -> OverflowLevel:
         """获取异常等级"""
         raise NotImplementedError
+
+    @staticmethod
+    def _has_anomaly(data: Union[Dict, Any]) -> bool:
+        """检查张量是否包含异常值"""
+        return has_nan_inf(data)
 
     def get_details(self) -> Dict:
         """获取异常详情"""
@@ -63,6 +57,12 @@ class AnomalyScene:
 
         """
         raise NotImplementedError
+
+    def _get_anomaly_indices_from_list(self, data_list: List[Dict]) -> List[int]:
+        return [i for i, data in enumerate(data_list) if self._has_anomaly(data)]
+
+    def _get_anomaly_keys_from_dict(self, data_dict: Dict) -> List[str]:
+        return [key for key, data in data_dict.items() if self._has_anomaly(data)]
 
 
 class InputOutputAnomalyScene(AnomalyScene):
@@ -87,34 +87,34 @@ class InputOutputAnomalyScene(AnomalyScene):
 class InputAnomalyOutputNormalScene(InputOutputAnomalyScene):
     """输入异常，输出正常场景"""
 
-    def matches(self) -> bool:
-        return self.has_input_anomaly() and not self.has_output_anomaly()
-
     @property
     def rank(self) -> OverflowLevel:
         return OverflowLevel.MEDIUM
+
+    def matches(self) -> bool:
+        return self.has_input_anomaly() and not self.has_output_anomaly()
 
 
 class InputAnomalyOutputAnomalyScene(InputOutputAnomalyScene):
     """输入异常，输出异常场景"""
 
-    def matches(self) -> bool:
-        return self.has_input_anomaly() and self.has_output_anomaly()
-
     @property
     def rank(self) -> OverflowLevel:
         return OverflowLevel.HIGH
+
+    def matches(self) -> bool:
+        return self.has_input_anomaly() and self.has_output_anomaly()
 
 
 class InputNormalOutputAnomalyScene(InputOutputAnomalyScene):
     """输入正常，输出异常场景"""
 
-    def matches(self) -> bool:
-        return not self.has_input_anomaly() and self.has_output_anomaly()
-
     @property
     def rank(self) -> OverflowLevel:
         return OverflowLevel.CRITICAL
+
+    def matches(self) -> bool:
+        return not self.has_input_anomaly() and self.has_output_anomaly()
 
 
 class NumericalMutationScene(AnomalyScene):
@@ -124,6 +124,10 @@ class NumericalMutationScene(AnomalyScene):
     def __init__(self, api_info: APIInfo, threshold: float = 100000.0):
         super().__init__(api_info)
         self.threshold = threshold
+
+    @property
+    def rank(self) -> OverflowLevel:
+        return OverflowLevel.HIGH
 
     @staticmethod
     def _get_tensor_norms(data_list: List[Dict]) -> List[float]:
@@ -171,10 +175,6 @@ class NumericalMutationScene(AnomalyScene):
         if max_input == 0:
             return max_output > self.threshold
         return max_output / max_input > self.threshold
-
-    @property
-    def rank(self) -> OverflowLevel:
-        return OverflowLevel.HIGH
 
     def get_details(self) -> Dict:
         details = super().get_details()

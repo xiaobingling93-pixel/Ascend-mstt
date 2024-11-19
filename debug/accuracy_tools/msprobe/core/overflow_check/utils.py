@@ -15,13 +15,14 @@
 
 from typing import Any
 
+CHECK_FIELDS = ['Max', 'Min', 'Mean', 'Norm']
+OVERFLOW_VALUES = ['inf', '-inf', 'nan']
+
 
 def has_nan_inf(value: Any) -> bool:
     """检查值是否包含NaN或Inf"""
     if isinstance(value, dict):
         for k, v in value.items():
-            if k in ['Max', 'Min', 'Mean', 'Norm'] and (
-                    str(v).lower() == 'nan' or str(v).lower() == 'inf' or str(v).lower() == '-inf'
-            ):
+            if k in CHECK_FIELDS and str(v).lower() in OVERFLOW_VALUES:
                 return True
     return False

@@ -47,3 +47,9 @@ ignore_nan_inf:
     description: "Performs a reduction operation across all processes and scatters the result into the output tensor. The output tensor may contain uninitialized data before the reduce_scatter_tensor call, but it will be overwritten with the reduced and scattered data."
     input_ignore:
       - index: 0
+
+  # Tensor inplace func
+  - api_name: "tensor.masked_fill_"
+    description: "Inplace fill tensor with given value by filtered mask"
+    input_ignore:
+      - index: 0
