@@ -705,7 +705,12 @@ class TrainerMon:
 
             # Check if the execution is within 'torch/autograd/function.py' file
             for idx in backward_function_indices:
+                # The Megatron and MindSpeed L0&L1 scenes
                 if idx + 1 < len(call_stack) and call_stack[idx + 1].filename.endswith('torch/autograd/function.py'):
+                    del call_stack
+                    return True
+                # The latest MindSpeed L2 and ModelLink scenes
+                if idx + 2 < len(call_stack) and call_stack[idx + 2].filename.endswith('torch/autograd/function.py'):
                     del call_stack
                     return True
 
