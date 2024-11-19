@@ -34,7 +34,7 @@ class TestNpuFusionAttention(unittest.TestCase):
         self.assertEqual(converted_tensor.shape, (self.seq_len, self.batch_size, self.num_heads * self.head_dim))
 
         # 测试从 bsnd 转换到 BNSD
-        converted_tensor = convert_from_bsnd(self.input_tensor, "BSND")
+        converted_tensor = convert_from_bsnd(self.input_tensor, "BNSD")
         self.assertEqual(converted_tensor.shape, (self.batch_size, self.num_heads, self.seq_len, self.head_dim))
 
     def test_convert_to_bsnd(self):
