@@ -247,7 +247,7 @@ def convert_from_bsnd(_input, input_layout):
         out = rearrange(_input, 'b s n d -> s b (n d)').contiguous()
     elif input_layout == "BNSD":
         # (B,S,N,D)=>(B,N,S,D)
-        out = rearrange(_input, 'b s n d -> b s n d').contiguous()
+        out = rearrange(_input, 'b s n d -> b n s d').contiguous()
     elif input_layout == "TND":
         raise ValueError(f"input_layout {input_layout} does not supported for now.")
     else:
@@ -275,9 +275,9 @@ def convert_to_bsnd(_input, n, input_layout):
     elif input_layout == "SBH":
         # (S,B,N*D)=>(B,S,N,D)
         out = rearrange(_input, 's b (n d) -> b s n d', n=n)
-    elif input_layout == "BSND":
-        # (B,S,N,D)=>(B,S,N,D)
-        out = rearrange(_input, 'b s n d -> b s n d', n=n)
+    elif input_layout == "BNSD":
+        # (B,N,S,D)=>(B,S,N,D)
+        out = rearrange(_input, 'b n s d -> b s n d', n=n)
     elif input_layout == "TND":
         raise ValueError(f"input_layout {input_layout} does not supported for now.")
     else:

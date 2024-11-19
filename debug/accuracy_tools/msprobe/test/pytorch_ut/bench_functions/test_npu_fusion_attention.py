@@ -33,9 +33,9 @@ class TestNpuFusionAttention(unittest.TestCase):
         converted_tensor = convert_from_bsnd(self.input_tensor, "SBH")
         self.assertEqual(converted_tensor.shape, (self.seq_len, self.batch_size, self.num_heads * self.head_dim))
 
-        # 测试从 bsnd 转换到 BSND
+        # 测试从 bsnd 转换到 BNSD
         converted_tensor = convert_from_bsnd(self.input_tensor, "BSND")
-        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.num_heads, self.seq_len, self.head_dim))
 
     def test_convert_to_bsnd(self):
         # 测试从 BSH 转换回 bsnd
@@ -44,6 +44,10 @@ class TestNpuFusionAttention(unittest.TestCase):
 
         # 测试从 SBH 转换回 bsnd
         converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> s b (n d)'), self.num_heads, "SBH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
+        
+        # 测试从 BNSD 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> b n s d'), self.num_heads, "BNSD")
         self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
     def test_basic_forward_input_layout_is_BSND(self):
