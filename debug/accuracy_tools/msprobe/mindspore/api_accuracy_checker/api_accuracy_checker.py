@@ -212,15 +212,13 @@ class ApiAccuracyChecker:
 
             # 处理前向
             forward_output_list = self.process_forward(api_name_str, api_info)
-            if forward_output_list is not None:
+            if forward_output_list is not Const.EXCEPTION_NONE:
                 self.data_manager.record(forward_output_list)
 
             # 处理反向
             backward_output_list = self.process_backward(api_name_str, api_info)
-            if backward_output_list is not None:
+            if backward_output_list is not Const.EXCEPTION_NONE:
                 self.data_manager.record(backward_output_list)
 
-
             self.data_manager.save_results(api_name_str)
-
 
