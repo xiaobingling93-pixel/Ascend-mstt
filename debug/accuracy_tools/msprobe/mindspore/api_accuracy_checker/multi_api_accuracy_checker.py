@@ -57,8 +57,22 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
         self.args = args  # 将 args 保存为类的属性
 
+        # 初始化一个属性来存储当前的设备ID（用于日志中显示）
+        self.current_device_id = None
 
     def process_on_device(self, device_id, api_infos, progress_queue):
+        """
+        在特定设备上处理一部分API。
+
+        参数:
+            device_id (int): 要使用的设备ID。
+            api_infos (list): 包含API名称和对应信息的元组列表。
+            progress_queue (multiprocessing.Queue): 用于通信进度更新的队列。
+        """
+
+        # 设置当前设备ID
+        self.current_device_id = device_id
+
         # 设置 MindSpore context 的 device_id
         context.set_context(device_id=device_id)
 
@@ -108,7 +122,7 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
             processes = []
             for index, device_id in enumerate(device_ids):
                 process = multiprocessing.Process(target=self.process_on_device,
-                                                args=(device_id, partitioned_api_infos_split[index], progress_queue))
+                                                  args=(device_id, partitioned_api_infos_split[index], progress_queue))
                 processes.append(process)
                 process.start()
 
@@ -130,10 +144,73 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
                             total_tasks -= len(partitioned_api_infos_split[processes.index(process)])
                         processes.remove(process)
 
-
             # 确保所有子进程完成或终止
             for process in processes:
                 process.join(timeout=60)
                 if process.is_alive():
                     logger.error(f"Process {process.pid} did not terminate. Forcing termination.")
                     process.terminate()
+
+    def process_forward(self, api_name_str, api_info):
+        """
+        Overrides the parent class's process_forward method to log the device ID when exceptions occur.
+
+        Parameters:
+            api_name_str (str): The name of the API.
+            api_info (object): The API information object.
+
+        Returns:
+            list or None: The forward output list or None if an error occurs.
+        """
+        if not api_info.check_forward_info():
+            logger.debug(
+                f"[Device {self.current_device_id}] API: {api_name_str} lacks forward information, skipping forward check.")
+            return None
+
+        try:
+            forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
+        except Exception as e:
+            logger.warning(
+                f"[Device {self.current_device_id}] Exception occurred while getting forward API inputs for {api_name_str}. Skipping forward check. Detailed exception information: {e}.")
+            return None
+
+        forward_output_list = None
+        try:
+            forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation,
+                                                              Const.FORWARD)
+        except Exception as e:
+            logger.warning(
+                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} forward API. Detailed exception information: {e}.")
+        return forward_output_list
+
+    def process_backward(self, api_name_str, api_info):
+        """
+        Overrides the parent class's process_backward method to log the device ID when exceptions occur.
+
+        Parameters:
+            api_name_str (str): The name of the API.
+            api_info (object): The API information object.
+
+        Returns:
+            list or None: The backward output list or None if an error occurs.
+        """
+        if not api_info.check_backward_info():
+            logger.debug(
+                f"[Device {self.current_device_id}] API: {api_name_str} lacks backward information, skipping backward check.")
+            return None
+
+        try:
+            backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
+        except Exception as e:
+            logger.warning(
+                f"[Device {self.current_device_id}] Exception occurred while getting backward API inputs for {api_name_str}. Skipping backward check. Detailed exception information: {e}.")
+            return None
+
+        backward_output_list = None
+        try:
+            backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation,
+                                                               Const.BACKWARD)
+        except Exception as e:
+            logger.warning(
+                f"[Device {self.current_device_id}] Exception occurred while running and comparing {api_name_str} backward API. Detailed exception information: {e}.")
+        return backward_output_list
