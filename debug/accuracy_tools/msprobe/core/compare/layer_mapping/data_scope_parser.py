@@ -17,13 +17,14 @@ import os
 import re
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import ClassVar, Dict, Optional, Tuple
+from typing import ClassVar, Dict, List, Optional, Tuple
 
 import yaml
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import save_yaml
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, add_time_with_yaml
+from msprobe.core.compare.layer_mapping.postprocess_pass import postprocess_pass
 
 
 @dataclass
@@ -36,6 +37,8 @@ class DumpDataItem:
     full_scope: str = ""
     layer_scope: str = ""
     stack_scope: str = ""
+    frame_stack_scope: str = ""
+    user_stack_scope: str = ""
     construct_scope: str = ""
     scope_direction: Optional[str] = None
     scope_id: Optional[int] = None
@@ -82,23 +85,27 @@ class DumpDataItem:
 
     def set_layer_scope(self, construct_info: str) -> None:
         self.construct_scope = construct_info
-        if not construct_info:
-            self.layer_scope = self.framework2layername.get(self.framework)
-            return
-        construct_info_list = construct_info.split(Const.SEP)
-        if len(construct_info_list) < abs(Const.LAYER_NAME_INDEX):
-            logger.error(
-                f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
-            raise CompareException(CompareException.INVALID_DATA_ERROR)
         if self.api_type == self.framework2layername.get(self.framework):
             # remove api name
             data_list = self.data_name.split(Const.SEP)
             data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
+        elif construct_info:
+            data_list = construct_info.split(Const.SEP)
         else:
-            data_list = construct_info_list
-        self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
-        self.scope_id = data_list[Const.SCOPE_ID_INDEX]
-        self.scope_direction = construct_info_list[Const.SCOPE_DIRECTION_INDEX]
+            data_list = []
+
+        if data_list:
+            self.layer_scope = Const.SEP.join(data_list[:Const.TYPE_NAME_INDEX])
+        else:
+            self.layer_scope = self.framework2layername.get(self.framework)
+        if construct_info:
+            construct_list = construct_info.split(Const.SEP)
+            if len(construct_list) < abs(Const.LAYER_NAME_INDEX):
+                logger.error(
+                    f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
+                raise CompareException(CompareException.INVALID_DATA_ERROR)
+            self.scope_id = construct_list[Const.SCOPE_ID_INDEX]
+            self.scope_direction = construct_list[Const.SCOPE_DIRECTION_INDEX]
 
     def set_stack_scope(self, stack_info: str) -> None:
         # Cell/Module has no stack info
@@ -106,7 +113,6 @@ class DumpDataItem:
             return
 
         if self.api_type in Const.DATA_TYPE_SKIP_LIST or not stack_info:
-            self.stack_scope = self.api_name
             return
 
         start_sign, end_sign = self.framework2stack_sign.get(self.framework)
@@ -114,13 +120,16 @@ class DumpDataItem:
         start_pos, end_pos = find_regard_scope(stack_info, start_sign, end_sign)
         # 获取指定范围的代码
         regard_scope = stack_info[start_pos + 1:end_pos]
-        func_stack_list = find_stack_func_list(regard_scope)
-        self.stack_scope = Const.SEP.join(func_stack_list)
+        frame_func_stack_list, user_func_stack_list = find_stack_func_list(regard_scope)
+        self.frame_stack_scope = Const.SEP.join(frame_func_stack_list)
+        self.user_stack_scope = Const.SEP.join(user_func_stack_list)
 
-    def set_full_scope(self, use_stack_scope=False) -> None:
+    def set_full_scope(self, use_user_func_scope=False, use_frame_func_scope=True) -> None:
         scope_list = [self.layer_scope]
-        if use_stack_scope:
-            scope_list.append(self.stack_scope)
+        if use_user_func_scope and self.user_stack_scope:
+            scope_list.append(self.user_stack_scope)
+        if use_frame_func_scope and self.frame_stack_scope:
+            scope_list.append(self.frame_stack_scope)
         scope_list.append(self.api_name)
         self.full_scope = Const.SEP.join(scope_list)
 
@@ -138,11 +147,41 @@ def find_regard_scope(lines, start_sign, end_sign):
     return start_pos, end_pos
 
 
-def find_stack_func_list(lines):
+def find_stack_func_list(lines, record_user=True):
     res_list = []
-    # 过滤和处理 regard_scope
+    user_stack = []
+    frame_stack = None
+    no_entrance = True
     for line in lines:
-        ele_list = line.split(',')
+        ele_list = line.split(Const.COMMA)
+        file_ele = ele_list[Const.STACK_FILE_INDEX]
+        # if framework func line and no framework entrance found yet
+        if any(ii in file_ele for ii in Const.FRAME_FILE_LIST) and no_entrance:
+            frame_stack = line  # Update the last target index
+        else:
+            if record_user:
+                user_stack.append(line)
+            no_entrance = False
+
+    # Check if the last string in the list contains target str
+    if frame_stack and no_entrance:
+        no_entrance = False
+
+    # 过滤和处理 regard_scope
+    frame_func = get_stack_in_lines([frame_stack])
+    user_func = get_stack_in_lines(user_stack)
+    return (frame_func, user_func)
+
+
+def get_stack_in_lines(simplified: List[str]):
+    res_list = []
+    if not simplified:
+        return res_list
+    for line in simplified:
+        if not line:
+            continue
+
+        ele_list = line.split(Const.COMMA)
         file_ele = ele_list[Const.STACK_FILE_INDEX]
         if any(ii in file_ele for ii in Const.FILE_SKIP_LIST):
             continue
@@ -154,6 +193,7 @@ def find_stack_func_list(lines):
         in_func_name = func_ele.split()[Const.STACK_FUNC_ELE_INDEX]
 
         res_list.append(in_func_name)
+
     reversed_list = res_list[::-1]
     return reversed_list
 
@@ -179,16 +219,7 @@ def get_dump_data_items(dump, stack, construct, framework, output_path=None):
         name2item[data_name] = data_item
         data_items.append(data_item)
 
-    # 处理反向数据，反向无栈信息，沿用正向数据栈信息
-    for data_item in data_items:
-        data_name = data_item.data_name
-        if Const.BACKWARD in data_name:
-            forward_name = data_name.replace(Const.BACKWARD, Const.FORWARD)
-            forward_item = name2item.get(forward_name, None)
-            if not forward_item:
-                continue
-            data_item.stack_scope = forward_item.stack_scope
-            data_item.full_scope = forward_item.full_scope
+    postprocess_pass(data_items, name2item)
 
     if output_path:
         yaml.add_representer(DumpDataItem, dumpdata_representer)

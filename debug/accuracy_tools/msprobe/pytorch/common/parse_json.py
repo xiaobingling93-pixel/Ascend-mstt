@@ -15,6 +15,7 @@
 
 from msprobe.core.common.exceptions import ParseJsonException
 from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.log import logger
 
 
 def parse_json_info_forward_backward(json_path):
@@ -22,8 +23,10 @@ def parse_json_info_forward_backward(json_path):
 
     real_data_path = dump_json.get("dump_data_dir")
     dump_data = dump_json.get("data")
+    if dump_data is None:
+        raise ParseJsonException(ParseJsonException.InvalidDumpJson, "something wrong with dump, no data found in dump.json")
     if not dump_data:
-        raise ParseJsonException(ParseJsonException.InvalidDumpJson, "dump数据中没有data字段")
+        logger.warning("data field is empty, no overflow data found.")
 
     forward_data = {}
     backward_data = {}

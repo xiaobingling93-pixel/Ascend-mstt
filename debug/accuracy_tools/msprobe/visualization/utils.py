@@ -77,20 +77,6 @@ def is_integer(s):
     except Exception:
         return False
 
-def process_kwargs_parameter(parameter):
-    """
-    转换kwargs参数命名, 不处理后缀是0.0, 0.1, 0.0.0等数据，例如Primitive.conv2d.0.forward.input.0.0
-    Args:
-        parameter: 'Module.module.Float16Module.forward.0.input.labels.0'
-    Returns: 'Module.module.Float16Module.forward.0.kwargs.labels'
-    """
-    parts = parameter.split(Const.SEP)
-    if len(parts) >= GraphConst.OUTPUT_MIN_LEN and parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT \
-            and not is_integer(parts[GraphConst.OUTPUT_INDEX_TWO]):
-        parts[GraphConst.OUTPUT_INDEX_THREE] = 'kwargs'
-        return Const.SEP.join(parts[:-1])
-    return parameter
-
 
 class ToolTip:
     MAX_DIFF = 'NPU与标杆API统计信息比对，最大值的差值'
@@ -136,6 +122,8 @@ class GraphConst:
     JSON_TIP_KEY = 'ToolTip'
     JSON_ROOT_KEY = 'root'
     JSON_NODE_KEY = 'node'
+    JSON_DATA_KEY = 'dump_data_dir'
+    JSON_TASK_KEY = 'task'
     DATA_KEY = 'data'
     REAL_DATA_TH = 0.1
     MAX_RELATIVE_ERR_TH = 0.5

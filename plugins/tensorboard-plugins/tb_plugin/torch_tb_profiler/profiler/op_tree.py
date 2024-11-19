@@ -68,7 +68,8 @@ class OpTreeBuilder:
             if main_tid:
                 # only append the staled device nodes into main thread
                 self.main_tid = op_list[0].tid
-                root_node = OpTreeBuilder._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes, is_ascend)
+                root_node = OpTreeBuilder._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes,
+                                                               is_ascend)
             else:
                 root_node = OpTreeBuilder._build_tree_internal(op_list, zero_rt_list, tid, [], is_ascend)
             tid2tree[int(tid)] = root_node

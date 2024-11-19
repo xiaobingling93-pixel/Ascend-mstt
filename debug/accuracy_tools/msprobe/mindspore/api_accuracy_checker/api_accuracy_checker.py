@@ -22,6 +22,7 @@ from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
 from msprobe.mindspore.api_accuracy_checker.base_compare_algorithm import compare_algorithms
+from msprobe.mindspore.api_accuracy_checker.data_manager import DataManager
 from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_json_dict, global_context,
                                                           trim_output_compute_element_list)
 from msprobe.mindspore.common.log import logger
@@ -47,9 +48,9 @@ class ResultCsvEntry:
 
 
 class ApiAccuracyChecker:
-    def __init__(self):
+    def __init__(self, args):
         self.api_infos = dict()
-        self.results = dict()
+        self.data_manager = DataManager(args.out_path, args.result_csv_path)  # 在初始化时实例化 DataManager
 
     @staticmethod
     def run_and_compare_helper(api_info, api_name_str, api_input_aggregation, forward_or_backward):
@@ -162,6 +163,9 @@ class ApiAccuracyChecker:
 
     def run_and_compare(self):
         for api_name_str, api_info in tqdm(self.api_infos.items()):
+            if not self.data_manager.is_unique_api(api_name_str):
+                continue
+
             if not api_info.check_forward_info():
                 logger.debug(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
                 continue
@@ -178,9 +182,11 @@ class ApiAccuracyChecker:
             except Exception as e:
                 logger.warning(f"exception occurs when running and comparing {api_name_str} forward api. "
                                f"detailed exception information: {e}.")
-            self.record(forward_output_list)
+            self.data_manager.record(forward_output_list)
 
             if not api_info.check_backward_info():
+                self.data_manager.save_results(api_name_str)  # 不存在反向，则直接保存前向结果
+
                 logger.debug(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
                 continue
             try:
@@ -196,101 +202,8 @@ class ApiAccuracyChecker:
             except Exception as e:
                 logger.warning(f"exception occurs when running and comparing {api_name_str} backward api. "
                                f"detailed exception information: {e}.")
-            self.record(backward_output_list)
+            self.data_manager.record(backward_output_list)
 
-    def record(self, output_list):
-        if output_list is None:
-            return
-        for output in output_list:
-            api_real_name, forward_or_backward, basic_info, compare_result_dict = output
-            key = tuple([api_real_name, forward_or_backward])
-            if key not in self.results:
-                self.results[key] = []
-            self.results[key].append(tuple([basic_info, compare_result_dict]))
+            self.data_manager.save_results(api_name_str)
 
-    def to_detail_csv(self, csv_dir):
-        # detail_csv
-        detail_csv = []
-        detail_csv_header_basic_info = [
-            MsCompareConst.DETAIL_CSV_API_NAME,
-            MsCompareConst.DETAIL_CSV_BENCH_DTYPE,
-            MsCompareConst.DETAIL_CSV_TESTED_DTYPE,
-            MsCompareConst.DETAIL_CSV_SHAPE,
-        ]
-        detail_csv_header_compare_result = list(compare_algorithms.keys())
-        detail_csv_header_status = [
-            MsCompareConst.DETAIL_CSV_PASS_STATUS,
-            MsCompareConst.DETAIL_CSV_MESSAGE,
-        ]
 
-        detail_csv_header = detail_csv_header_basic_info + detail_csv_header_compare_result + detail_csv_header_status
-        detail_csv.append(detail_csv_header)
-
-        for _, results in self.results.items():
-            # detail csv
-            for res in results:
-                basic_info, compare_result_dict = res
-                csv_row_basic_info = \
-                    [basic_info.api_name, basic_info.bench_dtype, basic_info.tested_dtype, basic_info.shape]
-                csv_row_compare_result = list(compare_result_dict.get(algorithm_name).compare_value \
-                                              for algorithm_name in detail_csv_header_compare_result)
-                csv_row_status = [basic_info.status, basic_info.err_msg]
-                csv_row = csv_row_basic_info + csv_row_compare_result + csv_row_status
-                detail_csv.append(csv_row)
-
-        file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.DETAIL_CSV_FILE_NAME))
-        create_directory(csv_dir)
-        write_csv(detail_csv, file_name, mode="w")
-
-    def to_result_csv(self, csv_dir):
-        result_csv_dict = dict()
-        for key, results in self.results.items():
-            api_real_name, forward_or_backward = key
-            forward_or_backward_pass_status = CompareConst.PASS
-            forward_or_backward_overall_err_msg = ""
-            # detail csv
-            for res in results:
-                basic_info, _ = res
-                if basic_info.status != CompareConst.PASS:
-                    forward_or_backward_pass_status = CompareConst.ERROR
-                forward_or_backward_overall_err_msg += basic_info.err_msg
-            forward_or_backward_overall_err_msg = \
-                "" if forward_or_backward_pass_status == CompareConst.PASS else forward_or_backward_overall_err_msg
-
-            # result_csv_dict
-            if api_real_name not in result_csv_dict:
-                result_csv_dict[api_real_name] = ResultCsvEntry()
-            if forward_or_backward == Const.FORWARD:
-                result_csv_dict[api_real_name].forward_pass_status = forward_or_backward_pass_status
-                result_csv_dict[api_real_name].forward_err_msg = forward_or_backward_overall_err_msg
-            else:
-                result_csv_dict[api_real_name].backward_pass_status = forward_or_backward_pass_status
-                result_csv_dict[api_real_name].backward_err_msg = forward_or_backward_overall_err_msg
-
-        # result_csv
-        result_csv = []
-        result_csv_header = [
-            MsCompareConst.DETAIL_CSV_API_NAME,
-            MsCompareConst.RESULT_CSV_FORWARD_TEST_SUCCESS,
-            MsCompareConst.RESULT_CSV_BACKWARD_TEST_SUCCESS,
-            MsCompareConst.DETAIL_CSV_MESSAGE,
-        ]
-        result_csv.append(result_csv_header)
-
-        for api_name, result_csv_entry in result_csv_dict.items():
-            if result_csv_entry.forward_pass_status == CompareConst.PASS and \
-                    result_csv_entry.backward_pass_status == CompareConst.PASS:
-                overall_err_msg = ""
-            else:
-                overall_err_msg = result_csv_entry.forward_err_msg + result_csv_entry.backward_err_msg
-            row = [
-                api_name,
-                result_csv_entry.forward_pass_status,
-                result_csv_entry.backward_pass_status,
-                overall_err_msg
-            ]
-            result_csv.append(row)
-
-        file_name = os.path.join(csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
-        create_directory(csv_dir)
-        write_csv(result_csv, file_name, mode="w")
