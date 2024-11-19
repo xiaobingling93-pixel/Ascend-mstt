@@ -127,27 +127,15 @@ def get_input(propagation):
         return args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward
     return args_device, kwargs_device, args_bench, kwargs_bench
 
-def exec_api_device(args, kwargs, args_grad_input, propagation):
-    output_device = {api_type}.{api_name}(*args, **kwargs)
+def exec_api(args, kwargs, args_grad_input, propagation):
+    output = {api_type}.{api_name}(*args, **kwargs)
     if propagation == BACKWARD:
         args_input_tensor = [tensor for tensor in args if isinstance(tensor, torch.Tensor) and tensor.requires_grad]
         args_input_tensor.extend(
             [value for value in kwargs.values() if isinstance(value, torch.Tensor) and value.requires_grad])
-        output_device_new = torch.autograd.grad(outputs=output_device, inputs=args_input_tensor, grad_outputs=args_grad_input)
-        return output_device_new
-    return output_device
-
-
-def exec_api_bench(args, kwargs, args_grad_input, propagation):
-    output_bench = {api_type}.{api_name}(*args, **kwargs)
-    if propagation == BACKWARD:
-        args_input_tensor = [tensor for tensor in args if isinstance(tensor, torch.Tensor) and tensor.requires_grad]
-        args_input_tensor.extend(
-            [value for value in kwargs.values() if isinstance(value, torch.Tensor) and value.requires_grad])
-        output_bench_new = torch.autograd.grad(outputs=output_bench, inputs=args_input_tensor, grad_outputs=args_grad_input)
-        return output_bench_new
-    return output_bench
-
+        output_backward = torch.autograd.grad(outputs=output, inputs=args_input_tensor, grad_outputs=args_grad_input)
+        return output_backward
+    return output
 
 def compute_inf_nan_proportion(inf_nan_mask, out_device, out_bench, abs_bench_with_eps, rtol):
     out_bench = out_bench.to(out_device.dtype)
@@ -345,19 +333,16 @@ def compare(out_device, out_bench, api_name):
     print("Compare result:")
     if type(out_device) != type(out_bench):
         print("ERROR: out_device and out_bench is not the same type!")
-        print("Compare finished.")
         return None
     if isinstance(out_bench, (list, tuple)):
         if len(out_device) != len(out_bench):
             print("ERROR: len of out_device and out_bench is different!")
-            print("Compare finished.")
             return None
         for index, _ in enumerate(out_bench):
             print(f"index {{index}}:")
             compare_element(out_device[index], out_bench[index], api_name)
     else:
         compare_element(out_device, out_bench, api_name)
-    print("Compare finished.")
 
 if __name__ == "__main__":
     device = get_device()
@@ -369,11 +354,12 @@ if __name__ == "__main__":
         print(f"iter: {{i}}:")
         if propagation == BACKWARD:
             args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward = get_input(propagation)
-            output_device = exec_api_device(args_device, kwargs_device, args_device_backward, propagation)
-            output_bench = exec_api_bench(args_bench, kwargs_bench, args_bench_backward, propagation)
+            output_device = exec_api(args_device, kwargs_device, args_device_backward, propagation)
+            output_bench = exec_api(args_bench, kwargs_bench, args_bench_backward, propagation)
             compare(output_device, output_bench, api_name)
         else:
             args_device, kwargs_device, args_bench, kwargs_bench = get_input(propagation)
-            output_device = exec_api_device(args_device, kwargs_device, None, propagation)
-            output_bench = exec_api_bench(args_bench, kwargs_bench, None, propagation)
+            output_device = exec_api(args_device, kwargs_device, None, propagation)
+            output_bench = exec_api(args_bench, kwargs_bench, None, propagation)
             compare(output_device, output_bench, api_name)
+    print("Compare finished.")
