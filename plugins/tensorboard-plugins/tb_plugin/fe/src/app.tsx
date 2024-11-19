@@ -39,6 +39,7 @@ import Tabs from '@material-ui/core/Tabs';
 import Typography from '@material-ui/core/Typography';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import { message } from 'antd';
 import 'antd/es/button/style/css';
 import 'antd/es/list/style/css';
 import 'antd/es/table/style/css';
@@ -209,12 +210,12 @@ export const App = () => {
 
   const [topTab, setTopTab] = React.useState<number>(0);
   const [fileList, setFileList] = React.useState<FileInfo[]>([]);
-  const [uploadedCount, setUploadedCount] = React.useState<number>(0);// #endregion
+  const [uploadedCount, setUploadedCount] = React.useState<number>(0); // #endregion
 
   React.useEffect(() => {
     setup()
       .catch(() => {
-        console.log('google chart is not supported offline');
+        message.warning('google chart is not supported offline');
       })
       .finally(() => {
         setLoaded(true);
@@ -228,7 +229,7 @@ export const App = () => {
         setRuns(runs.runs);
         setRunsLoading(runs.loading);
       } catch (e) {
-        console.info('Cannot fetch runs: ', e);
+        message.warning(`Cannot fetch runs: ${e}`);
       }
       await sleep(5000);
     }
@@ -242,7 +243,7 @@ export const App = () => {
     if (!run || !runs.includes(run)) {
       setRun(firstOrUndefined(runs) ?? '');
     }
-  }, [runs]);// #region - Diff Left
+  }, [runs]); // #region - Diff Left
 
   React.useEffect(() => {
     if (diffLeftRun) {
@@ -327,11 +328,17 @@ export const App = () => {
   // #endregion
 
   // #region - Event Handler
-  const handleTabChange = (event: React.ChangeEvent<{}>, value: any) => {
+  const handleTabChange = (
+    event: React.ChangeEvent<Record<string, unknown>>,
+    value: any
+  ) => {
     setSelectedTab(value as number);
   };
 
-  const handleTopTabChange = (event: React.ChangeEvent<{}>, value: any) => {
+  const handleTopTabChange = (
+    event: React.ChangeEvent<Record<string, unknown>>,
+    value: any
+  ) => {
     setTopTab(value as number);
   };
 
@@ -407,12 +414,22 @@ export const App = () => {
     }
   };
 
+  const _getViews = (view: Views): string => {
+    if (view === Views.Kernel) {
+      return deviceTarget === 'Ascend'
+        ? `NPU ${ViewNames[view]}`
+        : `GPU ${ViewNames[view]}`;
+    } else {
+      return ViewNames[view];
+    }
+  };
+
   const _changeUploadCount = (count: number) => {
     setUploadedCount(count);
-  };// #endregion
+  }; // #endregion
 
   const renderContent = () => {
-    if (!runsLoading && runs.length == 0) {
+    if (!runsLoading && runs.length === 0) {
       return (
         <Card variant='outlined'>
           <CardHeader title='No Runs Found'></CardHeader>
@@ -422,8 +439,8 @@ export const App = () => {
         </Card>
       );
     }
-
-    if (!loaded || !run || !worker || !view || !span) {
+    const notReady = !loaded || !run || !worker || !view || !span;
+    if (notReady) {
       return <FullCircularProgress />;
     }
 
@@ -472,6 +489,8 @@ export const App = () => {
         case Views.Module:
         case Views.Lightning:
           return <ModuleView run={run} worker={worker} span={span} />;
+        default:
+          return <></>;
       }
     } else {
       return (
@@ -494,8 +513,8 @@ export const App = () => {
         <ClickAwayListener onClickAway={SetIframeActive}>
           <FormControl variant='outlined' className={classes.formControl}>
             <Select value={span} onChange={handleSpanChange}>
-              {spans.map((span) => (
-                <MenuItem value={span}>{span}</MenuItem>
+              {spans.map((item) => (
+                <MenuItem value={item}>{item}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -559,7 +578,7 @@ export const App = () => {
                 <Tab label='Diff' />
               </Tabs>
             </Box>
-            {selectedTab == 0 ? (
+            {selectedTab === 0 ? (
               <>
                 <ListSubheader>Runs</ListSubheader>
                 <ClickAwayListener onClickAway={SetIframeActive}>
@@ -568,8 +587,8 @@ export const App = () => {
                     className={classes.formControl}
                   >
                     <Select value={run} onChange={handleRunChange}>
-                      {runs.map((run) => (
-                        <MenuItem value={run}>{run}</MenuItem>
+                      {runs.map((item) => (
+                        <MenuItem value={item}>{item}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -581,14 +600,8 @@ export const App = () => {
                     className={classes.formControl}
                   >
                     <Select value={view} onChange={handleViewChange}>
-                      {views.map((view) => (
-                        <MenuItem value={view}>
-                          {view === Views.Kernel
-                            ? deviceTarget === 'Ascend'
-                              ? `NPU ${ViewNames[view]}`
-                              : `GPU ${ViewNames[view]}`
-                            : ViewNames[view]}
-                        </MenuItem>
+                      {views.map((item) => (
+                        <MenuItem value={item}>{_getViews(item)}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>

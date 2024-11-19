@@ -22,14 +22,15 @@ import torch.nn as nn
 import torch.distributed as dist
 
 from msprobe.core.common.file_utils import load_yaml
-from msprobe.pytorch.monitor.module_metric import get_metrics
+from msprobe.core.common.const import MonitorConst
+from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_writer_tag_name
 
 try:
     import torch_npu
 except ImportError:
     pass
 
-PREFIX_POST = "post"
+RANK = None
 
 OpsPath = os.path.join(os.path.dirname(__file__), "distributed_ops.yaml")
 WrapDistributedOps = load_yaml(OpsPath).get("distributed", [])
@@ -152,7 +153,7 @@ def op_aggregate(op, tensorlist):
     if isinstance(tensorlist, torch.Tensor):
         return tensorlist
     if not tensorlist:
-        return torch.nan
+        return torch.tensor(torch.nan)
     if op == 'min':
         return min(tensorlist)
     if op == 'max':
@@ -160,19 +161,23 @@ def op_aggregate(op, tensorlist):
     if op == 'norm':
         return sum(tensorlist)
     if op == 'zeros':
-        return sum(tensorlist) / len(tensorlist) if len(tensorlist) != 0 else 0
-    return torch.nan
+        return sum(tensorlist) / len(tensorlist)
+    if op == 'nans':
+        return sum(tensorlist)
+    if op == 'mean':
+        return sum(tensorlist) / len(tensorlist)
+    return torch.tensor(torch.nan)
 
 
 def update_data(old, new):
-    for op, tag2tensorlist in new.items():
-        if op not in old:
-            old[op] = {}
-        for tag, tensor in tag2tensorlist.items():
-            if tag not in old[op]:
-                old[op][tag] = [tensor]
+    for tag, op2tensor in new.items():
+        if tag not in old:
+            old[tag] = {}
+        for op, tensor in op2tensor.items():
+            if op not in old[tag]:
+                old[tag][op] = [tensor]
             else:
-                old[op][tag].append(tensor)
+                old[tag][op].append(tensor)
     return old
 
 
@@ -188,25 +193,27 @@ def is_target_line(codeline):
 
 
 @torch.no_grad()
-def catch_data(cc_context, ops, args, prefix):
+def catch_data(cc_context, cc_name, ops, args, prefix):
     tensor_args = {}
     for arg in args:
         if isinstance(arg, torch.Tensor):
-            tensor_args[f'{prefix}_{len(tensor_args)}'] = arg
+            key = get_summary_writer_tag_name(cc_name, f'{prefix}_{len(tensor_args)}', RANK)
+            tensor_args[key] = arg
         elif isinstance(arg, list):
             if isinstance(arg[0], torch.Tensor):
                 stacked_arg = torch.stack(arg)
             elif isinstance(arg[0], dist.P2POp):
                 stacked_arg = torch.stack([op.tensor for op in arg])
-            tensor_args[f'{prefix}_{len(tensor_args)}'] = stacked_arg
+            key = get_summary_writer_tag_name(cc_name, f'{prefix}_{len(tensor_args)}', RANK)
+            tensor_args[key] = stacked_arg
 
-    new_data = {op: get_metrics(op, tensor_args, 1e-8) for op in ops}
+    new_data = get_metrics(ops, tensor_args, 1e-8)
     cc_context.data = update_data(cc_context.data, new_data)
 
 
-def create_async_callback_func(context, ops, args, prefix):
+def create_async_callback_func(context, cc_name, ops, args, prefix):
     def store_data():
-        catch_data(context, ops, args, prefix)
+        catch_data(context, cc_name, ops, args, prefix)
 
     return store_data
 
@@ -221,7 +228,7 @@ def create_hooks(context, monitor):
         if not is_target_line(monitor.cc_codeline):
             return
         args = args + tuple(kwargs.values())
-        catch_data(context[module.op_name_], monitor.ops, args, 'pre')
+        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_PRE)
         return
 
     def cc_hook(module, args, kwargs, out=None):
@@ -230,19 +237,23 @@ def create_hooks(context, monitor):
         args = args + tuple(kwargs.values())
         if out:  # async
             if isinstance(out, dist.Work):
-                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], monitor.ops,
-                                                                             args, PREFIX_POST)
-            elif isinstance(out, list):  # batch_isend_irecv
-                for _out in out:
-                    PENDING_ASYNC_CC_BY_HANDLE[_out] = create_async_callback_func(context[module.op_name_], monitor.ops,
-                                                                                  args, PREFIX_POST)
+                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], 
+                                                                             module.op_name_, 
+                                                                             monitor.ops, args, MonitorConst.PREFIX_POST)
+            elif isinstance(out, list): # batch_isend_irecv
+                for o in out:
+                    PENDING_ASYNC_CC_BY_HANDLE[o] = create_async_callback_func(context[module.op_name_], 
+                                                                               module.op_name_, 
+                                                                               monitor.ops, args, MonitorConst.PREFIX_POST)
             return out
-        catch_data(context[module.op_name_], monitor.ops, args, PREFIX_POST)
+        catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_POST)
         return out
 
+    global RANK
     pre_hooks = []
     hooks = []
-    if dist.is_initialized() and dist.get_rank() not in monitor.module_rank_list and monitor.module_rank_list != []:
+    RANK = dist.get_rank()
+    if dist.is_initialized() and RANK not in monitor.module_rank_list and monitor.module_rank_list != []:
         return [pre_hooks, hooks]
 
     if monitor.cc_log_only:

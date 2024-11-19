@@ -18,8 +18,8 @@ import os
 import uuid
 import json
 from collections import defaultdict
-from copy import deepcopy
 from functools import partial
+from copy import deepcopy
 from datetime import datetime
 
 import torch
@@ -33,8 +33,8 @@ from msprobe.pytorch.monitor.features import get_sign_matches
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD
-from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_tensorboard, get_summary_writer_tag_name, \
-    TensorMetrics, write_metrics_csv, squash_param_name, reorder_metric, sqrt_norm_metric
+from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_base, get_summary_writer_tag_name, \
+    TensorMetrics, write_metrics_csv, squash_param_name
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
 from msprobe.core.common.log import logger
@@ -54,9 +54,9 @@ if not torch_version_above_or_equal_2:
 output_base_dir = os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
 
 FORMAT_MAPPING = {
-    MonitorConst.TENSORBOARD: (SummaryWriterWithAD, write_metrics_tensorboard),
+    MonitorConst.TENSORBOARD: (SummaryWriterWithAD, write_metrics_base),
     MonitorConst.CSV: (CSVWriterWithAD, write_metrics_csv),
-    MonitorConst.API: (BaseWriterWithAD, write_metrics_tensorboard)
+    MonitorConst.API: (BaseWriterWithAD, write_metrics_base)
 }
 
 
@@ -110,7 +110,7 @@ class OptimizerContext:
         self.exp_avg_metric = []
         self.param_exp_avg_sq = defaultdict()
         self.exp_avg_sq_metric = []
-        self.metric_list = []
+        self.metric_dict = {}
 
 
 class CommunicationContext:
@@ -120,10 +120,10 @@ class CommunicationContext:
     @staticmethod
     def _agg(data):
         aggregated_data = {}
-        for op, tag2tensorlist in data.items():
-            aggregated_data[op] = {}
-            for tag, tensorlist in tag2tensorlist.items():
-                aggregated_data[op][tag] = op_aggregate(op, tensorlist)
+        for tag, op2tensorlist in data.items():
+            aggregated_data[tag] = {}
+            for op, tensorlist in op2tensorlist.items():
+                aggregated_data[tag][op] = op_aggregate(op, tensorlist)
         return aggregated_data
 
     def reset(self):
@@ -135,9 +135,9 @@ class CommunicationContext:
 
 class GradContext:
     def __init__(self) -> None:
-        self.pre = []
-        self.post = []
-        self.acc_metric = []
+        self.pre = {}
+        self.post = {}
+        self.acc_metric = {}
         self.acc = {}
         self.actv = {}
 
@@ -174,8 +174,6 @@ class TrainerMon:
         self.ndigits = self.config.get('ndigits', 6)
         self.all_xy = self.config.get('all_xy', False)
         self.xy_distribution = self.config.get('xy_distribution', False)
-        # backward hook cause megatron-lm pipeline parallel schedule assert exception.
-        # TBD: backward hook cause output tensor is view of some base tensor. root cause investigation pending.
         self.forward_only = self.config.get('forward_only', False)
         self.backward_only = self.config.get('backward_only', False)
         self.ur_distribution = self.config.get('ur_distribution', False)
@@ -246,21 +244,21 @@ class TrainerMon:
         self.vpp = False
         self.dp_group = None
         self.tp_group = None
+        self.enable_megatron = False
 
         self.param2name = defaultdict(str)
         self.name2index = defaultdict()
         self.name2indices = defaultdict()
         self.name2param = {}
         self.param_name_call_id = {}
+        self.duplicate_param = {}
+        self.name2tag = {}
         self.call_id = 0
         self.grad_accs = []
         self.handles = defaultdict(list)
 
         self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
-        self.verbose = False
         self.print_struct = self.config.get("print_struct", False)
-        if self.print_struct:
-            self.verbose = True
         self.struct_printed = False
         self.module_struct = {}
 
@@ -385,42 +383,30 @@ class TrainerMon:
         opt_context.exp_avg_metric = {}
         opt_context.exp_avg_sq_metric = {}
         m_tag_tensor_map = self.generate_param_metrics('exp_avg', opt_context.param_exp_avg)
-        v_tag_tensor_map = self.generate_param_metrics('exp_avg_sq', opt_context.param_exp_avg_sq)
-        for metric_name in self.ops:
-            opt_context.exp_avg_metric[metric_name] = get_metrics(metric_name, m_tag_tensor_map, self.eps)
-            opt_context.exp_avg_sq_metric[metric_name] = get_metrics(metric_name, v_tag_tensor_map, self.eps)
+        v_tag_tensor_map = self.generate_param_metrics('efxp_avg_sq', opt_context.param_exp_avg_sq)
+        get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
+        get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
     def generate_wgrad_metrics(self):
         if not self.wg_distribution:
             return {}, {}
 
-        unreduced = {}
         if self.weight_hooked:
-            for metric_name in self.ops:
-                unreduced[metric_name] = get_metrics(metric_name, self.grad_context.acc, self.eps)
-            self.grad_context.acc_metric = [unreduced.copy()]
-        sqrt_norm_metric(unreduced)
-        unreduced = reorder_metric(unreduced)
+            get_metrics(self.ops, self.grad_context.acc, self.eps, self.grad_context.acc_metric)
 
         grad_dict = {}
         for param, name in self.param2name.items():
-            if self.tp_group and not param_is_not_tensor_parallel_duplicate(param, self.tp_group):
-                continue
-            if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
+            if self.duplicate_param.get(name, False):
                 continue
             grad = param.main_grad if self.params_have_main_grad else param.grad
             if grad is None:
                 logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                 continue
-            key = get_summary_writer_tag_name(name, 'post_grad', self.rank)
-            grad_dict[key] = grad
+            tag = self.name2tag.get(name, {}).get(MonitorConst.POST_GRAD)
+            grad_dict[tag] = grad
 
-        reduced = {op: get_metrics(op, grad_dict, self.eps) for op in self.ops}
-        self.grad_context.post = [reduced.copy()]
-        sqrt_norm_metric(reduced)
-        reduced = reorder_metric(reduced)
-
-        return reduced, unreduced
+        get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
+        return self.grad_context.post, self.grad_context.pre
 
     def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None):
         """External interface"""
@@ -433,7 +419,7 @@ class TrainerMon:
         self.tp_group = tp_group
 
         self._register_param_name(model)
-        self._hook_weights()
+        self._patch_grad_sync()
         self.hook_modules(model, grad_acc_steps)
 
     def generate_param_metrics(self, tag, param_tensor):
@@ -449,16 +435,9 @@ class TrainerMon:
     def generate_xy_metrics(self):
         actv = {}
         for fwd_context in self.module_fwd_hook_context_by_module.values():
-            for op in self.ops:
-                if op not in actv:
-                    actv[op] = {}
-                actv[op].update(fwd_context.actv[op])
-        sqrt_norm_metric(actv)
-        actv = reorder_metric(actv)
+            actv.update(fwd_context.actv)
 
-        actv_grad = deepcopy(self.grad_context.actv)
-        sqrt_norm_metric(actv_grad)
-        actv_grad = reorder_metric(actv_grad)
+        actv_grad = self.grad_context.actv
 
         return actv, actv_grad
 
@@ -481,24 +460,29 @@ class TrainerMon:
         for _, fwd_context in self.module_fwd_hook_context_by_module.items():
             if len(fwd_context.actv) == 0:
                 continue
-            self.write_metrics(self.ops, self.summary_writer, [fwd_context.actv], step, 'actv')
+            self.write_metrics(self.ops, self.summary_writer, fwd_context.actv, step, 'actv')
             fwd_context.actv.clear()
         if self.grad_context.actv:
-            self.write_metrics(self.ops, self.summary_writer, [self.grad_context.actv], step, 'actv_grad')
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.actv, step, 'actv_grad')
 
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.write_metrics(self.ops, self.summary_writer, [opt_context.exp_avg_metric], opt_context.step, 'exp_avg')
-        self.write_metrics(self.ops, self.summary_writer, [opt_context.exp_avg_sq_metric], opt_context.step,
-                           'exp_avg_sq')
+        self.write_metrics(self.ops, self.summary_writer, opt_context.exp_avg_metric, 
+                           opt_context.step, 'exp_avg')
+        self.write_metrics(self.ops, self.summary_writer, opt_context.exp_avg_sq_metric,
+                            opt_context.step, 'exp_avg_sq')
 
     def write_grad_tb(self, step):
         if not self.wg_distribution:
             return
 
+        if self.enable_megatron:
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.pre, step, 'grad_unreduced')
+        else:
+            self.write_metrics(self.ops, self.summary_writer, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.write_metrics(self.ops, self.summary_writer, self.grad_context.post, step, 'grad_reduced')
-        self.write_metrics(self.ops, self.summary_writer, self.grad_context.acc_metric, step, 'grad_unreduced')
+        
 
     def hook_optimizer(self, optimizer=None):
         # in DDP by default use params_have_main_grad
@@ -551,17 +535,15 @@ class TrainerMon:
                 tbtag_tensor_map.update(self.generate_param_metrics('mg_direction', context.param_mg_direction))
 
             metric_dict = {}
-            for metric_name in self.ops:
-                metric_dict[metric_name] = get_metrics(metric_name, tbtag_tensor_map, self.eps)
-            for k, c in self.cc_context.items():
-                c.aggregate()
-                cc_metrics = self.generate_cc_metrics(k, c)
-                for op, m in cc_metrics.items():
-                    metric_dict[op].update(m)
+            get_metrics(self.ops, tbtag_tensor_map, self.eps, metric_dict)
+            for cc in self.cc_context.values():
+                cc.aggregate()
+                metric_dict.update(cc.data)
+                cc.reset()
 
             if not metric_dict:
                 return
-            context.metric_list.append(metric_dict)
+            context.metric_dict = metric_dict
             return
 
         def optimizer_post_step_hook(optimizer, args, kwargs):
@@ -586,16 +568,14 @@ class TrainerMon:
                     self.ratio_heatmap_visualizer[param_name].visualize(
                         get_summary_writer_tag_name(param_name, 'adam_ratio', rank), context.step, self.summary_writer)
 
-            if context.metric_list:
-                self.write_metrics(self.ops, self.summary_writer, context.metric_list, context.step, 'other')
-            context.metric_list.clear()
+            if context.metric_dict:
+                self.write_metrics(self.ops, self.summary_writer, context.metric_dict, context.step, 'other')
+            context.metric_dict.clear()
             context.step += 1
-            self.grad_context.reset()
             if self.anomaly_data_factory:
                 self.anomaly_data_writer.write_detected_json(self.summary_writer.get_anomalies())
             self.summary_writer.clear_anomalies()
             self.call_id = 0
-            self.param_name_call_id.clear()
             return
 
         def patch_step(func, optimizer):
@@ -621,8 +601,6 @@ class TrainerMon:
         return
 
     def _smallest_rank_print(self, msg):
-        if not self.verbose:
-            return
         if dist.is_initialized():
             if self.module_rank_list:
                 if dist.get_rank() == min(self.module_rank_list):
@@ -656,6 +634,14 @@ class TrainerMon:
                 self.param2name[param] = name
                 self.name2param[name] = param
                 self.name2index[name] = index
+
+                if self.tp_group and not param_is_not_tensor_parallel_duplicate(param, self.tp_group):
+                    self.duplicate_param[name] = True
+                if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
+                    self.duplicate_param[name] = True
+                self.name2tag[name] = {}
+                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank)
+                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
 
     def _register_param_name(self, model):
         if self.param_registered:
@@ -726,9 +712,11 @@ class TrainerMon:
             del call_stack
             return False
 
-        def fwd_hook_fun(module, module_input, module_output):
+        def fwd_hook_fun(module, module_input, module_output, name):
             if _is_recomputation():
                 return
+            if module not in self.module_fwd_hook_context_by_module:
+                self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
                 context.struct = {MonitorConst.ACTV_IN: get_param_struct(module_input),
@@ -766,12 +754,7 @@ class TrainerMon:
                 self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT,
                                             cared_output))
 
-            for metric_name in self.ops:
-                if context.micro_step == 0 and context.actv.get(metric_name, []):
-                    logger.warning(f"actv context of {context.module_name} is not empty when first micro_step, "
-                                   f"maybe something wrong happened. Now clear it.")
-                    context.actv.clear()
-                context.actv[metric_name].update(get_metrics(metric_name, tbtag_tensor_map, self.eps))
+            get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
 
             context.micro_step += 1
             if context.micro_step == self.micro_batch_number:
@@ -820,10 +803,7 @@ class TrainerMon:
                                f"maybe something wrong happened. Now clear it.")
                 context.actvgrad.clear()
 
-            for metric_name in self.ops:
-                if metric_name not in self.grad_context.actv:
-                    self.grad_context.actv[metric_name] = {}
-                self.grad_context.actv[metric_name].update(get_metrics(metric_name, tbtag_tensor_map, self.eps))
+            get_metrics(self.ops, tbtag_tensor_map, self.eps, self.grad_context.actv)
 
             context.micro_step += 1
             if context.micro_step == self.micro_batch_number:
@@ -841,9 +821,8 @@ class TrainerMon:
                 if not name:
                     continue
                 if not self.backward_only:
-                    handle = submodule.register_forward_hook(fwd_hook_fun)
+                    handle = submodule.register_forward_hook(partial(fwd_hook_fun, name=name))
                     self.handles['xy'].append(handle)
-                    self.module_fwd_hook_context_by_module[submodule] = ModuleHookContext(name)
                 if not self.forward_only:
                     handle = submodule.register_full_backward_hook(bwd_hook_fun)
                     self.handles['xy'].append(handle)
@@ -851,6 +830,36 @@ class TrainerMon:
                 logger.info_on_rank_0(f"> {name} is monitored successfully")
                 hooked_count += 1
         return hooked_count
+
+    def _patch_grad_sync(self):
+        def patch_sync(sync_grad_func):
+            def wrapper(bucket):
+                grad_dict = {}
+                for param, name in self.param2name.items():
+                    if param not in bucket.params_list:
+                        continue
+                    grad = param.main_grad if self.params_have_main_grad else param.grad
+                    if grad is None:
+                        logger.warning(f"grad is None: {name}, maybe something wrong happened.")
+                        continue
+                    tag = self.name2tag.get(name,{}).get(MonitorConst.PRE_GRAD)
+                    if tag is None:
+                        continue
+                    grad_dict[tag] = grad
+                get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
+                out = sync_grad_func(bucket)
+                return out
+            return wrapper
+        try:
+            from megatron.core.distributed.param_and_grad_buffer import Bucket
+            self.enable_megatron = True
+        except ImportError:
+            self.enable_megatron = False
+
+        if self.enable_megatron:
+            Bucket.start_grad_sync = patch_sync(Bucket.start_grad_sync)  # differ in different megatron version
+        else:
+            self._hook_weights()
 
     def _hook_weights(self):
         context = self.grad_context

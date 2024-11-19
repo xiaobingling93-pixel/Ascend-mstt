@@ -17,29 +17,29 @@ export interface TransformedCallStackDataInner extends CallStackTableDataInner {
 const lineRegex = /\([0-9]+\)$/;
 
 function parseCallStackLine(raw: string): CallStackFrame {
-  raw = raw.trim();
-  const results = raw.split(':');
+  let rawResult = raw.trim();
+  const results = rawResult.split(':');
   const location = results.slice(0, results.length - 1).join(':');
 
   const result = lineRegex.exec(location);
   if (!result) {
-    return { raw };
+    return { raw: rawResult };
   }
 
   const lineWithParens = result[0].trim();
-  const file = raw.slice(0, result.index).trim();
+  const file = rawResult.slice(0, result.index).trim();
   const line = Number(
     lineWithParens.substr(1, lineWithParens.length - 2).trim()
   );
 
   return {
-    raw,
+    raw: rawResult,
     file,
     line,
   };
 }
 
-function parseCallStack(callStack: string | undefined): CallStackFrame[] {
+function parseCallStack(callStack?: string): CallStackFrame[] {
   const lines = (callStack ?? '')
     .trim()
     .split(';')

@@ -90,13 +90,12 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(graph_other.root.subnodes[0].micro_step_id, 0)
 
     def test_mapping_match(self):
-        mapping_config = MagicMock()
         graph_a = Graph("model_name_a")
         graph_b = Graph("model_name_b")
         graph_a.add_node(NodeOp.module, "a1", BaseNode(NodeOp.module, "root"))
         graph_b.add_node(NodeOp.module, "b1", BaseNode(NodeOp.module, "root"))
-        mapping_config.get_mapping_string.return_value = "b1"
-        node_b, ancestors_n, ancestors_b = Graph.mapping_match(graph_a.get_node("a1"), graph_b, mapping_config)
+        mapping_dict = {"a1": "b1"}
+        node_b, ancestors_n, ancestors_b = Graph.mapping_match(graph_a.get_node("a1"), graph_b, mapping_dict)
         self.assertIsNotNone(node_b)
         self.assertEqual(ancestors_n, ["root"])
         self.assertEqual(ancestors_b, ["root"])

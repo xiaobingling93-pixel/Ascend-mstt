@@ -90,8 +90,17 @@ class DataManager:
             self.initialize_api_names_set(result_csv_path)
         else:
             # 默认情况下，设置输出路径为空，等待首次写入时初始化
-            self.detail_out_path = None
-            self.result_out_path = None
+            self.result_out_path = os.path.join(self.csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
+            self.detail_out_path = os.path.join(
+                self.csv_dir,
+                os.path.basename(self.result_out_path).replace("result", "details")
+            )
+
+            if self.detail_out_path and os.path.exists(self.detail_out_path):
+                check_file_or_directory_path(self.detail_out_path)
+
+            if self.result_out_path and os.path.exists(self.result_out_path):
+                check_file_or_directory_path(self.result_out_path)
 
     def initialize_api_names_set(self, result_csv_path):
         """读取现有的 CSV 文件并存储已经出现的 API 名称到集合中"""
@@ -146,17 +155,6 @@ class DataManager:
 
     def save_results(self, api_name_str):
         if self.is_first_write:
-            self.result_out_path = os.path.join(self.csv_dir, add_time_as_suffix(MsCompareConst.RESULT_CSV_FILE_NAME))
-            self.detail_out_path = os.path.join(
-                self.csv_dir,
-                os.path.basename(self.result_out_path).replace("result", "details")
-            )
-            if self.detail_out_path and os.path.exists(self.detail_out_path):
-                check_file_or_directory_path(self.detail_out_path)
-
-            if self.result_out_path and os.path.exists(self.result_out_path):
-                check_file_or_directory_path(self.result_out_path)
-
             # 直接写入表头
             logger.info("Writing CSV headers for the first time.")
             write_csv_header(self.detail_out_path, get_detail_csv_header)

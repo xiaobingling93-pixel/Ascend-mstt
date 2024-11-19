@@ -56,11 +56,11 @@ class Graph:
         return node_b, ancestors_n
 
     @staticmethod
-    def mapping_match(node_n, graph_b, mapping_config):
+    def mapping_match(node_n, graph_b, mapping_dict):
         """
         根据映射配置对节点进行匹配
         """
-        node_b = graph_b.node_map.get(mapping_config.get_mapping_string(node_n.id))
+        node_b = graph_b.node_map.get(mapping_dict.get(node_n.id, node_n.id))
         if not node_b or not node_n.compare_mapping_node(node_b):
             return None, [], []
         ancestors_n = node_n.get_ancestors()
