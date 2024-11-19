@@ -92,7 +92,7 @@ class TestApiAccuracyChecker(unittest.TestCase):
         delete_files_with_prefix(result_directory, "accuracy_checking")
 
     def test_is_api_checkable(self):
-        input_return_mapping = {"fake api": False, "MintFunctional.relu.0.forward": True, "Tensor.add.0.forward": True,
+        input_return_mapping = {"fake api": False, "MintFunctional.relu.0.forward": True, "Tensor.add_.0.forward": True,
                                 "Tensor.new.add.0.forward": False}
         for api_name, target_result in input_return_mapping.items():
             result = ApiAccuracyChecker.is_api_checkable(api_name)

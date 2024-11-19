@@ -16,4 +16,17 @@
 # list of api that can be checked
 
 tensor:
-  - add
+  - add_
+  - addmm_
+  - allclose
+  - copy_
+  - clone
+  - cumprod
+  - log2
+  - t
+  - view_as
+  - fill_
+  - floor_
+  - clamp_
+  - type_as
+  - zero_
