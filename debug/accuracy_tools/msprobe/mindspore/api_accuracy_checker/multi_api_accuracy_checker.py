@@ -120,7 +120,7 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
             completed_tasks = 0
             while completed_tasks < total_tasks:
                 try:
-                    completed_tasks += progress_queue.get(timeout=60)  # 设置超时时间（秒）
+                    completed_tasks += progress_queue.get(timeout=Const.PROGRESS_TIMEOUT)  # 设置超时时间（秒）
                     pbar.update(1)
                 except multiprocessing.queues.Empty:
                     logger.error("Timeout while waiting for progress updates. Skipping remaining tasks.")
@@ -136,7 +136,7 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
 
             # 确保所有子进程完成或终止
             for process in processes:
-                process.join(timeout=60)
+                process.join(timeout=Const.PROGRESS_TIMEOUT)
                 if process.is_alive():
                     logger.error(f"Process {process.pid} did not terminate. Forcing termination.")
                     process.terminate()
@@ -155,14 +155,14 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         if not api_info.check_forward_info():
             logger.debug(
                 f"[Device {self.current_device_id}] API: {api_name_str} lacks forward information, skipping forward check.")
-            return None
+            return Const.EXCEPTION_NONE
 
         try:
             forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
         except Exception as e:
             logger.warning(
                 f"[Device {self.current_device_id}] Exception occurred while getting forward API inputs for {api_name_str}. Skipping forward check. Detailed exception information: {e}.")
-            return None
+            return Const.EXCEPTION_NONE
 
         forward_output_list = None
         try:
@@ -187,14 +187,14 @@ class MultiApiAccuracyChecker(ApiAccuracyChecker):
         if not api_info.check_backward_info():
             logger.debug(
                 f"[Device {self.current_device_id}] API: {api_name_str} lacks backward information, skipping backward check.")
-            return None
+            return Const.EXCEPTION_NONE
 
         try:
             backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
         except Exception as e:
             logger.warning(
                 f"[Device {self.current_device_id}] Exception occurred while getting backward API inputs for {api_name_str}. Skipping backward check. Detailed exception information: {e}.")
-            return None
+            return Const.EXCEPTION_NONE
 
         backward_output_list = None
         try:

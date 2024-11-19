@@ -1,16 +1,21 @@
-import unittest
-from unittest.mock import patch, MagicMock, call
+# Python 标准库
+import os
+import sys
+import signal  # 导入 signal 模块
 import multiprocessing
 from multiprocessing import Process, Manager, Queue
+
+# 第三方库
+import unittest
+from unittest.mock import patch, MagicMock, call
+
+# 自定义模块
 from msprobe.mindspore.api_accuracy_checker.multi_api_accuracy_checker import (
     MultiApiAccuracyChecker
 )
 from msprobe.mindspore.api_accuracy_checker.multi_data_manager import MultiDataManager
 from msprobe.mindspore.common.log import logger
 from mindspore import context
-import os
-import sys
-import signal  # 添加这一行，导入 signal 模块
 
 
 class TestMultiApiAccuracyChecker(unittest.TestCase):

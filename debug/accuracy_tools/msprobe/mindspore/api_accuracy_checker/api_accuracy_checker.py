@@ -165,14 +165,14 @@ class ApiAccuracyChecker:
         """处理前向检查"""
         if not api_info.check_forward_info():
             logger.debug(f"api: {api_name_str} is lack of forward information, skip forward check.")
-            return None
+            return Const.EXCEPTION_NONE
 
         try:
             forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when getting inputs for {api_name_str} forward api. "
                            f"Skipping forward check. Detailed exception information: {e}.")
-            return None
+            return Const.EXCEPTION_NONE
 
         forward_output_list = None
         try:
@@ -186,14 +186,14 @@ class ApiAccuracyChecker:
         """处理反向检查"""
         if not api_info.check_backward_info():
             logger.debug(f"api: {api_name_str} is lack of backward information, skipping backward check.")
-            return None
+            return Const.EXCEPTION_NONE
 
         try:
             backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when getting inputs for {api_name_str} backward api. "
                            f"Skipping backward check. Detailed exception information: {e}.")
-            return None
+            return Const.EXCEPTION_NONE
 
         backward_output_list = None
         try:

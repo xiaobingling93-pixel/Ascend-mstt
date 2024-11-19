@@ -36,6 +36,8 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    PROGRESS_TIMEOUT = 60
+    EXCEPTION_NONE = None
     JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
