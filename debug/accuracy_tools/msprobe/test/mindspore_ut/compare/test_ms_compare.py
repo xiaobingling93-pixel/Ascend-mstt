@@ -1,7 +1,9 @@
 # coding=utf-8
-import unittest
-import tempfile
 import json
+import numpy as np
+import random
+import tempfile
+import unittest
 
 from msprobe.mindspore.compare.ms_compare import MSComparator, check_cross_framework
 from msprobe.core.common.const import Const
@@ -147,6 +149,73 @@ bench_json_data = {
 }
 
 
+json_data_template = {
+    'task': 'statistics',
+    'level': 'L1',
+    'dump_data_dir': '',
+    'data': {}
+}
+
+
+def gen_data(is_ms=True):
+    type_value = 'mindspore.Tensor' if is_ms else 'torch.Tensor'
+    dtype_value = 'BFloat16' if is_ms else 'torch.bfloat16'
+    return {
+        'type': type_value,
+        'dtype': dtype_value,
+        'shape': [4096, 1, 2048],
+        'Max': random.uniform(0, 4),
+        'Min': random.uniform(-4, 0),
+        'Mean': random.random() / 10000,
+        'Norm': random.random() * 1000
+    }
+
+
+def gen_api_mapping_test_data(need_user_mapping=False):
+    result_npu = json_data_template.copy()
+    result_bench = json_data_template.copy()
+    ms_comparator = MSComparator()
+    api_mapping = ms_comparator.load_internal_api()
+    ms_api_list = np.random.choice(list(api_mapping.keys()), size=5, replace=False).astype(str).tolist()
+    ms_api_data = {}
+    pt_api_data = {}
+    user_mapping = []
+    for api in ms_api_list:
+        call_num = random.randint(1, 10)
+        direction = random.choice(['forward', 'backward'])
+        data_name_ms = api + '.' + str(call_num) + '.' + direction
+        data_name_pt = api_mapping.get(api) + '.' + str(call_num) + '.' + direction
+        input_num = random.randint(1, 5)
+        output_num = random.randint(1, 5)
+        ms_data = {'input_args': [gen_data(True) for _ in range(input_num)],
+                   'output': [gen_data(True) for _ in range(output_num)]}
+        pt_data = {'input_args': [gen_data(False) for _ in range(input_num)],
+                   'output': [gen_data(False) for _ in range(output_num)]}
+        ms_api_data[data_name_ms] = ms_data
+        pt_api_data[data_name_pt] = pt_data
+        if need_user_mapping:
+            compare_num_input = random.randint(1, input_num)
+            compare_num_output = random.randint(1, output_num)
+            user_mapping_item = {'ms_api': api,
+                                 'pt_api': api_mapping.get(api),
+                                 'ms_args': sorted(np.random.choice(list(range(input_num)), size=compare_num_input,
+                                                                    replace=False).astype(int).tolist()),
+                                 'pt_args': sorted(np.random.choice(list(range(input_num)), size=compare_num_input,
+                                                                    replace=False).astype(int).tolist()),
+                                 'ms_output': sorted(np.random.choice(list(range(output_num)), size=compare_num_output,
+                                                                    replace=False).astype(int).tolist()),
+                                 'pt_output': sorted(np.random.choice(list(range(output_num)), size=compare_num_output,
+                                                                    replace=False).astype(int).tolist())}
+            user_mapping.append(user_mapping_item)
+    ms_api_key_list = list(ms_api_data.keys())
+    random.shuffle(ms_api_key_list)
+    result_npu['data'] = {k: ms_api_data.get(k) for k in ms_api_key_list}
+    pt_api_key_list = list(pt_api_data.keys())
+    random.shuffle(pt_api_key_list)
+    result_bench['data'] = {k: pt_api_data.get(k) for k in pt_api_key_list}
+    return result_npu, result_bench, user_mapping
+
+
 class TestUtilsMethods(unittest.TestCase):
 
     def test_check_op_ms(self):
@@ -214,7 +283,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.compare_process_custom(dump_mode=Const.ALL)
 
     def compare_process_custom(self, dump_mode):
-        import os, tempfile, json
+        import os
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         npu_dump_path = os.path.join(data_path, 'npu_dump.json')
         bench_dump_path = os.path.join(data_path, 'bench_dump.json')
@@ -244,3 +313,63 @@ class TestUtilsMethods(unittest.TestCase):
                 return check_cross_framework(temp_file.name)
         self.assertFalse(check_data(ms_data))
         self.assertTrue(check_data(pt_data))
+
+    def test_comapre_process(self):
+        import os
+        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
+        try:
+            npu_dump_path = os.path.join(data_path, 'npu_dump.json')
+            bench_dump_path = os.path.join(data_path, 'bench_dump.json')
+            npu_stack_path = os.path.join(data_path, 'npu_stack.json')
+
+            npu_data, bench_data, _ = gen_api_mapping_test_data()
+            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
+                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
+                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f):
+                json.dump(npu_data, n_d_f)
+                json.dump(bench_data, b_d_f)
+                json.dump({}, n_s_f)
+            ms_comparator = MSComparator(api_mapping=True)
+            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
+                                                      Const.SUMMARY)
+            self.assertTrue((result_df['Bench Name'] != 'N/A').all())
+        finally:
+            import shutil
+            shutil.rmtree(data_path)
+    
+    def test_compare_process_with_customize_api_mapping(self):
+        import os, yaml
+        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
+        try:
+            npu_dump_path = os.path.join(data_path, 'npu_dump.json')
+            bench_dump_path = os.path.join(data_path, 'bench_dump.json')
+            npu_stack_path = os.path.join(data_path, 'npu_stack.json')
+            user_mapping_path = os.path.join(data_path, 'user_mapping.yaml')
+
+            npu_data, bench_data, user_mapping = gen_api_mapping_test_data(True)
+            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
+                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
+                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f,
+                  open(user_mapping_path, 'w', encoding='utf8') as u_m_f):
+                json.dump(npu_data, n_d_f)
+                json.dump(bench_data, b_d_f)
+                json.dump({}, n_s_f)
+                yaml.safe_dump(user_mapping, u_m_f)
+            ms_comparator = MSComparator(api_mapping=user_mapping_path)
+            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
+                                                      Const.SUMMARY)
+            
+            user_mapping_dict = {}
+            for i in user_mapping:
+                user_mapping_dict[i.get('ms_api')] = {'input': i.get('ms_args'), 'output': i.get('ms_output')}
+            match_set = set()
+            for key, value in npu_data.get('data').items():
+                matched_dict = user_mapping_dict.get(key.rsplit('.', 2)[0])
+                match_set.update({key + '.input.' + str(i) for i in matched_dict.get('input')})
+                match_set.update({key + '.output.' + str(i) for i in matched_dict.get('output')})
+
+            self.assertTrue((result_df.loc[result_df['NPU Name'].isin(match_set), 'Bench Name'] != 'N/A').all())
+            self.assertTrue((~result_df.loc[result_df['NPU Name'].isin(match_set), 'Bench Name'] == 'N/A').all())
+        finally:
+            import shutil
+            shutil.rmtree(data_path)
