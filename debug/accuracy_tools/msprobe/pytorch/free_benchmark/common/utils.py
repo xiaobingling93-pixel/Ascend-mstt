@@ -124,6 +124,7 @@ class TorchC:
     abs = torch._C._VariableFunctionsClass.abs
     where = torch._C._VariableFunctionsClass.where
     div = torch._C._VariableFunctionsClass.div
+    mul = torch._C._VariableFunctionsClass.mul
     max = torch._C._VariableFunctionsClass.max
     min = torch._C._VariableFunctionsClass.min
     gt = torch._C._VariableFunctionsClass.gt
@@ -138,3 +139,5 @@ class TorchC:
     tensor_split = torch._C._VariableFunctionsClass.tensor_split
     stack = torch._C._VariableFunctionsClass.stack
     reshape = torch._C._VariableFunctionsClass.reshape
+    nan_to_num = torch._C._VariableFunctionsClass.nan_to_num
+    aminmax = torch._C._VariableFunctionsClass.aminmax
