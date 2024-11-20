@@ -166,6 +166,18 @@ def parse_bsnd_args(query, key, head_num, input_layout):
 
 
 def convert_from_bnsd(_input, input_layout):
+    """
+    transform qkv from bnsd to input_layout.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+       _input (torch.Tensor): tensor of shape (B,N,S,D)
+        input_layout (str): "BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+    """
     if input_layout == "BSH":
         # (B,N,S,D)=>(B,S,N*D)
         out = rearrange(_input, 'b n s d -> b s (n d)').contiguous()
@@ -183,7 +195,19 @@ def convert_from_bnsd(_input, input_layout):
 
 
 def convert_to_bnsd(_input, n, input_layout):
-    # 默认"BNSD"无需处理
+    """
+    transform qkv from input_layout to bnsd.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+        _input (torch.Tensor): tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+        n (int): num_heads
+        input_layout (str):"BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D)
+    """
     if input_layout == "BSH":
         # (B,S,N*D)=>(B,N,S,D)
         out = rearrange(_input, 'b s (n d) -> b n s d', n=n)
@@ -200,6 +224,67 @@ def convert_to_bnsd(_input, n, input_layout):
     if out.dim() != 4:
         raise ValueError(f"convert qkv format failed with input_layout {input_layout}.")
     return out.to(GTYPE)
+
+
+def convert_from_bsnd(_input, input_layout):
+    """
+    transform qkv from bsnd to input_layout.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+       _input (torch.Tensor): tensor of shape (B,S,N,D)
+        input_layout (str): "BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+    """
+    if input_layout == "BSH":
+        # (B,S,N,D)=>(B,S,N*D)
+        out = rearrange(_input, 'b s n d -> b s (n d)').contiguous()
+    elif input_layout == "SBH":
+        # (B,S,N,D)=>(S,B,N*D)
+        out = rearrange(_input, 'b s n d -> s b (n d)').contiguous()
+    elif input_layout == "BNSD":
+        # (B,S,N,D)=>(B,N,S,D)
+        out = rearrange(_input, 'b s n d -> b n s d').contiguous()
+    elif input_layout == "TND":
+        raise ValueError(f"input_layout {input_layout} does not supported for now.")
+    else:
+        out = _input
+    return out
+
+
+def convert_to_bsnd(_input, n, input_layout):
+    """
+    transform qkv from input_layout to bsnd.
+    B: batch_size
+    S: sequence_length
+    N: num_heads
+    D: head_dim
+    Args:
+        _input (torch.Tensor): tensor of shape (B,N,S,D) or (B,S,N,D) or (S,B,H) or (B,S,H)
+        n (int): num_heads
+        input_layout (str):"BSH" or "SBH" or "BSND" or "BNSD" or "TND"
+    Returns:
+        tensor of shape (B,S,N,D)
+    """
+    if input_layout == "BSH":
+        # (B,S,N*D)=>(B,S,N,D)
+        out = rearrange(_input, 'b s (n d) -> b s n d', n=n)
+    elif input_layout == "SBH":
+        # (S,B,N*D)=>(B,S,N,D)
+        out = rearrange(_input, 's b (n d) -> b s n d', n=n)
+    elif input_layout == "BNSD":
+        # (B,N,S,D)=>(B,S,N,D)
+        out = rearrange(_input, 'b n s d -> b s n d', n=n)
+    elif input_layout == "TND":
+        raise ValueError(f"input_layout {input_layout} does not supported for now.")
+    else:
+        out = _input
+    if out.dim() != 4:
+        raise ValueError(f"convert qkv format failed with input_layout {input_layout}.")
+    return out
 
 
 def generate_atten_mask(*args):
@@ -535,8 +620,13 @@ def gpu_fusion_attention(*args, **kwargs):
     else:
         alibi_slopes = None
 
+    input_layout = get_input_layout(*args, **kwargs)
+    query = convert_to_bsnd(query, n1, input_layout)
+    key = convert_to_bsnd(key, n2, input_layout)
+    value = convert_to_bsnd(value, n2, input_layout)
     out = flash_attn_func(
         query, key, value, dropout_p=(1 - keep_prob), softmax_scale=scale, causal=causal_switch,
         window_size=(window_left, window_right), alibi_slopes=alibi_slopes, deterministic=deterministic
     )
+    out = convert_from_bsnd(out, input_layout)
     return out, Const.NONE, Const.NONE

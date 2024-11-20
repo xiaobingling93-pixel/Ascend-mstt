@@ -254,7 +254,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
   };
 
   React.useEffect(() => {
-    deviceTarget !== 'Ascend' &&
+    if (deviceTarget !== 'Ascend') {
       api.defaultApi
         .memoryGet(
           run,
@@ -272,6 +272,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
             setDevice(resp.metadata.default_device);
           }
         });
+    }
   }, [run, worker, span, selectedRange]);
 
   React.useEffect(() => {
@@ -597,7 +598,9 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                           rows: searchedTableDataRows,
                           columns: data.columns,
                         }}
-                        sort={memoryStatsData!.metadata.sort}
+                        sort={
+                          !!memoryStatsData ? memoryStatsData.metadata.sort : ''
+                        }
                       />
                     )}
                   </DataLoading>

@@ -53,7 +53,7 @@ def extract_json(dirname, stack_json=False):
 def check_and_return_dir_contents(dump_dir, prefix):
     """
     check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
-    pattern: ^{prefix}(?:0|[0-9][1-9]*)?$
+    pattern: ^{prefix}(?:0|[1-9][0-9]*)?$
 
     Args:
         dump_dir (str): dump dir
@@ -69,7 +69,7 @@ def check_and_return_dir_contents(dump_dir, prefix):
     check_regex_prefix_format_valid(prefix)
     check_file_or_directory_path(dump_dir, True)
     contents = os.listdir(dump_dir)
-    pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
+    pattern = re.compile(rf'^{prefix}(?:0|[1-9][0-9]*)?$')
     for name in contents:
         if not pattern.match(name):
             logger.error(
