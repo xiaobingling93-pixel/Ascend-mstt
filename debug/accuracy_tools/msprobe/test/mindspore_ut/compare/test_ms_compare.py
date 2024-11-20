@@ -369,7 +369,7 @@ class TestUtilsMethods(unittest.TestCase):
                 match_set.update({key + '.output.' + str(i) for i in matched_dict.get('output')})
 
             self.assertTrue((result_df.loc[result_df['NPU Name'].isin(match_set), 'Bench Name'] != 'N/A').all())
-            self.assertTrue((~result_df.loc[result_df['NPU Name'].isin(match_set), 'Bench Name'] == 'N/A').all())
+            self.assertTrue((result_df.loc[~result_df['NPU Name'].isin(match_set), 'Bench Name'] == 'N/A').all())
         finally:
             import shutil
             shutil.rmtree(data_path)
