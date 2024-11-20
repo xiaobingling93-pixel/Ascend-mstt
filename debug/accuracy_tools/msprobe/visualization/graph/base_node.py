@@ -47,13 +47,6 @@ class BaseNode:
             return False
         return True
 
-    def compare_mapping_node(self, other):
-        if not compare_mapping_data(self.input_data, other.input_data):
-            return False
-        if not compare_mapping_data(self.output_data, other.output_data):
-            return False
-        return True
-
     def get_suggestions(self):
         """
         精度疑似有问题时，提供一些建议
