@@ -95,7 +95,7 @@ class ToolTip:
         '当最大相对误差越接近0表示其计算的误差越小。'
         '当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
     )
-    SMALL_VALUE_TIP = '{}, 由于{}小于{}, 此相对误差结果不作参考'
+    SMALL_VALUE_TIP = '{}, 由于{}小于{}, 建议不参考此相对误差，请参考绝对误差'
 
 
 class Suggestions:
@@ -176,10 +176,10 @@ class GraphConst:
         Const.BFLOAT16: 1e-3
     }
     SMALL_VALUES_ABS_ERROR = {
-        Const.TORCH_FLOAT32: 1e-9,
-        Const.TORCH_FLOAT16: 1e-5,
-        Const.TORCH_BFLOAT16: 1e-5,
-        Const.FLOAT32: 1e-9,
-        Const.FLOAT16: 1e-5,
-        Const.BFLOAT16: 1e-5
+        Const.TORCH_FLOAT32: 1e-6,
+        Const.TORCH_FLOAT16: 1e-3,
+        Const.TORCH_BFLOAT16: 1e-3,
+        Const.FLOAT32: 1e-6,
+        Const.FLOAT16: 1e-3,
+        Const.BFLOAT16: 1e-3
     }
