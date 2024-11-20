@@ -240,12 +240,9 @@ class MSComparator(Comparator):
         npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
         if self.cell_mapping:
-            npu_df[CompareConst.COMPARE_KEY] = npu_df.apply(lambda row:
-                                                            self.process_cell_mapping(row[CompareConst.OP_NAME]),
-                                                            axis=1)
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_cell_mapping)
         elif self.api_mapping:
-            npu_df[CompareConst.COMPARE_KEY] = npu_df.apply(
-                lambda row: self.process_internal_api_mapping(row[CompareConst.OP_NAME]), axis=1)
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_internal_api_mapping)
             if isinstance(self.api_mapping, str):
                 self.modify_compare_data_with_user_mapping(npu_df, bench_df)
         else:
