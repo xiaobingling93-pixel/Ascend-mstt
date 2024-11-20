@@ -16,7 +16,7 @@
 import re
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.utils import load_json_file, load_data_json_file, save_json_file, GraphConst
+from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.core.common.file_utils import load_json
 
@@ -33,11 +33,11 @@ class GraphBuilder:
             model_name: 模型名字，依赖外部输入
         Returns: Graph，代表图的数据结构
         """
-        construct_dict = load_json_file(construct_path)
-        data_dict = load_data_json_file(data_path)
+        construct_dict = load_json(construct_path)
+        dump_dict = load_json(data_path)
         stack_dict = load_json(stack_path)
-        graph = Graph(model_name, data_path=load_json(data_path).get('dump_data_dir', ''))
-        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
+        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''))
+        GraphBuilder._init_nodes(graph, construct_dict, dump_dict.get(GraphConst.DATA_KEY, {}), stack_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
 

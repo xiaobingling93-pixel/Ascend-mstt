@@ -26,12 +26,7 @@ class TestGraphBuilder(unittest.TestCase):
         }
         self.stack_dict = {}
 
-    @patch('msprobe.visualization.builder.graph_builder.load_json_file')
-    @patch('msprobe.visualization.builder.graph_builder.load_data_json_file')
-    def test_build(self, mock_load_data_json_file, mock_load_json_file):
-        mock_load_data_json_file.return_value = self.data_dict
-        mock_load_json_file.return_value = self.construct_dict
-
+    def test_build(self):
         graph = GraphBuilder.build(self.construct_path, self.data_path, self.stack_path, self.model_name)
         self.assertIsNotNone(graph)
         self.assertIsInstance(graph, Graph)
