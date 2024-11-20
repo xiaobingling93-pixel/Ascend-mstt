@@ -16,55 +16,70 @@
 import os
 import time
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory
+from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory, FileChecker
 from msprobe.core.common.const import FileCheckConst
 from msprobe.core.common.utils import CompareException
 from msprobe.visualization.compare.graph_comparator import GraphComparator
 from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
 from msprobe.core.common.log import logger
-from msprobe.visualization.mapping_config import MappingConfig
 from msprobe.visualization.graph.node_colors import NodeColors
+from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def _compare_graph(input_param, args, mapping_file=None):
+def _compare_graph(input_param, args):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
     dump_path_n = input_param.get('npu_path')
     dump_path_b = input_param.get('bench_path')
-    construct_path_n = os.path.join(dump_path_n, GraphConst.CONSTRUCT_FILE)
-    construct_path_b = os.path.join(dump_path_b, GraphConst.CONSTRUCT_FILE)
-    data_path_n = os.path.join(dump_path_n, GraphConst.DUMP_FILE)
-    data_path_b = os.path.join(dump_path_b, GraphConst.DUMP_FILE)
+    construct_path_n = FileChecker(os.path.join(dump_path_n, GraphConst.CONSTRUCT_FILE),
+                                   FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
+    construct_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.CONSTRUCT_FILE),
+                                   FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
+    data_path_n = FileChecker(os.path.join(dump_path_n, GraphConst.DUMP_FILE), FileCheckConst.FILE,
+                              FileCheckConst.READ_ABLE).common_check()
+    data_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.DUMP_FILE), FileCheckConst.FILE,
+                              FileCheckConst.READ_ABLE).common_check()
     graph_n = GraphBuilder.build(construct_path_n, data_path_n)
     graph_b = GraphBuilder.build(construct_path_b, data_path_b)
     logger.info('Model graphs built successfully, start Comparing graphs...')
     # 基于graph、stack和data进行比较
-    stack_path = os.path.join(dump_path_n, GraphConst.STACK_FILE)
+    stack_path = FileChecker(os.path.join(dump_path_n, GraphConst.STACK_FILE), FileCheckConst.FILE,
+                             FileCheckConst.READ_ABLE).common_check()
     dump_path_param = {
         'npu_json_path': data_path_n,
         'bench_json_path': data_path_b,
         'stack_json_path': stack_path,
         'is_print_compare_log': input_param.get("is_print_compare_log", True)
     }
-    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path,
-                                       mapping_config=MappingConfig(mapping_file) if mapping_file else None)
+    mapping_dict = None
+    if args.layer_mapping:
+        yaml_path = FileChecker(args.layer_mapping, FileCheckConst.FILE, FileCheckConst.READ_ABLE).common_check()
+        try:
+            mapping_dict = generate_api_mapping_by_layer_mapping(data_path_n, data_path_b, yaml_path)
+        except Exception:
+            logger.warning('The layer mapping file parsing failed, please check file format, mapping is not effective.')
+    graph_comparator = GraphComparator([graph_n, graph_b], dump_path_param, args.output_path, args.framework,
+                                       mapping_dict=mapping_dict)
     graph_comparator.compare()
     micro_steps = graph_n.paging_by_micro_step(graph_b)
     create_directory(args.output_path)
     output_path = os.path.join(args.output_path, f'compare_{current_time}.vis')
+    task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
-                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps)
+                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
     GraphBuilder.to_json(output_path, export_config)
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
 def _build_graph(dump_path, out_path):
     logger.info('Start building model graph...')
-    construct_path = os.path.join(dump_path, GraphConst.CONSTRUCT_FILE)
-    data_path = os.path.join(dump_path, GraphConst.DUMP_FILE)
+    construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
+                                 FileCheckConst.READ_ABLE).common_check()
+    data_path = FileChecker(os.path.join(dump_path, GraphConst.DUMP_FILE), FileCheckConst.FILE,
+                            FileCheckConst.READ_ABLE).common_check()
     create_directory(out_path)
     output_path = os.path.join(out_path, f'build_{current_time}.vis')
     graph = GraphBuilder.build(construct_path, data_path)
@@ -78,6 +93,8 @@ def _graph_service_parser(parser):
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path.", required=True)
+    parser.add_argument("-lm", "--layer_mapping", dest="layer_mapping", type=str,
+                        help="<optional> The layer mapping file path.", required=False)
 
 
 def _graph_service_command(args):

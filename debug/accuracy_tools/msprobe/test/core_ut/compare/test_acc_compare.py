@@ -295,16 +295,28 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_find_error_rows(self):
         summary_result = [summary_line_input, summary_line_1, summary_line_2, summary_line_3]
-        highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        find_error_rows(summary_result, 0, 1, highlight_dict, dump_mode=Const.SUMMARY)
-        self.assertEqual(highlight_dict, {'red_rows': [], 'yellow_rows': []})
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        find_error_rows(summary_result, 0, 1, highlight_dict_test, dump_mode=Const.SUMMARY)
+        self.assertEqual(highlight_dict_test, {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []})
 
     def test_find_compare_result_error_rows(self):
         result = [line_input, line_1, line_2, line_3]
         result_df = pd.DataFrame(result)
-        highlight_dict = {'red_rows': [], 'yellow_rows': []}
-        find_compare_result_error_rows(result_df, highlight_dict, dump_mode=Const.ALL)
-        self.assertEqual(highlight_dict, {'red_rows': [num_1, num_3], 'yellow_rows': [num_2]})
+        highlight_dict_test = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
+        find_compare_result_error_rows(result_df, highlight_dict_test, dump_mode=Const.ALL)
+        self.assertEqual(highlight_dict_test, {
+            "red_rows": {1, 3},
+            "yellow_rows": {2},
+            "red_lines": [
+                (1, ["maximum or minimum is nan, -inf, or inf"]),
+                (3, ["maximum absolute error exceeds 1e+10"])
+            ],
+            "yellow_lines": [
+                (2, ["The output's one thousandth err ratio decreases by more than 0.1 compared to the input's"]),
+                (3, ["maximum absolute error of both input and output exceed 1, with the output larger by an order of magnitude",
+                     "The output's cosine decreases by more than 0.1 compared to the input's"])
+            ]
+        })
 
     def test_calculate_summary_data(self):
         npu_summary_data = [1, 1, 1, 1]
@@ -520,7 +532,7 @@ class TestUtilsMethods(unittest.TestCase):
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']]
         o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'None', 'None', 'None', 'None', 'None',
+                   'torch.float32', 'torch.float32', [2, 2], [2, 2], 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported',
                    1, 1, 1, 1, 1, 1, 1, 1, 'None', 'No bench data matched.', '-1']]
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
@@ -535,7 +547,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', 'No bench data matched.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'No bench data matched.'])
 
     def test_compare_by_op_2(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
@@ -545,7 +557,7 @@ class TestUtilsMethods(unittest.TestCase):
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['None', 'None', 'None', 'None', 'None', f'Dump file: {pt_path} not found.'])
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', f'Dump file: {pt_path} not found.'])
 
         generate_pt(base_dir)
         result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)

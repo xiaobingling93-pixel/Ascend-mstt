@@ -3,7 +3,7 @@ import torch
 import unittest
 
 from msprobe.pytorch.bench_functions.npu_fusion_attention import npu_fusion_attention, npu_fusion_attention_grad, \
-    broadcast_kv
+    broadcast_kv, convert_from_bsnd, convert_to_bsnd, rearrange
 
 
 class TestNpuFusionAttention(unittest.TestCase):
@@ -18,6 +18,37 @@ class TestNpuFusionAttention(unittest.TestCase):
         self.key = torch.randn(self.B, self.S2, self.N2, self.D)
         self.value = torch.randn(self.B, self.S2, self.N2, self.D)
         self.atten_mask = torch.randn(self.B, 1, self.S1, self.S2)
+        self.batch_size = 2
+        self.seq_len = 3
+        self.num_heads = 4
+        self.head_dim = 5
+        self.input_tensor = torch.randn(self.batch_size, self.seq_len, self.num_heads, self.head_dim)
+
+    def test_convert_from_bsnd(self):
+        # 测试从 bsnd 转换到 BSH
+        converted_tensor = convert_from_bsnd(self.input_tensor, "BSH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads * self.head_dim))
+
+        # 测试从 bsnd 转换到 SBH
+        converted_tensor = convert_from_bsnd(self.input_tensor, "SBH")
+        self.assertEqual(converted_tensor.shape, (self.seq_len, self.batch_size, self.num_heads * self.head_dim))
+
+        # 测试从 bsnd 转换到 BNSD
+        converted_tensor = convert_from_bsnd(self.input_tensor, "BNSD")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.num_heads, self.seq_len, self.head_dim))
+
+    def test_convert_to_bsnd(self):
+        # 测试从 BSH 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> b s (n d)'), self.num_heads, "BSH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
+
+        # 测试从 SBH 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> s b (n d)'), self.num_heads, "SBH")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
+        
+        # 测试从 BNSD 转换回 bsnd
+        converted_tensor = convert_to_bsnd(rearrange(self.input_tensor, 'b s n d -> b n s d'), self.num_heads, "BNSD")
+        self.assertEqual(converted_tensor.shape, (self.batch_size, self.seq_len, self.num_heads, self.head_dim))
 
     def test_basic_forward_input_layout_is_BSND(self):
         # 基本前向传播测试

@@ -6,7 +6,7 @@ import * as React from 'react';
 import { FullCircularProgress } from './FullCircularProgress';
 
 interface IProps<T> {
-  value: T | undefined | null;
+  value?: T | null;
   children: (t: T) => JSX.Element;
 }
 

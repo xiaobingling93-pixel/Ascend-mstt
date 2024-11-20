@@ -52,7 +52,6 @@ class TestMsprobeAdapter(unittest.TestCase):
     def test_format_node_data(self):
         data_dict = {'node1': {'data_name': 'data1', 'full_op_name': 'op1'}}
         result = format_node_data(data_dict)
-        self.assertNotIn('data_name', result['node1'])
         self.assertNotIn('requires_grad', result['node1'])
 
     @patch('msprobe.visualization.builder.msprobe_adapter.get_accuracy')
@@ -84,7 +83,7 @@ class TestMsprobeAdapter(unittest.TestCase):
         self.assertEqual(data_dict['value4'], 'inf')
         self.assertEqual(data_dict['value5'], '-1')
 
-        all_none_dict = {'a': None, 'b': None, 'c': None, 'd': None, 'e': None}
+        all_none_dict = {'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'type': None}
         _format_data(all_none_dict)
         self.assertEqual({'value': 'null'}, all_none_dict)
 

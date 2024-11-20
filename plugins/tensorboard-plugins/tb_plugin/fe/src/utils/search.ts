@@ -10,7 +10,7 @@ import { useDebounce } from './debounce';
 export function useSearch(
   searchName: string,
   columnName: string,
-  table: api.Graph | undefined
+  table?: api.Graph
 ): [api.Graph | undefined] {
   const searchNameDebounce = useDebounce(searchName.trim(), 500);
 
@@ -45,7 +45,7 @@ export function useSearch(
 export function useSearchDirectly<T>(
   searchName: string,
   field: (v: T) => string,
-  table: T[] | undefined
+  table?: T[]
 ): [T[] | undefined] {
   const searchNameDebounce = useDebounce(searchName.trim(), 500);
 
