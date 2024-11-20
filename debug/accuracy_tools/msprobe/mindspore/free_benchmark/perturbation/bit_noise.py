@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -55,7 +55,7 @@ class BitNoisePerturbation(BasePerturbation):
         args = params.args
         params.fuzzed_value = self.add_bit_noise(params.args[params.index])
         if not self.is_fuzzed:
-            logger.warning(f"{self.api_name} can not add bit noise.")
+            logger.warning(f"{self.api_name_with_id} can not add bit noise.")
             return False
         params.args = args
         return self.get_fuzzed_result(params)

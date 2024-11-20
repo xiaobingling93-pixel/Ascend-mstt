@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 from unittest.mock import patch
@@ -21,9 +19,9 @@ from unittest.mock import patch
 import mindspore as ms
 from mindspore import Tensor
 
-from msprobe.mindspore.free_benchmark.handler.fix_handler import FixHandler
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
+from msprobe.mindspore.free_benchmark.handler.fix_handler import FixHandler
 
 
 class TestFixHandler(unittest.TestCase):
@@ -31,11 +29,11 @@ class TestFixHandler(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.fix_handler = FixHandler("api_name")
+        cls.fix_handler = FixHandler("api_name_with_id")
 
     def test__init__(self):
-        fix_handler = FixHandler("api_name")
-        self.assertEqual(fix_handler.api_name, "api_name")
+        fix_handler = FixHandler("api_name_with_id")
+        self.assertEqual(fix_handler.api_name_with_id, "api_name_with_id")
 
     def test_use_fuzzed_result(self):
         original_result = 1.0
@@ -81,7 +79,7 @@ class TestFixHandler(unittest.TestCase):
              patch.object(logger, "error") as mock_error:
             ret = self.fix_handler.handle(params)
         self.assertEqual(mock_error.call_count, 2)
-        self.assertEqual(mock_error.call_args_list[0][0][0], "api_name failed to fix.")
+        self.assertEqual(mock_error.call_args_list[0][0][0], "api_name_with_id failed to fix.")
         self.assertEqual(mock_error.call_args_list[1][0][0], "raise Exception")
         self.assertTrue((ret == params.original_result).all())
 

@@ -80,7 +80,7 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
             raise Exception("fuzz_level must be L1 or empty")
         if self.fuzz_stage and self.fuzz_stage not in FreeBenchmarkConst.STAGE_LIST:
-            raise Exception("fuzz_stage must be forward or empty")
+            raise Exception("fuzz_stage must be forward, backward or empty")
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "
                            "are not supported for mindspore free benchmark task.")
