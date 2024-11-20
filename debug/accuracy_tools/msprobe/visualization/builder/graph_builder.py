@@ -34,7 +34,7 @@ class GraphBuilder:
         """
         construct_dict = load_json_file(construct_path)
         data_dict = load_data_json_file(data_path)
-        graph = Graph(model_name, data_path=load_json(data_path).get('dump_data_dir', ''))
+        graph = Graph(model_name, data_path=load_json(data_path).get('dump_data_dir', ''), dump_data=data_dict)
         GraphBuilder._init_nodes(graph, construct_dict, data_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
