@@ -345,6 +345,11 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+    INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+    OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+    COMPARE_KEY = 'compare_key'
+    COMPARE_SHAPE = 'compare_shape'
+    INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
 
 
 class FileCheckConst:
