@@ -315,6 +315,9 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(check_data(pt_data))
 
     def test_comapre_process(self):
+        self.comapre_process()
+
+    def comapre_process(self):
         import os
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
         try:
@@ -338,6 +341,9 @@ class TestUtilsMethods(unittest.TestCase):
             shutil.rmtree(data_path)
     
     def test_compare_process_with_customize_api_mapping(self):
+        self.compare_process_with_customize_api_mapping()
+    
+    def compare_process_with_customize_api_mapping(self):
         import os, yaml
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
         try:
