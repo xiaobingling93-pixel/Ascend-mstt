@@ -26,7 +26,7 @@ import torch
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import binary_standard_api, absolute_standard_api, ulp_standard_api, thousandth_standard_api
 from msprobe.core.common.file_utils import FileOpen, load_json, save_json
 from msprobe.core.common.utils import check_file_or_directory_path, check_op_str_pattern_valid, is_int
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, MonitorConst, MsgConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import make_dir
 from msprobe.core.common.utils import recursion_depth_decorator
@@ -44,9 +44,9 @@ OPERATOR_TYPE = ("Functional", "Tensor", "Torch")
 API_INFO = 2
 FOUR_SEGMENT = 4
 FIVE_SEGMENT = 5
-DATA_NAME = 'data_name'
+DATA_NAME = "data_name"
 API_MAX_LENGTH = 30
-PROPAGATION_LIST = ["forward", "backward"]
+PROPAGATION_LIST = [Const.FORWARD, Const.BACKWARD]
 DATAMODE_LIST = ["random_data", "real_data"]
 
 
@@ -294,8 +294,8 @@ class OperatorScriptGenerator:
                 args_element_assignment += new_args_element_assignment
             else:
                 arg["parameter_name"] = "arg" + name_number + "_" + str(index)
-                args_element_assignment += "    " + "arg_info" + name_number + "_" + str(index) + " = " + "{}".format(str(arg)) + "\n"
-                args_element_assignment += "    " + "arg" + name_number + "_" + str(index) + " = " + "generate_data(arg_info" + name_number + "_" + str(index) + ")" + "\n"
+                args_element_assignment += "    " + "arg_info" + name_number + "_" + str(index) + " = " + "{}".format(str(arg)) + MsgConst.SPECIAL_CHAR[0]
+                args_element_assignment += "    " + "arg" + name_number + "_" + str(index) + " = " + "generate_data(arg_info" + name_number + "_" + str(index) + ")" + MsgConst.SPECIAL_CHAR[0]
         return args_element_assignment
 
 
@@ -321,7 +321,7 @@ class OperatorScriptGenerator:
                     if flag_bench:
                         args_list_generator += '.to(torch.device("cpu"))'
                         args_list_generator += ".to(RAISE_PRECISION.get(str(" + arg.get("parameter_name") + ".dtype), " + arg.get("parameter_name") + ".dtype))"
-            args_list_generator += ", "
+            args_list_generator += Const.COMMA
         return args_list_generator
 
     def generate_args_list(self, args_info, flag_device):
@@ -338,8 +338,8 @@ class OperatorScriptGenerator:
             if info.get("type") == "torch.device" or info.get("type") == "torch.dtype":
                 kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + info.get("value")
             else:
-                kwargs_value_assignment += "    " + "kwarg_info_" + key_name + name_number + " = " + "{}".format(str(info)) + "\n"
-                kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + "generate_data(kwarg_info_" + key_name + name_number + ")" + "\n"
+                kwargs_value_assignment += "    " + "kwarg_info_" + key_name + name_number + " = " + "{}".format(str(info)) + MsgConst.SPECIAL_CHAR[0]
+                kwargs_value_assignment += "    " + "kwarg_" + key_name + name_number + " = " + "generate_data(kwarg_info_" + key_name + name_number + ")" + MsgConst.SPECIAL_CHAR[0]
             info["parameter_name"] = "kwarg_" + key_name + name_number
         else:
             for index, arg in enumerate(info):
@@ -369,7 +369,7 @@ class OperatorScriptGenerator:
             kwargs_dict_generator += left_bracket
             for arg in info:
                 kwargs_dict_generator += self.recursive_kwargs_dict(arg, flag_device=flag_device, flag_bench=flag_bench)
-                kwargs_dict_generator += ", "
+                kwargs_dict_generator += Const.COMMA
             kwargs_dict_generator += right_bracket
         return kwargs_dict_generator
 
@@ -377,11 +377,11 @@ class OperatorScriptGenerator:
     def generate_kwargs_dict(self, kwargs_info, flag_device):
         kwargs_dict_generator = ""
         for key, value in kwargs_info.items():
-            kwargs_dict_generator += '"' + key + '"' + ": "
+            kwargs_dict_generator += '"' + key + '"' + MonitorConst.VPP_SEP
             if flag_device:
-                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_device=True) + ", "
+                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_device=True) + Const.COMMA
             else:
-                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_bench=True) + ", "
+                kwargs_dict_generator += self.recursive_kwargs_dict(value, flag_bench=True) + Const.COMMA
         return kwargs_dict_generator
 
 
