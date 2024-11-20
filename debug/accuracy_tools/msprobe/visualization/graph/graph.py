@@ -176,22 +176,7 @@ class Graph:
         detector = AnomalyDetector(self.dump_data)
         detector.analyze().filter()
 
-        def cb_func(_node: BaseNode):
-            if detector.has_overflow(_node.id):
-                lv = detector.get_overflow_level(_node.id)
+        for node_id, _node in self.node_map.items():
+            if detector.has_overflow(node_id):
+                lv = detector.get_overflow_level(node_id)
                 _node.set_overflow_level(lv)
-
-        def dfs(_node, vis_func=None, level=0):
-            if level > MAX_RECUR_LEVEL:
-                logger.warning(f'reach max recur level for overflow check by dfs, current/max: '
-                               f'{level}/{MAX_RECUR_LEVEL}')
-                return
-            cur_level = level + 1
-            if vis_func:
-                vis_func(_node)
-            for ch in _node.subnodes:
-                # run dfs on child nodes
-                dfs(ch, vis_func, level=cur_level)
-
-        # run dfs on graph root
-        dfs(self.root, vis_func=cb_func)
