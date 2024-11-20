@@ -43,7 +43,8 @@ class OptimizerMon(ABC):
         exp_avg_sq_dict = defaultdict(float)
         update_dict = defaultdict()
         ratio_dict = defaultdict()
-
+        if len(torch_opt.param_groups) > 1:
+            logger.warning(f"the length of torch_opt.param_groups larger than one, not compatible.")
         for param, name in params2name.items():
             if param in self.fp16_to_fp32_param:
                 param = self.fp16_to_fp32_param[param]
@@ -113,7 +114,9 @@ class OptimizerMon(ABC):
             fp32_param = fp32_partitioned_groups_flat[group_idx][start_idx: end_idx]
             fp32_param.grad = fp32_partitioned_groups_flat_grad[group_idx][start_idx: end_idx]
             param2name[fp32_param] = name
-            state_param = list(mix_prec_opt.state.values())[0]
+            if not mix_prec_opt.state:
+                continue
+            state_param = list(mix_prec_opt.state.values())[group_idx]
             exp_avg = state_param.get("exp_avg", None)
             exp_avg_sq = state_param.get("exp_avg_sq", None)
             if exp_avg is None or exp_avg_sq is None:
@@ -129,8 +132,8 @@ class OptimizerMon(ABC):
             if monitor.ur_distribution:
                 if 'step' in state_param:
                     step = state_param['step']  # Optimizer from pytorch or FusedAdam from apex(used by megatron)
-                elif 'step' in torch_opt.param_groups[0]:
-                    step = torch_opt.param_groups[0]['step']  # AdamW from mindspeed
+                elif 'step' in torch_opt.param_groups[group_idx]:
+                    step = torch_opt.param_groups[group_idx]['step']  # AdamW from mindspeed
                 else:
                     logger.warning(f"step of {name} is None, maybe something wrong happened.")
                     continue
