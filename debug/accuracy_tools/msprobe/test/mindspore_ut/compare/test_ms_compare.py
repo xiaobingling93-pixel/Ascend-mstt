@@ -319,7 +319,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def comapre_process(self):
         import os
-        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
+        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         try:
             npu_dump_path = os.path.join(data_path, 'npu_dump.json')
             bench_dump_path = os.path.join(data_path, 'bench_dump.json')
@@ -345,7 +345,7 @@ class TestUtilsMethods(unittest.TestCase):
     
     def compare_process_with_customize_api_mapping(self):
         import os, yaml
-        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/temp')
+        data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         try:
             npu_dump_path = os.path.join(data_path, 'npu_dump.json')
             bench_dump_path = os.path.join(data_path, 'bench_dump.json')
