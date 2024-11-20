@@ -61,8 +61,9 @@ export const ColumnChart: React.FC<IProps> = (props) => {
     const dataSource: Array<Array<number | string>> = [];
     dataSource.push(['worker', ...legends]);
     barHeights.forEach((item, index) => {
-      barLabels[index] !== undefined &&
+      if (barLabels[index] !== undefined) {
         dataSource.push([barLabels[index], ...item]);
+      }
     });
     const options: echarts.EChartsOption = {
       title: {
@@ -107,7 +108,9 @@ export const ColumnChart: React.FC<IProps> = (props) => {
       options.color = colors.slice(0, barLabels.length);
     }
 
-    options && chart.setOption(options, true);
+    if (options) {
+      chart.setOption(options, true);
+    }
     return () => {
       chart.dispose();
     };

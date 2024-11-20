@@ -168,7 +168,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
     [waittimeGraph, waittimeStep]
   );
 
-  const getTableData = (tableData?: any, opsWorker?: string) => {
+  const getTableData = (tableData?: any, opsWorker?: string): any[] => {
     if (!tableData || !opsWorker) {
       return [];
     }

@@ -35,9 +35,26 @@ interface IProps {
   tooltip_mode?: string;
 }
 
-const noLegendArea = { left: '5%', width: '90%', top: '5%', height: '90%' };
-const normalArea = { left: '5%', width: '95%' };
-const noTitleArea = { left: '5%', width: '95%', top: '10%', height: '80%' };
+interface IAreaPosition {
+  left: string;
+  width: string;
+  top?: string;
+  height?: string;
+}
+
+const noLegendArea: IAreaPosition = {
+  left: '5%',
+  width: '90%',
+  top: '5%',
+  height: '90%',
+};
+const normalArea: IAreaPosition = { left: '5%', width: '95%' };
+const noTitleArea: IAreaPosition = {
+  left: '5%',
+  width: '95%',
+  top: '10%',
+  height: '80%',
+};
 
 export const PieChart: React.FC<IProps> = (props) => {
   const {
@@ -102,7 +119,7 @@ export const PieChart: React.FC<IProps> = (props) => {
           white-space:pre-wrap;
           padding-right: 10px`,
       },
-      chartArea: (() => {
+      chartArea: ((): IAreaPosition => {
         if (noLegend) {
           return noLegendArea;
         }
