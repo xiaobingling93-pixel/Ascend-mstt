@@ -1,0 +1,9 @@
+{
+    "dump_json_path": "./dump.json",
+    "api_name": "",
+    "extract_api_path": "",
+    "propagation": "forward",
+    "data_mode": "random_data",
+    "random_seed": 1234,
+    "iter_times": 1
+}
