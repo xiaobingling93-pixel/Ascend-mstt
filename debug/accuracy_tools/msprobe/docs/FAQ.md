@@ -10,6 +10,9 @@
    - 输入参数或输出参数类型当前工具不支持，会有日志打印提醒。
    - 输入或者输出tensor的dtype为bool时，Mean和Norm等字段为null。
 
+2. 如果存在namedtuple类型的数据作为nn.Module的输出，工具会将各字段数据dump下来，但是输出数据类型会被转成tuple，原因是什么？
+   - 这是由于pytorch框架自身，在注册module的backward hook时，会将namedtuple类型转成tuple类型。
+
 # 2 精度预检(PyTorch)
 
 1. 预检工具在 dump 和 run_ut 的过程中，是否需要同时开启或关闭 jit 编译（jit_compile）？

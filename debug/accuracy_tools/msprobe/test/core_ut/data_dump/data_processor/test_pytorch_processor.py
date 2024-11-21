@@ -176,7 +176,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         size_element = torch.Size([2, 3])
         result = self.processor.analyze_single_element(size_element, [])
         self.assertEqual(result, self.processor._analyze_torch_size(size_element))
-    
+
     def test_analyze_single_element_numpy_conversion(self):
         numpy_element = np.int64(1)
         converted_numpy, numpy_type = self.processor._convert_numpy_to_builtin(numpy_element)
