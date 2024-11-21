@@ -16,7 +16,7 @@
 import atexit
 import os
 
-from msprobe.core.data_dump.scope import build_scope, ListScope
+from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
@@ -38,11 +38,7 @@ class DataCollector:
         self.data_processor = DataProcessorFactory.create_processor(self.config, self.data_writer)
         self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
-        if self.config.task == Const.FREE_BENCHMARK:
-            self.scope = build_scope(ListScope, self.config.scope, self.config.list)
-        else:
-            self.scope = build_scope(None, self.config.scope, self.config.list)
-
+        self.scope = ScopeFactory(self.config).build_scope()
         atexit.register(self.write_json)
 
     @property
