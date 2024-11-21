@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from msprobe.core.overflow_check.level import OverflowLevel
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import Suggestions, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data
@@ -32,6 +32,7 @@ class BaseNode:
         self.suggestions = {}
         self.stack_info = []
         self.micro_step_id = None
+        self.overflow_level = None
 
     def __str__(self):
         info = f'id:\t{self.id}'
@@ -62,6 +63,11 @@ class BaseNode:
         self.input_data = input_data
         self.output_data = output_data
 
+    def set_overflow_level(self, level):
+        if not level or not isinstance(level, OverflowLevel):
+            return
+        self.overflow_level = level
+
     def add_upnode(self, node):
         """
         绑定upnode，用于对两个节点进行上下级关联
@@ -85,19 +91,25 @@ class BaseNode:
         """
         输出数据
         """
-        result = {}
-        result['id'] = self.id
-        result['node_type'] = self.op.value
-        result['data'] = self.data
-        result['output_data'] = format_node_data(self.output_data)
-        result['input_data'] = format_node_data(self.input_data)
-        result['upnode'] = self.upnode.id if self.upnode else 'None'
-        result['subnodes'] = [node.id for node in self.subnodes]
-        result['matched_node_link'] = self.matched_node_link
-        result['suggestions'] = self.suggestions
-        result['stack_info'] = self.stack_info
+        result = {
+            'id': self.id,
+            'node_type': self.op.value,
+            'output_data': format_node_data(self.output_data),
+            'input_data': format_node_data(self.input_data),
+            'upnode': self.upnode.id if self.upnode else 'None',
+            'subnodes': [node.id for node in self.subnodes],
+            'matched_node_link': self.matched_node_link,
+            'suggestions': self.suggestions,
+            'stack_info': self.stack_info
+        }
         if self.micro_step_id is not None:
             result['micro_step_id'] = self.micro_step_id
+        # 是否存在overflow，并保存结果
+        if self.overflow_level and isinstance(self.overflow_level, OverflowLevel):
+            if self.data is None:
+                self.data = dict()
+            self.data['overflow_level'] = self.overflow_level.value
+        result['data'] = self.data
         return result
 
     def get_ancestors(self):
