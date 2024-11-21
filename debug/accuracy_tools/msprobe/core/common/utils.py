@@ -438,8 +438,10 @@ def safe_get_value(container, index, container_name, key=None):
         logger.error(err_msg)
         raise MsprobeBaseException(MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR) from e
 
+
 # 记录工具函数递归的深度
 recursion_depth = defaultdict(int)
+
 
 # 装饰一个函数，当函数递归调用超过限制时，抛出异常并打印函数信息。
 def recursion_depth_decorator(func_info):
