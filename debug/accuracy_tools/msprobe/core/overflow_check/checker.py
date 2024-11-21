@@ -55,7 +55,7 @@ class AnomalyDetector:
             InputAnomalyOutputNormalScene,      # 输入异常，输出正常
             NumericalMutationScene              # 输出较输入值突变
         ]
-        self.anomaly_scenes: dict[str, AnomalyScene] = dict()
+        self.anomaly_scenes = dict()
 
     @staticmethod
     def _create_api_info(api_name: str, data: Dict) -> APIInfo:
@@ -127,7 +127,7 @@ class AnomalyDetector:
         self.anomaly_scenes = result
         return self
 
-    def overflow_result(self) -> dict[str, AnomalyScene]:
+    def overflow_result(self) -> Dict[str, AnomalyScene]:
         return self.anomaly_scenes
 
     def has_overflow(self, api_name: str) -> bool:
