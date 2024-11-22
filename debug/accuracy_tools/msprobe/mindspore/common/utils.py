@@ -117,8 +117,8 @@ class Dropout3D(ops.Dropout3D):
 
 
 class DropoutExt(nn.Dropout):
-    def __init__(self, keep_prob=0.5):
-        super().__init__(1.)
+    def __init__(self, p=0.5):
+        super().__init__(0)
 
 
 def dropout_ext(input, p=0.5, training=True):
@@ -127,7 +127,10 @@ def dropout_ext(input, p=0.5, training=True):
 
 def remove_dropout():
     ops.Dropout = Dropout
+    ops.operations.Dropout = Dropout
     ops.Dropout2D = Dropout2D
+    ops.operations.Dropout2D = Dropout2D
     ops.Dropout3D = Dropout3D
+    ops.operations.Dropout3D = Dropout3D
     nn.Dropout = DropoutExt
     nn.functional.dropout = dropout_ext
