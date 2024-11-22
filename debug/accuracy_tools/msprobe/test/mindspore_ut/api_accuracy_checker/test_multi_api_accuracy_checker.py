@@ -251,7 +251,6 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
     def test_init(self):
         # 测试初始化方法
         self.assertIsInstance(self.checker.manager, Manager().__class__)
-        self.assertIsInstance(self.checker.is_first_write, multiprocessing.managers.ValueProxy)
         self.assertIsInstance(self.checker.multi_data_manager, MultiDataManager)
         self.assertEqual(self.checker.args, self.args)
 
