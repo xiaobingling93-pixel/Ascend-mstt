@@ -357,7 +357,7 @@ def check_cross_framework(bench_json_path):
     return False
 
 
-def ms_compare(input_param, output_path, suffix, **kwargs):
+def ms_compare(input_param, output_path, suffix=None, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
         auto_analyze = kwargs.get('auto_analyze', True)
