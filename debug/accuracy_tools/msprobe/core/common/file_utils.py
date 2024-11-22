@@ -424,6 +424,10 @@ def save_excel(path, data):
     try:
         if isinstance(data, pd.DataFrame):
             data.to_excel(path, index=False)
+        elif isinstance(data, list):
+            with pd.ExcelWriter(path) as writer:
+                for data_df, sheet_name in data:
+                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
         else:
             logger.error(f'unsupported data type.')
             return
@@ -645,3 +649,13 @@ def check_crt_valid(pem_path):
     now_utc = datetime.now(tz=timezone.utc)
     if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
         raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")
+
+
+def read_xlsx(file_path):
+    check_file_or_directory_path(file_path)
+    try:
+        result_df = pd.read_excel(file_path)
+    except Exception as e:
+        logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
+        raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
+    return result_df

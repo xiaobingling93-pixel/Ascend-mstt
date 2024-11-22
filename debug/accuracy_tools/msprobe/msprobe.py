@@ -47,6 +47,8 @@ def main():
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     graph_service_cmd_parser = subparsers.add_parser('graph')
     _compare_parser(compare_cmd_parser)
+    merge_result_parser = subparsers.add_parser('merge_result')
+
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
     if len(sys.argv) < 4:
@@ -62,6 +64,7 @@ def main():
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
         from msprobe.visualization.graph_service import _pt_graph_service_parser, _pt_graph_service_command
+        from msprobe.pytorch.compare.merge_result_cli import _merge_result_parser, merge_result_cli
 
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
@@ -70,6 +73,7 @@ def main():
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
         _pt_graph_service_parser(graph_service_cmd_parser)
+        _merge_result_parser(merge_result_parser)
     elif framework_args.framework == Const.MS_FRAMEWORK:
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         from msprobe.visualization.graph_service import _ms_graph_service_parser, _ms_graph_service_command
@@ -102,6 +106,8 @@ def main():
                 logger.error("Argument -cm or -am is not supported in PyTorch framework")
                 raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             compare_cli(args)
+        elif sys.argv[3] == "merge_result":
+            merge_result_cli(args)
     else:
         if not is_module_available(Const.MS_FRAMEWORK):
             logger.error("MindSpore does not exist, please install MindSpore library")

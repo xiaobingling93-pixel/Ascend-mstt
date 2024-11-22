@@ -1,0 +1,359 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import re
+import multiprocessing
+import pandas as pd
+from tqdm import tqdm
+from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx
+from msprobe.core.common.const import FileCheckConst, Const, CompareConst
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx
+from msprobe.core.compare.utils import table_value_is_valid
+
+
+def check_compare_result_name(file_name):
+    """
+    check whether the compare result name is as expected
+    """
+    single_rank_pattern = r"^compare_result_rank-rank_\d{14}.xlsx$"
+    multi_ranks_pattern = r"^compare_result_rank(\d+)-rank\1_\d{14}.xlsx$"
+    if re.match(single_rank_pattern, file_name):
+        logger.warning("single rank compare result do not need to be merged.")
+        return False
+    if not re.match(multi_ranks_pattern, file_name):
+        logger.error(f"wrong compare result name: {file_name}, please check!")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    return True
+
+
+def reorder_path(compare_result_path_list):
+    """
+    reorder compare results by rank num
+    """
+    rank_pattern = r"compare_result_rank(\d+)-rank"
+    reorder_path_list = sorted(
+        compare_result_path_list,
+        key=lambda path: int(re.search(rank_pattern, os.path.basename(path)).group(1))
+        if re.search(rank_pattern, os.path.basename(path)) else float('inf')
+    )
+    return reorder_path_list
+
+
+def get_result_path(input_dir):
+    """
+    get rank ordered compare result file path list
+    """
+    compare_result_path_list = [os.path.join(input_dir, f) for f in os.listdir(input_dir) if f.endswith('.xlsx')]
+    filt_compare_result_path_list = []
+    for file_path in compare_result_path_list:
+        file_name = os.path.basename(file_path)
+        if check_compare_result_name(file_name):
+            compare_result_path_checker = FileChecker(file_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE)     # TODO 入参需要确认
+            compare_result_path = compare_result_path_checker.common_check()
+            filt_compare_result_path_list.append(compare_result_path)
+
+    filt_compare_result_path_list = reorder_path(filt_compare_result_path_list)       # 多卡比对结果按rank序号重新排序
+
+    if len(filt_compare_result_path_list) < 2:
+        logger.warning("number of compare result is no more than 1, no need to merge.")     # 单卡结果无需合并，直接退出
+        exit()
+    if not os.path.basename(filt_compare_result_path_list[0]).split("_")[2] == "rank0-rank0":       # 以rank0为基础去找api，因此一定需要rank0结果
+        logger.error("merge result based on rank0 result, lack rank0 result in compare output path, please check!")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    return filt_compare_result_path_list
+
+
+def get_dump_mode(compare_result_rank0_path):
+    """
+    get dump mode from header of compare result table
+    """
+    result_df = read_xlsx(compare_result_rank0_path)
+    header = result_df.columns.tolist()
+    if CompareConst.COSINE in header:
+        return Const.ALL
+    elif CompareConst.MAX_DIFF in header:
+        return Const.SUMMARY
+    elif CompareConst.NPU_MD5 in header:
+        return Const.MD5
+    else:
+        logger.error("unrecognizable comparison result header, please check!")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+
+def check_index_dump_mode_consistent(compare_index_list, dump_mode):
+    """
+    check compare index to merge is consistent with dump mode
+    """
+    if dump_mode == Const.MD5:
+        logger.error("dump task 'md5' don not support merge compare results.")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+    dump_mode_compare_index_map = {
+        Const.ALL: CompareConst.ALL_COMPARE_INDEX,
+        Const.SUMMARY: CompareConst.SUMMARY_COMPARE_INDEX
+    }
+    valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
+    if compare_index_list == "":
+        return valid_compare_index
+    if all(compare_index in valid_compare_index for compare_index in compare_index_list):
+        return compare_index_list
+    else:
+        logger.error("compare index is not consistent with dump task, please check!")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
+
+def search_api_index_result(api_list, compare_index_list, result_df, rank_num, compare_index_dict):
+    """
+    parsing compare result into the intermediate target dict
+    {
+        compare_index1: {
+            api_full_name1:{
+                rank1: value,
+                rank2: value,
+                ...
+            },
+            api_full_name2,
+            ...
+        },
+        compare_index2: {},
+        ...
+    }
+    """
+    for compare_index in compare_index_list:
+        if rank_num == 0:
+            api_full_name_list = []
+            for api in api_list:
+                single_api_full_name_list = result_df.loc[
+                    result_df[CompareConst.NPU_NAME].str.contains(api, na=False), CompareConst.NPU_NAME].tolist()
+                if len(single_api_full_name_list) == 0:
+                    logger.warning(
+                        f"{api} not included in rank0 compare result and will not be presented in the merged result.")
+                    continue
+                api_full_name_list.extend(single_api_full_name_list)
+        else:
+            api_full_name_list = api_list
+
+        api_index_dict = compare_index_dict.setdefault(compare_index, {})
+        for api_full_name in api_full_name_list:
+            table_value_check(api_full_name)
+            row_num = result_df.index[result_df[CompareConst.NPU_NAME] == api_full_name].tolist()[0]
+            index_value = result_df.loc[row_num, compare_index]
+            table_value_check(index_value)
+            api_index_dict.setdefault(api_full_name, {})[rank_num] = index_value  # update api_index_dict
+        compare_index_dict[compare_index] = api_index_dict
+    return compare_index_dict
+
+
+def table_value_check(value):
+    if not table_value_is_valid(value):
+        raise RuntimeError(
+            f"Malicious value [{value}] is not allowed to be written into the merged xlsx.")
+
+
+def rank0_result_process(rank0_compare_result_path, api_list, compare_index_list):
+    compare_index_dict = {}
+    result_df = read_xlsx(rank0_compare_result_path)
+
+    rank_pattern = r"compare_result_rank(\d+)-rank"
+    rank_num = int(re.search(rank_pattern, os.path.basename(rank0_compare_result_path)).group(1))
+    rank_num_list = [[rank_num]]
+    logger.info(f"parsing rank{rank_num} compare result...")
+
+    compare_index_dict = search_api_index_result(api_list, compare_index_list,
+                                                 result_df, rank_num, compare_index_dict)
+
+    return compare_index_dict, rank_num_list
+
+
+def result_process(compare_result_path_list, api_list, compare_index_list):
+    compare_index_dict = {}
+    rank_num_list = []
+    for compare_result_path in compare_result_path_list:
+        result_df = read_xlsx(compare_result_path)
+
+        rank_pattern = r"compare_result_rank(\d+)-rank"
+        rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
+        rank_num_list.append(rank_num)
+        logger.info(f"parsing rank{rank_num} compare result...")
+
+        compare_index_dict = search_api_index_result(api_list, compare_index_list,
+                                                     result_df, rank_num, compare_index_dict)
+
+    return compare_index_dict, rank_num_list
+
+
+def handle_multi_process(func, func_args, lock):
+    compare_result_path_list, api_list, compare_index_list = func_args
+
+    result_num = len(compare_result_path_list)
+    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+    if result_num <= process_num:
+        process_num = result_num
+        chunks = [[compare_result_path] for compare_result_path in compare_result_path_list]
+    else:
+        chunk_size = result_num // process_num
+        chunks = [compare_result_path_list[i:i + chunk_size] for i in range(0, result_num, chunk_size)]
+
+    pool = multiprocessing.Pool(process_num)
+
+    def err_call(args):
+        logger.error('multiprocess compare failed! Reason: {}'.format(args))
+        try:
+            pool.terminate()
+        except OSError:
+            logger.error("pool terminate failed")
+
+    progress_bar = tqdm(total=len(compare_result_path_list) + 1, desc="Result Parsing Process", unit="num", ncols=100, initial=1)
+
+    def update_progress(size, progress_lock):
+        with progress_lock:
+            progress_bar.update(size)
+
+    results = []
+    for chunk in chunks:
+        chunk_size = len(chunk)
+        result = pool.apply_async(func,     # pool.apply_async立即返回ApplyResult对象，因此results中结果是顺序的
+                                  args=(chunk, api_list, compare_index_list),
+                                  error_callback=err_call,
+                                  callback=update_progress(chunk_size, lock))
+        results.append(result)
+
+    all_compare_index_dict_list = []
+    all_rank_num_list = []
+    for result in results:
+        compare_index_dict, rank_num_list = result.get()
+        all_compare_index_dict_list.append(compare_index_dict)
+        all_rank_num_list.append(rank_num_list)
+
+    pool.close()
+    pool.join()
+
+    return all_compare_index_dict_list, all_rank_num_list
+
+
+def gen_merge_result_single_process(compare_index_dict, rank_num_list, output_dir):
+    """
+    generate merge result from the intermediate dict.
+    one compare index, one sheet
+    """
+    file_name = add_time_with_xlsx("multi_ranks_compare_merge")
+    output_path = os.path.join(output_dir, file_name)
+    header = [CompareConst.NPU_NAME] + ["rank" + str(rank_num) for rank_num in rank_num_list]
+    result_df_list = []
+
+    for compare_index, api_index_dict in compare_index_dict.items():
+        result = []
+        for api_full_name, rank_value_dict in api_index_dict.items():
+            result_item = [api_full_name]
+            for value in rank_value_dict.values():
+                result_item.append(value)
+            result.append(result_item)
+        result_df = pd.DataFrame(result, columns=header, dtype="object")
+        result_df_list.append((result_df, compare_index))
+
+    save_excel(output_path, result_df_list)
+    logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
+
+
+def gen_merge_result_multi_process(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list):
+    """
+    generate merge result from the intermediate dict.
+    one compare index, one sheet
+    """
+    file_name = add_time_with_xlsx("multi_ranks_compare_merge")
+    output_path = os.path.join(output_dir, file_name)
+
+    all_result_df_list = []
+    for i, compare_index_dict in enumerate(all_compare_index_dict_list):
+        rank_num_list = all_rank_num_list[i]
+        header = [CompareConst.NPU_NAME] + ["rank" + str(rank_num) for rank_num in rank_num_list]
+        result_df_list = []
+        for compare_index, api_index_dict in compare_index_dict.items():
+            result = []
+            for api_full_name, rank_value_dict in api_index_dict.items():
+                result_item = [api_full_name]
+                for value in rank_value_dict.values():
+                    result_item.append(value)
+                result.append(result_item)
+            result_df = pd.DataFrame(result, columns=header, dtype="object")
+            result_df_list.append(result_df)
+        all_result_df_list.append(result_df_list)   # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
+
+    merge_df_list = df_merge(all_result_df_list)
+    final_result_df_list = []
+    for i, df in enumerate(merge_df_list):
+        final_result_df_list.append((df, compare_index_list[i]))
+    save_excel(output_path, final_result_df_list)
+    logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
+
+
+def df_merge(all_result_df_list):
+    """
+    merge different rank result_df
+    """
+    merge_df_base = all_result_df_list[0].copy()
+    for sublist in all_result_df_list[1:]:
+        for i in range(len(sublist)):
+            merge_df_base[i] = merge_df_base[i].merge(sublist[i], on=CompareConst.NPU_NAME, how='left')
+    return merge_df_base
+
+
+def merge_result(input_dir, output_dir, api_yaml_path, compare_index_list):
+    compare_result_path_list = get_result_path(input_dir)       # 获得的input_dir中所有比对结果件的全路径，并且对单卡rank，文件名不符合，文件数量太少，无rank0文件进行特别处理
+    dump_mode = get_dump_mode(compare_result_path_list[0])      # 通过rank0获取dump_mode
+    api_list = load_yaml(api_yaml_path)
+    compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)   # 校验index是否存在于对应的dump_mode中, 如果传入空，返回全量compare_index_list
+
+    compare_index_dict = {}
+    rank_num_list = []
+
+    compare_index_dict_0, rank_num_list_0 = rank0_result_process(compare_result_path_list[0], api_list, compare_index_list)
+
+    api_full_name_list = list(compare_index_dict_0.get(compare_index_list[0]))
+
+    func_args = (compare_result_path_list[1:], api_full_name_list, compare_index_list)
+    all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args, multiprocessing.Manager().RLock())
+
+    all_compare_index_dict_list = [compare_index_dict_0] + all_compare_index_dict_list
+    all_rank_num_list = rank_num_list_0 + all_rank_num_list
+
+    # compare_index_dict = {}
+    # rank_num_list = []
+    # for compare_result_path in compare_result_path_list:
+    #     result_df = read_xlsx(compare_result_path)
+    #
+    #     rank_pattern = r"compare_result_rank(\d+)-rank"
+    #     rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
+    #     rank_num_list.append(rank_num)
+    #     logger.info(f"parsing rank{rank_num} compare result...")
+    #
+    #     compare_index_dict = search_api_index_result(api_list, compare_index_list,
+    #                                                  result_df, rank_num, compare_index_dict)
+
+    # compare_index_dict, rank_num_list = result_process(compare_result_path_list, api_list, compare_index_list)
+    # gen_merge_result_single_process(compare_index_dict, rank_num_list, output_dir)
+
+    gen_merge_result_multi_process(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list)
+
+
+if __name__ == "__main__":
+    input_dir = '/home/yinglinwei/project/ar/merge_results_1125/mstt_3/debug/accuracy_tools/output_bak'
+    output_dir = '/home/yinglinwei/project/ar/merge_results_1125/mstt_3/debug/accuracy_tools/merge_output'
+    api_yaml_path = '/home/yinglinwei/project/ar/merge_results_1125/mstt_3/debug/accuracy_tools/output/api.yaml'
+    compare_index_list = ''
+    merge_result(input_dir, output_dir, api_yaml_path, compare_index_list)
+
+

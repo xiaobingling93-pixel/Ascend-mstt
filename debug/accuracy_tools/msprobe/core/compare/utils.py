@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
@@ -471,6 +471,18 @@ def print_compare_ends_info():
     logger.info('*' * total_len)
     logger.info(f"*{CompareConst.COMPARE_ENDS_SUCCESSFULLY.center(total_len - 2)}*")
     logger.info('*' * total_len)
+
+
+def table_value_is_valid(value: str) -> bool:
+    if not isinstance(value, str):
+        return True
+    try:
+        # -1.00 or +1.00 should be consdiered as digit numbers
+        float(value)
+    except ValueError:
+        # otherwise, they will be considered as formular injections
+        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+    return True
 
 
 def _compare_parser(parser):
