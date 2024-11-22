@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
+from collections import namedtuple
+from dataclasses import dataclass
 
 import numpy as np
 from msprobe.core.common.log import logger
@@ -117,7 +119,15 @@ class TestBaseDataProcessor(unittest.TestCase):
 
     def test_recursive_apply_transform(self):
         transform = lambda x, _: x * 2
+        Test = namedtuple("Test", ['a'])
+        myNamedTuple = Test(1)
+        @dataclass
+        class MyDataClass:
+            a: int
+        myData = MyDataClass(1)
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(2, transform), 4)
+        self.assertEqual(BaseDataProcessor.recursive_apply_transform(myData, transform), {'a': 2})
+        self.assertEqual(BaseDataProcessor.recursive_apply_transform(myNamedTuple, transform), {'a': 2})
         self.assertEqual(BaseDataProcessor.recursive_apply_transform([1, 2], transform), [2, 4])
         self.assertEqual(BaseDataProcessor.recursive_apply_transform((1, 2), transform), (2, 4))
         self.assertEqual(BaseDataProcessor.recursive_apply_transform({'a': 1}, transform), {'a': 2})
