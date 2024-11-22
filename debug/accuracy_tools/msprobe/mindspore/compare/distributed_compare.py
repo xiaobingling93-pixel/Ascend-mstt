@@ -19,9 +19,10 @@ from msprobe.core.common.utils import CompareException, check_compare_param, \
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.compare.ms_compare import MSComparator
+from msprobe.mindspore.compare.ms_compare import MSComparator, check_cross_framework
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
+from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
 
 def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
@@ -31,6 +32,10 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
     fuzzy_match = kwargs.get('fuzzy_match', False)
+    cell_mapping = kwargs.get('cell_mapping')
+    api_mapping = kwargs.get('api_mapping')
+    data_mapping = kwargs.get('data_mapping')
+    layer_mapping = kwargs.get('layer_mapping')
     is_print_compare_log = kwargs.get('is_print_compare_log', True)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
@@ -62,7 +67,10 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         except (CompareException, FileCheckException) as error:
             logger.error('Compare failed. Please check the arguments and do it again!')
             raise CompareException(error.code) from error
-        ms_comparator = MSComparator()
+        if layer_mapping:
+            data_mapping = generate_data_mapping_by_layer_mapping(dump_result_param, layer_mapping, output_path)
+        is_cross_framework = check_cross_framework(dump_result_param.get("bench_json_path"))
+        ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
         ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)
 
 
