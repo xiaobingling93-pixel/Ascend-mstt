@@ -283,7 +283,7 @@ def get_dump_mode(input_param):
     bench_task = bench_json_data.get('task', None)
 
     if not npu_task or not bench_task:
-        logger.error(f"Please check the dump task is correct.")
+        logger.error(f"Please check the dump task is correct, npu's task is {npu_task}, bench's task is {bench_task}.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
 
     if npu_task != bench_task:
