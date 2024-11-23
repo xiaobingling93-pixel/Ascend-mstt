@@ -391,15 +391,15 @@ class TestUtilsMethods(unittest.TestCase):
     def test_load_internal_api(self):
         ms_comparator = MSComparator()
         api_dict = ms_comparator.load_internal_api()
-        self.assertEqual(api_dict['Functional.abs'], 'Troch.abs')
+        self.assertEqual(api_dict['Functional.abs'], 'Torch.abs')
 
     def test_process_cell_mapping(self):
         self.base_test_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-        self.input_dir = os.path.join(self.base_test_dir, 'resoutrces')
+        self.input_dir = os.path.join(self.base_test_dir, 'resources')
         cell_mapping_path = os.path.join(self.input_dir, 'common', 'cell_mapping.yaml')
         ms_comparator = MSComparator(cell_mapping=cell_mapping_path)
-        npu_op_name = ms_comparator.process_cell_mapping(npu_cell_dict.get('op_name'))
-        self.assertEqual(npu_op_name[0], 'Module.fc1.Linear.forward.0.input.0')
+        npu_op_name = ms_comparator.process_cell_mapping(npu_cell_dict.get('op_name')[0])
+        self.assertEqual(npu_op_name, 'Module.fc1.Linear.forward.0.input.0')
 
     def test_read_npy_data(self):
         ms_comparator = MSComparator()
@@ -414,7 +414,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.temp_file = tempfile.NamedTemporaryFile(suffix='.npy')
         tensor = np.array([1, 2, 3])
         filename = self.temp_file.name.split('/')[-1]
-        torch.save(self.temp_file.name, tensor)
+        np.save(self.temp_file.name, tensor)
         result = ms_comparator.read_npy_data('/tmp', filename, load_pt_file=False)
         self.assertTrue(np.array_equal(result, np.array([1, 2, 3])))
         self.temp_file.close()
