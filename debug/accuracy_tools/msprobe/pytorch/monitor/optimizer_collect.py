@@ -43,8 +43,6 @@ class OptimizerMon(ABC):
         exp_avg_sq_dict = defaultdict(float)
         update_dict = defaultdict()
         ratio_dict = defaultdict()
-        if len(torch_opt.param_groups) > 1:
-            logger.warning(f"the length of torch_opt.param_groups larger than one, not compatible.")
         for param, name in params2name.items():
             if param in self.fp16_to_fp32_param:
                 param = self.fp16_to_fp32_param[param]
@@ -62,6 +60,8 @@ class OptimizerMon(ABC):
                 if monitor.mg_direction:
                     exp_avg_dict[name] = exp_avg
                 if monitor.ur_distribution:
+                    if len(torch_opt.param_groups) > 1:
+                        logger.info(f"the length of torch_opt.param_groups is {len(torch_opt.param_groups)}.")
                     if 'step' in state_param:
                         step = state_param['step']  # Optimizer from pytorch or FusedAdam from apex(used by megatron)
                     elif 'step' in torch_opt.param_groups[0]:
