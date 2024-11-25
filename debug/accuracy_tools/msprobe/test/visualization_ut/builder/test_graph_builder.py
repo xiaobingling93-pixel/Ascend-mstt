@@ -11,6 +11,7 @@ class TestGraphBuilder(unittest.TestCase):
     def setUp(self):
         self.construct_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "construct.json")
         self.data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "dump.json")
+        self.stack_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "stack.json")
         self.model_name = "TestModel"
         self.graph = Graph(self.model_name)
         self.graph_b = Graph(self.model_name)
@@ -23,14 +24,10 @@ class TestGraphBuilder(unittest.TestCase):
             "Module1": {"data": "data for Module1"},
             "Tensor1": {"data": "data for Tensor1"}
         }
+        self.stack_dict = {}
 
-    @patch('msprobe.visualization.builder.graph_builder.load_json_file')
-    @patch('msprobe.visualization.builder.graph_builder.load_data_json_file')
-    def test_build(self, mock_load_data_json_file, mock_load_json_file):
-        mock_load_data_json_file.return_value = self.data_dict
-        mock_load_json_file.return_value = self.construct_dict
-
-        graph = GraphBuilder.build(self.construct_path, self.data_path, self.model_name)
+    def test_build(self):
+        graph = GraphBuilder.build(self.construct_path, self.data_path, self.stack_path, self.model_name)
         self.assertIsNotNone(graph)
         self.assertIsInstance(graph, Graph)
         self.assertEqual(len(graph.node_map), 3)
@@ -43,7 +40,7 @@ class TestGraphBuilder(unittest.TestCase):
     @patch('msprobe.visualization.graph.node_op.NodeOp.get_node_op')
     @patch('msprobe.visualization.builder.msprobe_adapter.get_input_output', return_value=([], []))
     def test__init_nodes(self, mock_get_input_output, mock_get_node_op):
-        GraphBuilder._init_nodes(self.graph, self.construct_dict, self.data_dict)
+        GraphBuilder._init_nodes(self.graph, self.construct_dict, self.data_dict, self.stack_dict)
         mock_get_node_op.assert_any_call("Tensor1")
         mock_get_node_op.assert_any_call("Module1")
         self.assertIs(self.graph.root, self.graph.get_node("TestModel"))
@@ -51,7 +48,8 @@ class TestGraphBuilder(unittest.TestCase):
     def test__create_or_get_node(self):
         node_op = MagicMock()
         data_dict = {"node1": {}}
-        node = GraphBuilder._create_or_get_node(self.graph, data_dict, node_op, "node1")
+        stack_dict = {}
+        node = GraphBuilder._create_or_get_node(self.graph, [data_dict, stack_dict], node_op, "node1")
         self.assertIn("node1", self.graph.node_map)
         self.assertEqual(node.input_data, {})
         self.assertEqual(node.output_data, {})

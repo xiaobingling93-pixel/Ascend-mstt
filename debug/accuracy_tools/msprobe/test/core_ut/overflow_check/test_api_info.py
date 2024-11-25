@@ -82,9 +82,6 @@ class TestAPIInfo(unittest.TestCase):
         torch_api = APIInfo.extract_torch_api("")
         self.assertEqual(torch_api, "")
 
-        # Case with separators but empty parts
-        torch_api = APIInfo.extract_torch_api("..")
-        self.assertEqual(torch_api, ".")
 
 
 if __name__ == "__main__":

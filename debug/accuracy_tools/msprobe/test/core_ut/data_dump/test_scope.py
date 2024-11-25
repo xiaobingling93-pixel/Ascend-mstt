@@ -1,65 +1,34 @@
 import unittest
-from unittest.mock import MagicMock
-
-from msprobe.core.common.exceptions import ScopeException
-from msprobe.core.data_dump.scope import (
-    build_scope,
-    build_range_scope_according_to_scope_name,
-    BaseScope,
-    ListScope,
-    RangeScope,
-    APIRangeScope,
-    ModuleRangeScope
-)
+from unittest.mock import Mock
+from msprobe.core.data_dump.scope import ScopeFactory, ListScope, APIRangeScope, \
+    ModuleRangeScope, MixRangeScope, BaseScope, RangeScope, ScopeException
+from msprobe.core.common.const import Const
 
 
-class TestBuildScope(unittest.TestCase):
+class TestScopeFactory(unittest.TestCase):
+    def setUp(self):
+        self.config = Mock()
+        self.config.task = None
+        self.config.level = None
+        self.config.scope = None
+        self.config.list = None
 
-    def test_build_scope_with_no_scope_and_no_api_list(self):
-        result = build_scope(None)
-        self.assertIsNone(result)
+    def test_build_scope_none(self):
+        factory = ScopeFactory(self.config)
+        self.assertIsNone(factory.build_scope())
 
-    def test_build_scope_with_no_scope(self):
-        result = build_scope(None, api_list=['api1', 'api2'])
-        self.assertIsInstance(result, APIRangeScope)
+    def test_build_scope_free_benchmark(self):
+        self.config.task = Const.FREE_BENCHMARK
+        self.config.scope = ['scope1']
+        factory = ScopeFactory(self.config)
+        result = factory.build_scope()
+        self.assertIsInstance(result, ListScope)
 
-    def test_build_scope_with_no_api_list(self):
-        result = build_scope(None, scope=['scope1', 'scope2'])
-        self.assertIsInstance(result, APIRangeScope)
-
-    def test_build_scope_with_valid_scope_class(self):
-        class DummyScope:
-            def __init__(self, scope, api_list):
-                self.scope = scope
-                self.api_list = api_list
-
-        result = build_scope(DummyScope, scope=['scope1', 'scope2'], api_list=['api1', 'api2'])
-        self.assertIsInstance(result, DummyScope)
-        self.assertEqual(result.scope, ['scope1', 'scope2'])
-        self.assertEqual(result.api_list, ['api1', 'api2'])
-
-    def test_build_scope_with_invalid_scope_class(self):
-        with self.assertRaises(TypeError):
-            build_scope("NotAScopeClass", scope=['scope1'], api_list=['api1'])
-
-    def test_build_range_scope_with_valid_api_range_scope(self):
-        result = build_range_scope_according_to_scope_name(['scope1'], ['api1'])
-        self.assertIsInstance(result, APIRangeScope)
-        self.assertTrue(result.is_valid)
-
-    def test_build_range_scope_with_valid_module_range_scope(self):
-        result = build_range_scope_according_to_scope_name(['Module.m1', 'Module.m2'], ['api1'])
-        self.assertIsInstance(result, ModuleRangeScope)
-        self.assertTrue(result.is_valid)
-
-    def test_build_range_scope_with_invalid_scope(self):
-        with self.assertRaises(ScopeException) as context:
-            build_range_scope_according_to_scope_name(['Module.m1', 'scope1'], ['api1'])
-        self.assertIn("scope=['Module.m1', 'scope1']", str(context.exception))
-
-    def test_build_range_scope_with_empty_scope(self):
-        result = build_range_scope_according_to_scope_name([], ['api1'])
-        self.assertIsInstance(result, APIRangeScope)
+        self.config.scope = ['scope1']
+        self.config.list = ['api1']
+        factory = ScopeFactory(self.config)
+        with self.assertRaises(ScopeException):
+            factory.build_scope()
 
 
 class TestBaseScope(unittest.TestCase):
@@ -142,18 +111,51 @@ class TestListScope(unittest.TestCase):
         self.assertFalse(result)
 
 
+class MockRangeScope(RangeScope):
+    def check_scope_is_valid(self):
+        pass
+
+    def check(self, name):
+        pass
+
+
 class TestRangeScope(unittest.TestCase):
+    def test_init_valid(self):
+        scope = ['Tensor.add.0.forward', 'Tensor.add.0.backward']
+        rs = MockRangeScope(scope, [], Const.LEVEL_L1)
+        self.assertFalse(rs.in_scope)
+        self.assertFalse(rs.in_list)
 
-    def test_rectify_args(self):
-        scope = ["module1", "module2", "module3"]
+    def test_rectify_args_valid(self):
+        valid_scope = ['Tensor.add.0.forward', 'Tensor.add.0.backward']
+        valid_api_list = ["relu"]
+        rs = MockRangeScope(valid_scope, valid_api_list)
+        scope, api_list = rs.rectify_args(valid_scope, valid_api_list)
+        self.assertEqual(scope, valid_scope)
+        self.assertEqual(api_list, valid_api_list)
+
+    def test_rectify_args_invalid_scope_length(self):
         with self.assertRaises(ScopeException) as context:
-            RangeScope.rectify_args(scope, [])
-        self.assertEqual(context.exception.code, ScopeException.InvalidScope)
+            rs = MockRangeScope(['Tensor.add.0.forward'], [])
+            rs.rectify_args(['Tensor.add.0.forward'], [])
+        self.assertIn("须传入长度为2的列表", str(context.exception))
 
-        scope = ["module1"]
-        expected_scope = ["module1", "module1"]
-        result_scope, result_api_list = RangeScope.rectify_args(scope, [])
-        self.assertEqual(result_scope, expected_scope)
+    def test_scope_length_invalid(self):
+        scope = ['API.scope1.forward']
+        with self.assertRaises(ScopeException):
+            MockRangeScope(scope, [], Const.LEVEL_L1)
+
+    def test_rectify_args_invalid_api_scope_format(self):
+        with self.assertRaises(ScopeException) as context:
+            rs = MockRangeScope(['Tensor.add.', 'API.scope2.backward'], [], Const.LEVEL_L1)
+            rs.rectify_args(['Tensor.add.', 'API.scope2.backward'], [])
+        self.assertIn("scope参数格式错误", str(context.exception))
+
+    def test_rectify_args_invalid_module_scope_format(self):
+        with self.assertRaises(ScopeException) as context:
+            rs = MockRangeScope(['Cell.conv2d.', 'Module.scope2.backward'], [], Const.LEVEL_L0)
+            rs.rectify_args(['Cell.conv2d.', 'Module.scope2.backward'], [])
+        self.assertIn("scope参数格式错误", str(context.exception))
 
 
 class TestAPIRangeScope(unittest.TestCase):
@@ -197,7 +199,7 @@ class TestModuleRangeScope(unittest.TestCase):
         result = module_range_scope.check_scope_is_valid()
         self.assertTrue(result)
 
-        module_range_scope = ModuleRangeScope(["Module.1"], ["Module.2"])
+        module_range_scope = ModuleRangeScope(["Module.1", "Module.2"], ["Module.2"])
         self.assertTrue(module_range_scope.check_scope_is_valid())
 
     def test_begin_module(self):
@@ -236,5 +238,59 @@ class TestModuleRangeScope(unittest.TestCase):
         result = module_range_scope.check(module_name)
         self.assertTrue(result)
 
-        module_range_scope = ModuleRangeScope(["Module.1"], [])
+        module_range_scope = ModuleRangeScope(["Module.1", "Module.2"], [])
         self.assertFalse(module_range_scope.check(""))
+
+
+class TestMixRangeScope(unittest.TestCase):
+    def setUp(self):
+        self.scope = ['module1', 'module2']
+        self.api_list = ['api1', 'api2']
+        self.rs = MixRangeScope(self.scope, self.api_list)
+
+    def test_check_scope_is_valid_with_non_empty_scope(self):
+        self.assertTrue(self.rs.check_scope_is_valid())
+
+    def test_check_scope_is_valid_with_empty_scope(self):
+        rs_empty = MixRangeScope([], self.api_list)
+        self.assertFalse(rs_empty.check_scope_is_valid())
+
+    def test_begin_module_with_scope_match(self):
+        self.rs.begin_module('module1')
+        self.assertTrue(self.rs.in_scope)
+
+    def test_begin_module_with_api_list_match(self):
+        self.rs.begin_module('api1')
+        self.assertTrue(self.rs.in_list)
+
+    def test_end_module_with_scope_match(self):
+        self.rs.end_module('module2')
+        self.assertFalse(self.rs.in_scope)
+
+    def test_end_module_with_api_list_match(self):
+        self.rs.begin_module('api1')  
+        self.rs.end_module('api1')
+        self.assertFalse(self.rs.in_list)
+
+    def test_check_api_list_empty(self):
+        rs_empty = MixRangeScope(self.scope, [])
+        self.assertTrue(rs_empty.check_api_list('any_api'))
+
+    def test_check_api_list_match(self):
+        self.assertTrue(self.rs.check_api_list('api1'))
+
+    def test_check_api_list_no_match(self):
+        self.assertFalse(self.rs.check_api_list('api3'))
+
+    def test_check_with_scope_none_or_in_scope_true(self):
+        self.rs.in_scope = True
+        self.assertTrue(self.rs.check('api1'))
+        self.assertFalse(self.rs.check('api3'))
+
+    def test_check_with_scope_non_empty_and_in_scope_false(self):
+        self.rs.in_scope = False
+        self.assertFalse(self.rs.check('api1'))
+
+
+if __name__ == '__main__':
+    unittest.main()

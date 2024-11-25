@@ -61,7 +61,7 @@ class Graph:
         根据映射配置对节点进行匹配
         """
         node_b = graph_b.node_map.get(mapping_dict.get(node_n.id, node_n.id))
-        if not node_b or not node_n.compare_mapping_node(node_b):
+        if not node_b:
             return None, [], []
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()

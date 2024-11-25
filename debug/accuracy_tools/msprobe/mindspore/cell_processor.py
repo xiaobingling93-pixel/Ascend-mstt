@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.core.data_dump.scope import ModuleRangeScope
+from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope
 from msprobe.core.common.const import Const
 
 
@@ -24,10 +24,7 @@ class CellProcessor:
     module_node = {}
 
     def __init__(self, scope):
-        if isinstance(scope, ModuleRangeScope):
-            self.scope = scope
-        else:
-            self.scope = None
+        self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
 
     @staticmethod
     def set_cell_count(cell_name):
