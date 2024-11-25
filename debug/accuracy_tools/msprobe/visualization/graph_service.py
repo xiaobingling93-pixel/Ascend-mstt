@@ -16,21 +16,23 @@
 import os
 import time
 import json
-from msprobe.core.common.file_utils import FileOpen, check_file_type, create_directory, FileChecker
-from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.file_utils import (FileOpen, check_file_type, create_directory, FileChecker,
+                                            check_file_or_directory_path)
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.core.common.utils import CompareException
 from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.compare.graph_comparator import GraphComparator
-from msprobe.visualization.utils import GraphConst
+from msprobe.visualization.utils import GraphConst, check_directory_content
 from msprobe.visualization.builder.graph_builder import GraphBuilder, GraphExportConfig
 from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
+from msprobe.core.compare.utils import check_and_return_dir_contents
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def _compare_graph(input_param, args):
+def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.vis'):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
     dump_path_n = input_param.get('npu_path')
@@ -74,7 +76,7 @@ def _compare_graph(input_param, args):
         graph_b.overflow_check()
 
     create_directory(args.output_path)
-    output_path = os.path.join(args.output_path, f'compare_{current_time}.vis')
+    output_path = os.path.join(args.output_path, output_file_name)
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
@@ -101,6 +103,41 @@ def _build_graph(dump_path, out_path, overflow_check=False):
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
 
 
+def _compare_graph_ranks(input_param, args, step=None):
+    dump_rank_n = input_param.get('npu_path')
+    dump_rank_b = input_param.get('bench_path')
+    npu_ranks = sorted(check_and_return_dir_contents(dump_rank_n, Const.RANK))
+    bench_ranks = sorted(check_and_return_dir_contents(dump_rank_b, Const.RANK))
+    if npu_ranks != bench_ranks:
+        logger.error('The number of ranks in the two runs are different. Unable to match the ranks.')
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+    for nr, br in zip(npu_ranks, bench_ranks):
+        logger.info(f'Start processing data for {nr}...')
+        input_param['npu_path'] = os.path.join(dump_rank_n, nr)
+        input_param['bench_path'] = os.path.join(dump_rank_n, br)
+        output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
+        _compare_graph(input_param, args, output_file_name=output_file_name)
+
+
+def _compare_graph_steps(input_param, args):
+    dump_step_n = input_param.get('npu_path')
+    dump_step_b = input_param.get('bench_path')
+
+    npu_steps = sorted(check_and_return_dir_contents(dump_step_n, Const.STEP))
+    bench_steps = sorted(check_and_return_dir_contents(dump_step_b, Const.STEP))
+
+    if npu_steps != bench_steps:
+        logger.error('The number of steps in the two runs are different. Unable to match the steps.')
+        raise CompareException(CompareException.INVALID_PATH_ERROR)
+
+    for folder_step in npu_steps:
+        logger.info(f'Start processing data for {folder_step}...')
+        input_param['npu_path'] = os.path.join(dump_step_n, folder_step)
+        input_param['bench_path'] = os.path.join(dump_step_b, folder_step)
+
+        _compare_graph_ranks(input_param, args, step=folder_step)
+
+
 def _graph_service_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
@@ -117,10 +154,22 @@ def _graph_service_command(args):
         input_param = json.load(file)
     npu_path = input_param.get("npu_path")
     bench_path = input_param.get("bench_path")
+    check_file_or_directory_path(npu_path, isdir=True)
+    if bench_path:
+        check_file_or_directory_path(bench_path, isdir=True)
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
         _build_graph(npu_path, args.output_path, args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
-        _compare_graph(input_param, args)
+        content_n = check_directory_content(npu_path)
+        content_b = check_directory_content(bench_path)
+        if content_n != content_b:
+            raise ValueError('The directory structures of npu_path and bench_path are inconsistent.')
+        if content_n == GraphConst.RANKS:
+            _compare_graph_ranks(input_param, args)
+        elif content_n == GraphConst.STEPS:
+            _compare_graph_steps(input_param, args)
+        else:
+            _compare_graph(input_param, args)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
