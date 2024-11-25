@@ -93,7 +93,8 @@ class ModeAdapter:
                     value = data_info.get(GraphConst.VALUE_INDEX_LIST[index])
                     value_diff = data_info.get(key_list[index])
                     relative_err = str2float(data_info.get(item))
-                    if isinstance(value, float) and dtype in GraphConst.SMALL_VALUES.keys():
+                    if isinstance(value, float) and isinstance(value_diff, float) \
+                            and dtype in GraphConst.SMALL_VALUES.keys():
                         small_value = GraphConst.SMALL_VALUES.get(dtype)
                         # 小值域
                         if abs(value) <= small_value:

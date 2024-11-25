@@ -357,7 +357,7 @@ def check_cross_framework(bench_json_path):
     return False
 
 
-def ms_compare(input_param, output_path, **kwargs):
+def ms_compare(input_param, output_path, suffix=None, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
         auto_analyze = kwargs.get('auto_analyze', True)
@@ -379,5 +379,5 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = generate_data_mapping_by_layer_mapping(input_param, layer_mapping, output_path)
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
-    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode, suffix=suffix,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)
