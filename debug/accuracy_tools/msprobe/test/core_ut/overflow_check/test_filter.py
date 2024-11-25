@@ -26,7 +26,7 @@ class TestIgnoreFilter(unittest.TestCase):
 
     def setUp(self):
         self.mock_rule_path = "./mock_ignore_rules.yaml"
-        self.filter = IgnoreFilter(rule_path=self.mock_rule_path)
+        self.filter = IgnoreFilter()
 
     @patch("msprobe.core.common.file_utils.load_yaml")
     def test_load_rules(self, mock_load_yaml):
