@@ -412,12 +412,19 @@ class MsCompareConst:
     # api_info field
     MINT = "Mint"
     MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+
+    API_NAME_STR_LENGTH = 4
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
 
     # detail_csv
     DETAIL_CSV_API_NAME = "API Name"
