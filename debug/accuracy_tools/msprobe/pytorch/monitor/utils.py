@@ -54,7 +54,7 @@ def get_param_struct(param):
     if isinstance(param, (tuple, list)):
         res['config'] = f'{type(param).__name__}[{len(param)}]'
         for i, x in enumerate(param):
-            res[i] = f'size={tuple(x.shape)}, dtype={x.dtype}' if torch.is_tensor(x) else x
+            res[i] = f'size={tuple(x.shape)}, dtype={x.dtype}' if torch.is_tensor(x) else f'{type(x)}'
     elif torch.is_tensor(param):
         res['config'] = 'tensor'
         res['tensor'] = f'size={tuple(param.shape)}, dtype={param.dtype}'
