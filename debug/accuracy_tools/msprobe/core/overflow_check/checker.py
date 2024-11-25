@@ -55,7 +55,7 @@ class AnomalyDetector:
             InputAnomalyOutputNormalScene,      # 输入异常，输出正常
             NumericalMutationScene              # 输出较输入值突变
         ]
-        self.anomaly_scenes = dict()
+        self.anomaly_scenes: Dict[str, AnomalyScene] = dict()
 
     @staticmethod
     def _create_api_info(api_name: str, data: Dict) -> APIInfo:
