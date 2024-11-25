@@ -279,14 +279,21 @@ def get_dump_mode(input_param):
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
 
-    if npu_json_data['task'] != bench_json_data['task']:
+    npu_task = npu_json_data.get('task', None)
+    bench_task = bench_json_data.get('task', None)
+
+    if not npu_task or not bench_task:
+        logger.error(f"Please check the dump task is correct, npu's task is {npu_task}, bench's task is {bench_task}.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    if npu_task != bench_task:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
 
-    if npu_json_data['task'] == Const.TENSOR:
+    if npu_task == Const.TENSOR:
         return Const.ALL
 
-    if npu_json_data['task'] == Const.STATISTICS:
+    if npu_task == Const.STATISTICS:
         npu_md5_compare = md5_find(npu_json_data['data'])
         bench_md5_compare = md5_find(bench_json_data['data'])
         if npu_md5_compare == bench_md5_compare:

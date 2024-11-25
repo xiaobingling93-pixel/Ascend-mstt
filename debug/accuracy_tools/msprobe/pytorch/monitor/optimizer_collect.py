@@ -88,10 +88,8 @@ class OptimizerMon(ABC):
         partition_id = dist.get_rank()
 
         def get_flatten_grad(self, optimizer, group_idx):
-            if self.is_stage3 or optimizer.cpu_offload:
-                return fp32_partitioned_groups_flat[group_idx].grad
-            elif fp32_partitioned_groups_flat[group_idx].grad is None:
-                if partition_id == dist.get_world_size() - 1:
+            if  fp32_partitioned_groups_flat[group_idx].grad is None:
+                if partition_id == dist.get_world_size() - 1 and not self.is_stage3:
                     fp32_partitioned_groups_flat_grad = optimizer.flatten_dense_tensors_aligned(
                         optimizer.averaged_gradients[group_idx],
                         int(optimizer.partition_size[group_idx])
