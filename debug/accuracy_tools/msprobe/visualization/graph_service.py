@@ -114,7 +114,7 @@ def _compare_graph_ranks(input_param, args, step=None):
     for nr, br in zip(npu_ranks, bench_ranks):
         logger.info(f'Start processing data for {nr}...')
         input_param['npu_path'] = os.path.join(dump_rank_n, nr)
-        input_param['bench_path'] = os.path.join(dump_rank_n, br)
+        input_param['bench_path'] = os.path.join(dump_rank_b, br)
         output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
         _compare_graph(input_param, args, output_file_name=output_file_name)
 

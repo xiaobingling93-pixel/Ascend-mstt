@@ -101,8 +101,7 @@ def check_directory_content(input_path):
     for item in contents:
         item_path = os.path.join(input_path, item)
         if not os.path.isdir(item_path):
-            rank_all = step_all = False
-            break
+            continue
         if not rank_pattern.match(item):
             rank_all = False
         if not step_pattern.match(item):
