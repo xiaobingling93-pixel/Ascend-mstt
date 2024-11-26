@@ -1,5 +1,7 @@
-import numpy as np
+import json
 import os
+import numpy as np
+import unittest
 from unittest.mock import patch, MagicMock
 import mindspore as ms
 import mindspore.common.dtype as mstype
@@ -10,15 +12,17 @@ from mindspore import jit
 from msprobe.mindspore import PrecisionDebugger
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.dump.jit_dump import JitDump, dump_jit
-import unittest
-from unittest.mock import MagicMock, patch
+from msprobe.core.common.file_utils import FileOpen
+
 
 def conv(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_mode="valid", has_bias=True):
     return nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding,
-has_bias=has_bias, pad_mode=pad_mode)
+                     has_bias=has_bias, pad_mode=pad_mode)
+
 
 def fc_with_initialize(input_channels, out_channels, has_bias=True):
     return nn.Dense(input_channels, out_channels, has_bias=has_bias)
+
 
 class DataNormTranspose(nn.Cell):
     """Normalize an tensor image with mean and standard deviation.
@@ -47,6 +51,7 @@ class DataNormTranspose(nn.Cell):
         x = (x - self.mean) / self.std
         x = ops.transpose(x, (0, 3, 1, 2))
         return x
+
 
 class AlexNet(nn.Cell):
     """
@@ -105,81 +110,51 @@ class AlexNet(nn.Cell):
         x = ops.celu(x, 2.0)
         return x
 
-if __name__ == "__main__":
-    json_config = {
-        "task": "statistics",
-        "dump_path": "/absolute_path",
-        "rank": [],
-        "step": [],
-        "level": "L1"
-    }
 
-    common_config = CommonConfig(json_config)
-    task_config = BaseConfig(json_config)
-    mock_parse_json_config = MagicMock()
-    mock_parse_json_config.return_value = [common_config, task_config]
-    debugger = PrecisionDebugger()
-    ms.set_context(mode=ms.PYNATIVE_MODE)
-    net = AlexNet()
-    debugger.start()
-    ops.relu(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
-    grad_net = ms.grad(net, None, net.trainable_params())
-    output = grad_net(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
-    debugger.stop()
-    expected_file_count = 5
-    dir_path = "/absolute_path/step0/rank/dump_tensor_data/"
-    actual_file_count = len(os.listdir(dir_path))
-    assert actual_file_count == expected_file_count
+def save_dict_as_json(data, json_file_path):
+    with FileOpen(json_file_path, 'w') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 
-class SimpleNet(nn.Cell):
-    def __init__(self):
-        super(SimpleNet, self).__init__()
-        self.relu = ops.relu
-
-    def construct(self, x):
-        return self.relu(x)
-
-class TestJitDump(unittest.TestCase):
-    @patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_ori_func')
-    @patch('msprobe.mindspore.dump.hook_cell.api_registry.api_register.api_set_hook_func')
-    @patch.object(JitDump, 'need_dump', return_value=True)
-    def test_jitdump_forward(self, mock_need_dump, mock_set_ori_func, mock_set_hook_func):
+class TestJitDump0(unittest.TestCase):
+    def test_jitdump_forward_backward_L1(self):
+        file_path = os.path.abspath(__file__)
+        directory = os.path.dirname(file_path)
+        output_path = os.path.join(directory, "output_L1")
         # Set up configurations
         json_config = {
-            "task": "statistics",
-            "dump_path": "/absolute_path",
+            "task": "tensor",
+            "dump_path": output_path,
             "rank": [],
             "step": [],
             "level": "L1"
         }
+        config_json_path = os.path.join(directory, "config.json")
+        save_dict_as_json(json_config, config_json_path)
 
-        common_config = CommonConfig(json_config)
-        task_config = BaseConfig(json_config)
-        debugger = MagicMock()
+        PrecisionDebugger._instance = None
+        PrecisionDebugger.initialized = False
+
+        debugger = PrecisionDebugger(config_json_path)
 
         # Setup MindSpore context and JitDump class
         ms.set_context(mode=ms.PYNATIVE_MODE)
 
-        def identity_fn(x):
-            return x
+        net_model = AlexNet()
+        debugger.start()
+        ops.relu(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
+        grad_net = ms.grad(net_model, None, net_model.trainable_params())
+        output = grad_net(ms.Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32)))
+        debugger.stop()
+        expected_file_count = 5
+        output_tensor_path = os.path.join(output_path, "step0")
+        output_tensor_path = os.path.join(output_tensor_path, "rank")
+        output_tensor_path = os.path.join(output_tensor_path, "dump_tensor_data")
+        actual_file_count = len(os.listdir(output_tensor_path))
+        assert actual_file_count == expected_file_count
 
-        jit_dump_instance = JitDump(fn=identity_fn, ms_create_time=0)
 
-        # Set collector and config for JitDump
-        JitDump.set_config(common_config)
-        JitDump.set_data_collector(MagicMock())
-
-        net = SimpleNet()
-        input_tensor = Tensor(np.random.random([1, 227, 227, 3]).astype(np.float32))
-        output_tensor = net(input_tensor)
-
-        # Call the JitDump instance and validate expectations
-        jit_dump_instance(input_tensor)
-
-        # Assertions to ensure required methods are called
-        self.assertTrue(mock_set_ori_func.called, "api_set_ori_func should be called during forward pass.")
-
+class TestJitDump(unittest.TestCase):
     @patch('os.getpid', return_value=12345)
     def test_dump_jit(self, mock_getpid):
         in_feat = Tensor(np.array([1, 2, 3]), mstype.float32)
