@@ -347,7 +347,7 @@ def check_cross_framework(bench_json_path):
     return False
 
 
-def ms_compare(input_param, output_path, suffix=None, **kwargs):
+def ms_compare(input_param, output_path, **kwargs):
     try:
         stack_mode = kwargs.get('stack_mode', False)
         auto_analyze = kwargs.get('auto_analyze', True)
@@ -356,6 +356,7 @@ def ms_compare(input_param, output_path, suffix=None, **kwargs):
         api_mapping = kwargs.get('api_mapping', None)
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
+        suffix = kwargs.get('suffix', '')
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
