@@ -1,8 +1,24 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import unittest
 from unittest.mock import MagicMock, patch
-from msprobe.core.data_dump.scope import ModuleRangeScope
+
 from msprobe.core.common.const import Const
-from msprobe.mindspore.cell_processor import CellProcessor  # 替换为实际的模块名
+from msprobe.core.data_dump.scope import ModuleRangeScope
+from msprobe.mindspore.cell_processor import CellProcessor
 
 
 class MockCell:
@@ -95,6 +111,37 @@ class TestCellProcessor(unittest.TestCase):
         self.assertEqual(len(CellProcessor.cell_stack), 0)  # Stack should be empty now
         self.assertIsNone(CellProcessor.api_parent_node)
 
+    def test_set_and_get_reserved_name(self):
+        cell = MockCell()
+        cell.mindstudio_reserved_name = "mindstudio_reserved_name"
+        CellProcessor.reset_cell_stats()
 
-if __name__ == "__main__":
-    unittest.main()
+        cell_name = "Cell.net.Net.forward"
+        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
+        self.assertEqual(ret, cell_name + Const.SEP + "0")
+        self.assertEqual(cell.mindstudio_reserved_name, ret)
+        self.assertEqual(CellProcessor.cell_count[cell_name], 0)
+        self.assertFalse(hasattr(cell, "has_pre_hook_called"))
+
+        cell.has_pre_hook_called = False
+        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
+        self.assertEqual(ret, cell_name + Const.SEP + "1")
+        self.assertEqual(cell.mindstudio_reserved_name, ret)
+        self.assertEqual(CellProcessor.cell_count[cell_name], 1)
+        self.assertFalse(cell.has_pre_hook_called)
+
+        cell.has_pre_hook_called = True
+        cell.mindstudio_reserved_name = "mindstudio_reserved_name"
+        CellProcessor.reset_cell_stats()
+        ret = self.processor.set_and_get_reserved_name(cell, cell_name)
+        self.assertEqual(ret, "mindstudio_reserved_name")
+        self.assertEqual(cell.mindstudio_reserved_name, ret)
+        self.assertEqual(CellProcessor.cell_count, {})
+        self.assertFalse(cell.has_pre_hook_called)
+
+        ret = self.processor.set_and_get_reserved_name(cell, cell_name, is_called_by_pre_hook=True)
+        self.assertEqual(ret, cell_name + Const.SEP + "0")
+        self.assertEqual(cell.mindstudio_reserved_name, ret)
+        self.assertEqual(CellProcessor.cell_count[cell_name], 0)
+        self.assertTrue(cell.has_pre_hook_called)
+        CellProcessor.reset_cell_stats()
