@@ -84,9 +84,9 @@ class AnomalyDataLoader:
             try:
                 instances.append(GradAnomalyData(**values))
             except KeyError as e:
-                logger.warning(f"Missing key in anomaly data: {e}")
+                logger.warning(f"Missing key in anomaly data: {e}.")
             except Exception as e:
-                logger.warning(f"Value error when creating a GradAnomalyData instance: {e}")
+                logger.warning(f"Value error when creating a GradAnomalyData instance: {e}.")
         return instances
 
     def get_anomalies_from_jsons(self):
@@ -168,9 +168,9 @@ def _get_step_and_stop(args):
     try:
         step_list = ast.literal_eval(args.step_list)
         if not isinstance(step_list, list):
-            raise ValueError(f"{args.step_list} is not a list")
+            raise ValueError(f"{args.step_list} is not a list.")
     except (ValueError, SyntaxError, RecursionError) as e:
-        raise Exception(f"The step list must be a resolvable list type") from e
+        raise Exception(f"The step list must be a resolvable list type.") from e
     if args.top_k_number <= 0:
         raise Exception("The top k number must be greater than 0.")
     return step_list, args.top_k_number
