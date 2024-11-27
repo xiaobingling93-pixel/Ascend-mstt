@@ -266,8 +266,8 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    npu_path_valid = npu_path is not None and "dump" in npu_path
-    bench_path_valid = bench_path is not None and "dump" in bench_path
+    npu_path_valid = npu_path is not None and npu_path.endswith("dump.json")
+    bench_path_valid = bench_path is not None and bench_path.endswith("dump.json")
     if not npu_path_valid or not bench_path_valid:
         logger.error(f"Please check the json path is valid. npu_path: {npu_path}, bench_path: {bench_path}")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
