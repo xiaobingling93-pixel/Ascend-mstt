@@ -139,7 +139,7 @@ def _compare_graph_steps(input_param, args):
 
 
 def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=None):
-    ranks = check_and_return_dir_contents(dump_ranks_path, Const.RANK)
+    ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
     for rank in ranks:
         logger.info(f'Start processing data for {rank}...')
         dump_path = os.path.join(dump_ranks_path, rank)
@@ -148,7 +148,7 @@ def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=Non
 
 
 def _build_graph_steps(dump_steps_path, out_path, overflow_check=False):
-    steps = check_and_return_dir_contents(dump_steps_path, Const.STEP)
+    steps = sorted(check_and_return_dir_contents(dump_steps_path, Const.STEP))
     for step in steps:
         logger.info(f'Start processing data for {step}...')
         dump_ranks_path = os.path.join(dump_steps_path, step)

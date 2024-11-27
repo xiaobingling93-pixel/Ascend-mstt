@@ -88,6 +88,10 @@ def check_directory_content(input_path):
     if not contents:
         raise ValueError(f'The path {input_path} is empty.')
 
+    # 真实数据dump会有dump_tensor_data文件夹
+    if os.path.exists(os.path.join(input_path, Const.DUMP_TENSOR_DATA)):
+        return GraphConst.FILES
+
     # 检查是否全是文件
     if all(os.path.isfile(os.path.join(input_path, item)) for item in contents):
         return GraphConst.FILES
