@@ -20,7 +20,7 @@ import torch
 import torch.distributed as dist
 
 from msprobe.core.common.log import logger
-from msprobe.pytorch.monitor.utils import MVResult, MV_Grad_Result
+from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 
 class OptimizerMon(ABC):
@@ -142,8 +142,8 @@ class OptimizerMon(ABC):
                 monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
                 monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         del fp32_partitioned_groups_flat_grad
-        return MV_Grad_Result(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict,
-                              grad=param2name)
+        return MVGradResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict,
+                            grad=param2name)
 
 
 class MixPrecisionOptimizerMon(OptimizerMon):
@@ -171,7 +171,8 @@ class MegatronDistributedOptimizerMon(OptimizerMon):
                 "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
                 "if not, please check megatron-lm version")
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups, mix_prec_opt.shard_fp32_from_float16_groups):
+            for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups,
+                                                    mix_prec_opt.shard_fp32_from_float16_groups):
                 for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
                     self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
 
@@ -208,7 +209,7 @@ class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
             name2indices[name] = (start_idx, end_idx, group_idx, None)
         return name2indices
 
-    def fetch_mv(self, monitor, torch_opt, params2name, name2indices):
+    def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
         self.is_stage3 = True
         mix_prec_opt = OptimizerMon.wrapped_optimizer
         fp32_partitioned_groups_flat = mix_prec_opt.fp32_partitioned_groups_flat
@@ -261,7 +262,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
             name2indices[name] = (new_start_idx, new_end_idx, group_idx, group_with_rank)
         return name2indices
 
-    def fetch_mv(self, monitor, torch_opt, params2name, name2indices):
+    def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
         mix_prec_opt = OptimizerMon.wrapped_optimizer
         fp32_partitioned_groups_flat = mix_prec_opt.single_partition_of_fp32_groups
         return self._fetch_mv_grad_in_adam(monitor, torch_opt, params2name, name2indices, fp32_partitioned_groups_flat)

@@ -29,7 +29,7 @@ DIRECTORY_MAX_LENGTH = 4096
 
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
-MV_Grad_Result = namedtuple('MV_Grad_Result', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
+MVGradResult = namedtuple('MVGradResult', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
