@@ -490,6 +490,32 @@ ops:
   - scatter_update
   - derivative
   - jet
+  - row_stack
+  - gather
+  - arange
+  - cond
+  - slice_scatter
+  - clip_by_norm
+  - eps
+  - layer_norm
+  - cast
+  - numel
+  - permute
+  - select_scatter
+  - group_norm
+  - eq
+  - embedding
+  - bucketize
+  - ones_like
+  - zeros
+  - nanmean
+  - shape
+  - zeros_like
+  - is_floating_point
+  - ones
+  - diagonal_scatter
+  - vander
+  - is_nonzero
 
 tensor:
   - __abs__
