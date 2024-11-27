@@ -32,13 +32,9 @@ def extract_json(dirname, stack_json=False):
         if fname == 'construct.json':
             continue
         full_path = os.path.join(dirname, fname)
-        if full_path.endswith('.json'):
-            if not stack_json and 'dump' in full_path:
-                json_path = full_path
-                break
-            if stack_json and 'stack' in full_path:
-                json_path = full_path
-                break
+        if (not stack_json and full_path.endswith('dump.json')) or (stack_json and full_path.endswith('stack.json')):
+            json_path = full_path
+            break
 
     # Provide robustness on invalid directory inputs
     if not json_path:
