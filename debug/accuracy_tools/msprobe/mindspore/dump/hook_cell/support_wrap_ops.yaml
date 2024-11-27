@@ -505,17 +505,16 @@ ops:
   - group_norm
   - eq
   - embedding
-  - bucketize
   - ones_like
   - zeros
   - nanmean
   - shape
   - zeros_like
-  - is_floating_point
   - ones
   - diagonal_scatter
   - vander
   - is_nonzero
+  - rotary_position_embedding
 
 tensor:
   - __abs__
