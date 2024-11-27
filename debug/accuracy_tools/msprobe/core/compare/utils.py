@@ -29,7 +29,8 @@ from msprobe.core.common.file_utils import check_file_or_directory_path
 def extract_json(dirname, stack_json=False):
     json_path = ''
     for filename in os.listdir(dirname):
-        if (not stack_json and filename == 'dump.json') or (stack_json and filename == 'stack.json'):
+        target_file_name = 'stack.json' if stack_json else 'dump.json'
+        if filename == target_file_name:
             json_path = os.path.join(dirname, filename)
             break
 
