@@ -46,9 +46,9 @@ def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.
     data_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.DUMP_FILE), FileCheckConst.FILE,
                               FileCheckConst.READ_ABLE).common_check()
     stack_path_n = FileChecker(os.path.join(dump_path_n, GraphConst.STACK_FILE), FileCheckConst.FILE,
-                             FileCheckConst.READ_ABLE).common_check()
+                               FileCheckConst.READ_ABLE).common_check()
     stack_path_b = FileChecker(os.path.join(dump_path_b, GraphConst.STACK_FILE), FileCheckConst.FILE,
-                             FileCheckConst.READ_ABLE).common_check()
+                               FileCheckConst.READ_ABLE).common_check()
     graph_n = GraphBuilder.build(construct_path_n, data_path_n, stack_path_n)
     graph_b = GraphBuilder.build(construct_path_b, data_path_b, stack_path_b)
     logger.info('Model graphs built successfully, start Comparing graphs...')
@@ -84,7 +84,7 @@ def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def _build_graph(dump_path, out_path, overflow_check=False):
+def _build_graph(dump_path, out_path, overflow_check=False, output_file_name=f'build_{current_time}.vis'):
     logger.info('Start building model graph...')
     construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
                                  FileCheckConst.READ_ABLE).common_check()
@@ -93,7 +93,7 @@ def _build_graph(dump_path, out_path, overflow_check=False):
     stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
                              FileCheckConst.READ_ABLE).common_check()
     create_directory(out_path)
-    output_path = os.path.join(out_path, f'build_{current_time}.vis')
+    output_path = os.path.join(out_path, output_file_name)
     graph = GraphBuilder.build(construct_path, data_path, stack_path)
     micro_steps = graph.paging_by_micro_step()
     # 开启溢出检测
@@ -138,6 +138,23 @@ def _compare_graph_steps(input_param, args):
         _compare_graph_ranks(input_param, args, step=folder_step)
 
 
+def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=None):
+    ranks = check_and_return_dir_contents(dump_ranks_path, Const.RANK)
+    for rank in ranks:
+        logger.info(f'Start processing data for {rank}...')
+        dump_path = os.path.join(dump_ranks_path, rank)
+        output_file_name = f'build_{step}_{rank}_{current_time}.vis' if step else f'build_{rank}_{current_time}.vis'
+        _build_graph(dump_path, out_path, overflow_check, output_file_name)
+
+
+def _build_graph_steps(dump_steps_path, out_path, overflow_check=False):
+    steps = check_and_return_dir_contents(dump_steps_path, Const.STEP)
+    for step in steps:
+        logger.info(f'Start processing data for {step}...')
+        dump_ranks_path = os.path.join(dump_steps_path, step)
+        _build_graph_ranks(dump_ranks_path, out_path, overflow_check, step)
+
+
 def _graph_service_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
@@ -158,7 +175,13 @@ def _graph_service_command(args):
     if bench_path:
         check_file_or_directory_path(bench_path, isdir=True)
     if check_file_type(npu_path) == FileCheckConst.DIR and not bench_path:
-        _build_graph(npu_path, args.output_path, args.overflow_check)
+        content = check_directory_content(npu_path)
+        if content == GraphConst.RANKS:
+            _build_graph_ranks(npu_path, args.output_path, args.overflow_check)
+        elif content == GraphConst.STEPS:
+            _build_graph_steps(npu_path, args.output_path, args.overflow_check)
+        else:
+            _build_graph(npu_path, args.output_path, args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         content_n = check_directory_content(npu_path)
         content_b = check_directory_content(bench_path)
