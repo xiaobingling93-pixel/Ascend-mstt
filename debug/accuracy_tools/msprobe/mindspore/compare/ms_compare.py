@@ -197,12 +197,7 @@ class MSComparator(Comparator):
             data_value = data_value.numpy()
         else:
             data_value = load_npy(data_path) 
-        return data_value    
-
-    def api_replace(self, npu_op_name, target, para):
-        for idx, _ in enumerate(npu_op_name):
-            npu_op_name[idx] = npu_op_name[idx].replace(target, para)
-        return npu_op_name
+        return data_value
 
     def process_internal_api_mapping(self, npu_op_name):
         # get api name & class name from op_name
@@ -217,11 +212,6 @@ class MSComparator(Comparator):
             return npu_op_name.replace(ms_api_name, self.ms_to_pt_mapping.get(ms_api_name))
         else:
             return npu_op_name
-    
-    def remove_element(self, op_name, struct, summary, idx):
-        del op_name[idx]
-        del struct[idx]
-        del summary[idx]
     
     def get_api_name(self, api_list):
         try:
@@ -366,6 +356,7 @@ def ms_compare(input_param, output_path, **kwargs):
         api_mapping = kwargs.get('api_mapping', None)
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
+        suffix = kwargs.get('suffix', '')
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
@@ -379,5 +370,5 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = generate_data_mapping_by_layer_mapping(input_param, layer_mapping, output_path)
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
-    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode, suffix=suffix,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)

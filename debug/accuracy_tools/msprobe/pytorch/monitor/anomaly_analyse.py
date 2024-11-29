@@ -112,7 +112,7 @@ class AnomalyAnalyse:
     def __init__(self) -> None:
         self.sorted_anomalies = []
 
-    def get_range_top_K(self, topk, step_list, anomalies):
+    def get_range_top_k(self, topk, step_list, anomalies):
         """
         获取前topk个step_list范围内的异常。
         """
@@ -120,7 +120,9 @@ class AnomalyAnalyse:
             filtered_anomalies = anomalies
         else:
             filtered_anomalies = [
-                anomaly for anomaly in anomalies if anomaly.step in step_list
+                anomaly
+                for anomaly in anomalies
+                if anomaly.step in step_list
             ]
         if topk >= len(filtered_anomalies):
             self.sorted_anomalies = sorted(filtered_anomalies)
@@ -182,7 +184,7 @@ def _anomaly_analyse():
     loader = AnomalyDataLoader(args.data_path_dir)
     anomalies = loader.get_anomalies_from_jsons()
     analyser = AnomalyAnalyse()
-    top_anomalies = analyser.get_range_top_K(
+    top_anomalies = analyser.get_range_top_k(
         top_k_number, step_list, anomalies
     )
     analyser.rewrite_sorted_anomalies(

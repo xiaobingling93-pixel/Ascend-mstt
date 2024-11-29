@@ -17,7 +17,7 @@ import os
 from tqdm import tqdm
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
@@ -27,6 +27,8 @@ from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_jso
                                                           trim_output_compute_element_list)
 from msprobe.mindspore.common.log import logger
 
+cur_path = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
 
 class BasicInfoAndStatus:
     def __init__(self, api_name, bench_dtype, tested_dtype, shape, status, err_msg) -> None:
@@ -126,6 +128,29 @@ class ApiAccuracyChecker:
             gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
         return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
 
+    @staticmethod
+    def is_api_checkable(api_name_str):
+        '''
+        Args:
+            api_name_str: str, e.g. "MintFunctional.relu.0.forward", key in data field of api_info.json
+        Returns:
+            is_checkable: bool
+        Description:
+            tell whether this api is checkable based on the key in "data" dict in api_info.json
+        '''
+        api_name_str_list = api_name_str.split(Const.SEP)
+        if len(api_name_str_list) < MsCompareConst.API_NAME_STR_LENGTH:
+            return False
+        api_type_str = api_name_str_list[0]
+        real_api_str = Const.SEP.join(api_name_str_list[1:-2])
+        api_list = load_yaml(yaml_path)
+        supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
+        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL):
+            return True
+        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list:
+            return True
+        return False
+
     def parse(self, api_info_path):
         api_info_dict = load_json(api_info_path)
 
@@ -145,9 +170,7 @@ class ApiAccuracyChecker:
         api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
                                                      "data field in api_info.json", accepted_type=dict)
         for api_name, api_info in api_info_data.items():
-            is_mint = api_name.split(Const.SEP)[0] in \
-                      (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
-            if not is_mint:
+            if not self.is_api_checkable(api_name):
                 continue
             forbackward_str = api_name.split(Const.SEP)[-1]
             if forbackward_str not in (Const.FORWARD, Const.BACKWARD):

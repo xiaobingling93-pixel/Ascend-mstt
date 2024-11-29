@@ -136,8 +136,8 @@ class GraphConst:
     OUTPUT_INDEX_TWO = -2
     OUTPUT_INDEX_THREE = -3
     OUTPUT_MIN_LEN = 3
-    INPUT = 'input'
-    OUTPUT = 'output'
+    INPUT = '.input.'
+    OUTPUT = '.output.'
     STR_MAX_LEN = 50
     SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]

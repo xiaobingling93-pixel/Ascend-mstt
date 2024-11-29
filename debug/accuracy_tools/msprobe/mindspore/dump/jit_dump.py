@@ -67,7 +67,8 @@ class JitDump(_MindsporeFunctionExecutor):
         self._executor = PyNativeExecutor_.get_instance()
 
     def __call__(self, *args, **kwargs):
-        api_register.api_set_ori_func()
+        if JitDump.jit_dump_switch:
+            api_register.api_set_ori_func()
         out = super().__call__(*args, **kwargs)
         if JitDump.jit_dump_switch and len(args) > 0:
             if self.name and self.name != "construct":
@@ -75,9 +76,10 @@ class JitDump(_MindsporeFunctionExecutor):
             else:
                 dump_jit(args[0], args, out, True)
             JitDump.jit_enable = True
-        else:
+        elif len(args) == 0:
             logger.warning(f"The jit function {self.name} has no input arguments, nothing will be dumped.")
-        api_register.api_set_hook_func()
+        if JitDump.jit_dump_switch:
+            api_register.api_set_hook_func()
         return out
 
     @classmethod

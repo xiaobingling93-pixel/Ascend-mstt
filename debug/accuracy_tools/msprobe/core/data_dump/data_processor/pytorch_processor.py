@@ -118,6 +118,12 @@ class PytorchDataProcessor(BaseDataProcessor):
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
+    def process_group_hash(arg):
+        group_ranks = dist.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
+
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -130,11 +136,12 @@ class PytorchDataProcessor(BaseDataProcessor):
 
     @staticmethod
     def _analyze_process_group(arg):
-        group_id = hashlib.md5(str(id(arg)).encode('utf-8')).hexdigest()
-        group_info = {"type": "torch.ProcessGroup", "process_group_id": group_id}
+        group_info = {"type": "torch.ProcessGroup"}
         try:
             group_ranks = dist.get_process_group_ranks(arg)
             group_info.update({"group_ranks": group_ranks})
+            group_id = PytorchDataProcessor.process_group_hash(arg)
+            group_info.update({"group_id": group_id})
         except Exception as e:
             logger.warning(f"Failed to get process group(id: {group_id}) ranks info with error info: {e}.")
         return group_info
