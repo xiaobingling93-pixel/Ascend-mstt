@@ -48,7 +48,7 @@ def _merge_result_parser(parser):
 
 
 def merge_result_cli(args):
-    input_dir_checker = FileChecker(args.input_dir, FileCheckConst.DIR, FileCheckConst.READ_ABLE)     # TODO 入参需要确认
+    input_dir_checker = FileChecker(args.input_dir, FileCheckConst.DIR, FileCheckConst.READ_ABLE)
     input_dir = input_dir_checker.common_check()
     create_directory(args.output_dir)
 
