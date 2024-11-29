@@ -20,7 +20,7 @@ import torch
 import torch.distributed as dist
 
 from msprobe.core.common.log import logger
-from msprobe.pytorch.monitor.utils import MVResult, MV_Grad_Result
+from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 
 class OptimizerMon(ABC):
@@ -43,8 +43,6 @@ class OptimizerMon(ABC):
         exp_avg_sq_dict = defaultdict(float)
         update_dict = defaultdict()
         ratio_dict = defaultdict()
-        if len(torch_opt.param_groups) > 1:
-            logger.warning(f"the length of torch_opt.param_groups larger than one, not compatible.")
         for param, name in params2name.items():
             if param in self.fp16_to_fp32_param:
                 param = self.fp16_to_fp32_param[param]
@@ -62,6 +60,8 @@ class OptimizerMon(ABC):
                 if monitor.mg_direction:
                     exp_avg_dict[name] = exp_avg
                 if monitor.ur_distribution:
+                    if len(torch_opt.param_groups) > 1:
+                        logger.info(f"the length of torch_opt.param_groups is {len(torch_opt.param_groups)}.")
                     if 'step' in state_param:
                         step = state_param['step']  # Optimizer from pytorch or FusedAdam from apex(used by megatron)
                     elif 'step' in torch_opt.param_groups[0]:
@@ -88,10 +88,8 @@ class OptimizerMon(ABC):
         partition_id = dist.get_rank()
 
         def get_flatten_grad(self, optimizer, group_idx):
-            if self.is_stage3 or optimizer.cpu_offload:
-                return fp32_partitioned_groups_flat[group_idx].grad
-            elif fp32_partitioned_groups_flat[group_idx].grad is None:
-                if partition_id == dist.get_world_size() - 1:
+            if  fp32_partitioned_groups_flat[group_idx].grad is None:
+                if partition_id == dist.get_world_size() - 1 and not self.is_stage3:
                     fp32_partitioned_groups_flat_grad = optimizer.flatten_dense_tensors_aligned(
                         optimizer.averaged_gradients[group_idx],
                         int(optimizer.partition_size[group_idx])
@@ -144,8 +142,8 @@ class OptimizerMon(ABC):
                 monitor.update_heatmap_visualizer[name].pre_cal(update_dict[name])
                 monitor.ratio_heatmap_visualizer[name].pre_cal(ratio_dict[name])
         del fp32_partitioned_groups_flat_grad
-        return MV_Grad_Result(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict,
-                              grad=param2name)
+        return MVGradResult(exp_avg=exp_avg_dict, exp_avg_sq=exp_avg_sq_dict, update=update_dict, ratio=ratio_dict,
+                            grad=param2name)
 
 
 class MixPrecisionOptimizerMon(OptimizerMon):
@@ -173,7 +171,8 @@ class MegatronDistributedOptimizerMon(OptimizerMon):
                 "megatron distributed optimizer should have model_float16_groups and shard_fp32_from_float16_groups, "
                 "if not, please check megatron-lm version")
         if not self.fp16_to_fp32_param and mix_prec_opt is not None:
-            for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups, mix_prec_opt.shard_fp32_from_float16_groups):
+            for fp16_group, shard_fp32_group in zip(mix_prec_opt.model_float16_groups,
+                                                    mix_prec_opt.shard_fp32_from_float16_groups):
                 for fp16_param, shard_fp32_param in zip(fp16_group, shard_fp32_group):
                     self.fp16_to_fp32_param[fp16_param] = shard_fp32_param
 
@@ -210,7 +209,7 @@ class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
             name2indices[name] = (start_idx, end_idx, group_idx, None)
         return name2indices
 
-    def fetch_mv(self, monitor, torch_opt, params2name, name2indices):
+    def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
         self.is_stage3 = True
         mix_prec_opt = OptimizerMon.wrapped_optimizer
         fp32_partitioned_groups_flat = mix_prec_opt.fp32_partitioned_groups_flat
@@ -263,7 +262,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
             name2indices[name] = (new_start_idx, new_end_idx, group_idx, group_with_rank)
         return name2indices
 
-    def fetch_mv(self, monitor, torch_opt, params2name, name2indices):
+    def fetch_mv(self, monitor, torch_opt, params2name, name2indices=None):
         mix_prec_opt = OptimizerMon.wrapped_optimizer
         fp32_partitioned_groups_flat = mix_prec_opt.single_partition_of_fp32_groups
         return self._fetch_mv_grad_in_adam(monitor, torch_opt, params2name, name2indices, fp32_partitioned_groups_flat)

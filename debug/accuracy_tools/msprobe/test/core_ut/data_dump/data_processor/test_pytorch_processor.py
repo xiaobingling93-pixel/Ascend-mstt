@@ -165,6 +165,17 @@ class TestPytorchDataProcessor(unittest.TestCase):
         expected = {'type': 'slice', 'value': [None, None, None]}
         self.assertEqual(result, expected)
 
+    def test_process_group_hash(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor.process_group_hash(process_group_element)
+        expected = hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        self.assertEqual(result, expected)
+
     def test_analyze_torch_size(self):
         size = torch.Size([3, 4, 5])
         result = self.processor._analyze_torch_size(size)
@@ -180,11 +191,16 @@ class TestPytorchDataProcessor(unittest.TestCase):
     def test_analyze_process_group(self):
         os.environ['MASTER_ADDR'] = 'localhost'
         os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
         dist.init_process_group(backend='gloo', world_size=1, rank=0)
         process_group_element = dist.group.WORLD
         result = self.processor._analyze_process_group(process_group_element)
-        expected = {'type': 'torch.ProcessGroup', \
-                    'process_group_id': hashlib.md5(str(id(process_group_element)).encode('utf-8')).hexdigest(), 'group_ranks': [0]}
+        expected = {
+            'type': 'torch.ProcessGroup',
+            'group_ranks': [0],
+            'group_id': hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        }
         self.assertEqual(result, expected)
 
     def test_get_special_types(self):
@@ -204,6 +220,8 @@ class TestPytorchDataProcessor(unittest.TestCase):
     def test_analyze_single_element_process_group(self):
         os.environ['MASTER_ADDR'] = 'localhost'
         os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
         dist.init_process_group(backend='gloo', world_size=1, rank=0)
         process_group_element = dist.group.WORLD
         result = self.processor.analyze_single_element(process_group_element, [])

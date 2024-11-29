@@ -119,9 +119,15 @@ class AnomalyDataFactory(ABC):
         """
         self.name2callid = name2callid
 
-    def create(self, tag_name, message, step):
+    def create(self, tag, message, step):
         """如果检查出异常, 调用当前接口生成GradAnomalyData实例
+        tag (tuple): metric tag ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
+        message (str): anomaly detect message
+        step (int): training step
         """
+        if not isinstance(tag, tuple) or len(tag) != 2:
+            raise ValueError("tag must be a tuple with length 2")
+        tag_name = tag[0]
         param_name = tag_name.split('/')[0]
         call_id = self.name2callid.get(param_name, -1)
         if MonitorConst.VPP_SEP in param_name:
