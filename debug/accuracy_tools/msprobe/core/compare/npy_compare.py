@@ -33,7 +33,7 @@ def handle_inf_nan(n_value, b_value):
                 return float(value)
         except ValueError as e:
             logger.error('\n'.join(e.args))
-            raise CompareException(CompareException.INVALID_DATA_ERROR)
+            raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
     n_value, b_value = convert_to_float(n_value), convert_to_float(b_value)
     """处理inf和nan的数据"""
