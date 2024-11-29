@@ -14,13 +14,28 @@
 # limitations under the License.
 
 import abc
+
+import numpy
 import numpy as np
 from msprobe.core.common.utils import format_value
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
+from debug.accuracy_tools.msprobe.core.common.utils import CompareException
+
 
 def handle_inf_nan(n_value, b_value):
+    def convert_to_float(value):
+        try:
+            if isinstance(value, numpy.ndarray):
+                return value.astype(float)
+            else:
+                return float(value)
+        except ValueError as e:
+            logger.error('\n'.join(e.args))
+            raise CompareException(CompareException.INVALID_DATA_ERROR)
+
+    n_value, b_value = convert_to_float(n_value), convert_to_float(b_value)
     """处理inf和nan的数据"""
     n_inf = np.isinf(n_value)
     b_inf = np.isinf(b_value)
