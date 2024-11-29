@@ -21,7 +21,7 @@ from msprobe.core.common.utils import format_value
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
 
-from debug.accuracy_tools.msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException
 
 
 def handle_inf_nan(n_value, b_value):
