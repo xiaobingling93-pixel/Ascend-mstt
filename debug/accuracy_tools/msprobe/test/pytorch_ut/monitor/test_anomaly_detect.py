@@ -79,13 +79,13 @@ class TestAnomalyDataFactory(TestCase):
         self.assertEqual(self.AnomalyDataFactory.name2callid, {'param_name': 0})
 
     def test_create(self):
-        tag_name = "0:1.self_attention.core_attention_flash_0/rank0/output"
+        tag = ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min')
         message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min') at step 2."
         step = 2
-        result = self.AnomalyDataFactory.create(tag_name, message, step)
+        result = self.AnomalyDataFactory.create(tag, message, step)
         
         self.assertEqual(result.step, step)
-        self.assertEqual(result.tag_name, tag_name)
+        self.assertEqual(result.tag_name, tag[0])
         self.assertEqual(result.message, message)
         self.assertEqual(result.vpp_stage, 0)
 
