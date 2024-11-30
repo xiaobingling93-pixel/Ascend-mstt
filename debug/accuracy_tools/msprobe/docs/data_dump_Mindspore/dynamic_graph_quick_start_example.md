@@ -12,9 +12,7 @@
     "dump_path": "./output",
     "rank": [],
     "step": [],
-    "level": "L0",
-    "seed": 1234,
-    "is_deterministic": false,
+    "level": "L1",
     "enable_dataloader": false,
     "statistics": {
         "scope": [],
@@ -40,11 +38,10 @@ import mindspore as ms
 from mindspore import nn, ops
 from mindspore import context
 from mindspore import Tensor
-from msprobe.mindspore import PrecisionDebugger
+from msprobe.mindspore import PrecisionDebugger, seed_all
 
 # 设置随机种子以确保结果可重现
-ms.set_seed(1)
-np.random.seed(1)
+seed_all(seed=1234, mode=False, rm_dropout=True)
 
 # 配置文件路径
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -108,6 +105,8 @@ class AlexNet(nn.Cell):
         x = self.add(x, 0.1)  # 偏置加法
         x = self.mul(x, 2.0)  # 乘法操作
         x = self.relu(x)  # ReLU 激活函数
+        x = ops.celu(x) 
+        x = x + 2
 
         # 打印每层输出形状，调试时可使用
         print(f"After Conv1: {x.shape}")
