@@ -26,8 +26,8 @@
     }
 }
 
-以上配置参数详细介绍和使用请参见[《config.json 配置文件介绍》](../02.config_introduction.md)和[《config.json 配置示例》](../03.config_examples.md) 中的“MindSpore场景”。
 ```
+以上配置参数详细介绍和使用请参见[《config.json 配置文件介绍》](../02.config_introduction.md)和[《config.json 配置示例》](../03.config_examples.md) 中的“MindSpore场景”。
 
 ## 2. 模型脚本
 
