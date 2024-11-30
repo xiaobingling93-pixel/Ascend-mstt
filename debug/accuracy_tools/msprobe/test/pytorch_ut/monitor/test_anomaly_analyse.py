@@ -163,17 +163,17 @@ class TestAnomalyAnalyse(unittest.TestCase):
         ]
 
     @patch('msprobe.pytorch.monitor.anomaly_analyse.heapq.nsmallest')
-    def test_get_range_top_K(self, mock_nsmallest):
+    def test_get_range_top_k(self, mock_nsmallest):
         # 设置 mock 的返回值
         mock_nsmallest.return_value = self.anomalies[:2]
 
         # 测试 step_list 为空
-        result = self.anomaly_analyse.get_range_top_K(2, [], self.anomalies)
+        result = self.anomaly_analyse.get_range_top_k(2, [], self.anomalies)
         self.assertEqual(result, [self.anomalies[0], self.anomalies[1]])
 
         # 测试 step_list 不为空
         step_list = [1, 2, 3]
-        result = self.anomaly_analyse.get_range_top_K(2, step_list, self.anomalies)
+        result = self.anomaly_analyse.get_range_top_k(2, step_list, self.anomalies)
         self.assertEqual(result, [self.anomalies[0], self.anomalies[1]])  # 应该是 value=3 和 value=5 的异常
 
     @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
@@ -335,7 +335,7 @@ class TestAnomalyAnalyseFunction(unittest.TestCase):
 
         # 模拟异常分析
         mock_analyser_instance = MagicMock()
-        mock_analyser_instance.get_range_top_K.return_value = [
+        mock_analyser_instance.get_range_top_k.return_value = [
             MagicMock(message='Top Anomaly 1'),
             MagicMock(message='Top Anomaly 2')
         ]
@@ -349,7 +349,7 @@ class TestAnomalyAnalyseFunction(unittest.TestCase):
         mock_get_step_and_stop.assert_called_once_with(mock_args)
         mock_anomaly_data_loader.assert_called_once_with(mock_args.data_path_dir)
         mock_loader_instance.get_anomalies_from_jsons.assert_called_once()
-        mock_analyser_instance.get_range_top_K.assert_called_once_with(
+        mock_analyser_instance.get_range_top_k.assert_called_once_with(
             mock_top_k_number, mock_step_list, mock_loader_instance.get_anomalies_from_jsons.return_value
         )
         mock_analyser_instance.rewrite_sorted_anomalies.assert_called_once_with(mock_args.out_path)
