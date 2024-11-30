@@ -32,6 +32,7 @@ from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
+from msprobe.pytorch.hook_module.register_optimizer_hook import register_optimizer_hook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
@@ -312,6 +313,10 @@ class Service:
                 self.config.online_run_ut
             )
             api_register.api_modularity()
+
+        if self.config.level == Const.LEVEL_MIX:
+            register_optimizer_hook(self.data_collector)
+
 
     def attl_init(self):
         if self.config.online_run_ut:
