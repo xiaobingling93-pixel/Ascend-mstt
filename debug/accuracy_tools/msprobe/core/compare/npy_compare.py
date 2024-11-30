@@ -35,12 +35,12 @@ def handle_inf_nan(n_value, b_value):
             logger.error('\n'.join(e.args))
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
-    n_value, b_value = convert_to_float(n_value), convert_to_float(b_value)
+    n_value_convert, b_value_convert = convert_to_float(n_value), convert_to_float(b_value)
     """处理inf和nan的数据"""
-    n_inf = np.isinf(n_value)
-    b_inf = np.isinf(b_value)
-    n_nan = np.isnan(n_value)
-    b_nan = np.isnan(b_value)
+    n_inf = np.isinf(n_value_convert)
+    b_inf = np.isinf(b_value_convert)
+    n_nan = np.isnan(n_value_convert)
+    b_nan = np.isnan(b_value_convert)
     n_invalid = np.any(n_inf) or np.any(n_nan)
     b_invalid = np.any(b_inf) or np.any(b_nan)
     if n_invalid or b_invalid:
