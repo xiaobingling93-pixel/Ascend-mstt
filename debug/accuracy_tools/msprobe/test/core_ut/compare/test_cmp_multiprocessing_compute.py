@@ -48,6 +48,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     def test_handle_multi_process(self):
         func = Comparator().compare_ops
+        generate_dump_json(base_dir)
         input_parma = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
         lock = multiprocessing.Manager().RLock()
         result = _handle_multi_process(func, input_parma, result_df, lock)
