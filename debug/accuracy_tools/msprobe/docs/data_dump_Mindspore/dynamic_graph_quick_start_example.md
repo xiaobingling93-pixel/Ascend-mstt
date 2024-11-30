@@ -27,7 +27,7 @@
 }
 
 ```
-以上配置参数详细介绍和使用请参见[《config.json 配置文件介绍》](../02.config_introduction.md)和[《config.json 配置示例》](../03.config_examples.md) 中的“MindSpore场景”。
+以上配置参数详细介绍和使用请参见[《config.json 配置文件介绍》](../02.config_introduction.md)和[《config.json 配置示例》](../03.config_examples.md#3-mindspore-动态图场景) 中的“MindSpore动态图场景”。
 
 ## 2. 模型脚本
 
@@ -200,7 +200,7 @@ python alexnet_model.py
 
 ## 5. 数据分析
 
-在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用msprobe工具的精度预检和精度比对等操作，详细流程请参见[《config.json 配置示例》](../../README.md)。：
+在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用msprobe工具的精度预检和精度比对等操作，详细流程请参见[《config.json 配置示例》](../../README.md#2-精度预检)。：
 
 ```bash
 output/
