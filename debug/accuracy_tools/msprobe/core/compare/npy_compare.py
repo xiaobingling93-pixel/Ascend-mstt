@@ -131,7 +131,11 @@ def npy_data_check(n_value, b_value):
             error_message += "Dtype of NPU and bench Tensor do not match. Skipped.\n"
 
     if not error_message:
-        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有 nan/inf 数据
+        try:
+            n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
+        except CompareException:
+            logger.error('Numpy data is unreadable, please check!')
+            return True, 'Numpy data is unreadable, please check!'
         # handle_inf_nan 会返回'Nan'或ndarray类型，使用类型判断是否存在无法处理的nan/inf数据
         if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
             error_message += "The position of inf or nan in NPU and bench Tensor do not match.\n"
