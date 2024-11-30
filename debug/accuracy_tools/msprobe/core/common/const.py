@@ -360,6 +360,7 @@ class CompareConst:
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+    UNREADABLE = 'unreadable data'
 
 
 class FileCheckConst:

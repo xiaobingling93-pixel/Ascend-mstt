@@ -64,7 +64,11 @@ def get_error_type(n_value, b_value, error_flag):
     if not n_value.shape:  # 判断数据是否为标量
         return n_value, b_value, False
 
-    n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
+    try:
+        n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
+    except CompareException:
+        logger.error('Numpy data is unreadable, please check!')
+        return CompareConst.UNREADABLE, CompareConst.UNREADABLE, True
     if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
         return CompareConst.NAN, CompareConst.NAN, True
     return n_value, b_value, False
@@ -98,6 +102,8 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
             return "Shape of NPU and bench Tensor do not match. Skipped."
         if n_value == CompareConst.NAN:
             return "The position of inf or nan in NPU and bench Tensor do not match."
+        if n_value == CompareConst.UNREADABLE:
+            return "The npy data is unable to be read or compared, please check dump data files."
     else:
         if not n_value.shape:
             return "This is type of scalar data, can not compare."
