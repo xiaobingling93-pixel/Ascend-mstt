@@ -122,8 +122,7 @@ def extract_api_full_name(api_list, result_df, rank_num):
         single_api_full_name_list = result_df.loc[
             result_df[CompareConst.NPU_NAME].str.contains(api, na=False), CompareConst.NPU_NAME].tolist()
         if len(single_api_full_name_list) == 0:
-            logger.warning(
-                f"{api} not found in rank{rank_num} compare result.")
+            logger.warning(f"{api} not found in rank{rank_num} compare result.")
             continue
         api_full_name_list.extend(single_api_full_name_list)
     return api_full_name_list
@@ -263,7 +262,7 @@ def gen_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir,
     merge_df_list = df_merge(all_result_df_list)
     final_result_df_list = []
     for i, df in enumerate(merge_df_list):
-        final_result_df_list.append((df, compare_index_list[i]))
+        final_result_df_list.append((df, compare_index_list[i]))    # merge_df_list中df与compare_index_list中compare_index一一对应
     save_excel(output_path, final_result_df_list)
     logger.info(f"The compare results of the multi-ranks are merged and saved in: {output_path}.")
 
@@ -272,7 +271,7 @@ def df_merge(all_result_df_list):
     """
     merge different rank result_df
     """
-    merge_df_base = all_result_df_list[0].copy()
+    merge_df_base = all_result_df_list[0].copy()  # TODO 需要验一下第一个rank的结果为空的情况
     for sublist in all_result_df_list[1:]:
         for i in range(len(sublist)):
             merge_df_base[i] = pd.merge(merge_df_base[i], sublist[i], on=CompareConst.NPU_NAME, how='outer')
@@ -280,8 +279,8 @@ def df_merge(all_result_df_list):
 
 
 def merge_result(input_dir, output_dir, api_yaml_path, compare_index_list):
-    compare_result_path_list = get_result_path(input_dir)       # 获得的input_dir中所有比对结果件的全路径，并且对单卡rank，文件名不符合，文件数量太少进行特别处理
-    dump_mode = get_dump_mode(compare_result_path_list[0])      # 通过第一个rank结果获取dump_mode # TODO 是否要校验所有rank的dump_mode
+    compare_result_path_list = get_result_path(input_dir)   # 获得的input_dir中所有比对结果件的全路径，数量少于2，便提示退出
+    dump_mode = get_dump_mode(compare_result_path_list[0])  # 通过第一个rank结果获取dump_mode # TODO 是否要校验所有rank的dump_mode
     api_list = load_yaml(api_yaml_path)
     compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)   # 校验index是否存在于对应的dump_mode中, 如果传入空，返回全部compare_index
 
