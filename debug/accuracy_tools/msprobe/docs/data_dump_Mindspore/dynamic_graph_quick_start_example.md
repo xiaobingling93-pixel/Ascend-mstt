@@ -1,4 +1,4 @@
-# 动态图快速入门示例
+# 动态图精度数据采集快速入门示例
 
 本示例将展示如何在 MindSpore 动态图模式下使用 msprobe 工具进行精度数据采集。
 
@@ -13,7 +13,6 @@
     "rank": [],
     "step": [],
     "level": "L1",
-    "enable_dataloader": false,
     "statistics": {
         "scope": [],
         "list": [],
@@ -51,7 +50,7 @@ config_path = os.path.join(script_dir, 'config.json')
 debugger = PrecisionDebugger(config_path=config_path)
 
 # 设置 MindSpore 设备上下文
-context.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", device_id=0, deterministic='ON')
+context.set_context(mode=ms.PYNATIVE_MODE, device_target="Ascend", device_id=0)
 
 # 定义卷积层
 def conv_layer(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_mode="valid", has_bias=True):
@@ -61,6 +60,7 @@ def conv_layer(in_channels, out_channels, kernel_size, stride=1, padding=0, pad_
 # 定义全连接层
 def fc_layer(input_channels, out_channels, has_bias=True):
     return nn.Dense(input_channels, out_channels, has_bias=has_bias)
+
 
 class AlexNet(nn.Cell):
     """
@@ -187,7 +187,7 @@ python alexnet_model.py
 
 ## 4. 查看采集结果
 
-执行训练脚本命令后，工具会将模型训练过程中的精度数据采集下来。
+执行训练命令后，工具会将模型训练过程中的精度数据采集下来。
 
 日志中打印出现如下信息表示数据采集成功，即可手动停止模型训练查看采集数据。
 
@@ -199,13 +199,13 @@ python alexnet_model.py
 
 ## 5. 数据分析
 
-在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用msprobe工具的精度预检和精度比对等操作，详细流程请参见[《msprobe使用手册》](../../README.md#2-精度预检)。：
+在 `dump_path` 参数指定的路径下（本例中为 `./output`），会出现如下目录结构，后续精度数据分析操作可使用 msprobe 工具的精度预检和精度比对等功能，详细流程请参见[《msprobe使用手册》](../../README.md#2-精度预检)。：
 
 ```bash
 output/
 └── step0
     └── rank
-        ├── construct.json             # level为L0时，保存Module的层级关系信息，当前场景为空
-        ├── dump.json                  # 保存前反向API的输入输出的统计量信息和溢出信息等
+        ├── construct.json             # level为L0时，保存Cell的层级关系信息。当前场景为空
+        ├── dump.json                  # 保存API前反向输入输出数据的统计量信息
         └── stack.json                 # 保存API的调用栈
 ```
