@@ -186,7 +186,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
 
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
-            if n_value == CompareConst.READ_NONE:
+            if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
                 return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.NONE:
                 return CompareConst.UNSUPPORTED, ''
@@ -224,7 +224,7 @@ class GetMaxAbsErr(TensorComparisonBasic):
     """计算最大绝对误差"""
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
-            if n_value == CompareConst.READ_NONE:
+            if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
                 return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
@@ -257,7 +257,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
     """计算最大相对误差"""
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
-            if n_value == CompareConst.READ_NONE:
+            if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
                 return CompareConst.UNSUPPORTED, ''
             if n_value == CompareConst.NONE:
                 return 0, ''
@@ -279,7 +279,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之一的比例"""
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
-            if n_value == CompareConst.READ_NONE:
+            if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
                 return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
@@ -301,7 +301,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之五的比例"""
     def apply(self, n_value, b_value, error_flag, relative_err=None):
         if error_flag:
-            if n_value == CompareConst.READ_NONE:
+            if n_value == CompareConst.READ_NONE or n_value == CompareConst.UNREADABLE:
                 return CompareConst.UNSUPPORTED, ""
             if n_value == CompareConst.NONE:
                 return 0, ""
