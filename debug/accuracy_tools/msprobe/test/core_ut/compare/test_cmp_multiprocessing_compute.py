@@ -39,7 +39,7 @@ class TestUtilsMethods(unittest.TestCase):
             CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
             CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
         ])
-        os.mkdir(base_dir, mode=0o750, exist_ok=True)
+        os.makedirs(base_dir, mode=0o750, exist_ok=True)
         self.lock = threading.Lock()
 
     def tearDown(self):
