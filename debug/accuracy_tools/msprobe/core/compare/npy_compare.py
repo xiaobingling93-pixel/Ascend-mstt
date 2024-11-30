@@ -15,7 +15,6 @@
 
 import abc
 
-import numpy
 import numpy as np
 from msprobe.core.common.utils import format_value
 from msprobe.core.common.const import Const, CompareConst
@@ -27,7 +26,7 @@ from msprobe.core.common.utils import CompareException
 def handle_inf_nan(n_value, b_value):
     def convert_to_float(value):
         try:
-            if isinstance(value, numpy.ndarray):
+            if isinstance(value, np.ndarray):
                 return value.astype(float)
             else:
                 return float(value)
