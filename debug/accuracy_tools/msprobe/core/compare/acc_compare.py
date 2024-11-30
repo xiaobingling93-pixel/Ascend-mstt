@@ -518,7 +518,7 @@ def get_bench_data_name(bench_op_name, bench_data):
         return get(CompareConst.DATA_NAME.lower(), data)
 
     if Const.INPUT == bench_name_list[1]:
-        return get_by_layer(bench_data_bundle.get('input_args'))
+        return get_by_layer(bench_data_bundle.get('input', bench_data_bundle.get('input_args')))
     elif Const.KWARGS == bench_name_list[1]:
         return get_by_layer(bench_data_bundle.get('input_kwargs'))
     elif Const.OUTPUT == bench_name_list[1]:
