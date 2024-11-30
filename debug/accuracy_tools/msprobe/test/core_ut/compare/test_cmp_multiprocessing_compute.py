@@ -11,6 +11,7 @@ from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, 
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.utils import CompareException
+from test_acc_compare import generate_dump_json
 
 
 
@@ -28,33 +29,6 @@ columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_cmp_multiprocessing_compute')
-
-
-def generate_dump_json(base_dir):
-    data_path = os.path.join(base_dir, 'dump.json')
-    data = {
-        'task': 'statistics',
-        'level': 'L1',
-        'dump_data_dir': '',
-        'data': {
-            'Functional.linear.0.forward': {
-                'input_args': [
-                    {'type': 'torch.Tensor',
-                     'dtype': 'torch.float32',
-                     'shape': [2, 2],
-                     'Max': 2,
-                     'Min': 0,
-                     'Mean': 1,
-                     'Norm': 1,
-                     'requires_grad': False,
-                     'data_name': 'Functional.linear.0.forward.input.0.pt'
-                     }
-                ]
-            }
-        }
-    }
-    with open(data_path, 'w') as json_file:
-        json.dump(data, json_file)
 
 
 class TestUtilsMethods(unittest.TestCase):
