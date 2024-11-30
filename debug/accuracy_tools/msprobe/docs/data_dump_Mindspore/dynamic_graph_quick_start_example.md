@@ -11,7 +11,7 @@
     "task": "statistics",
     "dump_path": "./output",
     "rank": [],
-    "step": [],
+    "step": ["0-2"],
     "level": "L1",
     "statistics": {
         "scope": [],
