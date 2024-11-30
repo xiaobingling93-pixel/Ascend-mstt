@@ -537,7 +537,8 @@ class TestUtilsMethods(unittest.TestCase):
         columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
         result_df = pd.DataFrame(data, columns=columns)
         o_result = pd.DataFrame(o_data, columns=columns)
-        input_param = {}
+        generate_dump_json(base_dir)
+        input_param = {'bench_json_path': os.path.join(base_dir, 'hump.json')}
         result = Comparator()._do_multi_process(input_param, result_df)
         self.assertTrue(result.equals(o_result))
 
@@ -546,19 +547,30 @@ class TestUtilsMethods(unittest.TestCase):
         bench_op_name = 'N/A'
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [-1, -1]}
         input_param = {}
-        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
         self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 'No bench data matched.'])
 
     def test_compare_by_op_2(self):
         npu_op_name = 'Functional.linear.0.forward.input.0'
         bench_op_name = 'Functional.linear.0.forward.input.0'
+        pt_name = '-1'
+        pt_path = os.path.join(base_dir, pt_name)
+        op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
+        input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, 
+                                              {'Functional.linear.0.forward': {'input_args': [{'data_name':'Functional.linear.0.forward.input.0.pt'}]}})
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 
+                                  f'Dump file: {pt_path} not found.'])
+
         pt_name = 'Functional.linear.0.forward.input.0.pt'
         pt_path = os.path.join(base_dir, pt_name)
         op_name_mapping_dict = {'Functional.linear.0.forward.input.0': [pt_path, pt_path]}
         input_param = {'npu_dump_data_dir': base_dir, 'bench_dump_data_dir': base_dir}
-        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
-        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', f'Dump file: {pt_path} not found.'])
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, {})
+        self.assertEqual(result, ['unsupported', 'unsupported', 'unsupported', 'unsupported', 'unsupported', 
+                                  'Bench does not have data file.'])
 
         generate_pt(base_dir)
-        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param)
+        result = PTComparator().compare_by_op(npu_op_name, bench_op_name, op_name_mapping_dict, input_param, 
+                                              {'Functional.linear.0.forward': {'input_args': [{'data_name':'Functional.linear.0.forward.input.0.pt'}]}})
         self.assertEqual(result, [1.0, 0.0, 0.0, 1.0, 1.0, ''])

@@ -342,9 +342,12 @@ class Comparator:
         data_name = safe_get_value(npu_bench_name_list, 1, "npu_bench_name_list")
         error_file, relative_err, error_flag = None, None, False
         bench_data_name = get_bench_data_name(bench_op_name, bench_data)
-        if data_name == '-1' or data_name == -1 or not bench_data_name:  # 没有真实数据路径
+        if data_name == '-1' or data_name == -1:  # 没有真实数据路径
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
+        elif not bench_data_name:
+            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
+            error_file = 'no_bench_data'
         else:
             try:
                 read_npy_data = getattr(self, "read_npy_data")
@@ -363,7 +366,7 @@ class Comparator:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
-            except FileCheckException:
+            except (FileCheckException, CompareException):
                 error_file = data_name
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True

@@ -88,7 +88,9 @@ def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None
     """获取异常情况的错误信息"""
     if error_flag:
         if n_value == CompareConst.READ_NONE:
-            if error_file:
+            if error_file == '':
+                return 'Bench does not have data file.'
+            elif error_file is not None:
                 return "Dump file: {} not found.".format(error_file)
             return CompareConst.NO_BENCH
         if n_value == CompareConst.NONE:
