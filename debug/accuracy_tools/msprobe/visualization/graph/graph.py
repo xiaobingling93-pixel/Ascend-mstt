@@ -113,12 +113,9 @@ class Graph:
                         micro_step += 1
                         result[micro_step] = []
                         backward_flag = False
-                    result[micro_step].append(node)
                 else:
-                    result[micro_step].append(node)
                     backward_flag = True
-            else:
-                result[micro_step].append(node)
+            result[micro_step].append(node)
         return result
 
     def add_node(self, node_op, node_id, up_node=None, id_accumulation=False):
