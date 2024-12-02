@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytz
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime, timedelta
@@ -41,21 +42,22 @@ class AnomalyInform:
         self.exception_message_list = []
         self.time = 0
         self.current_time = 0
+        self.time_zone = pytz.timezone('Asia/Shanghai')  # Explicitly setting the time zone to Beijing time
 
     def inform_fun(self, exception_message_list, job_id):
         pass
 
     def run(self, exception_message, job_id):
         if self.time != 0 and self.current_time == 0:
-            self.current_time = datetime.now()
+            self.current_time = datetime.now(self.time_zone)
         if self.time == 0 or ((self.current_time - self.time) > timedelta(minutes=self.interval_time)):
             self.exception_message_list.append(exception_message)
             self.inform_fun(self.exception_message_list, job_id)
             self.exception_message_list = []
-            self.time = datetime.now()
+            self.time = datetime.now(self.time_zone)
         elif (self.current_time - self.time) <= timedelta(minutes=self.interval_time):
             self.exception_message_list.append(exception_message)
-            self.current_time = datetime.now()
+            self.current_time = datetime.now(self.time_zone)
 
 
 class DatabaseInform(AnomalyInform):

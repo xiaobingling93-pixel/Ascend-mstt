@@ -15,12 +15,13 @@
 
 import inspect
 import os
+import pytz
 import uuid
 import json
 from collections import defaultdict
 from functools import partial
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 
 import torch
 import torch.distributed as dist
@@ -194,7 +195,10 @@ class TrainerMon:
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
 
-        cur_time = datetime.now().strftime('%b%d_%H-%M-%S')
+        # 设置时区，使用 'UTC' 作为示例
+        local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
+
+        cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
 
         if dist.is_initialized():
@@ -842,7 +846,7 @@ class TrainerMon:
                     if grad is None:
                         logger.warning(f"grad is None: {name}, maybe something wrong happened.")
                         continue
-                    tag = self.name2tag.get(name,{}).get(MonitorConst.PRE_GRAD)
+                    tag = self.name2tag.get(name, {}).get(MonitorConst.PRE_GRAD)
                     if tag is None:
                         continue
                     grad_dict[tag] = grad
