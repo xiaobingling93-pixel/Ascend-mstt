@@ -228,3 +228,10 @@ def get_ulp_err(bench_output, device_output, dtype):
 def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
     return (device_output.astype(data_type) - bench_output).astype(data_type) * \
             np.exp2(-eb + exponent_num).astype(data_type)
+
+
+def compare_bool_tensor(bench_output, device_output):
+    error_nums = (bench_output != device_output).sum()
+    error_rate = float(error_nums / bench_output.size)
+    result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
+    return error_rate, result, ""

@@ -16,6 +16,7 @@
 # limitations under the License.
 
 from msprobe.core.common.const import CompareConst
+from msprobe.pytorch.common.log import logger
 
 
 class CompareColumn:
@@ -40,6 +41,15 @@ class CompareColumn:
         self.max_ulp_error = CompareConst.SPACE
         self.mean_ulp_error = CompareConst.SPACE
         self.ulp_error_proportion = CompareConst.SPACE
+
+    def update(self, metrics):
+        for key, value in metrics.items():
+            if value is None:
+                continue
+            if not hasattr(self, key):
+                logger.error(f"The key '{key}' is not a valid attribute of CompareColumn.")
+                continue
+            setattr(self, key, value)
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,
