@@ -7,6 +7,45 @@ from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_small_val
 
 
 class BenchmarkCompare(BaseCompare):
+    """
+    Benchmark comparison class for calculating accuracy metrics.
+
+    This class is designed to compare the output of a benchmark test with the output of a device.
+    It calculates various metrics such as small value error ratio, RMSE, error balance, max relative error,
+    and mean relative error to assess the accuracy of the device output against the benchmark output.
+
+    Attributes:
+        bench_output (np.ndarray): The output from the benchmark.
+        device_output (np.ndarray): The output from the device.
+        dtype (torch.dtype): The data type of the outputs.
+        abs_bench (np.ndarray): The absolute value of the benchmark output.
+        abs_bench_with_eps (np.ndarray): The absolute value of the benchmark output with epsilon.
+        both_finite_mask (np.ndarray): A mask indicating where both outputs are finite.
+        inf_nan_mask (np.ndarray): A mask indicating where either output is infinite or NaN.
+        abs_err (np.ndarray): The absolute error between the benchmark and device outputs.
+        small_value (float): The small value threshold for comparison.
+        small_value_atol (float): The absolute tolerance for small values.
+        small_value_mask (np.ndarray): A mask indicating where values are small.
+        rel_err (np.ndarray): The relative error between the benchmark and device outputs.
+        abs_err_greater_mask (np.ndarray): A mask indicating where absolute error is greater than the small value 
+        tolerance.
+
+    Methods:
+        _get_abs_err_greater_mask(small_value_atol): Calculates a mask where absolute error is greater than the small 
+        value tolerance.
+        _compute_rel_err(): Computes the relative error between the benchmark and device outputs.
+        _pre_compare(): Prepares the comparison by calculating various metrics.
+        _compute_metrics(): Computes the accuracy metrics.
+
+    Note:
+        This class assumes that the input data is a dictionary containing 'bench_output', 'device_output', 
+        'compare_column' and 'dtype'. 
+        The data type should be a PyTorch data type.
+
+    See Also:
+        BaseCompare: The base class for comparison classes.
+        InputData: The class containing input data for comparison.
+    """
 
     def __init__(self, input_data):
         super(BenchmarkCompare, self).__init__(input_data)

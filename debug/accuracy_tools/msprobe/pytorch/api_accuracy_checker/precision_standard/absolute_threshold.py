@@ -9,6 +9,44 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config imp
 
 
 class AbsolutethdCompare(BaseCompare):
+    """
+    Absolute threshold compare class.
+
+    This class is used to compare the absolute threshold of benchmark outputs and device outputs.
+    It calculates various metrics such as inf_nan_error_ratio, rel_err_ratio, and abs_err_ratio
+    to determine the accuracy of the device output compared to the benchmark output.
+
+    Attributes:
+        bench_output (np.ndarray): The output from the benchmark.
+        device_output (np.ndarray): The output from the device.
+        dtype (torch.dtype): The data type of the outputs.
+        abs_bench (np.ndarray): The absolute value of the benchmark output.
+        abs_bench_with_eps (np.ndarray): The absolute value of the benchmark output with epsilon.
+        both_finite_mask (np.ndarray): A mask indicating where both outputs are finite.
+        inf_nan_mask (np.ndarray): A mask indicating where either output is infinite or NaN.
+        rtol (float): The relative tolerance for comparison.
+        rel_err (np.ndarray): The relative error between the benchmark and device outputs.
+        small_value (float): The small value threshold for comparison.
+        small_value_atol (float): The absolute tolerance for small values.
+        small_value_mask (np.ndarray): A mask indicating where values are small.
+        normal_value_mask (np.ndarray): A mask indicating where values are normal.
+
+    Methods:
+        _get_rtol(): Gets the relative tolerance based on the data type.
+        _get_rel_err(abs_bench_with_eps): Calculates the relative error.
+        _get_normal_value_mask(small_value_mask): Gets the mask for normal values.
+        _pre_compare(): Prepares the comparison by calculating various metrics.
+        _compute_metrics(): Computes the comparison metrics.
+
+    Note:
+        This class assumes that the input data is a dictionary containing 'bench_output', 'device_output', 
+        'compare_column' and 'dtype'.
+        The 'dtype' should be a PyTorch data type.
+
+    See Also:
+        BaseCompare: The base class for comparison classes.
+        StandardConfig: The class containing standard configuration values.
+    """
     def __init__(self, input_data):
         super(AbsolutethdCompare, self).__init__(input_data)
 

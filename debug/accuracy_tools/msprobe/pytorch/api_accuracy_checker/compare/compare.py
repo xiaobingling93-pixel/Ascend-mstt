@@ -138,6 +138,31 @@ class Comparator:
                 test_rows.append([subject] + list(test_subject))
         return test_rows
 
+    @staticmethod
+    def _binary_standard_compare(input_data):
+        binary_compare = BinaryCompare(input_data)
+        binary_compare.compare()
+    
+    @staticmethod
+    def _thousandth_standard_compare(input_data):
+        thousandth_compare = ThousandthStdCompare(input_data)
+        thousandth_compare.compare()
+    
+    @staticmethod
+    def _absolute_standard_compare(input_data):
+        absolute_compare = AbsolutethdCompare(input_data)
+        absolute_compare.compare()
+
+    @staticmethod
+    def _ulp_compare(input_data):
+        ulp_compare = UlpCompare(input_data)
+        ulp_compare.compare()
+    
+    @staticmethod
+    def _benchmark_compare(input_data):
+        benchmark_compare = BenchmarkCompare(input_data)
+        benchmark_compare.compare()
+
     def write_csv_title(self):
         summary_test_rows = [
             [self.COLUMN_API_NAME, 
@@ -317,26 +342,6 @@ class Comparator:
             status, compare_column, message = self._compare_float_tensor(api_name, bench_output, device_output,
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
-
-    def _binary_standard_compare(self, input_data):
-        binary_compare = BinaryCompare(input_data)
-        binary_compare.compare()
-    
-    def _thousandth_standard_compare(self, input_data):
-        thousandth_compare = ThousandthStdCompare(input_data)
-        thousandth_compare.compare()
-    
-    def _absolute_standard_compare(self, input_data):
-        absolute_compare = AbsolutethdCompare(input_data)
-        absolute_compare.compare()
-
-    def _ulp_compare(self, input_data):
-        ulp_compare = UlpCompare(input_data)
-        ulp_compare.compare()
-    
-    def _benchmark_compare(self, input_data):
-        benchmark_compare = BenchmarkCompare(input_data)
-        benchmark_compare.compare()
 
     def _perform_comparison(self, api_name, input_data):
         comparison_func = self.registry.get_comparison_function(api_name, None)

@@ -3,6 +3,29 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import absolute_
 
 
 class StandardRegistry:
+    """
+    Registry class for managing comparison standards and functions.
+
+    This class provides a centralized registry for different comparison standards and their corresponding functions.
+    It allows for dynamic registration of comparison functions based on the standard category.
+
+    Attributes:
+        comparison_functions (dict): A dictionary mapping standard categories to their corresponding comparison 
+        functions.
+        standard_categories (dict): A dictionary mapping standard names to their corresponding API categories.
+
+    Methods:
+        _get_standard_category(api_name, dtype): Determines the standard category for a given API name and data type.
+        register(standard, func): Registers a comparison function for a given standard category.
+        get_comparison_function(api_name, dtype): Retrieves the comparison function for a given API name and data type.
+
+    Note:
+        The data type is used to determine the standard category if it is not supported by binary comparison.
+        If the API name is not found in any standard category, it defaults to the 'benchmark' category.
+
+    See Also:
+        BaseCompare: The base class for comparison classes.
+    """
     def __init__(self):
         self.comparison_functions = {}
         self.standard_categories = {

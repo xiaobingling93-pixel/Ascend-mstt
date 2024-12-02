@@ -7,6 +7,22 @@ from msprobe.core.common.const import CompareConst
 
 
 class UlpCompare(BaseCompare):
+    """
+    Ulp compare comparison class for calculating accuracy metrics.
+
+    Attributes:
+        bench_output (array-like): The benchmark output values.
+        device_output (array-like): The device output values.
+        dtype (torch.dtype): The data type of the outputs (e.g., torch.float32 or torch.float16).
+        ulp_err (array-like): The ULP errors calculated from the benchmark and device outputs.
+
+    Methods:
+        _stat_max_ulp_err(ulp_err): Calculates the maximum ULP error.
+        _stat_mean_ulp_err(ulp_err): Calculates the mean ULP error.
+        _stat_ulp_error_proportion(ulp_err): Calculates the proportion of ULP errors exceeding a threshold.
+        _pre_compare(): Prepares for comparison by calculating ULP errors.
+        _compute_metrics(): Computes the ULP error metrics.
+    """
     def __init__(self, input_data):
         super(UlpCompare, self).__init__(input_data)
     

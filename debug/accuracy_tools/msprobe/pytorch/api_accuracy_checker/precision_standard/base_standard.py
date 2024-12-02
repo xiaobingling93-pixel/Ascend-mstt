@@ -4,6 +4,39 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config imp
 
 
 class BaseCompare:
+    """
+    Base comparison class for benchmarking and device output.
+
+    This class provides a foundation for comparing benchmark outputs with device outputs.
+    It encapsulates the common logic for calculating accuracy metrics and
+    provides a framework for subclasses to implement specific comparison logic.
+
+    Attributes:
+        bench_output (np.ndarray): The output from the benchmark.
+        device_output (np.ndarray): The output from the device.
+        compare_column (object): The column object to store comparison results.
+        dtype (torch.dtype): The data type of the outputs.
+
+    Methods:
+        get_small_value_threshold(): Retrieves the small value threshold for the given data type.
+        stat_abs_bench_with_eps(): Calculates the absolute benchmark output with epsilon.
+        stat_abs_error(): Calculates the absolute error between the benchmark and device outputs.
+        stat_finite_and_infinite_mask(): Generates masks for finite and infinite/NaN values.
+        stat_small_value_mask(abs_bench, both_finite_mask, small_value): Creates a mask for small values.
+        compare(): Performs the comparison and computes metrics.
+        _pre_compare(): Pre-comparison hook for subclass-specific initialization.
+        _compute_metrics(): Computes the comparison metrics.
+        _post_compare(metrics): Post-comparison hook to update comparison results.
+
+    Note:
+        This class assumes that the input data is an instance of InputData containing the benchmark output,
+        device output, comparison column, and data type. Subclasses should implement the _pre_compare,
+        _compute_metrics, and _post_compare methods to provide specific comparison logic.
+
+    See Also:
+        InputData: The class containing input data for comparison.
+        StandardConfig: The class containing standard configuration values.
+    """
     def __init__(self, input_data):
         self.bench_output = input_data.bench_output
         self.device_output = input_data.device_output
