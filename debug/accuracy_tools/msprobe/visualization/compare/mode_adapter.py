@@ -116,8 +116,8 @@ class ModeAdapter:
         """
         if len(key_list) != len(id_list):
             return
-        for data_id, key in zip(id_list, key_list):
-            data_dict[key] = compare_data[data_id]
+        for id_val, key in zip(id_list, key_list):
+            data_dict[key] = compare_data[id_val]
 
     @staticmethod
     def _check_list_len(data_list, len_num):

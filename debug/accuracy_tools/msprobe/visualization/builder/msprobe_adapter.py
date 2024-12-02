@@ -74,11 +74,7 @@ def get_input_output(node_data, node_id):
         full_op_name = item.get('full_op_name', '')
         if not full_op_name:
             continue
-        splits = full_op_name.split('.')
-        if len(splits) < GraphConst.OUTPUT_MIN_LEN:
-            continue
-        if GraphConst.OUTPUT in splits[GraphConst.OUTPUT_INDEX_TWO] and \
-                GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
+        if GraphConst.OUTPUT in full_op_name and GraphConst.INPUT not in full_op_name:
             output_data[full_op_name] = item
         else:
             name = item.get('data_name')

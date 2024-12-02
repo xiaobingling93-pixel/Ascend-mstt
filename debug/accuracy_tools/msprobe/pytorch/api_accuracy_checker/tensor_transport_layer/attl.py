@@ -100,21 +100,21 @@ class ATTL:
         self.socket_manager.add_to_sending_queue(data, rank=rank, step=step)
 
     def recv(self, timeout_ms=0) -> Optional[BufferType]:
-        buffer = None
-        while buffer is None:
+        buffer = ''
+        while not buffer:
             if timeout_ms > 0:
                 time.sleep(timeout_ms / 1000.0)
-            if buffer is None and not self.data_queue.empty():
+            if not buffer and not self.data_queue.empty():
                 buffer = self.data_queue.get()
                 break
-            if buffer is None and timeout_ms > 0:  # timeout is the only case we give up and return None
+            if not buffer and timeout_ms > 0:  # timeout is the only case we give up and return None
                 break
             if self.message_end and self.data_queue.empty():
                 buffer = b"KILL_CONFIRM"
                 self.kill_progress = True
                 break
             time.sleep(0.1)  # waiting outside the lock before next attempt
-        if buffer is None:
+        if not buffer:
             # this is a result of a timeout
             self.logger.info(f"RECEIVE API DATA TIMED OUT")
         else:
@@ -131,7 +131,7 @@ class ATTL:
             except Exception as e:
                 self.logger.warning("there is something error. please check it. %s", e)
             if isinstance(buffer, bytes):
-                return None
+                return ''
             if isinstance(buffer, str):
                 return buffer
 

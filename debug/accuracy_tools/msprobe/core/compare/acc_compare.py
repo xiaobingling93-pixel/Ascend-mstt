@@ -18,26 +18,26 @@ import os
 from copy import deepcopy
 
 import pandas as pd
-from tqdm import tqdm
-from msprobe.core.common.file_utils import load_json
+from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.file_utils import remove_path
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid, safe_get_value
-from msprobe.core.common.file_utils import remove_path
 from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
-                                        check_stack_json_str
+    check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
-    get_rela_diff_summary_mode, print_compare_ends_info
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
     get_error_message
-from msprobe.core.advisor.advisor import Advisor
+from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
+    get_rela_diff_summary_mode, print_compare_ends_info
+from tqdm import tqdm
 
 
 class Comparator:
-    
+
     def __init__(self):
         pass
 
@@ -50,10 +50,10 @@ class Comparator:
             logger.error(f"The length of npu_struct and bench_struct must be >= 3, "
                          f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. Please check!")
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
- 
+
         result_item = [ms_op_name, bench_op_name, npu_struct[0], bench_struct[0],
-                        npu_struct[1], bench_struct[1], npu_struct[2], bench_struct[2],
-                        CompareConst.PASS if npu_struct[2] == bench_struct[2] else CompareConst.DIFF]
+                       npu_struct[1], bench_struct[1], npu_struct[2], bench_struct[2],
+                       CompareConst.PASS if npu_struct[2] == bench_struct[2] else CompareConst.DIFF]
 
         if len(args) >= 2 and args[0]:
             result_item.extend(args[1])
@@ -95,14 +95,14 @@ class Comparator:
         else:
             if dump_mode == Const.ALL:
                 for row in result:
-                    del row[-2]     # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
+                    del row[-2]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
                 header.append(CompareConst.DATA_NAME)
             else:
                 for row in result:
-                    del row[-1]     # 输出结果不要堆栈信息时，删除中间结果result中的stack info，非真实数据时为倒数第1列
+                    del row[-1]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，非真实数据时为倒数第1列
         result_df = pd.DataFrame(result, columns=header, dtype='object')
-        return result_df   
-    
+        return result_df
+
     @classmethod
     def gen_merge_list(cls, json_data, op_name, stack_json_data, dump_mode):
         op_data = json_data['data'][op_name]
@@ -116,16 +116,16 @@ class Comparator:
             'full_op_name': op_name,
             'full_info': stack_info
         })
-            
+
         merge_list = merge_tensor(op_parsed_list, dump_mode)
         return merge_list
-    
+
     def check_op(self, npu_dict, bench_dict, fuzzy_match):
         npu_op_name = npu_dict[CompareConst.OP_NAME]
         bench_op_name = bench_dict[CompareConst.OP_NAME]
         graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
                                       safe_get_value(bench_op_name, 0, "bench_op_name"))
-        
+
         frame_name = getattr(self, "frame_name")
         if frame_name == "PTComparator":
             from msprobe.pytorch.compare.match import graph_mapping
@@ -141,7 +141,7 @@ class Comparator:
             logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
             is_match = False
         return is_match and struct_match
-    
+
     def match_op(self, npu_queue, bench_queue, fuzzy_match):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
             if self.check_op(npu_queue[-1], b_op, fuzzy_match):
@@ -152,7 +152,7 @@ class Comparator:
             if self.check_op(n_op, bench_queue[-1], fuzzy_match):
                 return n_index, len(bench_queue) - 1
         return -1, -1
-    
+
     def compare_process(self, file_lists, stack_mode, fuzzy_match, dump_mode):
         npu_json_path, bench_json_path, stack_json_path = file_lists
         npu_json_data = load_json(npu_json_path)
@@ -227,7 +227,7 @@ class Comparator:
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
                 get_un_match_accuracy(result, npu_data, dump_mode)
-                
+
         result_df = self.make_result_table(result, stack_mode, dump_mode)
         return result_df
 
@@ -281,18 +281,21 @@ class Comparator:
                 bench_struct = bench_ops_all.get(bench_op_name).get('struct', [])
 
                 if len(npu_struct) < 2 or len(bench_struct) < 2:
-                    logger.error(f"The length of npu_struct and bench_struct must be >= 2, "
-                                 f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. Please check!")
+                    logger.error(
+                        f"The length of npu_struct and bench_struct must be >= 2, "
+                        f"but got npu_struct={len(npu_struct)} and bench_struct={len(bench_struct)}. "
+                        f"Please check!"
+                    )
                     raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
                 base_result_item = [
                     ms_op_name, bench_op_name,
-                    npu_struct[0],  
+                    npu_struct[0],
                     bench_struct[0],
                     npu_struct[1],
                     bench_struct[1]
                 ]
-                
+
                 if dump_mode == Const.SUMMARY:
                     result_item = base_result_item + [" "] * 8
                 else:
@@ -376,7 +379,7 @@ class Comparator:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
         result_list.append(err_msg)
         return result_list
-    
+
     def compare_core(self, input_parma, output_path, **kwargs):
         """
         Compares data from multiple JSON files and generates a comparison report.
@@ -413,7 +416,12 @@ class Comparator:
         if self.data_mapping:
             result_df = self.compare_process_custom([npu_json, bench_json, stack_json], stack_mode, dump_mode)
         else:
-            result_df = self.compare_process([npu_json, bench_json, stack_json], stack_mode, fuzzy_match, dump_mode)
+            result_df = self.compare_process(
+                [npu_json, bench_json, stack_json],
+                stack_mode,
+                fuzzy_match,
+                dump_mode
+            )
 
         if not result_df.values.tolist():
             logger.warning("Can`t match any op.")
@@ -430,7 +438,7 @@ class Comparator:
             advisor.analysis()
 
         print_compare_ends_info()
-    
+
     def compare_ops(self, idx, dump_path_dict, result_df, lock, input_param):
         cos_result = []
         max_err_result = []
@@ -480,4 +488,3 @@ class Comparator:
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
-    

@@ -14,10 +14,11 @@
 # limitations under the License.
 
 import inspect
+import time
+import json
 import os
 import pytz
 import uuid
-import json
 from collections import defaultdict
 from functools import partial
 from copy import deepcopy
@@ -25,24 +26,24 @@ from datetime import datetime, timezone
 
 import torch
 import torch.distributed as dist
-from torch.utils.hooks import BackwardHook
-from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
-
-from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
-from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
-from msprobe.pytorch.monitor.features import get_sign_matches
-from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.log import logger
+from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD
-from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_base, get_summary_writer_tag_name, \
-    TensorMetrics, write_metrics_csv, squash_param_name
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
-from msprobe.core.common.log import logger
+from msprobe.pytorch.monitor.features import get_sign_matches
+from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_base, get_summary_writer_tag_name, \
+    TensorMetrics, write_metrics_csv, squash_param_name
+from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
+from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops
-from msprobe.core.common.file_utils import load_json
-from msprobe.core.common.const import MonitorConst
-from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
+from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
+from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
+from torch.utils.hooks import BackwardHook
+
 try:
     import torch_npu
 except ImportError:
@@ -63,7 +64,7 @@ FORMAT_MAPPING = {
 
 def param_is_not_tensor_parallel_duplicate(param, tp_group):
     return (hasattr(param, 'tensor_model_parallel') and param.tensor_model_parallel) or (
-        torch.distributed.get_rank(group=tp_group) == 0
+            torch.distributed.get_rank(group=tp_group) == 0
     )
 
 
@@ -112,6 +113,7 @@ class OptimizerContext:
         self.param_exp_avg_sq = defaultdict()
         self.exp_avg_sq_metric = []
         self.metric_dict = {}
+        self.param_metric = {}
 
 
 class CommunicationContext:
@@ -180,6 +182,7 @@ class TrainerMon:
         self.ur_distribution = self.config.get('ur_distribution', False)
         self.mv_distribution = self.config.get("mv_distribution", False)
         self.wg_distribution = self.config.get("wg_distribution", False)
+        self.param_distribution = self.config.get("param_distribution", False)
         self.mg_direction = self.config.get('mg_direction', False)
         self.cc_distribution = self.config.get("cc_distribution", {})
         if not self.cc_distribution.get('enable', False):
@@ -380,14 +383,17 @@ class TrainerMon:
         if not self.optimizer_hooked:
             self.hook_optimizer()
         return
+    
+    def generate_param_metrics(self, opt_context):
+        get_metrics(self.ops, self.name2param, self.eps, opt_context.param_metric)
 
     def generate_mv_metrics(self, opt_context):
         if not self.mv_distribution:
             return
         opt_context.exp_avg_metric = {}
         opt_context.exp_avg_sq_metric = {}
-        m_tag_tensor_map = self.generate_param_metrics('exp_avg', opt_context.param_exp_avg)
-        v_tag_tensor_map = self.generate_param_metrics('efxp_avg_sq', opt_context.param_exp_avg_sq)
+        m_tag_tensor_map = self.generate_param_map('exp_avg', opt_context.param_exp_avg)
+        v_tag_tensor_map = self.generate_param_map('efxp_avg_sq', opt_context.param_exp_avg_sq)
         get_metrics(self.ops, m_tag_tensor_map, self.eps, opt_context.exp_avg_metric)
         get_metrics(self.ops, v_tag_tensor_map, self.eps, opt_context.exp_avg_sq_metric)
 
@@ -414,7 +420,6 @@ class TrainerMon:
 
     def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None):
         """External interface"""
-        # todo: add parameter check
         logger.info(f'grad acc steps {grad_acc_steps}')
         self.hook_optimizer(optimizer)
         self.micro_batch_number = grad_acc_steps
@@ -426,7 +431,7 @@ class TrainerMon:
         self._patch_grad_sync()
         self.hook_modules(model, grad_acc_steps)
 
-    def generate_param_metrics(self, tag, param_tensor):
+    def generate_param_map(self, tag, param_tensor):
         metrics = {}
         rank = dist.get_rank() if dist.is_initialized() else None
         for name in self.param2name.values():
@@ -469,13 +474,18 @@ class TrainerMon:
         if self.grad_context.actv:
             self.write_metrics(self.ops, self.summary_writer, self.grad_context.actv, step, 'actv_grad')
 
+    def write_param_tb(self, opt_context):
+        if not self.param_distribution:
+            return
+        self.write_metrics(self.ops, self.summary_writer, opt_context.param_metric, opt_context.step, 'param')
+
     def write_mv_tb(self, opt_context):
         if not self.mv_distribution:
             return
-        self.write_metrics(self.ops, self.summary_writer, opt_context.exp_avg_metric, 
+        self.write_metrics(self.ops, self.summary_writer, opt_context.exp_avg_metric,
                            opt_context.step, 'exp_avg')
         self.write_metrics(self.ops, self.summary_writer, opt_context.exp_avg_sq_metric,
-                            opt_context.step, 'exp_avg_sq')
+                           opt_context.step, 'exp_avg_sq')
 
     def write_grad_tb(self, step):
         if not self.wg_distribution:
@@ -486,7 +496,6 @@ class TrainerMon:
         else:
             self.write_metrics(self.ops, self.summary_writer, self.grad_context.acc_metric, step, 'grad_unreduced')
         self.write_metrics(self.ops, self.summary_writer, self.grad_context.post, step, 'grad_reduced')
-        
 
     def hook_optimizer(self, optimizer=None):
         # in DDP by default use params_have_main_grad
@@ -521,6 +530,7 @@ class TrainerMon:
 
             self.generate_wgrad_metrics()
             self.generate_mv_metrics(context)
+            self.generate_param_metrics(context)
 
             tbtag_tensor_map = {}
             if self.mg_direction:
@@ -534,7 +544,7 @@ class TrainerMon:
                     else:
                         same_direction_ratio = get_sign_matches(grad, context.param_exp_avg[name])
                     context.param_mg_direction[name] = same_direction_ratio
-                tbtag_tensor_map.update(self.generate_param_metrics('mg_direction', context.param_mg_direction))
+                tbtag_tensor_map.update(self.generate_param_map('mg_direction', context.param_mg_direction))
 
             metric_dict = {}
             get_metrics(self.ops, tbtag_tensor_map, self.eps, metric_dict)
@@ -557,6 +567,7 @@ class TrainerMon:
             self.write_xy_tb(context.step)
             self.write_grad_tb(context.step)
             self.write_mv_tb(context)
+            self.write_param_tb(context)
             self.write_adhoc_check(context.step)
 
             if self.ur_distribution:
@@ -639,8 +650,10 @@ class TrainerMon:
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
                 self.name2tag[name] = {}
-                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank)
-                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD,
+                                                                                         self.rank)
+                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD,
+                                                                                          self.rank)
 
     def _register_param_name(self, model):
         if self.param_registered:
@@ -853,7 +866,9 @@ class TrainerMon:
                 get_metrics(self.ops, grad_dict, self.eps, self.grad_context.pre)
                 out = sync_grad_func(bucket)
                 return out
+
             return wrapper
+
         try:
             from megatron.core.distributed.param_and_grad_buffer import Bucket
             self.enable_megatron = True

@@ -231,7 +231,7 @@ def md5_find(data):
                 for data_detail in data[key_op][api_info]:
                     if data_detail and 'md5' in data_detail:
                         return True
-            elif 'md5' in data[key_op][api_info]:
+            elif data[key_op][api_info] and 'md5' in data[key_op][api_info]:
                 return True
     return False
 
@@ -266,8 +266,10 @@ def get_stack_construct_by_dump_json_path(dump_json_path):
 def set_dump_path(input_param):
     npu_path = input_param.get("npu_json_path", None)
     bench_path = input_param.get("bench_json_path", None)
-    if not npu_path or not bench_path:
-        logger.error(f"Please check the json path is valid.")
+    npu_path_valid = npu_path is not None and npu_path.endswith("dump.json")
+    bench_path_valid = bench_path is not None and bench_path.endswith("dump.json")
+    if not npu_path_valid or not bench_path_valid:
+        logger.error(f"Please check the json path is valid. npu_path: {npu_path}, bench_path: {bench_path}")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     input_param['npu_dump_data_dir'] = os.path.join(os.path.dirname(npu_path), Const.DUMP_TENSOR_DATA)
     input_param['bench_dump_data_dir'] = os.path.join(os.path.dirname(bench_path), Const.DUMP_TENSOR_DATA)
@@ -279,14 +281,21 @@ def get_dump_mode(input_param):
     npu_json_data = load_json(npu_path)
     bench_json_data = load_json(bench_path)
 
-    if npu_json_data['task'] != bench_json_data['task']:
+    npu_task = npu_json_data.get('task', None)
+    bench_task = bench_json_data.get('task', None)
+
+    if not npu_task or not bench_task:
+        logger.error(f"Please check the dump task is correct, npu's task is {npu_task}, bench's task is {bench_task}.")
+        raise CompareException(CompareException.INVALID_TASK_ERROR)
+
+    if npu_task != bench_task:
         logger.error(f"Please check the dump task is consistent.")
         raise CompareException(CompareException.INVALID_TASK_ERROR)
 
-    if npu_json_data['task'] == Const.TENSOR:
+    if npu_task == Const.TENSOR:
         return Const.ALL
 
-    if npu_json_data['task'] == Const.STATISTICS:
+    if npu_task == Const.STATISTICS:
         npu_md5_compare = md5_find(npu_json_data['data'])
         bench_md5_compare = md5_find(bench_json_data['data'])
         if npu_md5_compare == bench_md5_compare:

@@ -165,7 +165,7 @@ def write_metrics_base(ops, summary_writer, metric_value, step, prefix=''):
     for op2tensor in metric_value.values():
         tensors.extend(op2tensor.values())
     with torch.no_grad():
-        metric_list = torch.stack(tensors).squeeze().cpu()
+        metric_list = torch.stack(tensors).cpu()
     for tag, metric in zip(tags, metric_list):
         summary_writer.add_scalar(tag, metric, step)
 
