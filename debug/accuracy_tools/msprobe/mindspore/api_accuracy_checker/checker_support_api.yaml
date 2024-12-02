@@ -17,13 +17,58 @@
 
 tensor:
   - add_
+  - add
   - addmm_
+  - all
   - allclose
+  - any
+  - bool
+  - byte
+  - ceil
+  - clamp
+  - contiguous
   - copy_
+  - cos
   - clone
   - cumprod
+  - expand_as
+  - flatten
+  - float
+  - half
+  - int
+  - is_contiguous
+  - isnan
+  - item
+  - log
   - log2
+  - long
+  - masked_fill
+  - max
+  - mean
+  - min
+  - numel
+  - numpy
+  - repeat
+  - repeat_interleave
+  - reshape
+  - round
+  - select
+  - sin
+  - size
+  - split
+  - sqrt
+  - square
+  - sub
+  - swapaxes
+  - to
   - t
+  - tolist
+  - topk
+  - transpose
+  - trunc
+  - type
+  - unsqueeze
+  - view
   - view_as
   - fill_
   - floor_

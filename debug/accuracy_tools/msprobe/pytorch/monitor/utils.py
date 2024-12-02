@@ -29,7 +29,7 @@ DIRECTORY_MAX_LENGTH = 4096
 
 beijing_tz = timezone(timedelta(hours=8))
 MVResult = namedtuple('MVResult', ("exp_avg", "exp_avg_sq", "update", "ratio"))
-MV_Grad_Result = namedtuple('MV_Grad_Result', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
+MVGradResult = namedtuple('MVGradResult', ("exp_avg", "exp_avg_sq", "update", "ratio", "grad"))
 
 
 class MsgConst:
@@ -80,14 +80,11 @@ def validate_ops(ops):
 
 
 def validate_ranks(ranks):
-    world_size = dist.get_world_size()
     if not isinstance(ranks, list):
         raise TypeError("module_ranks should be a list")
     for rank in ranks:
         if not isinstance(rank, int) or isinstance(rank, bool):
             raise TypeError(f"element in module_ranks should be a int, get {type(rank)}")
-        if rank < 0 or rank >= world_size:
-            logger.warning(f"rank {rank} is beyond world size [0, {world_size - 1}] and will be ignored")
 
 
 def validate_targets(targets):

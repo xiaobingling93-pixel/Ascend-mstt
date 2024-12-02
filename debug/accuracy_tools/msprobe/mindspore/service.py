@@ -82,7 +82,7 @@ class Service:
                 return None
 
             if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = cell.mindstudio_reserved_name
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                 module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
             else:
                 module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs,
@@ -100,12 +100,19 @@ class Service:
             if not self.should_excute_hook():
                 return
 
+            need_exchange = True
             if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = cell.mindstudio_reserved_name
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+                if not hasattr(cell, 'has_pre_hook_called') or not cell.has_pre_hook_called:
+                    need_exchange = False
+
             self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                if need_exchange:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                else:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
                 self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
         pid = os.getpid()
@@ -210,6 +217,7 @@ class Service:
             return
         self.primitive_switch = False
         api_register.api_set_ori_func()
+        JitDump.jit_dump_switch = False
 
     def stop(self):
         if self.should_stop_service:

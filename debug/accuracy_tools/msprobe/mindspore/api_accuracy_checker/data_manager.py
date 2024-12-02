@@ -75,7 +75,6 @@ def check_csv_header(headers, required_constants, csv_path):
             MsprobeBaseException.MISSING_HEADER_ERROR,
             f"{csv_path} 缺少以下必需的表头字段: {missing_constants}"
         )
-    return True
 
 
 class DataManager:
