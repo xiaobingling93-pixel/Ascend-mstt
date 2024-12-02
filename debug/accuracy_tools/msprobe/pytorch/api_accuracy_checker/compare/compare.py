@@ -31,15 +31,12 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import 
 from msprobe.pytorch.api_accuracy_checker.precision_standard.binary_consistency import BinaryCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.thousandth_standard import ThousandthStdCompare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_input import CompareInput
-from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
-    get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
-    get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err, compare_bool_tensor
+from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_err, get_max_abs_err, get_rel_err_ratio, \
+    cosine_sim, get_rel_err_origin, get_abs_bench_with_eps, compare_bool_tensor
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
-    ulp_standard_api, thousandth_standard_api, apis_threshold
+    DETAIL_TEST_ROWS, BENCHMARK_COMPARE_SUPPORT_LIST
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.pytorch.common.log import logger
 
@@ -114,13 +111,6 @@ class Comparator:
             return CompareConst.ERROR, compare_column, ""
         compare_column.error_rate = 0
         return CompareConst.PASS, compare_column, ""
-
-    @staticmethod
-    def _get_absolute_threshold_attribute(api_name, dtype):
-        small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
-        small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
-        rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
-        return small_value_threshold, small_value_atol, rtol
 
     @staticmethod
     def _get_run_ut_detail(test_result):
@@ -349,9 +339,8 @@ class Comparator:
         benchmark_compare.compare()
 
     def _perform_comparison(self, api_name, input_data):
-        comparison_func = self.registry.get_comparison_function(api_name)
-        if comparison_func:
-            comparison_func(input_data)
+        comparison_func = self.registry.get_comparison_function(api_name, None)
+        comparison_func(input_data)
             
     def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
         message = ""
@@ -359,7 +348,10 @@ class Comparator:
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
         input_data = CompareInput(bench_output, device_output, compare_column, dtype, rel_err_orign)
-        self._perform_comparison(api_name, input_data)
+        if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
+            self._perform_comparison(api_name, input_data)
+        else:
+            message += f"The data type {dtype} is not supported for new precision standard."
 
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
         compare_column.cosine_sim = cos_res
