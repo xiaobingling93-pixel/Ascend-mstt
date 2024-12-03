@@ -1,4 +1,20 @@
-import torch
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import check_inf_nan_value, check_norm_value, \
@@ -62,6 +78,21 @@ class AbsolutethdCompare(BaseCompare):
         return np.logical_and(self.both_finite_mask, np.logical_not(small_value_mask))
 
     def _pre_compare(self):
+        """
+        Computes error ratios based on the prepared masks and error metrics.
+
+        This method calculates three key error ratios:
+        1. Infinite/NaN Error Ratio: The proportion of infinite or NaN values in the comparison.
+        2. Relative Error Ratio: The proportion of values where the relative error is within the specified tolerance.
+        3. Absolute Error Ratio: The proportion of values where the absolute error is within the specified tolerance.
+
+        Returns:
+        dict: A dictionary containing the computed error ratios.
+            The dictionary has the following keys:
+            - "inf_nan_error_ratio": The proportion of infinite or NaN values.
+            - "rel_err_ratio": The proportion of values with relative error within tolerance.
+            - "abs_err_ratio": The proportion of values with absolute error within tolerance.
+        """
         self.abs_bench, self.abs_bench_with_eps = self.stat_abs_bench_with_eps()
         self.both_finite_mask, self.inf_nan_mask = self.stat_finite_and_infinite_mask()
         self.rtol = self._get_rtol()
@@ -75,9 +106,8 @@ class AbsolutethdCompare(BaseCompare):
                                                   self.rtol)
         rel_err_ratio = check_norm_value(self.normal_value_mask, self.rel_err, self.rtol)
         abs_err_ratio = check_small_value(self.abs_bench, self.both_finite_mask, self.small_value_atol)
-        metrics = {
+        return {
             "inf_nan_error_ratio": inf_nan_error_ratio,
             "rel_err_ratio": rel_err_ratio,
             "abs_err_ratio": abs_err_ratio
         }
-        return metrics

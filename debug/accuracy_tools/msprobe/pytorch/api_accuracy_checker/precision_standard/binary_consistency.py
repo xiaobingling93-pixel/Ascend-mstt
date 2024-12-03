@@ -1,4 +1,20 @@
-import numpy as np
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import compare_bool_tensor
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare
 
@@ -31,8 +47,19 @@ class BinaryCompare(BaseCompare):
         super(BinaryCompare, self).__init__(input_data)
 
     def _compute_metrics(self):
+        """
+        Computes the error rate metric for the comparison between benchmark and device outputs.
+
+        This method calculates the proportion of mismatches between the benchmark output and the device output.
+        It uses the `compare_bool_tensor` function to compare the two tensors and extract the error rate.
+
+        Returns:
+        dict: A dictionary containing the computed error rate metric.
+            The dictionary has the following key:
+            - "error_rate": The proportion of mismatches between the benchmark and device outputs.
+        """
         error_rate, _, _ = compare_bool_tensor(self.bench_output, self.device_output)
-        metrics = {
+
+        return {
             "error_rate": error_rate
         }
-        return metrics

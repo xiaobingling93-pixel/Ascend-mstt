@@ -1,4 +1,20 @@
-import torch
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare
@@ -68,17 +84,35 @@ class BenchmarkCompare(BaseCompare):
         self.abs_err_greater_mask = self._get_abs_err_greater_mask(self.small_value_atol)
 
     def _compute_metrics(self):
+        """
+        Computes a comprehensive set of error metrics for the comparison between benchmark and device outputs.
+
+        This method calculates five key metrics:
+        1. Small Value Error Ratio: The proportion of errors associated with small values.
+        2. Root Mean Square Error (RMSE): The square root of the mean of the squared errors.
+        3. Error Balance (EB): A measure of the balance between the errors in the benchmark and device outputs.
+        4. Maximum Relative Error: The maximum relative error between the benchmark and device outputs.
+        5. Mean Relative Error: The mean relative error between the benchmark and device outputs.
+        
+        Returns:
+        dict: A dictionary containing the computed error metrics.
+            The dictionary has the following keys:
+            - "small_value_err_ratio": The proportion of errors associated with small values.
+            - "max_rel_error": The maximum relative error.
+            - "mean_rel_error": The mean relative error.
+            - "rmse": The root mean square error.
+            - "eb": The error balance.
+        """
         small_value_err_ratio = get_small_value_err_ratio(self.small_value_mask, self.abs_err_greater_mask)
         rmse = get_rmse(self.abs_err, np.logical_or(self.inf_nan_mask, self.small_value_mask))
         eb = get_error_balance(self.bench_output, self.device_output)
         max_rel_error = get_max_rel_err(self.rel_err)
         mean_rel_error = get_mean_rel_err(self.rel_err)
-        metrics = {
+
+        return {
             "small_value_err_ratio": small_value_err_ratio,
             "max_rel_error": max_rel_error,
             "mean_rel_error": mean_rel_error,
             "rmse": rmse,
             "eb": eb
         }
-
-        return metrics
