@@ -1,4 +1,7 @@
 # coding=utf-8
+import json
+import os
+import shutil
 import unittest
 import threading
 import pandas as pd
@@ -8,6 +11,7 @@ from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, 
 from msprobe.core.compare.acc_compare import Comparator
 from msprobe.core.common.const import CompareConst
 from msprobe.core.common.utils import CompareException
+from test_acc_compare import generate_dump_json
 
 
 
@@ -24,6 +28,7 @@ o_data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.i
 columns = CompareConst.COMPARE_RESULT_HEADER + ['Data_name']
 result_df = pd.DataFrame(data, columns=columns)
 o_result = pd.DataFrame(o_data, columns=columns)
+base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_cmp_multiprocessing_compute')
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -34,11 +39,17 @@ class TestUtilsMethods(unittest.TestCase):
             CompareConst.ERROR_MESSAGE, CompareConst.ACCURACY,
             CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO
         ])
+        os.makedirs(base_dir, mode=0o750, exist_ok=True)
         self.lock = threading.Lock()
+
+    def tearDown(self):
+        if os.path.exists(base_dir):
+            shutil.rmtree(base_dir)
 
     def test_handle_multi_process(self):
         func = Comparator().compare_ops
-        input_parma = {}
+        generate_dump_json(base_dir)
+        input_parma = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
         lock = multiprocessing.Manager().RLock()
         result = _handle_multi_process(func, input_parma, result_df, lock)
         self.assertTrue(result.equals(o_result))
