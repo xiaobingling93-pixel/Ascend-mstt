@@ -127,6 +127,23 @@ class TestMultiApiAccuracyChecker(unittest.TestCase):
             "[Device 1] API: API_2 lacks backward information, skipping backward check."
         )
 
+    def test_process_backward_with_backward_info(self):
+        """测试 process_backward 成功执行时，返回正确的输出列表。"""
+        # 设置 current_device_id
+        self.checker.current_device_id = 1
+
+        api_info = MagicMock()
+        api_info.check_backward_info.return_value = False
+
+        backward_inputs_aggregation = MagicMock()
+        backward_output_list = MagicMock()
+
+        with patch.object(self.checker, 'prepare_api_input_aggregation', return_value=backward_inputs_aggregation), \
+                patch.object(self.checker, 'run_and_compare_helper', return_value=backward_output_list):
+            result = self.checker.process_forward("API_1", api_info)
+
+            self.assertEqual(result, backward_output_list)
+
     def test_init(self):
         # 测试初始化方法
         self.assertIsInstance(self.checker.manager, Manager().__class__)
