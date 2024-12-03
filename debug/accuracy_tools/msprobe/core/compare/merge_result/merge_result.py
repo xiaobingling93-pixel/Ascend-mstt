@@ -18,7 +18,7 @@ import re
 import multiprocessing
 import pandas as pd
 from tqdm import tqdm
-from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx
+from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
 from msprobe.core.compare.utils import table_value_is_valid
@@ -74,11 +74,13 @@ def get_result_path(input_dir):
     return filt_compare_result_path_list
 
 
-def get_dump_mode(compare_result_first_rank_path):
+# def get_dump_mode(compare_result_first_rank_path):
+def get_dump_mode(result_df):
+
     """
     get dump mode from header of first compare result table
     """
-    result_df = read_xlsx(compare_result_first_rank_path)
+    # result_df = read_xlsx(compare_result_first_rank_path)
     header = result_df.columns.tolist()
     if CompareConst.COSINE in header:
         return Const.ALL
@@ -94,6 +96,7 @@ def get_dump_mode(compare_result_first_rank_path):
 def check_index_dump_mode_consistent(compare_index_list, dump_mode):
     """
     check compare index to merge is consistent with dump mode
+    if compare_index_list is None, return all compare_indexes of dump mode
     """
     if dump_mode == Const.MD5:
         logger.error("dump task 'md5' don not support merge compare results.")
@@ -104,7 +107,7 @@ def check_index_dump_mode_consistent(compare_index_list, dump_mode):
         Const.SUMMARY: CompareConst.SUMMARY_COMPARE_INDEX
     }
     valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
-    if compare_index_list == "":
+    if not compare_index_list:
         return valid_compare_index
     if all(compare_index in valid_compare_index for compare_index in compare_index_list):
         return compare_index_list
@@ -143,8 +146,8 @@ def search_api_index_result(api_list, compare_index_list, result_df, rank_num, c
         ...
     }
     """
+    api_full_name_list = extract_api_full_name(api_list, result_df, rank_num)
     for compare_index in compare_index_list:
-        api_full_name_list = extract_api_full_name(api_list, result_df, rank_num)
         api_index_dict = {}
         for api_full_name in api_full_name_list:
             table_value_check(api_full_name)
@@ -176,10 +179,19 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
         rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
         rank_num_list.append(rank_num)
         logger.info(f"parsing rank{rank_num} compare result...")
-
-        compare_index_dict = search_api_index_result(api_list, compare_index_list,
-                                                     result_df, rank_num, compare_index_dict)
-        compare_index_dict_list.append(compare_index_dict)
+        if not result_df.empty:
+            # TODO 获取dump_mode
+            dump_mode = get_dump_mode(result_df)
+            # TODO 比较当前dump_mode和last_dump_mode
+            # TODO 根据dump_mode和compare_index_list获得真实compare_index_list
+            # 因为compare_index是指定的，固定不变，所以一旦compare_index是确定的，dump_mode也是确定的，
+            # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
+            compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)
+            compare_index_dict = search_api_index_result(api_list, compare_index_list,
+                                                         result_df, rank_num, compare_index_dict)
+            compare_index_dict_list.append(compare_index_dict)
+        else:
+            logger.warning(f"rank{rank_num} compare result is empty and will not shown in merged result.")
 
     return compare_index_dict_list, rank_num_list
 
@@ -199,7 +211,7 @@ def handle_multi_process(func, func_args, lock):
     pool = multiprocessing.Pool(process_num)
 
     def err_call(args):
-        logger.error('multiprocess compare failed! Reason: {}'.format(args))
+        logger.error('multiprocess merge result failed! Reason: {}'.format(args))
         try:
             pool.terminate()
         except OSError:
@@ -243,9 +255,8 @@ def gen_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir,
 
     all_result_df_list = []
     for compare_index_dict_list, rank_num_list in zip(all_compare_index_dict_list, all_rank_num_list):
-        header = [CompareConst.NPU_NAME] + ["rank" + str(rank_num) for rank_num in rank_num_list]
-
-        for compare_index_dict in compare_index_dict_list:
+        for compare_index_dict, rank_num in zip(compare_index_dict_list, rank_num_list):
+            header = [CompareConst.NPU_NAME, "rank" + str(rank_num)]
             result_df_list = []
             for compare_index, api_index_dict in compare_index_dict.items():
                 result = []
@@ -278,11 +289,23 @@ def df_merge(all_result_df_list):
     return merge_df_base
 
 
-def merge_result(input_dir, output_dir, api_yaml_path, compare_index_list):
+def merge_result(input_dir, output_dir, config_path):
+    input_dir = FileChecker(input_dir, FileCheckConst.DIR, FileCheckConst.READ_ABLE).common_check()
+    create_directory(output_dir)
+
     compare_result_path_list = get_result_path(input_dir)   # 获得的input_dir中所有比对结果件的全路径，数量少于2，便提示退出
-    dump_mode = get_dump_mode(compare_result_path_list[0])  # 通过第一个rank结果获取dump_mode # TODO 是否要校验所有rank的dump_mode
-    api_list = load_yaml(api_yaml_path)
-    compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)   # 校验index是否存在于对应的dump_mode中, 如果传入空，返回全部compare_index
+    # dump_mode = get_dump_mode(compare_result_path_list[0])  # 通过第一个rank结果获取dump_mode # TODO 是否要校验所有rank的dump_mode
+
+    config = load_yaml(config_path)
+    if not config:
+        logger.error('config.yaml is empty, please check.')
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    api_list = config.get('api')
+    if not api_list:
+        logger.error('The APIs required to merge data were not found')
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+    compare_index_list = config.get('compare_index')
+    # compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)
 
     func_args = (compare_result_path_list, api_list, compare_index_list)
     all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args,
@@ -293,8 +316,7 @@ def merge_result(input_dir, output_dir, api_yaml_path, compare_index_list):
 
 # TODO 测试代码，后续删除
 if __name__ == "__main__":
-    input_dir = '/home/yinglinwei/project/ar/merge_result_1129/mstt_3/debug/accuracy_tools/output_bak'
-    output_dir = '/home/yinglinwei/project/ar/merge_result_1129/mstt_3/debug/accuracy_tools/merge_output'
-    api_yaml_path = '/home/yinglinwei/project/ar/merge_result_1129/mstt_3/debug/accuracy_tools/output/api.yaml'
-    compare_index_list = ''
-    merge_result(input_dir, output_dir, api_yaml_path, compare_index_list)
+    input_dir = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/output'
+    output_dir = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/merge_output'
+    config_path = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/output/config.yaml'
+    merge_result(input_dir, output_dir, config_path)

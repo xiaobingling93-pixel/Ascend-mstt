@@ -64,7 +64,7 @@ def main():
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
         from msprobe.visualization.graph_service import _pt_graph_service_parser, _pt_graph_service_command
-        from msprobe.pytorch.compare.merge_result_cli import _merge_result_parser, merge_result_cli
+        from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
