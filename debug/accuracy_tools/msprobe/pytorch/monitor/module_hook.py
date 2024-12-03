@@ -18,12 +18,12 @@ import time
 import json
 import os
 import uuid
-import pytz
 from collections import defaultdict
-from functools import partial
 from copy import deepcopy
 from datetime import datetime, timezone
+from functools import partial
 
+import pytz
 import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
