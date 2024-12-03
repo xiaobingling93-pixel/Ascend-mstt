@@ -20,7 +20,10 @@ from msprobe.pytorch.common.log import logger
 
 
 class CompareColumn:
-    __slots__ = ['inf_nan_error_ratio', 'rel_err_ratio', 'abs_err_ratio', 
+    __slots__ = [
+                 'bench_type', 'npu_type','shape', 'cosine_sim', 'max_abs_err', 'rel_err_hundredth',
+                 'rel_err_ten_thousandth',
+                 'inf_nan_error_ratio', 'rel_err_ratio', 'abs_err_ratio', 
                  'small_value_err_ratio', 'max_rel_error', 'mean_rel_error', 'rmse', 'eb',
                  'max_ulp_error', 'mean_ulp_error', 'ulp_error_proportion',
                  'error_rate',
