@@ -18,6 +18,7 @@
 # 定义比对算法及比对标准
 import torch
 import numpy as np
+import math
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
 from msprobe.core.common.const import CompareConst
@@ -228,3 +229,25 @@ def get_ulp_err(bench_output, device_output, dtype):
 def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
     return (device_output.astype(data_type) - bench_output).astype(data_type) * \
             np.exp2(-eb + exponent_num).astype(data_type)
+
+
+def calc_ratio(x, y, default_value):
+        '''
+        计算npu侧和gpu侧统计量的比值
+        输入：
+            column_name：统计量名称
+            x：npu侧统计量
+            y：gpu侧统计量
+            default：当x不接近0，y接近0，设置的比值默认值
+        输出： 
+            ratio：统计量x和y的比值
+        '''
+
+        message = ""
+        if math.isclose(y, 0.0):
+            if math.isclose(x, 0.0):
+                return 1.0
+            else:
+                return default_value
+        else:
+            return abs(x / y)
