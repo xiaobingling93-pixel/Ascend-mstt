@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-import inspect
 import time
 import json
 import os
@@ -36,7 +34,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, write_metrics_bas
     TensorMetrics, write_metrics_csv, squash_param_name
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
-from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops
+from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
@@ -191,6 +189,8 @@ class TrainerMon:
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
             api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
+
+        self.common_info()
 
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
@@ -377,7 +377,7 @@ class TrainerMon:
         if not self.optimizer_hooked:
             self.hook_optimizer()
         return
-    
+
     def generate_param_metrics(self, opt_context):
         get_metrics(self.ops, self.name2param, self.eps, opt_context.param_metric)
 
@@ -682,49 +682,8 @@ class TrainerMon:
             # nothing to hook
             return 0
 
-        def _is_recomputation():
-            """Check if the current operation is in the re-computation phase.
-
-            This function inspects the current call stack to indicate whether the current operation is in the
-            re-computation phase. We use a blacklist mechanism, now supported megatron and mindspeed framework.
-            megatron: The 'backward' function is called by the 'torch/autograd/function.py' file.
-            mindspeed: The 'checkpoint_function_backward' function is called by the 'torch/autograd/function.py'
-            file or the custom module(use CheckpointWithoutOutput) with the 'backward' function is executed within the
-            'torch/_tensor.py' file.
-
-            Returns:
-                bool: True if in the re-computation phase, False otherwise.
-            """
-            backward_function_indices = []
-            call_stack = inspect.stack()
-
-            # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
-            for frame_info in call_stack:
-                if frame_info.function == 'backward' and frame_info.filename.endswith('torch/_tensor.py'):
-                    del call_stack
-                    return True
-
-            # Identify indices in the call stack where the specific function is being executed
-            for idx, frame_info in enumerate(call_stack):
-                if frame_info.function == 'backward' or frame_info.function == 'checkpoint_function_backward':
-                    backward_function_indices.append(idx)
-
-            # Check if the execution is within 'torch/autograd/function.py' file
-            for idx in backward_function_indices:
-                # The Megatron and MindSpeed L0&L1 scenes
-                if idx + 1 < len(call_stack) and call_stack[idx + 1].filename.endswith('torch/autograd/function.py'):
-                    del call_stack
-                    return True
-                # The latest MindSpeed L2 and ModelLink scenes
-                if idx + 2 < len(call_stack) and call_stack[idx + 2].filename.endswith('torch/autograd/function.py'):
-                    del call_stack
-                    return True
-
-            del call_stack
-            return False
-
         def fwd_hook_fun(module, module_input, module_output, name):
-            if _is_recomputation():
+            if is_recomputation():
                 return
             if module not in self.module_fwd_hook_context_by_module:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)

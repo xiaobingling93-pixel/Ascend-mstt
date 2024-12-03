@@ -1,10 +1,12 @@
 import unittest
+from unittest.mock import patch, MagicMock
 
 import torch
 
 from msprobe.pytorch.monitor.utils import filter_special_chars, MsgConst, get_param_struct, validate_ops, \
     validate_ranks, validate_targets, validate_print_struct, validate_ur_distribution, validate_xy_distribution, \
-    validate_mg_distribution, validate_wg_distribution, validate_cc_distribution, validate_alert, validate_config
+    validate_mg_distribution, validate_wg_distribution, validate_cc_distribution, validate_alert, validate_config, \
+    is_recomputation
 
 
 class TestValidationFunctions(unittest.TestCase):
@@ -77,6 +79,68 @@ class TestValidationFunctions(unittest.TestCase):
             'alert': {'rules': [{'rule_name': 'AnomalyTurbulence', 'args': {'threshold': 10.0}}], 'dump': True}
         }
         validate_config(config)
+
+
+class TestIsRecomputation(unittest.TestCase):
+    @patch('inspect.stack')
+    def test_in_recomputation_megatron(self, mock_stack):
+        # 模拟megatron框架下的调用栈
+        frame1 = MagicMock()
+        frame1.function = 'backward'
+        frame1.filename = 'torch/_tensor.py'
+
+        frame2 = MagicMock()
+        frame2.function = 'some_function'
+        frame2.filename = 'torch/autograd/function.py'
+
+        mock_stack.return_value = [frame1, frame2]
+
+        self.assertTrue(is_recomputation())
+
+    @patch('inspect.stack')
+    def test_in_recomputation_mindspeed_L0L1(self, mock_stack):
+        # 模拟mindspeed L0&L1场景下的调用栈
+        frame1 = MagicMock()
+        frame1.function = 'checkpoint_function_backward'
+        frame1.filename = 'some_module.py'
+
+        frame2 = MagicMock()
+        frame2.function = 'some_other_function'
+        frame2.filename = 'torch/autograd/function.py'
+
+        mock_stack.return_value = [frame1, frame2]
+
+        self.assertTrue(is_recomputation())
+
+    @patch('inspect.stack')
+    def test_in_recomputation_mindspeed_L2(self, mock_stack):
+        # 模拟mindspeed L2场景下的调用栈
+        frame1 = MagicMock()
+        frame1.function = 'checkpoint_function_backward'
+        frame1.filename = 'another_module.py'
+
+        frame2 = MagicMock()
+        frame2.function = 'yet_another_function'
+        frame2.filename = 'some_file.py'
+
+        frame3 = MagicMock()
+        frame3.function = 'final_function'
+        frame3.filename = 'torch/autograd/function.py'
+
+        mock_stack.return_value = [frame1, frame2, frame3]
+
+        self.assertTrue(is_recomputation())
+
+    @patch('inspect.stack')
+    def test_not_in_recomputation(self, mock_stack):
+        # 模拟非重计算阶段的调用栈
+        frame1 = MagicMock()
+        frame1.function = 'forward'
+        frame1.filename = 'my_model.py'
+
+        mock_stack.return_value = [frame1]
+
+        self.assertFalse(is_recomputation())
 
 
 if __name__ == '__main__':
