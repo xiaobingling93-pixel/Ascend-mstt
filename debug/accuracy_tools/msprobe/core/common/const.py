@@ -348,10 +348,12 @@ class CompareConst:
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+    KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+    UNREADABLE = 'unreadable data'
 
 
 class FileCheckConst:

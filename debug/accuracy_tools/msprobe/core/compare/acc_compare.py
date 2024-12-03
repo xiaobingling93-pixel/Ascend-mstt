@@ -15,6 +15,7 @@
 
 import multiprocessing
 import os
+import re
 from copy import deepcopy
 
 import pandas as pd
@@ -336,13 +337,27 @@ class Comparator:
         result_df = self.make_result_table(result, stack_mode, dump_mode)
         return result_df
 
-    def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param):
+    def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param, bench_data):
+        """
+        :param npu_op_name: excel中的NPU_Name，例如：MintFunctional.conv2d.0.forward.input.3.0
+        :param bench_op_name: excel中的Bench_Name，例如：Functional.conv2d.0.forward.input.3.0
+        :param op_name_mapping_dict: op_name和npy或pt文件的映射关系
+        :param input_param: npu_json_path/bench_json_path/stack_json_path等参数
+        :param bench_data: bench的dump数据中"data"字段
+        :return: result_list，包含余弦相似度、最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率和错误信息
+        用于读取excel中的NPU_Name和Bench_Name，根据映射关系找到npy或pt文件，然后读取文件中的数据进行比较，计算余弦相似度、
+        最大绝对误差、最大相对误差、千分之一误差率、千分之五误差率并生成错误信息
+        """
         npu_bench_name_list = op_name_mapping_dict[npu_op_name]
         data_name = safe_get_value(npu_bench_name_list, 1, "npu_bench_name_list")
         error_file, relative_err, error_flag = None, None, False
+        bench_data_name = get_bench_data_name(bench_op_name, bench_data)
         if data_name == '-1' or data_name == -1:  # 没有真实数据路径
             n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
             error_flag = True
+        elif not bench_data_name:
+            n_value, b_value, error_flag = CompareConst.READ_NONE, CompareConst.READ_NONE, True
+            error_file = 'no_bench_data'
         else:
             try:
                 read_npy_data = getattr(self, "read_npy_data")
@@ -350,19 +365,18 @@ class Comparator:
                 if frame_name == "MSComparator":
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.NUMPY_SUFFIX)
                     if self.cross_frame:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
-                                                bench_op_name + Const.PT_SUFFIX, load_pt_file=True)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_data_name,
+                                                load_pt_file=True)
                     else:
-                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"),
-                                                bench_op_name + Const.NUMPY_SUFFIX)
+                        b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_data_name)
                 else:
                     n_value = read_npy_data(input_param.get("npu_dump_data_dir"), npu_op_name + Const.PT_SUFFIX)
-                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_op_name + Const.PT_SUFFIX)
+                    b_value = read_npy_data(input_param.get("bench_dump_data_dir"), bench_data_name)
             except IOError as error:
                 error_file = error.filename
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
-            except FileCheckException:
+            except (FileCheckException, CompareException):
                 error_file = data_name
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
@@ -447,6 +461,7 @@ class Comparator:
         one_thousand_err_ratio_result = []
         five_thousand_err_ratio_result = []
         is_print_compare_log = input_param.get("is_print_compare_log")
+        bench_data = load_json(input_param.get("bench_json_path")).get('data')
         for i in range(len(result_df)):
             npu_op_name = result_df.iloc[i, 0]
             bench_op_name = result_df.iloc[i, 1]
@@ -454,7 +469,7 @@ class Comparator:
                 logger.info("start compare: {}".format(npu_op_name))
 
             cos_sim, max_abs_err, max_relative_err, one_thousand_err_ratio, five_thousand_err_ratio, err_msg = \
-                self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param)
+                self.compare_by_op(npu_op_name, bench_op_name, dump_path_dict, input_param, bench_data)
 
             if is_print_compare_log:
                 logger.info(
@@ -488,3 +503,36 @@ class Comparator:
         except ValueError as e:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
+
+def get_bench_data_name(bench_op_name, bench_data):
+    bench_name_list = re.split(r'\.(input|output|kwargs)\.', bench_op_name)
+    bench_data_bundle = bench_data.get(bench_name_list[0], {})
+    if not bench_data_bundle or len(bench_name_list) < 3:
+        return None
+    layers = bench_name_list[2].split(Const.SEP)
+
+    def get(key, container):
+        if isinstance(container, dict):
+            return container.get(key)
+        if isinstance(container, list):
+            try:
+                return container[int(key)]
+            except (ValueError, IndexError):
+                return None
+        return None
+
+    def get_by_layer(container):
+        data = container
+        for layer in layers:
+            data = get(layer, data)
+        return get(CompareConst.DATA_NAME.lower(), data)
+
+    if Const.INPUT == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle.get(Const.INPUT, bench_data_bundle.get(Const.INPUT_ARGS)))
+    elif Const.KWARGS == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle.get(Const.INPUT_KWARGS))
+    elif Const.OUTPUT == bench_name_list[1]:
+        return get_by_layer(bench_data_bundle.get(Const.OUTPUT))
+    else:
+        return None
+
