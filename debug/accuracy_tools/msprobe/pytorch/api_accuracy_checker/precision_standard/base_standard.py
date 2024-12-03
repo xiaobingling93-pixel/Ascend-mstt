@@ -44,6 +44,11 @@ class BaseCompare:
         self.compare_column = input_data.compare_column
         self.dtype = input_data.dtype
 
+    @staticmethod
+    def stat_small_value_mask(abs_bench, both_finite_mask, small_value):
+        small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value)
+        return small_value_mask
+
     def get_small_value_threshold(self):
         small_value = StandardConfig.get_small_valuel(self.dtype)
         small_value_atol = StandardConfig.get_small_value_atol(self.dtype)
@@ -60,10 +65,6 @@ class BaseCompare:
     def stat_finite_and_infinite_mask(self):
         both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(self.bench_output, self.device_output)
         return both_finite_mask, inf_nan_mask
-    
-    def stat_small_value_mask(self, abs_bench, both_finite_mask, small_value):
-        small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value)
-        return small_value_mask
 
     def compare(self):
         self._pre_compare()
@@ -74,8 +75,7 @@ class BaseCompare:
         pass
 
     def _compute_metrics(self):
-        metrics = {}
-        return metrics
+        return {}
     
     def _post_compare(self, metrics):
         self.compare_column.update(metrics)

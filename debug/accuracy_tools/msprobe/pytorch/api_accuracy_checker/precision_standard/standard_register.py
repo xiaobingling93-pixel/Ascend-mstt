@@ -53,6 +53,25 @@ class StandardRegistry:
             'thousandth_threshold': thousandth_standard_api
         }
 
+    def register(self, standard: str, func: Callable) -> None:
+        """
+        Registers a comparison function for a given standard category.
+
+        Args:
+            standard (str): The name of the standard category.
+            func (Callable): The comparison function to be registered.
+
+        Raises:
+            ValueError: If the standard category is not supported.
+        """
+        if not callable(func):
+            raise ValueError("The function to be registered must be callable.")
+        self.comparison_functions[standard] = func
+
+    def get_comparison_function(self, api_name, dtype=None):
+        standard = self._get_standard_category(api_name, dtype)
+        return self.comparison_functions.get(standard)
+
     def _get_standard_category(self, api_name, dtype=None):
         """
         Determines the standard category for a given API name and data type.
@@ -81,24 +100,3 @@ class StandardRegistry:
             if api_name in category:
                 return name
         return "benchmark"
-    
-    def register(self, standard: str, func: Callable) -> None:
-        """
-        Registers a comparison function for a given standard category.
-
-        Args:
-            standard (str): The name of the standard category.
-            func (Callable): The comparison function to be registered.
-
-        Raises:
-            ValueError: If the standard category is not supported.
-        """
-        if not callable(func):
-            raise ValueError("The function to be registered must be callable.")
-        if standard not in self.api_standard_function_map:
-            raise ValueError(f"The standard '{standard}' is not supported.")
-        self.comparison_functions[standard] = func
-
-    def get_comparison_function(self, api_name, dtype=None):
-        standard = self._get_standard_category(api_name, dtype)
-        return self.comparison_functions.get(standard)
