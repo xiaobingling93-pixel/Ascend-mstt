@@ -478,8 +478,8 @@ class Comparator:
             five_thousand_err_ratio_result=five_thousand_err_ratio_result
         )
 
-        return _save_cmp_result(idx, cr, result_df, lock)   
-    
+        return _save_cmp_result(idx, cr, result_df, lock)
+
     def do_multi_process(self, input_parma, result_df):
         try:
             result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
