@@ -1,9 +1,12 @@
+import os
 import sys
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 import zlib
+import hashlib
 
 import torch
+from torch import distributed as dist
 import numpy as np
 
 from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, BaseDataProcessor
@@ -162,10 +165,42 @@ class TestPytorchDataProcessor(unittest.TestCase):
         expected = {'type': 'slice', 'value': [None, None, None]}
         self.assertEqual(result, expected)
 
+    def test_process_group_hash(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor.process_group_hash(process_group_element)
+        expected = hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        self.assertEqual(result, expected)
+
     def test_analyze_torch_size(self):
         size = torch.Size([3, 4, 5])
         result = self.processor._analyze_torch_size(size)
         expected = {'type': 'torch.Size', 'value': [3, 4, 5]}
+        self.assertEqual(result, expected)
+
+    def test_analyze_memory_format(self):
+        memory_format_element = torch.contiguous_format
+        result = self.processor._analyze_memory_format(memory_format_element)
+        expected = {'type': 'torch.memory_format', 'format': 'contiguous_format'}
+        self.assertEqual(result, expected)
+
+    def test_analyze_process_group(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor._analyze_process_group(process_group_element)
+        expected = {
+            'type': 'torch.ProcessGroup',
+            'group_ranks': [0],
+            'group_id': hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        }
         self.assertEqual(result, expected)
 
     def test_get_special_types(self):
@@ -176,6 +211,21 @@ class TestPytorchDataProcessor(unittest.TestCase):
         size_element = torch.Size([2, 3])
         result = self.processor.analyze_single_element(size_element, [])
         self.assertEqual(result, self.processor._analyze_torch_size(size_element))
+
+    def test_analyze_single_element_memory_size(self):
+        memory_format_element = torch.contiguous_format
+        result = self.processor.analyze_single_element(memory_format_element, [])
+        self.assertEqual(result, self.processor._analyze_memory_format(memory_format_element))
+
+    def test_analyze_single_element_process_group(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor.analyze_single_element(process_group_element, [])
+        self.assertEqual(result, self.processor._analyze_process_group(process_group_element))
 
     def test_analyze_single_element_numpy_conversion(self):
         numpy_element = np.int64(1)
