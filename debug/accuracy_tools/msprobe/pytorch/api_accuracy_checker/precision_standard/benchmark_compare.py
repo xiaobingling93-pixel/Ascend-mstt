@@ -20,7 +20,7 @@ import math
 from collections import namedtuple
 
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import BaseConfig
-from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BasePrecisionComare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BasePrecisionCompare
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import calc_ratio
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ApiPrecisionCompareColumn, check_inf_or_nan, \
     is_inf_or_nan
@@ -34,7 +34,7 @@ BenchmarkInfNanConsistency = namedtuple('BenchmarkInfNanConsistency', ['small_va
                                                                            'eb_inf_nan_consistency'])
 
 
-class BenchmarkPrecisionStandard(BasePrecisionComare):
+class BenchmarkPrecisionStandard(BasePrecisionCompare):
     def __init__(self, input_data):
         super().__init__(input_data)
         self.compare_algorithm = "标杆比对法"

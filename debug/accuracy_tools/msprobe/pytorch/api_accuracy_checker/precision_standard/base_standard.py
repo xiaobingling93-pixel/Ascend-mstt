@@ -20,7 +20,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_s
 from msprobe.core.common.const import CompareConst
 
 
-class BasePrecisionComare:
+class BasePrecisionCompare:
     def __init__(self, input_data):
         self.npu_precision = input_data.npu_precision
         self.gpu_precision = input_data.gpu_precision

@@ -244,20 +244,6 @@ def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
         input_data = PrecisionCompareInput(row_npu, row_gpu, compare_column)
         comparison_func = registry.get_comparison_function(api_name, dtype)
         comparison_func(input_data)
-        if api_name in thousandth_standard_api:
-            new_status = record_thousandth_threshold_result(compare_column, row_npu)
-        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or \
-            api_name in binary_standard_api:
-            new_status = record_binary_consistency_result(api_name, compare_column, row_npu)
-        elif api_name in absolute_standard_api:
-            new_status = record_absolute_threshold_result(compare_column, row_npu)
-        elif api_name in ulp_standard_api and \
-            row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
-            us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_ulp_compare_result(compare_column, us)
-        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
-            bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_benchmark_compare_result(compare_column, bs)
     return new_status
 
 

@@ -232,22 +232,27 @@ def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
 
 
 def calc_ratio(x, y, default_value):
-        '''
-        计算npu侧和gpu侧统计量的比值
-        输入：
-            column_name：统计量名称
-            x：npu侧统计量
-            y：gpu侧统计量
-            default：当x不接近0，y接近0，设置的比值默认值
-        输出： 
-            ratio：统计量x和y的比值
-        '''
+    """
+    Calculate the ratio of statistics from the NPU side to the GPU side.
 
-        message = ""
-        if math.isclose(y, 0.0):
-            if math.isclose(x, 0.0):
-                return 1.0
-            else:
-                return default_value
+    Args:
+        x (float): The statistic from the NPU side.
+        y (float): The statistic from the GPU side.
+        default_value (float): The default value to use when y is close to 0 and x is not.
+
+    Returns:
+        float: The ratio of the statistics x and y.
+
+    Note:
+        If y is close to 0, the function returns the default value unless x is also close to 0, in which case 
+        it returns 1.0.
+        Otherwise, it returns the absolute value of x divided by y.
+    """
+    message = ""
+    if math.isclose(y, 0.0):
+        if math.isclose(x, 0.0):
+            return 1.0
         else:
-            return abs(x / y)
+            return default_value
+    else:
+        return abs(x / y)
