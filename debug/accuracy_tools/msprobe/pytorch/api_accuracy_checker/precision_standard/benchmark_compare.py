@@ -161,4 +161,6 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
             "mean_rel_err_status": mean_rel_err_status,
             "eb_status": eb_status
         }
-        return compare_result, status_dict, ""
+        metrics.update(status_dict)
+        metrics.update({'compare_result': compare_result})
+        return metrics

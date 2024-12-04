@@ -27,7 +27,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ApiPrecis
     is_inf_or_nan
 
 
-UlpInfNanConsistency = namedtuple('UlpInfNanConsistency', ['ulp_inf_nan_consistency'])
+UlpInfNanConsistency = namedtuple('UlpInfNanConsistency', ['mean_ulp_err_inf_nan_consistency', 
+                                             'ulp_err_proportion_ratio_inf_nan_consistency'])
 
 
 class UlpPrecisionStandard(BasePrecisionCompare):
@@ -35,25 +36,32 @@ class UlpPrecisionStandard(BasePrecisionCompare):
         super().__init__(input_data)
         self.compare_algorithm = "ULP误差比对法"
 
-    def _check_mean_ulp_err(self):
+    def _compute_mean_ulp_err(self):
         column_name = ApiPrecisionCompareColumn.MEAN_ULP_ERR
         npu_value, gpu_value = self._get_and_convert_values(column_name)
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
-            return check_inf_or_nan(npu_value, gpu_value, column_name)
+            _, mean_ulp_err_inf_nan_consistency, message = check_inf_or_nan(npu_value, gpu_value, column_name)
+            return npu_value, mean_ulp_err_inf_nan_consistency, message
         else:
-            return None, True, ""
+            return npu_value, True, ""
+    
+    def _compute_ulp_err_proportion(self):
+        column_name = ApiPrecisionCompareColumn.ULP_ERR_PROPORTION
+        npu_value, gpu_value = self._get_and_convert_values(column_name)
+        return npu_value, gpu_value
         
     def _get_status(self, metrics, inf_nan_consistency):
-        ulp_inf_nan_consistency = inf_nan_consistency.ulp_inf_nan_consistency
-        _, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._check_mean_ulp_err()
-        compare_meassage = ""
-        if not ulp_inf_nan_consistency or not mean_ulp_err_inf_nan_consistency:
+        ulp_inf_nan_consistency = inf_nan_consistency.mean_ulp_err_inf_nan_consistency and \
+                                  inf_nan_consistency.ulp_err_proportion_ratio_inf_nan_consistency  
+
+        if not ulp_inf_nan_consistency:
             status_dict = {
                 "ulp_err_status": CompareConst.ERROR
             }
-            if not mean_ulp_err_inf_nan_consistency:
-                compare_meassage = mean_ulp_err_message
-            return CompareConst.ERROR, status_dict, compare_meassage
+            compare_result = CompareConst.ERROR
+            metrics['compare_message'] =  metrics.get("compare_message", "") + "ERROR: ULP误差不满足标准\n"
+            metrics.update({'compare_result': compare_result})
+            return metrics
         
         dtype = self.row_npu.get(ApiPrecisionCompareColumn.DEVICE_DTYPE)
         mean_ulp_err = metrics.get("mean_ulp_error")
@@ -65,12 +73,15 @@ class UlpPrecisionStandard(BasePrecisionCompare):
         else:
             status, final_message = \
                 self._get_fp16_ulp_err_status(ulp_err_proportion, ulp_err_proportion_ratio)
-        compare_meassage = final_message
+        metrics['compare_message'] =  metrics.get("compare_message", "") + final_message
 
         status_dict = {
             "ulp_err_status": status
         }
-        return status, status_dict, compare_meassage
+        compare_result = status
+        metrics.update(status_dict)
+        metrics.update({'compare_result': compare_result})
+        return metrics
 
     def _get_fp32_ulp_err_status(self, mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio):
         mean_ulp_err_threshold, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold = \
@@ -102,16 +113,18 @@ class UlpPrecisionStandard(BasePrecisionCompare):
             return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_ratio(self):
-        column_name = ApiPrecisionCompareColumn.MEAN_ULP_ERR
-        mean_ulp_error, _ = self._get_and_convert_values(column_name)
-        column_name = ApiPrecisionCompareColumn.ULP_ERR_PROPORTION
-        npu_ulp_err_proportion, gpu_ulp_err_proportion = self._get_and_convert_values(column_name)
-        ulp_err_proportion_ratio, ulp_inf_nan_consistency, compare_message = \
+        compare_message = ""
+        mean_ulp_error, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
+        compare_message += mean_ulp_err_message
+        npu_ulp_err_proportion, gpu_ulp_err_proportion = self._compute_ulp_err_proportion()
+        ulp_err_proportion_ratio, ulp_err_proportion_ratio_inf_nan_consistency, ulp_err_proportion_ratio_message = \
             self._compute_ulp_err_proportion_ratio(npu_ulp_err_proportion, gpu_ulp_err_proportion)
+        compare_message += ulp_err_proportion_ratio_message
         metrics = {
             "mean_ulp_error": mean_ulp_error,
             "ulp_err_proportion": npu_ulp_err_proportion,
             "ulp_err_proportion_ratio": ulp_err_proportion_ratio,
             "compare_message": compare_message
             }
-        return metrics, UlpInfNanConsistency(ulp_inf_nan_consistency)
+        return metrics, UlpInfNanConsistency(mean_ulp_err_inf_nan_consistency, 
+                                             ulp_err_proportion_ratio_inf_nan_consistency)
