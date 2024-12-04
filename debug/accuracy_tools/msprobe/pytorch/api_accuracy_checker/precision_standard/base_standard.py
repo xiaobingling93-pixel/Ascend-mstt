@@ -15,9 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import BaseConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_str_to_float
-from msprobe.core.common.const import CompareConst
 
 
 class BasePrecisionCompare:
@@ -27,29 +25,32 @@ class BasePrecisionCompare:
         self.compare_column = input_data.compare_column
         self.compare_algorithm = None
     
+    def compare(self):
+        metrics, inf_nan_consistency = self._compute_ratio()
+        compare_result = self._post_compare(metrics, inf_nan_consistency)
+        return compare_result
     
     def _get_and_convert_values(self, column_name):
         npu_value = self.npu_precision.get(column_name)
         gpu_value = self.gpu_precision.get(column_name)
+        if npu_value is None:
+            raise ValueError(f"NPU value for column '{column_name}' is None.")
+        if gpu_value is None:
+            raise ValueError(f"GPU value for column '{column_name}' is None.")
         npu_value = convert_str_to_float(npu_value)
         gpu_value = convert_str_to_float(gpu_value)
         return npu_value, gpu_value
     
-    def get_status(self, metrics, inf_nan_consistency):
+    def _get_status(self, metrics, inf_nan_consistency):
         pass
 
-    def compute_ratio(self):
+    def _compute_ratio(self):
         pass
     
-    def post_compare(self, metrics, inf_nan_consistency):
-        compare_result, status_dict = self.get_status(metrics, inf_nan_consistency)
+    def _post_compare(self, metrics, inf_nan_consistency):
+        compare_result, status_dict = self._get_status(metrics, inf_nan_consistency)
         metrics.update(status_dict)
         metrics.update({'compare_result': compare_result})
         metrics.update({'compare_algorithm': self.compare_algorithm})
         self.compare_column.update(metrics)
-        return compare_result
-    
-    def compare(self):
-        metrics, inf_nan_consistency = self.compute_ratio()
-        compare_result = self.post_compare(metrics, inf_nan_consistency)
         return compare_result

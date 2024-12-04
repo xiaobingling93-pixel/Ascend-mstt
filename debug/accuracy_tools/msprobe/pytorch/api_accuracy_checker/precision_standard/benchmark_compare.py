@@ -53,7 +53,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, 10000.0), True, ""
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_rmse_ratio(self):
         column_name = ApiPrecisionCompareColumn.RMSE
@@ -61,7 +61,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, 10000.0), True, ""
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_max_rel_err_ratio(self):
         column_name = ApiPrecisionCompareColumn.MAX_REL_ERR
@@ -69,7 +69,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, 10000.0), True, ""
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_mean_rel_err_ratio(self):
         column_name = ApiPrecisionCompareColumn.MEAN_REL_ERR
@@ -77,7 +77,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, 10000.0), True, ""
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_eb_ratio(self):
         column_name = ApiPrecisionCompareColumn.EB
@@ -85,7 +85,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, 10000.0), True, ""
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
     
     def _compute_ratio(self):
         compare_message = ""

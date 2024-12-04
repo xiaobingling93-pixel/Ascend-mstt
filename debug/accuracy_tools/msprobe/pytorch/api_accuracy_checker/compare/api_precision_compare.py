@@ -358,7 +358,8 @@ def record_ulp_compare_result(input_data):
 
 
 def check_thousandth_rate(thousandth_rate):
-    return CompareConst.PASS if convert_str_to_float(thousandth_rate) >= 0.999 else CompareConst.ERROR
+    return CompareConst.PASS if convert_str_to_float(thousandth_rate) >= CompareConst.THOUSANDTH_PASS_VALUE \
+        else CompareConst.ERROR
 
 
 def record_thousandth_threshold_result(input_data):
