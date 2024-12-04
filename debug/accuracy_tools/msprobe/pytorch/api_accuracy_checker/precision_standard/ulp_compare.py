@@ -36,6 +36,14 @@ class UlpPrecisionStandard(BasePrecisionCompare):
         super().__init__(input_data)
         self.compare_algorithm = "ULP误差比对法"
 
+    @staticmethod
+    def _compute_ulp_err_proportion_ratio(npu_value, gpu_value):
+        column_name = ApiPrecisionCompareColumn.ULP_ERR_PROPORTION
+        if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
+            return check_inf_or_nan(npu_value, gpu_value, column_name)
+        else:
+            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
+
     def _compute_mean_ulp_err(self):
         column_name = ApiPrecisionCompareColumn.MEAN_ULP_ERR
         npu_value, gpu_value = self._get_and_convert_values(column_name)
@@ -104,14 +112,7 @@ class UlpPrecisionStandard(BasePrecisionCompare):
             return CompareConst.PASS, ""
         compare_message = "ERROR: ULP误差不满足标准\n"
         return CompareConst.ERROR, compare_message
-    
-    def _compute_ulp_err_proportion_ratio(npu_value, gpu_value):
-        column_name = ApiPrecisionCompareColumn.ULP_ERR_PROPORTION
-        if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
-            return check_inf_or_nan(npu_value, gpu_value, column_name)
-        else:
-            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
-    
+
     def _compute_ratio(self):
         compare_message = ""
         mean_ulp_error, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
