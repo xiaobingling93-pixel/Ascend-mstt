@@ -115,14 +115,14 @@ class UlpPrecisionStandard(BasePrecisionCompare):
 
     def _compute_ratio(self):
         compare_message = ""
-        mean_ulp_error, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
+        mean_ulp_err, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._compute_mean_ulp_err()
         compare_message += mean_ulp_err_message
         npu_ulp_err_proportion, gpu_ulp_err_proportion = self._compute_ulp_err_proportion()
         ulp_err_proportion_ratio, ulp_err_proportion_ratio_inf_nan_consistency, ulp_err_proportion_ratio_message = \
             self._compute_ulp_err_proportion_ratio(npu_ulp_err_proportion, gpu_ulp_err_proportion)
         compare_message += ulp_err_proportion_ratio_message
         metrics = {
-            "mean_ulp_error": mean_ulp_error,
+            "mean_ulp_err": mean_ulp_err,
             "ulp_err_proportion": npu_ulp_err_proportion,
             "ulp_err_proportion_ratio": ulp_err_proportion_ratio,
             "compare_message": compare_message
