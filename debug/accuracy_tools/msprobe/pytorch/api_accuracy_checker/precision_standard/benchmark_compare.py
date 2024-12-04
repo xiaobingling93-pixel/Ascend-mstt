@@ -41,6 +41,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
 
     @staticmethod
     def get_final_status(status_list):
+        compare_result = CompareConst.PASS
         if CompareConst.ERROR in status_list:
             compare_result = CompareConst.ERROR
         elif CompareConst.WARNING in status_list:

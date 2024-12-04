@@ -243,7 +243,7 @@ def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
         dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         input_data = PrecisionCompareInput(row_npu, row_gpu, compare_column)
         comparison_func = registry.get_comparison_function(api_name, dtype)
-        comparison_func(input_data)
+        new_status = comparison_func(input_data)
     return new_status
 
 
