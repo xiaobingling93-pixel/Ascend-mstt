@@ -12,15 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import inspect
 from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
 
 import torch
-from torch import distributed as dist
 
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.log import logger
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
@@ -62,6 +61,48 @@ def get_param_struct(param):
         res['config'] = f'{type(param)}'
         logger.warning(f'Not support type({type(param)}) now, please check the type of param {param}')
     return res
+
+
+def is_recomputation():
+    """Check if the current operation is in the re-computation phase.
+
+    This function inspects the current call stack to indicate whether the current operation is in the
+    re-computation phase. We use a blacklist mechanism, now supported megatron and mindspeed framework.
+    megatron: The 'backward' function is called by the 'torch/autograd/function.py' file.
+    mindspeed: The 'checkpoint_function_backward' function is called by the 'torch/autograd/function.py'
+    file or the custom module(use CheckpointWithoutOutput) with the 'backward' function is executed within the
+    'torch/_tensor.py' file.
+
+    Returns:
+        bool: True if in the re-computation phase, False otherwise.
+    """
+    backward_function_indices = []
+    call_stack = inspect.stack()
+
+    # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
+    for frame_info in call_stack:
+        if frame_info.function == Const.BACKWARD and frame_info.filename.endswith('torch/_tensor.py'):
+            del call_stack
+            return True
+
+    # Identify indices in the call stack where the specific function is being executed
+    for idx, frame_info in enumerate(call_stack):
+        if frame_info.function == Const.BACKWARD or frame_info.function == 'checkpoint_function_backward':
+            backward_function_indices.append(idx)
+
+    # Check if the execution is within 'torch/autograd/function.py' file
+    for idx in backward_function_indices:
+        # The Megatron and MindSpeed L0&L1 scenes
+        if idx + 1 < len(call_stack) and call_stack[idx + 1].filename.endswith('torch/autograd/function.py'):
+            del call_stack
+            return True
+        # The latest MindSpeed L2 and ModelLink scenes
+        if idx + 2 < len(call_stack) and call_stack[idx + 2].filename.endswith('torch/autograd/function.py'):
+            del call_stack
+            return True
+
+    del call_stack
+    return False
 
 
 def validate_ops(ops):

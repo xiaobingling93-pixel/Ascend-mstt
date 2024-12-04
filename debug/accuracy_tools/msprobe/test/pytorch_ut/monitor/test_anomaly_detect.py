@@ -1,9 +1,18 @@
 import unittest
 from unittest import TestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from msprobe.pytorch.monitor.anomaly_detect import BaseWriterWithAD, AnomalyTurbulence, AnomalyScanner, \
-                                        AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD
+from msprobe.pytorch.monitor.anomaly_detect import AnomalyTurbulence, AnomalyScanner, \
+    AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD, ScanRule
+
+
+class TestScanRule(TestCase):
+    def test_apply_not_implemented(self):
+        scan_rule = ScanRule()
+        with self.assertRaises(Exception) as context:
+            scan_rule.apply(None, None)
+
+        self.assertEqual(str(context.exception), "abstract method apply is not implemented")
 
 
 class TestAnomalyTurbulence(TestCase):
@@ -17,7 +26,7 @@ class TestAnomalyTurbulence(TestCase):
         cur = 16
         result = self.rule.apply(history, cur)
         self.assertTrue(result)
-    
+
     def test_apply_with_non_positive_baseline(self):
         history = [0, 0, 0]
         cur = -1
@@ -37,6 +46,9 @@ class TestAnomalyScanner(TestCase):
         self.assertIsInstance(rules[0], AnomalyTurbulence)
         self.assertEqual(rules[0].threshold, 0.2)
 
+        rules = AnomalyScanner.load_rules(None)
+        self.assertEqual(len(rules), 0)
+
     @patch("msprobe.pytorch.monitor.anomaly_detect.logger")
     def test_load_rules_with_missing_keys(self, mock_logger):
         specs = [
@@ -47,21 +59,25 @@ class TestAnomalyScanner(TestCase):
         self.assertEqual(len(rules), 0)
         mock_logger.warning.assert_called_once_with(f"Spec is missing required keys: {specs[0]}")
 
-    @patch("msprobe.pytorch.monitor.anomaly_detect.logger")
-    def test_load_rules_with_invalid_rule(self, mock_logger):
-        specs = [
-            {"rule_name": "InvalidRule", "args": {"threshold": 0.2}}
-        ]
+    def test_load_rules_with_invalid_rule(self):
+        # test invalid rule_name
+        specs = [{"rule_name": "InvalidRule", "args": {"threshold": 0.2}}]
         rules = AnomalyScanner.load_rules(specs)
+        self.assertEqual(len(rules), 0)
 
+        # test invalid args
+        specs = [{"rule_name": "AnomalyTurbulence", "args": "invalid args"}]
+        rules = AnomalyScanner.load_rules(specs)
         self.assertEqual(len(rules), 0)
 
     def test_scan(self):
-        AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
-        ad_rules = [AnomalyTurbulence_obj]
+        ad_rules = [AnomalyTurbulence(0.2)]
+        # test scan with anomaly
         expected = True, "AnomalyTurbulence"
-
         self.assertEqual(AnomalyScanner.scan(ad_rules, 1.0, 2.0), expected)
+        # test scan with no anomaly
+        expected = False, None
+        self.assertEqual(AnomalyScanner.scan(ad_rules, 1.0, 1.0), expected)
 
 
 class TestAnomalyDataFactory(TestCase):
@@ -78,16 +94,29 @@ class TestAnomalyDataFactory(TestCase):
 
         self.assertEqual(self.AnomalyDataFactory.name2callid, {'param_name': 0})
 
-    def test_create(self):
+    def test_create_success(self):
         tag = ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min')
         message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min') at step 2."
         step = 2
         result = self.AnomalyDataFactory.create(tag, message, step)
-        
+
         self.assertEqual(result.step, step)
         self.assertEqual(result.tag_name, tag[0])
         self.assertEqual(result.message, message)
         self.assertEqual(result.vpp_stage, 0)
+
+        # test no vpp_stage
+        tag = ('1.self_attention.core_attention_flash_0/rank0/output', 'min')
+        result = self.AnomalyDataFactory.create(tag, message, step)
+        self.assertEqual(result.vpp_stage, 0)
+
+    def test_create_failed(self):
+        error_tag = '0:1.self_attention.core_attention_flash_0/rank0/output'
+        message = "Rule AnomalyTurbulence reports anomaly signal in ('0:1.self_attention.core_attention_flash_0/rank0/output', 'min') at step 2."
+        step = 2
+        with self.assertRaises(Exception) as context:
+            self.AnomalyDataFactory.create(error_tag, message, step)
+        self.assertEqual(str(context.exception), "tag must be a tuple with length 2")
 
 
 class TestGradAnomalyData(TestCase):
@@ -118,6 +147,71 @@ class TestGradAnomalyData(TestCase):
 
         self.assertEqual(self.GradAnomalyData.get_key(), expected)
 
+    def test_lt_different_step(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_different_micro_step(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_step_same_micro_step_different_vpp_stage(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0)
+        self.assertGreater(data1, data2)
+        self.assertLess(data2, data1)
+
+    def test_lt_same_step_same_micro_step_same_vpp_stage_different_pp_stage(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0)
+        self.assertGreater(data1, data2)
+        self.assertLess(data2, data1)
+
+    def test_lt_same_step_same_micro_step_same_vpp_stage_same_pp_stage_different_call_id(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=1)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+    def test_lt_same_data(self):
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        self.assertGreaterEqual(data1, data2)
+        self.assertLessEqual(data1, data2)
+
+    def test_lt_not_instance(self):
+        data = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        not_instance = "not an instance of GradAnomalyData"
+        self.assertEqual(data.__lt__(not_instance), NotImplemented)
+
+    def test_le_same_instance(self):
+        # 测试相同实例的情况
+        data1 = GradAnomalyData()
+        self.assertTrue(data1 <= data1)
+
+    def test_le_different_instance(self):
+        # 测试不同实例的情况
+        data1 = GradAnomalyData()
+        data2 = GradAnomalyData()
+        self.assertTrue(data1 <= data2)
+
+    def test_le_not_instance(self):
+        # 测试非GradAnomalyData实例的情况
+        data = GradAnomalyData()
+        not_instance = "Not an instance of GradAnomalyData"
+        self.assertEqual(data.__le__(not_instance), NotImplemented)
+
+    def test_le_different_instance_not_equal(self):
+        # 测试不同实例且不相等的情况
+        data1 = GradAnomalyData()
+        data2 = GradAnomalyData()
+        data2.some_attribute = "some value"
+        self.assertTrue(data1 <= data2)
+
 
 class TestBaseWriterWithAD(TestCase):
 
@@ -139,7 +233,7 @@ class TestBaseWriterWithAD(TestCase):
     def test_add_scalar(self, mock_logger):
         AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
         self.BaseWriter.ad_rules = [AnomalyTurbulence_obj]
-        self.BaseWriter.tag2scalars = {'tag':{'avg': 1.0, 'count': 1}}
+        self.BaseWriter.tag2scalars = {'tag': {'avg': 1.0, 'count': 1}}
         self.BaseWriter.add_scalar('tag', 2.0)
 
         mock_logger.info.assert_called_once()
@@ -148,7 +242,7 @@ class TestBaseWriterWithAD(TestCase):
         AnomalyTurbulence_obj = AnomalyTurbulence(0.2)
         self.BaseWriter.ad_rules = [AnomalyTurbulence_obj]
         expected = True, "AnomalyTurbulence"
-        
+
         self.assertEqual(self.BaseWriter._ad(2.0, 1.0), expected)
 
     def test_update_tag2scalars(self):
@@ -158,3 +252,7 @@ class TestBaseWriterWithAD(TestCase):
         self.BaseWriter._update_tag2scalars('tag1', 2.0)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['avg'], 1.5)
         self.assertEqual(self.BaseWriter.tag2scalars['tag1']['count'], 2)
+
+
+if __name__ == '__main__':
+    unittest.main()

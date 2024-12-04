@@ -30,6 +30,8 @@ from msprobe.core.common.const import FileCheckConst, MonitorConst
 
 
 class ScanRule(ABC):
+    name = "ScanRule"
+
     def apply(self, history, cur):
         raise NotImplementedError("abstract method apply is not implemented")
 
@@ -54,6 +56,9 @@ class AnomalyScanner:
 
     @staticmethod
     def load_rules(specs: List[dict]):
+        """
+        specs: [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
+        """
         if specs is None:
             return []
         alert_rules = []
@@ -184,6 +189,7 @@ class GradAnomalyData:
         return self.__dict__
 
     def get_key(self):
+        # 0:1.self_attention.core_attention_flash_0/rank0/input_grad
         return ''.join([str(self.tag_name), "_step_", str(self.step), "_call_", str(self.call_id)])
 
 
@@ -206,6 +212,14 @@ class BaseWriterWithAD:
         self.anomalies.clear()
 
     def add_scalar(self, tag, scalar_value, global_step=None):
+        """If an anomaly is detected, the anomaly information is recorded and added to self.anomalies.
+        Args:
+            tag (tuple): tuple of tag_name and tag like ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min').
+            scalar_value (float): scalar_value.
+            global_step (int): global_step.
+        Returns:
+            None
+        """
         detected = False
         if self.ad_rules:
             avg = self._update_tag2scalars(tag, scalar_value)
@@ -213,9 +227,7 @@ class BaseWriterWithAD:
         if detected:
             exception_message = f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
             logger.info(f"{BCOLORS.WARNING}> {exception_message}{BCOLORS.ENDC}")
-            if self.anomaly_inform:
-                self.anomaly_inform.run(exception_message, self.job_id)
-
+            # append to self.anomalies for dump
             if self.anomaly_factory:
                 self.anomalies.append(self.anomaly_factory.create(tag, exception_message, global_step))
 
@@ -255,6 +267,11 @@ class CSVWriterWithAD(BaseWriterWithAD):
         self.header = []
 
     def write_csv(self, prefix, step):
+        """
+        Args:
+            prefix[str]: prefix of output csv file e.g. grad_unreduced
+            step[int]
+        """
         if len(self.context_dict) == 0:
             return
         filepath = os.path.join(self.log_dir, f'{prefix}_{step}.csv')
@@ -273,6 +290,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         self.context_dict = defaultdict(list)
 
     def add_scalar(self, tag, scalar_value, global_step):
+        """
+        ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
+        """
         super().add_scalar(tag, scalar_value, global_step)
 
         name = tag[0].split('/')[0]
