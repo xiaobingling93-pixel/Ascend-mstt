@@ -129,7 +129,8 @@ class BaseConfig:
     def get_fp16_ulp_err_proportion_threshold(cls):
         return cls._fp16_ulp_err_proportion
     
-    def get_ulp_threshold(self, dtype):
+    @classmethod
+    def get_ulp_threshold(cls, dtype):
         if dtype == torch.float32:
             mean_ulp_err_threshold = BaseConfig.get_fp32_mean_ulp_err_threshold()
             ulp_err_proportion_threshold = BaseConfig.get_fp32_ulp_err_proportion_threshold()
