@@ -19,7 +19,6 @@ import json
 import os
 import uuid
 from collections import defaultdict
-from copy import deepcopy
 from datetime import datetime, timezone
 from functools import partial
 
