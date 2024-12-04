@@ -303,9 +303,11 @@ class TestUtilsMethods(unittest.TestCase):
         bench_dump_path = os.path.join(data_path, 'bench_dump.json')
         npu_stack_path = os.path.join(data_path, 'npu_stack.json')
 
-        with open(npu_dump_path, 'w') as n_d_f, open(bench_dump_path, 'w') as b_d_f, open(npu_stack_path, 'w') as n_s_f:
+        with open(npu_dump_path, 'w') as n_d_f:
             json.dump(npu_json_data, n_d_f)
+        with open(bench_dump_path, 'w') as b_d_f:
             json.dump(bench_json_data, b_d_f)
+        with open(npu_stack_path, 'w') as n_s_f:
             json.dump({}, n_s_f)
         ms_comparator = MSComparator()
         result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
@@ -337,11 +339,11 @@ class TestUtilsMethods(unittest.TestCase):
             npu_stack_path = os.path.join(data_path, 'npu_stack.json')
 
             npu_data, bench_data, _ = gen_api_mapping_test_data()
-            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
-                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
-                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f):
+            with open(npu_dump_path, 'w', encoding='utf8') as n_d_f:
                 json.dump(npu_data, n_d_f)
+            with open(bench_dump_path, 'w', encoding='utf8') as b_d_f:
                 json.dump(bench_data, b_d_f)
+            with open(npu_stack_path, 'w', encoding='utf8') as n_s_f:
                 json.dump({}, n_s_f)
             ms_comparator = MSComparator(api_mapping=True)
             result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
@@ -361,13 +363,13 @@ class TestUtilsMethods(unittest.TestCase):
             user_mapping_path = os.path.join(data_path, 'user_mapping.yaml')
 
             npu_data, bench_data, user_mapping = gen_api_mapping_test_data(True)
-            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
-                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
-                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f,
-                  open(user_mapping_path, 'w', encoding='utf8') as u_m_f):
+            with open(npu_dump_path, 'w', encoding='utf8') as n_d_f:
                 json.dump(npu_data, n_d_f)
+            with open(bench_dump_path, 'w', encoding='utf8') as b_d_f:
                 json.dump(bench_data, b_d_f)
+            with open(npu_stack_path, 'w', encoding='utf8') as n_s_f:
                 json.dump({}, n_s_f)
+            with open(user_mapping_path, 'w', encoding='utf8') as u_m_f:
                 yaml.safe_dump(user_mapping, u_m_f)
             ms_comparator = MSComparator(api_mapping=user_mapping_path)
             result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
