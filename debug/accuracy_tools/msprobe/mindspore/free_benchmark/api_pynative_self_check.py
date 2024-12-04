@@ -73,7 +73,7 @@ class ApiPyNativeSelfCheck:
 
             api_name_with_id = api_name_with_id[:-1]
             hook_prefix = api_name_with_id[:api_name_with_id.find(Const.SEP) + 1]
-            api_name = (MsConst.HOOK_MS_PREFIX_DICT.get(hook_prefix) +
+            api_name = (MsConst.HOOK_MS_PREFIX_DICT.get(hook_prefix, "") +
                         api_name_with_id[api_name_with_id.find(Const.SEP) + 1:api_name_with_id.rfind(Const.SEP)])
             if api_name in self.api_list:
                 ret = check_self(api_name_with_id, output_data, self.ori_func.get(api_name),
