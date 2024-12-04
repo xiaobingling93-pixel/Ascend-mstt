@@ -106,9 +106,9 @@ class OptimizerContext:
         self.param_adam_ratio = defaultdict()
         self.param_weight_grad = defaultdict()
         self.param_exp_avg = defaultdict()
-        self.exp_avg_metric = []
+        self.exp_avg_metric = {}
         self.param_exp_avg_sq = defaultdict()
-        self.exp_avg_sq_metric = []
+        self.exp_avg_sq_metric = {}
         self.metric_dict = {}
         self.param_metric = {}
 
@@ -191,6 +191,8 @@ class TrainerMon:
             self.cc_pre_hook = self.cc_distribution.get('cc_pre_hook', False)
             api_register.initialize_hook(*create_hooks(context=self.cc_context, monitor=self))
             api_register.redirect_api()
+
+        self.common_info()
 
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
@@ -323,7 +325,7 @@ class TrainerMon:
             logger.info_on_rank_0('> grad and momentum direction will not be compared.')
         if not self.cc_distribution.get('enable', False):
             logger.info_on_rank_0("> cc operator is not monitored.")
-        if self.opt_ty is None:
+        if not self.opt_ty:
             if self.ur_distribution:
                 raise Exception("ur_distribution cannot be enabled with unknown optimizer.")
             if self.mv_distribution:
