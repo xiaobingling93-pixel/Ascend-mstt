@@ -55,13 +55,13 @@ class StandardConfig:
         torch.bfloat16: 1e-3,
         torch.float32: 1e-6,
         "default": 1e-6
-        }
+    }
     _small_value_atol = {
         torch.float16: 1e-5,
         torch.bfloat16: 1e-5,
         torch.float32: 1e-9,
         "default": 1e-9
-        }
+    }
     _rtol = {
         torch.float16: 1e-3,
         torch.bfloat16: 4e-3,

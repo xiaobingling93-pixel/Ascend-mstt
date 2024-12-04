@@ -72,7 +72,7 @@ class BenchmarkCompare(BaseCompare):
     
     def _compute_rel_err(self):
         rel_err = get_rel_err(self.abs_err, self.abs_bench_with_eps, self.small_value_mask, self.inf_nan_mask)
-        return rel_err, rel_err.size
+        return rel_err
     
     def _pre_compare(self):
         self.abs_bench, self.abs_bench_with_eps = self.stat_abs_bench_with_eps()
@@ -80,7 +80,7 @@ class BenchmarkCompare(BaseCompare):
         self.abs_err = self.stat_abs_error()
         self.small_value, self.small_value_atol = self.get_small_value_threshold()
         self.small_value_mask = self.stat_small_value_mask(self.abs_bench, self.both_finite_mask, self.small_value)
-        self.rel_err, _ = self._compute_rel_err()
+        self.rel_err = self._compute_rel_err()
         self.abs_err_greater_mask = self._get_abs_err_greater_mask(self.small_value_atol)
 
     def _compute_metrics(self):
