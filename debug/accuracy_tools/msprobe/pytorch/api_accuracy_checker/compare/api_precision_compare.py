@@ -363,7 +363,7 @@ def check_thousandth_rate(thousandth_rate):
 
 
 def record_thousandth_threshold_result(input_data):
-    row_npu = input_data.npu_row
+    row_npu = input_data.row_npu
     compare_column = input_data.compare_column
     new_status = check_thousandth_rate(row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH])
     compare_column.rel_err_thousandth = row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
