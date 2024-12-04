@@ -116,7 +116,7 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
     
     
     def _get_threshold(self, metric):
-        error_threshold, warning_threshold = BaseConfig.get_threshold(metric)
+        error_threshold, warning_threshold = BaseConfig.get_benchmark_threshold(metric)
         return error_threshold, warning_threshold
     
 

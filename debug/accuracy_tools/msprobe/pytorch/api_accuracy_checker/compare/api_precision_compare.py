@@ -304,7 +304,7 @@ def check_csv_columns(columns, csv_type):
 
 
 def record_binary_consistency_result(input_data):
-    row_npu = input_data.npu_row
+    row_npu = input_data.row_npu
     compare_column = input_data.compare_column
     new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE])
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
@@ -319,7 +319,7 @@ def record_binary_consistency_result(input_data):
 
 
 def record_absolute_threshold_result(input_data):
-    row_npu = input_data.npu_row
+    row_npu = input_data.row_npu
     compare_column = input_data.compare_column
     absolute_threshold_result = get_absolute_threshold_result(row_npu)
     compare_column.inf_nan_error_ratio = absolute_threshold_result.get("inf_nan_error_ratio")

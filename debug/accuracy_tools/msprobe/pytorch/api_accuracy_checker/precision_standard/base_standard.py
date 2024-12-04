@@ -20,8 +20,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_s
 
 class BasePrecisionCompare:
     def __init__(self, input_data):
-        self.npu_precision = input_data.npu_precision
-        self.gpu_precision = input_data.gpu_precision
+        self.row_npu = input_data.row_npu
+        self.row_gpu = input_data.row_gpu
         self.compare_column = input_data.compare_column
         self.compare_algorithm = None
     
@@ -31,8 +31,8 @@ class BasePrecisionCompare:
         return compare_result
     
     def _get_and_convert_values(self, column_name):
-        npu_value = self.npu_precision.get(column_name)
-        gpu_value = self.gpu_precision.get(column_name)
+        npu_value = self.row_npu.get(column_name)
+        gpu_value = self.row_gpu.get(column_name)
         if npu_value is None:
             raise ValueError(f"NPU value for column '{column_name}' is None.")
         if gpu_value is None:

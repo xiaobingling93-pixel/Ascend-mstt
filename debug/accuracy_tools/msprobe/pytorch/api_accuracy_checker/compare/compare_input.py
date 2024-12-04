@@ -19,7 +19,7 @@ import numpy as np
 
 
 class PrecisionCompareInput:
-    def __init__(self, npu_precision, gpu_precision, compare_column):
-        self.npu_precision = npu_precision
-        self.gpu_precision = gpu_precision
+    def __init__(self, row_npu, row_gpu, compare_column):
+        self.row_npu = row_npu
+        self.row_gpu = row_gpu
         self.compare_column = compare_column

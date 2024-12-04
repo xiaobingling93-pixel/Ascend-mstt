@@ -101,7 +101,8 @@ class BaseConfig:
     def get_eb_threshold(cls, threshold_type):
         return cls._eb_threshold.get(threshold_type, cls._eb_threshold["default"])
     
-    def get_benchmark_threshold(metric):
+    @classmethod
+    def get_benchmark_threshold(cls, metric):
         metric_threshold_functions = {
             'small_value': BaseConfig.get_small_value_threshold,
             'rmse': BaseConfig.get_rmse_threshold,
