@@ -3,7 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyTurbulence, AnomalyScanner, \
-    AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD, ScanRule
+    AnomalyDataFactory, GradAnomalyData, BaseWriterWithAD, ScanRule, WriterInput
 
 
 class TestScanRule(TestCase):
@@ -216,7 +216,7 @@ class TestGradAnomalyData(TestCase):
 class TestBaseWriterWithAD(TestCase):
 
     def setUp(self) -> None:
-        self.BaseWriter = BaseWriterWithAD('', None, None)
+        self.BaseWriter = BaseWriterWithAD(WriterInput('', None, None))
 
     def test_get_anomalies(self):
         expected = []

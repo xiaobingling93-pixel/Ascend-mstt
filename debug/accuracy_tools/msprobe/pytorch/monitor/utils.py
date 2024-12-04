@@ -21,6 +21,7 @@ import torch
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import is_int
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
@@ -202,6 +203,15 @@ def validate_alert(alert):
         raise TypeError('dump must be bool.')
 
 
+def validate_step_count_per_record(step_count_per_record):
+    if not is_int(step_count_per_record):
+        raise TypeError('step_count_per_record must be int.')
+    if step_count_per_record < 1:
+        raise ValueError("step_count_per_record must greater than 0")
+    if step_count_per_record > 1e6:
+        raise ValueError("step_count_per_record must smaller than 1e6")
+
+
 def validate_config(config):
     config['ops'] = validate_ops(config.get('ops', []))
 
@@ -235,3 +245,6 @@ def validate_config(config):
 
     alert = config.get('alert', {})
     validate_alert(alert)
+
+    step_count_per_record = config.get('step_count_per_record', 1)
+    validate_step_count_per_record(step_count_per_record)
