@@ -161,4 +161,4 @@ class BenchmarkPrecisionStandard(BasePrecisionCompare):
             "mean_rel_err_status": mean_rel_err_status,
             "eb_status": eb_status
         }
-        return compare_result, status_dict
+        return compare_result, status_dict, ""

@@ -48,9 +48,11 @@ class BasePrecisionCompare:
         pass
     
     def _post_compare(self, metrics, inf_nan_consistency):
-        compare_result, status_dict = self._get_status(metrics, inf_nan_consistency)
+        compare_result, status_dict, compare_message = self._get_status(metrics, inf_nan_consistency)
         metrics.update(status_dict)
         metrics.update({'compare_result': compare_result})
         metrics.update({'compare_algorithm': self.compare_algorithm})
+        if compare_message:
+            metrics.update({'compare_message': compare_message})
         self.compare_column.update(metrics)
         return compare_result

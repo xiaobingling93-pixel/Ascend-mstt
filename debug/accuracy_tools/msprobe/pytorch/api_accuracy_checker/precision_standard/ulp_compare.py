@@ -46,25 +46,26 @@ class UlpPrecisionStandard(BasePrecisionCompare):
     def _get_status(self, metrics, inf_nan_consistency):
         ulp_inf_nan_consistency = inf_nan_consistency.ulp_inf_nan_consistency
         _, mean_ulp_err_inf_nan_consistency, mean_ulp_err_message = self._check_mean_ulp_err()
-        if not mean_ulp_err_inf_nan_consistency:
-           metrics['compare_message'] = metrics.get('compare_message', '') + mean_ulp_err_message
+        compare_meassage = ""
         if not ulp_inf_nan_consistency or not mean_ulp_err_inf_nan_consistency:
             status_dict = {
                 "ulp_err_status": CompareConst.ERROR
             }
-            return CompareConst.ERROR, status_dict
+            if not mean_ulp_err_inf_nan_consistency:
+                compare_meassage = mean_ulp_err_message
+            return CompareConst.ERROR, status_dict, compare_meassage
         
         dtype = self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE)
         if dtype == torch.float32:
             status, final_message = self._get_fp32_ulp_err_status()
         else:
             status, final_message = self._get_fp16_ulp_err_status()
-        metrics['compare_message'] = metrics.get('compare_message', '') + final_message
+        compare_meassage = final_message
 
         status_dict = {
             "ulp_err_status": status
         }
-        return status, status_dict
+        return status, status_dict, compare_meassage
 
     def _get_fp32_ulp_err_status(self):
         mean_ulp_err_threshold, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold = \
