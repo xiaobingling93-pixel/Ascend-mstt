@@ -150,38 +150,38 @@ class TestGradAnomalyData(TestCase):
     def test_lt_different_step(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        self.assertTrue(data1 < data2)
-        self.assertFalse(data2 < data1)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
 
     def test_lt_same_step_different_micro_step(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0)
-        self.assertTrue(data1 < data2)
-        self.assertFalse(data2 < data1)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
 
     def test_lt_same_step_same_micro_step_different_vpp_stage(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0)
-        self.assertFalse(data1 < data2)
-        self.assertTrue(data2 < data1)
+        self.assertGreater(data1, data2)
+        self.assertLess(data2, data1)
 
     def test_lt_same_step_same_micro_step_same_vpp_stage_different_pp_stage(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0)
-        self.assertFalse(data1 < data2)
-        self.assertTrue(data2 < data1)
+        self.assertGreater(data1, data2)
+        self.assertLess(data2, data1)
 
     def test_lt_same_step_same_micro_step_same_vpp_stage_same_pp_stage_different_call_id(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=1)
-        self.assertTrue(data1 < data2)
-        self.assertFalse(data2 < data1)
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
 
     def test_lt_same_data(self):
         data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
         data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        self.assertFalse(data1 < data2)
-        self.assertFalse(data2 < data1)
+        self.assertGreaterEqual(data1, data2)
+        self.assertLessEqual(data1, data2)
 
     def test_lt_not_instance(self):
         data = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)

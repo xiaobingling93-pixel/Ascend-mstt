@@ -161,7 +161,7 @@ class TestModuleHookContext(unittest.TestCase):
 
     def test_set_format_by_arg_with_key_not_in_target_config(self):
         self.module_hook_context.set_format_by_arg('output', self.target_config1)
-        self.assertFalse('output' in self.module_hook_context.format_by_arg)
+        self.assertNotIn('output', self.module_hook_context.format_by_arg)
 
     def test_set_format_by_arg_with_ignore_in(self):
         self.module_hook_context.set_format_by_arg('input', self.target_config2)
