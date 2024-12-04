@@ -19,7 +19,7 @@ from functools import wraps
 
 import torch
 
-from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.log import logger
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
@@ -81,13 +81,13 @@ def is_recomputation():
 
     # Identify the function 'backward' is being executed within the 'torch/_tensor.py' file.
     for frame_info in call_stack:
-        if frame_info.function == 'backward' and frame_info.filename.endswith('torch/_tensor.py'):
+        if frame_info.function == Const.BACKWARD and frame_info.filename.endswith('torch/_tensor.py'):
             del call_stack
             return True
 
     # Identify indices in the call stack where the specific function is being executed
     for idx, frame_info in enumerate(call_stack):
-        if frame_info.function == 'backward' or frame_info.function == 'checkpoint_function_backward':
+        if frame_info.function == Const.BACKWARD or frame_info.function == 'checkpoint_function_backward':
             backward_function_indices.append(idx)
 
     # Check if the execution is within 'torch/autograd/function.py' file
