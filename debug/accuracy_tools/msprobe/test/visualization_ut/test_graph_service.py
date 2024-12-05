@@ -43,7 +43,6 @@ class TestGraphService(unittest.TestCase):
         last_call_args = mock_log_info.call_args[0][0]
         self.assertIn(log_info, last_call_args)
         matches = re.findall(self.pattern, last_call_args)
-        self.assertNotEquals(matches, [])
         self.assertTrue(os.path.exists(os.path.join(self.output, matches[0])))
 
     @patch('msprobe.core.common.log.logger.info')
