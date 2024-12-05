@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 
@@ -30,7 +28,7 @@ from msprobe.mindspore.free_benchmark.perturbation.exchange_value import Exchang
 class TestPerturbationFactory(unittest.TestCase):
 
     def test_create(self):
-        api_name = "mindspore.ops.add"
+        api_name = "Functional.add.0"
 
         Config.pert_type = "UNKNOWN"
         with self.assertRaises(Exception) as context:
@@ -41,29 +39,29 @@ class TestPerturbationFactory(unittest.TestCase):
         Config.pert_type = FreeBenchmarkConst.EXCHANGE_VALUE
         pert = PerturbationFactory.create(api_name)
         self.assertTrue(isinstance(pert, ExchangeValuePerturbation))
-        self.assertEqual(pert.api_name, api_name)
+        self.assertEqual(pert.api_name_with_id, api_name)
         self.assertFalse(pert.is_fuzzed)
 
         Config.pert_type = FreeBenchmarkConst.NO_CHANGE
         pert = PerturbationFactory.create(api_name)
         self.assertTrue(isinstance(pert, NoChangePerturbation))
-        self.assertEqual(pert.api_name, api_name)
+        self.assertEqual(pert.api_name_with_id, api_name)
         self.assertFalse(pert.is_fuzzed)
 
         Config.pert_type = FreeBenchmarkConst.BIT_NOISE
         pert = PerturbationFactory.create(api_name)
         self.assertTrue(isinstance(pert, BitNoisePerturbation))
-        self.assertEqual(pert.api_name, api_name)
+        self.assertEqual(pert.api_name_with_id, api_name)
         self.assertFalse(pert.is_fuzzed)
 
         Config.pert_type = FreeBenchmarkConst.ADD_NOISE
         pert = PerturbationFactory.create(api_name)
         self.assertTrue(isinstance(pert, AddNoisePerturbation))
-        self.assertEqual(pert.api_name, api_name)
+        self.assertEqual(pert.api_name_with_id, api_name)
         self.assertFalse(pert.is_fuzzed)
 
         Config.pert_type = FreeBenchmarkConst.IMPROVE_PRECISION
         pert = PerturbationFactory.create(api_name)
         self.assertTrue(isinstance(pert, ImprovePrecisionPerturbation))
-        self.assertEqual(pert.api_name, api_name)
+        self.assertEqual(pert.api_name_with_id, api_name)
         self.assertFalse(pert.is_fuzzed)

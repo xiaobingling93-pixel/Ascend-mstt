@@ -1,8 +1,0 @@
-{
-    "targets": {
-        "foo": {}
-    },
-    "cc_distribution": {"enable": true, "cc_log_only": true},
-    "module_ranks": [0,1],
-    "ops":["max","min","norm","zeros"]
-}

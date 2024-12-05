@@ -43,6 +43,10 @@ export MSPROBE_LOG_LEVEL={x}
 
 ## 🧰 主要功能
 
+### 0 用前必看
+
+使用工具前，建议先浏览[**工具功能模块简介、适用场景和当前版本局限性**](./docs/23.tool_function_introduction.md)，了解功能特性。
+
 ### 1 数据采集
 
 msprobe 通过在训练脚本中添加 PrecisionDebugger 接口的方式对 API 执行精度数据 dump 操作，对应 config.json 中的 task 为 statistics 或 tensor。
@@ -115,7 +119,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 ## 🌟 新版本特性
 
-若查看历史版本特性，请点击[安装](./docs/01.installation.md)。
+若查看历史版本特性，请参见[安装](./docs/01.installation.md)。
 
 【数据采集】
 - 支持 config.json 中的 step 传入范围；

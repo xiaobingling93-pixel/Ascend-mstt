@@ -14,9 +14,10 @@
 # limitations under the License.
 
 import inspect
+
+import numpy as np
 import psutil
 import torch
-import numpy as np
 
 try:
     import torch_npu
@@ -26,6 +27,7 @@ else:
     pta_cpu_device = torch.device("cpu")
 
 from msprobe.core.common.const import CompareConst
+from msprobe.pytorch.common.log import logger
 
 cpu_device = torch._C.device("cpu")
 COLOR_RED = '\033[31m'
@@ -77,9 +79,9 @@ def get_callstack():
     for (_, path, line, func, code, _) in inspect.stack()[2:]:
         try:
             stack_line = [path, str(line), func, code[0].strip() if code else code]
+            callstack.append(stack_line)
         except IndexError:
             logger.error("Failed to get callstack for code:{} index out of range".format(code))
-        callstack.append(stack_line)
     return callstack
 
 

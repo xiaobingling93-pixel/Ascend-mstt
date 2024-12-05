@@ -1,4 +1,5 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
 import os
 import random
@@ -117,8 +117,8 @@ class Dropout3D(ops.Dropout3D):
 
 
 class DropoutExt(nn.Dropout):
-    def __init__(self, keep_prob=0.5):
-        super().__init__(1.)
+    def __init__(self, p=0.5):
+        super().__init__(0)
 
 
 def dropout_ext(input, p=0.5, training=True):
@@ -127,7 +127,10 @@ def dropout_ext(input, p=0.5, training=True):
 
 def remove_dropout():
     ops.Dropout = Dropout
+    ops.operations.Dropout = Dropout
     ops.Dropout2D = Dropout2D
+    ops.operations.Dropout2D = Dropout2D
     ops.Dropout3D = Dropout3D
+    ops.operations.Dropout3D = Dropout3D
     nn.Dropout = DropoutExt
     nn.functional.dropout = dropout_ext

@@ -28,17 +28,11 @@ from msprobe.core.common.file_utils import check_file_or_directory_path
 
 def extract_json(dirname, stack_json=False):
     json_path = ''
-    for fname in os.listdir(dirname):
-        if fname == 'construct.json':
-            continue
-        full_path = os.path.join(dirname, fname)
-        if full_path.endswith('.json'):
-            if not stack_json and 'dump' in full_path:
-                json_path = full_path
-                break
-            if stack_json and 'stack' in full_path:
-                json_path = full_path
-                break
+    for filename in os.listdir(dirname):
+        target_file_name = 'stack.json' if stack_json else 'dump.json'
+        if filename == target_file_name:
+            json_path = os.path.join(dirname, filename)
+            break
 
     # Provide robustness on invalid directory inputs
     if not json_path:
@@ -53,7 +47,7 @@ def extract_json(dirname, stack_json=False):
 def check_and_return_dir_contents(dump_dir, prefix):
     """
     check the given dump dir and validate files in dump dir by using the given prefix patterns to build a
-    pattern: ^{prefix}(?:0|[0-9][1-9]*)?$
+    pattern: ^{prefix}(?:0|[1-9][0-9]*)?$
 
     Args:
         dump_dir (str): dump dir
@@ -69,7 +63,7 @@ def check_and_return_dir_contents(dump_dir, prefix):
     check_regex_prefix_format_valid(prefix)
     check_file_or_directory_path(dump_dir, True)
     contents = os.listdir(dump_dir)
-    pattern = re.compile(rf'^{prefix}(?:0|[0-9][1-9]*)?$')
+    pattern = re.compile(rf'^{prefix}(?:0|[1-9][0-9]*)?$')
     for name in contents:
         if not pattern.match(name):
             logger.error(

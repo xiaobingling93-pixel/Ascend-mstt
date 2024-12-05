@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch
 from msprobe.visualization.graph.base_node import BaseNode, NodeOp
 from msprobe.visualization.utils import GraphConst
 
@@ -68,9 +67,3 @@ class TestBaseNode(unittest.TestCase):
     def test_get_ancestors(self):
         expected_ancestors = ['up_node_1']
         self.assertEqual(self.node.get_ancestors(), expected_ancestors)
-
-    @patch('msprobe.visualization.builder.msprobe_adapter.compare_mapping_data')
-    def test_compare_mapping_node(self, mock_compare_mapping_data):
-        mock_compare_mapping_data.return_value = True
-        result = self.node.compare_mapping_node(BaseNode(NodeOp.function_api, "up_node_1"))
-        self.assertTrue(result)

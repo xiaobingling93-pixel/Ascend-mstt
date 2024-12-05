@@ -17,7 +17,7 @@ import os
 from tqdm import tqdm
 
 from msprobe.core.common.const import Const, CompareConst, MsCompareConst
-from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json
+from msprobe.core.common.file_utils import FileOpen, create_directory, write_csv, load_json, load_yaml
 from msprobe.core.common.utils import add_time_as_suffix
 from msprobe.mindspore.api_accuracy_checker.api_info import ApiInfo
 from msprobe.mindspore.api_accuracy_checker.api_runner import api_runner, ApiInputAggregation
@@ -27,6 +27,8 @@ from msprobe.mindspore.api_accuracy_checker.utils import (check_and_get_from_jso
                                                           trim_output_compute_element_list)
 from msprobe.mindspore.common.log import logger
 
+cur_path = os.path.dirname(os.path.realpath(__file__))
+yaml_path = os.path.join(cur_path, MsCompareConst.SUPPORTED_API_LIST_FILE)
 
 class BasicInfoAndStatus:
     def __init__(self, api_name, bench_dtype, tested_dtype, shape, status, err_msg) -> None:
@@ -126,6 +128,29 @@ class ApiAccuracyChecker:
             gradient_inputs = api_info.get_compute_element_list(Const.BACKWARD, Const.INPUT)
         return ApiInputAggregation(forward_inputs, kwargs, gradient_inputs)
 
+    @staticmethod
+    def is_api_checkable(api_name_str):
+        '''
+        Args:
+            api_name_str: str, e.g. "MintFunctional.relu.0.forward", key in data field of api_info.json
+        Returns:
+            is_checkable: bool
+        Description:
+            tell whether this api is checkable based on the key in "data" dict in api_info.json
+        '''
+        api_name_str_list = api_name_str.split(Const.SEP)
+        if len(api_name_str_list) < MsCompareConst.API_NAME_STR_LENGTH:
+            return False
+        api_type_str = api_name_str_list[0]
+        real_api_str = Const.SEP.join(api_name_str_list[1:-2])
+        api_list = load_yaml(yaml_path)
+        supported_tensor_api_list = api_list.get(MsCompareConst.SUPPORTED_TENSOR_LIST_KEY)
+        if api_type_str in (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL):
+            return True
+        if api_type_str == MsCompareConst.TENSOR_API and real_api_str in supported_tensor_api_list:
+            return True
+        return False
+
     def parse(self, api_info_path):
         api_info_dict = load_json(api_info_path)
 
@@ -145,9 +170,7 @@ class ApiAccuracyChecker:
         api_info_data = check_and_get_from_json_dict(api_info_dict, MsCompareConst.DATA_FIELD,
                                                      "data field in api_info.json", accepted_type=dict)
         for api_name, api_info in api_info_data.items():
-            is_mint = api_name.split(Const.SEP)[0] in \
-                      (MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL)
-            if not is_mint:
+            if not self.is_api_checkable(api_name):
                 continue
             forbackward_str = api_name.split(Const.SEP)[-1]
             if forbackward_str not in (Const.FORWARD, Const.BACKWARD):
@@ -161,49 +184,64 @@ class ApiAccuracyChecker:
             else:
                 self.api_infos[api_name].load_backward_info(api_info)
 
+    def process_forward(self, api_name_str, api_info):
+        """处理前向检查"""
+        if not api_info.check_forward_info():
+            logger.debug(f"api: {api_name_str} is lack of forward information, skip forward check.")
+            return Const.EXCEPTION_NONE
+
+        try:
+            forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when getting inputs for {api_name_str} forward api. "
+                           f"Skipping forward check. Detailed exception information: {e}.")
+            return Const.EXCEPTION_NONE
+
+        forward_output_list = None
+        try:
+            forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when running and comparing {api_name_str} forward api. "
+                           f"Detailed exception information: {e}.")
+        return forward_output_list
+
+    def process_backward(self, api_name_str, api_info):
+        """处理反向检查"""
+        if not api_info.check_backward_info():
+            logger.debug(f"api: {api_name_str} is lack of backward information, skipping backward check.")
+            return Const.EXCEPTION_NONE
+
+        try:
+            backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when getting inputs for {api_name_str} backward api. "
+                           f"Skipping backward check. Detailed exception information: {e}.")
+            return Const.EXCEPTION_NONE
+
+        backward_output_list = None
+        try:
+            backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
+        except Exception as e:
+            logger.warning(f"Exception occurs when running and comparing {api_name_str} backward api. "
+                           f"Detailed exception information: {e}.")
+        return backward_output_list
+
+
+
     def run_and_compare(self):
         for api_name_str, api_info in tqdm(self.api_infos.items()):
             if not self.data_manager.is_unique_api(api_name_str):
                 continue
 
-            if not api_info.check_forward_info():
-                logger.debug(f"api: {api_name_str} is lack of forward infomation, skip forward and backward check.")
-                continue
-            try:
-                forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
-            except Exception as e:
-                logger.warning(f"exception occurs when getting inputs for {api_name_str} forward api. "
-                               f"skip forward and backward check. detailed exception information: {e}.")
-                continue
-            forward_output_list = None
-            try:
-                forward_output_list = \
-                    self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
-            except Exception as e:
-                logger.warning(f"exception occurs when running and comparing {api_name_str} forward api. "
-                               f"detailed exception information: {e}.")
-            self.data_manager.record(forward_output_list)
+            # 处理前向
+            forward_output_list = self.process_forward(api_name_str, api_info)
+            if forward_output_list is not Const.EXCEPTION_NONE:
+                self.data_manager.record(forward_output_list)
 
-            if not api_info.check_backward_info():
-                self.data_manager.save_results(api_name_str)  # 不存在反向，则直接保存前向结果
-
-                logger.debug(f"api: {api_name_str} is lack of backward infomation, skip backward check.")
-                continue
-            try:
-                backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
-            except Exception as e:
-                logger.warning(f"exception occurs when getting inputs for {api_name_str} backward api. "
-                               f"skip backward check. detailed exception information: {e}.")
-                continue
-            backward_output_list = None
-            try:
-                backward_output_list = \
-                    self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
-            except Exception as e:
-                logger.warning(f"exception occurs when running and comparing {api_name_str} backward api. "
-                               f"detailed exception information: {e}.")
-            self.data_manager.record(backward_output_list)
+            # 处理反向
+            backward_output_list = self.process_backward(api_name_str, api_info)
+            if backward_output_list is not Const.EXCEPTION_NONE:
+                self.data_manager.record(backward_output_list)
 
             self.data_manager.save_results(api_name_str)
-
 

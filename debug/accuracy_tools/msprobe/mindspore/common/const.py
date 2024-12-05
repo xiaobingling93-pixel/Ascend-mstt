@@ -38,17 +38,10 @@ class Const:
     ASCEND_910A = "ascend910"
 
     OPS_PREFIX = "mindspore.ops."
-    Tensor_PREFIX = "mindspore.Tensor."
+    TENSOR_PREFIX = "mindspore.Tensor."
     MINT_PREFIX = "mindspore.mint."
     MINT_NN_FUNC_PREFIX = "mindspore.mint.nn.functional."
-    COMM_PREFIX = "mindspore.communication.comm_func."
-    COMMUNICATION_API_LIST = [
-        "mindspore.communication.comm_func.all_gather_into_tensor",
-        "mindspore.communication.comm_func.gather_into_tensor",
-        "mindspore.communication.comm_func.all_reduce",
-        "mindspore.communication.comm_func.reduce",
-        "mindspore.communication.comm_func.reduce_scatter_tensor"
-        ]
+
     TENSOR_DATA_PREFIX = "Tensor."
     STUB_TENSOR_DATA_PREFIX = "Tensor."
     OPS_DATA_PREFIX = "Functional."
@@ -67,6 +60,13 @@ class Const:
 
     GRAPH_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.INPUT, CoreConst.OUTPUT]
 
+    HOOK_MS_PREFIX_DICT = {
+        OPS_DATA_PREFIX: OPS_PREFIX,
+        TENSOR_DATA_PREFIX: TENSOR_PREFIX,
+        MINT_DATA_PREFIX: MINT_PREFIX,
+        MINT_NN_FUNC_DATA_PREFIX: MINT_NN_FUNC_PREFIX
+    }
+
 
 class FreeBenchmarkConst:
     ADD_NOISE = "add_noise"
@@ -82,19 +82,21 @@ class FreeBenchmarkConst:
     DEFAULT_PERT_TYPE = IMPROVE_PRECISION
     DEFAULT_HANDLER_TYPE = CHECK
     DEVICE_LIST = [DEFAULT_DEVICE]
-    STAGE_LIST = [CoreConst.FORWARD]
+    STAGE_LIST = [CoreConst.FORWARD, CoreConst.BACKWARD]
     DUMP_LEVEL_LIST = [DEFAULT_DUMP_LEVEL]
     PERT_TYPE_LIST = [IMPROVE_PRECISION, ADD_NOISE, BIT_NOISE, NO_CHANGE, EXCHANGE_VALUE]
     HANDLER_TYPE_LIST = [CHECK, FIX]
     NO_CHANGE_ERROR_THRESHOLD = 1.0
     SYMBOL_FLIPPING_RATIO = 8.0
 
+    SUPPORTED_CHECK_API_FILE = "support_wrap_ops.yaml"
+    CHECK_RESULT_FILE = "free_benchmark.csv"
+
     API_PREFIX_DICT = {
         "ops": Const.OPS_PREFIX,
-        "Tensor": Const.Tensor_PREFIX,
+        "Tensor": Const.TENSOR_PREFIX,
         "mint": Const.MINT_PREFIX,
-        "mint.nn.functional": Const.MINT_NN_FUNC_PREFIX,
-        "communication": Const.COMM_PREFIX
+        "mint.nn.functional": Const.MINT_NN_FUNC_PREFIX
     }
 
     PERT_VALUE_DICT = {
@@ -105,6 +107,7 @@ class FreeBenchmarkConst:
     }
 
     ERROR_THRESHOLD = {
+        ms.bfloat16: 1.004,
         ms.float16: 1.002,
         ms.float32: 1.0002
     }
