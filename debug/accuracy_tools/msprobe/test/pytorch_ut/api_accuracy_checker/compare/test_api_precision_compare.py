@@ -281,6 +281,31 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.assertEqual(result['abs_err_result'], CompareConst.PASS)
         self.assertEqual(result['absolute_threshold_result'], CompareConst.ERROR)
 
+    @patch('msprobe.core.common.file_utils.read_csv')
+    @patch('msprobe.core.common.file_utils.write_csv')
+    @patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.check_csv_columns')
+    @patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.analyse_csv')
+    @patch('msprobe.core.common.file_utils.change_mode')
+    @patch('msprobe.pytorch.common.log.logger')
+    def test_happy_path(self, mock_logger, mock_change_mode, mock_analyse_csv, mock_check_csv_columns, mock_write_csv, mock_read_csv):
+        # Arrange
+        config = CompareConfig('npu.csv', 'gpu.csv', 'result.csv', 'details.csv')
+        mock_read_csv.side_effect = [MagicMock(columns=['col1', 'col2']), MagicMock(columns=['col3', 'col4'])]
+        
+        # Act
+        api_precision_compare(config)
+
+        # Assert
+        mock_logger.info.assert_any_call("Start compare task")
+        mock_logger.info.assert_any_call("Compare task result will be saved in result.csv")
+        mock_logger.info.assert_any_call("Compare task detail will be saved in details.csv")
+        mock_check_csv_columns.assert_any_call(['col1', 'col2'], "npu_csv")
+        mock_check_csv_columns.assert_any_call(['col3', 'col4'], "gpu_csv")
+        mock_write_csv.assert_any_call([mock_logger.apiPrecisionCompareColumn.get_result_csv_title()], 'result.csv')
+        mock_write_csv.assert_any_call([mock_logger.apiPrecisionCompareColumn.get_detail_csv_title()], 'details.csv')
+        mock_analyse_csv.assert_called_once()
+        mock_change_mode.assert_any_call('result.csv', FileCheckConst.DATA_FILE_AUTHORITY)
+        mock_change_mode.assert_any_call('details.csv', FileCheckConst.DATA_FILE_AUTHORITY)
 
 if __name__ == '__main__':
     unittest.main()
