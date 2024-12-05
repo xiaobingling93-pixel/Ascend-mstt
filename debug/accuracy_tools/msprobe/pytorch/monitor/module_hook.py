@@ -17,8 +17,10 @@ import json
 import os
 import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from functools import partial
 
+import pytz
 import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
@@ -195,7 +197,10 @@ class TrainerMon:
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
 
-        cur_time = time.strftime('%b%d_%H-%M-%S', time.localtime())
+        # 设置时区，使用 'UTC' 作为示例
+        local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
+
+        cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
 
         if dist.is_initialized():

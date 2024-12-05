@@ -99,6 +99,7 @@ class FreeBenchmarkException(CodedException):
         OutputIndexError: "[msprobe] Free benchmark output index out of bounds: ",
     }
 
+
 class DistributedNotInitializedError(Exception):
     def __init__(self, msg):
         super().__init__()
