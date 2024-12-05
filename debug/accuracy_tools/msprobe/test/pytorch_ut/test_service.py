@@ -19,6 +19,51 @@ class TestService(unittest.TestCase):
         self.config = DebuggerConfig(common_config, task_config, Const.STATISTICS, "./ut_dump", "L1")
         self.service = Service(self.config)
 
+    @patch('msprobe.pytorch.service.api_register')
+    @patch('msprobe.pytorch.service.logger')
+    def test_forward_backward_dump_end(self, mock_logger, mock_api_register):
+        self.service.forward_backward_dump_end()
+
+        mock_logger.info_on_rank_0.assert_called_once_with("Data needed ends here.")
+        mock_api_register.api_originality.assert_called_once()
+
+    def test_is_registered_backward_hook_true(self):
+        module = nn.Linear(10, 5)
+        module._backward_hooks = {0: lambda: None}  # Mocking a hook
+        module._is_full_backward_hook = False
+        res = self.service.is_registered_backward_hook(module)
+
+        self.assertTrue(res)
+
+    def test_is_registered_backward_hook_false_with_no_hook(self):
+        module = nn.Linear(10, 5)
+        res = self.service.is_registered_backward_hook(module)
+
+        self.assertFalse(res)
+
+    def test_is_registered_backward_hook_false_with_empty_hook(self):
+        module = nn.Linear(10, 5)
+        module._backward_hooks = {}
+        res = self.service.is_registered_backward_hook(module)
+
+        self.assertFalse(res)  
+
+    def test_is_registered_backward_hook_false_with_hooks_full(self):
+        module = nn.Linear(10, 5)
+        module._backward_hooks = {0: lambda: None}  # Mocking a hook
+        module._is_full_backward_hook = True
+        res = self.service.is_registered_backward_hook(module)
+
+        self.assertFalse(res)
+
+    def test_check_register_full_backward_hook(self):
+        module = nn.Linear(10, 5)
+        module._backward_hooks = {0: lambda: None}  # Mocking a hook
+        module._is_full_backward_hook = False
+        self.service.check_register_full_backward_hook(module)
+
+        self.assertIsNone(module._is_full_backward_hook)
+
     def test_start(self):
         with patch("msprobe.pytorch.service.get_rank_if_initialized", return_value=0), \
                 patch("msprobe.pytorch.service.Service.create_dirs", return_value=None):
@@ -94,3 +139,6 @@ class TestService(unittest.TestCase):
         self.service.switch = True
         self.service.data_collector = DataCollector()
         self.assertFalse(self.service.should_execute_hook())
+
+if __name__ == '__main__':
+    unittest.main()
