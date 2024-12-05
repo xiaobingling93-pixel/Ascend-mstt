@@ -30,13 +30,13 @@ def check_compare_result_name(file_name):
     """
     single_rank_pattern = r"^compare_result_rank-rank_\d{14}.xlsx$"
     multi_ranks_pattern = r"^compare_result_rank(\d+)-rank\1_\d{14}.xlsx$"
+    if re.match(multi_ranks_pattern, file_name):
+        return True
     if re.match(single_rank_pattern, file_name):
         logger.warning("single rank compare result do not need to be merged.")
         return False
-    if not re.match(multi_ranks_pattern, file_name):
-        logger.error(f"wrong compare result name: {file_name}, please check!")
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
-    return True
+    logger.error(f"wrong compare result name: {file_name}, please check!")
+    raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
 
 def reorder_path(compare_result_path_list):
@@ -47,7 +47,6 @@ def reorder_path(compare_result_path_list):
     reorder_path_list = sorted(
         compare_result_path_list,
         key=lambda path: int(re.search(rank_pattern, os.path.basename(path)).group(1))
-        if re.search(rank_pattern, os.path.basename(path)) else float('inf')
     )
     return reorder_path_list
 
@@ -74,13 +73,11 @@ def get_result_path(input_dir):
     return filt_compare_result_path_list
 
 
-# def get_dump_mode(compare_result_first_rank_path):
 def get_dump_mode(result_df):
 
     """
     get dump mode from header of first compare result table
     """
-    # result_df = read_xlsx(compare_result_first_rank_path)
     header = result_df.columns.tolist()
     if CompareConst.COSINE in header:
         return Const.ALL
@@ -109,7 +106,7 @@ def check_index_dump_mode_consistent(compare_index_list, dump_mode):
     valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
     if not compare_index_list:
         return valid_compare_index
-    if all(compare_index in valid_compare_index for compare_index in compare_index_list):
+    if set(compare_index_list).issubset(valid_compare_index):
         return compare_index_list
     else:
         logger.error("compare index is not consistent with dump task, please check!")
@@ -282,7 +279,7 @@ def df_merge(all_result_df_list):
     """
     merge different rank result_df
     """
-    merge_df_base = all_result_df_list[0].copy()  # TODO 需要验一下第一个rank的结果为空的情况
+    merge_df_base = all_result_df_list[0]  # TODO 需要验一下第一个rank的结果为空的情况
     for sublist in all_result_df_list[1:]:
         for i in range(len(sublist)):
             merge_df_base[i] = pd.merge(merge_df_base[i], sublist[i], on=CompareConst.NPU_NAME, how='outer')
@@ -294,7 +291,6 @@ def merge_result(input_dir, output_dir, config_path):
     create_directory(output_dir)
 
     compare_result_path_list = get_result_path(input_dir)   # 获得的input_dir中所有比对结果件的全路径，数量少于2，便提示退出
-    # dump_mode = get_dump_mode(compare_result_path_list[0])  # 通过第一个rank结果获取dump_mode # TODO 是否要校验所有rank的dump_mode
 
     config = load_yaml(config_path)
     if not config:
@@ -305,7 +301,6 @@ def merge_result(input_dir, output_dir, config_path):
         logger.error('The APIs required to merge data were not found')
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
     compare_index_list = config.get('compare_index')
-    # compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)
 
     func_args = (compare_result_path_list, api_list, compare_index_list)
     all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args,
