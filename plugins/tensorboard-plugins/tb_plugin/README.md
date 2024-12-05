@@ -17,7 +17,7 @@
   2. 从源代码安装
      * 从仓库下载源码:
 
-       `git clone https://gitee.com/ascend/att.git`
+       `git clone https://gitee.com/ascend/mstt.git`
 
      * 进入目录 `/plugins/tensorboard_plugins/tb_plugin` 下.
      * 编译前端代码
