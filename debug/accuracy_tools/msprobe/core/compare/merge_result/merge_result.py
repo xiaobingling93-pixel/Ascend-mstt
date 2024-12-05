@@ -279,7 +279,12 @@ def df_merge(all_result_df_list):
     """
     merge different rank result_df
     """
-    merge_df_base = all_result_df_list[0]  # TODO 需要验一下第一个rank的结果为空的情况
+    if len(all_result_df_list) == 0:
+        logger.warning("nothing to merge.")
+        exit()
+    if len(all_result_df_list) == 1:
+        logger.info("only one compare result get merge data.")
+    merge_df_base = all_result_df_list[0]
     for sublist in all_result_df_list[1:]:
         for i in range(len(sublist)):
             merge_df_base[i] = pd.merge(merge_df_base[i], sublist[i], on=CompareConst.NPU_NAME, how='outer')
