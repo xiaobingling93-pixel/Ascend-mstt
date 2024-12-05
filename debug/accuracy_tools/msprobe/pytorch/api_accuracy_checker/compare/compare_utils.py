@@ -134,6 +134,7 @@ ULP_PARAMETERS = {
 class ApiPrecisionCompareColumn:
     API_NAME = 'API Name'
     DEVICE_DTYPE = 'DEVICE Dtype'
+    SHAPE = 'Shape'
     SMALL_VALUE_ERROR_RATE = '小值域错误占比'
     RMSE = '均方根误差'
     MAX_REL_ERR = '相对误差最大值'

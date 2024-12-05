@@ -234,7 +234,8 @@ def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
     full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
     # 当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
     if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace() or \
-        row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in API_PRECISION_COMPARE_UNSUPPORT_LIST:
+        row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in API_PRECISION_COMPARE_UNSUPPORT_LIST or \
+        row_npu[ApiPrecisionCompareColumn.SHAPE] == CompareConst.ZERO_SHAPE:
         compare_column.api_name = full_api_name_with_direction_status
         compare_column.compare_result = CompareConst.SKIP
         compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
