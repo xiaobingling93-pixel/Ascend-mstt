@@ -151,7 +151,6 @@ class TestModuleHook(unittest.TestCase):
         dist.get_rank = dist_mock.get_rank
         dist.get_process_group_ranks = dist_mock.get_process_group_ranks
 
-        # monitor_demo(cc_config)
         hooker = TrainerMon(
             cc_config,
             params_have_main_grad=False,
