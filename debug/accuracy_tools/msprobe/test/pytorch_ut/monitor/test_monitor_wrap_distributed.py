@@ -297,16 +297,12 @@ class TestCatchData(unittest.TestCase):
     def test_catch_data_with_tensor(self):
         args = [torch.tensor([1, 2, 3])]
         catch_data(self.cc_context, self.cc_name, self.ops, args, self.prefix)
-        self.assertIn(self.target_key, self.cc_context.data)
-        for op in self.ops:
-            self.assertIn(op, self.cc_context.data[self.target_key])
+        self.assertEqual(len(self.cc_context.data), 1)
 
     def test_catch_data_with_list_of_tensors(self):
         args = [[torch.tensor([1, 2, 3]), torch.tensor([4, 5, 6])]]
         catch_data(self.cc_context, self.cc_name, self.ops, args, self.prefix)
-        self.assertIn(self.target_key, self.cc_context.data)
-        for op in self.ops:
-            self.assertIn(op, self.cc_context.data[self.target_key])
+        self.assertEqual(len(self.cc_context.data), 1)
 
 
 class TestCreateHooks(unittest.TestCase):

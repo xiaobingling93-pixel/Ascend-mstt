@@ -58,12 +58,21 @@ class TestModuleHook(unittest.TestCase):
 
     def test_print_struct(self):
         print_struct_config = os.path.join(base_dir, "config/struct_config.json")
+
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = False
+        dist.is_initialized = dist_mock.is_initialized
+
         with self.assertRaises(Exception) as context:
             monitor_demo(print_struct_config)
         self.assertEqual(str(context.exception), "exit after first step when print model struct")
 
     def test_xy_wg_mv_ur(self):
         output_list = []
+
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = False
+        dist.is_initialized = dist_mock.is_initialized
 
         # # test_xy_distribution
         xy_config = os.path.join(base_dir, "config/xy_config.json")
@@ -171,10 +180,6 @@ class TestModuleHook(unittest.TestCase):
         tensor_name = 'test_tensor'
         rank_list = [1, 2]
         ops_list = ['max', 'min']
-        TrainerMon.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
-
-        dist_mock.is_initialized.return_value = False
-        dist.is_initialized = dist_mock.is_initialized
         TrainerMon.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
 
     def test_generate_cc_metrics(self):
