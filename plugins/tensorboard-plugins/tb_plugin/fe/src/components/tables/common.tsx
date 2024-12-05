@@ -55,7 +55,7 @@ export function getCommonOperationColumns<
   const hostTotalDurationCompare = (a: T, b: T) =>
     (a.host_total_duration || 0) - (b.host_total_duration || 0);
   const tcEligibleCompare = (a: T, b: T) =>
-    a.tc_eligible!.localeCompare(b.tc_eligible!);
+    (a.tc_eligible ?? '').localeCompare(b.tc_eligible ?? '');
   const tcSelfRatioCompare = (a: T, b: T) =>
     (a.tc_self_ratio || 0) - (b.tc_self_ratio || 0);
   const tcTotalRatioCompare = (a: T, b: T) =>

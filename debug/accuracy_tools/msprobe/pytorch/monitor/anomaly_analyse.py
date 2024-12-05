@@ -84,9 +84,9 @@ class AnomalyDataLoader:
             try:
                 instances.append(GradAnomalyData(**values))
             except KeyError as e:
-                logger.warning(f"Missing key in anomaly data: {e}")
+                logger.warning(f"Missing key in anomaly data: {e}.")
             except Exception as e:
-                logger.warning(f"Value error when creating a GradAnomalyData instance: {e}")
+                logger.warning(f"Value error when creating a GradAnomalyData instance: {e}.")
         return instances
 
     def get_anomalies_from_jsons(self):
@@ -112,7 +112,7 @@ class AnomalyAnalyse:
     def __init__(self) -> None:
         self.sorted_anomalies = []
 
-    def get_range_top_K(self, topk, step_list, anomalies):
+    def get_range_top_k(self, topk, step_list, anomalies):
         """
         获取前topk个step_list范围内的异常。
         """
@@ -120,7 +120,9 @@ class AnomalyAnalyse:
             filtered_anomalies = anomalies
         else:
             filtered_anomalies = [
-                anomaly for anomaly in anomalies if anomaly.step in step_list
+                anomaly
+                for anomaly in anomalies
+                if anomaly.step in step_list
             ]
         if topk >= len(filtered_anomalies):
             self.sorted_anomalies = sorted(filtered_anomalies)
@@ -168,9 +170,9 @@ def _get_step_and_stop(args):
     try:
         step_list = ast.literal_eval(args.step_list)
         if not isinstance(step_list, list):
-            raise ValueError(f"{args.step_list} is not a list")
+            raise ValueError(f"{args.step_list} is not a list.")
     except (ValueError, SyntaxError, RecursionError) as e:
-        raise Exception(f"The step list must be a resolvable list type") from e
+        raise Exception(f"The step list must be a resolvable list type.") from e
     if args.top_k_number <= 0:
         raise Exception("The top k number must be greater than 0.")
     return step_list, args.top_k_number
@@ -182,7 +184,7 @@ def _anomaly_analyse():
     loader = AnomalyDataLoader(args.data_path_dir)
     anomalies = loader.get_anomalies_from_jsons()
     analyser = AnomalyAnalyse()
-    top_anomalies = analyser.get_range_top_K(
+    top_anomalies = analyser.get_range_top_k(
         top_k_number, step_list, anomalies
     )
     analyser.rewrite_sorted_anomalies(

@@ -73,7 +73,10 @@ class DumpDataItem:
         data_name_list = data_name.split(Const.SEP)
         if not data_name_list or len(data_name_list) < abs(Const.LAYER_NAME_INDEX):
             logger.error(
-                f"The dump data does not comply with the format specification and must contain no less than four fields. The current data is {data_name}")
+                f"The dump data does not comply with the format specification and "
+                f"must contain no less than four fields. "
+                f"The current data is {data_name}"
+            )
             raise CompareException(CompareException.INVALID_DATA_ERROR)
 
         self.api_type = data_name_list[Const.API_TYPE_INDEX]
@@ -102,7 +105,10 @@ class DumpDataItem:
             construct_list = construct_info.split(Const.SEP)
             if len(construct_list) < abs(Const.LAYER_NAME_INDEX):
                 logger.error(
-                    f"The construct data does not comply with the format specification and must contain no less than four fields. The current data is {construct_info}")
+                    f"The construct data does not comply with the format specification and "
+                    f"must contain no less than four fields. "
+                    f"The current data is {construct_info}"
+                )
                 raise CompareException(CompareException.INVALID_DATA_ERROR)
             self.scope_id = construct_list[Const.SCOPE_ID_INDEX]
             self.scope_direction = construct_list[Const.SCOPE_DIRECTION_INDEX]

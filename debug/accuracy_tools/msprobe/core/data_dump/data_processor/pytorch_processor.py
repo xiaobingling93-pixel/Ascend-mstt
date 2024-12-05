@@ -16,9 +16,11 @@
 import zlib
 from dataclasses import asdict
 from typing import List
+import hashlib
 
 import numpy as np
 import torch
+from torch import distributed as dist
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
@@ -35,7 +37,13 @@ except ImportError:
 
 
 class PytorchDataProcessor(BaseDataProcessor):
-    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor)
+    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup)
+    memory_format = {
+        torch.contiguous_format: "contiguous_format",
+        torch.channels_last: "channels_last",
+        torch.channels_last_3d: "channels_last_3d",
+        torch.preserve_format: "preserve_format"
+    }
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -116,8 +124,33 @@ class PytorchDataProcessor(BaseDataProcessor):
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
+    def process_group_hash(arg):
+        group_ranks = dist.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
+
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
+
+    @staticmethod
+    def _analyze_memory_format(arg):
+        # 获取内存格式
+        format_type = PytorchDataProcessor.memory_format.get(arg)
+
+        return {"type": "torch.memory_format", "format": format_type}
+
+    @staticmethod
+    def _analyze_process_group(arg):
+        group_info = {"type": "torch.ProcessGroup"}
+        try:
+            group_ranks = dist.get_process_group_ranks(arg)
+            group_info.update({"group_ranks": group_ranks})
+            group_id = PytorchDataProcessor.process_group_hash(arg)
+            group_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to get process group(id: {group_id}) ranks info with error info: {e}.")
+        return group_info
 
     @classmethod
     def get_special_types(cls):
@@ -128,6 +161,10 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self.torch_object_key[suffix_stack[-1]](element)
         if isinstance(element, torch.Size):
             return self._analyze_torch_size(element)
+        if isinstance(element, torch.memory_format):
+            return self._analyze_memory_format(element)
+        if isinstance(element, dist.ProcessGroup):
+            return self._analyze_process_group(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)

@@ -13,24 +13,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import copy
 import os
 import re
 
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
+
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import (FileOpen, create_directory,
+from msprobe.core.common.file_utils import (FileOpen, create_directory, load_json,
                                             load_npy, load_yaml)
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import (CompareException, check_compare_param,
                                        check_configuration_param,
-                                       get_dump_mode, set_dump_path)
+                                       get_dump_mode, set_dump_path, check_op_str_pattern_valid)
+from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.compare.check import check_struct_match, fuzzy_check_op
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 
 
 class MSComparator(Comparator):
+    """
+    用于mindspore动态图同框架/跨框架精度比对，支持md5/summary/all模式。
+    cell_mapping: mindspore在cell级别(L0)dump数据和pytorch的module之间的映射关系；
+    api_mapping: mindspore在api级别(L1)dump数据和pytorch的api之间的映射关系；
+    data_mapping: mindspore的cell或api的入参/出参和pytorch之间的映射关系；
+    is_cross_framework: 是否跨框架。
+    """
     def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
@@ -52,10 +63,108 @@ class MSComparator(Comparator):
         else:
             raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
                             f"{type(self.data_mapping)}")
+    
+    @classmethod
+    def calc_accuracy(cls, result_df, dump_mode, header):
+        condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
+        result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
+        result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
+
+        def calc_summary_diff(data_type: str):
+            def type_check(val):
+                check_series = pd.Series(False, index=val.index)
+                val_str = val.astype(str)
+                check_series[pd.to_numeric(val_str, errors='coerce').notna() | val_str.str.lower().eq('nan')] = True
+                return check_series
+            
+            def get_number(val):
+                return pd.to_numeric(val.astype(str), errors='coerce')
+            
+            ms_val = result_df['NPU ' + data_type]
+            pt_val = result_df['Bench ' + data_type]
+            diff_name = data_type.capitalize() + ' diff'
+            rel_err_name = ('norm' if data_type == 'l2norm' else data_type).capitalize() + 'RelativeErr'
+            condition_na = ~type_check(ms_val) | ~type_check(pt_val)
+            result_df.loc[condition_na, [diff_name, rel_err_name]] = CompareConst.N_A
+            result_df.loc[~(condition_no_bench | condition_na), diff_name] = get_number(ms_val) - get_number(pt_val)
+            condition_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].isna()
+            condition_not_nan_diff = ~condition_no_bench & ~condition_na & result_df[diff_name].notna()
+            result_df.loc[condition_nan_diff, [diff_name, rel_err_name]] = CompareConst.NAN
+            condition_pt_zero = pt_val == 0
+            result_df.loc[condition_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
+            condition_ref_err = condition_not_nan_diff & ~condition_pt_zero
+            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, diff_name] / 
+                                                              pt_val[condition_ref_err] * 100)
+            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, rel_err_name]
+                                                              .abs().astype(str) + '%')
+            magnitude = get_number(result_df[diff_name]).abs() / (
+                    pd.Series(np.maximum(get_number(ms_val), get_number(pt_val))).abs() + CompareConst.EPSILON)
+            return magnitude > CompareConst.MAGNITUDE
+
+        if dump_mode == Const.MD5:
+            condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
+            result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
+            result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
+        elif dump_mode == Const.SUMMARY:
+            warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
+            warning_flag = pd.DataFrame(warning_list).all()
+            result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
+            result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
+            result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
+        else:
+            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR, 
+                         CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
+                         CompareConst.ERROR_MESSAGE]
+            result_df.loc[~condition_no_bench, fill_cols] = ''
+            result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
+        return result_df[header]
+
+    @classmethod
+    def make_result_df(cls, result, stack_mode, dump_mode):
+        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode]
+
+        if stack_mode:
+            header.append(CompareConst.STACK)
+        if dump_mode == Const.ALL:
+            header.append(CompareConst.DATA_NAME)
+        result.rename(columns={'op_name_x': CompareConst.NPU_NAME,
+                               'op_name_y': CompareConst.BENCH_NAME,
+                               'dtype_x': CompareConst.NPU_DTYPE,
+                               'dtype_y': CompareConst.BENCH_DTYPE,
+                               'shape_x': CompareConst.NPU_SHAPE,
+                               'shape_y': CompareConst.BENCH_SHAPE,
+                               'md5_x': CompareConst.NPU_MD5,
+                               'md5_y': CompareConst.BENCH_MD5,
+                               'data_name_x': CompareConst.DATA_NAME,
+                               'stack_info_x': CompareConst.STACK}, inplace=True)
+        
+        npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
+        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, 
+                         CompareConst.BENCH_NORM]
+        def set_summary(summary):
+            if summary == CompareConst.N_A:
+                return [CompareConst.N_A] * 4
+            summary_list = []
+            for i in summary:
+                if i is None:
+                    summary_list.append(CompareConst.N_A)
+                elif str(i).lower() == 'nan':
+                    summary_list.append(CompareConst.NAN)
+                else:
+                    summary_list.append(i)
+            return summary_list
+        
+        result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
+        result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
+        result_df = pd.DataFrame(columns=header)
+        for h in header:
+            if h in result.columns:
+                result_df[h] = result[h]
+        return cls.calc_accuracy(result_df, dump_mode, header)
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
-        yaml_path = os.path.join(cur_path, "ms_to_pt_api.yaml")
+        yaml_path = os.path.abspath(os.path.join(cur_path, CompareConst.INTERNAL_API_MAPPING_FILE))
         return load_yaml(yaml_path)
 
     def load_mapping_file(self, mapping_file):
@@ -66,42 +175,20 @@ class MSComparator(Comparator):
         return mapping_dict
 
     def process_cell_mapping(self, npu_op_name):
-        npu_op_name = [op_name.replace("Cell", "Module", 1) for op_name in npu_op_name]
+        if not npu_op_name or not re.match(r'.+(?:for|back)ward\..+', npu_op_name):
+            return CompareConst.N_A
+        npu_op_name = npu_op_name.replace("Cell", "Module", 1)
         if self.cell_mapping_dict:
-            for index, op_name in enumerate(npu_op_name):
-                # get cell name & class name from op_name
-                # Cell.fc1.Dense.forward.0.input.0
-                cell_name = op_name.split(Const.SEP, 1)[-1].rsplit(Const.SEP, 4)[0]
-                if cell_name in self.cell_mapping_dict:
-                    npu_op_name[index] = op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
+            # get cell name & class name from op_name
+            # Cell.fc1.Dense.forward.0.input.0
+            cell_name = re.split(r'\.(?:for|back)ward\.', npu_op_name.split(Const.SEP, 1)[-1])[0]
+            if cell_name in self.cell_mapping_dict:
+                npu_op_name = npu_op_name.replace(cell_name, self.cell_mapping_dict[cell_name], 1)
         return npu_op_name
 
-    def check_op(self, npu_dict, bench_dict, fuzzy_match):
-        npu_dict_new, bench_dict_new = copy.deepcopy(npu_dict), copy.deepcopy(bench_dict)  
-        npu_op_name, bench_op_name = npu_dict_new.get(CompareConst.OP_NAME), bench_dict_new.get(CompareConst.OP_NAME)
-        if self.cell_mapping is not None:
-            npu_op_name = self.process_cell_mapping(npu_op_name)
-        if self.api_mapping is not None:
-            npu_op_name = self.process_internal_api_mapping(npu_op_name, bench_op_name)
-            if isinstance(self.api_mapping, str):
-                npu_dict_new, bench_dict_new, target_dict = self.transform_user_mapping_api(npu_dict_new, 
-                                                                                            bench_dict_new)
-                if target_dict:
-                    bench_dict = self.reconstitution_bench_dict(npu_dict, copy.deepcopy(bench_dict_new), target_dict)
-                    npu_op_name = npu_dict_new.get(CompareConst.OP_NAME) 
-                    bench_op_name = bench_dict_new.get(CompareConst.OP_NAME)
-        struct_match = check_struct_match(npu_dict_new, bench_dict_new, cross_frame=self.cross_frame)
-        if not fuzzy_match:
-            return npu_op_name == bench_op_name and struct_match
-        is_match = True
-        try:
-            is_match = fuzzy_check_op(npu_op_name, bench_op_name)
-        except Exception as err:
-            logger.warning("%s and %s can not fuzzy match." % (npu_op_name, bench_op_name))
-            is_match = False
-        return is_match and struct_match
-    
     def read_npy_data(self, dir_path, file_name, load_pt_file=False):
+        if not file_name:
+            return None
         data_path = os.path.join(dir_path, file_name)
         if load_pt_file:
             import torch
@@ -112,33 +199,21 @@ class MSComparator(Comparator):
             data_value = data_value.numpy()
         else:
             data_value = load_npy(data_path) 
-        return data_value    
+        return data_value
 
-    def api_replace(self, npu_op_name, target, para):
-        for idx, _ in enumerate(npu_op_name):
-            npu_op_name[idx] = npu_op_name[idx].replace(target, para)
-        return npu_op_name
-    
-    def process_internal_api_mapping(self, npu_op_name, bench_op_name):
+    def process_internal_api_mapping(self, npu_op_name):
         # get api name & class name from op_name
         # Functional.addcmul.0.forward.input.0
-        npu_op_name, bench_op_name = npu_op_name.copy(), bench_op_name.copy()
-        ms_api_name = self.get_api_name(npu_op_name[0].split(Const.SEP))
-        pt_api_name = self.get_api_name(bench_op_name[0].split(Const.SEP))
+        ms_api_name = self.get_api_name(npu_op_name.split(Const.SEP))
         class_name = ms_api_name.split(Const.SEP)[0]
         if class_name == "Mint":
-            return self.api_replace(npu_op_name, "Mint", "Torch")
+            return npu_op_name.replace("Mint", "Torch")
         elif class_name == "MintFunctional":
-            return self.api_replace(npu_op_name, "MintFunctional", "Functional")
-        elif self.ms_to_pt_mapping.get(ms_api_name) == pt_api_name:
-            return self.api_replace(npu_op_name, ms_api_name, pt_api_name)
+            return npu_op_name.replace("MintFunctional", "Functional")
+        elif self.ms_to_pt_mapping.get(ms_api_name):
+            return npu_op_name.replace(ms_api_name, self.ms_to_pt_mapping.get(ms_api_name))
         else:
             return npu_op_name
-    
-    def remove_element(self, op_name, struct, summary, idx):
-        del op_name[idx]
-        del struct[idx]
-        del summary[idx]
     
     def get_api_name(self, api_list):
         try:
@@ -147,109 +222,126 @@ class MSComparator(Comparator):
             logger.error(f'Failed to retrieve API name, please check if the dump data is reasonable')
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         return api_name
-    
-    def transform_user_mapping_api(self, new_npu_dict, new_bench_dict):
-        """
-        Transform user mapping API based on new NPU and benchmark dictionaries.
-        Parameters:
-            new_npu_dict (dict): New NPU operation dictionary.
-            new_bench_dict (dict): New benchmark operation dictionary.
-        Returns:
-            tuple: Updated NPU and benchmark dictionaries, along with the target dictionary.
-        """
-        npu_op_name, bench_op_name = new_npu_dict.get(CompareConst.OP_NAME), new_bench_dict.get(CompareConst.OP_NAME)
-        npu_struct_in = new_npu_dict.get(CompareConst.INPUT_STRUCT)
-        bench_struct_in = new_bench_dict.get(CompareConst.INPUT_STRUCT)
-        npu_struct_out = new_npu_dict.get(CompareConst.OUTPUT_STRUCT)
-        bench_struct_out = new_bench_dict.get(CompareConst.OUTPUT_STRUCT)
-        npu_summary, bench_summary = new_npu_dict.get(CompareConst.SUMMARY), new_bench_dict.get(CompareConst.SUMMARY)
-        npu_in_len, bench_in_len = len(npu_struct_in), len(bench_struct_in) 
-        npu_out_len, bench_out_len = len(npu_struct_out), len(bench_struct_out)
-        ms_api_list, pt_api_list = npu_op_name[0].split(Const.SEP), bench_op_name[0].split(Const.SEP)
-        ms_api_name = self.get_api_name(ms_api_list)
-        pt_api_name = self.get_api_name(pt_api_list)
-        target_dict = {}
-        for api_dict in self.api_mapping_dict:
-            if api_dict.get("pt_api") == pt_api_name and api_dict.get("ms_api") == ms_api_name:
-                ms_user_args_len, pt_user_args_len = len(api_dict.get("ms_args")), len(api_dict.get("pt_args"))
-                ms_user_output_len, pt_user_output_len = len(api_dict.get("ms_output")), len(api_dict.get("pt_output"))
-                if ms_user_args_len != pt_user_args_len or ms_user_output_len != pt_user_output_len:
-                    logger.warning("The user-defined mapping table is incorrect,\
-                        make sure that the number of parameters is equal")
-                    break
-                ms_out_list = api_dict.get("ms_output", [])
-                for idx in reversed(range(npu_out_len)):
-                    if idx not in ms_out_list:
-                        del npu_struct_out[idx]
-                        if idx + npu_in_len < len(npu_summary) and idx + npu_in_len < len(npu_op_name): 
-                            del npu_summary[idx + npu_in_len]
-                            del npu_op_name[idx + npu_in_len]
-                pt_out_list = api_dict.get("pt_output", [])
-                for idx in reversed(range(bench_out_len)):
-                    if idx not in pt_out_list:
-                        del bench_struct_out[idx]
-                        if idx + bench_in_len < len(bench_summary) and idx + bench_in_len < len(bench_op_name): 
-                            del bench_summary[idx + bench_in_len]
-                            del bench_op_name[idx + bench_in_len]
-                ms_para_list = api_dict.get("ms_args", []) 
-                for idx in reversed(range(npu_in_len)):
-                    if idx not in ms_para_list:
-                        self.remove_element(npu_op_name, npu_struct_in, npu_summary, idx)
-                pt_para_list = api_dict.get("pt_args", []) 
-                for idx in reversed(range(bench_in_len)):
-                    if idx not in pt_para_list:
-                        self.remove_element(bench_op_name, bench_struct_in, bench_summary, idx)
-                npu_op_name = self.api_replace(npu_op_name, ms_api_name, pt_api_name)
-                if len(npu_op_name) != len(bench_op_name):
-                    logger.warning(
-                        "The total number of input and output parameters of \
-                            npu_op_name and bench_op_name are not equal.")
-                    break
-                npu_op_name = self.para_sequence_update(npu_op_name, bench_op_name)
-                target_dict = api_dict
-                break
-        if target_dict:
-            new_npu_dict.update({CompareConst.OP_NAME: npu_op_name, CompareConst.INPUT_STRUCT: npu_struct_in, 
-                                 CompareConst.OUTPUT_STRUCT: npu_struct_out, CompareConst.SUMMARY: npu_summary})
-            new_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in,
-                                   CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
-        return new_npu_dict, new_bench_dict, target_dict  
-    
-    def para_sequence_update(self, npu_op_name, bench_op_name):
-        for idx, _ in enumerate(npu_op_name):
-            bench_op_name_list = bench_op_name[idx].rsplit(Const.SEP, 1)
-            if len(bench_op_name_list) != 0:
-                npu_op_name[idx] = npu_op_name[idx].rsplit(Const.SEP, 1)[0] + Const.SEP + bench_op_name_list[-1]
-        return npu_op_name
 
-    def reconstitution_bench_dict(self, npu_dict, del_bench_dict, api_dict):
-        ms_user_args_list = api_dict.get("ms_args", [])
-        ms_user_output_list = api_dict.get("ms_output", [])
-        npu_struct_in = npu_dict.get(CompareConst.INPUT_STRUCT)
-        npu_struct_out = npu_dict.get(CompareConst.OUTPUT_STRUCT)
-        npu_in_len = len(npu_struct_in)
-        npu_out_len = len(npu_struct_out)
-        if npu_in_len == len(ms_user_args_list) and npu_out_len == len(ms_user_output_list):
-            return del_bench_dict
-        ms_input_args_list = [i for i in range(npu_in_len)]
-        input_sub_list = list(set(ms_input_args_list) - set(ms_user_args_list))
-        ms_output_args_list = [i for i in range(npu_out_len)]
-        output_sub_list = list(set(ms_output_args_list) - set(ms_user_output_list))
-        bench_op_name = del_bench_dict.get(CompareConst.OP_NAME, [])
-        bench_struct_in = del_bench_dict.get(CompareConst.INPUT_STRUCT, [])
-        bench_struct_out = del_bench_dict.get(CompareConst.OUTPUT_STRUCT, [])
-        bench_summary = del_bench_dict.get(CompareConst.SUMMARY, [])
-        for idx in input_sub_list:  # Fill in the blank value field in the pt dictionary
-            bench_op_name.insert(idx, CompareConst.N_A)
-            bench_struct_in.insert(idx, CompareConst.N_A)
-            bench_summary.insert(idx, CompareConst.N_A)
-        for idx in output_sub_list:  # Fill in the blank value field in the pt dictionary
-            bench_op_name.insert(npu_in_len + idx, CompareConst.N_A)
-            bench_struct_out.insert(idx, CompareConst.N_A)
-            bench_summary.insert(npu_in_len + idx, CompareConst.N_A)
-        del_bench_dict.update({CompareConst.OP_NAME: bench_op_name, CompareConst.INPUT_STRUCT: bench_struct_in, 
-                               CompareConst.OUTPUT_STRUCT: bench_struct_out, CompareConst.SUMMARY: bench_summary})
-        return del_bench_dict
+    def compare_process(self, file_lists, stack_mode, fuzzy_match, dump_mode):
+        npu_json_path, bench_json_path, stack_json_path = file_lists
+        npu_json_data = load_json(npu_json_path)
+        bench_json_data = load_json(bench_json_path)
+        stack_json_data = load_json(stack_json_path)
+
+        npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
+        bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
+        if self.cell_mapping:
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_cell_mapping)
+        elif self.api_mapping:
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_internal_api_mapping)
+            if isinstance(self.api_mapping, str):
+                self.modify_compare_data_with_user_mapping(npu_df, bench_df)
+        else:
+            npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME]
+        npu_df[[Const.DTYPE, Const.SHAPE]] = npu_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        bench_df[[Const.DTYPE, Const.SHAPE]] = bench_df[[Const.DTYPE, Const.SHAPE]].astype(str)
+        npu_df[CompareConst.COMPARE_SHAPE] = npu_df[Const.SHAPE]
+        bench_df[CompareConst.COMPARE_SHAPE] = bench_df[Const.SHAPE]
+        bench_df[CompareConst.COMPARE_KEY] = bench_df[CompareConst.OP_NAME]
+        match_result = pd.merge(npu_df, bench_df, on=[CompareConst.COMPARE_KEY, CompareConst.COMPARE_SHAPE],
+                                how='outer')
+        match_result = match_result[match_result['op_name_x'].notna()].fillna(CompareConst.N_A)
+
+        def gen_dtype_condition():
+            npu_dtype = match_result['dtype_x']
+            bench_dtype = match_result['dtype_y']
+            if self.cross_frame:
+                npu_dtype = npu_dtype.map(dtype_mapping).fillna(npu_dtype)
+            return ((npu_dtype == bench_dtype) |
+                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.FLOAT32)) |
+                    ((npu_dtype == Const.FLOAT32) & (bench_dtype == Const.FLOAT16)) |
+                    ((npu_dtype == Const.FLOAT16) & (bench_dtype == Const.BFLOAT16)) |
+                    ((npu_dtype == Const.BFLOAT16) & (bench_dtype == Const.FLOAT16)) |
+                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_FLOAT32)) |
+                    ((npu_dtype == Const.TORCH_FLOAT32) & (bench_dtype == Const.TORCH_FLOAT16)) |
+                    ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_BFLOAT16)) |
+                    ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
+        
+        match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
+        return MSComparator.make_result_df(match_result, stack_mode, dump_mode)
+
+    def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
+        def get_api_indices_dict(op_name_df):
+            api_indices_dict = defaultdict(list)
+            for op_index, name in enumerate(op_name_df[CompareConst.OP_NAME]):
+                api = self.get_api_name(name.split(Const.SEP))
+                api_indices_dict[api].append(op_index)
+            return api_indices_dict
+
+        ms_api_indices_dict = get_api_indices_dict(npu_df)
+        pt_api_indices_dict = get_api_indices_dict(bench_df)
+
+        def gen_input_compare_key(pattern, term):
+            flag = True
+            for i, prefix in enumerate(mapping_dict.get(f'ms_{term}')):
+                if op_name.split(pattern)[1].startswith(str(prefix)):
+                    npu_df.loc[index, CompareConst.COMPARE_KEY] = (
+                        op_name.replace(pattern + str(prefix),
+                                        pattern + str(mapping_dict.get(f'pt_{term}')[i])))
+                    flag = False
+            return flag
+
+        for mapping_dict in self.api_mapping_dict:
+            if (len(mapping_dict.get('ms_args')) != len(mapping_dict.get('pt_args')) or
+                    len(mapping_dict.get('ms_output')) != len(mapping_dict.get('pt_output'))):
+                logger.warning('The user-defined mapping table is incorrect,\
+                                make sure that the number of parameters is equal')
+                continue
+            ms_api, pt_api = mapping_dict.get('ms_api'), mapping_dict.get('pt_api')
+            if ms_api not in ms_api_indices_dict or pt_api not in pt_api_indices_dict:
+                continue
+            for index in ms_api_indices_dict.get(ms_api):
+                op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
+                if CompareConst.INPUT_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.INPUT_PATTERN, 'args')
+                elif CompareConst.KWARGS_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.KWARGS_PATTERN, 'args')
+                elif CompareConst.OUTPUT_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.OUTPUT_PATTERN, 'output')
+                else:
+                    logger.error(f'Excepted op_name: {op_name}')
+                    raise CompareException(CompareException.INVALID_DATA_ERROR)
+                if is_abandoned:
+                    npu_df.loc[index, CompareConst.COMPARE_KEY] = op_name + 'abandoned'
+
+    def gen_data_df(self, data_json, stack_json, dump_mode):
+        result = {
+            CompareConst.OP_NAME: [],
+            Const.DTYPE: [],
+            Const.SHAPE: [],
+            Const.SUMMARY: [],
+            'stack_info': []
+        }
+        if dump_mode == Const.ALL:
+            result['data_name'] = []
+        elif dump_mode == Const.MD5:
+            result[Const.MD5] = []
+        for data_name in data_json['data']:
+            check_op_str_pattern_valid(data_name)
+            merge_list = self.gen_merge_list(data_json, data_name, stack_json, dump_mode)
+            if not merge_list:
+                continue
+            for op_name in merge_list[CompareConst.OP_NAME]:
+                result[CompareConst.OP_NAME].append(op_name)
+                if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
+                    struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
+                else:
+                    struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
+                result[Const.DTYPE].append(struct[0])
+                result[Const.SHAPE].append(struct[1])
+                if dump_mode == Const.MD5:
+                    result[Const.MD5].append(struct[2])
+                result[Const.SUMMARY].append(merge_list[Const.SUMMARY].pop(0))
+                result['stack_info'].append(merge_list['stack_info'][0])
+                if dump_mode == Const.ALL:
+                    result['data_name'].append(merge_list['data_name'].pop(0))
+        return pd.DataFrame(result)
 
 
 def check_cross_framework(bench_json_path):
@@ -270,6 +362,7 @@ def ms_compare(input_param, output_path, **kwargs):
         api_mapping = kwargs.get('api_mapping', None)
         data_mapping = kwargs.get('data_mapping', None)
         layer_mapping = kwargs.get('layer_mapping', None)
+        suffix = kwargs.get('suffix', '')
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
@@ -283,5 +376,5 @@ def ms_compare(input_param, output_path, **kwargs):
         data_mapping = generate_data_mapping_by_layer_mapping(input_param, layer_mapping, output_path)
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
     ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
-    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
+    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode, suffix=suffix,
                  auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)

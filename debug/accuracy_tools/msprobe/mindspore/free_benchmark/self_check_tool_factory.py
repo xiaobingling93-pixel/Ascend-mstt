@@ -15,7 +15,7 @@
 
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelFCheck
+from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelfCheck
 
 
 class SelfCheckToolFactory:
@@ -28,7 +28,7 @@ class SelfCheckToolFactory:
         Const.API: {
             Const.GRAPH_KBYK_MODE: None,
             Const.GRAPH_GE_MODE: None,
-            Const.PYNATIVE_MODE: ApiPyNativeSelFCheck
+            Const.PYNATIVE_MODE: ApiPyNativeSelfCheck
         },
         Const.KERNEL: {
             Const.GRAPH_KBYK_MODE: None,

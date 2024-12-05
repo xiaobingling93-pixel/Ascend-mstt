@@ -41,7 +41,18 @@ api_parent_module_mapping = {
     (MsCompareConst.MINT, Const.MS_FRAMEWORK): mindspore.mint,
     (MsCompareConst.MINT, Const.PT_FRAMEWORK): torch,
     (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): mindspore.mint.nn.functional,
-    (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional
+    (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): torch.nn.functional,
+    (MsCompareConst.TENSOR_API, Const.MS_FRAMEWORK): mindspore.Tensor,
+    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): torch.Tensor
+}
+
+api_parent_module_str_mapping = {
+    (MsCompareConst.MINT, Const.MS_FRAMEWORK): "mindspore.mint",
+    (MsCompareConst.MINT, Const.PT_FRAMEWORK): "torch",
+    (MsCompareConst.MINT_FUNCTIONAL, Const.MS_FRAMEWORK): "mindspore.mint.nn.functional",
+    (MsCompareConst.MINT_FUNCTIONAL, Const.PT_FRAMEWORK): "torch.nn.functional",
+    (MsCompareConst.TENSOR_API, Const.MS_FRAMEWORK): "mindspore.Tensor",
+    (MsCompareConst.TENSOR_API, Const.PT_FRAMEWORK): "torch.Tensor"
 }
 
 
@@ -73,7 +84,7 @@ class ApiRunner:
             api_name_str: str, the trimmed key of data dict in api_info.json. e.g. "MintFunctional.relu.0"
 
         Return:
-            api_type_str: str, Union["MintFunctional", "Mint"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
             api_sub_name: str, e.g. "relu"
         '''
         api_name_list = api_name_str.split(Const.SEP)
@@ -81,8 +92,8 @@ class ApiRunner:
             err_msg = f"ApiRunner.get_info_from_name failed: api_name_str: {api_name_str} is not in defined format"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
         api_type_str, api_sub_name = api_name_list[0], api_name_list[1]
-        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL]:
-            err_msg = f"ApiRunner.get_info_from_name failed: not mint or mint.nn.functional api"
+        if api_type_str not in [MsCompareConst.MINT, MsCompareConst.MINT_FUNCTIONAL, MsCompareConst.TENSOR_API]:
+            err_msg = f"ApiRunner.get_info_from_name failed: not mint, mint.nn.functional or Tensor api"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.WrongValue))
 
         return api_type_str, api_sub_name
@@ -91,7 +102,7 @@ class ApiRunner:
     def get_api_instance(api_type_str, api_sub_name, api_platform):
         '''
         Args:
-            api_type_str: str, Union["MintFunctional", "Mint"]
+            api_type_str: str, Union["MintFunctional", "Mint", "Tensor"]
             api_sub_name: str, e.g. "relu"
             api_platform: str: Union["mindpore", "torch"]
 
@@ -105,9 +116,8 @@ class ApiRunner:
         '''
 
         api_parent_module = api_parent_module_mapping.get((api_type_str, api_platform))
-        module_str = "mindspore.mint." if api_platform == Const.MS_FRAMEWORK else "torch."
-        submodule_str = "nn.functional." if api_type_str == MsCompareConst.MINT_FUNCTIONAL else ""
-        full_api_name = module_str + submodule_str + api_sub_name
+        api_parent_module_str = api_parent_module_str_mapping.get((api_type_str, api_platform))
+        full_api_name = api_parent_module_str + Const.SEP + api_sub_name
         if not hasattr(api_parent_module, api_sub_name):
             err_msg = f"ApiRunner.get_api_instance failed: {full_api_name} is not found"
             logger.error_log_with_exp(err_msg, ApiAccuracyCheckerException(ApiAccuracyCheckerException.ApiWrong))

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import math
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
@@ -73,11 +74,7 @@ def get_input_output(node_data, node_id):
         full_op_name = item.get('full_op_name', '')
         if not full_op_name:
             continue
-        splits = full_op_name.split('.')
-        if len(splits) < GraphConst.OUTPUT_MIN_LEN:
-            continue
-        if GraphConst.OUTPUT in splits[GraphConst.OUTPUT_INDEX_TWO] and \
-                GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
+        if GraphConst.OUTPUT in full_op_name and GraphConst.INPUT not in full_op_name:
             output_data[full_op_name] = item
         else:
             name = item.get('data_name')
@@ -105,23 +102,6 @@ def compare_data(data_dict_list1, data_dict_list2):
             tag_value2 = dict2.get(tag_key, None)
             if tag_value1 != tag_value2:
                 return False
-    return True
-
-
-def compare_mapping_data(data_dict_list1, data_dict_list2):
-    """
-    node1映射node2，可能node1参数多于或少于node2参数，个别参数的shape的维度顺序不同，node1参数null对应node2参数其他值
-    工具要尽可能保证node的数据能够比对，进行数据的弱校验，仅校验参数的shape维度数值是否相同
-    """
-    for x, y in zip(data_dict_list1.values(), data_dict_list2.values()):
-        x_shape = x.get('shape')
-        y_shape = y.get('shape')
-        if x_shape is None or y_shape is None:
-            continue
-        x_shape = sorted(x_shape) if isinstance(x_shape, list) else x_shape
-        y_shape = sorted(y_shape) if isinstance(y_shape, list) else y_shape
-        if x_shape != y_shape:
-            return False
     return True
 
 

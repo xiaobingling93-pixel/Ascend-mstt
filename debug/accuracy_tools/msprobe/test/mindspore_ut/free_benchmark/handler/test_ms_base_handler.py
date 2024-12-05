@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 from unittest.mock import patch
@@ -21,11 +19,11 @@ from unittest.mock import patch
 import mindspore as ms
 from mindspore import Tensor, ops
 
-from msprobe.mindspore.free_benchmark.handler.base_handler import BaseHandler
 from msprobe.mindspore.common.const import FreeBenchmarkConst
 from msprobe.mindspore.common.log import logger
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
 from msprobe.mindspore.free_benchmark.common.utils import Tools
+from msprobe.mindspore.free_benchmark.handler.base_handler import BaseHandler
 
 
 class Handler(BaseHandler):
@@ -46,11 +44,11 @@ class TestBaseHandler(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.base_handler = Handler("api_name")
+        cls.base_handler = Handler("api_name_with_id")
 
     def test___init__(self):
-        base_handler = Handler("api_name")
-        self.assertEqual(base_handler.api_name, "api_name")
+        base_handler = Handler("api_name_with_id")
+        self.assertEqual(base_handler.api_name_with_id, "api_name_with_id")
 
     def test_pre_calculate(self):
         fuzzed_output = Tensor([1.0], dtype=ms.float32)

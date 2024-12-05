@@ -14,12 +14,11 @@
 # limitations under the License.
 
 import os
-from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, set_dump_path, get_dump_mode
+from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.compare.ms_compare import MSComparator
+from msprobe.mindspore.compare.ms_compare import ms_compare
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 from msprobe.mindspore.compare.ms_graph_compare import GraphMSComparator
 
@@ -28,9 +27,6 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get('suffix'):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    stack_mode = kwargs.get('stack_mode', False)
-    auto_analyze = kwargs.get('auto_analyze', True)
-    fuzzy_match = kwargs.get('fuzzy_match', False)
     is_print_compare_log = kwargs.get('is_print_compare_log', True)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
@@ -53,17 +49,7 @@ def ms_compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
             'stack_json_path': stack_path,
             'is_print_compare_log': is_print_compare_log
         }
-        try:
-            set_dump_path(dump_result_param)
-            dump_mode = get_dump_mode(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
-            create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, dump_mode)
-        except (CompareException, FileCheckException) as error:
-            logger.error('Compare failed. Please check the arguments and do it again!')
-            raise CompareException(error.code) from error
-        ms_comparator = MSComparator()
-        ms_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)
+        ms_compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)
 
 
 def ms_graph_compare(inputs, outputs):

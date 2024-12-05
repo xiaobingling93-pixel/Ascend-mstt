@@ -381,7 +381,7 @@ def load_npy(filepath):
 def load_json(json_path):
     try:
         with FileOpen(json_path, "r") as f:
-            fcntl.flock(f, fcntl.LOCK_EX)
+            fcntl.flock(f, fcntl.LOCK_SH)
             data = json.load(f)
             fcntl.flock(f, fcntl.LOCK_UN)
     except Exception as e:

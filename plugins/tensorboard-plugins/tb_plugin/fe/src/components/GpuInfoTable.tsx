@@ -94,7 +94,7 @@ function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
 
 export const GpuInfoTable: React.FC<IProps> = (props) => {
   const classes = useStyles();
-  interface TableCellInfo {
+  interface TableCellInfoNoLast {
     content: string;
     rowspan: number;
     cellType: 'node' | 'pid' | 'gpu' | 'key' | 'value';
@@ -113,7 +113,7 @@ export const GpuInfoTable: React.FC<IProps> = (props) => {
     value: classes.valueTd,
   };
 
-  const renderCell = function (info: TableCellInfo) {
+  const renderCell = function (info: TableCellInfoNoLast) {
     let cellClass = cellToClass[info.cellType];
     let content = info.cellType === 'key' ? `${info.content}:` : info.content;
     return (
