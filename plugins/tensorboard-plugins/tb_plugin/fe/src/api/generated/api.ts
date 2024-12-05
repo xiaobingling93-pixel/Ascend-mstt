@@ -1664,15 +1664,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1736,15 +1736,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1817,15 +1817,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
@@ -1895,15 +1895,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
@@ -1971,15 +1971,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2043,15 +2043,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2119,15 +2119,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (start_ts !== undefined) {
@@ -2203,15 +2203,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (start_ts !== undefined) {
@@ -2283,15 +2283,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2364,15 +2364,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
@@ -2460,19 +2460,19 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by;
+        localVarQueryParameter.group_by = group_by;
       }
 
       if (op_name !== undefined) {
@@ -2553,19 +2553,19 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by;
+        localVarQueryParameter.group_by = group_by;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2629,15 +2629,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2719,11 +2719,11 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2787,15 +2787,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2859,15 +2859,15 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker;
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span;
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2910,7 +2910,7 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2961,7 +2961,7 @@ export const DefaultApiFetchParamCreator = function (
       const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run;
+        localVarQueryParameter.run = run;
       }
 
       if (view !== undefined) {

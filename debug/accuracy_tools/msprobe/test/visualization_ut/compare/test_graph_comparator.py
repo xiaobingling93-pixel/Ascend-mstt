@@ -98,7 +98,6 @@ class TestGraphComparator(unittest.TestCase):
         comparator._postcompare()
 
         comparator._handle_api_collection_index.assert_called_once()
-        comparator.ma.add_error_key.assert_called()
 
     @patch('msprobe.visualization.compare.graph_comparator.get_compare_mode')
     @patch('msprobe.visualization.compare.graph_comparator.load_json_file')

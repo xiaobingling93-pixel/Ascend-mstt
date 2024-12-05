@@ -15,7 +15,7 @@
 
 import inspect
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, is_dataclass
 from typing import Tuple, Dict, Optional, Any
 
 import numpy as np
@@ -209,25 +209,42 @@ class BaseDataProcessor:
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
             return arg_transform
+        elif isinstance(args, tuple) and hasattr(args, '_fields'):
+            # namedtuple to dict
+            args_dict = {field: getattr(args, field) for field in args._fields}
+            return cls.apply_transform_dict(args_dict, transform, depth)
+        elif is_dataclass(args):
+            # dataclass to dict
+            args_dict = {field: getattr(args, field) for field in args.__dataclass_fields__}
+            return cls.apply_transform_dict(args_dict, transform, depth)
         elif isinstance(args, (list, tuple)):
-            result_list = []
-            for i, arg in enumerate(args):
-                cls._recursive_key_stack.append(str(i))
-                result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
-                cls._recursive_key_stack.pop()
+            result_list = cls.apply_transform_list(args, transform, depth)
             return type(args)(result_list)
         elif isinstance(args, dict):
-            result_dict = {}
-            for k, arg in args.items():
-                cls._recursive_key_stack.append(str(k))
-                result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
-                cls._recursive_key_stack.pop()
-            return result_dict
+            return cls.apply_transform_dict(args, transform, depth)
         elif args is not None:
             logger.warning(f"Data type {type(args)} is not supported.")
             return None
         else:
             return None
+    
+    @classmethod
+    def apply_transform_dict(cls, args, transform, depth):
+        result_dict = {}
+        for k, arg in args.items():
+            cls._recursive_key_stack.append(str(k))
+            result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
+            cls._recursive_key_stack.pop()
+        return result_dict
+
+    @classmethod
+    def apply_transform_list(cls, args, transform, depth):
+        result_list = []
+        for i, arg in enumerate(args):
+            cls._recursive_key_stack.append(str(i))
+            result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
+            cls._recursive_key_stack.pop()
+        return result_list
 
     def if_return_forward_new_output(self):
         return self._return_forward_new_output

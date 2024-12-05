@@ -80,37 +80,8 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
   React.useLayoutEffect(() => {
     const element = graphRef.current;
     if (!element) {
-      return;
+      return undefined;
     }
-
-    let left_duration_data: number[] = [];
-    let left_accumulated_duration_data: number[] = [];
-
-    let right_duration_data: number[] = [];
-    let right_accumulated_duration_data: number[] = [];
-
-    for (let i = 0; i < rawData.length; i++) {
-      let curr = rawData[i];
-      left_duration_data.push(curr[1]);
-      right_duration_data.push(curr[2]);
-      left_accumulated_duration_data.push(curr[3]);
-      right_accumulated_duration_data.push(curr[4]);
-    }
-
-    let left_duration_max = Math.max(...left_duration_data);
-    let right_duration_max = Math.max(...right_duration_data);
-    let duration_max = Math.max(left_duration_max, right_duration_max);
-
-    let left_accumulated_duration_max = Math.max(
-      ...left_accumulated_duration_data
-    );
-    let right_accumulated_duration_max = Math.max(
-      ...right_accumulated_duration_data
-    );
-    let accumulated_max = Math.max(
-      left_accumulated_duration_max,
-      right_accumulated_duration_max
-    );
 
     const chart = echarts.init(element);
 
@@ -592,26 +563,28 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Calls',
       dataIndex: 'baselineCalls',
       key: 'baselineCalls',
-      sorter: (a: TableRow, b: TableRow) => a.baselineCalls! - b.baselineCalls!,
+      sorter: (a: TableRow, b: TableRow) =>
+        a.baselineCalls ?? 0 - (b.baselineCalls ?? 0),
     },
     {
       title: 'Exp Calls',
       dataIndex: 'expCalls',
       key: 'expCalls',
-      sorter: (a: TableRow, b: TableRow) => a.expCalls! - b.expCalls!,
+      sorter: (a: TableRow, b: TableRow) => a.expCalls ?? 0 - (b.expCalls ?? 0),
     },
     {
       title: 'Delta Calls',
       dataIndex: 'deltaCalls',
       key: 'deltaCalls',
-      sorter: (a: TableRow, b: TableRow) => a.deltaCalls! - b.deltaCalls!,
+      sorter: (a: TableRow, b: TableRow) =>
+        a.deltaCalls ?? 0 - (b.deltaCalls ?? 0),
     },
     {
       title: 'Delta Calls%',
       dataIndex: 'deltaCallsPercent',
       key: 'deltaCallsPercent',
       sorter: (a: TableRow, b: TableRow) =>
-        a.deltaCallsPercentNumber! - b.deltaCallsPercentNumber!,
+        a.deltaCallsPercentNumber ?? 0 - (b.deltaCallsPercentNumber ?? 0),
     },
   ];
 
@@ -703,9 +676,8 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       if (top) {
         setTableDataSource(top);
       } else {
-        let tableDataSource2 = generateDataSourceFromUnderlyingData(
-          rootUnderlyingData!
-        );
+        let tableDataSource2 =
+          generateDataSourceFromUnderlyingData(rootUnderlyingData);
         setTableDataSource(tableDataSource2);
       }
     }
@@ -729,8 +701,11 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
   };
 
   const generateDataSourceFromUnderlyingData = (
-    selectedUnderlyingData: ColumnUnderlyingData
+    selectedUnderlyingData?: ColumnUnderlyingData
   ) => {
+    if (!selectedUnderlyingData) {
+      return [];
+    }
     let newTableDataSource: TableRow[] = [];
 
     for (let i = 0; i < selectedUnderlyingData.leftAggs.length; i++) {

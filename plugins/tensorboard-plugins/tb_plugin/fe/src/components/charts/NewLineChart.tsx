@@ -306,7 +306,9 @@ export const LineChart: React.FC<IProps> = (props) => {
       };
     }
 
-    option && myChart.setOption(option, true);
+    if (option) {
+      myChart.setOption(option, true);
+    }
     myChart.dispatchAction({
       type: 'takeGlobalCursor',
       key: 'dataZoomSelect',
@@ -372,8 +374,12 @@ export const LineChart: React.FC<IProps> = (props) => {
           endId = binarySearch(graph.rows, record.col3, compare_fn);
         }
         let selection = [];
-        startId >= 0 && selection.push(startId);
-        endId >= 0 && selection.push(endId);
+        if (startId >= 0) {
+          selection.push(startId);
+        }
+        if (endId >= 0) {
+          selection.push(endId);
+        }
         chartObj.dispatchAction({
           type: 'downplay',
           seriesName: 'Allocated',

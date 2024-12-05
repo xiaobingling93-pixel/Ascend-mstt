@@ -8,8 +8,7 @@ from msprobe.visualization.builder.msprobe_adapter import (
     format_node_data,
     compare_node,
     _format_decimal_string,
-    _format_data,
-    compare_mapping_data
+    _format_data
 )
 from msprobe.visualization.utils import GraphConst
 import torch
@@ -86,16 +85,3 @@ class TestMsprobeAdapter(unittest.TestCase):
         all_none_dict = {'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'type': None}
         _format_data(all_none_dict)
         self.assertEqual({'value': 'null'}, all_none_dict)
-
-    def test_compare_mapping_data(self):
-        dict1 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}, 'c': {'shape': [1, 2, 3]}}
-        dict2 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}, 'c': {'shape': [1, 2, 3]}}
-        dict3 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict4 = {'a': {'shape': [2, 1, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict5 = {'a': {'shape': [2, 2, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict6 = {'a': {'type': 'str'}}
-        self.assertTrue(compare_mapping_data(dict1, dict2))
-        self.assertTrue(compare_mapping_data(dict1, dict3))
-        self.assertTrue(compare_mapping_data(dict1, dict4))
-        self.assertFalse(compare_mapping_data(dict1, dict5))
-        self.assertTrue(compare_mapping_data(dict1, dict6))

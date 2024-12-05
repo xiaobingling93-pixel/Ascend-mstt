@@ -84,8 +84,6 @@ const ViewNames = {
   [Views.Lightning]: Views.Lightning,
 };
 
-const accViews = ['Loss Comparison'];
-
 const drawerWidth = 340;
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -225,9 +223,9 @@ export const App = () => {
   const continuouslyFetchRuns = async () => {
     while (true) {
       try {
-        const runs = await api.defaultApi.runsGet();
-        setRuns(runs.runs);
-        setRunsLoading(runs.loading);
+        const result = await api.defaultApi.runsGet();
+        setRuns(result.runs);
+        setRunsLoading(result.loading);
       } catch (e) {
         message.warning(`Cannot fetch runs: ${e}`);
       }
@@ -247,52 +245,48 @@ export const App = () => {
 
   React.useEffect(() => {
     if (diffLeftRun) {
-      api.defaultApi.workersGet(diffLeftRun, Views.Overview).then((workers) => {
-        setDiffLeftWorkerOptions(workers);
+      api.defaultApi.workersGet(diffLeftRun, Views.Overview).then((data) => {
+        setDiffLeftWorkerOptions(data);
       });
     }
   }, [diffLeftRun]);
 
   React.useEffect(() => {
     if (diffLeftRun && diffLeftWorker) {
-      api.defaultApi.spansGet(diffLeftRun, diffLeftWorker).then((spans) => {
-        setDiffLeftSpansOptions(spans);
+      api.defaultApi.spansGet(diffLeftRun, diffLeftWorker).then((data) => {
+        setDiffLeftSpansOptions(data);
       });
     }
   }, [diffLeftRun, diffLeftWorker]);
 
   // #endregion
   // #region - Diff Right
-
   React.useEffect(() => {
     if (diffRightRun) {
-      api.defaultApi
-        .workersGet(diffRightRun, Views.Overview)
-        .then((workers) => {
-          setDiffRightWorkerOptions(workers);
-        });
+      api.defaultApi.workersGet(diffRightRun, Views.Overview).then((data) => {
+        setDiffRightWorkerOptions(data);
+      });
     }
   }, [diffRightRun]);
 
   React.useEffect(() => {
     if (diffRightRun && diffRightWorker) {
-      api.defaultApi.spansGet(diffRightRun, diffRightWorker).then((spans) => {
-        setDiffRightSpansOptions(spans);
+      api.defaultApi.spansGet(diffRightRun, diffRightWorker).then((data) => {
+        setDiffRightSpansOptions(data);
       });
     }
   }, [diffRightRun, diffRightWorker]);
 
   // #endregion
   // #region - normal
-
   React.useEffect(() => {
     if (run) {
       api.defaultApi.viewsGet(run).then((rawViews) => {
-        const views = rawViews.views
+        const result = rawViews.views
           .map((v) => Views[Views[v as Views]])
           .filter(Boolean);
         setDeviceTarget(rawViews.device_target);
-        setViews(views);
+        setViews(result);
       });
     }
   }, [run]);
@@ -303,8 +297,8 @@ export const App = () => {
 
   React.useEffect(() => {
     if (run && view) {
-      api.defaultApi.workersGet(run, view).then((workers) => {
-        setWorkers(workers);
+      api.defaultApi.workersGet(run, view).then((data) => {
+        setWorkers(data);
       });
     }
   }, [run, view]);
@@ -315,8 +309,8 @@ export const App = () => {
 
   React.useEffect(() => {
     if (run && worker) {
-      api.defaultApi.spansGet(run, worker).then((spans) => {
-        setSpans(spans);
+      api.defaultApi.spansGet(run, worker).then((data) => {
+        setSpans(data);
       });
     }
   }, [run, worker]);
@@ -331,14 +325,14 @@ export const App = () => {
   const handleTabChange = (
     event: React.ChangeEvent<Record<string, unknown>>,
     value: any
-  ) => {
+  ): void => {
     setSelectedTab(value as number);
   };
 
   const handleTopTabChange = (
     event: React.ChangeEvent<Record<string, unknown>>,
     value: any
-  ) => {
+  ): void => {
     setTopTab(value as number);
   };
 
@@ -414,13 +408,13 @@ export const App = () => {
     }
   };
 
-  const _getViews = (view: Views): string => {
-    if (view === Views.Kernel) {
+  const _getViews = (viewName: Views): string => {
+    if (viewName === Views.Kernel) {
       return deviceTarget === 'Ascend'
-        ? `NPU ${ViewNames[view]}`
-        : `GPU ${ViewNames[view]}`;
+        ? `NPU ${ViewNames[viewName]}`
+        : `GPU ${ViewNames[viewName]}`;
     } else {
-      return ViewNames[view];
+      return ViewNames[viewName];
     }
   };
 

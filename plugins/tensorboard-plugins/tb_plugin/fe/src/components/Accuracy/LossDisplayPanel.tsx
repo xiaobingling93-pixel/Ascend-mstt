@@ -170,7 +170,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
         },
         formatter: (name) => {
           // Show ellipsis and set tooltip for legends with too long name
-          return name.length > 50 ? name.slice(0, 48) + '...' : name;
+          return name.length > 50 ? `${name.slice(0, 48)}...` : name;
         },
       },
       xAxis: {

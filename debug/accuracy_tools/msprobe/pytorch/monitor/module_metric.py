@@ -165,7 +165,7 @@ def write_metrics_base(ops, summary_writer, metric_value, step, prefix=''):
     for op2tensor in metric_value.values():
         tensors.extend(op2tensor.values())
     with torch.no_grad():
-        metric_list = torch.stack(tensors).squeeze().cpu()
+        metric_list = torch.stack(tensors).cpu()
     for tag, metric in zip(tags, metric_list):
         summary_writer.add_scalar(tag, metric, step)
 
@@ -181,9 +181,9 @@ def write_metrics_csv(ops, summary_writer, metric_value, step, prefix=''):
             else:
                 input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
             ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
-            summary_writer.header = ["module_name", *ops_]
+            summary_writer.header = ["module_name", "step", *ops_]
         else:
-            summary_writer.header = ["param_name", *ops]
+            summary_writer.header = ["param_name", "step", *ops]
 
         for key in metric_value.keys():
             if MonitorConst.VPP_SEP in key:

@@ -14,36 +14,48 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import re
 
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import ScopeException
 
 
-def build_scope(scope_class, scope=None, api_list=None):
-    if not scope and not api_list:
-        return None
-    if scope is None:
-        scope = []
-    if api_list is None:
-        api_list = []
-    if scope_class:
-        return scope_class(scope, api_list)
-    return build_range_scope_according_to_scope_name(scope, api_list)
+class ScopeFactory:
+    def __init__(self, config):
+        self.task = config.task
+        self.level = config.level
+        self.scope = config.scope
+        self.api_list = config.list
 
+    def build_scope(self):
+        if not self.scope and not self.api_list:
+            return None
+        if self.scope is None:
+            self.scope = []
+        if self.api_list is None:
+            self.api_list = []
+        if self.task == Const.FREE_BENCHMARK:
+            return ListScope(self.scope, self.api_list)
+        return self._build_range_scope()
 
-def build_range_scope_according_to_scope_name(scope, api_list):
-    api_range_scope = APIRangeScope(scope, api_list)
-    module_range_scope = ModuleRangeScope(scope, api_list)
-    if not scope:  # 如果没有scope参数则用哪类scope都一样
-        return api_range_scope
-    if api_range_scope.is_valid and module_range_scope.is_valid:
-        raise ScopeException(ScopeException.InvalidScope, f"scope={scope}.")
-    elif api_range_scope.is_valid:
-        return api_range_scope
-    elif module_range_scope.is_valid:
-        return module_range_scope
-    else:
-        raise ScopeException(ScopeException.InvalidScope, f"scope={scope}")
+    def _build_range_scope(self):
+        api_range_scope = APIRangeScope(self.scope, self.api_list, self.level)
+        module_range_scope = ModuleRangeScope(self.scope, self.api_list, self.level)
+        mix_range_scope = MixRangeScope(self.scope, self.api_list, self.level)
+
+        if self.level == Const.LEVEL_MIX:
+            return mix_range_scope
+        
+        if not self.scope:
+            return api_range_scope
+        if api_range_scope.is_valid and module_range_scope.is_valid:
+            raise ScopeException(ScopeException.InvalidScope, f"scope={self.scope}.")
+        elif api_range_scope.is_valid:
+            return api_range_scope
+        elif module_range_scope.is_valid:
+            return module_range_scope
+        else:
+            raise ScopeException(ScopeException.InvalidScope, f"scope={self.scope}")
 
 
 class BaseScope(ABC):
@@ -51,7 +63,8 @@ class BaseScope(ABC):
     Module_Type_API = "api"
     module_type = ["Module", "Cell"]
 
-    def __init__(self, scope, api_list):
+    def __init__(self, scope, api_list, level=None):
+        self.level = level
         scope, api_list = self.rectify_args(scope, api_list)
         self.scope = scope
         self.api_list = api_list
@@ -109,17 +122,36 @@ class RangeScope(BaseScope, ABC):
     def __init__(self, *args):
         super().__init__(*args)
         self.in_scope = False
+        self.in_list = False
         self.is_valid = self.check_scope_is_valid()
 
-    @staticmethod
-    def rectify_args(scope, api_list):
-        scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
-        if isinstance(scope, list):
-            if len(scope) == 1:
-                scope.append(scope[0])
-            elif len(scope) > 2:
+    def check_name_pattern(self, name):
+        options_pattern = "|".join(re.escape(option) for option in Const.DUMP_PREFIX)
+        api_pattern = rf"^({options_pattern})\..*\.\d+\.(forward|backward)$"
+        module_pattern = r"^(Cell|Module)\..*\.(forward|backward)\.\d+$"
+
+        if self.level == Const.LEVEL_L1:
+            if not re.match(api_pattern, name):
                 raise ScopeException(ScopeException.InvalidScope,
-                    f"scope参数指定区间断点，须传入长度为1或2的列表，实际长度为{len(scope)}.")
+                                    f"scope参数格式错误，要求格式为api完整命名，实际为{name}.")
+        
+        if self.level == Const.LEVEL_L0:
+            if not re.match(module_pattern, name):
+                raise ScopeException(ScopeException.InvalidScope,
+                                    f"scope参数格式错误，要求格式为模块完整命名，实际为{name}.")
+
+        if self.level == Const.LEVEL_MIX:
+            if not re.match(api_pattern, name) and not re.match(module_pattern, name):
+                raise ScopeException(ScopeException.InvalidScope,
+                                    f"scope参数格式错误，要求格式为api或模块完整命名，实际为{name}.")
+
+    def rectify_args(self, scope, api_list):
+        scope, api_list = super(RangeScope, RangeScope).rectify_args(scope, api_list)
+        if scope and len(scope) != 2:
+            raise ScopeException(ScopeException.InvalidScope,
+                f"scope参数指定区间断点，须传入长度为2的列表，实际长度为{len(scope)}.")
+        for name in scope:
+            self.check_name_pattern(name)
         return scope, api_list
 
     @abstractmethod
@@ -192,3 +224,50 @@ class ModuleRangeScope(RangeScope):
         if not self.scope or self.in_scope:
             return self.check_api_list(name)
         return False
+
+
+class MixRangeScope(RangeScope):
+    def check_scope_is_valid(self):
+        return True if self.scope else False
+        
+    def begin_module(self, module_name):
+        if self.scope and module_name == self.scope[0]:
+            self.in_scope = True
+        for name in self.api_list:
+            if name in module_name:
+                self.in_list = True
+
+    def end_module(self, module_name):
+        if self.scope and module_name == self.scope[1]:
+            self.in_scope = False
+        for name in self.api_list:
+            if name in module_name:
+                self.in_list = False
+
+    def check_api_list(self, api_name):
+        if not self.api_list:
+            return True
+        
+        for name in self.api_list:
+            if name in api_name:
+                return True
+        return False
+    
+    def check(self, name):
+        """
+        dump时调用的接口，根据scope和api_list判断是否需要dump
+        """
+        result = False
+        if self.scope and name == self.scope[0]:
+            self.in_scope = True
+
+        if not self.scope or self.in_scope:
+            if self.in_list:
+                result = True
+            else:
+                result = self.check_api_list(name)
+
+        if self.scope and name == self.scope[1]:
+            self.in_scope = False
+        return result
+    
