@@ -31,13 +31,13 @@ class DebuggerConfig:
         self.scope = task_config.scope if task_config.scope else []
         self.list = task_config.list if task_config.list else []
         self.data_mode = task_config.data_mode if task_config.data_mode else ["all"]
-        self.backward_input_list = task_config.backward_input if task_config.backward_input else []
-        self.backward_input = {}
-        self.acl_config = common_config.acl_config if common_config.acl_config else ""
-        self.is_forward_acl_dump = True
         self.summary_mode = task_config.summary_mode if task_config.summary_mode else Const.STATISTICS
         self.overflow_nums = task_config.overflow_nums if task_config.overflow_nums else 1
         self.framework = Const.PT_FRAMEWORK
+
+        if self.level == Const.LEVEL_L2:
+            self.is_backward_kernel_dump = False
+            self._check_and_adjust_config_with_l2()
 
         if self.task == Const.FREE_BENCHMARK:
             self.fuzz_device = task_config.fuzz_device
@@ -63,17 +63,6 @@ class DebuggerConfig:
                 if isinstance(task_config.online_run_ut_recompute, bool) else False
 
         self.check()
-
-        if self.level == "L2":
-            if not self.scope or not isinstance(self.scope, list) or len(self.scope) != 1:
-                raise ValueError("scope must be configured as a list with one api name")
-            if isinstance(self.scope[0], str) and Const.BACKWARD in self.scope[0] and not self.backward_input_list:
-                raise ValueError("backward_input must be configured when scope contains 'backward'")
-            if Const.BACKWARD in self.scope[0]:
-                self.is_forward_acl_dump = False
-                for index, scope_spec in enumerate(self.scope):
-                    self.scope[index] = scope_spec.replace(Const.BACKWARD, Const.FORWARD)
-                    self.backward_input[self.scope[index]] = self.backward_input_list[index]
 
     def check_kwargs(self):
         if self.task and self.task not in Const.TASK_LIST:
@@ -108,3 +97,16 @@ class DebuggerConfig:
             logger.error_on_rank_0(f"The 'model' parameter of start must be a torch.nn.Module type.")
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")
+
+    def _check_and_adjust_config_with_l2(self):
+        if self.scope:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the scope cannot be configured.")
+        if not self.list or len(self.list) != 1:
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
+                                   f"When level is set to L2, the list must be configured as a list with one api name.")
+        api_name = self.list[0]
+        if api_name.endswith(Const.BACKWARD):
+            self.is_backward_kernel_dump = True
+            api_forward_name = api_name[:-len(Const.BACKWARD)] + Const.FORWARD
+            self.list.append(api_forward_name)
