@@ -24,6 +24,12 @@ from msprobe.mindspore.dump.hook_cell.wrap_api import (HOOKTensor, HOOKStubTenso
 from msprobe.core.common.utils import Const
 
 
+def stub_method(method):
+    def wrapped_method(*args, **kwargs):
+        return method(*args, **kwargs)
+    return wrapped_method
+
+
 class ApiRegistry:
     def __init__(self):
         self.tensor_ori_attr = {}
@@ -50,9 +56,13 @@ class ApiRegistry:
             if Const.SEP in api:
                 sub_module_name, sub_op = api.rsplit(Const.SEP, 1)
                 sub_module = getattr(ori_api_group, sub_module_name)
-                api_ori_attr[api] = getattr(sub_module, sub_op)
+                ori_api_func = getattr(sub_module, sub_op)
             else:
-                api_ori_attr[api] = getattr(ori_api_group, api)
+                ori_api_func = getattr(ori_api_group, api)
+            if ori_api_group == StubTensor:
+                api_ori_attr[api] = stub_method(ori_api_func)
+                continue
+            api_ori_attr[api] = ori_api_func
 
     @staticmethod
     def set_api_attr(api_group, attr_dict):

@@ -17,7 +17,6 @@ import os
 import stat
 
 import numpy as np
-import torch
 
 
 class Const:
@@ -37,7 +36,7 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
-    PROGRESS_TIMEOUT = 60
+    PROGRESS_TIMEOUT = 3000
     EXCEPTION_NONE = None
     JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
@@ -194,12 +193,6 @@ class Const:
     MEAN = 'Mean'
     NORM = 'Norm'
 
-    MEMORY_FORMAT = {
-            torch.contiguous_format: "contiguous_format",
-            torch.channels_last: "channels_last",
-            torch.channels_last_3d: "channels_last_3d",
-            torch.preserve_format: "preserve_format"
-        }
 
 class CompareConst:
     """
@@ -360,10 +353,12 @@ class CompareConst:
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
     INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+    KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
     OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
     COMPARE_KEY = 'compare_key'
     COMPARE_SHAPE = 'compare_shape'
     INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+    UNREADABLE = 'unreadable data'
 
 
 class FileCheckConst:
@@ -420,12 +415,19 @@ class MsCompareConst:
     # api_info field
     MINT = "Mint"
     MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+
+    API_NAME_STR_LENGTH = 4
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
 
     # detail_csv
     DETAIL_CSV_API_NAME = "API Name"
@@ -486,7 +488,7 @@ class MonitorConst:
     DATABASE = "database"
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
-    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage0", "DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
 
     DOT = "."

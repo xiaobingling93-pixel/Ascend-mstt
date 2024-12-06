@@ -52,12 +52,12 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
     """
     if framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import PTComparator
-        return PTComparator()._do_multi_process(dump_path_param, csv_path)
+        return PTComparator().do_multi_process(dump_path_param, csv_path)
     else:
         from msprobe.mindspore.compare.ms_compare import MSComparator
         ms_comparator = MSComparator()
         ms_comparator.cross_frame = is_cross_frame
-        return ms_comparator._do_multi_process(dump_path_param, csv_path)
+        return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
@@ -74,11 +74,7 @@ def get_input_output(node_data, node_id):
         full_op_name = item.get('full_op_name', '')
         if not full_op_name:
             continue
-        splits = full_op_name.split('.')
-        if len(splits) < GraphConst.OUTPUT_MIN_LEN:
-            continue
-        if GraphConst.OUTPUT in splits[GraphConst.OUTPUT_INDEX_TWO] and \
-                GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
+        if GraphConst.OUTPUT in full_op_name and GraphConst.INPUT not in full_op_name:
             output_data[full_op_name] = item
         else:
             name = item.get('data_name')

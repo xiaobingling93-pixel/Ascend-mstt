@@ -24,7 +24,7 @@ from msprobe.mindspore.common.log import logger
 class MultiDataManager(DataManager):
     def __init__(self, csv_dir, result_csv_path, shared_is_first_write):
         super().__init__(csv_dir, result_csv_path)
-        self.is_first_write = True
+
         # 使用共享的 is_first_write 变量来控制表头写入
         self.shared_is_first_write = shared_is_first_write
         # 创建锁对象，确保线程安全

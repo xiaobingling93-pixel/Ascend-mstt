@@ -33,24 +33,6 @@ class TestDebuggerConfig(unittest.TestCase):
         self.assertEqual(debugger.handler_type, "check")
         self.assertTrue(debugger.preheat_config["if_preheat"])
 
-    def test_level_l2_scope_validation(self):
-        self.task_config.scope = ["backward.api"]
-        self.task_config.backward_input = ["input"]
-        debugger = DebuggerConfig(self.common_config, self.task_config, None, None, "L2")
-        self.assertEqual(debugger.scope, ["forward.api"])
-        self.assertEqual(debugger.backward_input["forward.api"], "input")
-
-        self.task_config.scope = ["op1", "op2"]
-        with self.assertRaises(ValueError) as context:
-            DebuggerConfig(self.common_config, self.task_config, None, None, "L2")
-        self.assertIn("scope must be configured as a list with one api name", str(context.exception))
-
-        self.task_config.scope = ["backward.api"]
-        self.task_config.backward_input = []
-        with self.assertRaises(ValueError) as context:
-            DebuggerConfig(self.common_config, self.task_config, None, None, "L2")
-        self.assertIn("backward_input must be configured when scope contains 'backward'", str(context.exception))
-
     def test_online_run_ut_initialization(self):
         self.task_config.online_run_ut = True
         self.task_config.nfs_path = "./nfs_path"
@@ -62,7 +44,7 @@ class TestDebuggerConfig(unittest.TestCase):
         self.assertTrue(debugger.online_run_ut)
         self.assertEqual(debugger.nfs_path, "./nfs_path")
         self.assertEqual(debugger.port, 8080)
-        
+
     def test_valid_task_and_level(self):
         config = DebuggerConfig(self.common_config, self.task_config, "tensor", None, "L1")
         config.check_kwargs()
@@ -85,3 +67,34 @@ class TestDebuggerConfig(unittest.TestCase):
             config = DebuggerConfig(self.common_config, self.task_config, "tensor", None, "L1")
             config.check_kwargs()
         self.assertIn("dump_path not found", str(context.exception))
+
+    def test_check_and_adjust_config_with_l2_scope_not_empty(self):
+        self.common_config.dump_path = "./dump_path"
+        self.common_config.task = Const.TENSOR
+
+        self.task_config.scope = ["test_api_name"]
+        debugger = DebuggerConfig(self.common_config, self.task_config, None, None, None)
+        with self.assertRaises(MsprobeException) as context:
+            debugger._check_and_adjust_config_with_l2()
+        self.assertIn("the scope cannot be configured", str(context.exception))
+
+    def test_check_and_adjust_config_with_l2_list_empty(self):
+        self.common_config.dump_path = "./dump_path"
+        self.common_config.task = Const.TENSOR
+
+        self.task_config.scope = []
+        self.task_config.list = []
+        debugger = DebuggerConfig(self.common_config, self.task_config, None, None, None)
+        with self.assertRaises(MsprobeException) as context:
+            debugger._check_and_adjust_config_with_l2()
+        self.assertIn("the list must be configured", str(context.exception))
+
+    def test_check_and_adjust_config_with_l2_success(self):
+        self.common_config.dump_path = "./dump_path"
+        self.common_config.task = Const.TENSOR
+
+        self.task_config.scope = []
+        self.task_config.list = ["Functional.conv2d.0.backward"]
+        debugger = DebuggerConfig(self.common_config, self.task_config, None, None, None)
+        debugger._check_and_adjust_config_with_l2()
+        self.assertIn("Functional.conv2d.0.forward", self.task_config.list)

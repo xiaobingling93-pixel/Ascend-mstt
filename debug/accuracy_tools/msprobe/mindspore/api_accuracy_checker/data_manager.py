@@ -75,7 +75,6 @@ def check_csv_header(headers, required_constants, csv_path):
             MsprobeBaseException.MISSING_HEADER_ERROR,
             f"{csv_path} 缺少以下必需的表头字段: {missing_constants}"
         )
-    return True
 
 
 class DataManager:
@@ -111,27 +110,27 @@ class DataManager:
         headers = csv_data[0] if csv_data else []  # 如果文件为空，则 headers 会为空
 
         # 使用提取的表头校验函数
-        check_csv_header(headers, get_result_csv_header(), result_csv_path)
+        if check_csv_header(headers, get_result_csv_header(), result_csv_path):
 
-        # 获取 "API Name" 列的索引
-        api_name_index = None
-        for i, header in enumerate(headers):
-            if MsCompareConst.DETAIL_CSV_API_NAME in header:  # CSV 文件的标题行包含了字节顺序标记,所以使用通过包含方式来查找
-                api_name_index = i
-                break
+            # 获取 "API Name" 列的索引
+            api_name_index = None
+            for i, header in enumerate(headers):
+                if MsCompareConst.DETAIL_CSV_API_NAME in header:  # CSV 文件的标题行包含了字节顺序标记,所以使用通过包含方式来查找
+                    api_name_index = i
+                    break
 
-        if api_name_index is None:
-            logger.warning(f"{result_csv_path} No column contains 'API Name'.")
-            return
+            if api_name_index is None:
+                logger.warning(f"{result_csv_path} No column contains 'API Name'.")
+                return
 
-        # 读取每一行的 API 名称
-        for row in csv_data[1:]:  # 跳过标题行，从第二行开始
-            if row and len(row) > api_name_index:
-                api_name = row[api_name_index]
-                if api_name:
-                    self.api_names_set.add(api_name)
+            # 读取每一行的 API 名称
+            for row in csv_data[1:]:  # 跳过标题行，从第二行开始
+                if row and len(row) > api_name_index:
+                    api_name = row[api_name_index]
+                    if api_name:
+                        self.api_names_set.add(api_name)
 
-        logger.debug(f"Initialized API names set from existing CSV: {self.api_names_set}")
+            logger.debug(f"Initialized API names set from existing CSV: {self.api_names_set}")
 
     def is_unique_api(self, api_name):
         """检查 API 名称是否唯一，如果已经存在则返回 False，否则加入集合并返回 True"""

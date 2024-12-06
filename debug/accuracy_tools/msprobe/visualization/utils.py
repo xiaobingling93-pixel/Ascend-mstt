@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import re
 import json
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
@@ -78,6 +80,47 @@ def is_integer(s):
         return False
 
 
+def check_directory_content(input_path):
+    """
+    检查input_path内容, 是否全是step{数字}命名的文件夹(例如step0), 或者全是rank{数字}命名的文件夹(例如rank0), 或者全是文件
+    """
+    contents = os.listdir(input_path)
+    if not contents:
+        raise ValueError(f'The path {input_path} is empty.')
+
+    # 真实数据dump会有dump_tensor_data文件夹
+    if os.path.exists(os.path.join(input_path, Const.DUMP_TENSOR_DATA)):
+        return GraphConst.FILES
+
+    # 检查是否全是文件
+    if all(os.path.isfile(os.path.join(input_path, item)) for item in contents):
+        return GraphConst.FILES
+
+    rank_pattern = re.compile(r'^rank\d+$')
+    step_pattern = re.compile(r'^step\d+$')
+
+    rank_all = True
+    step_all = True
+
+    for item in contents:
+        item_path = os.path.join(input_path, item)
+        if not os.path.isdir(item_path):
+            continue
+        if not rank_pattern.match(item):
+            rank_all = False
+        if not step_pattern.match(item):
+            step_all = False
+
+    if rank_all:
+        return GraphConst.RANKS
+    if step_all:
+        return GraphConst.STEPS
+
+    raise ValueError("The input path content does not conform to the expected naming convention. "
+                     "It is expected to be all step{number} named folders (such as step0), "
+                     "all rank{number} named folders (such as rank0), or all files.")
+
+
 class ToolTip:
     MAX_DIFF = 'NPU与标杆API统计信息比对，最大值的差值'
     MIN_DIFF = 'NPU与标杆API统计信息比对，最小值的差值'
@@ -136,8 +179,8 @@ class GraphConst:
     OUTPUT_INDEX_TWO = -2
     OUTPUT_INDEX_THREE = -3
     OUTPUT_MIN_LEN = 3
-    INPUT = 'input'
-    OUTPUT = 'output'
+    INPUT = '.input.'
+    OUTPUT = '.output.'
     STR_MAX_LEN = 50
     SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]
@@ -183,3 +226,7 @@ class GraphConst:
         Const.FLOAT16: 1e-3,
         Const.BFLOAT16: 1e-3
     }
+
+    RANKS = 'ranks'
+    STEPS = 'steps'
+    FILES = 'files'

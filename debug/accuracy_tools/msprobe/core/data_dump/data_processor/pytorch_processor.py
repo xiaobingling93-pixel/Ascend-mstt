@@ -13,21 +13,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
 import zlib
 from dataclasses import asdict
 from typing import List
-import hashlib
 
 import numpy as np
 import torch
 from torch import distributed as dist
+
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
 from msprobe.pytorch.common.utils import save_pt, load_pt
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
+from msprobe.core.common.utils import recursion_depth_decorator
 
 is_gpu = False
 try:
@@ -38,6 +41,12 @@ except ImportError:
 
 class PytorchDataProcessor(BaseDataProcessor):
     pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup)
+    memory_format = {
+        torch.contiguous_format: "contiguous_format",
+        torch.channels_last: "channels_last",
+        torch.channels_last_3d: "channels_last_3d",
+        torch.preserve_format: "preserve_format"
+    }
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -118,23 +127,30 @@ class PytorchDataProcessor(BaseDataProcessor):
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
+    def process_group_hash(arg):
+        group_ranks = dist.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
+
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
     @staticmethod
     def _analyze_memory_format(arg):
         # 获取内存格式
-        format_type = Const.MEMORY_FORMAT.get(arg)
+        format_type = PytorchDataProcessor.memory_format.get(arg)
 
         return {"type": "torch.memory_format", "format": format_type}
 
     @staticmethod
     def _analyze_process_group(arg):
-        group_id = hashlib.md5(str(id(arg)).encode('utf-8')).hexdigest()
-        group_info = {"type": "torch.ProcessGroup", "process_group_id": group_id}
+        group_info = {"type": "torch.ProcessGroup"}
         try:
             group_ranks = dist.get_process_group_ranks(arg)
             group_info.update({"group_ranks": group_ranks})
+            group_id = PytorchDataProcessor.process_group_hash(arg)
+            group_info.update({"group_id": group_id})
         except Exception as e:
             logger.warning(f"Failed to get process group(id: {group_id}) ranks info with error info: {e}.")
         return group_info
@@ -345,64 +361,120 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
 
 
 class KernelDumpDataProcessor(PytorchDataProcessor):
-    forward_init_status = False
-    multi_output_apis = ["_sort_", "npu_flash_attention"]
-
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
+        self.enable_kernel_dump = True
+        self.is_found_output_tensor = False
+        self.is_found_grad_input_tensor = False
+        self.forward_args = None
+        self.forward_kwargs = None
+        self.forward_output_tensor = None
+        self.grad_input_tensor = None
+
+    @staticmethod
+    def start_kernel_dump(config_path):
+        torch_npu.npu.synchronize()
+        torch_npu.npu.init_dump()
+        torch_npu.npu.set_dump(config_path)
+        torch_npu.npu.synchronize()
+
+    @staticmethod
+    def stop_kernel_dump():
+        torch_npu.npu.synchronize()
+        torch_npu.npu.finalize_dump()
+        torch_npu.npu.synchronize()
+
+    @staticmethod
+    def _print_unsupported_log(api_name):
+        logger.warning(f"The kernel dump does not support the {api_name} API.")
+
+    def analyze_pre_forward(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        if is_gpu:
+            logger.warning("The current environment is not a complete NPU environment, and kernel dump cannot be used.")
+            self.enable_kernel_dump = False
+            return
+
+        if self.config.is_backward_kernel_dump:
+            self.forward_args = self.clone_and_detach_tensor(module_input_output.args)
+            self.forward_kwargs = self.clone_and_detach_tensor(module_input_output.kwargs)
+            try:
+                output = module.forward(*self.forward_args, **self.forward_kwargs)
+            except Exception:
+                self._print_unsupported_log(name)
+                self.enable_kernel_dump = False
+                return
+
+            self.analyze_element(convert_tuple(output))
+            if not self.is_found_output_tensor:
+                self._print_unsupported_log(name)
+                self.enable_kernel_dump = False
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
 
     def analyze_forward(self, name, module, module_input_output):
-        if self.config.is_forward_acl_dump:
-            self.forward_acl_dump(name, module, module_input_output)
+        if not self.enable_kernel_dump:
+            return
+        if self.config.is_backward_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    def analyze_backward(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+
+        self.analyze_element(module_input_output.grad_input)
+        if not self.is_found_grad_input_tensor:
+            self._print_unsupported_log(name)
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
+
+        try:
+            self.forward_output_tensor.backward(self.grad_input_tensor, retain_graph=True)
+        except Exception:
+            self._print_unsupported_log(name)
+            self.stop_kernel_dump()
+            return
+
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    @recursion_depth_decorator("KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor")
+    def clone_and_detach_tensor(self, input_params):
+        if isinstance(input_params, torch.Tensor):
+            if input_params.requires_grad:
+                return input_params.clone().detach().requires_grad_()
+            return input_params.clone()
+        elif isinstance(input_params, tuple):
+            return tuple(self.clone_and_detach_tensor(x) for x in input_params)
+        elif isinstance(input_params, list):
+            return list(self.clone_and_detach_tensor(x) for x in input_params)
+        elif isinstance(input_params, dict):
+            return {k: self.clone_and_detach_tensor(v) for k, v in input_params.items()}
         else:
-            self.dump_mode_backward_acl_dump(name, module, module_input_output)
+            return input_params
 
-    def forward_acl_dump(self, name, module, module_input_output):
-        if not KernelDumpDataProcessor.forward_init_status:
-            KernelDumpDataProcessor.forward_init_status = True
-            torch_npu.npu.synchronize()
-            torch_npu.npu.init_dump()
-            torch_npu.npu.set_dump(self.config.acl_config)
-            torch_npu.npu.synchronize()
-            if self.op_need_trigger(name):
-                module.forward(*module_input_output.args, **module_input_output.kwargs).cpu()
-            else:
-                module.forward(*module_input_output.args, **module_input_output.kwargs)
-            torch_npu.npu.synchronize()
-            torch_npu.npu.finalize_dump()
-            torch_npu.npu.synchronize()
-        KernelDumpDataProcessor.forward_init_status = False
-        logger.info("Dump %s op file." % name)
+    def analyze_single_element(self, element, suffix_stack):
+        if isinstance(element, torch.Tensor):
+            if not self.is_found_output_tensor:
+                if element.requires_grad:
+                    self.forward_output_tensor = element
+                    self.is_found_output_tensor = True
+                return {}
+            if not self.is_found_grad_input_tensor:
+                self.grad_input_tensor = element.clone()
+                self.is_found_grad_input_tensor = True
+        return {}
 
-    def acl_backward_dump_status(self, output, grad, module_name):
-        if isinstance(output, torch.Tensor):
-            output.backward(grad, retain_graph=True)
-            return True
-
-        for api_name in KernelDumpDataProcessor.multi_output_apis:
-            if api_name in module_name:
-                output[0].backward(grad, retain_graph=True)
-                return True
-        return False
-
-    def dump_mode_backward_acl_dump(self, name, module, module_input_output):
-        grad_path = self.config.backward_input.get(name)
-        if not KernelDumpDataProcessor.forward_init_status:
-            KernelDumpDataProcessor.forward_init_status = True
-            output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            pt = load_pt(grad_path)
-            grad = pt.to("npu").requires_grad_()
-            torch_npu.npu.init_dump()
-            torch_npu.npu.set_dump(self.config.acl_config)
-            torch_npu.npu.synchronize()
-            if not self.acl_backward_dump_status(output, grad, name):
-                logger.warning("The output of {} is not of tensor type and cannot be automatically derived. "
-                               "you can manually construct a single API backward case for ACL dump.".format(
-                    name))
-            torch_npu.npu.synchronize()
-            torch_npu.npu.finalize_dump()
-        KernelDumpDataProcessor.forward_init_status = False
-        logger.info("Dump %s op file." % name)
-
-    def op_need_trigger(self, module_name):
-        return 'Tensor.__getitem__.' in module_name
+    def reset_status(self):
+        self.enable_kernel_dump = True
+        self.is_found_output_tensor = False
+        self.is_found_grad_input_tensor = False
+        self.forward_args = None
+        self.forward_kwargs = None
+        self.forward_output_tensor = None
+        self.grad_input_tensor = None

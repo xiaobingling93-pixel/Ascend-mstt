@@ -34,7 +34,6 @@ class TestCommonConfig(TestCase):
         self.assertEqual(common_config.rank, [])
         self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
-        self.assertIsNone(common_config.acl_config)
         self.assertFalse(common_config.enable_dataloader)
 
         json_config.update({"task": "md5"})
@@ -75,7 +74,6 @@ class TestBaseConfig(TestCase):
         base_config.check_config()
         self.assertIsNone(base_config.scope)
         self.assertIsNone(base_config.list)
-        self.assertIsNone(base_config.backward_input)
         self.assertIsNone(base_config.file_format)
         self.assertIsNone(base_config.summary_mode)
         self.assertIsNone(base_config.overflow_nums)

@@ -1,10 +1,16 @@
 # coding=utf-8
 import json
-import numpy as np
+import os
 import random
+import shutil
 import tempfile
 import unittest
 
+import numpy as np
+import torch
+import yaml
+
+from msprobe.core.common.utils import CompareException
 from msprobe.mindspore.compare.ms_compare import MSComparator, check_cross_framework
 from msprobe.core.common.const import Const
 
@@ -48,7 +54,7 @@ bench_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.con
                           [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
                           [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], 'stack_info': []}
 
-npu_op_name = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
+npu_op_name_list = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
                           'Functional.conv2d.0.forward.input.2', 'Functional.conv2d.0.forward.output']
 
 npu_op_name_Mint = ['Mint.conv2d.0.forward.input.0', 'Mint.conv2d.0.forward.input.1',
@@ -59,6 +65,16 @@ bench_op_name = ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.for
 
 data_mapping = {'Functional.flash_attention_score.4.forward.input.0': 'NPU.npu_fusion_attention.4.forward.input.0',
                 'Functional.flash_attention_score.4.forward.output.0': 'NPU.npu_fusion_attention.4.forward.output.0'}
+
+npu_cell_dict = {'op_name': ['Cell.fc1.Dense.forward.0.input.0', 'Cell.fc1.Dense.forward.0.input.1',
+                             'Cell.fc1.Dense.forward.0.input.2', 'Cell.fc1.Dense.forward.0.output.0'],
+                 'input_struct': [('Float32', [1, 1, 28, 28]), ('Float32', [16, 1, 5, 5]),
+                                  ('Float32', [16])],
+                 'output_struct': [('Float32', [1, 16, 28, 28])],
+                 'summary': [[3.029174327850342, -2.926689624786377, -0.06619918346405029],
+                          [0.19919930398464203, -0.19974489510059357, 0.006269412115216255],
+                          [0.19734230637550354, -0.18177609145641327, 0.007903944700956345],
+                          [2.1166646480560303, -2.190781354904175, -0.003579073818400502]], "stack_info": []}
 
 npu_json_data = {
     'task': 'statistics',
@@ -222,7 +238,7 @@ class TestUtilsMethods(unittest.TestCase):
         fuzzy_match = False
         ms_comparator = MSComparator()
         result = ms_comparator.check_op(npu_dict, bench_dict, fuzzy_match)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     def test_data_mapping(self):
         dump_mode = Const.SUMMARY
@@ -283,20 +299,24 @@ class TestUtilsMethods(unittest.TestCase):
         self.compare_process_custom(dump_mode=Const.ALL)
 
     def compare_process_custom(self, dump_mode):
-        import os
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
-        npu_dump_path = os.path.join(data_path, 'npu_dump.json')
-        bench_dump_path = os.path.join(data_path, 'bench_dump.json')
-        npu_stack_path = os.path.join(data_path, 'npu_stack.json')
+        try:
+            npu_dump_path = os.path.join(data_path, 'npu_dump.json')
+            bench_dump_path = os.path.join(data_path, 'bench_dump.json')
+            npu_stack_path = os.path.join(data_path, 'npu_stack.json')
 
-        with open(npu_dump_path, 'w') as n_d_f, open(bench_dump_path, 'w') as b_d_f, open(npu_stack_path, 'w') as n_s_f:
-            json.dump(npu_json_data, n_d_f)
-            json.dump(bench_json_data, b_d_f)
-            json.dump({}, n_s_f)
-        ms_comparator = MSComparator()
-        result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
-                                                         False, dump_mode)
-        self.assertListEqual(result_df.values.tolist(), [])
+            with open(npu_dump_path, 'w') as n_d_f:
+                json.dump(npu_json_data, n_d_f)
+            with open(bench_dump_path, 'w') as b_d_f:
+                json.dump(bench_json_data, b_d_f)
+            with open(npu_stack_path, 'w') as n_s_f:
+                json.dump({}, n_s_f)
+            ms_comparator = MSComparator()
+            result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
+                                                             False, dump_mode)
+            self.assertListEqual(result_df.values.tolist(), [])
+        finally:
+            shutil.rmtree(data_path)
 
     def test_check_cross_framework(self):
         ms_data = {
@@ -315,7 +335,6 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(check_data(pt_data))
 
     def test_comapre_process(self):
-        import os
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         try:
             npu_dump_path = os.path.join(data_path, 'npu_dump.json')
@@ -323,22 +342,20 @@ class TestUtilsMethods(unittest.TestCase):
             npu_stack_path = os.path.join(data_path, 'npu_stack.json')
 
             npu_data, bench_data, _ = gen_api_mapping_test_data()
-            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
-                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
-                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f):
+            with open(npu_dump_path, 'w', encoding='utf8') as n_d_f:
                 json.dump(npu_data, n_d_f)
+            with open(bench_dump_path, 'w', encoding='utf8') as b_d_f:
                 json.dump(bench_data, b_d_f)
+            with open(npu_stack_path, 'w', encoding='utf8') as n_s_f:
                 json.dump({}, n_s_f)
             ms_comparator = MSComparator(api_mapping=True)
             result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
                                                       Const.SUMMARY)
             self.assertTrue((result_df['Bench Name'] != 'N/A').all())
         finally:
-            import shutil
             shutil.rmtree(data_path)
     
     def test_compare_process_with_customize_api_mapping(self):
-        import os, yaml
         data_path = tempfile.mkdtemp(prefix='dump_data', dir='/tmp')
         try:
             npu_dump_path = os.path.join(data_path, 'npu_dump.json')
@@ -347,13 +364,13 @@ class TestUtilsMethods(unittest.TestCase):
             user_mapping_path = os.path.join(data_path, 'user_mapping.yaml')
 
             npu_data, bench_data, user_mapping = gen_api_mapping_test_data(True)
-            with (open(npu_dump_path, 'w', encoding='utf8') as n_d_f,
-                  open(bench_dump_path, 'w', encoding='utf8') as b_d_f,
-                  open(npu_stack_path, 'w', encoding='utf8') as n_s_f,
-                  open(user_mapping_path, 'w', encoding='utf8') as u_m_f):
+            with open(npu_dump_path, 'w', encoding='utf8') as n_d_f:
                 json.dump(npu_data, n_d_f)
+            with open(bench_dump_path, 'w', encoding='utf8') as b_d_f:
                 json.dump(bench_data, b_d_f)
+            with open(npu_stack_path, 'w', encoding='utf8') as n_s_f:
                 json.dump({}, n_s_f)
+            with open(user_mapping_path, 'w', encoding='utf8') as u_m_f:
                 yaml.safe_dump(user_mapping, u_m_f)
             ms_comparator = MSComparator(api_mapping=user_mapping_path)
             result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
@@ -363,7 +380,7 @@ class TestUtilsMethods(unittest.TestCase):
             for i in user_mapping:
                 user_mapping_dict[i.get('ms_api')] = {'input': i.get('ms_args'), 'output': i.get('ms_output')}
             match_set = set()
-            for key, value in npu_data.get('data').items():
+            for key in npu_data.get('data').keys():
                 matched_dict = user_mapping_dict.get(key.rsplit('.', 2)[0])
                 match_set.update({key + '.input.' + str(i) for i in matched_dict.get('input')})
                 match_set.update({key + '.output.' + str(i) for i in matched_dict.get('output')})
@@ -371,5 +388,59 @@ class TestUtilsMethods(unittest.TestCase):
             self.assertTrue((result_df.loc[result_df['NPU Name'].isin(match_set), 'Bench Name'] != 'N/A').all())
             self.assertTrue((result_df.loc[~result_df['NPU Name'].isin(match_set), 'Bench Name'] == 'N/A').all())
         finally:
-            import shutil
             shutil.rmtree(data_path)
+
+    def test_load_internal_api(self):
+        ms_comparator = MSComparator()
+        api_dict = ms_comparator.load_internal_api()
+        self.assertEqual(api_dict['Functional.abs'], 'Torch.abs')
+
+    def test_process_cell_mapping(self):
+        self.base_test_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+        self.input_dir = os.path.join(self.base_test_dir, 'resources')
+        cell_mapping_path = os.path.join(self.input_dir, 'common', 'cell_mapping.yaml')
+        ms_comparator = MSComparator(cell_mapping=cell_mapping_path)
+        npu_op_name = ms_comparator.process_cell_mapping(npu_cell_dict.get('op_name')[0])
+        self.assertEqual(npu_op_name, 'Module.fc1.Linear.forward.0.input.0')
+
+    def test_read_npy_data(self):
+        ms_comparator = MSComparator()
+        self.temp_file = tempfile.NamedTemporaryFile(suffix='.pt')
+        tensor = torch.Tensor([1, 2, 3])
+        filename = self.temp_file.name.split('/')[-1]
+        torch.save(tensor, self.temp_file.name)
+        result = ms_comparator.read_npy_data('/tmp', filename, load_pt_file=True)
+        self.assertTrue(np.array_equal(result, np.array([1, 2, 3])))
+        self.temp_file.close()
+
+        self.temp_file = tempfile.NamedTemporaryFile(suffix='.npy')
+        tensor = np.array([1, 2, 3])
+        filename = self.temp_file.name.split('/')[-1]
+        np.save(self.temp_file.name, tensor)
+        result = ms_comparator.read_npy_data('/tmp', filename, load_pt_file=False)
+        self.assertTrue(np.array_equal(result, np.array([1, 2, 3])))
+        self.temp_file.close()
+
+    def test_process_internal_api_mapping(self):
+        ms_comparator = MSComparator(api_mapping=1)
+        npu_op_name = "Mint.addcmul.0.forward.input.0"
+        result = ms_comparator.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(result, "Torch.addcmul.0.forward.input.0")
+
+        npu_op_name = "MintFunctional.addcmul.0.forward.input.0"
+        result = ms_comparator.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(result, "Functional.addcmul.0.forward.input.0")
+
+        npu_op_name = "Functional.abs"
+        result = ms_comparator.process_internal_api_mapping(npu_op_name)
+        self.assertEqual(result, "Torch.abs")
+
+    def test_get_api_name(self):
+        ms_comparator = MSComparator()
+        api_list = ["Functional", "absolute", "0", "forward", "input", "0"]
+        result = ms_comparator.get_api_name(api_list)
+        self.assertEqual(result, "Functional.absolute")
+
+        api_list = ["Mint"]
+        with self.assertRaises(CompareException):
+            ms_comparator.get_api_name(api_list)
