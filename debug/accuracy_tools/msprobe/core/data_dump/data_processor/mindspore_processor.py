@@ -41,7 +41,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
     @staticmethod
     def get_md5_for_tensor(x):
         x = convert_bf16_to_fp32(x)
-        tensor_bytes = x.contiguous().asnumpy().tobytes()
+        tensor_bytes = x.asnumpy().tobytes()
         crc32_hash = zlib.crc32(tensor_bytes)
         return f"{crc32_hash:08x}"
 
