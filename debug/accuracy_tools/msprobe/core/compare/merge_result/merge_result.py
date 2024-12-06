@@ -73,21 +73,22 @@ def get_result_path(input_dir):
     return filt_compare_result_path_list
 
 
-def get_dump_mode(result_df):
+def get_dump_mode(result_df, rank_num):
 
     """
     get dump mode from header of first compare result table
     """
     header = result_df.columns.tolist()
-    if CompareConst.COSINE in header:
+    if header in [CompareConst.COMPARE_RESULT_HEADER, CompareConst.COMPARE_RESULT_HEADER_STACK]:
         return Const.ALL
-    elif CompareConst.MAX_DIFF in header:
+    elif header in [CompareConst.SUMMARY_COMPARE_RESULT_HEADER, CompareConst.SUMMARY_COMPARE_RESULT_HEADER_STACK]:
         return Const.SUMMARY
-    elif CompareConst.NPU_MD5 in header:
+    elif header in [CompareConst.MD5_COMPARE_RESULT_HEADER, CompareConst.MD5_COMPARE_RESULT_HEADER_STACK]:
         return Const.MD5
     else:
-        logger.error("Unrecognizable comparison result header, please check!")
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+        logger.warning(f"A valid dump task can not be identified from rank{rank_num} compare result, please check! "
+                       f"The compare result will not be shown in merged result.")
+        return ""
 
 
 def check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num):
@@ -178,7 +179,9 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
         rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
         logger.info(f"Parsing rank{rank_num} compare result...")
         if not result_df.empty:
-            dump_mode = get_dump_mode(result_df)
+            dump_mode = get_dump_mode(result_df, rank_num)
+            if dump_mode == "":
+                return compare_index_dict_list, rank_num_list
             # 因为compare_index是指定的，固定不变，所以一旦compare_index是确定的，dump_mode也是确定的，
             # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
             compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num)
@@ -317,7 +320,7 @@ def merge_result(input_dir, output_dir, config_path):
 
 # TODO 测试代码，后续删除
 if __name__ == "__main__":
-    input_dir = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/output'
-    output_dir = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/merge_output'
-    config_path = '/home/yinglinwei/project/ar/merge_result_1203/mstt_3/debug/accuracy_tools/output/config.yaml'
+    input_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output'
+    output_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/merge_output'
+    config_path = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output/config.yaml'
     merge_result(input_dir, output_dir, config_path)
