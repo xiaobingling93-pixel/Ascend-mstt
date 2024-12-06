@@ -4,7 +4,7 @@ import unittest
 from msprobe.core.compare.utils import _compare_parser
 
 
-class TestUtils(unittest.TestCase):
+class TestUtilsMethods(unittest.TestCase):
     def test_compare_parser(self):
         parser = argparse.ArgumentParser()
         _compare_parser(parser)
