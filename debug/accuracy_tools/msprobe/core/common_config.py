@@ -16,7 +16,6 @@
 from msprobe.core.common.const import Const, FileCheckConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
-from msprobe.core.common.file_utils import FileChecker
 from msprobe.core.common.utils import get_real_step_or_rank
 
 
@@ -27,7 +26,6 @@ class CommonConfig:
         self.rank = get_real_step_or_rank(json_config.get('rank'), Const.RANK)
         self.step = get_real_step_or_rank(json_config.get('step'), Const.STEP)
         self.level = json_config.get('level')
-        self.acl_config = json_config.get('acl_config')
         self.enable_dataloader = json_config.get('enable_dataloader', False)
         self._check_config()
 
@@ -44,16 +42,6 @@ class CommonConfig:
         if not isinstance(self.enable_dataloader, bool):
             logger.error_log_with_exp("enable_dataloader is invalid, it should be a boolean",
                                       MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        if self.acl_config:
-            self._check_acl_config()
-
-    def _check_acl_config(self):
-        if not isinstance(self.acl_config, str):
-            logger.error_log_with_exp("acl_config is invalid, it should be a string",
-                                      MsprobeException(MsprobeException.INVALID_PARAM_ERROR))
-        file_checker = FileChecker(
-            file_path=self.acl_config, path_type=FileCheckConst.FILE, file_type=FileCheckConst.JSON_SUFFIX)
-        file_checker.common_check()
 
 
 class BaseConfig:
@@ -61,7 +49,6 @@ class BaseConfig:
         self.scope = json_config.get('scope')
         self.list = json_config.get('list')
         self.data_mode = json_config.get('data_mode')
-        self.backward_input = json_config.get("backward_input")
         self.file_format = json_config.get("file_format")
         self.summary_mode = json_config.get("summary_mode")
         self.overflow_nums = json_config.get("overflow_nums")
@@ -89,7 +76,6 @@ class BaseConfig:
     def check_config(self):
         self._check_str_list_config(self.scope, "scope")
         self._check_str_list_config(self.list, "list")
-        self._check_str_list_config(self.backward_input, "backward_input")
         self._check_data_mode()
 
     def _check_data_mode(self):

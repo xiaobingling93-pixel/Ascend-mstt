@@ -539,7 +539,7 @@ class TestUtilsMethods(unittest.TestCase):
         o_result = pd.DataFrame(o_data, columns=columns)
         generate_dump_json(base_dir)
         input_param = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
-        result = Comparator()._do_multi_process(input_param, result_df)
+        result = Comparator().do_multi_process(input_param, result_df)
         self.assertTrue(result.equals(o_result))
 
     def test_compare_by_op_1(self):

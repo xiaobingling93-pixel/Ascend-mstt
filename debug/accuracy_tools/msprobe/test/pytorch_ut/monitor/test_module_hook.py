@@ -2,13 +2,17 @@ import os.path
 import shutil
 import time
 import unittest
-from unittest.mock import patch
+from collections import defaultdict
+from unittest.mock import patch, MagicMock
 
 import pandas as pd
+import torch
+from torch import distributed as dist
 
 from msprobe.pytorch.monitor.module_hook import CommunicationContext, GradContext, ModuleHookContext, \
     param_is_not_tensor_parallel_duplicate, param_is_data_parallel_duplicate
 from msprobe.test.pytorch_ut.monitor.demo_model import monitor_demo
+from msprobe.pytorch import TrainerMon
 
 base_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -32,14 +36,43 @@ class TestModuleHook(unittest.TestCase):
     def tearDown(self) -> None:
         clean_output(self.monitor_output)
 
+    def test_smallest_rank_print(self):
+        xy_config = os.path.join(base_dir, "config/xy_config.json")
+        hooker = TrainerMon(
+            xy_config,
+            params_have_main_grad=False,
+            opt_ty='Megatron_FP32Optimizer'
+        )
+        # mock dist
+        dist_mock = MagicMock()
+        dist_mock.get_rank.return_value = 0
+        dist_mock.is_initialized.return_value = True
+        dist.is_initialized = dist_mock.is_initialized
+        dist.get_rank = dist_mock.get_rank
+
+        hooker._smallest_rank_print("test print")
+
+        hooker.module_rank_list = [0]
+        hooker._smallest_rank_print("test print")
+        self.assertIsNotNone(hooker)
+
     def test_print_struct(self):
         print_struct_config = os.path.join(base_dir, "config/struct_config.json")
+
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = False
+        dist.is_initialized = dist_mock.is_initialized
+
         with self.assertRaises(Exception) as context:
             monitor_demo(print_struct_config)
         self.assertEqual(str(context.exception), "exit after first step when print model struct")
 
     def test_xy_wg_mv_ur(self):
         output_list = []
+
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = False
+        dist.is_initialized = dist_mock.is_initialized
 
         # # test_xy_distribution
         xy_config = os.path.join(base_dir, "config/xy_config.json")
@@ -115,6 +148,118 @@ class TestModuleHook(unittest.TestCase):
         tb_dir = os.listdir(os.path.join(self.monitor_output, csv_dir[0]))
         self.assertEqual(len(tb_dir), 1)
         self.assertTrue(tb_dir[0].startswith("events.out.tfevents."))
+
+    def test_cc_distribution(self):
+        cc_config = os.path.join(base_dir, "config/cc_config.json")
+
+        dist_mock = MagicMock()
+        dist_mock.get_rank.return_value = 0
+        dist_mock.is_initialized.return_value = True
+        dist_mock.get_process_group_ranks.return_value = [0]
+        dist.is_initialized = dist_mock.is_initialized
+        dist.get_rank = dist_mock.get_rank
+        dist.get_process_group_ranks = dist_mock.get_process_group_ranks
+
+        hooker = TrainerMon(
+            cc_config,
+            params_have_main_grad=False,
+            opt_ty='Megatron_FP32Optimizer'
+        )
+        self.assertIsNotNone(hooker)
+
+    def test_adhoc_check(self):
+        # mock dist
+        dist_mock = MagicMock()
+        dist_mock.get_rank.return_value = 0
+        dist_mock.is_initialized.return_value = True
+        dist.is_initialized = dist_mock.is_initialized
+        dist.get_rank = dist_mock.get_rank
+
+        target_tensor = torch.randn(10)
+        module_name = 'test_module'
+        tensor_name = 'test_tensor'
+        rank_list = [1, 2]
+        ops_list = ['max', 'min']
+        TrainerMon.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
+
+    def test_generate_cc_metrics(self):
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = True
+        dist_mock.get_rank.return_value = 1
+        dist.is_initialized = dist_mock.is_initialized
+        dist.get_rank = dist_mock.get_rank
+
+        cc_name = 'test_cc'
+        cc_tensor = CommunicationContext()
+        cc_tensor.data = {
+            'min': {
+                'tag1': 'tensor1',
+                'tag2': 'tensor2'
+            },
+            'max': {
+                'tag3': 'tensor3',
+                'tag4': 'tensor4'
+            }
+        }
+        expected_metrics = {'min': {'test_cc/rank1/tag1': 'tensor1', 'test_cc/rank1/tag2': 'tensor2'},
+                            'max': {'test_cc/rank1/tag3': 'tensor3', 'test_cc/rank1/tag4': 'tensor4'}}
+        result = TrainerMon.generate_cc_metrics(cc_name, cc_tensor)
+        self.assertDictEqual(result, expected_metrics)
+
+    def test_common_info_with_Exception(self):
+        xy_config = os.path.join(base_dir, "config/xy_config.json")
+        hooker = TrainerMon(
+            xy_config,
+            params_have_main_grad=False,
+            opt_ty=None
+        )
+        hooker.forward_only = True
+
+        hooker.ur_distribution = True
+        with self.assertRaises(Exception) as context:
+            hooker.common_info()
+        self.assertIn(str(context.exception), "ur_distribution cannot be enabled with unknown optimizer.")
+
+        hooker.ur_distribution = False
+        hooker.mv_distribution = True
+        with self.assertRaises(Exception) as context:
+            hooker.common_info()
+        self.assertIn(str(context.exception), "mv_distribution cannot be enabled with unknown optimizer.")
+
+    def test_generate_xy_metrics(self):
+        xy_config = os.path.join(base_dir, "config/xy_config.json")
+        trainer_mon = TrainerMon(
+            xy_config,
+            params_have_main_grad=False,
+            opt_ty='Megatron_FP32Optimizer'
+        )
+
+        fwd_context = ModuleHookContext("module1")
+        fwd_context.actv = {'module1': 'value1'}
+        trainer_mon.module_fwd_hook_context_by_module = {'module1': fwd_context}
+        trainer_mon.grad_context.actv = {'module2': 'value2'}
+
+        actv, actv_grad = trainer_mon.generate_xy_metrics()
+        self.assertEqual(actv, {'module1': 'value1'})
+        self.assertEqual(actv_grad, {'module2': 'value2'})
+
+    def test_reload_xy(self):
+        xy_config = os.path.join(base_dir, "config/xy_config.json")
+        trainer_mon = TrainerMon(
+            xy_config,
+            params_have_main_grad=False,
+            opt_ty='Megatron_FP32Optimizer'
+        )
+        trainer_mon.rank = 0
+        trainer_mon.module_rank_list = [1, 2]
+        trainer_mon.handles = {'xy': []}
+        trainer_mon.module_fwd_hook_context_by_module = {"a": ModuleHookContext("test")}
+        trainer_mon.hook_modules = MagicMock()
+
+        handle = MagicMock()
+        trainer_mon.handles['xy'].append(handle)
+        trainer_mon.reload_xy()
+        self.assertEqual(trainer_mon.handles['xy'], [])
 
 
 class TestParamIsNotTensorParallelDuplicate(unittest.TestCase):

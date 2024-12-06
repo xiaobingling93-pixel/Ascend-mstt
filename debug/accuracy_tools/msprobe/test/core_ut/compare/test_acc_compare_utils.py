@@ -356,10 +356,9 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(args.fuzzy_match)
 
     def test_compare_parser_2(self):
-        test_args = ["-i", "input.json"]
-
-        with self.assertRaises(SystemExit):  # argparse 会抛出 SystemExit
-            self.parser.parse_args(test_args)
+        self.assertEqual(self.parser.parse_args('-i aaa -o'.split(' ')).output_path, './output')
+        self.assertEqual(self.parser.parse_args('-i aaa'.split(' ')).output_path, './output')
+        self.assertEqual(self.parser.parse_args('-i aaa -o ./aaa/output'.split(' ')).output_path, './aaa/output')
 
     def test_compare_parser_3(self):
         test_args = ["-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
