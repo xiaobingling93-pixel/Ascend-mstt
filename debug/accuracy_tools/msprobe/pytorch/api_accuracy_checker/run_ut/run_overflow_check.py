@@ -61,14 +61,27 @@ def check_tensor_overflow(x):
         return False
 
 
-def check_data_overflow(x):
+def check_data_overflow(x, device):
     if isinstance(x, (tuple, list)) and x:
         for _, item in enumerate(x):
-            if check_data_overflow(item):
+            if check_data_overflow(item, device):
                 return True
         return False
     else:
-        return check_tensor_overflow(x)
+        if device == Const.CPU_LOWERCASE:
+            return check_tensor_overflow(x)
+        else:
+            return torch_npu.npu.utils.npu_check_overflow(x)
+
+
+def is_bool_output(x):
+    if isinstance(x, (tuple, list)) and x:
+        for _, item in enumerate(x):
+            if is_bool_output(item):
+                return True
+        return False
+    else:
+        return isinstance(x, bool)
 
 
 def run_overflow_check(forward_file):
@@ -98,17 +111,24 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
+    device_info_kwargs = kwargs.get("device")
+    if device_info_kwargs and device_info_kwargs.get('value'):
+        kwargs['device'] = device_info_kwargs.get('value')
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
         del kwargs["device"]
     out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
     npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
+    if is_bool_output(out) or is_bool_output(npu_out):
+        logger.warning("The output of %s is bool type.This dtype not support overflow, so it will be skipped."
+                       % api_full_name)
+        return
     if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return
 
-    cpu_overflow = check_data_overflow(out)
-    npu_overflow = torch_npu.npu.utils.npu_check_overflow(npu_out)
+    cpu_overflow = check_data_overflow(out, Const.CPU_LOWERCASE)
+    npu_overflow = check_data_overflow(npu_out, Const.NPU_LOWERCASE)
     if cpu_overflow == npu_overflow:
         logger.warning("The %s overflow is a normal overflow." % api_full_name)
     else:
