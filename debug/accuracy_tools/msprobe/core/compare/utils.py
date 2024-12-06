@@ -471,7 +471,8 @@ def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path.", required=True)
+                        help="<Required> The compare task result out path. Default path: ./output", 
+                        required=False, default="./output", nargs="?", const="./output")
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
     parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
