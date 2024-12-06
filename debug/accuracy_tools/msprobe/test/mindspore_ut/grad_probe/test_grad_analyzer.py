@@ -159,6 +159,18 @@ class TestGradAnalyzer(TestCase):
             with self.assertRaises(RuntimeError):
                 self.csv_generator.traverse_files(npy_files)
 
+    def test_traverse_files_with_data_successful_move(self):
+        npy_files = ["step_dir.npy"]
+        self.csv_generator.current_step = 0
+        test_file_path = os.path.join(self.dump_dir, "step_dir.npy")
+        np.save(test_file_path, np.array([1, 2, 3, 4, 5]))
+        with mock.patch.object(self.csv_generator, 'load_npy_data', return_value=np.array([1, 2, 3, 4, 5])):
+            self.csv_generator.traverse_files(npy_files)
+            dst_file_path = os.path.join(self.save_dir, f"step{self.csv_generator.current_step}", "dir.npy")
+            assert os.path.exists(dst_file_path)
+            real_tensor = np.load(dst_file_path)
+            self.assertTrue((real_tensor == np.array([1, 2, 3, 4, 5])).all())
+
 
 if __name__ == "__main__":
     from unittest import main

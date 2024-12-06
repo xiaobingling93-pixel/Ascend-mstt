@@ -5,12 +5,10 @@
     "step": [],  
     "level": "L1", 
     "enable_dataloader": false,
-    "acl_config": "",
     "tensor": {
         "scope": [], 
         "list":[], 
-        "data_mode": ["all"], 
-        "backward_input": [],
+        "data_mode": ["all"],
         "file_format": "npy" 
     },
     "statistics": {

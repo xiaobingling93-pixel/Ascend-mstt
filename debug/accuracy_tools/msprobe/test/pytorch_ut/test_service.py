@@ -64,19 +64,60 @@ class TestService(unittest.TestCase):
 
         self.assertIsNone(module._is_full_backward_hook)
 
-    def test_start(self):
+    def test_start_success(self):
         with patch("msprobe.pytorch.service.get_rank_if_initialized", return_value=0), \
                 patch("msprobe.pytorch.service.Service.create_dirs", return_value=None):
             self.service.start(None)
         self.assertEqual(self.service.current_rank, 0)
 
-    def test_stop_and_step(self):
-        with patch("msprobe.core.data_dump.data_collector.DataCollector.write_json", return_value=None):
-            self.service.stop()
+    def test_start_fail(self):
+        self.service.config.rank = [1, 2]
+        self.service.current_rank = 3
+        self.assertIsNone(self.service.start(None))
+
+        self.service.config.step = [1, 2]
+        self.service.current_iter = 3
+        self.assertIsNone(self.service.start(None))
+
+    @patch("msprobe.core.data_dump.data_collector.DataCollector.write_json")
+    def test_stop_success(self, mock_write_json):
+        mock_write_json.return_value = None
+        self.service.stop()
+
         self.assertFalse(self.service.switch)
 
+    def test_stop_fail(self):
+        self.service.switch = True
+
+        self.service.config.rank = [1, 2]
+        self.service.current_rank = 3
+        res = self.service.stop()
+        self.assertIsNone(res)
+        self.assertTrue(self.service.switch)
+
+        self.service.config.step = [1, 2]
+        self.service.current_iter = 3
+        res = self.service.stop()
+        self.assertIsNone(res)
+        self.assertTrue(self.service.switch)
+
+        self.service.config.level = "L2"
+        res = self.service.stop()
+        self.assertIsNone(res)
+        self.assertTrue(self.service.switch)
+
+        self.service.should_stop_service = True
+        res = self.service.stop()
+        self.assertIsNone(res)
+        self.assertTrue(self.service.switch)
+
+    def test_step_success(self):
         self.service.step()
         self.assertEqual(self.service.current_iter, 1)
+    
+    def test_step_fail(self):
+        self.service.should_stop_service = True
+        self.assertIsNone(self.service.step())
 
     def test_register_hook_new(self):
         class TestModule(nn.Module):
