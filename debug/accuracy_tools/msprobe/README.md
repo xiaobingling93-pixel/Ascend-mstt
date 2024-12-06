@@ -33,6 +33,20 @@ export MSPROBE_LOG_LEVEL={x}
 ```
 **config.json** 的配置要求和各功能具体的使用指导详见后续章节。
 
+## 环境和依赖
+
+- 硬件环境请参见《[昇腾产品形态说明](https://gitee.com/link?target=https%3A%2F%2Fwww.hiascend.com%2Fdocument%2Fdetail%2Fzh%2Fcanncommercial%2F80RC22%2Fquickstart%2Fquickstart%2Fquickstart_18_0002.html)》。
+- 软件环境请参见《[CANN 软件安装指南](https://gitee.com/link?target=https%3A%2F%2Fwww.hiascend.com%2Fdocument%2Fdetail%2Fzh%2Fcanncommercial%2F80RC22%2Fsoftwareinst%2Finstg%2Finstg_0000.html%3FMode%3DPmIns%26OS%3DUbuntu%26Software%3DcannToolKit)》安装昇腾设备开发或运行环境，即toolkit软件包。
+
+以上环境依赖请根据实际环境选择适配的版本。
+
+## 版本配套说明
+
+- msprobe支持AscendPyTorch 1.11.0或更高版本，支持的PyTorch和CANN以及PyTorch和python软件版本配套关系请参见《[Ascend Extension for PyTorch插件](https://gitee.com/ascend/pytorch)》。
+- msprobe支持MindSpore 2.4.0或更高版本，支持的MindSpore和CANN以及MindSpore和python软件版本配套关系请参见《[MindSpore版本发布列表](https://www.mindspore.cn/versions)》。
+- msprobe支持的固件驱动版本与配套CANN软件支持的固件驱动版本相同，开发者可通过“[昇腾社区-固件与驱动](https://gitee.com/link?target=https%3A%2F%2Fwww.hiascend.com%2Fhardware%2Ffirmware-drivers%2Fcommunity%3Fproduct%3D2%26model%3D28%26cann%3D8.0.RC3.alpha003%26driver%3D1.0.25.alpha)”页面根据产品型号与CANN软件版本获取配套的固件与驱动。
+
+
 ## 🚨 工具限制与注意事项
 
 **1. Pytorch 框架下，工具暂不支持 Fully Sharded Data Parallel(FSDP)。**
