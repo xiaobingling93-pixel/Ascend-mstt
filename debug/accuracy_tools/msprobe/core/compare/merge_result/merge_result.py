@@ -33,9 +33,9 @@ def check_compare_result_name(file_name):
     if re.match(multi_ranks_pattern, file_name):
         return True
     if re.match(single_rank_pattern, file_name):
-        logger.warning("single rank compare result do not need to be merged.")
+        logger.warning("Single rank compare result do not need to be merged.")
         return False
-    logger.error(f"wrong compare result name: {file_name}, please check!")
+    logger.error(f"Wrong compare result name: {file_name}, please check!")
     raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
 
@@ -68,7 +68,7 @@ def get_result_path(input_dir):
     filt_compare_result_path_list = reorder_path(filt_compare_result_path_list)       # 多卡比对结果按rank序号重新排序
 
     if len(filt_compare_result_path_list) < 2:
-        logger.warning("number of compare result is no more than 1, no need to merge.")     # 单卡结果无需合并，直接退出
+        logger.warning("Number of compare result is no more than 1, no need to merge.")     # 单卡结果无需合并，直接退出
         exit()
     return filt_compare_result_path_list
 
@@ -86,18 +86,19 @@ def get_dump_mode(result_df):
     elif CompareConst.NPU_MD5 in header:
         return Const.MD5
     else:
-        logger.error("unrecognizable comparison result header, please check!")
+        logger.error("Unrecognizable comparison result header, please check!")
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
 
-def check_index_dump_mode_consistent(compare_index_list, dump_mode):
+def check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num):
     """
     check compare index to merge is consistent with dump mode
     if compare_index_list is None, return all compare_indexes of dump mode
     """
     if dump_mode == Const.MD5:
-        logger.error("dump task 'md5' don not support merge compare results.")
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+        logger.warning(f"Rank{rank_num} compare result is 'md5' dump task and does not support merging result, please "
+                       f"check! The compare result will not be shown in merged result.")
+        return []
 
     dump_mode_compare_index_map = {
         Const.ALL: CompareConst.ALL_COMPARE_INDEX,
@@ -109,8 +110,9 @@ def check_index_dump_mode_consistent(compare_index_list, dump_mode):
     if set(compare_index_list).issubset(valid_compare_index):
         return compare_index_list
     else:
-        logger.error("compare index is not consistent with dump task, please check!")
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+        logger.warning(f"Compare indexes in rank{rank_num} compare result are not consistent with dump task, please "
+                       f"check! The compare result will not be shown in merged result.")
+        return []
 
 
 def extract_api_full_name(api_list, result_df, rank_num):
@@ -174,21 +176,20 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
 
         rank_pattern = r"compare_result_rank(\d+)-rank"
         rank_num = int(re.search(rank_pattern, os.path.basename(compare_result_path)).group(1))
-        rank_num_list.append(rank_num)
-        logger.info(f"parsing rank{rank_num} compare result...")
+        logger.info(f"Parsing rank{rank_num} compare result...")
         if not result_df.empty:
-            # TODO 获取dump_mode
             dump_mode = get_dump_mode(result_df)
-            # TODO 比较当前dump_mode和last_dump_mode
-            # TODO 根据dump_mode和compare_index_list获得真实compare_index_list
             # 因为compare_index是指定的，固定不变，所以一旦compare_index是确定的，dump_mode也是确定的，
             # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
-            compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode)
+            compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num)
+            if len(compare_index_list) == 0:
+                return compare_index_dict_list, rank_num_list
             compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
             compare_index_dict_list.append(compare_index_dict)
+            rank_num_list.append(rank_num)
         else:
-            logger.warning(f"rank{rank_num} compare result is empty and will not shown in merged result.")
+            logger.warning(f"Rank{rank_num} compare result is empty and will not shown in merged result.")
 
     return compare_index_dict_list, rank_num_list
 
@@ -208,11 +209,11 @@ def handle_multi_process(func, func_args, lock):
     pool = multiprocessing.Pool(process_num)
 
     def err_call(args):
-        logger.error('multiprocess merge result failed! Reason: {}'.format(args))
+        logger.error('Multiprocess merge result failed! Reason: {}'.format(args))
         try:
             pool.terminate()
         except OSError:
-            logger.error("pool terminate failed")
+            logger.error("Pool terminate failed")
 
     progress_bar = tqdm(total=len(compare_result_path_list), desc="Result Parsing Process", unit="num", ncols=100)
 
@@ -280,10 +281,10 @@ def df_merge(all_result_df_list):
     merge different rank result_df
     """
     if len(all_result_df_list) == 0:
-        logger.warning("nothing to merge.")
+        logger.warning("Nothing to merge.")
         exit()
     if len(all_result_df_list) == 1:
-        logger.info("only one compare result get merge data.")
+        logger.info("Only one compare result get merge data.")
     merge_df_base = all_result_df_list[0]
     for sublist in all_result_df_list[1:]:
         for i in range(len(sublist)):

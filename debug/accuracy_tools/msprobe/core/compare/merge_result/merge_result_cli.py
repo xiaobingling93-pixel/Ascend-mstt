@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import argparse
-from msprobe.core.compare.merge_result import merge_result
+from msprobe.core.compare.merge_result.merge_result import merge_result
 
 
 def parse_list(value):
