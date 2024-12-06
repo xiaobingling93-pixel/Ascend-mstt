@@ -31,8 +31,7 @@ INSTALL_REQUIRED = [
     "twisted",
     "matplotlib",
     "tensorboard",
-    "sqlalchemy",
-    "pymysql"
+    "tabulate"
 ]
 
 EXCLUDE_PKGS = [

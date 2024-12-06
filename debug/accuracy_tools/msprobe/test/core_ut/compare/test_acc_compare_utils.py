@@ -6,9 +6,10 @@ import unittest
 import argparse
 from msprobe.core.compare.utils import extract_json, rename_api, read_op, op_item_parse, \
     check_and_return_dir_contents, resolve_api_special_parameters, get_rela_diff_summary_mode, \
-    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser
+    get_accuracy, get_un_match_accuracy, merge_tensor, _compare_parser, stack_column_process, result_item_init, \
+    ApiItemInfo
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.const import Const
+from msprobe.core.common.const import Const, CompareConst
 
 
 # test_read_op_1
@@ -25,16 +26,16 @@ op_data = {
                 'Norm': 2.2533628940582275, 'requires_grad': True}]}
 op_name = "Tensor.add_0.0.forward"
 op_result = [
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5':'00000000',
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.input.0'},
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5':'00000000',
+     'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481, 'data_name': '-1',
      'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.forward.input.1'},
-    {'full_op_name': 'Tensor.add_0.0.forward.input.alpha.0', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': None,
-     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1'},
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
-     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
+    {'full_op_name': 'Tensor.add_0.0.forward.input.alpha', 'dtype': "<class 'float'>", 'shape': '[]', 'md5': '0dae4479',
+     'Max': -0.1, 'Min': -0.1, 'Mean': -0.1, 'Norm': -0.1, 'data_name': '-1', 'type': 'float', 'value': -0.1},
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'md5':'00000000',
+     'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063, 'data_name': '-1',
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.forward.output.0'}]
 
 # test_read_op_1
@@ -50,13 +51,13 @@ op_data_b = {
                 'Norm': 2.2533628940582275, 'requires_grad': True}]}
 op_name_b = "Tensor.add_0.0.backward"
 op_result_b = [
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.input.0'},
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.003992878366261721, 'Min': -0.008102823048830032, 'Mean': -0.0002002553956117481,
      'Norm': 0.02844562754034996, 'requires_grad': False, 'full_op_name': 'Tensor.add_0.0.backward.input.1'},
-    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3],
+    {'type': 'torch.Tensor', 'dtype': 'torch.float32', 'shape': [16, 1, 3, 3], 'data_name': '-1', 'md5': '00000000',
      'Max': 0.33033010363578796, 'Min': -0.331031858921051, 'Mean': -0.030964046716690063,
      'Norm': 2.2533628940582275, 'requires_grad': True, 'full_op_name': 'Tensor.add_0.0.backward.output.0'}]
 
@@ -73,11 +74,13 @@ parse_item_list = None
 parse_top_bool = True
 o_result_parse = [
     {'Max': 4097.0, 'Mean': 820.2, 'Min': 0.0, 'Norm': 4097.0, 'dtype': 'torch.int64', 'requires_grad': False,
-     'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0'},
+     'shape': [5], 'type': 'torch.Tensor', 'full_op_name': 'Distributed.broadcast.0.forward.input.0',
+     'data_name': '-1', 'md5': '00000000'},
     {'full_op_name': 'Distributed.broadcast.0.forward.input.1', 'dtype': "<class 'int'>", 'shape': '[]',
-     'md5': None, 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1'},
-    {'Max': None, 'Mean': None, 'Min': None, 'Norm': None, 'data_name': '-1', 'dtype': 'slice',
-     'full_op_name': 'Distributed.broadcast.0.forward.input.2', 'md5': None, 'shape': '(3,)'}
+     'md5': 'f4dbdf21', 'Max': 0, 'Min': 0, 'Mean': 0, 'Norm': 0, 'data_name': '-1', 'type': 'int', 'value': 0},
+    {'Max': None, 'Mean': None, 'Min': None, 'Norm': None, 'data_name': '-1', 'dtype': 'slice', 'type': 'slice',
+     'full_op_name': 'Distributed.broadcast.0.forward.input.2', 'md5': '5fbbe87f', 'shape': '(3,)',
+     'value': [None, None, None]}
 ]
 
 
@@ -267,12 +270,12 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, op_result_b)
 
     def test_op_item_parse(self):
-        result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool)
+        result = op_item_parse(parse_item, parse_op_name)
         self.assertEqual(result, o_result_parse)
-
+    
     def test_op_item_parse_max_depth(self):
         with self.assertRaises(CompareException) as context:
-            result = op_item_parse(parse_item, parse_op_name, parse_index, parse_item_list, parse_top_bool, depth=11)
+            op_item_parse(parse_item, parse_op_name, depth=11)
         self.assertEqual(context.exception.code, CompareException.RECURSION_LIMIT_ERROR)
 
     def test_resolve_api_special_parameters(self):
@@ -367,3 +370,71 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertIsNone(args.api_mapping)  # 默认值应为 None
         self.assertEqual(args.data_mapping, "data_mapping.txt")
         self.assertEqual(args.layer_mapping, "layer_mapping.txt")
+
+    def test_stack_column_process_stack_info(self):
+        result_item = []
+        has_stack = True
+        index = 0
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['abc'])
+
+    def test_stack_column_process_None(self):
+        result_item = []
+        has_stack = True
+        index = 1
+        key = CompareConst.INPUT_STRUCT
+        npu_stack_info = ['abc']
+        result_item = stack_column_process(result_item, has_stack, index, key, npu_stack_info)
+        self.assertEqual(result_item, ['None'])
+
+    def test_result_item_init_all_and_summary(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.ALL
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' '])
+
+        dump_mode = Const.SUMMARY
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '])
+
+    def test_result_item_init_md5(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96], 'e87000dc')
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96], 'e87000dc')
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(result_item, ['Tensor.add.0.forward.input.0', 'Tensor.add.0.forward.input.0',
+                                       'torch.float32', 'torch.float32', [96], [96], 'e87000dc', 'e87000dc', 'pass'])
+
+    def test_result_item_init_md5_index_error(self):
+        n_name = 'Tensor.add.0.forward.input.0'
+        n_struct = ('torch.float32', [96])
+        npu_stack_info = ['abc']
+        b_name = 'Tensor.add.0.forward.input.0'
+        b_struct = ('torch.float32', [96])
+        bench_stack_info = ['abc']
+        n_info = ApiItemInfo(n_name, n_struct, npu_stack_info)
+        b_info = ApiItemInfo(b_name, b_struct, bench_stack_info)
+
+        dump_mode = Const.MD5
+        with self.assertRaises(CompareException) as context:
+            result_item = result_item_init(n_info, b_info, dump_mode)
+        self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)

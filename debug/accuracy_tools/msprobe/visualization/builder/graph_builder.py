@@ -16,25 +16,29 @@
 import re
 from msprobe.visualization.graph.graph import Graph
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.utils import load_json_file, load_data_json_file, save_json_file, GraphConst
+from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
+from msprobe.core.common.file_utils import load_json
 
 
 class GraphBuilder:
     @staticmethod
-    def build(construct_path, data_path, model_name='DefaultModel'):
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
         """
         GraphBuilder的对外提供的构图方法
         Args:
             construct_path: construct.json路径
             data_path: dump.json路径
+            stack_path: stack.json路径
             model_name: 模型名字，依赖外部输入
         Returns: Graph，代表图的数据结构
         """
-        construct_dict = load_json_file(construct_path)
-        data_dict = load_data_json_file(data_path)
-        graph = Graph(model_name)
-        GraphBuilder._init_nodes(graph, construct_dict, data_dict)
+        construct_dict = load_json(construct_path)
+        dump_dict = load_json(data_path)
+        stack_dict = load_json(stack_path)
+        data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
+        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
+        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
         GraphBuilder._collect_apis_between_modules(graph)
         return graph
 
@@ -55,6 +59,8 @@ class GraphBuilder:
             result[GraphConst.COLORS] = config.node_colors
         if config.micro_steps:
             result[GraphConst.MICRO_STEPS] = config.micro_steps
+        if config.task:
+            result[GraphConst.JSON_TASK_KEY] = config.task
         save_json_file(filename, result)
 
     @staticmethod
@@ -74,29 +80,31 @@ class GraphBuilder:
         return upnode_id
 
     @staticmethod
-    def _init_nodes(graph, construct_dict, data_dict):
+    def _init_nodes(graph, construct_dict, data_dict, stack_dict):
         for subnode_id, upnode_id in construct_dict.items():
             upnode_id = GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
             if upnode_id:
                 upnode_op = NodeOp.get_node_op(upnode_id)
-                upnode = GraphBuilder._create_or_get_node(graph, data_dict, upnode_op, upnode_id)
+                upnode = GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], upnode_op, upnode_id)
             else:
                 upnode = graph.root
             node_op = NodeOp.get_node_op(subnode_id)
-            GraphBuilder._create_or_get_node(graph, data_dict, node_op, subnode_id, upnode)
+            GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], node_op, subnode_id, upnode)
 
     @staticmethod
-    def _create_or_get_node(graph, data_dict, op, name, upnode=None):
+    def _create_or_get_node(graph, data_stack_list, op, name, upnode=None):
         if name in graph.node_map:
             node = graph.get_node(name)
         else:
             graph.add_node(op, name, upnode)
             node = graph.get_node(name)
-            node_data = data_dict.get(name, {})
+            node_data = data_stack_list[0].get(name, {})
+            node_stack_info = data_stack_list[1].get(name, [])
             # 添加输入输出数据
             input_data, output_data = get_input_output(node_data, node.id)
             # 更新数据
             node.set_input_output(input_data, output_data)
+            node.stack_info = node_stack_info
         # 添加节点
         node.add_upnode(upnode)
         return node
@@ -131,6 +139,10 @@ class GraphBuilder:
                                              id_accumulation=True)
                     api_collection_node = graph.get_node(node_id)
                     api_collection_node.subnodes = temp_nodes
+                    # 重新确立父子关系
+                    for node in temp_nodes:
+                        node.upnode = api_collection_node
+                    api_collection_node.upnode = graph.root
                     output.append(api_collection_node)
                 else:
                     # 如果连续的api节点不足2个，将它们原样添加到输出列表
@@ -144,9 +156,10 @@ class GraphBuilder:
 
 
 class GraphExportConfig:
-    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None):
+    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task=''):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
         self.node_colors = node_colors
         self.micro_steps = micro_steps
+        self.task = task

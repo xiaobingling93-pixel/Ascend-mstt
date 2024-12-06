@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+from msprobe.core.overflow_check.checker import AnomalyDetector
 from msprobe.visualization.graph.base_node import BaseNode
 from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import GraphConst
@@ -20,12 +20,17 @@ from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
 
 
+MAX_RECUR_LEVEL = 100
+
+
 class Graph:
-    def __init__(self, model_name):
+    def __init__(self, model_name, data_path='', dump_data=None):
         self.node_map = {}
         self.node_id_map = {}
         self.add_node(NodeOp.module, model_name)
         self.root = self.get_node(model_name)
+        self.data_path = data_path
+        self.dump_data = dump_data
 
     def __str__(self):
         infos = [f'{str(self.node_map.get(node_id))}' for node_id in self.node_map]
@@ -51,12 +56,12 @@ class Graph:
         return node_b, ancestors_n
 
     @staticmethod
-    def mapping_match(node_n, graph_b, mapping_config):
+    def mapping_match(node_n, graph_b, mapping_dict):
         """
         根据映射配置对节点进行匹配
         """
-        node_b = graph_b.node_map.get(mapping_config.get_mapping_string(node_n.id))
-        if not node_b or not node_n.compare_mapping_node(node_b):
+        node_b = graph_b.node_map.get(mapping_dict.get(node_n.id, node_n.id))
+        if not node_b:
             return None, [], []
         ancestors_n = node_n.get_ancestors()
         ancestors_b = node_b.get_ancestors()
@@ -72,27 +77,45 @@ class Graph:
     @staticmethod
     def split_nodes_by_micro_step(nodes):
         """
-        根据Module名称后缀数字, 区分一个step中的多个micro steps, 后缀数字相同代表节点属于同一个micro step.
+        根据Module名称, 区分一个step中的多个micro steps.
+        一个micro step必须是一次完整的前反向过程
+        Example::
+            =============== micro step0
+            Module.forward
+            Module.forward
+            ...
+            Module.backward
+            Module.backward
+            =============== micro step1
+            Module.forward
+            Module.forward
+            ...
+            Module.backward
+            Module.backward
+            =============== micro step2
+            Module.forward
+            Module.forward
+            ...
+            Module.backward
+            Module.backward
+
         如果是非Module节点，分类到前一个Module节点所在的micro step.
         """
         result = {}
-        default_id = 0
-        result[default_id] = []
+        micro_step = 0
+        result[micro_step] = []
+        backward_flag = False
 
         for node in nodes:
             if node.op == NodeOp.module:
-                micro_step_id = node.id.split(Const.SEP)[-1]
-                try:
-                    micro_step_id = int(micro_step_id)
-                except ValueError:
-                    logger.warning(f'The node id suffix {micro_step_id} is not a number, micro steps cannot be split.')
-                    micro_step_id = 0
-                if micro_step_id not in result:
-                    default_id = micro_step_id
-                    result[micro_step_id] = []
-                result[micro_step_id].append(node)
-            else:
-                result[default_id].append(node)
+                if f'{Const.SEP}{Const.FORWARD}{Const.SEP}' in node.id:
+                    if backward_flag:
+                        micro_step += 1
+                        result[micro_step] = []
+                        backward_flag = False
+                else:
+                    backward_flag = True
+            result[micro_step].append(node)
         return result
 
     def add_node(self, node_op, node_id, up_node=None, id_accumulation=False):
@@ -131,6 +154,7 @@ class Graph:
         """
         result = {}
         result[GraphConst.JSON_ROOT_KEY] = self.root.id if self.root else 'None'
+        result[GraphConst.JSON_DATA_KEY] = self.data_path
         result[GraphConst.JSON_NODE_KEY] = {}
         for node_id in self.node_map:
             info = self.node_map.get(node_id).to_dict()
@@ -165,3 +189,12 @@ class Graph:
                         micro_step_id = 0
                     node.micro_step_id = micro_step_id
         return len(batches_n)
+
+    def overflow_check(self):
+        detector = AnomalyDetector(self.dump_data)
+        detector.analyze().filter()
+
+        for node_id, _node in self.node_map.items():
+            if detector.has_overflow(node_id):
+                lv = detector.get_overflow_level(node_id)
+                _node.set_overflow_level(lv)

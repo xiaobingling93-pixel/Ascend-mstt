@@ -67,7 +67,7 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 class TestUtilsMethods(unittest.TestCase):
 
     def test_check_struct_match_success(self):
-        result = check_struct_match(npu_dict, bench_dict, cross_frame=False)
+        result = check_struct_match(npu_dict, bench_dict)
         self.assertTrue(result)
 
     def test_check_struct_match_fail(self):
@@ -80,7 +80,7 @@ class TestUtilsMethods(unittest.TestCase):
                                         ('torch.float32', [16])],
                        'output_struct': [('torch.float32', [1, 16, 28, 28])]
                        }
-        result = check_struct_match(npu_dict2, bench_dict2, cross_frame=False)
+        result = check_struct_match(npu_dict2, bench_dict2)
         self.assertFalse(result)
 
     def test_check_struct_index_error(self):
@@ -94,7 +94,7 @@ class TestUtilsMethods(unittest.TestCase):
                        'output_struct': [('torch.float32')]
                        }
         with self.assertRaises(CompareException) as context:
-            result = check_struct_match(npu_dict3, bench_dict3, cross_frame=False)
+            result = check_struct_match(npu_dict3, bench_dict3)
         self.assertEqual(context.exception.code, CompareException.INDEX_OUT_OF_BOUNDS_ERROR)
 
     def test_check_type_shape_match_success(self):

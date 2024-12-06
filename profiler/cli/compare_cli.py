@@ -36,6 +36,7 @@ from profiler.compare_tools.compare_backend.comparison_generator import Comparis
 @click.option('--enable_api_compare', is_flag=True, help="Enable API performance comparison")
 @click.option('--enable_kernel_compare', is_flag=True, help="Enable kernel performance comparison")
 @click.option('--disable_details', is_flag=True, help="Hide detailed comparison")
+@click.option('--disable_module', is_flag=True, help="Hide module comparison")
 @click.option('--output_path', '-o', 'output_path', type=click.Path(), help="Path of comparison result")
 @click.option('--max_kernel_num', 'max_kernel_num', type=int, help="The number of kernels per torch op is limited")
 @click.option('--op_name_map', type=ast.literal_eval, default='{}',
@@ -45,7 +46,8 @@ from profiler.compare_tools.compare_backend.comparison_generator import Comparis
 @click.option('--gpu_flow_cat', type=str, default='', help="Identifier of the GPU connection")
 @click.option('--base_step', type=str, default='', help="Comparison step for performance data to be compared")
 @click.option('--comparison_step', type=str, default='', help="Comparison step for benchmark performance data")
-
+@click.option('--force', is_flag=True, help="Indicates whether to skip file size verification and "
+                                            "owner verification")
 def compare_cli(**kwargs) -> None:
     args = AnalyzeDict(kwargs)
     ComparisonGenerator(args).run()

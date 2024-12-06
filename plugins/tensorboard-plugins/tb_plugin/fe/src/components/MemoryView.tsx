@@ -108,7 +108,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
 
   // for backward compatability, old profile do not have events to show
   const showEvents = () => {
-    return memoryEventsData && Object.keys(memoryEventsData.rows).length != 0;
+    return memoryEventsData && Object.keys(memoryEventsData.rows).length !== 0;
   };
   const [memoryEventsData, setMemoryEventsData] = React.useState<
     MemoryEventsData | undefined
@@ -116,7 +116,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
 
   // for backward compatability, old profile do not have curve to show
   const showCurve = () => {
-    return memoryCurveData && Object.keys(memoryCurveData.rows).length != 0;
+    return memoryCurveData && Object.keys(memoryCurveData.rows).length !== 0;
   };
   const [memoryCurveData, setMemoryCurveData] = React.useState<
     MemoryCurveData | MemoryCurveDataAscend | undefined
@@ -158,7 +158,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
       return -1;
     }
     for (let i = 0; i < memoryStatsData.columns.length; i++) {
-      if (memoryStatsData.columns[i].name == memoryStatsData.metadata.search) {
+      if (memoryStatsData.columns[i].name === memoryStatsData.metadata.search) {
         return i;
       }
     }
@@ -166,7 +166,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
   };
 
   const getStep = (size: number, indexBias: number) => {
-    return 10 ** (Math.floor(Math.log10(size != 0 ? size : 1)) - indexBias);
+    return 10 ** (Math.floor(Math.log10(size !== 0 ? size : 1)) - indexBias);
   };
 
   const filterByEventSize = <T,>(
@@ -254,7 +254,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
   };
 
   React.useEffect(() => {
-    deviceTarget !== 'Ascend' &&
+    if (deviceTarget !== 'Ascend') {
       api.defaultApi
         .memoryGet(
           run,
@@ -265,13 +265,14 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
         )
         .then((resp) => {
           setMemoryStatsData(resp);
-          if (!devices || devices.length == 0) {
+          if (!devices || devices.length === 0) {
             // setDevices only execute on view load. Since selection on curve
             // might filter all events later, some devices might is missing.
             setDevices(Object.keys(resp.rows));
             setDevice(resp.metadata.default_device);
           }
         });
+    }
   }, [run, worker, span, selectedRange]);
 
   React.useEffect(() => {
@@ -293,7 +294,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
         }
         let curMaxSize: MaxEventSize = {};
         let curFilterEventSize: EventSizeFilter = {};
-        for (let deviceName in tempRes.rows) {
+        Object.keys(tempRes.rows).forEach((deviceName) => {
           curMaxSize[deviceName] = 0;
           for (let i = 0; i < tempRes.rows[deviceName].length; i++) {
             curMaxSize[deviceName] = Math.max(
@@ -306,7 +307,7 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
             curMaxSize[deviceName],
           ];
           curMaxSize[deviceName] = curMaxSize[deviceName];
-        }
+        });
         setMaxSize(curMaxSize);
         setFilterEventSize(curFilterEventSize);
         setMemoryEventsData(tempRes);
@@ -440,8 +441,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                           value={device}
                           onChange={onDeviceChanged}
                         >
-                          {devices.map((device) => (
-                            <MenuItem value={device}>{device}</MenuItem>
+                          {devices.map((item) => (
+                            <MenuItem value={item}>{item}</MenuItem>
                           ))}
                         </Select>
                       </Grid>
@@ -455,8 +456,8 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                             value={tag}
                             onChange={onTagChanged}
                           >
-                            {tags.map((device) => (
-                              <MenuItem value={device}>{device}</MenuItem>
+                            {tags.map((item) => (
+                              <MenuItem value={item}>{item}</MenuItem>
                             ))}
                           </Select>
                         </Grid>
@@ -597,7 +598,9 @@ export const MemoryView: React.FC<IProps> = React.memo((props) => {
                           rows: searchedTableDataRows,
                           columns: data.columns,
                         }}
-                        sort={memoryStatsData!.metadata.sort}
+                        sort={
+                          !!memoryStatsData ? memoryStatsData.metadata.sort : ''
+                        }
                       />
                     )}
                   </DataLoading>

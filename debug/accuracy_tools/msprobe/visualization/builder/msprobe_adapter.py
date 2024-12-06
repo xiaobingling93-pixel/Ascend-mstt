@@ -13,15 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import re
+import math
 from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
-from msprobe.visualization.utils import GraphConst, process_kwargs_parameter
-from msprobe.pytorch.compare.pt_compare import PTComparator
+from msprobe.visualization.utils import GraphConst
+from msprobe.core.common.const import Const
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
-    r'^(Module)',  # NodeOp.module
-    r'^(Tensor|Torch|Functional|NPU|VF|Distributed|Aten)'  # NodeOp.function_api
+    # NodeOp.module
+    r'^(Module.|Cell.)',
+    # NodeOp.function_api
+    r'^(Tensor.|Torch.|Functional.|NPU.|VF.|Distributed.|Aten.|Mint.|Primitive.|Jit.|MintFunctional.)'
 ]
 
 
@@ -38,14 +41,23 @@ def get_compare_mode(dump_path_param):
     return compare_mode
 
 
-def run_real_data(dump_path_param, csv_path):
+def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
     """
     多进程运行生成真实数据
     Args:
         dump_path_param: 调用acc_compare接口所依赖的参数
         csv_path: 生成文件路径
+        framework: 框架类型, pytorch或mindspore
+        is_cross_frame: 是否进行跨框架比对，仅支持mindspore比pytorch, 其中pytorch为标杆
     """
-    return PTComparator()._do_multi_process(dump_path_param, csv_path)
+    if framework == Const.PT_FRAMEWORK:
+        from msprobe.pytorch.compare.pt_compare import PTComparator
+        return PTComparator().do_multi_process(dump_path_param, csv_path)
+    else:
+        from msprobe.mindspore.compare.ms_compare import MSComparator
+        ms_comparator = MSComparator()
+        ms_comparator.cross_frame = is_cross_frame
+        return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):
@@ -62,14 +74,15 @@ def get_input_output(node_data, node_id):
         full_op_name = item.get('full_op_name', '')
         if not full_op_name:
             continue
-        splits = full_op_name.split('.')
-        if len(splits) < GraphConst.OUTPUT_MIN_LEN:
-            continue
-        if GraphConst.OUTPUT in splits[GraphConst.OUTPUT_INDEX_TWO] and \
-                GraphConst.INPUT not in splits[GraphConst.OUTPUT_INDEX_THREE]:
+        if GraphConst.OUTPUT in full_op_name and GraphConst.INPUT not in full_op_name:
             output_data[full_op_name] = item
         else:
-            input_data[process_kwargs_parameter(full_op_name)] = item
+            name = item.get('data_name')
+            # 节点参数名称尽量使用落盘数据的名称
+            if isinstance(name, str) and name != '-1':
+                input_data[name.rsplit(Const.SEP, 1)[0]] = item
+            else:
+                input_data[full_op_name] = item
     return input_data, output_data
 
 
@@ -92,28 +105,11 @@ def compare_data(data_dict_list1, data_dict_list2):
     return True
 
 
-def compare_mapping_data(data_dict_list1, data_dict_list2):
-    """
-    node1映射node2，可能node1参数多于或少于node2参数，个别参数的shape的维度顺序不同，node1参数null对应node2参数其他值
-    工具要尽可能保证node的数据能够比对，进行数据的弱校验，仅校验参数的shape维度数值是否相同
-    """
-    for x, y in zip(data_dict_list1.values(), data_dict_list2.values()):
-        x_shape = x.get('shape')
-        y_shape = y.get('shape')
-        if x_shape is None or y_shape is None:
-            continue
-        x_shape = sorted(x_shape) if isinstance(x_shape, list) else x_shape
-        y_shape = sorted(y_shape) if isinstance(y_shape, list) else y_shape
-        if x_shape != y_shape:
-            return False
-    return True
-
-
 def format_node_data(data_dict):
     """
     批量进行节点数据的输出
     """
-    del_list = ['requires_grad', 'data_name', 'full_op_name']
+    del_list = ['requires_grad', 'full_op_name']
     for _, value in data_dict.items():
         if not isinstance(value, dict):
             continue
@@ -182,7 +178,7 @@ def _format_data(data_dict):
     格式化数据，小数保留6位，处理一些异常值
     """
     pattern = r'^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)$'
-    none_num = 0
+    all_null = False
     for key, value in data_dict.items():
         if isinstance(value, str):
             # 将单引号删掉，None换成null避免前端解析错误
@@ -196,12 +192,14 @@ def _format_data(data_dict):
         elif isinstance(value, float):
             value = round(value, GraphConst.ROUND_TH)
         # Inf会走入这里，确保转成Inf。另外给其他不符合预期的类型做兜底方案
-        if not isinstance(value, (list, tuple, dict, str)):
+        if key != GraphConst.ERROR_KEY:
+            # 除了error_key不转str，其他都转str, 避免前端解析错误
             value = str(value)
-        if value == GraphConst.NULL or key == GraphConst.ERROR_KEY:
-            none_num += 1
+        # max为null, 意味着这个参数值为null
+        if key == Const.MAX and value == GraphConst.NULL:
+            all_null = True
         data_dict[key] = value
     # 字典里的value全null，只保留一个null
-    if none_num == len(data_dict):
+    if all_null:
         data_dict.clear()
         data_dict[GraphConst.VALUE] = GraphConst.NULL

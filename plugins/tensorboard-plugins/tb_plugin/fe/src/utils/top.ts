@@ -18,20 +18,20 @@ interface IOptions {
 }
 
 export function useTopN(options?: IOptions) {
-  options ??= {};
+  let realOptions = options ?? {};
 
   const [topText, setTopText] = React.useState(
-    String(options.defaultTop ?? 15)
+    String(realOptions.defaultTop ?? 15)
   );
   const [actualTop, setActualTop] = React.useState<number | undefined>(
     Number(topText)
   );
   const [useTop, setUseTop] = React.useState(
-    options.defaultUseTop ?? UseTop.NotUse
+    realOptions.defaultUseTop ?? UseTop.NotUse
   );
 
-  const setActualDebounce = !options.noDebounce
-    ? React.useCallback(debounce(setActualTop, options.wait ?? 500), [])
+  const setActualDebounce = !realOptions.noDebounce
+    ? React.useCallback(debounce(setActualTop, realOptions.wait ?? 500), [])
     : setActualTop;
   React.useEffect(() => {
     if (useTop !== UseTop.Use) {

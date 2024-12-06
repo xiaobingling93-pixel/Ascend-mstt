@@ -16,7 +16,7 @@
 import atexit
 import os
 
-from msprobe.core.data_dump.scope import build_scope, ListScope
+from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import Const
@@ -28,7 +28,6 @@ def build_data_collector(config):
 
 
 class DataCollector:
-    multi_output_apis = ["_sort_", "npu_flash_attention"]
     tasks_need_tensor_data = [Const.OVERFLOW_CHECK, Const.TENSOR, Const.FREE_BENCHMARK]
     level_without_construct = [Const.LEVEL_L1, Const.LEVEL_L2]
 
@@ -38,11 +37,7 @@ class DataCollector:
         self.data_processor = DataProcessorFactory.create_processor(self.config, self.data_writer)
         self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
-        if self.config.task == Const.FREE_BENCHMARK:
-            self.scope = build_scope(ListScope, self.config.scope, self.config.list)
-        else:
-            self.scope = build_scope(None, self.config.scope, self.config.list)
-
+        self.scope = ScopeFactory(self.config).build_scope()
         atexit.register(self.write_json)
 
     @property
@@ -85,6 +80,10 @@ class DataCollector:
         self.data_writer.update_data(data_info)
 
     def pre_forward_data_collect(self, name, module, pid, module_input_output):
+        if self.config.level == Const.LEVEL_L2 and self.check_scope_and_pid(self.scope, name, pid):
+            self.data_processor.analyze_pre_forward(name, module, module_input_output)
+            return
+
         backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
         if self.check_scope_and_pid(self.scope, backward_name, pid):
             self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
@@ -98,13 +97,14 @@ class DataCollector:
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
+        if self.config.level == Const.LEVEL_L2:
+            self.data_processor.analyze_forward(name, module, module_input_output)
+            return
 
         if not self.is_inplace(module):
             data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         else:
             data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
-        if self.config.level == "L2":
-            return
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
@@ -114,6 +114,8 @@ class DataCollector:
             return
 
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
+        if self.config.level == Const.LEVEL_L2:
+            return
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):

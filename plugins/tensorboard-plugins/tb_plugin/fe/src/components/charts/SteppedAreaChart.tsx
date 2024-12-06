@@ -46,7 +46,9 @@ export const SteppedAreaChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {
+      return undefined;
+    }
 
     const chart = echarts.init(element);
     const dataSource: Array<Array<number | string>> = [];
@@ -89,7 +91,9 @@ export const SteppedAreaChart: React.FC<IProps> = (props) => {
       }),
     };
 
-    options && chart.setOption(options, true);
+    if (options) {
+      chart.setOption(options, true);
+    }
 
     return () => {
       chart.dispose();

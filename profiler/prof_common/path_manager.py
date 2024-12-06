@@ -17,7 +17,8 @@ import re
 import shutil
 import platform
 
-from .constant import Constant
+from profiler.prof_common.constant import Constant
+from profiler.prof_common.additional_args_manager import AdditionalArgsManager
 
 
 class PathManager:
@@ -87,8 +88,15 @@ class PathManager:
             msg = f"Invalid path which has illagal characters \"{invalid_obj}\"."
             raise RuntimeError(msg)
 
+        path_split_list = path.split("/")
+        for path in path_split_list:
+            path_list = path.split("\\")
+            for name in path_list:
+                if len(name) > cls.MAX_FILE_NAME_LENGTH:
+                    raise RuntimeError("Length of input path exceeds the limit.")
+
     @classmethod
-    def check_path_owner_consistent(cls, path: str):
+    def check_path_owner_consistent(cls, path_list: list):
         """
         Function Description:
             check whether the path belong to process owner
@@ -97,16 +105,16 @@ class PathManager:
         Exception Description:
             when invalid path, prompt the user
         """
-        base_name = os.path.basename(path)
-        if not os.path.exists(path):
-            msg = f"Invalid path: {base_name}"
-            raise RuntimeError(msg)
-        if platform.system().lower() == cls.WINDOWS:
+        if platform.system().lower() == cls.WINDOWS or AdditionalArgsManager().force:
             return
-        if os.stat(path).st_uid != os.getuid():
-            check_msg = input("The path does not belong to you, do you want to continue? [y/n]")
-            if check_msg.lower() != "y":
-                raise RuntimeError("The user choose not to continue.")
+        for path in path_list:
+            if not os.path.exists(path):
+                continue
+            if os.stat(path).st_uid != os.getuid():
+                check_msg = input("The path does not belong to you, do you want to continue? [y/n]")
+                if check_msg.lower() != "y":
+                    raise RuntimeError("The user choose not to continue.")
+                return
 
     @classmethod
     def check_path_writeable(cls, path):
@@ -118,7 +126,6 @@ class PathManager:
         Exception Description:
             when invalid data throw exception
         """
-        cls.check_path_owner_consistent(path)
         if os.path.islink(path):
             msg = f"Invalid path which is a soft link."
             raise RuntimeError(msg)
@@ -137,7 +144,6 @@ class PathManager:
         Exception Description:
             when invalid data throw exception
         """
-        cls.check_path_owner_consistent(path)
         if os.path.islink(path):
             msg = f"Invalid path which is a soft link."
             raise RuntimeError(msg)
@@ -148,6 +154,8 @@ class PathManager:
 
     @classmethod
     def remove_path_safety(cls, path: str):
+        if not os.path.exists(path):
+            return
         base_name = os.path.basename(path)
         msg = f"Failed to remove path: {base_name}"
         cls.check_path_writeable(path)
@@ -196,6 +204,8 @@ class PathManager:
     def check_file_size(cls, file_path: str):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"The file {file_path} does not exists.")
+        if AdditionalArgsManager().force:
+            return
         file_size = os.path.getsize(file_path)
         if file_size > Constant.MAX_FILE_SIZE_5_GB:
             check_msg = input(

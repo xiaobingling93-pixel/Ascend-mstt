@@ -19,7 +19,7 @@ import os
 import unittest
 
 from msprobe.mindspore.free_benchmark.self_check_tool_factory import SelfCheckToolFactory
-from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelFCheck
+from msprobe.mindspore.free_benchmark.api_pynative_self_check import ApiPyNativeSelfCheck
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
 from msprobe.core.common_config import CommonConfig, BaseConfig
 from msprobe.mindspore.common.const import Const as MsConst
@@ -49,4 +49,4 @@ class TestSelfCheckToolFactory(unittest.TestCase):
 
         config.execution_mode = MsConst.PYNATIVE_MODE
         tool = SelfCheckToolFactory.create(config)
-        self.assertTrue(isinstance(tool, ApiPyNativeSelFCheck))
+        self.assertIsInstance(tool, ApiPyNativeSelfCheck, "")

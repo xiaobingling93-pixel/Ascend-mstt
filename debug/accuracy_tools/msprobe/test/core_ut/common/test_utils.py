@@ -17,18 +17,24 @@
 import json
 import os
 import tempfile
+from datetime import datetime, timezone
 from unittest import TestCase
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import MagicMock, mock_open, patch
+
+import OpenSSL
+import numpy as np
 
 from msprobe.core.common.const import Const
-from msprobe.core.common.file_utils import (FileCheckConst,
-                                            FileCheckException,
-                                            check_file_size,
-                                            check_file_or_directory_path,
-                                            get_json_contents,
-                                            get_file_content_bytes,
-                                            save_json)
-from msprobe.core.common.inplace_op_checker import InplaceOpChecker
+from msprobe.core.common.file_utils import (
+    FileCheckConst,
+    FileCheckException,
+    check_file_or_directory_path,
+    check_file_size,
+    check_crt_valid,
+    get_file_content_bytes,
+    get_json_contents,
+    save_json,
+)
 from msprobe.core.common.log import logger
 from msprobe.core.common.exceptions import MsprobeException
 from msprobe.core.common.utils import (CompareException,
@@ -41,7 +47,13 @@ from msprobe.core.common.utils import (CompareException,
                                        get_dump_mode,
                                        get_real_step_or_rank, 
                                        get_step_or_rank_from_string, 
-                                       get_stack_construct_by_dump_json_path)
+                                       get_stack_construct_by_dump_json_path,
+                                       check_seed_all,
+                                       safe_get_value,
+                                       recursion_depth_decorator,
+                                       MsprobeBaseException,
+                                       check_str_param,
+                                       is_json_file)
 
 
 class TestUtils(TestCase):
@@ -82,23 +94,23 @@ class TestUtils(TestCase):
     @patch.object(logger, "error")
     def test_check_compare_param(self, mock_error):
         params = {
-            "npu_json_path": "npu_path",
-            "bench_json_path": "bench_path",
-            "stack_json_path": "stack_path",
+            "npu_json_path": "npu_path.json",
+            "bench_json_path": "bench_path.json",
+            "stack_json_path": "stack_path.json",
             "npu_dump_data_dir": "npu_dump_data_dir",
             "bench_dump_data_dir": "bench_dump_data_dir"
         }
 
         call_args = [
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("npu_dump_data_dir", True),
             ("bench_dump_data_dir", True),
             ("output_path", True),
-            ("npu_path", False),
-            ("bench_path", False),
-            ("stack_path", False),
+            ("npu_path.json", False),
+            ("bench_path.json", False),
+            ("stack_path.json", False),
             ("output_path", True)
         ]
 
@@ -192,7 +204,7 @@ class TestUtils(TestCase):
         with self.assertRaises(CompareException) as context:
             set_dump_path(input_param)
         self.assertEqual(context.exception.code, CompareException.INVALID_PATH_ERROR)
-        mock_error.assert_called_with("Please check the json path is valid.")
+        mock_error.assert_called_with("Please check the json path is valid. npu_path: None, bench_path: bench_path")
 
     @patch.object(logger, "error")
     def test_get_dump_mode(self, mock_error):
@@ -264,6 +276,9 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeException) as context:
             get_real_step_or_rank([1, 2, 3.5], "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([True, 1, 2], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         result = get_real_step_or_rank([1, 10, 50], "step")
         self.assertEqual(result, [1, 10, 50])
 
@@ -312,3 +327,159 @@ class TestUtils(TestCase):
 
             self.assertEqual(stack, {'stack_key': 'stack_value'})
             self.assertEqual(construct, {'construct_key': 'construct_value'})
+
+    @patch.object(logger, "error")
+    def test_recursion_depth_decorator(self, mock_error):
+        # 测试递归深度限制函数
+        recursion_list = [[]]
+        temp_list = recursion_list[0] 
+        for _ in range(Const.MAX_DEPTH):
+            temp_list.append([])
+            temp_list = temp_list[0]
+        temp_list.append(0)
+        call_record = []
+        @recursion_depth_decorator("test func_info")
+        def recursion_func(test_list, call_record):
+            call_record.append(1)
+            if isinstance(test_list, list):
+                recursion_func(test_list[0], call_record)
+        with self.assertRaises(MsprobeException) as context:
+            recursion_func(recursion_list, call_record)
+        # 执行超过限制的递归函数会触发异常、且函数成功调用次数等于限制次数
+        self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
+        mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
+        self.assertEqual(len(call_record), Const.MAX_DEPTH)
+        
+    def test_check_seed_all(self):
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(-1, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(Const.MAX_SEED_VALUE + 1, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all("1", True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(True, True)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(True, 1)
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        
+    def test_safe_get_value_dict_valid_key_index(self):
+        # Test valid key and index in a dictionary
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        self.assertEqual(safe_get_value(dict_container, 1, 'dict_container', key='a'), 2)
+
+    def test_safe_get_value_invalid_key(self):
+        # Test invalid key in dictionary
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(dict_container, 1, 'dict_container', key='invalid_key')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+
+    def test_safe_get_value_valid_key_invalid_index(self):
+        # Test invalid index in dictionary[key]
+        dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(dict_container, 5, 'dict_container', key='a')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_safe_get_value_list_valid_index(self):
+        # Test valid index in a list
+        list_container = [10, 20, 30]
+        self.assertEqual(safe_get_value(list_container, 1, 'list_container'), 20)
+
+    def test_safe_get_value_list_index_out_of_bounds(self):
+        # Test index out of bounds in a list
+        list_container = [10, 20, 30]
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value(list_container, 10, 'list_container')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INDEX_OUT_OF_BOUNDS_ERROR)
+
+    def test_safe_get_value_tuple_valid_index(self):
+        # Test valid index in a tuple
+        tuple_container = (100, 200, 300)
+        self.assertEqual(safe_get_value(tuple_container, 2, 'tuple_container'), 300)
+
+    def test_safe_get_value_array_valid_index(self):
+        # Test valid index in a numpy array
+        array_container = np.array([1000, 2000, 3000])
+        self.assertEqual(safe_get_value(array_container, 0, 'array_container'), 1000)
+
+    def test_safe_get_value_unsupported_container_type(self):
+        # Test unsupported container type (e.g., a string)
+        with self.assertRaises(MsprobeBaseException) as context:
+            safe_get_value("unsupported_type", 0, 'string_container')
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_OBJECT_TYPE_ERROR)
+
+    def test_valid_str_param(self):
+        valid_param = "valid_string_without_special_chars"
+        check_str_param(valid_param)
+
+    def test_invalid_str_param(self):
+        invalid_param = "invalid$tring&with^special*chars()"
+        with self.assertRaises(MsprobeBaseException) as context:
+            check_str_param(invalid_param)
+        self.assertEqual(context.exception.code, MsprobeBaseException.INVALID_CHAR_ERROR)
+
+    def test_is_json_file(self):
+        file_path_true = 'step/rank/stack.json'
+        file_path_false = 1
+        self.assertTrue(is_json_file(file_path_true))
+        self.assertFalse(is_json_file(file_path_false))
+
+
+class TestCheckCrtValid(TestCase):
+    """
+    Test the check_crt_valid function.
+    """
+
+    def setUp(self):
+        self.cert_file_path = "cert_file_path.pem"
+        if not os.path.exists(self.cert_file_path):
+            with open(self.cert_file_path, 'w') as f:
+                f.write("This is a test certificate.")
+
+    def tearDown(self):
+        if os.path.exists(self.cert_file_path):
+            os.remove(self.cert_file_path)
+
+    @patch('msprobe.core.common.file_utils.datetime')
+    @patch('OpenSSL.crypto.load_certificate')
+    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
+    def test_check_crt_valid_success(self, mock_open_, mock_load_certificate, mock_datetime):
+        mock_cert = MagicMock()
+        mock_cert.get_notBefore.return_value = b'20220101'
+        mock_cert.get_notAfter.return_value = b'20230101'
+        mock_cert.has_expired.return_value = False
+        mock_load_certificate.return_value = mock_cert
+        mock_datetime.now.return_value = datetime(2022, 10, 1)
+
+        check_crt_valid(self.cert_file_path)
+        mock_load_certificate.assert_called_once_with(OpenSSL.crypto.FILETYPE_PEM, 'cert_data')
+
+    @patch('datetime.datetime')
+    @patch('OpenSSL.crypto.load_certificate')
+    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
+    def test_check_crt_valid_expired(self, mock_open_, mock_load_certificate, mock_datetime):
+        mock_cert = MagicMock()
+        mock_cert.get_notBefore.return_value = b'20220101'
+        mock_cert.get_notAfter.return_value = b'20230101'
+        mock_cert.has_expired.return_value = True
+        mock_load_certificate.return_value = mock_cert
+        mock_datetime.now.return_value = datetime(2022, 10, 1, tzinfo=timezone.utc)
+
+        with self.assertRaises(RuntimeError) as context:
+            check_crt_valid(self.cert_file_path)
+        self.assertIn('The SSL certificate has expired and needs to be replaced', str(context.exception))
+
+    @patch('OpenSSL.crypto.load_certificate')
+    @patch('builtins.open', new_callable=mock_open, read_data="cert_data")
+    def test_check_crt_valid_exception(self, mock_open_, mock_load_certificate):
+        mock_load_certificate.side_effect = Exception('Test Exception')
+
+        with self.assertRaises(RuntimeError) as context:
+            check_crt_valid(self.cert_file_path)
+        self.assertIn('The SSL certificate is invalid', str(context.exception))

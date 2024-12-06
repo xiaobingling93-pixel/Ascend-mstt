@@ -53,14 +53,17 @@ export const ColumnChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {
+      return undefined;
+    }
 
     const chart = echarts.init(element);
     const dataSource: Array<Array<number | string>> = [];
     dataSource.push(['worker', ...legends]);
     barHeights.forEach((item, index) => {
-      barLabels[index] !== undefined &&
+      if (barLabels[index] !== undefined) {
         dataSource.push([barLabels[index], ...item]);
+      }
     });
     const options: echarts.EChartsOption = {
       title: {
@@ -76,10 +79,10 @@ export const ColumnChart: React.FC<IProps> = (props) => {
           rotate: getAngleByDataLength(barLabels.length),
           formatter: (name: string) => {
             const index = name.indexOf('@');
-            if (index > -1) {
-              name = name.slice(index + 1);
-            }
-            return name.length > 16 ? name.slice(0, 14) + '...' : name;
+            const processedName = index > -1 ? name.slice(index + 1) : name; // 使用新变量处理
+            return processedName.length > 16
+              ? `${processedName.slice(0, 14)}...`
+              : processedName;
           },
         },
       },
@@ -105,7 +108,9 @@ export const ColumnChart: React.FC<IProps> = (props) => {
       options.color = colors.slice(0, barLabels.length);
     }
 
-    options && chart.setOption(options, true);
+    if (options) {
+      chart.setOption(options, true);
+    }
     return () => {
       chart.dispose();
     };

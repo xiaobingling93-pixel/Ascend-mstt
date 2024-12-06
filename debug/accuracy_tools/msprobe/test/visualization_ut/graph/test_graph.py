@@ -67,17 +67,19 @@ class TestGraph(unittest.TestCase):
                                               'matched_node_link': [], 'suggestions': {}, 'stack_info': []}})
         
     def test_split_nodes_by_micro_step(self):
-        nodes = [BaseNode(NodeOp.module, 'a.0'), BaseNode(NodeOp.module, 'b.0'),
-                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.1'),
-                 BaseNode(NodeOp.module, 'b.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
+        nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),
+                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.forward.1'),
+                 BaseNode(NodeOp.module, 'b.forward.0'), BaseNode(NodeOp.module, 'b.backward.0'),
+                 BaseNode(NodeOp.module, 'a.backward.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
         result = Graph.split_nodes_by_micro_step(nodes)
         self.assertEqual(len(result), 2)
         self.assertEqual(len(result[0]), 3)
 
     def test_paging_by_micro_step(self):
-        nodes = [BaseNode(NodeOp.module, 'a.0'), BaseNode(NodeOp.module, 'b.0'),
-                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.1'),
-                 BaseNode(NodeOp.module, 'b.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
+        nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),
+                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.forward.1'),
+                 BaseNode(NodeOp.module, 'b.forward.0'), BaseNode(NodeOp.module, 'b.backward.0'),
+                 BaseNode(NodeOp.module, 'a.backward.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
 
         graph = Graph('Model1')
         graph.root.subnodes = nodes
@@ -90,13 +92,12 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(graph_other.root.subnodes[0].micro_step_id, 0)
 
     def test_mapping_match(self):
-        mapping_config = MagicMock()
         graph_a = Graph("model_name_a")
         graph_b = Graph("model_name_b")
         graph_a.add_node(NodeOp.module, "a1", BaseNode(NodeOp.module, "root"))
         graph_b.add_node(NodeOp.module, "b1", BaseNode(NodeOp.module, "root"))
-        mapping_config.get_mapping_string.return_value = "b1"
-        node_b, ancestors_n, ancestors_b = Graph.mapping_match(graph_a.get_node("a1"), graph_b, mapping_config)
+        mapping_dict = {"a1": "b1"}
+        node_b, ancestors_n, ancestors_b = Graph.mapping_match(graph_a.get_node("a1"), graph_b, mapping_dict)
         self.assertIsNotNone(node_b)
         self.assertEqual(ancestors_n, ["root"])
         self.assertEqual(ancestors_b, ["root"])

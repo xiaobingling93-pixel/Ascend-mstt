@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import torch
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
@@ -26,6 +27,7 @@ from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import 
 
 class AddNoiseLayer(NpuBaseLayer):
 
+    @recursion_depth_decorator("FreeBenchmark: AddNoiseLayer.add_noise")
     def add_noise(self, tensor_obj):
         if isinstance(tensor_obj, torch.Tensor):
             self.perturbed_value = ThresholdConfig.PERTURBATION_VALUE_DICT.get(

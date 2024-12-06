@@ -27,7 +27,9 @@ export const AreaChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) return;
+    if (!element) {
+      return undefined;
+    }
 
     const data = new google.visualization.DataTable();
     data.addColumn('string', 'step');

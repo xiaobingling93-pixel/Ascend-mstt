@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -13,17 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
 
 import unittest
 
 import mindspore as ms
 from mindspore import Tensor
 
-from msprobe.mindspore.free_benchmark.common.utils import Tools, UnequalRow, make_unequal_row
-from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.mindspore.free_benchmark.common.config import Config
 from msprobe.mindspore.free_benchmark.common.handler_params import HandlerParams
+from msprobe.mindspore.free_benchmark.common.utils import Tools, UnequalRow, make_unequal_row
 from msprobe.mindspore.runtime import Runtime
 
 
@@ -45,6 +43,18 @@ class TestUtils(unittest.TestCase):
 
         ret = Tools.get_default_error_threshold(ms.float16)
         self.assertEqual(ret, FreeBenchmarkConst.ERROR_THRESHOLD.get(ms.float16))
+
+    def test_get_grad_out(self):
+        tensor = Tensor([1.0, 5.0], dtype=ms.float32)
+        target_grad_out = Tensor([1.0, 1.0], dtype=ms.float32)
+        ret = Tools.get_grad_out(tensor)
+        self.assertTrue((ret == target_grad_out).all())
+
+        tensors = (Tensor([1.0, 5.0], dtype=ms.float16), Tensor([1.0, 5.0], dtype=ms.float16))
+        target_grad_out = (Tensor([1.0, 1.0], dtype=ms.float16), Tensor([1.0, 1.0], dtype=ms.float16))
+        ret = Tools.get_grad_out(tensors)
+        self.assertTrue((ret[0] == target_grad_out[0]).all())
+        self.assertTrue((ret[1] == target_grad_out[1]).all())
 
     def test_unequal_row(self):
         self.assertIsNone(UnequalRow.rank)

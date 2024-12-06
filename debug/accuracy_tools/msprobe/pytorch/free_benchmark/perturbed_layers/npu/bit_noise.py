@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import torch
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
@@ -31,6 +32,7 @@ class BitNoiseLayer(NpuBaseLayer):
         self.bit_tail: int = 1
         self.bit_type = None
 
+    @recursion_depth_decorator("FreeBenchmark: BitNoiseLayer.add_bit_noise")
     def add_bit_noise(self, tensor_obj):
         """
         对输入添加噪声

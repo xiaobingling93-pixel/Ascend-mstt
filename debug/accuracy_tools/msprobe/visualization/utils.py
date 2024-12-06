@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import re
 import json
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
@@ -70,18 +72,53 @@ def str2float(percentage_str):
         return 0
 
 
-def process_kwargs_parameter(parameter):
+def is_integer(s):
+    try:
+        int(s)
+        return True
+    except Exception:
+        return False
+
+
+def check_directory_content(input_path):
     """
-    转换kwargs参数命名
-    Args:
-        parameter: 'Module.module.Float16Module.forward.0.input.labels.0'
-    Returns: 'Module.module.Float16Module.forward.0.kwargs.labels'
+    检查input_path内容, 是否全是step{数字}命名的文件夹(例如step0), 或者全是rank{数字}命名的文件夹(例如rank0), 或者全是文件
     """
-    parts = parameter.split(Const.SEP)
-    if parts[GraphConst.OUTPUT_INDEX_THREE] == GraphConst.INPUT:
-        parts[GraphConst.OUTPUT_INDEX_THREE] = 'kwargs'
-        return Const.SEP.join(parts[:-1])
-    return parameter
+    contents = os.listdir(input_path)
+    if not contents:
+        raise ValueError(f'The path {input_path} is empty.')
+
+    # 真实数据dump会有dump_tensor_data文件夹
+    if os.path.exists(os.path.join(input_path, Const.DUMP_TENSOR_DATA)):
+        return GraphConst.FILES
+
+    # 检查是否全是文件
+    if all(os.path.isfile(os.path.join(input_path, item)) for item in contents):
+        return GraphConst.FILES
+
+    rank_pattern = re.compile(r'^rank\d+$')
+    step_pattern = re.compile(r'^step\d+$')
+
+    rank_all = True
+    step_all = True
+
+    for item in contents:
+        item_path = os.path.join(input_path, item)
+        if not os.path.isdir(item_path):
+            continue
+        if not rank_pattern.match(item):
+            rank_all = False
+        if not step_pattern.match(item):
+            step_all = False
+
+    if rank_all:
+        return GraphConst.RANKS
+    if step_all:
+        return GraphConst.STEPS
+
+    raise ValueError("The input path content does not conform to the expected naming convention. "
+                     "It is expected to be all step{number} named folders (such as step0), "
+                     "all rank{number} named folders (such as rank0), or all files.")
 
 
 class ToolTip:
@@ -101,7 +138,7 @@ class ToolTip:
         '当最大相对误差越接近0表示其计算的误差越小。'
         '当dump数据中存在0或Nan时，比对结果中最大相对误差则出现inf或Nan的情况，属于正常现象'
     )
-    SMALL_VALUE_TIP = '{} 小于1e-3，不计算相对误差'
+    SMALL_VALUE_TIP = '{}, 由于{}小于{}, 建议不参考此相对误差，请参考绝对误差'
 
 
 class Suggestions:
@@ -128,6 +165,8 @@ class GraphConst:
     JSON_TIP_KEY = 'ToolTip'
     JSON_ROOT_KEY = 'root'
     JSON_NODE_KEY = 'node'
+    JSON_DATA_KEY = 'dump_data_dir'
+    JSON_TASK_KEY = 'task'
     DATA_KEY = 'data'
     REAL_DATA_TH = 0.1
     MAX_RELATIVE_ERR_TH = 0.5
@@ -140,8 +179,8 @@ class GraphConst:
     OUTPUT_INDEX_TWO = -2
     OUTPUT_INDEX_THREE = -3
     OUTPUT_MIN_LEN = 3
-    INPUT = 'input'
-    OUTPUT = 'output'
+    INPUT = '.input.'
+    OUTPUT = '.output.'
     STR_MAX_LEN = 50
     SMALL_VALUE = 1e-3
     MD5_INDEX_LIST = [CompareConst.RESULT]
@@ -150,6 +189,7 @@ class GraphConst:
     SUMMARY_INDEX_LIST = [CompareConst.MAX_DIFF, CompareConst.MIN_DIFF, CompareConst.MEAN_DIFF,
                           CompareConst.NORM_DIFF, CompareConst.MAX_RELATIVE_ERR, CompareConst.MIN_RELATIVE_ERR,
                           CompareConst.MEAN_RELATIVE_ERR, CompareConst.NORM_RELATIVE_ERR]
+    VALUE_INDEX_LIST = [Const.MAX, Const.MIN, Const.MEAN, Const.NORM]
     APIS_BETWEEN_MODULES = 'Apis_Between_Modules'
     NULL = 'null'
     NONE = 'None'
@@ -170,3 +210,23 @@ class GraphConst:
         SUMMARY_COMPARE: Const.SUMMARY,
         MD5_COMPARE: Const.MD5
     }
+    SMALL_VALUES = {
+        Const.TORCH_FLOAT32: 1e-6,
+        Const.TORCH_FLOAT16: 1e-3,
+        Const.TORCH_BFLOAT16: 1e-3,
+        Const.FLOAT32: 1e-6,
+        Const.FLOAT16: 1e-3,
+        Const.BFLOAT16: 1e-3
+    }
+    SMALL_VALUES_ABS_ERROR = {
+        Const.TORCH_FLOAT32: 1e-6,
+        Const.TORCH_FLOAT16: 1e-3,
+        Const.TORCH_BFLOAT16: 1e-3,
+        Const.FLOAT32: 1e-6,
+        Const.FLOAT16: 1e-3,
+        Const.BFLOAT16: 1e-3
+    }
+
+    RANKS = 'ranks'
+    STEPS = 'steps'
+    FILES = 'files'

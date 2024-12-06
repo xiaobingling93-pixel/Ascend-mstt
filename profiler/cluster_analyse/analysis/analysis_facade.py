@@ -21,12 +21,12 @@ from analysis.comm_matrix_analysis import CommMatrixAnalysis
 from analysis.comm_matrix_analysis import CommMatrixAnalysisOptimized
 from analysis.step_trace_time_analysis import StepTraceTimeAnalysis
 from analysis.host_info_analysis import HostInfoAnalysis
-from common_func.constant import Constant
-
+from profiler.prof_common.constant import Constant
 
 class AnalysisFacade:
     default_module = {CommunicationAnalysis, StepTraceTimeAnalysis, CommMatrixAnalysis, HostInfoAnalysis}
-    simplified_module = {CommunicationAnalysisOptimized, StepTraceTimeAnalysis, CommMatrixAnalysisOptimized, HostInfoAnalysis}
+    simplified_module = {CommunicationAnalysisOptimized, StepTraceTimeAnalysis,
+                         CommMatrixAnalysisOptimized, HostInfoAnalysis}
 
     def __init__(self, params: dict):
         self.params = params

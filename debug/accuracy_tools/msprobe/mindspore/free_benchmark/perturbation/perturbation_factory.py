@@ -36,9 +36,9 @@ class PerturbationFactory:
     }
 
     @staticmethod
-    def create(api_name: str):
+    def create(api_name_with_id: str):
         perturbation = PerturbationFactory.perturbations.get(Config.pert_type)
         if perturbation:
-            return perturbation(api_name)
+            return perturbation(api_name_with_id)
         else:
             raise Exception(f'{Config.pert_type} is a invalid perturbation type')

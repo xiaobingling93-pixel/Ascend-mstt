@@ -186,9 +186,9 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
         return;
       }
       const reader = new FileReader();
-      reader.onload = ((selectedFile) => {
-        return (e) => {
-          addFile(selectedFile.name.trim(), e.target?.result as string);
+      reader.onload = ((loadedFile) => {
+        return (event) => {
+          addFile(loadedFile.name.trim(), event.target?.result as string);
           setImportSpin(false);
         };
       })(file);
@@ -201,6 +201,7 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
   const addFile = (fileName: string, fileContent: string) => {
     const fileLength = fileName.length;
     const tempList: FileInfo[] = JSON.parse(JSON.stringify(fileList));
+    let updatedFileName = fileName; // 新变量用于存储更新后的文件名
     // 上传同名文件加上(1~最大文件数减1)标识
     if (!!tempList.find((item) => item.fileName === fileName)) {
       for (let i = 1; i < MAX_FILE_COUNT; i++) {
@@ -208,14 +209,14 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
           fileLength - 4
         )}`;
         if (tempList.find((item) => item.fileName === temp) === undefined) {
-          fileName = temp;
+          updatedFileName = temp;
           break;
         }
       }
     }
     const file: FileInfo = {
       id: fileList.length,
-      fileName: fileName,
+      fileName: updatedFileName,
       fileContent,
       checked: true,
       lossTag: 'loss:',
