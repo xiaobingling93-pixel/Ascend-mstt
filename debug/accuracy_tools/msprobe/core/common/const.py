@@ -577,6 +577,7 @@ class MonitorConst:
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
+    OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
 
     EXP_AVG = "exp_avg"
     EFXP_AVG_SQ = "efxp_avg_sq"
