@@ -17,8 +17,10 @@ import json
 import os
 import uuid
 from collections import defaultdict
+from datetime import datetime, timezone
 from functools import partial
 
+import pytz
 import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
@@ -26,7 +28,7 @@ from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.log import logger
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
-    CSVWriterWithAD, BaseWriterWithAD
+    CSVWriterWithAD, BaseWriterWithAD, WriterInput
 from msprobe.pytorch.monitor.distributed.wrap_distributed import api_register, create_hooks, op_aggregate, \
     get_process_group
 from msprobe.pytorch.monitor.features import get_sign_matches
@@ -195,7 +197,10 @@ class TrainerMon:
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
 
-        cur_time = time.strftime('%b%d_%H-%M-%S', time.localtime())
+        # 设置时区，使用 'UTC' 作为示例
+        local_tz = pytz.timezone("Asia/Shanghai")  # 根据需要调整为目标时区
+
+        cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
 
         if dist.is_initialized():
@@ -218,15 +223,19 @@ class TrainerMon:
         if self.format not in FORMAT_MAPPING:
             raise ValueError(f"Unsupported format: {self.format}")
         writer, self.write_metrics = FORMAT_MAPPING[self.format]
+        self.step_count_per_record = self.config.get('step_count_per_record', 1)
 
         if (rank in self.module_rank_list) or len(self.module_rank_list) == 0:
             self.summary_writer = writer(
-                tensorboard_dir,
-                self.alert_rules,
-                unique_id,
-                None,
-                self.anomaly_data_factory,
-                self.ndigits
+                WriterInput(
+                    tensorboard_dir,
+                    self.alert_rules,
+                    unique_id,
+                    None,
+                    self.anomaly_data_factory,
+                    self.ndigits,
+                    self.step_count_per_record
+                )
             )
             # 初始化anomaly detected文件目录
             if self.anomaly_data_factory:

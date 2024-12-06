@@ -193,15 +193,26 @@ class GradAnomalyData:
         return ''.join([str(self.tag_name), "_step_", str(self.step), "_call_", str(self.call_id)])
 
 
+@dataclass
+class WriterInput:
+    path: str
+    ad_rules: list
+    job_id: str
+    anomaly_inform: bool = False
+    anomaly_factory: AnomalyDataFactory = None
+    ndigits: int = 6
+    step_count_per_record: int = 1
+
+
 class BaseWriterWithAD:
-    def __init__(self, path, ad_rules, job_id, anomaly_inform=False, anomaly_factory=None, ndigits=6):
+    def __init__(self, writer_input: WriterInput):
         self.tag2scalars = {}
-        self.ad_rules = ad_rules
-        self.job_id = job_id
-        self.anomaly_inform = anomaly_inform
-        self.anomaly_factory = anomaly_factory
+        self.ad_rules = writer_input.ad_rules
+        self.job_id = writer_input.job_id
+        self.anomaly_inform = writer_input.anomaly_inform
+        self.anomaly_factory = writer_input.anomaly_factory
         self.anomalies = []
-        self.ndigits = ndigits
+        self.ndigits = writer_input.ndigits
 
     def get_anomalies(self):
         """返回已检测到的异常列表
@@ -257,14 +268,20 @@ class BaseWriterWithAD:
 
 
 class CSVWriterWithAD(BaseWriterWithAD):
-    def __init__(self, path, ad_rules, job_id, anomaly_inform=False, anomaly_factory=None, ndigits=6):
-        super().__init__(path, ad_rules, job_id, anomaly_inform, anomaly_factory, ndigits)
+    def __init__(self, writer_input: WriterInput):
+        super().__init__(writer_input)
 
+        path = writer_input.path
         self.log_dir = path
         create_directory(path)
         change_mode(path, FileCheckConst.DATA_DIR_AUTHORITY)
         self.context_dict = defaultdict(list)
         self.header = []
+        self.step_count_per_record = writer_input.step_count_per_record
+
+    def get_step_interval(self, step):
+        count = step // self.step_count_per_record
+        return count * self.step_count_per_record, (count + 1) * self.step_count_per_record - 1
 
     def write_csv(self, prefix, step):
         """
@@ -274,7 +291,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         """
         if len(self.context_dict) == 0:
             return
-        filepath = os.path.join(self.log_dir, f'{prefix}_{step}.csv')
+        
+        ster_start, step_end = self.get_step_interval(step)
+        filepath = os.path.join(self.log_dir, f'{prefix}_{ster_start}-{step_end}.csv')
         if not os.path.exists(filepath):
             data_frame = pd.DataFrame(columns=self.header)
             write_df_to_csv(data_frame, filepath)
@@ -282,9 +301,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         new_data = []
         for name, metric_value in self.context_dict.items():
             if MonitorConst.VPP_SEP not in name:
-                new_data.append([name] + metric_value)
+                new_data.append([name] + [step] + metric_value)
             else:
-                new_data.append(name.split(MonitorConst.VPP_SEP) + metric_value)
+                new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
         new_data = pd.DataFrame(new_data).round(self.ndigits)
         write_df_to_csv(new_data, filepath, mode='a+', header=False)
         self.context_dict = defaultdict(list)
@@ -303,12 +322,13 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
 
 class SummaryWriterWithAD(SummaryWriter, BaseWriterWithAD):
-    def __init__(self, path, ad_rules, job_id, anomaly_inform=False, anomaly_factory=None, ndigits=6):
+    def __init__(self, writer_input: WriterInput):
 
+        path = writer_input.path
         if not os.path.exists(path):
             create_directory(path)
         try:
-            super(SummaryWriter, self).__init__(path, ad_rules, job_id, anomaly_inform, anomaly_factory, ndigits)
+            super(SummaryWriter, self).__init__(writer_input)
             super().__init__(path)
         except Exception as e:
             logger.error(f'error when init summary writer at {path}: {e}')
