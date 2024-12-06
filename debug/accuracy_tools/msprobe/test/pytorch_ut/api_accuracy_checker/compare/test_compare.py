@@ -8,7 +8,9 @@ from unittest.mock import patch
 import numpy as np
 import torch.nn.functional
 
-from msprobe.pytorch.api_accuracy_checker.compare.compare import *
+from msprobe.core.common.utils import CompareException
+from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo
 
