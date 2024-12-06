@@ -355,12 +355,10 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(args.compare_only)
         self.assertTrue(args.fuzzy_match)
 
-    def test_compare_parser(self):
-        parser = argparse.ArgumentParser()
-        _compare_parser(parser)
-        self.assertEqual(parser.parse_args('-i aaa -o'.split(' ')).output_path, './output')
-        self.assertEqual(parser.parse_args('-i aaa'.split(' ')).output_path, './output')
-        self.assertEqual(parser.parse_args('-i aaa -o ./aaa/output'.split(' ')).output_path, './aaa/output')
+    def test_compare_parser_2(self):
+        self.assertEqual(self.parser.parse_args('-i aaa -o'.split(' ')).output_path, './output')
+        self.assertEqual(self.parser.parse_args('-i aaa'.split(' ')).output_path, './output')
+        self.assertEqual(self.parser.parse_args('-i aaa -o ./aaa/output'.split(' ')).output_path, './aaa/output')
 
     def test_compare_parser_3(self):
         test_args = ["-i", "input.json", "-o", "output.json", "-cm", "cell_mapping.txt", "-dm",
