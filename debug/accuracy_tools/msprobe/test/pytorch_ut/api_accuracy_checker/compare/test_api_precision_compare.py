@@ -156,21 +156,22 @@ class TestApiPrecisionCompare(unittest.TestCase):
         }
         
         self.test_data_2 = {
-            'API Name': ['torch.abs.0.forward.output.0', 'torch.matmul.0.forward.output.0'],
-            'DEVICE Dtype': ['float32', 'float32'],
-            '小值域错误占比': ['0', '0'],
-            '均方根误差': ['0', '0'],
-            '相对误差最大值': ['0', '0'],
-            '相对误差平均值': ['0', '0'],
-            '误差均衡性': ['0', '0'],
-            '二进制一致错误率': ['0', '0'],
-            'inf/nan错误率': ['0', '0'],
-            '相对误差错误率': ['0', '0'],
-            '绝对误差错误率': ['0', '0'],
-            'ULP误差平均值': ['0', '0'],
-            'ULP误差大于阈值占比': ['0', '0'],
-            '双千指标': ['0', '0'],
-            'Message': ['error', 'pass']
+            'API Name': ['torch.abs.0.forward.output.0', 'torch.matmul.0.forward.output.0', 
+                         'torch.matmul.0.backward.output.0', 'torch.add.0.forward.output.0'],
+            'DEVICE Dtype': ['torch.float32', 'torch.float32', 'torch.float32', 'torch.float64'],
+            '小值域错误占比': ['0', '0', '0', '0'],
+            '均方根误差': ['0', '0', '0', '0'],
+            '相对误差最大值': ['0', '0', '0', '0'],
+            '相对误差平均值': ['0', '0', '0', '0'],
+            '误差均衡性': ['0', '0', '0', '0'],
+            '二进制一致错误率': ['0', '0', '0', '0'],
+            'inf/nan错误率': ['0', '0', '0', '0'],
+            '相对误差错误率': ['0', '0', '0', '0'],
+            '绝对误差错误率': ['0', '0', '0', '0'],
+            'ULP误差平均值': ['0', '0', '0', '0'],
+            'ULP误差大于阈值占比': ['0', '0', '0', '0'],
+            '双千指标': ['0', '0', '0', '0'],
+            'Message': ['error', 'pass', 'error', 'pass']
         }
         
         self.api_name = "test_api"
