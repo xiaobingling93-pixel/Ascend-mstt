@@ -121,8 +121,8 @@ class DropoutExt(nn.Dropout):
         super().__init__(0)
 
 
-def dropout_ext(input, p=0.5, training=True):
-    return input
+def dropout_ext(input_tensor, p=0.5, training=True):
+    return input_tensor
 
 
 def remove_dropout():
