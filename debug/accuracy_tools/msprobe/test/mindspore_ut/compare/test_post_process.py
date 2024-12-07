@@ -1,7 +1,8 @@
 import pytest
-# from unittest.mock import MagicMock
-# from your_module import backward_pass, DumpDataItem, Const
 import unittest
+
+
+from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.layer_mapping.data_scope_parser import (
     DumpDataItem,
 )
@@ -53,9 +54,6 @@ class TestModifyMapping(unittest.TestCase):
         ]
         pt_item1 = DumpDataItem(Const.PT_FRAMEWORK)
         pt_item1.set(pt_name1, pt_construct_info1, pt_stack_info1)
-        # item1.type_name = "ParallelTransformer"
-        # item1.layer_scope = "layer_1"
-        # item1.full_scope = "scope1.layer_1.1"
 
         pt_name2 = "Module.module.module.language_model.encoder.layers.0.self_attention.ParallelAttention.forward.0"
         pt_construct_info2 = "Module.module.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0"
@@ -253,7 +251,7 @@ class TestModifyMapping(unittest.TestCase):
         self.pt_data_items = [pt_item1, pt_item2]
 
     def test_backward_pass_when_ms_valid_then_pass(self):
-        name2item = {data_item.data_name : data_item for date_item in self.ms_data_items}
+        name2item = {data_item.data_name : data_item for data_item in self.ms_data_items}
         backward_pass(self.ms_data_items, name2item)
         expected_stack_scope = self.ms_data_items[3].stack_scope
 
@@ -262,42 +260,41 @@ class TestModifyMapping(unittest.TestCase):
         self.assertEqual(self.ms_data_items[2].layer_scope, self.ms_data_items[3].layer_scope)
 
     def test_backward_pass_when_none_then_pass(self):
-        non_data = DumpDataItem(Const.MS_FRAMEWORK)
-        non_data.set('', '', [])
-        non_datas = [non_data, non_data]
-        name2item = {data_item.data_name : data_item for date_item in non_datas}
-        try:
+        with self.assertRaises(CompareException) as context:
+            non_data = DumpDataItem(Const.MS_FRAMEWORK)
+            non_data.set('', '', [])
+            non_datas = [non_data, non_data]
+            name2item = {data_item.data_name : data_item for data_item in non_datas}
             backward_pass(non_datas, name2item)
-        except Exception as e:
-            self.fail(f"Unexpected exception raised: {e}")
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
 
     def test_renumber_index_pass_when_ms_valid_then_pass(self):
         suffix = "layers"
         type_name = "ParallelTransformer"
         renumber_index_pass(self.ms_data_items, type_name, suffix)
-        self.assertEqual(self.ms_data_items[1].full_scope, "")
-        
+        self.assertEqual(self.ms_data_items[1].full_scope, "Cells.network_with_loss.module.language_model.encoder.layers.1.attention")
 
     def test_postprocess_pass_when_ms_valid_then_pass(self):
-        name2item = {data_item.data_name : data_item for date_item in self.ms_data_items}
+        name2item = {data_item.data_name : data_item for data_item in self.ms_data_items}
         try:
             postprocess_pass(self.ms_data_items, name2item)
         except Exception as e:
             self.fail(f"Unexpected exception raised: {e}")
 
     def test_postprocess_pass_when_pt_valid_then_pass(self):
-        name2item = {data_item.data_name : data_item for date_item in self.pt_data_items}
+        name2item = {data_item.data_name : data_item for data_item in self.pt_data_items}
         try:
             postprocess_pass(self.pt_data_items, name2item)
         except Exception as e:
             self.fail(f"Unexpected exception raised: {e}")       
 
     def test_postprocess_pass_when_non_data_then_pass(self):
-        non_data = DumpDataItem(Const.MS_FRAMEWORK)
-        non_data.set('', '', [])
-        non_datas = [non_data, non_data]
-        name2item = {data_item.data_name : data_item for date_item in non_datas}
-        try:
+        with self.assertRaises(CompareException) as context:
+            non_data = DumpDataItem(Const.MS_FRAMEWORK)
+            non_data.set('', '', [])
+            non_datas = [non_data, non_data]
+            name2item = {data_item.data_name : data_item for data_item in non_datas}
             postprocess_pass(non_datas, name2item)
-        except Exception as e:
-            self.fail(f"Unexpected exception raised: {e}")
+        self.assertTrue(isinstance(context.exception, CompareException))
+        self.assertEqual(context.exception.code, CompareException.INVALID_DATA_ERROR)
