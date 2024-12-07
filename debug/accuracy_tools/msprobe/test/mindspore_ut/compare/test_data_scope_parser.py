@@ -1,4 +1,6 @@
+import os
 import unittest
+import tempfile
 from msprobe.core.compare.layer_mapping.data_scope_parser import (
     find_regard_scope,
     find_stack_func_list,
@@ -7,6 +9,7 @@ from msprobe.core.compare.layer_mapping.data_scope_parser import (
 )
 from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import load_yaml
+
 
 class TestModifyMapping(unittest.TestCase):
 
@@ -233,7 +236,7 @@ class TestModifyMapping(unittest.TestCase):
             ]
         }
 
-        self.pt_dump = {
+        self.pt_dump_source = {
         "task": "statistics",
         "level": "mix",
         "dump_data_dir": None,
@@ -521,6 +524,7 @@ class TestModifyMapping(unittest.TestCase):
                 "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
             ]
         }
+
     def test_find_regard_scope(self):
         start_sign = "add"
         end_sign = "attention"
@@ -574,12 +578,12 @@ class TestModifyMapping(unittest.TestCase):
             {
                 "data_name": "Functional.add.0.forward",
                 "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
-                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.add"
             },
             {
                 "data_name": "Functional.add.4.forward",
                 "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
-                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.add"
             },
             {
                 "data_name": "Tensor.reshape.2.forward",
@@ -605,21 +609,22 @@ class TestModifyMapping(unittest.TestCase):
 
         expected_result = [
             {
-                "data_name": "Functional.add.0.forward",
-                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
-                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention"
             },
             {
-                "data_name": "Functional.add.4.forward",
-                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
-                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+                "data_name": "Mint.cos.0.forward",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.cos"
             },
             {
-                "data_name": "Tensor.reshape.2.forward",
-                "construct_scope": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0",
-                "full_scope": "Cell.transformer_layers.0.attention.reshape"
+                "data_name": "Functional.flash_attention_score.0.forward",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.flash_attention_score"
             }
         ]
+        # result store DumpDataItem Object List
         actual_values = [(res.data_name, res.construct_scope, res.full_scope) for res in result]
         expect_values = [(item.get("data_name"), item.get("construct_scope"), item.get("full_scope")) for item in expected_result]
         self.assertListEqual(actual_values, expect_values)
@@ -699,17 +704,7 @@ class TestModifyMapping(unittest.TestCase):
         self.assertEqual(result, [])
 
     # Test 4: output_path is provided, ensure file is saved
-    def test_get_dump_data_items_when_valid_with_output_path_then_pass(self, tmp_path):
-        output_path = tmp_path
-
-        result = get_dump_data_items(dump, stack, construct, framework, output_path)
-
-        # Check if file was saved
-        saved_file = tmp_path / "ms_data_mocked_time.yaml"
-        assert saved_file.exists()
-
-    # Test 5: Empty dump and output_path
-    def test_empty_dump_with_output_path(mock_dependencies, tmp_path):
+    def test_empty_dump_with_output_path(self):
         dump = {}
         stack = {
             "Tensor.__add__.0.forward": ["stack data"]
@@ -717,10 +712,50 @@ class TestModifyMapping(unittest.TestCase):
         construct = {
             "Tensor.__add__.0.forward": "construct data"
         }
-        framework = "ms"
-        output_path = tmp_path
+        framework = Const.MS_FRAMEWORK
+        output_path = "./"
 
-        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK, output_path)
-        saved_file = os.path.join(tmp_path,  f"{Const.MS_FRAMEWORK}_data.yaml")
+        result = get_dump_data_items(dump, stack, construct, framework, output_path)
+
+        # Check if file was saved
+        entries = os.listdir(output_path)
+        # filter file endwith _data.yaml
+        sign = f"{Const.MS_FRAMEWORK}_data"
+        data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
+        saved_file = data_yaml_files[0]
         yaml_info = load_yaml(saved_file)
-        self.assertEqual(result, [])
+        os.remove(saved_file)
+        self.assertEqual(yaml_info, {})
+
+    # Test 5: Empty dump and output_path
+    def test_get_dump_data_items_when_valid_with_output_path_then_pass(self):
+        output_path = "./"
+        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK, output_path)
+        # Check if file was saved
+        entries = os.listdir(output_path)
+        sign = f"{Const.MS_FRAMEWORK}_data"
+        data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
+        # filter file endwith _data.yaml
+        saved_file = data_yaml_files[0]
+        yaml_info = load_yaml(saved_file)
+        expected_result = [
+            {
+                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention"
+            },
+            {
+                "data_name": "Mint.cos.0.forward",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.cos"
+            },
+            {
+                "data_name": "Functional.flash_attention_score.0.forward",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.flash_attention_score"
+            }
+        ]
+        actual_values = [(res.get("data_name"), res.get("construct_scope"), res.get("full_scope")) for name, res in yaml_info.items()]
+        expect_values = [(item.get("data_name"), item.get("construct_scope"), item.get("full_scope")) for item in expected_result]
+        os.remove(saved_file)
+        self.assertListEqual(actual_values, expect_values)
