@@ -273,7 +273,7 @@ class TestModifyMapping(unittest.TestCase):
         suffix = "layers"
         type_name = "ParallelTransformer"
         renumber_index_pass(self.ms_data_items, type_name, suffix)
-        self.assertEqual(self.ms_data_items[1].full_scope, "Cells.network_with_loss.module.language_model.encoder.layers.1.attention")
+        self.assertEqual(self.ms_data_items[1].full_scope, "Cell.network_with_loss.module.language_model.encoder.layers.1.attention")
 
     def test_postprocess_pass_when_ms_valid_then_pass(self):
         name2item = {data_item.data_name : data_item for data_item in self.ms_data_items}
