@@ -11,8 +11,8 @@ class TestLayerMapping(unittest.TestCase):
     def setUp(self):
         self.base_test_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
         self.input_dir = os.path.join(self.base_test_dir, 'resources', 'layer_mapping')
-        self.npu_dump_json = os.path.join(self.input_dir, 'mindspore.json')
-        self.bench_dump_json = os.path.join(self.input_dir, 'pytorch.json')
+        self.npu_dump_json = os.path.join(self.input_dir, 'mindspore', 'dump.json')
+        self.bench_dump_json = os.path.join(self.input_dir, 'pytorch', 'dump.json')
         self.layer_mapping = os.path.join(self.input_dir, 'layer_mapping.yaml')
 
     def test_generate_api_mapping_by_layer_mapping(self):
