@@ -473,37 +473,65 @@ class TestModifyMapping(unittest.TestCase):
         }
         self.ms_stack_source = {
             "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": [
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
-                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, \
+                in _run_construct, \n output = self._run_forward_hook(inputs, output)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, \
+                in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
                 "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative\
+                /transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, \
+                in construct, \n lm_output = self.language_model(tokens,",
             ],
             "Mint.cos.0.forward": [
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
-                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
-                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 98, in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
-                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 123, in _apply_fused_rotary_pos_emb, \n cos_ = mint.cos(freqs).to(t.dtype)",
-                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 136, in apply_rotary_pos_emb, \n return _apply_fused_rotary_pos_emb(t, freqs)",
-                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 619, in construct, \n query = apply_rotary_pos_emb(query, q_pos_emb, self.config)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
-                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
-                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, \
+                in _run_construct, \n output = self._run_forward_hook(inputs, output)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, \
+                in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 98, \
+                in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 123, \
+                in _apply_fused_rotary_pos_emb, \n cos_ = mint.cos(freqs).to(t.dtype)",
+                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 136, \
+                in apply_rotary_pos_emb, \n return _apply_fused_rotary_pos_emb(t, freqs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 619, \
+                in construct, \n query = apply_rotary_pos_emb(query, q_pos_emb, self.config)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, \
+                in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/\
+                transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/\
+                transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, \
+                in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, \
+                in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, \
+                in construct, \n lm_output = self.language_model(tokens,",
             ],
             "Functional.flash_attention_score.0.forward": [
                 "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
@@ -577,12 +605,14 @@ class TestModifyMapping(unittest.TestCase):
         expected_result = [
             {
                 "data_name": "Functional.add.0.forward",
-                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.\
+                scale_mask_softmax.ScaleMaskSoftmax.forward.0",
                 "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.add"
             },
             {
                 "data_name": "Functional.add.4.forward",
-                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.\
+                scale_mask_softmax.ScaleMaskSoftmax.forward.0",
                 "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.add"
             },
             {
@@ -609,19 +639,26 @@ class TestModifyMapping(unittest.TestCase):
 
         expected_result = [
             {
-                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention"
+                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.ParallelTransformerLayer.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention"
             },
             {
                 "data_name": "Mint.cos.0.forward",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.cos"
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.cos"
             },
             {
                 "data_name": "Functional.flash_attention_score.0.forward",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.flash_attention_score"
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.flash_attention_score"
             }
         ]
         # result store DumpDataItem Object List
@@ -714,13 +751,13 @@ class TestModifyMapping(unittest.TestCase):
         }
         framework = Const.MS_FRAMEWORK
         output_path = "./"
-
-        result = get_dump_data_items(dump, stack, construct, framework, output_path)
-
         # Check if file was saved
         entries = os.listdir(output_path)
-        # filter file endwith _data.yaml
         sign = f"{Const.MS_FRAMEWORK}_data"
+        data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
+        for yaml_file in data_yaml_files:
+            os.remove(yaml_file)
+        result = get_dump_data_items(dump, stack, construct, framework, output_path)
         data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
         saved_file = data_yaml_files[0]
         yaml_info = load_yaml(saved_file)
@@ -730,32 +767,41 @@ class TestModifyMapping(unittest.TestCase):
     # Test 5: Empty dump and output_path
     def test_get_dump_data_items_when_valid_with_output_path_then_pass(self):
         output_path = "./"
-        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK, output_path)
         # Check if file was saved
         entries = os.listdir(output_path)
         sign = f"{Const.MS_FRAMEWORK}_data"
         data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
-        # filter file endwith _data.yaml
+        for yaml_file in data_yaml_files:
+            os.remove(yaml_file)
+        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK, output_path)
+        data_yaml_files = [os.path.join(output_path, entry) for entry in entries if sign in entry]
         saved_file = data_yaml_files[0]
         yaml_info = load_yaml(saved_file)
         expected_result = [
             {
-                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention"
+                "data_name": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.ParallelTransformerLayer.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention"
             },
             {
                 "data_name": "Mint.cos.0.forward",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.cos"
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.cos"
             },
             {
                 "data_name": "Functional.flash_attention_score.0.forward",
-                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
-                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.flash_attention_score"
+                "construct_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.network_with_loss.module.language_model.encoder.layers.\
+                0.attention.flash_attention_score"
             }
         ]
-        actual_values = [(res.get("data_name"), res.get("construct_scope"), res.get("full_scope")) for name, res in yaml_info.items()]
+        actual_values = [(name, res.get("construct_scope"), res.get("full_scope")) for name, res in yaml_info.items()]
         expect_values = [(item.get("data_name"), item.get("construct_scope"), item.get("full_scope")) for item in expected_result]
         os.remove(saved_file)
         self.assertListEqual(actual_values, expect_values)
