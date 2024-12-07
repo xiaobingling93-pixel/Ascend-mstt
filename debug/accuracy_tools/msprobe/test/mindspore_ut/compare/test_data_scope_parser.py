@@ -6,7 +6,7 @@ from msprobe.core.compare.layer_mapping.data_scope_parser import (
     get_stack_in_lines,
 )
 from msprobe.core.common.const import Const
-
+from msprobe.core.common.file_utils import load_yaml
 
 class TestModifyMapping(unittest.TestCase):
 
@@ -233,6 +233,294 @@ class TestModifyMapping(unittest.TestCase):
             ]
         }
 
+        self.pt_dump = {
+        "task": "statistics",
+        "level": "mix",
+        "dump_data_dir": None,
+        "data": {
+            "Tensor.__add__.0.forward": {
+                "input_args": [
+                    {
+                        "type": "torch.Tensor",
+                        "dtype": "torch.int64",
+                        "shape": [],
+                        "Max": 423,
+                        "Min": 423,
+                        "Mean": 423,
+                        "Norm": 423,
+                        "requires_grad": False
+                    },
+                    {
+                        "type": "int",
+                        "value": 1
+                    }
+                ],
+                "input_kwargs": {},
+                "output": [
+                    {
+                        "type": "torch.Tensor",
+                        "dtype": "torch.int64",
+                        "shape": [],
+                        "Max": 424,
+                        "Min": 424,
+                        "Mean": 424,
+                        "Norm": 424,
+                        "requires_grad": False
+                    }
+                ]
+            },
+            "Tensor.__add__.1.forward": {
+                "input_args": [
+                    {
+                        "type": "torch.Tensor",
+                        "dtype": "torch.int64",
+                        "shape": [],
+                        "Max": 423,
+                        "Min": 423,
+                        "Mean": 423,
+                        "Norm": 423,
+                        "requires_grad": False
+                    },
+                    {
+                        "type": "int",
+                        "value": 1
+                    }
+                ],
+                "input_kwargs": {},
+                "output": [
+                    {
+                        "type": "torch.Tensor",
+                        "dtype": "torch.int64",
+                        "shape": [],
+                        "Max": 424,
+                        "Min": 424,
+                        "Mean": 424,
+                        "Norm": 424,
+                        "requires_grad": False
+                    }
+                ]
+            },
+                }
+        }
+
+        self.ms_dump_source = {
+            "task": "statistics",
+            "level": "mix",
+            "dump_data_dir": None,
+            "data": {
+                # layer type
+                "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": {
+                    "input_args": [],
+                    "input_kwargs": {},
+                    "output": [
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "BFloat16",
+                            "shape": [
+                                1024,
+                                1,
+                                6144
+                            ],
+                            "Max": 0.421875,
+                            "Min": -0.443359375,
+                            "Mean": -0.0002346038818359375,
+                            "Norm": 50.75
+                        },
+                        None
+                    ]
+                },
+                # Mint Type
+                "Mint.cos.0.forward": {
+                    "input_args": [
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "Float32",
+                            "shape": [
+                                4096,
+                                1,
+                                1,
+                                128
+                            ],
+                            "Max": 4095.0,
+                            "Min": 0.0,
+                            "Mean": 238.66024780273438,
+                            "Norm": 427910.46875
+                        }
+                    ],
+                    "input_kwargs": {},
+                    "output": [
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "Float32",
+                            "shape": [
+                                4096,
+                                1,
+                                1,
+                                128
+                            ],
+                            "Max": 1.0000001192092896,
+                            "Min": -1.0000001192092896,
+                            "Mean": 0.13587358593940735,
+                            "Norm": 528.9301147460938
+                        }
+                    ]
+                },
+                # Functional Type
+                "Functional.flash_attention_score.0.forward": {
+                    "input_args": [
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "BFloat16",
+                            "shape": [
+                                4096,
+                                1,
+                                1536
+                            ],
+                            "Max": 3.671875,
+                            "Min": -3.765625,
+                            "Mean": -0.00072479248046875,
+                            "Norm": 1744.0
+                        },
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "BFloat16",
+                            "shape": [
+                                4096,
+                                1,
+                                1536
+                            ],
+                            "Max": 3.484375,
+                            "Min": -3.0625,
+                            "Mean": -0.00115966796875,
+                            "Norm": 1728.0
+                        },
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "BFloat16",
+                            "shape": [
+                                4096,
+                                1,
+                                1536
+                            ],
+                            "Max": 3.28125,
+                            "Min": -3.234375,
+                            "Mean": -0.001861572265625,
+                            "Norm": 1744.0
+                        },
+                        {
+                            "type": "int",
+                            "value": 12
+                        }
+                    ],
+                    "input_kwargs": {
+                        "attn_mask": {
+                            "type": "mindspore.Tensor",
+                            "dtype": "UInt8",
+                            "shape": [
+                                1,
+                                1,
+                                4096,
+                                4096
+                            ],
+                            "Max": 1.0,
+                            "Min": 0.0,
+                            "Mean": 0.876311182975769,
+                            "Norm": 3834.326904296875
+                        },
+                        "scalar_value": {
+                            "type": "float",
+                            "value": 0.08838834764831843
+                        },
+                        "pre_tokens": {
+                            "type": "int",
+                            "value": 65536
+                        },
+                        "next_tokens": {
+                            "type": "int",
+                            "value": 0
+                        },
+                        "input_layout": {
+                            "type": "str",
+                            "value": "SBH"
+                        }
+                    },
+                    "output": [
+                        {
+                            "type": "mindspore.Tensor",
+                            "dtype": "BFloat16",
+                            "shape": [
+                                4096,
+                                1,
+                                1536
+                            ],
+                            "Max": 2.734375,
+                            "Min": -2.578125,
+                            "Mean": -0.001373291015625,
+                            "Norm": 266.0
+                        }
+                    ]
+                },
+            }
+        }
+
+        self.ms_construct_source = {
+            "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0",
+            "Mint.cos.0.forward": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0",
+            "Functional.flash_attention_score.0.forward": "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0"
+        }
+        self.ms_stack_source = {
+            "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": [
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
+            ],
+            "Mint.cos.0.forward": [
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 98, in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 123, in _apply_fused_rotary_pos_emb, \n cos_ = mint.cos(freqs).to(t.dtype)",
+                "File /path_to_net/PanGu_ms/pangu/model/rotary_pos_embedding.py, line 136, in apply_rotary_pos_emb, \n return _apply_fused_rotary_pos_emb(t, freqs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 619, in construct, \n query = apply_rotary_pos_emb(query, q_pos_emb, self.config)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
+            ],
+            "Functional.flash_attention_score.0.forward": [
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 505, in _run_construct, \n output = self._run_forward_hook(inputs, output)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/hook_cell.py, line 48, in __call__, \n out = super(HOOKCell, self).__call__(*args, **kwargs)",
+                "File /path_to_package/mstt/debug/accuracy_tools/msprobe/mindspore/dump/hook_cell/wrap_api.py, line 98, in api_function, \n return ApiTemplate(api_name, api_dict, prefix, hook)(*args, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 637, in construct, \n output = ops.flash_attention_score(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/model/transformer.py, line 201, in ParallelTransformerLayerForward, \n attention_output, _ = self.attention(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/transformer.py, line 1454, in construct, \n hidden_states = layer(",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/third_party/dynamic-parallel/mindformers/experimental/parallel_core/pynative/transformer/language_model.py, line 579, in construct, \n encoder_output = self.encoder(encoder_input,",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 2453, in _backward_hook_construct, \n outputs = self.construct(*outputs, **kwargs)",
+                "File /path_to_package/site-packages/mindspore/nn/cell.py, line 494, in _run_construct, \n output = self._backward_hook_construct(*inputs, **kwargs)",
+                "File /path_to_net/PanGu_ms/pangu/gpt_model.py, line 101, in construct, \n lm_output = self.language_model(tokens,",
+            ]
+        }
     def test_find_regard_scope(self):
         start_sign = "add"
         end_sign = "attention"
@@ -279,7 +567,7 @@ class TestModifyMapping(unittest.TestCase):
         expect_values = [(item.get("data_name"), item.get("construct_scope")) for item in expected_result]
         self.assertListEqual(actual_values, expect_values)
 
-    def test_get_dump_data_items_when_ms_valid_then_pass(self):
+    def test_get_dump_data_items_when_ms_functional_valid_then_pass(self):
         result = get_dump_data_items(
             self.ms_dump, self.ms_stack, self.ms_construct, Const.MS_FRAMEWORK)
         expected_result = [
@@ -299,8 +587,8 @@ class TestModifyMapping(unittest.TestCase):
                 "full_scope": "Cell.transformer_layers.0.attention.reshape"
             }
         ]
-        actual_values = [(res.data_name, res.construct_scope) for res in result]
-        expect_values = [(item.get("data_name"), item.get("construct_scope")) for item in expected_result]
+        actual_values = [(res.data_name, res.construct_scope, res.full_scope) for res in result]
+        expect_values = [(item.get("data_name"), item.get("construct_scope"), item.get("full_scope")) for item in expected_result]
         self.assertListEqual(actual_values, expect_values)
 
     def test_get_stack_in_lines_when_frame_func_then_pass(self):
@@ -311,3 +599,128 @@ class TestModifyMapping(unittest.TestCase):
     def test_find_stack_func_list_when_frame_func_then_pass(self):
         result = find_stack_func_list(self.frame_func_lines)
         self.assertEqual(result, (["copy"], []))
+
+    def test_get_dump_data_items_when_layer_and_mint_valid_then_pass(self):
+        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK)
+
+        expected_result = [
+            {
+                "data_name": "Functional.add.0.forward",
+                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+            },
+            {
+                "data_name": "Functional.add.4.forward",
+                "construct_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.ScaleMaskSoftmax.forward.0",
+                "full_scope": "Cell.transformer_layers.0.attention.core_attention.scale_mask_softmax.attn_mask_add.add"
+            },
+            {
+                "data_name": "Tensor.reshape.2.forward",
+                "construct_scope": "Cell.transformer_layers.0.attention.ParallelAttention.forward.0",
+                "full_scope": "Cell.transformer_layers.0.attention.reshape"
+            }
+        ]
+        actual_values = [(res.data_name, res.construct_scope, res.full_scope) for res in result]
+        expect_values = [(item.get("data_name"), item.get("construct_scope"), item.get("full_scope")) for item in expected_result]
+        self.assertListEqual(actual_values, expect_values)
+
+    # Test 2: stack and construct are empty
+    def test_get_dump_data_items_when_empty_construct_stack_then_pass(self):
+        dump = {
+            "data": {
+                "Functional.flash_attention_score.0.forward": {
+                "input_args": [
+                    {
+                        "type": "mindspore.Tensor",
+                        "dtype": "BFloat16",
+                        "shape": [
+                            4096,
+                            1,
+                            1536
+                        ],
+                        "Max": 3.671875,
+                        "Min": -3.765625,
+                        "Mean": -0.00072479248046875,
+                        "Norm": 1744.0
+                    },
+                    {
+                        "type": "mindspore.Tensor",
+                        "dtype": "BFloat16",
+                        "shape": [
+                            4096,
+                            1,
+                            1536
+                        ],
+                        "Max": 3.484375,
+                        "Min": -3.0625,
+                        "Mean": -0.00115966796875,
+                        "Norm": 1728.0
+                    },
+                    {
+                        "type": "mindspore.Tensor",
+                        "dtype": "BFloat16",
+                        "shape": [
+                            4096,
+                            1,
+                            1536
+                        ],
+                        "Max": 3.28125,
+                        "Min": -3.234375,
+                        "Mean": -0.001861572265625,
+                        "Norm": 1744.0
+                    },
+                    {
+                        "type": "int",
+                        "value": 12
+                    }
+                ],
+                }
+            }
+        }
+        stack = {}
+        construct = {}
+        framework = Const.MS_FRAMEWORK
+
+        result = get_dump_data_items(dump, stack, construct, framework)
+
+        self.assertEqual(result, [])
+
+    # Test 3: No data in dump
+    def test_get_dump_data_items_when_empty_dump_stack_then_pass(self):
+        dump = {}
+        stack = {}
+        construct = {
+            "Cell.network_with_loss.module.language_model.encoder.layers.0.attention.ParallelAttention.forward.0": "Cell.network_with_loss.module.language_model.encoder.layers.0.ParallelTransformerLayer.forward.0"
+        }
+        framework = Const.MS_FRAMEWORK
+
+        result = get_dump_data_items(dump, stack, construct, framework)
+
+        self.assertEqual(result, [])
+
+    # Test 4: output_path is provided, ensure file is saved
+    def test_get_dump_data_items_when_valid_with_output_path_then_pass(self, tmp_path):
+        output_path = tmp_path
+
+        result = get_dump_data_items(dump, stack, construct, framework, output_path)
+
+        # Check if file was saved
+        saved_file = tmp_path / "ms_data_mocked_time.yaml"
+        assert saved_file.exists()
+
+    # Test 5: Empty dump and output_path
+    def test_empty_dump_with_output_path(mock_dependencies, tmp_path):
+        dump = {}
+        stack = {
+            "Tensor.__add__.0.forward": ["stack data"]
+        }
+        construct = {
+            "Tensor.__add__.0.forward": "construct data"
+        }
+        framework = "ms"
+        output_path = tmp_path
+
+        result = get_dump_data_items(self.ms_dump_source, self.ms_stack_source, self.ms_construct_source, Const.MS_FRAMEWORK, output_path)
+        saved_file = os.path.join(tmp_path,  f"{Const.MS_FRAMEWORK}_data.yaml")
+        yaml_info = load_yaml(saved_file)
+        self.assertEqual(result, [])
