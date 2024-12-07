@@ -1,6 +1,5 @@
 # -------------------------------------------------------------------------
-# Copyright (c) Microsoft Corporation. All rights reserved.
-#
+# Copyright (c) Microsoft Corporation.
 # Copyright(c) 2023 Huawei Technologies.
 # All rights reserved
 #
@@ -25,9 +24,9 @@ from configparser import ConfigParser
 
 import setuptools
 
-
 config = ConfigParser()
-config.read('./config/config.ini')
+config.read('./torch_tb_profiler/config/config.ini')
+
 
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
@@ -97,7 +96,7 @@ setuptools.setup(
     },
     packages=setuptools.find_packages(),
     package_data={
-        "torch_tb_profiler": ["static/**"],
+        "torch_tb_profiler": ["static/**", "config/**"],
     },
     entry_points={
         "tensorboard_plugins": [

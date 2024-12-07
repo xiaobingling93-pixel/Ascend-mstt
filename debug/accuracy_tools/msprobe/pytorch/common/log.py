@@ -1,9 +1,21 @@
-import os
-import time
-import sys
-from msprobe.pytorch.common.utils import get_rank_if_initialized
-from msprobe.core.common.log import BaseLogger
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.common.log import BaseLogger
+from msprobe.pytorch.common.utils import get_rank_if_initialized
 
 
 class PyTorchLogger(BaseLogger):
@@ -16,17 +28,6 @@ class PyTorchLogger(BaseLogger):
         except DistributedNotInitializedError:
             current_rank = None
         return current_rank
-
-    def _print_log(self, level, msg, end='\n'):
-        current_rank = self.get_rank()
-        current_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        pid = os.getpid()
-        if current_rank is not None:
-            full_msg = f"{current_time} ({pid}) [rank {current_rank}] [{level}] {msg}"
-        else:
-            full_msg = f"{current_time} ({pid}) [{level}] {msg}"
-        print(full_msg, end=end)
-        sys.stdout.flush()
 
 
 logger = PyTorchLogger()

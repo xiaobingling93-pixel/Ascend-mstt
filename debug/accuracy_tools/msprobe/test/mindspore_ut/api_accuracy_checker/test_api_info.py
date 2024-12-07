@@ -21,6 +21,21 @@ class TestApiInfo(unittest.TestCase):
         """
         global_context.init(False, os.path.join(directory, "files"))
 
+    def test_get_kwargs_with_null(self):
+        # first load forward backward api_info
+        only_kwargs_api_info_dict = {
+            "input_kwargs": {
+                "approximate": None,
+            }
+        }
+        api_info = ApiInfo("only_input_kwargs_api")
+        api_info.load_forward_info(only_kwargs_api_info_dict)
+
+        self.assertTrue(api_info.check_forward_info())
+        kwargs_compute_element_dict = api_info.get_kwargs()
+        self.assertEqual(kwargs_compute_element_dict.get("approximate").get_parameter(), None)
+
+
     def test_get_compute_element_list(self):
         # first load forward backward api_info
         forward_api_info_dict = {
@@ -34,7 +49,7 @@ class TestApiInfo(unittest.TestCase):
                     ],
                     "Max": 3.0,
                     "Min": 1.0,
-                    "data_name": "input.npy",
+                    "data_name": "2_3_input.npy",
                 }
             ],
             "input_kwargs": {
@@ -53,7 +68,7 @@ class TestApiInfo(unittest.TestCase):
                     ],
                     "Max": 3.0,
                     "Min": 1.0,
-                    "data_name": "input.npy",
+                    "data_name": "2_3_input.npy",
                 }
             ],
         }

@@ -23,8 +23,8 @@ class OverallParser(object):
         @classmethod
         def create_from_statistics(cls, statistics: 'OverallParser.Statistics', total_duration: int):
             costs = [0.] * len(ProfileRole)
-            for i in range(len(statistics.cost_ranges)):
-                costs[i] = get_ranges_sum(statistics.cost_ranges[i])
+            for i, cost_range in enumerate(statistics.cost_ranges):
+                costs[i] = get_ranges_sum(cost_range)
             costs[ProfileRole.Total] = total_duration
             return cls(costs)
 
@@ -58,8 +58,8 @@ class OverallParser(object):
         def intersection_with_step(self, step: Tuple[int, int]):
             cost_ranges: List[List[Tuple[int, int]]] = []
             step = [step]
-            for range in self.cost_ranges:
-                cost_ranges.append(intersection_ranges_lists(step, range))
+            for cost_range in self.cost_ranges:
+                cost_ranges.append(intersection_ranges_lists(step, cost_range))
 
             return OverallParser.Statistics(cost_ranges)
 
@@ -77,6 +77,9 @@ class OverallParser(object):
 
     def aggregate(self, steps: List[Tuple[int, int]], role_ranges: List[List[Tuple[int, int]]]):
         logger.debug('Overall, statistics')
+        if len(steps) <= 0:
+            logger.error('Invalid steps number of 0')
+            return
         global_stats = OverallParser.Statistics.create_from_range(steps, role_ranges)
         if role_ranges[ProfileRole.Kernel]:
             comm_comp_overlap = intersection_ranges_lists(

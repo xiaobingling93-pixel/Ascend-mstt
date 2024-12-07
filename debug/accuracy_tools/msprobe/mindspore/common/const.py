@@ -1,7 +1,22 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import mindspore as ms
 
-from msprobe.core.common.const import Const as CoreCost
+from msprobe.core.common.const import Const as CoreConst
 
 
 class Const:
@@ -9,54 +24,79 @@ class Const:
     API = "api"
     KERNEL = "kernel"
     TOOL_LEVEL_DICT = {
-        CoreCost.LEVEL_L0: CELL,
-        CoreCost.LEVEL_L1: API,
-        CoreCost.LEVEL_L2: KERNEL
+        CoreConst.LEVEL_L0: CELL,
+        CoreConst.LEVEL_L1: API,
+        CoreConst.LEVEL_L2: KERNEL
     }
     PYNATIVE_MODE = "pynative"
     GRAPH_GE_MODE = "graph_ge"
     GRAPH_KBYK_MODE = "graph_kbyk"
+    JIT_LEVEL = "jit_level"
+    JIT_LEVEL_O0 = "O0"
+    JIT_LEVEL_O1 = "O1"
+    JIT_LEVEL_O2 = "O2"
+    ASCEND_910A = "ascend910"
+
+    OPS_PREFIX = "mindspore.ops."
+    TENSOR_PREFIX = "mindspore.Tensor."
+    MINT_PREFIX = "mindspore.mint."
+    MINT_NN_FUNC_PREFIX = "mindspore.mint.nn.functional."
+
+    TENSOR_DATA_PREFIX = "Tensor."
+    STUB_TENSOR_DATA_PREFIX = "Tensor."
+    OPS_DATA_PREFIX = "Functional."
+    MINT_DATA_PREFIX = "Mint."
+    MINT_NN_FUNC_DATA_PREFIX = "MintFunctional."
+    DISTRIBUTED_DATA_PREFIX = "Distributed."
+
+    SUPPORTED_API_LIST_FILE = "support_wrap_ops.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+    SUPPORTED_OPS_LIST_KEY = "ops"
+    SUPPORTED_MINT_LIST_KEY = "mint.ops"
+    SUPPORTED__MINT_NN_FUNC_LIST_KEY = "mint.nn.functional"
+    SUPPORTED_COMM_LIST_KEY = "communication.comm_func"
+
+    DROPOUT_API_NAME_PREFIX = "dropout"
+
+    GRAPH_DATA_MODE_LIST = [CoreConst.ALL, CoreConst.INPUT, CoreConst.OUTPUT]
+
+    HOOK_MS_PREFIX_DICT = {
+        OPS_DATA_PREFIX: OPS_PREFIX,
+        TENSOR_DATA_PREFIX: TENSOR_PREFIX,
+        MINT_DATA_PREFIX: MINT_PREFIX,
+        MINT_NN_FUNC_DATA_PREFIX: MINT_NN_FUNC_PREFIX
+    }
 
 
 class FreeBenchmarkConst:
-    DEFAULT_DEVICE = "npu"
-    DEFAULT_STAGE = "forward"
-    DEFAULT_DUMP_LEVEL = CoreCost.LEVEL_L1
-    DEFAULT_PERT_TYPE = "improve_precision"
-    DEFAULT_HANDLER_TYPE = "check"
-    FIX_HANDLER_MODE = "fix"
     ADD_NOISE = "add_noise"
     BIT_NOISE = "bit_noise"
     NO_CHANGE = "no_change"
+    EXCHANGE_VALUE = "change_value"
     IMPROVE_PRECISION = "improve_precision"
     CHECK = "check"
     FIX = "fix"
-    DEVICE_LIST = ["npu"]
-    STAGE_LIST = ["forward"]
-    DUMP_LEVEL_LIST = [CoreCost.LEVEL_L1]
-    PERT_TYPE_LIST = [IMPROVE_PRECISION, ADD_NOISE, BIT_NOISE, NO_CHANGE]
+    DEFAULT_DEVICE = "npu"
+    DEFAULT_STAGE = CoreConst.FORWARD
+    DEFAULT_DUMP_LEVEL = "L1"
+    DEFAULT_PERT_TYPE = IMPROVE_PRECISION
+    DEFAULT_HANDLER_TYPE = CHECK
+    DEVICE_LIST = [DEFAULT_DEVICE]
+    STAGE_LIST = [CoreConst.FORWARD, CoreConst.BACKWARD]
+    DUMP_LEVEL_LIST = [DEFAULT_DUMP_LEVEL]
+    PERT_TYPE_LIST = [IMPROVE_PRECISION, ADD_NOISE, BIT_NOISE, NO_CHANGE, EXCHANGE_VALUE]
     HANDLER_TYPE_LIST = [CHECK, FIX]
-    COMMUNICATION_API_LIST = [
-        "mindspore.communication.comm_func.all_gather_into_tensor",
-        "mindspore.communication.comm_func.gather_into_tensor",
-        "mindspore.communication.comm_func.all_reduce",
-        "mindspore.communication.comm_func.reduce",
-        "mindspore.communication.comm_func.reduce_scatter_tensor"
-        ]
     NO_CHANGE_ERROR_THRESHOLD = 1.0
     SYMBOL_FLIPPING_RATIO = 8.0
-    OPS_PREFIX = "mindspore.ops."
-    Tensor_PREFIX = "mindspore.Tensor."
-    MINT_PREFIX = "mindspore.mint."
-    MINT_NN_FUNC_PREFIX = "mindspore.mint.nn.functional."
-    COMM_PREFIX = "mindspore.communication.comm_func."
+
+    SUPPORTED_CHECK_API_FILE = "support_wrap_ops.yaml"
+    CHECK_RESULT_FILE = "free_benchmark.csv"
 
     API_PREFIX_DICT = {
-        "ops": OPS_PREFIX,
-        "Tensor": Tensor_PREFIX,
-        "mint": MINT_PREFIX,
-        "mint.nn.functional": MINT_NN_FUNC_PREFIX,
-        "communication": COMM_PREFIX
+        "ops": Const.OPS_PREFIX,
+        "Tensor": Const.TENSOR_PREFIX,
+        "mint": Const.MINT_PREFIX,
+        "mint.nn.functional": Const.MINT_NN_FUNC_PREFIX
     }
 
     PERT_VALUE_DICT = {
@@ -67,6 +107,7 @@ class FreeBenchmarkConst:
     }
 
     ERROR_THRESHOLD = {
+        ms.bfloat16: 1.004,
         ms.float16: 1.002,
         ms.float32: 1.0002
     }

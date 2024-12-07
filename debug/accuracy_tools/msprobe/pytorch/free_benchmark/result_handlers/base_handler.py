@@ -1,10 +1,26 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Tuple
-import numpy as np
 
+import numpy as np
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.exceptions import FreeBenchmarkException
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import ThresholdConfig
 from msprobe.pytorch.free_benchmark.common.enums import (
@@ -35,7 +51,9 @@ class FuzzHandler(ABC):
             origin_ouput = origin_ouput.values
             perturbed_output = perturbed_output.values
         if hasattr(perturbed_output, "dtype"):
-            abs_tol = ThresholdConfig.ABS_TOL_VALUE_DICT.get(perturbed_output.dtype, FuzzThreshold.F32_THD)
+            abs_tol = ThresholdConfig.ABS_TOL_VALUE_DICT.get(
+                perturbed_output.dtype, FuzzThreshold.F32_THD
+            )
         else:
             abs_tol = FuzzThreshold.F32_THD
         return (
@@ -53,16 +71,22 @@ class FuzzHandler(ABC):
         :return origin_output_chunks: 切块后原始输出列表
         :return perturbed_output_chunks: 切块后扰动后输出列表
         """
-        single_output_mem = origin_output.element_size() * origin_output.nelement() / Const.ONE_MB
+        single_output_mem = (
+            origin_output.element_size() * origin_output.nelement() / Const.ONE_MB
+        )
         if single_output_mem == 0 or origin_output.ndim == 0:
             return [origin_output], [perturbed_output]
         # 张量大小和批数之间的关系：chunks_exp=math.log(M,2)-4, chunks=2**chunks_exp (M为对比张量数据大小[Mb])
         chunks_exp = int(math.log(single_output_mem, 2)) - 4
-        chunks = 2 ** chunks_exp
+        chunks = 2**chunks_exp
         chunks = max(chunks, 1)
         chunks = min(chunks, ThresholdConfig.TENSOR_SPLIT_MAX_CHUNK)
-        origin_output_chunks = TorchC.tensor_split(TorchC.reshape(origin_output, (-1,)), chunks)
-        perturbed_output_chunks = TorchC.tensor_split(TorchC.reshape(perturbed_output, (-1,)), chunks)
+        origin_output_chunks = TorchC.tensor_split(
+            TorchC.reshape(origin_output, (-1,)), chunks
+        )
+        perturbed_output_chunks = TorchC.tensor_split(
+            TorchC.reshape(perturbed_output, (-1,)), chunks
+        )
         return origin_output_chunks, perturbed_output_chunks
 
     @staticmethod
@@ -80,14 +104,24 @@ class FuzzHandler(ABC):
         pass
 
     def get_ratio_from_specific_norm(
-            self, origin_output, perturbed_output, norm_type, abs_tol
+        self, origin_output, perturbed_output, norm_type, abs_tol
     ):
         if norm_type == NormType.ENDLESS_NORM:
             return self.calculate_error(origin_output, perturbed_output, abs_tol)
         return ThresholdConfig.COMP_CONSISTENT
 
     def calculate_error(self, origin_output, perturbed_output, abs_tol):
-        origin_output_chunks, perturbed_output_chunks = self.tensor_split_for_error_calculate(origin_output, perturbed_output)
+        origin_output_chunks, perturbed_output_chunks = (
+            self.tensor_split_for_error_calculate(origin_output, perturbed_output)
+        )
+        if len(origin_output_chunks) != len(perturbed_output_chunks):
+            err_msg = (
+                f"For {self.params.api_name}, the number of compare tensor chunks is different: "
+                f"{len(origin_output_chunks)} != {len(perturbed_output_chunks)}. please check!"
+            )
+            raise FreeBenchmarkException(
+                FreeBenchmarkException.OutputIndexError, err_msg
+            )
         norm1 = -np.inf
         norm2 = -np.inf
         norm3 = np.inf
@@ -95,11 +129,25 @@ class FuzzHandler(ABC):
             if chunk_origin.nelement() == 0:
                 break
             chunk_perturbed = perturbed_output_chunks[i]
-            ratio_tensor1 = TorchC.where(TorchC.abs(chunk_perturbed) > abs_tol,
-                                         TorchC.div(TorchC.clamp(chunk_origin, min=abs_tol), TorchC.clamp(chunk_perturbed, min=abs_tol)), 1)
-            ratio_tensor2 = TorchC.where(TorchC.abs(chunk_origin) > abs_tol,
-                                         TorchC.div(TorchC.clamp(chunk_perturbed, min=abs_tol), TorchC.clamp(chunk_origin, min=abs_tol)), 1)
-            norm_values = TorchC.stack([TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)])
+            ratio_tensor1 = TorchC.where(
+                TorchC.abs(chunk_perturbed) > abs_tol,
+                TorchC.div(
+                    TorchC.clamp(chunk_origin, min=abs_tol),
+                    TorchC.clamp(chunk_perturbed, min=abs_tol),
+                ),
+                1,
+            )
+            ratio_tensor2 = TorchC.where(
+                TorchC.abs(chunk_origin) > abs_tol,
+                TorchC.div(
+                    TorchC.clamp(chunk_perturbed, min=abs_tol),
+                    TorchC.clamp(chunk_origin, min=abs_tol),
+                ),
+                1,
+            )
+            norm_values = TorchC.stack(
+                [TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)]
+            )
             max_ratio1, max_ratio2 = norm_values.tolist()
             norm1 = max(norm1, self.convert_overflow_ratio_to_consistent(max_ratio1))
             norm2 = max(norm2, self.convert_overflow_ratio_to_consistent(max_ratio2))
@@ -126,13 +174,13 @@ class FuzzHandler(ABC):
         if self.params.fuzz_stage == Const.BACKWARD:
             abs_tol = ThresholdConfig.BACKWARD_OUTPUT_LOWER_BOUND
         else:
-            abs_tol = abs_tol ** 0.5
+            abs_tol = abs_tol**0.5
         return self.get_ratio_from_specific_norm(
             origin_output, perturbed_output, norm_type, abs_tol
         )
 
     def npu_compare(
-            self, origin_output, perturbed_output
+        self, origin_output, perturbed_output
     ) -> Tuple[bool, Optional[float]]:
 
         if isinstance(perturbed_output, int):
@@ -150,6 +198,7 @@ class FuzzHandler(ABC):
                 f"[msprobe] Free Benchmark: For {self.params.api_name} "
                 f"The compare for output type {type(perturbed_output)} is not supported"
             )
+            return True, 1
 
         threshold = self.get_threshold(Tools.get_first_tensor_dtype(origin_output))
         ratio = self.ratio_calculate(
@@ -189,7 +238,7 @@ class FuzzHandler(ABC):
                         max_fuzz_ratio if ratio is None else max(max_fuzz_ratio, ratio)
                     )
                     data_params.is_consistent = (
-                            is_consistent and data_params.is_consistent
+                        is_consistent and data_params.is_consistent
                     )
                     if not is_consistent and data_params.grad_unequal_flag:
                         self.unequal_rows.append(

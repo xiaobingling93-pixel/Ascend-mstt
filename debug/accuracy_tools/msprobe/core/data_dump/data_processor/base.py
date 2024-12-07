@@ -1,11 +1,28 @@
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import inspect
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, is_dataclass
 from typing import Tuple, Dict, Optional, Any
+
 import numpy as np
-from msprobe.core.common.log import logger
-from msprobe.core.common.utils import convert_tuple
+
 from msprobe.core.common.const import Const
+from msprobe.core.common.log import logger
+from msprobe.core.common.utils import convert_tuple, CompareException
 
 
 @dataclass
@@ -69,8 +86,11 @@ class TensorStatInfo:
 
 class BaseDataProcessor:
     _recursive_key_stack = []
-    special_type = (np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
-                    bool, int, float, str, slice)
+    special_type = (
+        np.integer, np.floating, np.bool_, np.complexfloating, np.str_, np.byte, np.unicode_,
+        bool, int, float, str, slice,
+        type(Ellipsis)
+    )
 
     def __init__(self, config, data_writer):
         self.data_writer = data_writer
@@ -79,34 +99,36 @@ class BaseDataProcessor:
         self.stack_info_struct = {}
         self.current_api_or_module_name = None
         self.api_data_category = None
-        self.has_overflow = False
         self.current_iter = 0
         self._return_forward_new_output = False
         self._forward_new_output = None
+        if hasattr(config, "data_mode"):
+            self.allowed_data_mode = self._get_allowed_data_mode(config.data_mode)
 
     @property
     def data_path(self):
         return self.data_writer.dump_tensor_data_dir
-    
+
     @property
     def is_terminated(self):
         return False
 
     @staticmethod
     def analyze_api_call_stack(name):
+        try:
+            api_stack = inspect.stack()[5:]
+        except Exception as e:
+            logger.warning(f"The call stack of <{name}> failed to retrieve, {e}.")
+            api_stack = None
         stack_str = []
-        for (_, path, line, func, code, _) in inspect.stack()[5:]:
-            if not code:
-                continue
-            stack_line = " ".join([
-                "File", ", ".join([
-                    path,
-                    " ".join(["line", str(line)]),
-                    " ".join(["in", func]),
-                    " ".join(["\n", code[0].strip()])
-                ])
-            ])
-            stack_str.append(stack_line)
+        if api_stack:
+            for (_, path, line, func, code, _) in api_stack:
+                if not code:
+                    continue
+                stack_line = f"File {path}, line {str(line)}, in {func}, \n {code[0].strip()}"
+                stack_str.append(stack_line)
+        else:
+            stack_str.append(Const.WITHOUT_CALL_STACK)
         stack_info_struct = {name: stack_str}
         return stack_info_struct
 
@@ -137,37 +159,92 @@ class BaseDataProcessor:
         return arg, ''
 
     @staticmethod
+    def _analyze_builtin(arg):
+        single_arg = {}
+        if isinstance(arg, slice):
+            # The slice parameter may be of the tensor, numpy or other types.
+            # It needs to be converted to the Python value type before JSON serialization
+            single_arg.update({"type": "slice"})
+            values = []
+            for value in [arg.start, arg.stop, arg.step]:
+                if value is not None:
+                    try:
+                        value = int(value)
+                    except ValueError:
+                        logger.warning(f"The data type {type(value)} cannot be converted to int type.")
+                        value = None
+                values.append(value)
+            single_arg.update({"value": values})
+        else:
+            single_arg.update({"type": type(arg).__name__})
+            # When arg is Ellipsis(...) type, it needs to be converted to str("...") type
+            single_arg.update({"value": arg if arg is not Ellipsis else "..."})
+        return single_arg
+
+    @staticmethod
     def _analyze_numpy(value, numpy_type):
         return {"type": numpy_type, "value": value}
+
+    @staticmethod
+    def _get_allowed_data_mode(data_mode):
+        if Const.ALL in data_mode:
+            allowed_data_mode = [Const.FORWARD, Const.BACKWARD, Const.INPUT, Const.OUTPUT]
+        else:
+            allowed_data_mode = list(set(data_mode))
+            if Const.FORWARD not in allowed_data_mode and Const.BACKWARD not in allowed_data_mode:
+                allowed_data_mode += [Const.FORWARD, Const.BACKWARD]
+            if Const.INPUT not in allowed_data_mode and Const.OUTPUT not in allowed_data_mode:
+                allowed_data_mode += [Const.INPUT, Const.OUTPUT]
+        return allowed_data_mode
 
     @classmethod
     def get_special_types(cls):
         return cls.special_type
 
     @classmethod
-    def recursive_apply_transform(cls, args, transform):
+    def recursive_apply_transform(cls, args, transform, depth=0):
+        if depth > Const.MAX_DEPTH:
+            logger.error(f"The maximum depth of recursive transform, {Const.MAX_DEPTH} is reached.")
+            raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
         if isinstance(args, cls.get_special_types()):
             arg_transform = transform(args, cls._recursive_key_stack)
             return arg_transform
+        elif isinstance(args, tuple) and hasattr(args, '_fields'):
+            # namedtuple to dict
+            args_dict = {field: getattr(args, field) for field in args._fields}
+            return cls.apply_transform_dict(args_dict, transform, depth)
+        elif is_dataclass(args):
+            # dataclass to dict
+            args_dict = {field: getattr(args, field) for field in args.__dataclass_fields__}
+            return cls.apply_transform_dict(args_dict, transform, depth)
         elif isinstance(args, (list, tuple)):
-            result_list = []
-            for i, arg in enumerate(args):
-                cls._recursive_key_stack.append(str(i))
-                result_list.append(cls.recursive_apply_transform(arg, transform))
-                cls._recursive_key_stack.pop()
+            result_list = cls.apply_transform_list(args, transform, depth)
             return type(args)(result_list)
         elif isinstance(args, dict):
-            resutl_dict = {}
-            for k, arg in args.items():
-                cls._recursive_key_stack.append(str(k))
-                resutl_dict[k] = cls.recursive_apply_transform(arg, transform)
-                cls._recursive_key_stack.pop()
-            return resutl_dict
+            return cls.apply_transform_dict(args, transform, depth)
         elif args is not None:
             logger.warning(f"Data type {type(args)} is not supported.")
             return None
         else:
             return None
+    
+    @classmethod
+    def apply_transform_dict(cls, args, transform, depth):
+        result_dict = {}
+        for k, arg in args.items():
+            cls._recursive_key_stack.append(str(k))
+            result_dict[k] = cls.recursive_apply_transform(arg, transform, depth=depth + 1)
+            cls._recursive_key_stack.pop()
+        return result_dict
+
+    @classmethod
+    def apply_transform_list(cls, args, transform, depth):
+        result_list = []
+        for i, arg in enumerate(args):
+            cls._recursive_key_stack.append(str(i))
+            result_list.append(cls.recursive_apply_transform(arg, transform, depth=depth + 1))
+            cls._recursive_key_stack.pop()
+        return result_list
 
     def if_return_forward_new_output(self):
         return self._return_forward_new_output
@@ -179,10 +256,9 @@ class BaseDataProcessor:
     def update_iter(self, current_iter):
         self.current_iter = current_iter
 
-    def visit_and_clear_overflow_status(self, api_or_module_name):
+    def update_api_or_module_name(self, api_or_module_name):
         if self.current_api_or_module_name != api_or_module_name:
             self.current_api_or_module_name = api_or_module_name
-            self.has_overflow = False
 
     def is_dump_for_data_mode(self, forward_backward, input_output):
         """
@@ -195,13 +271,11 @@ class BaseDataProcessor:
         Return:
             bool: True if the parameters are in data_mode or data_mode is all, False otherwise.
         """
-        return (Const.ALL in self.config.data_mode or
-                forward_backward in self.config.data_mode or
-                input_output in self.config.data_mode)
+        return forward_backward in self.allowed_data_mode and input_output in self.allowed_data_mode
 
     def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         pass
-    
+
     def analyze_element(self, element):
         return self.recursive_apply_transform(element, self.analyze_single_element)
 

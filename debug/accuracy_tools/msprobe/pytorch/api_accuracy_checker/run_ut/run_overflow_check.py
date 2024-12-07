@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import os
 import sys
@@ -11,12 +28,12 @@ else:
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api
-from msprobe.core.common.utils import get_json_contents
-from msprobe.core.common.file_check import check_link
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import exec_api, is_unsupported_api
+from msprobe.core.common.file_utils import check_link, FileChecker
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
+from msprobe.core.common.const import FileCheckConst, Const
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.parse_json import parse_json_info_forward_backward
-from msprobe.core.common.const import Const
 
 
 def check_tensor_overflow(x):
@@ -25,8 +42,8 @@ def check_tensor_overflow(x):
             tensor_max = x.cpu().detach().float().numpy().tolist()
             tensor_min = tensor_max
         else:
-            tensor_max = torch._C._VariableFunctionsClass.max(x).cpu().detach().float().numpy().tolist()
-            tensor_min = torch._C._VariableFunctionsClass.min(x).cpu().detach().float().numpy().tolist()
+            tensor_max = torch.max(x).cpu().detach().float().numpy().tolist()
+            tensor_min = torch.min(x).cpu().detach().float().numpy().tolist()
         # inf
         if tensor_max == float('inf') or tensor_min == float('-inf'):
             return True
@@ -58,23 +75,25 @@ def run_overflow_check(forward_file):
     logger.info("start UT test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
+        if is_unsupported_api(api_full_name, is_overflow_check=True):
+            continue
         try:
             run_torch_api(api_full_name, api_info_dict, real_data_path)
         except Exception as err:
             _, api_name, _ = api_full_name.split(Const.SEP)
             if "not implemented for 'Half'" in str(err):
-                logger.warning(f"API {api_name} not support half tensor in CPU, please add {api_name} to CONVERT_API "
-                               f"'fp16_to_fp32' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
+                logger.warning(f"API {api_name} not support half tensor in CPU. This API does not support overflow "
+                               "check, so it will be skipped.")
             elif "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
-                               f"'int32_to_int64' list in accuracy_tools/api_accuracy_check/common/utils.py file.")
+                               "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
 
 
 def run_torch_api(api_full_name, api_info_dict, real_data_path):
     torch.npu.clear_npu_overflow_flag()
-    api_type, api_name, _ = api_full_name.split(Const.SEP)
+    api_type, api_name = extract_basic_api_segments(api_full_name)
     args, kwargs, need_grad = get_api_info(api_info_dict, api_name, real_data_path)
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
@@ -82,8 +101,8 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get("device"):
         del kwargs["device"]
-    out = exec_api(api_type, api_name, args, kwargs)
-    npu_out = exec_api(api_type, api_name, npu_args, npu_kwargs)
+    out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
+    npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
     if out is None and npu_out is None:
         logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return
@@ -119,8 +138,9 @@ def _run_overflow_check(parser=None):
 def _run_overflow_check_command(args):
     torch.npu.set_compile_mode(jit_compile=args.jit_compile)
     npu_device = "npu:" + str(args.device_id)
-    check_link(args.api_info_file)
-    api_info = os.path.realpath(args.api_info_file)
+    api_info_file_checker = FileChecker(file_path=args.api_info_file, path_type=FileCheckConst.FILE, 
+                                            ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
+    api_info = api_info_file_checker.common_check()
     try:
         torch.npu.set_device(npu_device)
     except Exception as error:

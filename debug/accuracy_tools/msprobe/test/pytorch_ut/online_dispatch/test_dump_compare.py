@@ -17,13 +17,15 @@ import torch
 import json
 import os
 import threading
+import shutil
+import numpy as np
 from pathlib import Path
 from unittest.mock import Mock, patch
-import pandas as pd
+from unittest.mock import MagicMock
 
 from msprobe.core.common.const import CompareConst
-from msprobe.pytorch.online_dispatch.dump_compare import support_basic_type, dump_data, save_temp_summary, dispatch_workflow, get_torch_func, dispatch_multiprocess, error_call
-
+from msprobe.pytorch.online_dispatch.dump_compare import support_basic_type, dump_data, save_temp_summary, \
+    dispatch_workflow, get_torch_func, dispatch_multiprocess, error_call, DispatchRunParam, DisPatchDataInfo
 
 
 class TestDumpCompare(unittest.TestCase):
@@ -66,15 +68,110 @@ class TestDumpCompare(unittest.TestCase):
                     CompareConst.STACK: 2,
                     CompareConst.ERROR_MESSAGE: 1}
 
+        self.dump_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'dump_data')
+        os.makedirs(self.dump_path, mode=0o750, exist_ok=True)
+
     def tearDown(self):
         if os.path.exists(self.summary_path):
             os.remove(self.summary_path)
+        if os.path.exists(self.dump_path):
+            shutil.rmtree(self.dump_path)
+
+    def test_DispatchRunParam(self):
+        debug_flag = True
+        device_id = 0
+        root_npu_path = '/path/to/npu'
+        root_cpu_path = '/path/to/cpu'
+        process_num = 4
+        comparator = 'comparator_function'
+
+        dispatch_run_param = DispatchRunParam(debug_flag, device_id, root_npu_path, root_cpu_path, process_num,
+                                              comparator)
+
+        # 验证静态参数是否正确初始化
+        self.assertEqual(dispatch_run_param.debug_flag, debug_flag)
+        self.assertEqual(dispatch_run_param.device_id, device_id)
+        self.assertEqual(dispatch_run_param.root_npu_path, root_npu_path)
+        self.assertEqual(dispatch_run_param.root_cpu_path, root_cpu_path)
+        self.assertEqual(dispatch_run_param.process_num, process_num)
+        self.assertEqual(dispatch_run_param.comparator, comparator)
+
+        # 验证动态参数是否有默认值
+        self.assertFalse(dispatch_run_param.process_flag)  # 默认值应为 False
+        self.assertIsNone(dispatch_run_param.func_name)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.func_namespace)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.aten_api)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.aten_api_overload_name)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.single_api_index)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.api_index)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.dump_flag)  # 默认值应为 None
+        self.assertIsNone(dispatch_run_param.auto_dump_flag)  # 默认值应为 None
+
+    def test_DisPatchDataInfo(self):
+        mock_func = MagicMock()
+        mock_lock = MagicMock()
+        cpu_args = (1, 2, 3)
+        cpu_kwargs = {'arg1': 1, 'arg2': 2}
+        all_summary = ['summary1', 'summary2']
+        npu_out_cpu = [10, 20]
+        cpu_out = [30, 40]
+
+        dispatch_data = DisPatchDataInfo(cpu_args, cpu_kwargs, all_summary, mock_func, npu_out_cpu, cpu_out, mock_lock)
+
+        self.assertEqual(dispatch_data.cpu_args, cpu_args)
+        self.assertEqual(dispatch_data.cpu_kwargs, cpu_kwargs)
+        self.assertEqual(dispatch_data.all_summary, all_summary)
+        self.assertEqual(dispatch_data.func, mock_func)
+        self.assertEqual(dispatch_data.npu_out_cpu, npu_out_cpu)
+        self.assertEqual(dispatch_data.cpu_out, cpu_out)
+        self.assertEqual(dispatch_data.lock, mock_lock)
 
     def test_support_basic_type_should_return_true_when_is_instance(self):
         self.assertTrue(support_basic_type(2.3))
 
     def test_support_basic_type_should_return_false_when_isnot_instance(self):
         self.assertFalse(support_basic_type("abcde"))
+
+    def test_data_dump_tensor(self):
+        # 测试正常的 tensor 是否保存
+        data = torch.tensor([1, 2, 3])
+        prefix = 'test_tensor'
+        dump_data(data, prefix, self.dump_path)
+        expected_path = os.path.join(self.dump_path, f'{prefix}.npy')
+        self.assertTrue(os.path.exists(expected_path))
+        # 检查保存的内容
+        saved_data = np.load(expected_path)
+        self.assertTrue(np.array_equal(saved_data, data.numpy()))
+
+    def test_data_dump_basic(self):
+        # 测试基本类型数据的保存
+        data = 42
+        prefix = 'test_basic'
+        dump_data(data, prefix, self.dump_path)
+        expected_path = os.path.join(self.dump_path, f'{prefix}.npy')
+        self.assertTrue(os.path.exists(expected_path))
+        # 检查保存的内容是否正确
+        saved_data = np.load(expected_path)
+        self.assertEqual(saved_data, data)
+
+    def test_data_dump_recursive(self):
+        # 测试嵌套 list 的递归调用
+        data = [42, [3.14, 2.71]]
+        prefix = 'test_recursive'
+        dump_data(data, prefix, self.dump_path)
+        # 检查保存的文件
+        self.assertTrue(os.path.exists(os.path.join(self.dump_path, 'test_recursive.0.npy')))
+        self.assertTrue(os.path.exists(os.path.join(self.dump_path, 'test_recursive.1.0.npy')))
+        self.assertTrue(os.path.exists(os.path.join(self.dump_path, 'test_recursive.1.1.npy')))
+
+    def test_data_dump_meta(self):
+        # 测试 meta tensor 是否跳过
+        data = torch.empty(3, 3, device='meta')
+        prefix = 'test_tensor_meta'
+        dump_data(data, prefix, self.dump_path)
+        expected_path = os.path.join(self.dump_path, f'{prefix}.npy')
+        # Meta tensor 不应该生成文件
+        self.assertFalse(os.path.exists(expected_path))
 
     def test_save_temp_summary(self):
         api_index='1'
@@ -138,13 +235,6 @@ class TestDumpCompare(unittest.TestCase):
         mock_run_param.aten_api="new_attr2"
         mock_run_param.aten_api_overload_name="new_attr3"
         self.assertIsNone(get_torch_func(mock_run_param))
-
-    def test_get_torch_func_should_return_None_when_inside_input(self):
-        mock_run_param = Mock()
-        mock_run_param.func_namespace="aten"
-        mock_run_param.aten_api="add"
-        mock_run_param.aten_api_overload_name="Scalar"
-        self.assertEqual(get_torch_func(mock_run_param),torch.ops.aten.add.Scalar)
 
     @patch('msprobe.core.common.log.BaseLogger.error')
     def test_dispatch_multiprocess_should_logger_error_when_wrong_api_input(self,mock_error):

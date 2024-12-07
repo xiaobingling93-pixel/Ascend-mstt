@@ -1,3 +1,18 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import stat
 
@@ -8,21 +23,34 @@ class Const:
     """
     Class for const
     """
+    TOOL_NAME = "msprobe"
+
+    ipv4_pattern = "([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])(\.([1-9]?\d|1\d{2}|2[0-4]\d|25[0-5])){3}$"
     SEP = "."
     REGEX_PREFIX_MAX_LENGTH = 20
     REGEX_PREFIX_PATTERN = r"^[a-zA-Z0-9_-]+$"
     FILE_PATTERN = r'^[a-zA-Z0-9_./-]+$'
+    STRING_BLACKLIST = r"^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]"
     COMMA = ","
     FLOAT_EPSILON = np.finfo(float).eps
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    PROGRESS_TIMEOUT = 3000
+    EXCEPTION_NONE = None
+    JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
     DEFAULT_PATH = './'
     WHITE_LIST = 'white_list'
     BLACK_LIST = 'black_list'
     DUMP_TENSOR_DATA = 'dump_tensor_data'
+    NONE = None
+    THREE_SEGMENT = 3
+    FOUR_SEGMENT = 4
+    SIX_SEGMENT = 6
+    SEVEN_SEGMENT = 7
+    MAX_DEPTH = 10
 
     # dump mode
     ALL = "all"
@@ -71,6 +99,8 @@ class Const:
     RUN_UT = "run_ut"
     GRAD_PROBE = "grad_probe"
     TASK_LIST = [TENSOR, STATISTICS, OVERFLOW_CHECK, FREE_BENCHMARK, RUN_UT, GRAD_PROBE]
+    DUMP_DATA_COLLECTION_LIST = [STATISTICS, TENSOR]
+    DUMP_DATA_MODE_LIST = [ALL, INPUT, OUTPUT, FORWARD, BACKWARD]
     LEVEL_L0 = "L0"
     LEVEL_L1 = "L1"
     LEVEL_L2 = "L2"
@@ -82,17 +112,52 @@ class Const:
     DATA = "data"
     PT_FRAMEWORK = "pytorch"
     MS_FRAMEWORK = "mindspore"
+    UNKNOWN_FRAMEWORK = "unknown"
     DIRECTORY_LENGTH = 4096
     FILE_NAME_LENGTH = 255
     FLOAT_TYPE = [np.half, np.single, float, np.double, np.float64, np.longdouble, np.float32, np.float16]
     BOOL_TYPE = [bool, np.uint8]
     INT_TYPE = [np.int32, np.int64]
     NPU = 'NPU'
+    NPU_LOWERCASE = 'npu'
+    CPU_LOWERCASE = 'cpu'
+    CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+    DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
+                   "Aten", "VF", "NPU", "Jit"]
 
+    # struct json param
+    ORIGIN_DATA = "origin_data"
+    SCOPE = "scope"
+    STACK = "stack"
+
+    ATEN = "Aten"
+    MODULE_WHITE_LIST = ["torch", "numpy"]
+
+    FUNC_SKIP_LIST = ["construct", "__call__"]
+    FILE_SKIP_LIST = ["msprobe", "MindSpeed"]
+    DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
+
+    STACK_FILE_INDEX = 0
+    STACK_FUNC_INDEX = 2
+    STACK_FUNC_ELE_INDEX = 1
+
+    SCOPE_ID_INDEX = -1
+    SCOPE_DIRECTION_INDEX = -2
+    TYPE_NAME_INDEX = -3
+    LAYER_NAME_INDEX = -4
+    API_TYPE_INDEX = 0
+    LEFT_MOVE_INDEX = -1
+    RIGHT_MOVE_INDEX = 1
+
+    TOP_LAYER = "TopLayer"
+    CELL = "Cell"
+    MODULE = "Module"
+    FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
-        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all"
+        "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
+        "all_gather_into_tensor", "reduce_scatter_tensor"
     ]
 
     CONVERT = {
@@ -102,6 +167,31 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+
+    FILL_CHAR_NUMS = 50
+    TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
+    WITHOUT_CALL_STACK = "The call stack retrieval failed."
+
+    STEP = "step"
+    RANK = "rank"
+    HYPHEN = "-"
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
+
+    # data type const
+    FLOAT16 = "Float16"
+    FLOAT32 = "Float32"
+    BFLOAT16 = "BFloat16"
+    TORCH_FLOAT16 = "torch.float16"
+    TORCH_FLOAT32 = "torch.float32"
+    TORCH_BFLOAT16 = "torch.bfloat16"
+
+    DTYPE = 'dtype'
+    SHAPE = 'shape'
+    MAX = 'Max'
+    MIN = 'Min'
+    MEAN = 'Mean'
+    NORM = 'Norm'
 
 
 class CompareConst:
@@ -143,6 +233,19 @@ class CompareConst:
     NPU_MD5 = "NPU MD5"
     BENCH_MD5 = "BENCH MD5"
     RESULT = "Result"
+    MAGNITUDE = 0.5
+    OP_NAME = "op_name"
+    STRUCT = "struct"
+    INPUT_STRUCT = "input_struct"
+    KWARGS_STRUCT = "kwargs_struct"
+    OUTPUT_STRUCT = "output_struct"
+    SUMMARY = "summary"
+    MAX_EXCEL_LENGTH = 1048576
+    YES = "Yes"
+    NO = "No"
+    STATISTICS_INDICATOR_NUM = 4
+    EPSILON = 1e-10
+    COMPARE_ENDS_SUCCESSFULLY = "msprobe compare ends successfully."
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -159,6 +262,12 @@ class CompareConst:
     MD5_COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
+
+    HEAD_OF_COMPARE_MODE = {
+        Const.ALL: COMPARE_RESULT_HEADER,
+        Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
+        Const.MD5: MD5_COMPARE_RESULT_HEADER
+    }
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -179,8 +288,12 @@ class CompareConst:
     PASS = 'pass'
     WARNING = 'Warning'
     ERROR = 'error'
+    TRUE = 'TRUE'
+    FALSE = 'FALSE'
     SKIP = 'SKIP'
     N_A = 'N/A'
+    INF = 'inf'
+    NEG_INF = '-inf'
     BFLOAT16_MIN = -3.3895313892515355e+38
     BFLOAT16_MAX = 3.3895313892515355e+38
     BFLOAT16_EPS = 3.90625e-3  # 2 ** -8
@@ -188,6 +301,7 @@ class CompareConst:
     # accuracy standards
     COS_THRESHOLD = 0.99
     MAX_ABS_ERR_THRESHOLD = 0.001
+    MAX_RELATIVE_ERR_THRESHOLD = 0.001
     COS_MAX_THRESHOLD = 0.9
     MAX_ABS_ERR_MAX_THRESHOLD = 1
     ACCURACY_CHECK_YES = "Yes"
@@ -205,6 +319,10 @@ class CompareConst:
     YELLOW = "FFFF00"
     BLUE = "0000FF"
 
+    # run_ut const
+    MAX_TOKENS = 65536
+    SPECIAL_SPARSE_MOED = 4
+
     # highlight rules const
     OVERFLOW_LIST = ['nan\t', 'inf\t', '-inf\t', 'nan', 'inf', '-inf']
     MAX_DIFF_RED = 1e+10
@@ -216,6 +334,26 @@ class CompareConst:
     MAX_RELATIVE_OUT_RED = 0.5
     MAX_RELATIVE_OUT_YELLOW = 0.1
     MAX_RELATIVE_IN_YELLOW = 0.01
+    MS_GRAPH_BASE = {
+        NPU_NAME: None, BENCH_NAME: None, NPU_DTYPE: None, BENCH_DTYPE: None, NPU_SHAPE: None, BENCH_SHAPE: None,
+        NPU_MAX: None, NPU_MIN: None, NPU_MEAN: None, NPU_NORM: None, BENCH_MAX: None, BENCH_MIN: None,
+        BENCH_MEAN: None, BENCH_NORM: None, ACCURACY: '', ERROR_MESSAGE: ''
+    }
+    MS_GRAPH_NPY = {
+        COSINE: None, MAX_ABS_ERR: None, MAX_RELATIVE_ERR: None, ONE_THOUSANDTH_ERR_RATIO: None,
+        FIVE_THOUSANDTHS_ERR_RATIO: None
+    }
+    MS_GRAPH_STATISTIC = {
+        MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
+        MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
+    }
+    INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+    KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
+    OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+    COMPARE_KEY = 'compare_key'
+    COMPARE_SHAPE = 'compare_shape'
+    INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+    UNREADABLE = 'unreadable data'
 
 
 class FileCheckConst:
@@ -240,7 +378,8 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 10 * 1024 * 1024
+    MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
     DATA_DIR_AUTHORITY = 0o750
@@ -253,19 +392,111 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
+    CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
 
 class OverflowConst:
     """
     Class for Overflow
     """
-    OVERFLOW_DEBUG_MODE_ENABLE = "OVERFLOW_DEBUG_MODE_ENABLE"
     OVERFLOW_ORIGINAL_MODE = 0
     OVERFLOW_DEBUG_MODE = 1
+
+
+class MsCompareConst:
+    # api_info field
+    MINT = "Mint"
+    MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+
+    API_NAME_STR_LENGTH = 4
+
+    TASK_FIELD = "task"
+    STATISTICS_TASK = "statistics"
+    TENSOR_TASK = "tensor"
+    DUMP_DATA_DIR_FIELD = "dump_data_dir"
+    DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
+
+    # detail_csv
+    DETAIL_CSV_API_NAME = "API Name"
+    DETAIL_CSV_BENCH_DTYPE = "Bench Dtype"
+    DETAIL_CSV_TESTED_DTYPE = "Tested Dtype"
+    DETAIL_CSV_SHAPE = "Shape"
+    DETAIL_CSV_PASS_STATUS = "Status"
+    DETAIL_CSV_MESSAGE = "Message"
+    DETAIL_CSV_FILE_NAME = "accuracy_checking_details"
+
+    # result_csv
+    RESULT_CSV_FORWARD_TEST_SUCCESS = "Forward Test Success"
+    RESULT_CSV_BACKWARD_TEST_SUCCESS = "Backward Test Success"
+    RESULT_CSV_FILE_NAME = "accuracy_checking_result"
+
+    EPSILON = 1e-8
 
 
 class MsgConst:
     """
     Class for log messages const
     """
+    MSPROBE_LOG_LEVEL = "MSPROBE_LOG_LEVEL"
+    LOG_LEVEL_ENUM = ["0", "1", "2", "3", "4"]
+    LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR"]
+
+    class LogLevel:
+        class DEBUG:
+            value = 0
+
+        class INFO:
+            value = 1
+
+        class WARNING:
+            value = 2
+
+        class ERROR:
+            value = 3
+
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+    NOT_CREATED_INSTANCE = "PrecisionDebugger instance is not created."
+
+
+class GraphMode:
+    NPY_MODE = "NPY_MODE"
+    STATISTIC_MODE = "STATISTIC_MODE"
+    ERROR_MODE = "ERROR_MODE"
+
+
+class MonitorConst:
+    """
+    Class for monitor const
+    """
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
+    MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
+    DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
+    DATABASE = "database"
+    EMAIL = "email"
+    OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage0", "DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
+    RULE_NAME = ['AnomalyTurbulence']
+
+    DOT = "."
+    VPP_SEP = ":"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
+    POST_GRAD = "post_grad"
+    PRE_GRAD = "pre_grad"
+    PREFIX_POST = "post"
+    PREFIX_PRE = "pre"
+
+
+    ANOMALY_JSON = "anomaly.json"
+    ANALYSE_JSON = "anomaly_analyse.json"
+    TENSORBOARD = "tensorboard"
+    CSV = "csv"
+    API = "api"

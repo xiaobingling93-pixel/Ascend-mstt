@@ -1,88 +1,127 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import math
 import abc
+import re
 from collections import namedtuple
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
-from msprobe.core.common.utils import get_header_index, save_workbook
+from tqdm import tqdm
+from msprobe.core.common.utils import get_header_index
+from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import CompareConst, FileCheckConst, Const
+from msprobe.core.common.utils import safe_get_value
 
 
 class HighlightCheck(abc.ABC):
     @abc.abstractmethod
-    def apply(self, info, color_columns, summary_compare):
+    def apply(self, info, color_columns, dump_mode):
         raise NotImplementedError
+
+
+def add_highlight_row_info(color_list, num, highlight_err_msg):
+    for i, (existing_num, existing_err_msg) in enumerate(color_list):
+        if num == existing_num:
+            color_list[i][1].append(highlight_err_msg)
+            return
+    color_list.append((num, [highlight_err_msg]))
 
 
 class CheckOrderMagnitude(HighlightCheck):
     """检查Max diff的数量级差异"""
-    def apply(self, info, color_columns, summary_compare=True):
+    def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                          else CompareConst.MAX_ABS_ERR, dump_mode)
         if abs(api_in[max_diff_index]) > abs(api_out[max_diff_index]):
             return
         in_order = 0 if abs(api_in[max_diff_index]) < 1 else math.log10(abs(api_in[max_diff_index]))
         out_order = 0 if abs(api_out[max_diff_index]) < 1 else math.log10(abs(api_out[max_diff_index]))
         if out_order - in_order >= CompareConst.ORDER_MAGNITUDE_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "maximum absolute error of both input and output exceed 1, "
+                                   "with the output larger by an order of magnitude")
 
 
 class CheckOneThousandErrorRatio(HighlightCheck):
     """检查千分误差比率"""
-    def apply(self, info, color_columns, summary_compare=True):
+    def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        one_thousand_index = get_header_index('One Thousandth Err Ratio', summary_compare)
-        if not isinstance(api_in[one_thousand_index], (float, int)) or not isinstance(api_out[one_thousand_index], (float, int)):
+        one_thousand_index = get_header_index(CompareConst.ONE_THOUSANDTH_ERR_RATIO, dump_mode)
+        if (not isinstance(api_in[one_thousand_index], (float, int)) or
+                not isinstance(api_out[one_thousand_index], (float, int))):
             return
-        if api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED:
-            color_columns.red.append(num)
+        if (api_in[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_IN_RED and
+                api_out[one_thousand_index] < CompareConst.ONE_THOUSAND_ERROR_OUT_RED):
+            add_highlight_row_info(color_columns.red, num,
+                                   "The input's one thousandth err ratio exceeds 0.9, while the output's is below 0.6")
         elif api_in[one_thousand_index] - api_out[one_thousand_index] > CompareConst.ONE_THOUSAND_ERROR_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's one thousandth err ratio decreases by more than 0.1 "
+                                   "compared to the input's")
 
 
 class CheckCosineSimilarity(HighlightCheck):
     """检查余弦相似度"""
-    def apply(self, info, color_columns, summary_compare=True):
+    def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        cosine_index = get_header_index('Cosine', summary_compare)
+        cosine_index = get_header_index(CompareConst.COSINE, dump_mode)
         if not isinstance(api_in[cosine_index], (float, int)) or not isinstance(api_out[cosine_index], (float, int)):
             return
         if api_in[cosine_index] - api_out[cosine_index] > CompareConst.COSINE_DIFF_YELLOW:
-            color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's cosine decreases by more than 0.1 compared to the input's")
 
 
 class CheckMaxRelativeDiff(HighlightCheck):
     """检查最大相对差异"""
-    def apply(self, info, color_columns, summary_compare=True):
+    def apply(self, info, color_columns, dump_mode):
         api_in, api_out, num = info
-        max_diff_index = get_header_index('Max diff', summary_compare)
-        bench_max_index = get_header_index('Bench max', summary_compare)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
+        bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
         input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
         output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(0.01, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
         if output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_RED:
-            color_columns.red.append(num)
-        elif output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW:
-            color_columns.yellow.append(num)
+            add_highlight_row_info(color_columns.red, num, "maximum relative error exceeds 0.5")
+        elif (output_max_relative_diff > CompareConst.MAX_RELATIVE_OUT_YELLOW and
+              input_max_relative_diff < CompareConst.MAX_RELATIVE_IN_YELLOW):
+            add_highlight_row_info(color_columns.yellow, num,
+                                   "The output's maximum relative error exceeds 0.1, while the input's is below 0.01")
 
 
 class CheckOverflow(HighlightCheck):
     """检查是否存在溢出"""
-    def apply(self, info, color_columns, summary_compare=True):
+    def apply(self, info, color_columns, dump_mode):
         line, num = info
-        npu_max_index = get_header_index('NPU max', summary_compare)
-        npu_min_index = get_header_index('NPU min', summary_compare)
-        max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+        npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
+        npu_min_index = get_header_index(CompareConst.NPU_MIN, dump_mode)
+        max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                          else CompareConst.MAX_ABS_ERR, dump_mode)
         if str(line[npu_max_index]) in CompareConst.OVERFLOW_LIST or str(
                 line[npu_min_index]) in CompareConst.OVERFLOW_LIST:
-            color_columns.red.append(num)
+            add_highlight_row_info(color_columns.red, num, "maximum or minimum is nan, -inf, or inf")
             return
         # check if Max_Diff > 1e+10
-        if isinstance(line[max_diff_index], (float, int)) and line[max_diff_index] > CompareConst.MAX_DIFF_RED:
-            color_columns.red.append(num)
+        if isinstance(line[max_diff_index], (float, int)) and abs(line[max_diff_index]) > CompareConst.MAX_DIFF_RED:
+            add_highlight_row_info(color_columns.red, num, "maximum absolute error exceeds 1e+10")
 
 
 class HighlightRules:
@@ -104,13 +143,14 @@ class HighlightRules:
     }
     
 
-def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compare=False, md5_compare=False):
+def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
     """找到单个API中需要高亮的行"""
-    if md5_compare:
+    if dump_mode == Const.MD5:
         return
-    npu_max_index = get_header_index('NPU max', summary_compare)
-    bench_max_index = get_header_index('Bench max', summary_compare)
-    max_diff_index = get_header_index('Max diff' if summary_compare else 'MaxAbsErr', summary_compare)
+    npu_max_index = get_header_index(CompareConst.NPU_MAX, dump_mode)
+    bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
+    max_diff_index = get_header_index(CompareConst.MAX_DIFF if dump_mode == Const.SUMMARY
+                                      else CompareConst.MAX_ABS_ERR, dump_mode)
 
     red_lines, yellow_lines = [], []
     LineInfo = namedtuple('LineInfo', ['line_data', 'num_pointer'])
@@ -123,7 +163,7 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compa
         num = last_len + i
         line_info = LineInfo(line_data=line, num_pointer=num)
         for rule in HighlightRules.basic_rules.values():
-            rule.apply(line_info, color_columns, summary_compare)
+            rule.apply(line_info, color_columns, dump_mode)
 
     # 对API的输出与输入比较，进行误差判断
     for n, api_out in enumerate(result[n_num_input:len(result)]):
@@ -141,36 +181,42 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, summary_compa
                 continue
 
             api_info = ApiInfo(api_input=api_in, api_output=api_out, num_pointer=num)
-            if summary_compare:
+            if dump_mode == Const.SUMMARY:
                 for rule in HighlightRules.summary_compare_rules.values():
-                    rule.apply(api_info, color_columns, summary_compare)
+                    rule.apply(api_info, color_columns, dump_mode)
             else:
                 for rule in HighlightRules.compare_rules.values():
-                    rule.apply(api_info, color_columns, summary_compare)
+                    rule.apply(api_info, color_columns, dump_mode)
 
-    highlight_dict.get('red_rows', []).extend(list(set(red_lines)))
-    highlight_dict.get('yellow_rows', []).extend(list(set(yellow_lines) - set(red_lines)))
+    red_lines_num_set = {x[0] for x in red_lines}
+    yellow_lines_num_set = {x[0] for x in yellow_lines}
+    highlight_dict.get('red_rows', set()).update(red_lines_num_set)
+    highlight_dict.get('yellow_rows', set()).update(yellow_lines_num_set - red_lines_num_set)
+    highlight_dict.get('red_lines', []).extend(red_lines)
+    highlight_dict.get('yellow_lines', []).extend(yellow_lines)
 
 
 def get_name_and_state(name):
     """Get api/module name and state"""
-    if "input" in name:
-        api_name = name.split("input")[0]
-        state = "input"
+    if Const.INPUT in name:
+        api_name = name.split(Const.INPUT)[0]
+        state = Const.INPUT
     else:
-        api_name = name.split("output")[0]
-        state = "output"
+        api_name = name.split(Const.OUTPUT)[0]
+        state = Const.OUTPUT
     return api_name, state
 
 
-def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, md5_compare):
+def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     """将dataframe根据API分组，并找到有误差的算子用于高亮"""
     result = result_df.values
     start, input_num, output_num, end = 0, 0, 0, len(result_df)
     last_api_name, last_state = None, None
     num, last_len = 0, 0
+    progress_bar = tqdm(total=len(result), desc="API/Module Analyse Progress", unit="item", ncols=100)
     for res_i in result:
-        api_name, state = get_name_and_state(res_i[0])
+        api_full_name = safe_get_value(res_i, 0, "res_i")
+        api_name, state = get_name_and_state(api_full_name)
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
@@ -181,42 +227,102 @@ def find_compare_result_error_rows(result_df, highlight_dict, summary_compare, m
             else:
                 output_num = num
                 find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                                summary_compare, md5_compare)
+                                dump_mode)
                 num, last_api_name, last_state = 1, api_name, state
                 start += input_num + output_num
                 input_num, output_num = 1, 0
         else:
             num, last_api_name, last_state = 1, api_name, state
+        progress_bar.update(1)
+    progress_bar.close()
     if state:
-        if state == "input":
+        if state == Const.INPUT:
             input_num = num
         else:
             output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict, summary_compare, md5_compare)
+        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
+                        dump_mode)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
-    logger.info('Compare result is %s' % file_path)
+
+    update_highlight_err_msg(result_df, highlight_dict)     # add highlight err_msg
 
     wb = openpyxl.Workbook()
     ws = wb.active
 
     # write header
+    logger.info('Initializing Excel file.')
     for j, col_name in enumerate(result_df.columns, start=1):
+        if not csv_value_is_valid(col_name):
+            raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
         ws.cell(row=1, column=j, value=col_name)
 
     for i, row in enumerate(result_df.iterrows(), start=2):
         for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)):
+            if not isinstance(value, (float, int)) or isinstance(value, bool):
                 value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
+            if not csv_value_is_valid(value):
+                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
+                                   f"{file_path}.")
             ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
-
-            if (i - 2) in highlight_dict['red_rows']:
-                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.RED,
-                                                            end_color=CompareConst.RED, fill_type="solid")
-            elif (i - 2) in highlight_dict['yellow_rows']:
-                ws.cell(row=i, column=j).fill = PatternFill(start_color=CompareConst.YELLOW,
-                                                            end_color=CompareConst.YELLOW, fill_type="solid")
-
+    
+    # 对可疑数据标色
+    logger.info('Coloring Excel in progress.')
+    col_len = len(result_df.columns)
+    red_fill = PatternFill(
+        start_color=CompareConst.RED, end_color=CompareConst.RED, fill_type="solid"
+    )
+    yellow_fill = PatternFill(
+        start_color=CompareConst.YELLOW, end_color=CompareConst.YELLOW, fill_type="solid",
+    )
+    for i in highlight_dict.get("red_rows", []):
+        for j in range(1, col_len + 1):
+            ws.cell(row=i + 2, column=j).fill = red_fill
+    for i in highlight_dict.get("yellow_rows", []):
+        for j in range(1, col_len + 1):
+            ws.cell(row=i + 2, column=j).fill = yellow_fill
+    logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
+
+
+def update_highlight_err_msg(result_df, highlight_dict):
+    if result_df.shape[1] <= 1:
+        return
+
+    if CompareConst.NPU_MD5 in result_df.columns:
+        return
+
+    err_msg = result_df.get(CompareConst.ERROR_MESSAGE)
+    red_lines_num_set = highlight_dict.get('red_rows')
+
+    for color in ['red', 'yellow']:
+        line_key = f'{color}_lines'
+        lines = highlight_dict.get(line_key, [])
+        for line_index, messages in lines:
+            if color == 'yellow' and line_index in red_lines_num_set:
+                continue  # 如果是 yellow 行，且已被 red 行覆盖，跳过
+
+            for msg in messages:
+                if err_msg[line_index] == '':
+                    err_msg[line_index] = msg
+                else:
+                    err_msg[line_index] += '\n' + msg
+
+            if color == 'red':
+                red_lines_num_set.add(line_index)
+
+    result_df[CompareConst.ERROR_MESSAGE] = err_msg
+
+
+def csv_value_is_valid(value: str) -> bool:
+    if not isinstance(value, str):
+        return True
+    try:
+        # -1.00 or +1.00 should be consdiered as digit numbers
+        float(value)
+    except ValueError:
+        # otherwise, they will be considered as formular injections
+        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+    return True

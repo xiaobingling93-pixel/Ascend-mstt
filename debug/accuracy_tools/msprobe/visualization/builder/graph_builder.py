@@ -1,0 +1,165 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import re
+from msprobe.visualization.graph.graph import Graph
+from msprobe.visualization.graph.node_op import NodeOp
+from msprobe.visualization.utils import save_json_file, GraphConst
+from msprobe.visualization.builder.msprobe_adapter import get_input_output
+from msprobe.core.common.file_utils import load_json
+
+
+class GraphBuilder:
+    @staticmethod
+    def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
+        """
+        GraphBuilder的对外提供的构图方法
+        Args:
+            construct_path: construct.json路径
+            data_path: dump.json路径
+            stack_path: stack.json路径
+            model_name: 模型名字，依赖外部输入
+        Returns: Graph，代表图的数据结构
+        """
+        construct_dict = load_json(construct_path)
+        dump_dict = load_json(data_path)
+        stack_dict = load_json(stack_path)
+        data_dict = dump_dict.get(GraphConst.DATA_KEY, {})
+        graph = Graph(model_name, data_path=dump_dict.get('dump_data_dir', ''), dump_data=data_dict)
+        GraphBuilder._init_nodes(graph, construct_dict, data_dict, stack_dict)
+        GraphBuilder._collect_apis_between_modules(graph)
+        return graph
+
+    @staticmethod
+    def to_json(filename, config):
+        """
+        将graph导出成.vis文件的接口
+        """
+        result = {}
+        if config.graph_b:
+            result[GraphConst.JSON_NPU_KEY] = config.graph_n.to_dict()
+            result[GraphConst.JSON_BENCH_KEY] = config.graph_b.to_dict()
+        else:
+            result = config.graph_n.to_dict()
+        if config.tool_tip:
+            result[GraphConst.JSON_TIP_KEY] = config.tool_tip
+        if config.node_colors:
+            result[GraphConst.COLORS] = config.node_colors
+        if config.micro_steps:
+            result[GraphConst.MICRO_STEPS] = config.micro_steps
+        if config.task:
+            result[GraphConst.JSON_TASK_KEY] = config.task
+        save_json_file(filename, result)
+
+    @staticmethod
+    def _handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id):
+        """
+        如果backward节点的父级节点是null，则尝试从同名的forward节点寻找父级节点
+        """
+        # 匹配以.backward.后跟一个或多个数字结尾的模式
+        backward_pattern = r"(\.backward\.)(\d+)$"
+        forward_pattern = r"(\.forward\.)(\d+)$"
+        if re.search(backward_pattern, subnode_id) and not upnode_id:
+            forward_upnode_id = construct_dict.get(re.sub(backward_pattern, r".forward.\2", subnode_id))
+            if forward_upnode_id:
+                new_upnode_id = re.sub(forward_pattern, r".backward.\2", forward_upnode_id)
+                if new_upnode_id in construct_dict:
+                    return new_upnode_id
+        return upnode_id
+
+    @staticmethod
+    def _init_nodes(graph, construct_dict, data_dict, stack_dict):
+        for subnode_id, upnode_id in construct_dict.items():
+            upnode_id = GraphBuilder._handle_backward_upnode_missing(construct_dict, subnode_id, upnode_id)
+            if upnode_id:
+                upnode_op = NodeOp.get_node_op(upnode_id)
+                upnode = GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], upnode_op, upnode_id)
+            else:
+                upnode = graph.root
+            node_op = NodeOp.get_node_op(subnode_id)
+            GraphBuilder._create_or_get_node(graph, [data_dict, stack_dict], node_op, subnode_id, upnode)
+
+    @staticmethod
+    def _create_or_get_node(graph, data_stack_list, op, name, upnode=None):
+        if name in graph.node_map:
+            node = graph.get_node(name)
+        else:
+            graph.add_node(op, name, upnode)
+            node = graph.get_node(name)
+            node_data = data_stack_list[0].get(name, {})
+            node_stack_info = data_stack_list[1].get(name, [])
+            # 添加输入输出数据
+            input_data, output_data = get_input_output(node_data, node.id)
+            # 更新数据
+            node.set_input_output(input_data, output_data)
+            node.stack_info = node_stack_info
+        # 添加节点
+        node.add_upnode(upnode)
+        return node
+
+    @staticmethod
+    def _collect_apis_between_modules(graph):
+        """
+        图首次展开，这些首层节点包含许多module和api，api数量很多导致图被拉得很长严重影响查阅，因此将module之间的apis收集起来成为节点
+        Args:
+            graph: 模型结构
+
+        Returns: None
+        """
+        i = 0
+        output = []
+        node_list = graph.root.subnodes
+        while i < len(node_list):
+            current_node = node_list[i]
+
+            # 当前节点为api，检查后续是否还有api
+            if current_node.op == NodeOp.function_api:
+                temp_nodes = [current_node]
+                i += 1
+                while i < len(node_list) and node_list[i].op == NodeOp.function_api:
+                    temp_nodes.append(node_list[i])
+                    i += 1
+
+                # 检查api节点是否大于等于2个
+                if len(temp_nodes) >= 2:
+                    # 创建新节点，将这些api节点放入新节点的subnodes属性
+                    node_id = graph.add_node(NodeOp.api_collection, GraphConst.APIS_BETWEEN_MODULES,
+                                             id_accumulation=True)
+                    api_collection_node = graph.get_node(node_id)
+                    api_collection_node.subnodes = temp_nodes
+                    # 重新确立父子关系
+                    for node in temp_nodes:
+                        node.upnode = api_collection_node
+                    api_collection_node.upnode = graph.root
+                    output.append(api_collection_node)
+                else:
+                    # 如果连续的api节点不足2个，将它们原样添加到输出列表
+                    output.extend(temp_nodes)
+            else:
+                # 如果当前节点为module，直接添加到输出列表
+                output.append(current_node)
+                i += 1
+
+        graph.root.subnodes = output
+
+
+class GraphExportConfig:
+    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task=''):
+        self.graph_n = graph_n
+        self.graph_b = graph_b
+        self.tool_tip = tool_tip
+        self.node_colors = node_colors
+        self.micro_steps = micro_steps
+        self.task = task

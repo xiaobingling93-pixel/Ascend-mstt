@@ -1,15 +1,29 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 from typing import List
 
 from tqdm import tqdm
-import pandas as pd
 import matplotlib.pyplot as plt
 
-from msprobe.core.common.utils import check_file_or_directory_path, check_path_before_create
-from msprobe.core.common.file_check import create_directory
+from msprobe.core.common.file_utils import create_directory, check_file_or_directory_path
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import remove_path, write_csv, load_npy
+from msprobe.core.common.file_utils import remove_path, load_npy, write_csv, read_csv
 from msprobe.core.grad_probe.constant import GradConst
+from msprobe.core.grad_probe.utils import plt_savefig
 
 
 class GradComparator:
@@ -21,7 +35,7 @@ class GradComparator:
                 continue
             if not os.path.exists(os.path.join(path2, summary_file)):
                 continue
-            summary_csv = pd.read_csv(os.path.join(path1, summary_file))
+            summary_csv = read_csv(os.path.join(path1, summary_file))
             return summary_csv["param_name"]
         raise RuntimeError("no matched grad_summary.csv for comparison, please dump data in same configuration")
     
@@ -34,6 +48,8 @@ class GradComparator:
 
     @classmethod
     def compare_distributed(cls, path1: str, path2: str, output_dir: str):
+        check_file_or_directory_path(path1, isdir=True)
+        check_file_or_directory_path(path2, isdir=True)
         ranks = cls._get_matched_dirs(path1, path2, "rank")
         logger.info(f"the following ranks will be compared: {ranks}")
         if not ranks:
@@ -90,11 +106,7 @@ class GradComparator:
                 create_directory(picture_dir)
             fig_save_path = os.path.join(picture_dir, f"{key}_similarities.png")
 
-            check_path_before_create(fig_save_path)
-            try:
-                plt.savefig(fig_save_path)
-            except Exception as e:
-                raise RuntimeError(f"save plt figure {fig_save_path} failed") from e
+            plt_savefig(fig_save_path)
             plt.close()
 
             result.append([key] + value)

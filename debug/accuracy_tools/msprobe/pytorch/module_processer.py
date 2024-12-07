@@ -1,10 +1,25 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from functools import wraps
 
 import torch
+from msprobe.core.common.const import Const
+from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope
 from torch.utils.hooks import BackwardHook
 
-from msprobe.core.common.const import Const
-from msprobe.core.data_dump.scope import ModuleRangeScope
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
@@ -15,10 +30,7 @@ class ModuleProcesser:
     module_node = {}
 
     def __init__(self, scope):
-        if isinstance(scope, ModuleRangeScope):
-            self.scope = scope
-        else:
-            self.scope = None
+        self.scope = scope if isinstance(scope, (ModuleRangeScope, MixRangeScope)) else None
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)

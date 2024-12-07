@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""
+
 import os
 
 from unittest import TestCase
@@ -25,7 +24,7 @@ from msprobe.mindspore.overflow_check.kernel_graph_overflow_check import KernelG
 
 
 class TestKernelGraphOverflowCheck(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_handle(self, _):
         json_config = {
             "task": "overflow_check",
@@ -43,10 +42,9 @@ class TestKernelGraphOverflowCheck(TestCase):
         self.assertEqual(checker.dump_json["common_dump_settings"]["op_debug_mode"], 2)
 
         os.environ["MS_ACL_DUMP_CFG_PATH"] = "path"
-        with patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.make_dump_path_if_not_exists"), \
-             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.FileOpen"), \
-             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.json.dump"), \
-             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.logger.info"):
+        with patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.create_directory"), \
+             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.logger.info"), \
+             patch("msprobe.mindspore.overflow_check.kernel_graph_overflow_check.save_json") as mock_save_json:
 
             os.environ["GRAPH_OP_RUN"] = "1"
             with self.assertRaises(Exception) as context:
@@ -56,6 +54,7 @@ class TestKernelGraphOverflowCheck(TestCase):
                 del os.environ["GRAPH_OP_RUN"]
 
             checker.handle()
+            self.assertIn("kernel_graph_overflow_check.json", mock_save_json.call_args_list[0][0][0])
             self.assertIn("kernel_graph_overflow_check.json", os.environ.get("MINDSPORE_DUMP_CONFIG"))
             self.assertEqual(os.environ.get("MS_ACL_DUMP_CFG_PATH"), None)
 

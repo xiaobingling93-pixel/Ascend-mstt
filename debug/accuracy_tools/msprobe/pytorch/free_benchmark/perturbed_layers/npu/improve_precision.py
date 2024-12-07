@@ -1,5 +1,21 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import torch
 from msprobe.core.common.const import Const
+from msprobe.core.common.utils import recursion_depth_decorator
 from msprobe.pytorch.free_benchmark import logger
 from msprobe.pytorch.free_benchmark.common.constant import CommonField
 from msprobe.pytorch.free_benchmark.common.enums import PerturbationMode
@@ -11,6 +27,9 @@ from msprobe.pytorch.free_benchmark.perturbed_layers.npu.npu_base_layser import 
 
 class ImprovePrecisionLayer(NpuBaseLayer):
 
+    @recursion_depth_decorator(
+        "FreeBenchmark: ImprovePrecisionLayer.improve_tensor_precision"
+    )
     def improve_tensor_precision(self, tensor_obj):
         if (
             isinstance(tensor_obj, torch.Tensor)

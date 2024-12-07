@@ -1,3 +1,20 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
 import math
 import os
@@ -7,7 +24,7 @@ from collections import namedtuple
 import torch
 import pandas as pd
 
-from msprobe.core.common.utils import write_csv
+from msprobe.core.common.file_utils import write_csv, read_csv
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
@@ -16,18 +33,19 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
     check_inf_or_nan
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
-from msprobe.core.common.file_check import FileChecker, change_mode, check_path_before_create, create_directory
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
+from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
-from msprobe.core.common.const import CompareConst, FileCheckConst, Const
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 
 CompareConfig = namedtuple('CompareConfig', ['npu_csv_path', 'gpu_csv_path', 'result_csv_path', 'details_csv_path'])
-BenchmarkInf_Nan_Consistency = namedtuple('BenchmarkInf_Nan_Consistency', ['small_value_inf_nan_consistency', 
+BenchmarkInfNanConsistency = namedtuple('BenchmarkInfNanConsistency', ['small_value_inf_nan_consistency', 
                                                                            'rmse_inf_nan_consistency', 
                                                                            'max_rel_inf_nan_consistency', 
                                                                            'mean_rel_inf_nan_consistency', 
                                                                            'eb_inf_nan_consistency'])
-unsupported_message = 'This data type does not support benchmark compare.'
+UNSUPPORTED_MESSAGE = 'This data type does not support benchmark compare.'
 
 DEFAULT_THRESHOLD = 1
 
@@ -153,11 +171,11 @@ class BenchmarkStandard(Standard):
         self.rmse_status = self._get_status(self.rmse_ratio, 'rmse') if rmse_inf_nan_consistency \
             else CompareConst.ERROR
         self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency \
-            else CompareConst.ERROR
+        self.max_rel_err_status = self._get_status(
+             self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency else CompareConst.ERROR
         self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency \
-            else CompareConst.ERROR
+        self.mean_rel_err_status = self._get_status(
+            self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency else CompareConst.ERROR
         self.check_result_list.append(self.mean_rel_err_status)
         self.eb_status = self._get_status(self.eb_ratio, 'eb')
         if CompareConst.ERROR in self.check_result_list:
@@ -186,7 +204,8 @@ class BenchmarkStandard(Standard):
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
         self.compare_message += max_rel_message
-        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(ApiPrecisionCompareColumn.MEAN_REL_ERR,
+        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(
+                                        ApiPrecisionCompareColumn.MEAN_REL_ERR,
                                         self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
         self.compare_message += mean_rel_message
@@ -195,8 +214,9 @@ class BenchmarkStandard(Standard):
                                         self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
         self.compare_message += eb_message
         
-        return BenchmarkInf_Nan_Consistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
-                                            max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency, eb_inf_nan_consistency)
+        return BenchmarkInfNanConsistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
+                                          max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency,
+                                          eb_inf_nan_consistency)
 
 
 class ULPStandard(Standard):
@@ -268,12 +288,12 @@ def api_precision_compare(config):
     logger.info(f"Compare task result will be saved in {config.result_csv_path}")
     logger.info(f"Compare task detail will be saved in {config.details_csv_path}")
     try:
-        npu_data = pd.read_csv(config.npu_csv_path)
+        npu_data = read_csv(config.npu_csv_path)
     except Exception as err:
         logger.error(f"Open npu csv Error: %s" % str(err))
     check_csv_columns(npu_data.columns, "npu_csv")
     try:
-        gpu_data = pd.read_csv(config.gpu_csv_path)
+        gpu_data = read_csv(config.gpu_csv_path)
     except Exception as err:
         logger.error(f"Open gpu csv Error: %s" % str(err))
     check_csv_columns(gpu_data.columns, "gpu_csv")
@@ -291,8 +311,10 @@ def api_precision_compare(config):
 
 def online_api_precision_compare(online_config):
     rank = online_config.rank
-    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
-    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace("_rank*.csv", f"_rank{rank}.csv")
+    result_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.result_csv_path).replace(
+                    "_rank*.csv", f"_rank{rank}.csv")
+    details_csv_path = os.path.join(Const.DEFAULT_PATH, online_config.details_csv_path).replace(
+                    "_rank*.csv", f"_rank{rank}.csv")
     detail_csv_title = [ApiPrecisionCompareColumn.get_detail_csv_title()]
     result_csv_title = [ApiPrecisionCompareColumn.get_result_csv_title()]
     if not os.path.exists(result_csv_path):
@@ -314,13 +336,23 @@ def online_api_precision_compare(online_config):
 def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
     last_api_name, last_api_dtype, last_api_full_name = None, None, None
+    last_api_skip_message = ''
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
         full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
         row_gpu = gpu_data[gpu_data[ApiPrecisionCompareColumn.API_NAME] == full_api_name_with_direction_status]
-        api_type, api_name, api_nums, direction_status, _, _ = full_api_name_with_direction_status.split(Const.SEP)
-        api_full_name = Const.SEP.join([api_type, api_name, api_nums])
+        api_name, api_full_name, direction_status = extract_detailed_api_segments(full_api_name_with_direction_status)
+        if not api_full_name:
+            err_message = f"The API name {full_api_name_with_direction_status} is invalid."
+            logger.error(err_message)
+            compare_column.api_name = full_api_name_with_direction_status
+            compare_column.compare_result = CompareConst.SKIP
+            compare_column.compare_message = err_message
+            write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
+            write_csv([[full_api_name_with_direction_status, CompareConst.SKIP, CompareConst.SKIP, err_message]], 
+                      config.result_csv_path)
+            continue
         if row_gpu.empty:
             logger.warning(f'This API : {full_api_name_with_direction_status} does not exist in the GPU data.')
             continue
@@ -329,50 +361,38 @@ def analyse_csv(npu_data, gpu_data, config):
             raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
         row_gpu = row_gpu.iloc[0]
         new_status = CompareConst.SPACE
-        # 当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
-        if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
+        try:
+            new_status = get_api_status(row_npu, row_gpu, api_name, compare_column)
+        except Exception as err:
+            logger.error(f"Get api status error: {str(err)}")
             compare_column.api_name = full_api_name_with_direction_status
             compare_column.compare_result = CompareConst.SKIP
-            compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
-            new_status = CompareConst.SKIP
+            compare_column.compare_message = str(err)
             write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
-        else:
-            compare_column.api_name = full_api_name_with_direction_status
-            if api_name in thousandth_standard_api:
-                new_status = record_thousandth_threshold_result(compare_column, row_npu)
-            elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or \
-                api_name in binary_standard_api:
-                new_status = record_binary_consistency_result(api_name, compare_column, row_npu)                            
-            elif api_name in absolute_standard_api:
-                new_status = record_absolute_threshold_result(compare_column, row_npu)
-            elif api_name in ulp_standard_api and \
-                row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
-                us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-                new_status = record_ulp_compare_result(compare_column, us)
-            elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
-                bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-                new_status = record_benchmark_compare_result(compare_column, bs)
-            write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
+            write_csv([[full_api_name_with_direction_status, CompareConst.SKIP, CompareConst.SKIP, str(err)]], 
+                      config.result_csv_path)
+            continue
+        
+        write_detail_csv(compare_column.to_column_value(), config.details_csv_path)
 
-        if last_api_name is not None and api_name != last_api_name:
+        if last_api_name is not None and api_full_name != last_api_name:
             if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
-                message = unsupported_message
-                write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-                print_test_success(api_full_name, "skip", "skip")
-                forward_status, backward_status = [], []
-                message = ''
+                message = UNSUPPORTED_MESSAGE
+                write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
+                print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
                 message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+                message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
-                print_test_success(api_full_name, forward_result, backward_result)
-                forward_status, backward_status = [], []
-                message = ''
+                print_test_success(last_api_name, forward_result, backward_result)
+                last_api_skip_message = ''
+            forward_status, backward_status = [], []
+            message = ''
 
         is_supported = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in API_PRECISION_COMPARE_UNSUPPORT_LIST
-        last_api_name = api_name
-        last_api_full_name = api_full_name
+        last_api_name = api_full_name
 
         last_api_dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
         if not is_supported:
@@ -380,6 +400,8 @@ def analyse_csv(npu_data, gpu_data, config):
 
         if direction_status == 'forward':
             forward_status.append(new_status)
+            last_api_skip_message = str(row_npu[ApiPrecisionCompareColumn.MESSAGE]) if new_status == CompareConst.SKIP \
+                                    else ''
         elif direction_status == 'backward':
             backward_status.append(new_status)
         else:
@@ -387,15 +409,44 @@ def analyse_csv(npu_data, gpu_data, config):
 
     if last_api_name is not None:
         if last_api_dtype in API_PRECISION_COMPARE_UNSUPPORT_LIST:
-            message = unsupported_message
-            write_csv([[last_api_name, "skip", "skip", message]], config.result_csv_path)
-            print_test_success(last_api_full_name, "skip", "skip")
+            message = UNSUPPORTED_MESSAGE
+            write_csv([[last_api_name, CompareConst.SKIP, CompareConst.SKIP, message]], config.result_csv_path)
+            print_test_success(last_api_name, CompareConst.SKIP, CompareConst.SKIP)
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
             message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+            message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
-            print_test_success(last_api_full_name, forward_result, backward_result)
+            print_test_success(last_api_name, forward_result, backward_result)
+            last_api_skip_message = ''
+
+
+def get_api_status(row_npu, row_gpu, api_name, compare_column):
+    full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
+    # 当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
+    if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
+        compare_column.api_name = full_api_name_with_direction_status
+        compare_column.compare_result = CompareConst.SKIP
+        compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
+        new_status = CompareConst.SKIP
+    else:
+        compare_column.api_name = full_api_name_with_direction_status
+        if api_name in thousandth_standard_api:
+            new_status = record_thousandth_threshold_result(compare_column, row_npu)
+        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or \
+            api_name in binary_standard_api:
+            new_status = record_binary_consistency_result(api_name, compare_column, row_npu)
+        elif api_name in absolute_standard_api:
+            new_status = record_absolute_threshold_result(compare_column, row_npu)
+        elif api_name in ulp_standard_api and \
+            row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
+            us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+            new_status = record_ulp_compare_result(compare_column, us)
+        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
+            bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
+            new_status = record_benchmark_compare_result(compare_column, bs)
+    return new_status
 
 
 def print_test_success(api_full_name, forward_result, backward_result):
@@ -551,8 +602,7 @@ def _api_precision_compare(parser=None):
 def _api_precision_compare_command(args):
     npu_csv_path = get_validated_result_csv_path(args.npu_csv_path, 'detail')
     gpu_csv_path = get_validated_result_csv_path(args.gpu_csv_path, 'detail')
-    out_path = os.path.realpath(args.out_path) if args.out_path else "./"
-    check_path_before_create(out_path)
+    out_path = args.out_path if args.out_path else Const.DEFAULT_PATH
     create_directory(out_path)
     out_path_checker = FileChecker(out_path, FileCheckConst.DIR, ability=FileCheckConst.WRITE_ABLE)
     out_path = out_path_checker.common_check()
@@ -570,7 +620,7 @@ def _api_precision_compare_parser(parser):
     parser.add_argument("-gpu", "--gpu_csv_path", dest="gpu_csv_path", default="", type=str,
                         help="<Required> Accuracy_checking_details.csv generated on the GPU by using the "
                              "api_accuracy_checker tool.",
-                        required=False)
+                        required=True)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The api precision compare task result out path.",
                         required=False)

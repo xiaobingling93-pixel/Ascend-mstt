@@ -1,6 +1,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import os
+from collections import namedtuple
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 import numpy as np
 from msprobe.core.common.log import logger
@@ -91,6 +94,23 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(np.str_('test')), ('test', 'str_'))
         self.assertEqual(BaseDataProcessor._convert_numpy_to_builtin(5), (5, ''))
 
+    def test_analyze_builtin(self):
+        result = self.processor._analyze_builtin(slice(1, 10, 2))
+        expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(slice(1, np.int64(10), np.int64(2)))
+        expected = {'type': 'slice', 'value': [1, 10, 2]}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(...)
+        expected = {'type': 'ellipsis', 'value': "..."}
+        self.assertEqual(result, expected)
+
+        result = self.processor._analyze_builtin(1)
+        expected = {'type': 'int', 'value': 1}
+        self.assertEqual(result, expected)
+
     def test_analyze_numpy(self):
         result = BaseDataProcessor._analyze_numpy(5, 'int32')
         self.assertEqual(result, {'type': 'int32', 'value': 5})
@@ -100,7 +120,23 @@ class TestBaseDataProcessor(unittest.TestCase):
 
     def test_recursive_apply_transform(self):
         transform = lambda x, _: x * 2
+        Test = namedtuple("Test", ['a'])
+        myNamedTuple = Test(1)
+        @dataclass
+        class MyDataClass:
+            last_hidden_state: int = None
+            hidden_states: Optional[Tuple[int, ...]] = None
+            attentions: Optional[Tuple[int, ...]] = None
+        
+        myData = MyDataClass(
+            last_hidden_state=1,
+            hidden_states=(2, 3),
+            attentions=(4, 5)
+        )
+        expected_dataclass_res = {'last_hidden_state': 2, 'hidden_states': (4, 6), 'attentions': (8,10)}
         self.assertEqual(BaseDataProcessor.recursive_apply_transform(2, transform), 4)
+        self.assertEqual(BaseDataProcessor.recursive_apply_transform(myData, transform), expected_dataclass_res)
+        self.assertEqual(BaseDataProcessor.recursive_apply_transform(myNamedTuple, transform), {'a': 2})
         self.assertEqual(BaseDataProcessor.recursive_apply_transform([1, 2], transform), [2, 4])
         self.assertEqual(BaseDataProcessor.recursive_apply_transform((1, 2), transform), (2, 4))
         self.assertEqual(BaseDataProcessor.recursive_apply_transform({'a': 1}, transform), {'a': 2})
@@ -125,21 +161,34 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.processor.update_iter(5)
         self.assertEqual(self.processor.current_iter, 5)
 
-    def test_visit_and_clear_overflow_status(self):
-        self.processor.has_overflow = True
-        self.processor.visit_and_clear_overflow_status("new_api")
-        self.assertFalse(self.processor.has_overflow)
+    def test_update_api_or_module_name(self):
+        self.processor.update_api_or_module_name("new_api")
         self.assertEqual(self.processor.current_api_or_module_name, "new_api")
 
     def test_is_dump_for_data_mode(self):
         self.config.data_mode = ["all"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["forward"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertTrue(self.processor.is_dump_for_data_mode("forward", "input"))
+
         self.config.data_mode = ["backward"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
         self.assertFalse(self.processor.is_dump_for_data_mode("forward", "input"))
+
+        self.config.data_mode = ["forward", "input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
+        self.assertFalse(self.processor.is_dump_for_data_mode("forward", "output"))
+
+        self.config.data_mode = ["forward", "input"]
+        self.processor.allowed_data_mode = self.processor._get_allowed_data_mode(self.config.data_mode)
+        self.assertFalse(self.processor.is_dump_for_data_mode("backward", "input"))
 
     @patch.object(BaseDataProcessor, 'analyze_element')
     def test_analyze_forward(self, mock_analyze_element):

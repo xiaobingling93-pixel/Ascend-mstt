@@ -1,10 +1,28 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
 import os
 import math
 
 import torch
 
-from msprobe.core.common.utils import CompareException, load_yaml
+from msprobe.core.common.utils import CompareException
+from msprobe.core.common.file_utils import load_yaml
 from msprobe.core.common.const import Const
 from msprobe.pytorch.common.log import logger
 
@@ -31,7 +49,8 @@ threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
 apis_threshold = load_yaml(threshold_yaml_path)
 
 
-DETAIL_TEST_ROWS = [[
+DETAIL_TEST_ROWS = [
+            [
             "API Name", "Bench Dtype", "DEVICE Dtype", "Shape",
             "余弦相似度",
             "最大绝对误差",
@@ -52,7 +71,8 @@ DETAIL_TEST_ROWS = [[
             "ULP误差大于阈值占比",
             "Status",
             "Message"
-        ]]
+            ]
+        ]
 
 
 precision_configs = {
@@ -153,11 +173,11 @@ class ApiPrecisionCompareColumn:
     def to_required_columns():
         return [ApiPrecisionCompareColumn.API_NAME, ApiPrecisionCompareColumn.DEVICE_DTYPE, 
                 ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE, ApiPrecisionCompareColumn.RMSE, 
-                ApiPrecisionCompareColumn.MAX_REL_ERR, ApiPrecisionCompareColumn.MEAN_REL_ERR, ApiPrecisionCompareColumn.EB,
-                ApiPrecisionCompareColumn.ERROR_RATE, ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, 
-                ApiPrecisionCompareColumn.REL_ERR_RATIO, ApiPrecisionCompareColumn.ABS_ERR_RATIO, 
-                ApiPrecisionCompareColumn.MEAN_ULP_ERR, ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
-                ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
+                ApiPrecisionCompareColumn.MAX_REL_ERR, ApiPrecisionCompareColumn.MEAN_REL_ERR,
+                ApiPrecisionCompareColumn.EB, ApiPrecisionCompareColumn.ERROR_RATE, 
+                ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO, ApiPrecisionCompareColumn.REL_ERR_RATIO, 
+                ApiPrecisionCompareColumn.ABS_ERR_RATIO, ApiPrecisionCompareColumn.MEAN_ULP_ERR, 
+                ApiPrecisionCompareColumn.ULP_ERR_PROPORTION, ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
 
     @staticmethod
     def get_detail_csv_title():
@@ -174,7 +194,8 @@ class ApiPrecisionCompareColumn:
                 ApiPrecisionCompareColumn.MEAN_ULP_ERR, ApiPrecisionCompareColumn.ULP_ERR_PROPORTION, 
                 ApiPrecisionCompareColumn.ULP_ERR_PROPORTION_RATIO, ApiPrecisionCompareColumn.ULP_ERR_STATUS,
                 ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH, ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH_STATUS,
-                ApiPrecisionCompareColumn.FINAL_RESULT, ApiPrecisionCompareColumn.ALGORITHM, ApiPrecisionCompareColumn.MESSAGE]
+                ApiPrecisionCompareColumn.FINAL_RESULT, ApiPrecisionCompareColumn.ALGORITHM, 
+                ApiPrecisionCompareColumn.MESSAGE]
     
     @staticmethod
     def get_result_csv_title():

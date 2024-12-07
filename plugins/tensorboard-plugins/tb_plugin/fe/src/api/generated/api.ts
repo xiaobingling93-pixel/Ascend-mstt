@@ -15,7 +15,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- * 
+ *
  * Modifications: Add visualization of PyTorch Ascend profiling.
  *--------------------------------------------------------------------------------------------*/
 
@@ -33,11 +33,11 @@
  * Do not edit the file manually.
  */
 
-import * as url from 'url'
-import * as portableFetch from 'portable-fetch'
-import { Configuration } from './configuration'
+import * as url from 'url';
+import * as portableFetch from 'portable-fetch';
+import { Configuration } from './configuration';
 
-const BASE_PATH = '.'.replace(/\/+$/, '')
+const BASE_PATH = '.'.replace(/\/+$/, '');
 
 /**
  *
@@ -47,8 +47,8 @@ export const COLLECTION_FORMATS = {
   csv: ',',
   ssv: ' ',
   tsv: '\t',
-  pipes: '|'
-}
+  pipes: '|',
+};
 
 /**
  *
@@ -56,7 +56,7 @@ export const COLLECTION_FORMATS = {
  * @interface FetchAPI
  */
 export interface FetchAPI {
-  (url: string, init?: any): Promise<Response>
+  (url: string, init?: any): Promise<Response>;
 }
 
 /**
@@ -65,8 +65,8 @@ export interface FetchAPI {
  * @interface FetchArgs
  */
 export interface FetchArgs {
-  url: string
-  options: any
+  url: string;
+  options: any;
 }
 
 /**
@@ -75,7 +75,7 @@ export interface FetchArgs {
  * @class BaseAPI
  */
 export class BaseAPI {
-  protected configuration: Configuration
+  protected configuration: Configuration;
 
   constructor(
     configuration?: Configuration,
@@ -83,8 +83,8 @@ export class BaseAPI {
     protected fetch: FetchAPI = portableFetch
   ) {
     if (configuration) {
-      this.configuration = configuration
-      this.basePath = configuration.basePath || this.basePath
+      this.configuration = configuration;
+      this.basePath = configuration.basePath || this.basePath;
     }
   }
 }
@@ -96,9 +96,9 @@ export class BaseAPI {
  * @extends {Error}
  */
 export class RequiredError extends Error {
-  name: 'RequiredError'
+  name: 'RequiredError';
   constructor(public field: string, msg?: string) {
-    super(msg)
+    super(msg);
   }
 }
 
@@ -107,7 +107,7 @@ export class RequiredError extends Error {
  * @export
  * @interface CallStackTableData
  */
-export interface CallStackTableData extends Array<CallStackTableDataInner> { }
+export interface CallStackTableData extends Array<CallStackTableDataInner> {}
 /**
  *
  * @export
@@ -119,67 +119,67 @@ export interface CallStackTableDataInner {
    * @type {string}
    * @memberof CallStackTableDataInner
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof CallStackTableDataInner
    */
-  input_shape?: string
+  input_shape?: string;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  calls: number
+  calls: number;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  device_self_duration?: number
+  device_self_duration?: number;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  device_total_duration?: number
+  device_total_duration?: number;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  host_self_duration: number
+  host_self_duration: number;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  host_total_duration: number
+  host_total_duration: number;
   /**
    *
    * @type {string}
    * @memberof CallStackTableDataInner
    */
-  call_stack?: string
+  call_stack?: string;
   /**
    *
    * @type {string}
    * @memberof CallStackTableDataInner
    */
-  tc_eligible?: string
+  tc_eligible?: string;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  tc_self_ratio?: number
+  tc_self_ratio?: number;
   /**
    *
    * @type {number}
    * @memberof CallStackTableDataInner
    */
-  tc_total_ratio?: number
+  tc_total_ratio?: number;
 }
 /**
  *
@@ -192,25 +192,25 @@ export interface DiffNode {
    * @type {OpStats}
    * @memberof DiffNode
    */
-  left: OpStats
+  left: OpStats;
   /**
    *
    * @type {OpStats}
    * @memberof DiffNode
    */
-  right: OpStats
+  right: OpStats;
   /**
    *
    * @type {string}
    * @memberof DiffNode
    */
-  path: string
+  path: string;
   /**
    *
    * @type {Array<DiffNode>}
    * @memberof DiffNode
    */
-  children: Array<DiffNode>
+  children: Array<DiffNode>;
 }
 /**
  *
@@ -223,13 +223,13 @@ export interface DistributedGraph {
    * @type {DistributedGraphMetadata}
    * @memberof DistributedGraph
    */
-  metadata: DistributedGraphMetadata
+  metadata: DistributedGraphMetadata;
   /**
    *
    * @type {any}
    * @memberof DistributedGraph
    */
-  data: any
+  data: any;
 }
 /**
  *
@@ -242,19 +242,19 @@ export interface DistributedGraphMetadata {
    * @type {string}
    * @memberof DistributedGraphMetadata
    */
-  title: string
+  title: string;
   /**
    *
    * @type {Array<string>}
    * @memberof DistributedGraphMetadata
    */
-  legends: Array<string>
+  legends: Array<string>;
   /**
    *
    * @type {string}
    * @memberof DistributedGraphMetadata
    */
-  units: string
+  units: string;
 }
 /**
  *
@@ -267,13 +267,13 @@ export interface Environment {
    * @type {string}
    * @memberof Environment
    */
-  title: string
+  title: string;
   /**
    *
    * @type {string}
    * @memberof Environment
    */
-  value: string
+  value: string;
 }
 /**
  *
@@ -286,13 +286,13 @@ export interface GpuInfo {
    * @type {GpuInfoMetadata}
    * @memberof GpuInfo
    */
-  metadata: GpuInfoMetadata
+  metadata: GpuInfoMetadata;
   /**
    *
    * @type {any}
    * @memberof GpuInfo
    */
-  data: any
+  data: any;
 }
 /**
  *
@@ -305,7 +305,7 @@ export interface GpuInfoMetadata {
    * @type {string}
    * @memberof GpuInfoMetadata
    */
-  title: string
+  title: string;
 }
 /**
  *
@@ -318,13 +318,13 @@ export interface GpuMetric {
    * @type {string}
    * @memberof GpuMetric
    */
-  title: string
+  title: string;
   /**
    *
    * @type {string}
    * @memberof GpuMetric
    */
-  value: string
+  value: string;
 }
 /**
  *
@@ -337,13 +337,13 @@ export interface GpuMetrics {
    * @type {Array<GpuMetric>}
    * @memberof GpuMetrics
    */
-  data: Array<GpuMetric>
+  data: Array<GpuMetric>;
   /**
    *
    * @type {string}
    * @memberof GpuMetrics
    */
-  tooltip: string
+  tooltip: string;
 }
 /**
  *
@@ -356,19 +356,19 @@ export interface Graph {
    * @type {string}
    * @memberof Graph
    */
-  title?: string
+  title?: string;
   /**
    *
    * @type {Array<GraphColumn>}
    * @memberof Graph
    */
-  columns: Array<GraphColumn>
+  columns: Array<GraphColumn>;
   /**
    *
    * @type {Array<Array<string | number | boolean | ValueAndFormat>>}
    * @memberof Graph
    */
-  rows: Array<Array<string | number | boolean | ValueAndFormat>>
+  rows: Array<Array<string | number | boolean | ValueAndFormat>>;
 }
 /**
  *
@@ -381,13 +381,13 @@ export interface ValueAndTooltip {
    * @type {string | number}
    * @memberof ValueAndTooltip
    */
-  value: string | number
+  value: string | number;
   /**
    *
    * @type {string}
    * @memberof ValueAndTooltip
    */
-  tooltip?: string
+  tooltip?: string;
 }
 /**
  *
@@ -400,19 +400,19 @@ export interface StepedGraph {
    * @type {string}
    * @memberof StepedGraph
    */
-  title?: string
+  title?: string;
   /**
    *
    * @type {Array<string>}
    * @memberof StepedGraph
    */
-  columns: Array<string>
+  columns: Array<string>;
   /**
    *
    * @type {Array<Array<ValueAndTooltip>>}
    * @memberof StepedGraph
    */
-  rows: Array<Array<ValueAndTooltip>>
+  rows: Array<Array<ValueAndTooltip>>;
 }
 /**
  *
@@ -425,19 +425,19 @@ export interface GraphAscend {
    * @type {string}
    * @memberof GraphAscend
    */
-  title?: string
+  title?: string;
   /**
    *
    * @type {Array<GraphColumn>}
    * @memberof GraphAscend
    */
-  columns: Array<GraphColumn>
+  columns: Array<GraphColumn>;
   /**
    *
    * @type {any}
    * @memberof GraphAscend
    */
-  rows: any
+  rows: any;
 }
 /**
  *
@@ -450,25 +450,25 @@ export interface GraphColumn {
    * @type {string}
    * @memberof GraphColumn
    */
-  type: string
+  type: string;
   /**
    *
    * @type {string}
    * @memberof GraphColumn
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof GraphColumn
    */
-  role?: string
+  role?: string;
   /**
    *
    * @type {GraphColumnP}
    * @memberof GraphColumn
    */
-  p?: GraphColumnP
+  p?: GraphColumnP;
 }
 /**
  *
@@ -481,7 +481,7 @@ export interface GraphColumnP {
    * @type {boolean}
    * @memberof GraphColumnP
    */
-  html?: boolean
+  html?: boolean;
 }
 /**
  *
@@ -494,13 +494,13 @@ export interface InlineResponse200 {
    * @type {TableMetadata}
    * @memberof InlineResponse200
    */
-  metadata: TableMetadata
+  metadata: TableMetadata;
   /**
    *
    * @type {OperationTableData}
    * @memberof InlineResponse200
    */
-  data: OperationTableData
+  data: OperationTableData;
 }
 /**
  *
@@ -513,13 +513,13 @@ export interface InlineResponse2001 {
    * @type {TableMetadata}
    * @memberof InlineResponse2001
    */
-  metadata: TableMetadata
+  metadata: TableMetadata;
   /**
    *
    * @type {CallStackTableData}
    * @memberof InlineResponse2001
    */
-  data: CallStackTableData
+  data: CallStackTableData;
 }
 /**
  *
@@ -532,13 +532,13 @@ export interface InlineResponse2002 {
    * @type {GpuInfoMetadata}
    * @memberof InlineResponse2002
    */
-  metadata: GpuInfoMetadata
+  metadata: GpuInfoMetadata;
   /**
    *
    * @type {any}
    * @memberof InlineResponse2002
    */
-  data: any
+  data: any;
 }
 /**
  *
@@ -551,8 +551,8 @@ export interface KernelGraph {
    * @type {Graph}
    * @memberof KernelGraph
    */
-  total: Graph,
-  device_target: string
+  total: Graph;
+  device_target: string;
 }
 /**
  *
@@ -565,50 +565,50 @@ export interface KeyedColumn {
    * @type {string}
    * @memberof KeyedColumn
    */
-  type: string
+  type: string;
   /**
    *
    * @type {string}
    * @memberof KeyedColumn
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof KeyedColumn
    */
-  key: string
+  key: string;
 }
 /**
- * 
+ *
  * @export
  * @interface MemoryCurveDataAll
  */
 export interface MemoryCurveDataAll {
   /**
-   * 
+   *
    * @type {string}
    * @memberof MemoryCurveDataAll
    */
-  default_device: string
+  default_device: string;
   /**
-   * 
+   *
    * @type {Array<string>}
    * @memberof MemoryCurveDataAll
    */
-  devices: Array<string>
+  devices: Array<string>;
   /**
    *
    * @type {MemoryCurveDataAscend}
    * @memberof MemoryCurveDataAll
    */
-  total: MemoryCurveDataAscend
+  total: MemoryCurveDataAscend;
   /**
    *
    * @type {MemoryCurveDataAscend}
    * @memberof MemoryCurveDataAll
    */
-  ptaGe: MemoryCurveDataAscend
+  ptaGe: MemoryCurveDataAscend;
 }
 /**
  *
@@ -621,19 +621,19 @@ export interface MemoryCurveData {
    * @type {MemoryCurveDataMetadata}
    * @memberof MemoryCurveData
    */
-  metadata: MemoryCurveDataMetadata
+  metadata: MemoryCurveDataMetadata;
   /**
    *
    * @type {Array<GraphColumn>}
    * @memberof MemoryCurveData
    */
-  columns: Array<GraphColumn>
+  columns: Array<GraphColumn>;
   /**
    *
    * @type {any}
    * @memberof MemoryCurveData
    */
-  rows: any
+  rows: any;
 }
 /**
  *
@@ -646,19 +646,19 @@ export interface MemoryCurveDataAscend {
    * @type {MemoryCurveDataMetadata}
    * @memberof MemoryCurveDataAscend
    */
-  metadata: MemoryCurveDataMetadata
+  metadata: MemoryCurveDataMetadata;
   /**
    *
    * @type {any}
    * @memberof MemoryCurveDataAscend
    */
-  columns: any
+  columns: any;
   /**
    *
    * @type {any}
    * @memberof MemoryCurveDataAscend
    */
-  rows: any
+  rows: any;
 }
 /**
  *
@@ -671,55 +671,55 @@ export interface MemoryCurveDataMetadata {
    * @type {string}
    * @memberof MemoryCurveDataMetadata
    */
-  default_device: string
+  default_device: string;
   /**
    *
    * @type {Array<string>}
    * @memberof MemoryCurveDataMetadata
    */
-  devices: Array<string>
+  devices: Array<string>;
   /**
    *
    * @type {any}
    * @memberof MemoryCurveDataMetadata
    */
-  peaks: any
+  peaks: any;
   /**
    *
    * @type {any}
    * @memberof MemoryCurveDataMetadata
    */
-  totals: any
+  totals: any;
   /**
    *
    * @type {number}
    * @memberof MemoryCurveDataMetadata
    */
-  first_ts: number
+  first_ts: number;
   /**
    *
    * @type {string}
    * @memberof MemoryCurveDataMetadata
    */
-  time_metric: string
+  time_metric: string;
   /**
    *
    * @type {string}
    * @memberof MemoryCurveDataMetadata
    */
-  memory_metric: string
+  memory_metric: string;
   /**
    *
    * @type {number}
    * @memberof MemoryCurveDataMetadata
    */
-  time_factor: number
+  time_factor: number;
   /**
    *
    * @type {number}
    * @memberof MemoryCurveDataMetadata
    */
-  memory_factor: number
+  memory_factor: number;
 }
 /**
  *
@@ -732,38 +732,38 @@ export interface MemoryEventsData {
    * @type {MemoryEventsTableMetadata}
    * @memberof MemoryEventsData
    */
-  metadata: MemoryEventsTableMetadata
+  metadata: MemoryEventsTableMetadata;
   /**
    *
    * @type {Array<GraphColumn>}
    * @memberof MemoryEventsData
    */
-  columns: Array<GraphColumn>
+  columns: Array<GraphColumn>;
   /**
    *
    * @type {any}
    * @memberof MemoryEventsData
    */
-  rows: any
+  rows: any;
 }
 /**
- * 
+ *
  * @exports
  * @interface MemoryEventsDataAll
  */
 export interface MemoryEventsDataAll {
   /**
-   * 
+   *
    * @type {MemoryEventsData}
    * @memberof MemoryEventsDataAll
    */
-  operator: MemoryEventsData
+  operator: MemoryEventsData;
   /**
-   * 
+   *
    * @type {MemoryEventsData}
    * @memberof MemoryEventsDataAll
    */
-  component: MemoryEventsData
+  component: MemoryEventsData;
 }
 /**
  *
@@ -776,25 +776,25 @@ export interface MemoryEventsTableMetadata {
    * @type {string}
    * @memberof MemoryEventsTableMetadata
    */
-  title: string
+  title: string;
   /**
    *
    * @type {string}
    * @memberof MemoryEventsTableMetadata
    */
-  default_device: string
+  default_device: string;
   /**
    *
    * @type {string}
    * @memberof MemoryEventsTableMetadata
    */
-  search?: string
+  search?: string;
   /**
    *
    * @type {string}
    * @memberof MemoryEventsTableMetadata
    */
-  sort?: string
+  sort?: string;
 }
 /**
  *
@@ -807,19 +807,19 @@ export interface MemoryStatsData {
    * @type {MemoryStatsTableMetadata}
    * @memberof MemoryStatsData
    */
-  metadata: MemoryStatsTableMetadata
+  metadata: MemoryStatsTableMetadata;
   /**
    *
    * @type {Array<GraphColumn>}
    * @memberof MemoryStatsData
    */
-  columns: Array<GraphColumn>
+  columns: Array<GraphColumn>;
   /**
    *
    * @type {any}
    * @memberof MemoryStatsData
    */
-  rows: any
+  rows: any;
 }
 /**
  *
@@ -832,25 +832,25 @@ export interface MemoryStatsTableMetadata {
    * @type {string}
    * @memberof MemoryStatsTableMetadata
    */
-  title: string
+  title: string;
   /**
    *
    * @type {string}
    * @memberof MemoryStatsTableMetadata
    */
-  default_device: string
+  default_device: string;
   /**
    *
    * @type {string}
    * @memberof MemoryStatsTableMetadata
    */
-  search: string
+  search: string;
   /**
    *
    * @type {string}
    * @memberof MemoryStatsTableMetadata
    */
-  sort: string
+  sort: string;
 }
 /**
  *
@@ -863,61 +863,61 @@ export interface ModuleStats {
    * @type {string}
    * @memberof ModuleStats
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof ModuleStats
    */
-  id: string
+  id: string;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  occurences: number
+  occurences: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  operators: number
+  operators: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  host_duration: number
+  host_duration: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  self_host_duration: number
+  self_host_duration: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  device_duration: number
+  device_duration: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  self_device_duration: number
+  self_device_duration: number;
   /**
    *
    * @type {number}
    * @memberof ModuleStats
    */
-  avg_duration: number
+  avg_duration: number;
   /**
    *
    * @type {Array<ModuleStats>}
    * @memberof ModuleStats
    */
-  children: Array<ModuleStats>
+  children: Array<ModuleStats>;
 }
 /**
  *
@@ -930,13 +930,13 @@ export interface ModuleViewData {
    * @type {Array<KeyedColumn>}
    * @memberof ModuleViewData
    */
-  columns: Array<KeyedColumn>
+  columns: Array<KeyedColumn>;
   /**
    *
    * @type {Array<ModuleStats>}
    * @memberof ModuleViewData
    */
-  data: Array<ModuleStats>
+  data: Array<ModuleStats>;
 }
 /**
  *
@@ -949,37 +949,37 @@ export interface OpAgg {
    * @type {string}
    * @memberof OpAgg
    */
-  name: string
+  name: string;
   /**
    *
    * @type {number}
    * @memberof OpAgg
    */
-  calls: number
+  calls: number;
   /**
    *
    * @type {number}
    * @memberof OpAgg
    */
-  host_duration: number
+  host_duration: number;
   /**
    *
    * @type {number}
    * @memberof OpAgg
    */
-  device_duration: number
+  device_duration: number;
   /**
    *
    * @type {number}
    * @memberof OpAgg
    */
-  self_host_duration: number
+  self_host_duration: number;
   /**
    *
    * @type {number}
    * @memberof OpAgg
    */
-  self_device_duration: number
+  self_device_duration: number;
 }
 /**
  *
@@ -992,38 +992,38 @@ export interface OpStats {
    * @type {string}
    * @memberof OpStats
    */
-  name: string
+  name: string;
   /**
    *
    * @type {number}
    * @memberof OpStats
    */
-  duration: number
+  duration: number;
   /**
    *
    * @type {number}
    * @memberof OpStats
    */
-  device_duration: number
+  device_duration: number;
   /**
    *
    * @type {number}
    * @memberof OpStats
    */
-  total_duration: number
+  total_duration: number;
   /**
    *
    * @type {Array<OpAgg>}
    * @memberof OpStats
    */
-  aggs: Array<OpAgg>
+  aggs: Array<OpAgg>;
 }
 /**
  *
  * @export
  * @interface OperationTableData
  */
-export interface OperationTableData extends Array<OperationTableDataInner> { }
+export interface OperationTableData extends Array<OperationTableDataInner> {}
 /**
  *
  * @export
@@ -1035,67 +1035,67 @@ export interface OperationTableDataInner {
    * @type {string}
    * @memberof OperationTableDataInner
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof OperationTableDataInner
    */
-  input_shape?: string
+  input_shape?: string;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  calls: number
+  calls: number;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  device_self_duration?: number
+  device_self_duration?: number;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  device_total_duration?: number
+  device_total_duration?: number;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  host_self_duration: number
+  host_self_duration: number;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  host_total_duration: number
+  host_total_duration: number;
   /**
    *
    * @type {boolean}
    * @memberof OperationTableDataInner
    */
-  has_call_stack: boolean
+  has_call_stack: boolean;
   /**
    *
    * @type {string}
    * @memberof OperationTableDataInner
    */
-  tc_eligible?: string
+  tc_eligible?: string;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  tc_self_ratio?: number
+  tc_self_ratio?: number;
   /**
    *
    * @type {number}
    * @memberof OperationTableDataInner
    */
-  tc_total_ratio?: number
+  tc_total_ratio?: number;
 }
 /**
  *
@@ -1108,25 +1108,25 @@ export interface OperatorGraph {
    * @type {Graph}
    * @memberof OperatorGraph
    */
-  device_total_time: Graph
+  device_total_time: Graph;
   /**
    *
    * @type {Graph}
    * @memberof OperatorGraph
    */
-  device_self_time: Graph
+  device_self_time: Graph;
   /**
    *
    * @type {Graph}
    * @memberof OperatorGraph
    */
-  host_total_time: Graph
+  host_total_time: Graph;
   /**
    *
    * @type {Graph}
    * @memberof OperatorGraph
    */
-  host_self_time: Graph
+  host_self_time: Graph;
 }
 /**
  *
@@ -1139,37 +1139,37 @@ export interface OperatorNode {
    * @type {string}
    * @memberof OperatorNode
    */
-  name: string
+  name: string;
   /**
    *
    * @type {number}
    * @memberof OperatorNode
    */
-  start_time: number
+  start_time: number;
   /**
    *
    * @type {number}
    * @memberof OperatorNode
    */
-  end_time: number
+  end_time: number;
   /**
    *
    * @type {string}
    * @memberof OperatorNode
    */
-  type: string
+  type: string;
   /**
    *
    * @type {number}
    * @memberof OperatorNode
    */
-  tid: number
+  tid: number;
   /**
    *
    * @type {Array<OperatorNode>}
    * @memberof OperatorNode
    */
-  children: Array<OperatorNode>
+  children: Array<OperatorNode>;
 }
 /**
  *
@@ -1182,31 +1182,31 @@ export interface Overview {
    * @type {Array<Performance>}
    * @memberof Overview
    */
-  performance: Array<Performance>
+  performance: Array<Performance>;
   /**
    *
    * @type {Array<Environment>}
    * @memberof Overview
    */
-  environments: Array<Environment>
+  environments: Array<Environment>;
   /**
    *
    * @type {StepedGraph}
    * @memberof Overview
    */
-  steps: StepedGraph
+  steps: StepedGraph;
   /**
    *
    * @type {string}
    * @memberof Overview
    */
-  recommendations: string
+  recommendations: string;
   /**
    *
    * @type {GpuMetrics}
    * @memberof Overview
    */
-  gpu_metrics?: GpuMetrics
+  gpu_metrics?: GpuMetrics;
 }
 /**
  *
@@ -1219,31 +1219,31 @@ export interface Performance {
    * @type {string}
    * @memberof Performance
    */
-  name: string
+  name: string;
   /**
    *
    * @type {string}
    * @memberof Performance
    */
-  description?: string
+  description?: string;
   /**
    *
    * @type {string}
    * @memberof Performance
    */
-  value?: string
+  value?: string;
   /**
    *
    * @type {string}
    * @memberof Performance
    */
-  extra?: string
+  extra?: string;
   /**
    *
    * @type {Array<Performance>}
    * @memberof Performance
    */
-  children?: Array<Performance>
+  children?: Array<Performance>;
 }
 /**
  *
@@ -1256,13 +1256,13 @@ export interface Runs {
    * @type {Array<string>}
    * @memberof Runs
    */
-  runs: Array<string>
+  runs: Array<string>;
   /**
    *
    * @type {boolean}
    * @memberof Runs
    */
-  loading: boolean
+  loading: boolean;
 }
 /**
  *
@@ -1275,13 +1275,13 @@ export interface TableData {
    * @type {Graph}
    * @memberof TableData
    */
-  data: Graph
+  data: Graph;
   /**
    *
    * @type {TableMetadata}
    * @memberof TableData
    */
-  metadata: TableMetadata
+  metadata: TableMetadata;
 }
 /**
  *
@@ -1294,13 +1294,13 @@ export interface TableMetadata {
    * @type {string}
    * @memberof TableMetadata
    */
-  sort: string
+  sort: string;
   /**
    *
    * @type {any}
    * @memberof TableMetadata
    */
-  tooltips?: any
+  tooltips?: any;
 }
 /**
  *
@@ -1313,7 +1313,7 @@ export interface TensorCoresGraph {
    * @type {Graph}
    * @memberof TensorCoresGraph
    */
-  total: Graph
+  total: Graph;
 }
 /**
  *
@@ -1326,32 +1326,32 @@ export interface ValueAndFormat {
    * @type {string | number | boolean}
    * @memberof ValueAndFormat
    */
-  v: string | number | boolean
+  v: string | number | boolean;
   /**
    *
    * @type {string}
    * @memberof ValueAndFormat
    */
-  f: string
+  f: string;
 }
 /**
- * 
+ *
  * @exports
  * @interface Views
  */
 export interface Views {
   /**
-   * 
+   *
    * @type {string}
    * @memberof Views
    */
-  device_target: string
+  device_target: string;
   /**
-   * 
+   *
    * @type {Array<string>}
    * @memberof Views
    */
-  views: Array<string>
+  views: Array<string>;
 }
 /**
  * DefaultApi - fetch parameter creator
@@ -1388,75 +1388,75 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
       // verify required parameter 'exp_run' is not null or undefined
       if (exp_run === null || exp_run === undefined) {
         throw new RequiredError(
           'exp_run',
           'Required parameter exp_run was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
       // verify required parameter 'exp_worker' is not null or undefined
       if (exp_worker === null || exp_worker === undefined) {
         throw new RequiredError(
           'exp_worker',
           'Required parameter exp_worker was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
       // verify required parameter 'exp_span' is not null or undefined
       if (exp_span === null || exp_span === undefined) {
         throw new RequiredError(
           'exp_span',
           'Required parameter exp_span was null or undefined when calling diffnodeGet.'
-        )
+        );
       }
-      const localVarPath = `/diffnode`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/diffnode`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (exp_run !== undefined) {
-        localVarQueryParameter['exp_run'] = exp_run
+        localVarQueryParameter.exp_run = exp_run;
       }
 
       if (exp_worker !== undefined) {
-        localVarQueryParameter['exp_worker'] = exp_worker
+        localVarQueryParameter.exp_worker = exp_worker;
       }
 
       if (exp_span !== undefined) {
-        localVarQueryParameter['exp_span'] = exp_span
+        localVarQueryParameter.exp_span = exp_span;
       }
 
       if (path !== undefined) {
-        localVarQueryParameter['path'] = path
+        localVarQueryParameter.path = path;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1464,19 +1464,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1497,38 +1497,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling distributedCommopsGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling distributedCommopsGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling distributedCommopsGet.'
-        )
+        );
       }
-      const localVarPath = `/distributed/commops`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/distributed/commops`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1536,19 +1536,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1569,38 +1569,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling distributedGpuinfoGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling distributedGpuinfoGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling distributedGpuinfoGet.'
-        )
+        );
       }
-      const localVarPath = `/distributed/gpuinfo`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/distributed/gpuinfo`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1608,19 +1608,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1641,38 +1641,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling distributedOverlapGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling distributedOverlapGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling distributedOverlapGet.'
-        )
+        );
       }
-      const localVarPath = `/distributed/overlap`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/distributed/overlap`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1680,19 +1680,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1713,38 +1713,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling distributedWaittimeGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling distributedWaittimeGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling distributedWaittimeGet.'
-        )
+        );
       }
-      const localVarPath = `/distributed/waittime`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/distributed/waittime`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1752,19 +1752,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1787,49 +1787,49 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling kernelGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling kernelGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling kernelGet.'
-        )
+        );
       }
       // verify required parameter 'group_by' is not null or undefined
       if (group_by === null || group_by === undefined) {
         throw new RequiredError(
           'group_by',
           'Required parameter group_by was null or undefined when calling kernelGet.'
-        )
+        );
       }
-      const localVarPath = `/kernel`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/kernel`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by
+        localVarQueryParameter.group_by = group_by;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1837,19 +1837,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1872,42 +1872,42 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling kernelTableGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling kernelTableGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling kernelTableGet.'
-        )
+        );
       }
-      const localVarPath = `/kernel/table`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/kernel/table`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by
+        localVarQueryParameter.group_by = group_by;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1915,19 +1915,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -1948,38 +1948,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling kernelTcPieGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling kernelTcPieGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling kernelTcPieGet.'
-        )
+        );
       }
-      const localVarPath = `/kernel/tc_pie`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/kernel/tc_pie`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -1987,19 +1987,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2020,38 +2020,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling memoryCurveGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling memoryCurveGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling memoryCurveGet.'
-        )
+        );
       }
-      const localVarPath = `/memory_curve`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/memory_curve`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2059,19 +2059,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2096,46 +2096,46 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling memoryEventsGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling memoryEventsGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling memoryEventsGet.'
-        )
+        );
       }
-      const localVarPath = `/memory_events`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/memory_events`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (start_ts !== undefined) {
-        localVarQueryParameter['start_ts'] = start_ts
+        localVarQueryParameter.start_ts = start_ts;
       }
 
       if (end_ts !== undefined) {
-        localVarQueryParameter['end_ts'] = end_ts
+        localVarQueryParameter.end_ts = end_ts;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2143,19 +2143,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2180,46 +2180,46 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling memoryGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling memoryGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling memoryGet.'
-        )
+        );
       }
-      const localVarPath = `/memory`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/memory`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (start_ts !== undefined) {
-        localVarQueryParameter['start_ts'] = start_ts
+        localVarQueryParameter.start_ts = start_ts;
       }
 
       if (end_ts !== undefined) {
-        localVarQueryParameter['end_ts'] = end_ts
+        localVarQueryParameter.end_ts = end_ts;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2227,19 +2227,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2260,38 +2260,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling moduleGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling moduleGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling moduleGet.'
-        )
+        );
       }
-      const localVarPath = `/module`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/module`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2299,19 +2299,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2334,49 +2334,49 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling operationGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling operationGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling operationGet.'
-        )
+        );
       }
       // verify required parameter 'group_by' is not null or undefined
       if (group_by === null || group_by === undefined) {
         throw new RequiredError(
           'group_by',
           'Required parameter group_by was null or undefined when calling operationGet.'
-        )
+        );
       }
-      const localVarPath = `/operation`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/operation`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by
+        localVarQueryParameter.group_by = group_by;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2384,19 +2384,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2423,64 +2423,64 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling operationStackGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling operationStackGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling operationStackGet.'
-        )
+        );
       }
       // verify required parameter 'group_by' is not null or undefined
       if (group_by === null || group_by === undefined) {
         throw new RequiredError(
           'group_by',
           'Required parameter group_by was null or undefined when calling operationStackGet.'
-        )
+        );
       }
       // verify required parameter 'op_name' is not null or undefined
       if (op_name === null || op_name === undefined) {
         throw new RequiredError(
           'op_name',
           'Required parameter op_name was null or undefined when calling operationStackGet.'
-        )
+        );
       }
-      const localVarPath = `/operation/stack`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/operation/stack`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by
+        localVarQueryParameter.group_by = group_by;
       }
 
       if (op_name !== undefined) {
-        localVarQueryParameter['op_name'] = op_name
+        localVarQueryParameter.op_name = op_name;
       }
 
       if (input_shape !== undefined) {
-        localVarQueryParameter['input_shape'] = input_shape
+        localVarQueryParameter.input_shape = input_shape;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2488,19 +2488,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2523,49 +2523,49 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling operationTableGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling operationTableGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling operationTableGet.'
-        )
+        );
       }
       // verify required parameter 'group_by' is not null or undefined
       if (group_by === null || group_by === undefined) {
         throw new RequiredError(
           'group_by',
           'Required parameter group_by was null or undefined when calling operationTableGet.'
-        )
+        );
       }
-      const localVarPath = `/operation/table`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/operation/table`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       if (group_by !== undefined) {
-        localVarQueryParameter['group_by'] = group_by
+        localVarQueryParameter.group_by = group_by;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2573,19 +2573,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2606,38 +2606,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling overviewGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling overviewGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling overviewGet.'
-        )
+        );
       }
-      const localVarPath = `/overview`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/overview`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2645,19 +2645,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2665,30 +2665,30 @@ export const DefaultApiFetchParamCreator = function (
      * @throws {RequiredError}
      */
     runsGet(options: any = {}): FetchArgs {
-      const localVarPath = `/runs`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/runs`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       localVarUrlObj.query = Object.assign(
         {},
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2703,27 +2703,27 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling spansGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling spansGet.'
-        )
+        );
       }
-      const localVarPath = `/spans`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/spans`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2731,19 +2731,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2764,38 +2764,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling traceGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling traceGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling traceGet.'
-        )
+        );
       }
-      const localVarPath = `/trace`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/trace`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2803,19 +2803,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2836,38 +2836,38 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling treeGet.'
-        )
+        );
       }
       // verify required parameter 'worker' is not null or undefined
       if (worker === null || worker === undefined) {
         throw new RequiredError(
           'worker',
           'Required parameter worker was null or undefined when calling treeGet.'
-        )
+        );
       }
       // verify required parameter 'span' is not null or undefined
       if (span === null || span === undefined) {
         throw new RequiredError(
           'span',
           'Required parameter span was null or undefined when calling treeGet.'
-        )
+        );
       }
-      const localVarPath = `/tree`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/tree`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (worker !== undefined) {
-        localVarQueryParameter['worker'] = worker
+        localVarQueryParameter.worker = worker;
       }
 
       if (span !== undefined) {
-        localVarQueryParameter['span'] = span
+        localVarQueryParameter.span = span;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2875,19 +2875,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2901,16 +2901,16 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling viewsGet.'
-        )
+        );
       }
-      const localVarPath = `/views`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/views`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2918,19 +2918,19 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
+        options: localVarRequestOptions,
+      };
     },
     /**
      *
@@ -2945,27 +2945,27 @@ export const DefaultApiFetchParamCreator = function (
         throw new RequiredError(
           'run',
           'Required parameter run was null or undefined when calling workersGet.'
-        )
+        );
       }
       // verify required parameter 'view' is not null or undefined
       if (view === null || view === undefined) {
         throw new RequiredError(
           'view',
           'Required parameter view was null or undefined when calling workersGet.'
-        )
+        );
       }
-      const localVarPath = `/workers`
-      const localVarUrlObj = url.parse(localVarPath, true)
-      const localVarRequestOptions = Object.assign({ method: 'GET' }, options)
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
+      const localVarPath = `/workers`;
+      const localVarUrlObj = url.parse(localVarPath, true);
+      const localVarRequestOptions = Object.assign({ method: 'GET' }, options);
+      const localVarHeaderParameter = {} as any;
+      const localVarQueryParameter = {} as any;
 
       if (run !== undefined) {
-        localVarQueryParameter['run'] = run
+        localVarQueryParameter.run = run;
       }
 
       if (view !== undefined) {
-        localVarQueryParameter['view'] = view
+        localVarQueryParameter.view = view;
       }
 
       localVarUrlObj.query = Object.assign(
@@ -2973,22 +2973,22 @@ export const DefaultApiFetchParamCreator = function (
         localVarUrlObj.query,
         localVarQueryParameter,
         options.query
-      )
+      );
       // fix override query string Detail: https://stackoverflow.com/a/7517673/1077943
-      delete localVarUrlObj.search
+      delete localVarUrlObj.search;
       localVarRequestOptions.headers = Object.assign(
         {},
         localVarHeaderParameter,
         options.headers
-      )
+      );
 
       return {
         url: url.format(localVarUrlObj),
-        options: localVarRequestOptions
-      }
-    }
-  }
-}
+        options: localVarRequestOptions,
+      };
+    },
+  };
+};
 
 /**
  * DefaultApi - functional programming interface
@@ -3029,7 +3029,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
         exp_span,
         path,
         options
-      )
+      );
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3039,12 +3039,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3062,7 +3062,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<InlineResponse2002> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).distributedCommopsGet(run, worker, span, options)
+      ).distributedCommopsGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3072,12 +3072,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3095,7 +3095,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<GpuInfo> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).distributedGpuinfoGet(run, worker, span, options)
+      ).distributedGpuinfoGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3105,12 +3105,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3128,7 +3128,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<DistributedGraph> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).distributedOverlapGet(run, worker, span, options)
+      ).distributedOverlapGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3138,12 +3138,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3161,7 +3161,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<DistributedGraph> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).distributedWaittimeGet(run, worker, span, options)
+      ).distributedWaittimeGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3171,12 +3171,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3196,7 +3196,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<KernelGraph> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).kernelGet(run, worker, span, group_by, options)
+      ).kernelGet(run, worker, span, group_by, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3206,12 +3206,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3231,7 +3231,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<TableData> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).kernelTableGet(run, worker, span, group_by, options)
+      ).kernelTableGet(run, worker, span, group_by, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3241,12 +3241,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3264,7 +3264,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<TensorCoresGraph> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).kernelTcPieGet(run, worker, span, options)
+      ).kernelTcPieGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3274,12 +3274,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3294,10 +3294,13 @@ export const DefaultApiFp = function (configuration?: Configuration) {
       worker: string,
       span: string,
       options?: any
-    ): (fetch?: FetchAPI, basePath?: string) => Promise<MemoryCurveDataAll | MemoryCurveData> {
+    ): (
+      fetch?: FetchAPI,
+      basePath?: string
+    ) => Promise<MemoryCurveDataAll | MemoryCurveData> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).memoryCurveGet(run, worker, span, options)
+      ).memoryCurveGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3307,12 +3310,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3331,10 +3334,13 @@ export const DefaultApiFp = function (configuration?: Configuration) {
       start_ts?: number,
       end_ts?: number,
       options?: any
-    ): (fetch?: FetchAPI, basePath?: string) => Promise<MemoryEventsData | MemoryEventsDataAll> {
+    ): (
+      fetch?: FetchAPI,
+      basePath?: string
+    ) => Promise<MemoryEventsData | MemoryEventsDataAll> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).memoryEventsGet(run, worker, span, start_ts, end_ts, options)
+      ).memoryEventsGet(run, worker, span, start_ts, end_ts, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3344,12 +3350,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3371,7 +3377,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<MemoryStatsData> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).memoryGet(run, worker, span, start_ts, end_ts, options)
+      ).memoryGet(run, worker, span, start_ts, end_ts, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3381,12 +3387,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3404,7 +3410,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<ModuleViewData> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).moduleGet(run, worker, span, options)
+      ).moduleGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3414,12 +3420,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3439,7 +3445,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<OperatorGraph> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).operationGet(run, worker, span, group_by, options)
+      ).operationGet(run, worker, span, group_by, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3449,12 +3455,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3486,7 +3492,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
         op_name,
         input_shape,
         options
-      )
+      );
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3496,12 +3502,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3521,7 +3527,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<InlineResponse200> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).operationTableGet(run, worker, span, group_by, options)
+      ).operationTableGet(run, worker, span, group_by, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3531,12 +3537,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3554,7 +3560,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<Overview> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).overviewGet(run, worker, span, options)
+      ).overviewGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3564,12 +3570,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3579,9 +3585,8 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     runsGet(
       options?: any
     ): (fetch?: FetchAPI, basePath?: string) => Promise<Runs> {
-      const localVarFetchArgs = DefaultApiFetchParamCreator(
-        configuration
-      ).runsGet(options)
+      const localVarFetchArgs =
+        DefaultApiFetchParamCreator(configuration).runsGet(options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3591,12 +3596,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3612,7 +3617,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<Array<string>> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).spansGet(run, worker, options)
+      ).spansGet(run, worker, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3622,12 +3627,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3645,7 +3650,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<any> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).traceGet(run, worker, span, options)
+      ).traceGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3655,12 +3660,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3678,7 +3683,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<OperatorNode> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).treeGet(run, worker, span, options)
+      ).treeGet(run, worker, span, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3688,12 +3693,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3707,7 +3712,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<Views> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).viewsGet(run, options)
+      ).viewsGet(run, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3717,12 +3722,12 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
+        });
+      };
     },
     /**
      *
@@ -3738,7 +3743,7 @@ export const DefaultApiFp = function (configuration?: Configuration) {
     ): (fetch?: FetchAPI, basePath?: string) => Promise<Array<string>> {
       const localVarFetchArgs = DefaultApiFetchParamCreator(
         configuration
-      ).workersGet(run, view, options)
+      ).workersGet(run, view, options);
       return (
         fetch: FetchAPI = portableFetch,
         basePath: string = BASE_PATH
@@ -3748,15 +3753,15 @@ export const DefaultApiFp = function (configuration?: Configuration) {
           localVarFetchArgs.options
         ).then((response) => {
           if (response.status >= 200 && response.status < 300) {
-            return response.json()
+            return response.json();
           } else {
-            throw response
+            throw response;
           }
-        })
-      }
-    }
-  }
-}
+        });
+      };
+    },
+  };
+};
 
 /**
  * DefaultApi - factory interface
@@ -3799,7 +3804,7 @@ export const DefaultApiFactory = function (
         exp_span,
         path,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3820,7 +3825,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3841,7 +3846,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3862,7 +3867,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3883,7 +3888,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3907,7 +3912,7 @@ export const DefaultApiFactory = function (
         span,
         group_by,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3931,7 +3936,7 @@ export const DefaultApiFactory = function (
         span,
         group_by,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3947,7 +3952,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3963,7 +3968,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -3990,7 +3995,7 @@ export const DefaultApiFactory = function (
         start_ts,
         end_ts,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4017,7 +4022,7 @@ export const DefaultApiFactory = function (
         start_ts,
         end_ts,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4033,7 +4038,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4057,7 +4062,7 @@ export const DefaultApiFactory = function (
         span,
         group_by,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4087,7 +4092,7 @@ export const DefaultApiFactory = function (
         op_name,
         input_shape,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4111,7 +4116,7 @@ export const DefaultApiFactory = function (
         span,
         group_by,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4127,7 +4132,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4135,7 +4140,7 @@ export const DefaultApiFactory = function (
      * @throws {RequiredError}
      */
     runsGet(options?: any) {
-      return DefaultApiFp(configuration).runsGet(options)(fetch, basePath)
+      return DefaultApiFp(configuration).runsGet(options)(fetch, basePath);
     },
     /**
      *
@@ -4149,7 +4154,7 @@ export const DefaultApiFactory = function (
         run,
         worker,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4165,7 +4170,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4181,7 +4186,7 @@ export const DefaultApiFactory = function (
         worker,
         span,
         options
-      )(fetch, basePath)
+      )(fetch, basePath);
     },
     /**
      *
@@ -4190,7 +4195,10 @@ export const DefaultApiFactory = function (
      * @throws {RequiredError}
      */
     viewsGet(run: string, options?: any) {
-      return DefaultApiFp(configuration).viewsGet(run, options)(fetch, basePath)
+      return DefaultApiFp(configuration).viewsGet(run, options)(
+        fetch,
+        basePath
+      );
     },
     /**
      *
@@ -4204,10 +4212,10 @@ export const DefaultApiFactory = function (
         run,
         view,
         options
-      )(fetch, basePath)
-    }
-  }
-}
+      )(fetch, basePath);
+    },
+  };
+};
 
 /**
  * DefaultApi - object-oriented interface
@@ -4248,7 +4256,7 @@ export class DefaultApi extends BaseAPI {
       exp_span,
       path,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4271,7 +4279,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4294,7 +4302,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4317,7 +4325,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4340,7 +4348,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4366,7 +4374,7 @@ export class DefaultApi extends BaseAPI {
       span,
       group_by,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4392,7 +4400,7 @@ export class DefaultApi extends BaseAPI {
       span,
       group_by,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4415,7 +4423,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4438,7 +4446,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4467,7 +4475,7 @@ export class DefaultApi extends BaseAPI {
       start_ts,
       end_ts,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4496,7 +4504,7 @@ export class DefaultApi extends BaseAPI {
       start_ts,
       end_ts,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4514,7 +4522,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4540,7 +4548,7 @@ export class DefaultApi extends BaseAPI {
       span,
       group_by,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4572,7 +4580,7 @@ export class DefaultApi extends BaseAPI {
       op_name,
       input_shape,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4598,7 +4606,7 @@ export class DefaultApi extends BaseAPI {
       span,
       group_by,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4616,7 +4624,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4629,7 +4637,7 @@ export class DefaultApi extends BaseAPI {
     return DefaultApiFp(this.configuration).runsGet(options)(
       this.fetch,
       this.basePath
-    )
+    );
   }
 
   /**
@@ -4645,7 +4653,7 @@ export class DefaultApi extends BaseAPI {
       run,
       worker,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4663,7 +4671,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4681,7 +4689,7 @@ export class DefaultApi extends BaseAPI {
       worker,
       span,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 
   /**
@@ -4695,7 +4703,7 @@ export class DefaultApi extends BaseAPI {
     return DefaultApiFp(this.configuration).viewsGet(run, options)(
       this.fetch,
       this.basePath
-    )
+    );
   }
 
   /**
@@ -4711,6 +4719,6 @@ export class DefaultApi extends BaseAPI {
       run,
       view,
       options
-    )(this.fetch, this.basePath)
+    )(this.fetch, this.basePath);
   }
 }

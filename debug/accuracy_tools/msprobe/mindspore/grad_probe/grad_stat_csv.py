@@ -1,8 +1,23 @@
-from abc import ABC, abstractmethod
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import hashlib
+from abc import ABC, abstractmethod
 
 import mindspore
-from mindspore import ops, Tensor
+from mindspore import ops
 from msprobe.core.grad_probe.constant import GradConst
 
 
@@ -11,6 +26,7 @@ class CsvInput:
         self.param_name = param_name
         self.grad = grad
         self.bounds = bounds
+
 
 class GradStatCsv:
     csv = {}
@@ -52,9 +68,11 @@ class CsvItem(ABC):
 
 @register_csv_item(GradConst.MD5)
 class CsvMd5(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["MD5"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         tensor_bytes = grad.float().numpy().tobytes()
@@ -64,19 +82,21 @@ class CsvMd5(CsvItem):
 
 @register_csv_item(GradConst.DISTRIBUTION)
 class CsvDistribution(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         bounds = csv_input.bounds
         intervals = []
         if bounds:
             intervals.append(f"(-inf, {bounds[0]}]")
             for i in range(1, len(bounds)):
-                intervals.append(f"({bounds[i-1]}, {bounds[i]}]")
+                intervals.append(f"({bounds[i - 1]}, {bounds[i]}]")
         if intervals:
             intervals.append(f"({bounds[-1]}, inf)")
         intervals.append("=0")
-    
+
         return intervals
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         bounds = csv_input.bounds
@@ -94,9 +114,11 @@ class CsvDistribution(CsvItem):
 
 @register_csv_item(GradConst.MAX)
 class CsvMax(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["max"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.amax(grad).float().numpy().tolist()]
@@ -104,9 +126,11 @@ class CsvMax(CsvItem):
 
 @register_csv_item(GradConst.MIN)
 class CsvMin(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["min"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.amin(grad).float().numpy().tolist()]
@@ -114,9 +138,11 @@ class CsvMin(CsvItem):
 
 @register_csv_item(GradConst.NORM)
 class CsvNorm(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["norm"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [ops.norm(grad).float().numpy().tolist()]
@@ -124,9 +150,11 @@ class CsvNorm(CsvItem):
 
 @register_csv_item(GradConst.SHAPE)
 class CsvShape(CsvItem):
+    @staticmethod
     def generate_csv_header(csv_input):
         return ["shape"]
 
+    @staticmethod
     def generate_csv_content(csv_input):
         grad = csv_input.grad
         return [list(grad.shape)]

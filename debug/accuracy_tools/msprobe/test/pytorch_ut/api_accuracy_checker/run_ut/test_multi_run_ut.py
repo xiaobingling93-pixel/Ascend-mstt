@@ -5,8 +5,131 @@ import logging
 from unittest.mock import patch, mock_open, MagicMock
 import json
 import signal
+from msprobe.core.common.file_utils import create_directory, save_json, write_csv
+from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut import split_json_file, signal_handler, run_parallel_ut, \
     prepare_config, main, ParallelUTConfig
+
+
+class Args:
+    def __init__(self, config_path=None, api_info_path=None, out_path=None, result_csv_path=None):
+        self.config_path = config_path
+        self.api_info_path = api_info_path
+        self.out_path = out_path
+        self.result_csv_path = result_csv_path
+
+
+class TestFileCheck(unittest.TestCase):
+    def setUp(self):
+        src_path = 'temp_path'
+        create_directory(src_path)
+        dst_path = 'soft_link'
+        os.symlink(src_path, dst_path)
+        self.hard_path = os.path.abspath(src_path)
+        self.soft_path = os.path.abspath(dst_path)
+        json_path = os.path.join(self.hard_path, 'test.json')
+        json_data = {'key': 'value'}
+        save_json(json_path, json_data)
+        self.hard_json_path = json_path
+        soft_json_path = 'soft.json'
+        os.symlink(json_path, soft_json_path)
+        self.soft_json_path = os.path.abspath(soft_json_path)
+        csv_path = os.path.join(self.hard_path, 'test.csv')
+        csv_data = [['1', '2', '3']]
+        write_csv(csv_data, csv_path)
+        soft_csv_path = 'soft.csv'
+        os.symlink(csv_path, soft_csv_path)
+        self.csv_path = os.path.abspath(soft_csv_path)
+        self.empty_path = "empty_path"
+
+    def tearDown(self):
+        os.unlink(self.soft_json_path)
+        os.unlink(self.csv_path)
+        os.unlink(self.soft_path)
+        for file in os.listdir(self.hard_path):
+            os.remove(os.path.join(self.hard_path, file))
+        os.rmdir(self.hard_path)
+
+    def test_config_path_soft_link_check(self):
+        args = Args(config_path=self.soft_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_api_info_path_soft_link_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.soft_json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+
+    def test_out_path_soft_link_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.soft_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+    
+    def test_result_csv_path_soft_link_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+                    result_csv_path=self.csv_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.SOFT_LINK_ERROR)
+    
+    def test_config_path_empty_check(self):
+        args = Args(config_path=self.empty_path, api_info_path=self.hard_json_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_api_info_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.empty_path, out_path=self.hard_path)
+        
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_out_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.empty_path)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_result_csv_path_empty_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+                    result_csv_path=self.empty_path)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_config_path_invalid_check(self):
+        args = Args(config_path=123, api_info_path=self.hard_json_path, out_path=self.hard_path)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_api_info_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path="123", out_path=self.hard_path)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_out_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=123)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
+    
+    def test_result_csv_path_invalid_check(self):
+        args = Args(config_path=self.hard_json_path, api_info_path=self.hard_json_path, out_path=self.hard_path, 
+                    result_csv_path=123)
+        with self.assertRaises(Exception) as context:
+            prepare_config(args)
+            self.assertEqual(context.exception.code, FileCheckException.ILLEGAL_PATH_ERROR)
 
 
 class TestMultiRunUT(unittest.TestCase):
@@ -28,12 +151,12 @@ class TestMultiRunUT(unittest.TestCase):
         self.assertEqual(len(split_files), num_splits)
         self.assertEqual(total_items, len(self.test_data.get('data')))
 
-
+    @patch('msprobe.pytorch.api_accuracy_checker.run_ut.multi_run_ut.remove_path')
     @patch('subprocess.Popen')
     @patch('os.path.exists', return_value=True)
     @patch('builtins.open', new_callable=mock_open)
     @patch('json.load', side_effect=lambda f: {'key1': 'TRUE', 'key2': 'TRUE'})
-    def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen):
+    def test_run_parallel_ut(self, mock_json_load, mock_file, mock_exists, mock_popen, _):
         mock_process = MagicMock()
         mock_process.poll.side_effect = [None, None, 1]
         mock_process.stdout.readline.side_effect = ['[ERROR] Test Error Message\n', '']

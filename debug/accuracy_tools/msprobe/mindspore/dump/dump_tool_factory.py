@@ -1,7 +1,22 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from msprobe.mindspore.common.const import Const
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
-from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 from msprobe.mindspore.dump.kernel_graph_dump import KernelGraphDump
+from msprobe.mindspore.dump.kernel_kbyk_dump import KernelKbykDump
 
 
 class DumpToolFactory:
@@ -25,6 +40,8 @@ class DumpToolFactory:
 
     @staticmethod
     def create(config: DebuggerConfig):
+        if len(config.data_mode) != 1 or config.data_mode[0] not in Const.GRAPH_DATA_MODE_LIST:
+            raise Exception("data_mode must be one of all, input, output.")
         tool = DumpToolFactory.tools.get(config.level)
         if not tool:
             raise Exception("Valid level is needed.")

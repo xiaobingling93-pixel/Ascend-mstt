@@ -1,10 +1,24 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
-from pathlib import Path
 
 from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import create_directory
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.core.common.file_check import FileChecker, FileCheckConst, check_path_before_create
 
 
 class DebuggerConfig:
@@ -19,26 +33,29 @@ class DebuggerConfig:
         self.level_ori = common_config.level
         self.list = [] if not task_config.list else task_config.list
         self.scope = [] if not task_config.scope else task_config.scope
-        self.data_mode = [] if not task_config.data_mode else task_config.data_mode
+        self.data_mode = [Const.ALL] if not task_config.data_mode else task_config.data_mode
         self.file_format = task_config.file_format
         self.overflow_nums = 1 if not task_config.overflow_nums else task_config.overflow_nums
         self.check_mode = task_config.check_mode
         self.framework = Const.MS_FRAMEWORK
         self.summary_mode = task_config.summary_mode
         self.check()
-        self._make_dump_path_if_not_exists()
+        create_directory(self.dump_path)
 
         if self.task == Const.FREE_BENCHMARK:
             self.pert_type = (FreeBenchmarkConst.DEFAULT_PERT_TYPE
                               if not task_config.pert_mode else task_config.pert_mode)
             self.handler_type = (FreeBenchmarkConst.DEFAULT_HANDLER_TYPE
                                  if not task_config.handler_type else task_config.handler_type)
-            if self.handler_type == FreeBenchmarkConst.FIX_HANDLER_MODE and \
+            self.stage = FreeBenchmarkConst.DEFAULT_STAGE if not task_config.fuzz_stage else task_config.fuzz_stage
+            if self.handler_type == FreeBenchmarkConst.FIX and \
                self.pert_type != FreeBenchmarkConst.DEFAULT_PERT_TYPE:
                 raise ValueError("pert_mode must be improve_precision or empty when handler_type is fix, "
                                  f"but got {self.pert_type}.")
+            if self.stage == Const.BACKWARD and self.handler_type == FreeBenchmarkConst.FIX:
+                raise ValueError("handler_type must be check or empty when fuzz_stage is backward, "
+                                 f"but got {self.handler_type}.")
             self.dump_level = FreeBenchmarkConst.DEFAULT_DUMP_LEVEL
-            self.stage = FreeBenchmarkConst.DEFAULT_STAGE
 
     def check(self):
         if not self.dump_path:
@@ -52,23 +69,4 @@ class DebuggerConfig:
             self.file_format = "npy"
         if not self.check_mode:
             self.check_mode = "all"
-        self._check_rank()
-        self._check_step()
         return True
-
-    def _check_rank(self):
-        for rank_id in self.rank:
-            if not isinstance(rank_id, int) or rank_id < 0:
-                raise ValueError(f"rank {self.rank} must be a positive integer.")
-
-    def _check_step(self):
-        for s in self.step:
-            if not isinstance(s, int) or s < 0:
-                raise ValueError(f"step element {s} must be a positive integer.")
-
-    def _make_dump_path_if_not_exists(self):
-        check_path_before_create(self.dump_path)
-        if not os.path.exists(self.dump_path):
-            Path(self.dump_path).mkdir(mode=FileCheckConst.DATA_DIR_AUTHORITY, exist_ok=True)
-        file_check = FileChecker(self.dump_path, FileCheckConst.DIR)
-        file_check.common_check()

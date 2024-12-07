@@ -1,29 +1,52 @@
-import copy
-import os
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import hashlib
 import zlib
 from dataclasses import asdict
 from typing import List
 
 import numpy as np
 import torch
-from msprobe.core.common.file_check import path_len_exceeds_limit, change_mode
+from torch import distributed as dist
+
+from msprobe.core.common.const import Const
+from msprobe.core.common.file_utils import path_len_exceeds_limit
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import Const, OverflowConst, FileCheckConst
+from msprobe.core.common.utils import convert_tuple
 from msprobe.core.data_dump.data_processor.base import BaseDataProcessor, ModuleBackwardInputsOutputs, \
     ModuleForwardInputsOutputs, TensorStatInfo
+from msprobe.pytorch.common.utils import save_pt, load_pt
 from msprobe.pytorch.free_benchmark import FreeBenchmarkCheck, UnequalRow
-from msprobe.pytorch.common.utils import save_pt
+from msprobe.core.common.utils import recursion_depth_decorator
 
-
+is_gpu = False
 try:
     import torch_npu
-    is_gpu = False
 except ImportError:
     is_gpu = True
 
 
 class PytorchDataProcessor(BaseDataProcessor):
-    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor)
+    pytorch_special_type = (torch.device, torch.dtype, torch.Size, torch.Tensor, torch.memory_format, dist.ProcessGroup)
+    memory_format = {
+        torch.contiguous_format: "contiguous_format",
+        torch.channels_last: "channels_last",
+        torch.channels_last_3d: "channels_last_3d",
+        torch.preserve_format: "preserve_format"
+    }
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
@@ -67,8 +90,8 @@ class PytorchDataProcessor(BaseDataProcessor):
         if data_clone.numel() == 0:
             return tensor_stat
         elif data_clone.dtype == torch.bool:
-            tensor_stat.max = True in data_clone
-            tensor_stat.min = False not in data_clone
+            tensor_stat.max = torch._C._VariableFunctionsClass.any(data_clone).item()
+            tensor_stat.min = torch._C._VariableFunctionsClass.all(data_clone).item()
         elif not data_clone.shape:
             tensor_stat.max = tensor_stat.min = tensor_stat.mean = tensor_stat.norm = data_clone.item()
         elif torch.is_complex(data_clone):
@@ -92,35 +115,45 @@ class PytorchDataProcessor(BaseDataProcessor):
         data_nan = torch._C._VariableFunctionsClass.isnan(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(data_nan)) == data_clone.numel():
             return float('nan')
+
         finite_mask = torch._C._VariableFunctionsClass.isfinite(data_clone)
         if int(torch._C._VariableFunctionsClass.sum(finite_mask)) > 0:
-            finite_values = data_clone[finite_mask]
+            finite_values = getattr(torch._C._TensorBase, "__getitem__")(data_clone, finite_mask)
             return torch._C._VariableFunctionsClass.max(finite_values).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(finite_values).item()
         else:
-            data_no_nan = data_clone[~data_nan]
+            data_no_nan = getattr(torch._C._TensorBase, "__getitem__")(data_clone, ~data_nan)
             return torch._C._VariableFunctionsClass.max(data_no_nan).item() if operator == 'max' else \
                 torch._C._VariableFunctionsClass.min(data_no_nan).item()
 
     @staticmethod
-    def _analyze_builtin(arg):
-        single_arg = {}
-        if isinstance(arg, slice):
-            single_arg.update({"type": "slice"})
-            # slice参数中可能存在tensor类型，json序列化，需要转换为python数值类型
-            values = [
-                value if not isinstance(value, torch.Tensor) else value.item()
-                for value in [arg.start, arg.stop, arg.step]
-            ]
-            single_arg.update({"value": values})
-        else:
-            single_arg.update({"type": type(arg).__name__})
-            single_arg.update({"value": arg})
-        return single_arg
+    def process_group_hash(arg):
+        group_ranks = dist.get_process_group_ranks(arg)
+        group_ranks_hash = hashlib.md5(str(group_ranks).encode('utf-8')).hexdigest()
+        return group_ranks_hash
 
     @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
+
+    @staticmethod
+    def _analyze_memory_format(arg):
+        # 获取内存格式
+        format_type = PytorchDataProcessor.memory_format.get(arg)
+
+        return {"type": "torch.memory_format", "format": format_type}
+
+    @staticmethod
+    def _analyze_process_group(arg):
+        group_info = {"type": "torch.ProcessGroup"}
+        try:
+            group_ranks = dist.get_process_group_ranks(arg)
+            group_info.update({"group_ranks": group_ranks})
+            group_id = PytorchDataProcessor.process_group_hash(arg)
+            group_info.update({"group_id": group_id})
+        except Exception as e:
+            logger.warning(f"Failed to get process group(id: {group_id}) ranks info with error info: {e}.")
+        return group_info
 
     @classmethod
     def get_special_types(cls):
@@ -131,12 +164,16 @@ class PytorchDataProcessor(BaseDataProcessor):
             return self.torch_object_key[suffix_stack[-1]](element)
         if isinstance(element, torch.Size):
             return self._analyze_torch_size(element)
+        if isinstance(element, torch.memory_format):
+            return self._analyze_memory_format(element)
+        if isinstance(element, dist.ProcessGroup):
+            return self._analyze_process_group(element)
         converted_numpy, numpy_type = self._convert_numpy_to_builtin(element)
         if converted_numpy is not element:
             return self._analyze_numpy(converted_numpy, numpy_type)
         if isinstance(element, torch.Tensor):
             return self._analyze_tensor(element, Const.SEP.join(suffix_stack))
-        if isinstance(element, (bool, int, float, str, slice)):
+        if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
 
@@ -172,7 +209,7 @@ class StatisticsDataProcessor(PytorchDataProcessor):
 class TensorDataProcessor(PytorchDataProcessor):
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
-        saved_tensor = tensor.contiguous().detach()
+        saved_tensor = tensor.clone().contiguous().detach()
         save_pt(saved_tensor, file_path)
         single_arg = super()._analyze_tensor(tensor, suffix)
         single_arg.update({"data_name": dump_data_name})
@@ -184,91 +221,87 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
 
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
+        self.has_overflow = False
+        self.support_inf_nan = None
+        self.cached_inplace_api_info = {}
         self.cached_tensors_and_file_paths = {}
         self.bits_for_overflow = 8
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
-        self.forward_inplace_inputs = None
 
     @property
     def is_terminated(self):
         if self.overflow_nums == -1:
             return False
         if self.real_overflow_nums >= self.overflow_nums:
-            logger.info(f"[msprobe] 超过预设溢出次数 当前溢出次数: {self.real_overflow_nums}")
             return True
         return False
 
-    @staticmethod
-    def overflow_debug_mode_enable():
-        overflow_mode = os.getenv(OverflowConst.OVERFLOW_DEBUG_MODE_ENABLE, Const.ENV_DISABLE)
-        return overflow_mode == Const.ENV_ENABLE
-
     def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
-        self.forward_inplace_inputs = copy.deepcopy(module_input_output)
+        self.has_overflow = False
+        self._is_support_inf_nan()
+        self.cached_inplace_api_info = super().analyze_pre_forward_inplace(name, module_input_output)
         return None
 
     def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
-        module_input_output.output = module_input_output.concat_args_and_kwargs()
-        module_input_output.args = self.forward_inplace_inputs.args
-        module_input_output.kwargs = self.forward_inplace_inputs.kwargs
-        # release memory used by forward inputs
-        self.forward_inplace_inputs = None
-        return self.analyze_forward(name, None, module_input_output)
+        self._is_support_inf_nan()
+        api_info_struct = super().analyze_forward_inplace(name, module_input_output)
+        if name in self.cached_inplace_api_info and name in api_info_struct:
+            self.cached_inplace_api_info[name].update(api_info_struct[name])
+        elif name in api_info_struct:
+            self.cached_inplace_api_info = api_info_struct
+        self.handle_overflow()
+        return self.cached_inplace_api_info if self.has_overflow else None
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
+        self._is_support_inf_nan()
         api_info_struct = super().analyze_forward(name, module, module_input_output)
-        self.maybe_save_overflow_data_and_check_overflow_times()
+        self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
     def analyze_backward(self, name, module, module_input_output: ModuleBackwardInputsOutputs):
         self.has_overflow = False
+        self._is_support_inf_nan()
         api_info_struct = super().analyze_backward(name, module, module_input_output)
-        self.maybe_save_overflow_data_and_check_overflow_times()
+        self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
-    def maybe_save_overflow_data_and_check_overflow_times(self):
+    def handle_overflow(self):
+        if not self.support_inf_nan:
+            self._analyze_maybe_overflow_flag()
         if self.has_overflow:
             for file_path, tensor in self.cached_tensors_and_file_paths.items():
                 save_pt(tensor, file_path)
             self.real_overflow_nums += 1
+            if self.overflow_nums != -1 and self.real_overflow_nums >= self.overflow_nums:
+                logger.info(f"[{Const.TOOL_NAME}] Reached the preset overflow times, "
+                            f"current overflow times: {self.real_overflow_nums}.")
         self.cached_tensors_and_file_paths = {}
 
-    def check_overflow_npu(self):
-        if self.overflow_debug_mode_enable():
-            float_status = torch.zeros(self.bits_for_overflow).npu()
-            result = torch_npu.npu_get_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
-            if result.cpu()[0] != 0:
-                return True
-            else:
-                return False
-        else:
-            return torch_npu._C._check_overflow_npu()
+    def _is_support_inf_nan(self):
+        if self.support_inf_nan is not None:
+            return
+        try:
+            self.support_inf_nan = is_gpu or torch_npu.npu.utils.is_support_inf_nan()
+        except Exception:
+            logger.warning(f"Unable to determine if the current device supports inf/nan mode, default not supported.")
+            self.support_inf_nan = False
 
-    def clear_overflow_npu(self):
-        if self.overflow_debug_mode_enable():
-            float_status = torch.zeros(self.bits_for_overflow).npu()
-            torch_npu.npu_clear_float_status(float_status, OverflowConst.OVERFLOW_DEBUG_MODE)
-        else:
-            torch_npu._C._clear_overflow_npu()
+    def _analyze_maybe_overflow_flag(self):
+        try:
+            self.has_overflow = torch_npu.npu.utils.get_npu_overflow_flag()
+            if self.has_overflow:
+                torch_npu.npu.utils.clear_npu_overflow_flag()
+        except Exception as e:
+            logger.error(f"Overflow check failed, the current environment may be abnormal.")
+            raise RuntimeError(f"overflow check failed") from e
 
     def _analyze_maybe_overflow_tensor(self, tensor_json):
-        if is_gpu or (hasattr(torch_npu._C, '_npu_is_support_inf_nan') and torch_npu._C._npu_is_support_inf_nan()):
-            if tensor_json['Max'] is None:
-                return
-            if np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']):
-                self.has_overflow = True
-            if np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min']):
-                self.has_overflow = True
-        else:
-            try:
-                self.has_overflow = self.check_overflow_npu()
-                if self.has_overflow:
-                    self.clear_overflow_npu()
-            except Exception as e:
-                logger.error(f"Overflow check failed, the current environment may be abnormal.")
-                raise RuntimeError(f"overflow check failed") from e
+        if tensor_json['Max'] is None or tensor_json['Min'] is None:
+            return
+        self.has_overflow = np.isinf(tensor_json['Max']) or np.isnan(tensor_json['Max']) or \
+                            np.isinf(tensor_json['Min']) or np.isnan(tensor_json['Min'])
 
     def _analyze_tensor(self, tensor, suffix):
         dump_data_name, file_path = self.get_save_file_path(suffix)
@@ -277,8 +310,9 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         else:
             logger.warning(f'The file path {file_path} length exceeds limit.')
         single_arg = super()._analyze_tensor(tensor, suffix)
-        self._analyze_maybe_overflow_tensor(single_arg)
         single_arg.update({"data_name": dump_data_name})
+        if not self.has_overflow and self.support_inf_nan:
+            self._analyze_maybe_overflow_tensor(single_arg)
         return single_arg
 
 
@@ -327,63 +361,120 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
 
 
 class KernelDumpDataProcessor(PytorchDataProcessor):
-    forward_init_status = False
-    multi_output_apis = ["_sort_", "npu_flash_attention"]
-
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
+        self.enable_kernel_dump = True
+        self.is_found_output_tensor = False
+        self.is_found_grad_input_tensor = False
+        self.forward_args = None
+        self.forward_kwargs = None
+        self.forward_output_tensor = None
+        self.grad_input_tensor = None
+
+    @staticmethod
+    def start_kernel_dump(config_path):
+        torch_npu.npu.synchronize()
+        torch_npu.npu.init_dump()
+        torch_npu.npu.set_dump(config_path)
+        torch_npu.npu.synchronize()
+
+    @staticmethod
+    def stop_kernel_dump():
+        torch_npu.npu.synchronize()
+        torch_npu.npu.finalize_dump()
+        torch_npu.npu.synchronize()
+
+    @staticmethod
+    def _print_unsupported_log(api_name):
+        logger.warning(f"The kernel dump does not support the {api_name} API.")
+
+    def analyze_pre_forward(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        if is_gpu:
+            logger.warning("The current environment is not a complete NPU environment, and kernel dump cannot be used.")
+            self.enable_kernel_dump = False
+            return
+
+        if self.config.is_backward_kernel_dump:
+            self.forward_args = self.clone_and_detach_tensor(module_input_output.args)
+            self.forward_kwargs = self.clone_and_detach_tensor(module_input_output.kwargs)
+            try:
+                output = module.forward(*self.forward_args, **self.forward_kwargs)
+            except Exception:
+                self._print_unsupported_log(name)
+                self.enable_kernel_dump = False
+                return
+
+            self.analyze_element(convert_tuple(output))
+            if not self.is_found_output_tensor:
+                self._print_unsupported_log(name)
+                self.enable_kernel_dump = False
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
 
     def analyze_forward(self, name, module, module_input_output):
-        if self.config.is_forward_acl_dump:
-            self.forward_acl_dump(name, module, module_input_output)
+        if not self.enable_kernel_dump:
+            return
+        if self.config.is_backward_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    def analyze_backward(self, name, module, module_input_output):
+        if not self.enable_kernel_dump:
+            return
+        self.enable_kernel_dump = False
+
+        self.analyze_element(module_input_output.grad_input)
+        if not self.is_found_grad_input_tensor:
+            self._print_unsupported_log(name)
+            return
+        self.start_kernel_dump(self.config.kernel_config_path)
+
+        try:
+            self.forward_output_tensor.backward(self.grad_input_tensor, retain_graph=True)
+        except Exception:
+            self._print_unsupported_log(name)
+            self.stop_kernel_dump()
+            return
+
+        self.stop_kernel_dump()
+        logger.info(f"The kernel data of {name} is dumped successfully.")
+
+    @recursion_depth_decorator("KernelDump: KernelDumpDataProcessor.clone_and_detach_tensor")
+    def clone_and_detach_tensor(self, input_params):
+        if isinstance(input_params, torch.Tensor):
+            if input_params.requires_grad:
+                return input_params.clone().detach().requires_grad_()
+            return input_params.clone()
+        elif isinstance(input_params, tuple):
+            return tuple(self.clone_and_detach_tensor(x) for x in input_params)
+        elif isinstance(input_params, list):
+            return list(self.clone_and_detach_tensor(x) for x in input_params)
+        elif isinstance(input_params, dict):
+            return {k: self.clone_and_detach_tensor(v) for k, v in input_params.items()}
         else:
-            self.dump_mode_backward_acl_dump(name, module, module_input_output)
+            return input_params
 
-    def forward_acl_dump(self, name, module, module_input_output):
-        if not KernelDumpDataProcessor.forward_init_status:
-            KernelDumpDataProcessor.forward_init_status = True
-            torch_npu.npu.synchronize()
-            torch_npu.npu.init_dump()
-            torch_npu.npu.set_dump(self.config.acl_config)
-            torch_npu.npu.synchronize()
-            if self.op_need_trigger(name):
-                module.forward(*module_input_output.args, **module_input_output.kwargs).cpu()
-            else:
-                module.forward(*module_input_output.args, **module_input_output.kwargs)
-            torch_npu.npu.synchronize()
-            torch_npu.npu.finalize_dump()
-            torch_npu.npu.synchronize()
-        KernelDumpDataProcessor.forward_init_status = False
-        logger.info("Dump %s op file." % name)
+    def analyze_single_element(self, element, suffix_stack):
+        if isinstance(element, torch.Tensor):
+            if not self.is_found_output_tensor:
+                if element.requires_grad:
+                    self.forward_output_tensor = element
+                    self.is_found_output_tensor = True
+                return {}
+            if not self.is_found_grad_input_tensor:
+                self.grad_input_tensor = element.clone()
+                self.is_found_grad_input_tensor = True
+        return {}
 
-    def acl_backward_dump_status(self, output, grad, module_name):
-        if isinstance(output, torch.Tensor):
-            output.backward(grad, retain_graph=True)
-            return True
-
-        for api_name in KernelDumpDataProcessor.multi_output_apis:
-            if api_name in module_name:
-                output[0].backward(grad, retain_graph=True)
-                return True
-        return False
-
-    def dump_mode_backward_acl_dump(self, name, module, module_input_output):
-        grad_path = self.config.backward_input.get(name)
-        if not KernelDumpDataProcessor.forward_init_status:
-            KernelDumpDataProcessor.forward_init_status = True
-            output = module.forward(*module_input_output.args, **module_input_output.kwargs)
-            grad = torch.load(grad_path).to("npu").requires_grad_()
-            torch_npu.npu.init_dump()
-            torch_npu.npu.set_dump(self.config.acl_config)
-            torch_npu.npu.synchronize()
-            if not self.acl_backward_dump_status(output, grad, name):
-                logger.warning("The output of {} is not of tensor type and cannot be automatically derived. "
-                               "you can manually construct a single API backward case for ACL dump.".format(
-                    name))
-            torch_npu.npu.synchronize()
-            torch_npu.npu.finalize_dump()
-        KernelDumpDataProcessor.forward_init_status = False
-        logger.info("Dump %s op file." % name)
-
-    def op_need_trigger(self, module_name):
-        return 'Tensor.__getitem__.' in module_name
+    def reset_status(self):
+        self.enable_kernel_dump = True
+        self.is_found_output_tensor = False
+        self.is_found_grad_input_tensor = False
+        self.forward_args = None
+        self.forward_kwargs = None
+        self.forward_output_tensor = None
+        self.grad_input_tensor = None

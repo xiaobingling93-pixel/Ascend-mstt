@@ -68,9 +68,10 @@ class OpTreeBuilder:
             if main_tid:
                 # only append the staled device nodes into main thread
                 self.main_tid = op_list[0].tid
-                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes, is_ascend)
+                root_node = OpTreeBuilder._build_tree_internal(op_list, zero_rt_list, tid, staled_device_nodes,
+                                                               is_ascend)
             else:
-                root_node = self._build_tree_internal(op_list, zero_rt_list, tid, [], is_ascend)
+                root_node = OpTreeBuilder._build_tree_internal(op_list, zero_rt_list, tid, [], is_ascend)
             tid2tree[int(tid)] = root_node
 
         return tid2tree
@@ -83,7 +84,8 @@ class OpTreeBuilder:
                 # there are multiple tids
                 backward_tid = self._find_backward_tid()
                 tid2len = {
-                    tid: root.end_time - root.start_time for tid, root in self.tid2tree.items()
+                    tid: root.end_time - root.start_time
+                    for tid, root in self.tid2tree.items()
                     if tid != backward_tid or backward_tid is None
                 }
                 # get the maximum length as the main thread
@@ -97,7 +99,8 @@ class OpTreeBuilder:
 
         return None
 
-    def _build_tree_internal(self, host_node_list, zero_rt_list, tid, staled_device_nodes, is_ascend):
+    @staticmethod
+    def _build_tree_internal(host_node_list, zero_rt_list, tid, staled_device_nodes, is_ascend):
         """host_node_list: list of OperatorNode and ProfilerStepNode.
         zero_rt_list: list of RuntimeNode with external_id=0."""
 
@@ -110,7 +113,7 @@ class OpTreeBuilder:
                     name='dummy',
                     start_time=None,
                     end_time=None,
-                    type=EventTypes.RUNTIME,
+                    node_type=EventTypes.RUNTIME,
                     tid=0,
                     device_nodes=staled_device_nodes))
                 dummpy_rt[0].fill_stats()
@@ -119,7 +122,7 @@ class OpTreeBuilder:
                 name='CallTreeRoot',
                 start_time=-sys.maxsize - 1,
                 end_time=sys.maxsize,
-                type=EventTypes.PYTHON,
+                node_type=EventTypes.PYTHON,
                 tid=tid,
                 runtimes=zero_rt_list + dummpy_rt)  # Give the list of RuntimeNode with external_id=0 to root node.
             node_stack.append(root_node)
@@ -130,7 +133,6 @@ class OpTreeBuilder:
                         if node.end_time <= tail_node.end_time or (
                                 is_ascend and math.isclose(node.end_time, tail_node.end_time, rel_tol=1)):
                             tail_node.children.append(node)
-                            # node.parent_node = weakref.ref(tail_node)
                             node_stack.append(node)
                         else:
                             logger.error('Error in input data: ranges on the same thread should not intersect!'
@@ -274,7 +276,7 @@ class OpTreeBuilder:
 
         if isinstance(node, ModuleNode):
             backward_node = BackwardNode(name=node.name + '.backward', start_time=None, end_time=None,
-                                         type='backward', tid=0)
+                                         node_type='backward', tid=0)
             if parent is None:
                 result.append(backward_node)
             else:

@@ -11,7 +11,7 @@ found in the LICENSE file.
         'use strict';
 
         function onTraceViewerImportFail() {
-            document.addEventListener('DOMContentLoaded', function () {
+            document.addEventListener('DOMContentLoaded', () => {
                 document.body.textContent =
                     'tracing/bin/trace_viewer_full.html is missing. ' +
                     'Run vulcanize_trace_viewer from $TRACE_VIEWER and reload.';
@@ -52,12 +52,11 @@ found in the LICENSE file.
             // warning.
             window.__hideTraceViewerPolyfillWarning = true;
 
-            window.addEventListener("message", event => {
-                const data = event.data || {}
-                console.log(data)
-                name = data.name || 'unknown'
-                onResult(data.data)
-            })
+            window.addEventListener('message', event => {
+                const data = event.data || {};
+                name = data.name || 'unknown';
+                onResult(data.data);
+            });
 
             function onResult(result) {
                 model = new tr.Model();
@@ -78,7 +77,7 @@ found in the LICENSE file.
                 overlay.visible = true;
             }
 
-            document.addEventListener('WebComponentsReady', function () {
+            document.addEventListener('WebComponentsReady', () => {
                 const container = document.createElement('track-view-container');
                 container.id = 'track_view_container';
 
@@ -91,7 +90,7 @@ found in the LICENSE file.
                 Polymer.dom(document.body).appendChild(viewer);
 
                 if (window.parent) {
-                  window.parent.postMessage({ msg: 'ready' }, '*')
+                  window.parent.postMessage({ msg: 'ready' }, window.origin);
                 }
             });
         }());

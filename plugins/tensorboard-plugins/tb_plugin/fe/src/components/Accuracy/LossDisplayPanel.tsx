@@ -17,16 +17,16 @@
  * limitations under the License.
  *--------------------------------------------------------------------------------------------*/
 
-import * as React from 'react'
-import { useState, useLayoutEffect, useRef } from 'react'
-import { makeStyles } from '@material-ui/core/styles'
-import { FileInfo } from './entity'
-import * as echarts from 'echarts'
-import { Table } from 'antd'
-import { ColumnsType } from 'antd/es/table'
+import * as React from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
+import { makeStyles } from '@material-ui/core/styles';
+import { FileInfo } from './entity';
+import * as echarts from 'echarts';
+import { Table } from 'antd';
+import { ColumnsType } from 'antd/es/table';
 
 interface IProps {
-  fileList: FileInfo[]
+  fileList: FileInfo[];
 }
 
 const useStyles = makeStyles(() => ({
@@ -35,14 +35,14 @@ const useStyles = makeStyles(() => ({
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
-    height: '50%'
+    height: '50%',
   },
   title: {
     height: 24,
     lineHeight: '24px',
     fontFamily: 'sans-serif',
     fontSize: 16,
-    fontWeight: 700
+    fontWeight: 700,
   },
   content: {
     flex: 1,
@@ -50,11 +50,11 @@ const useStyles = makeStyles(() => ({
   },
   lossChart: {
     height: '100%',
-    flex: 1
+    flex: 1,
   },
   lossTable: {
     height: '100%',
-    width: '32%'
+    width: '32%',
   },
   tableHeader: {
     display: 'inline-block',
@@ -64,130 +64,141 @@ const useStyles = makeStyles(() => ({
     transform: 'translateY(-50%)',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap'
-  }
-}))
+    whiteSpace: 'nowrap',
+  },
+}));
 
 export const LossDisplayPanel: React.FC<IProps> = (props) => {
-  const { fileList } = props
-  const classes = useStyles()
-  const chartRef = useRef<HTMLDivElement>(null)
-  const [pageSize, setPageSize] = useState(20)
-  const totalRef = useRef<number>(0)
+  const { fileList } = props;
+  const classes = useStyles();
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [pageSize, setPageSize] = useState(20);
+  const totalRef = useRef<number>(0);
 
   const getColumns = (): ColumnsType<any> => {
-    const columns: ColumnsType<any> = [{
-      title: 'Iteration',
-      key: 'iter',
-      dataIndex: 'iter',
-      width: '20%',
-      fixed: 'left'
-    }]
+    const columns: ColumnsType<any> = [
+      {
+        title: 'Iteration',
+        key: 'iter',
+        dataIndex: 'iter',
+        width: '20%',
+        fixed: 'left',
+      },
+    ];
     fileList.forEach((item, index) => {
       columns.push({
         title: () => (
-          <div className={classes.tableHeader} title={item.fileName}>{item.fileName}</div>
+          <div className={classes.tableHeader} title={item.fileName}>
+            {item.fileName}
+          </div>
         ),
         key: index,
         dataIndex: item.fileName,
-        width: 150
-      })
-    })
-    return columns
-  }
+        width: 150,
+      });
+    });
+    return columns;
+  };
 
   const getTableData = (): readonly any[] => {
-    const dataSource: any[] = []
-    let allIters: number[] = []
-    fileList.forEach(file => {
-      allIters = allIters.concat(file.iters)
-    })
-    const uniqueIter = new Set(allIters.sort((a, b) => a - b))
+    const dataSource: any[] = [];
+    let allIters: number[] = [];
+    fileList.forEach((file) => {
+      allIters = allIters.concat(file.iters);
+    });
+    const uniqueIter = new Set(allIters.sort((a, b) => a - b));
     uniqueIter.forEach((iter, index) => {
-      const fileLosses: { [fileName: string]: number | string } = {}
-      fileList.forEach(file => {
-        fileLosses[file.fileName] = file.iterLosses[iter] ?? 'NA'
-      })
+      const fileLosses: { [fileName: string]: number | string } = {};
+      fileList.forEach((file) => {
+        fileLosses[file.fileName] = file.iterLosses[iter] ?? 'NA';
+      });
       dataSource.push({
         key: `${iter}_${index}`,
         iter,
-        ...fileLosses
-      })
-    })
-    totalRef.current = dataSource.length
-    return dataSource
-  }
+        ...fileLosses,
+      });
+    });
+    totalRef.current = dataSource.length;
+    return dataSource;
+  };
 
   const onShowSizeChange = (current: number, size: number) => {
-    setPageSize(size)
-  }
+    setPageSize(size);
+  };
 
   useLayoutEffect(() => {
-    const element = chartRef.current
+    const element = chartRef.current;
     if (!element) {
-      return
+      return undefined;
     }
-    const echart = echarts.init(element)
-    const dataset: echarts.DatasetComponentOption[] = []
-    const series: echarts.SeriesOption[] = []
+    const echart = echarts.init(element);
+    const dataset: echarts.DatasetComponentOption[] = [];
+    const series: echarts.SeriesOption[] = [];
     fileList.forEach((item, index) => {
       dataset.push({
-        source: item.losses
-      })
-      series.push({ type: 'line', name: item.fileName, datasetIndex: index, symbol: 'none' })
-    })
+        source: item.losses,
+      });
+      series.push({
+        type: 'line',
+        name: item.fileName,
+        datasetIndex: index,
+        symbol: 'none',
+      });
+    });
     let option: echarts.EChartsOption = {
       title: {
         text: 'Loss Chart',
         textStyle: {
           fontSize: 12,
-          color: '#000'
-        }
+          color: '#000',
+        },
       },
       tooltip: {
         trigger: 'axis',
         confine: true,
         axisPointer: {
           label: {
-            precision: 0
-          }
-        }
+            precision: 0,
+          },
+        },
       },
       legend: {
         type: 'scroll',
         bottom: 0,
         tooltip: {
-          show: true
+          show: true,
         },
         formatter: (name) => {
           // Show ellipsis and set tooltip for legends with too long name
-          return name.length > 50 ? name.slice(0, 48) + "..." : name;
-        }
+          return name.length > 50 ? `${name.slice(0, 48)}...` : name;
+        },
       },
       xAxis: {
         type: 'value',
         boundaryGap: false,
         name: 'Iteration',
-        minInterval: 1
+        minInterval: 1,
       },
       yAxis: {
         type: 'value',
         name: 'Loss',
-        scale: true
+        scale: true,
       },
       dataZoom: {
-        type: 'inside'
+        type: 'inside',
       },
       dataset,
-      series
-    }
+      series,
+    };
 
-    option && echart.setOption(option, true)
+    if (option) {
+      echart.setOption(option, true);
+    }
 
     return () => {
-      echart.dispose()
-    }
-  }, [fileList])
+      echart.dispose();
+    };
+  }, [fileList]);
 
   return (
     <div className={classes.root}>
@@ -201,17 +212,20 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
           size='small'
           scroll={{
             x: 150 * fileList.length + 100,
-            y: fileList.length < 2 ? 'calc(100vh - 240px)' : 'calc(50vh - 185px)'
+            y:
+              fileList.length < 2
+                ? 'calc(100vh - 240px)'
+                : 'calc(50vh - 185px)',
           }}
           pagination={{
             pageSize,
             pageSizeOptions: ['10', '20', '30', '50', '100'],
             total: totalRef.current,
-            showTotal: total => `Total ${total} items`,
-            onShowSizeChange
+            showTotal: (total) => `Total ${total} items`,
+            onShowSizeChange,
           }}
         />
       </div>
     </div>
-  )
-}
+  );
+};

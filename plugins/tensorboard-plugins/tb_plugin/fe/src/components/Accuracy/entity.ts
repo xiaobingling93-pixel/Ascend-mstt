@@ -18,13 +18,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 export interface FileInfo {
-  id: number
-  fileName: string
-  fileContent: string
-  checked: boolean
-  lossTag: string
-  iterTag: string
-  iters: number[]
-  losses: number[][]
-  iterLosses: { [iter: number]: number }
+  id: number;
+  fileName: string;
+  fileContent: string;
+  checked: boolean;
+  lossTag: string;
+  iterTag: string;
+  iters: number[];
+  losses: number[][];
+  iterLosses: { [iter: number]: number };
 }

@@ -35,6 +35,8 @@ NODE_PROCESS_PATTERN = re.compile(r"""^(.*)_(\d+)""")
 MONITOR_RUN_REFRESH_INTERNAL_IN_SECONDS = 10
 MAX_GPU_PER_NODE = 64
 MAX_FILE_SIZE = 500 * 1024 * 1024
+MAX_LINUX_PATH_LENGTH = 4096
+MAX_WINDOWS_PATH_LENGTH = 260
 
 View = namedtuple('View', 'id, name, display_name')
 OVERALL_VIEW = View(1, 'overall', 'Overview')

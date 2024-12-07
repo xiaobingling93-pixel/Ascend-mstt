@@ -1,0 +1,340 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import os
+import sys
+import statistics as st
+from abc import ABC
+from dataclasses import dataclass, field
+from typing import List
+from collections import defaultdict
+
+import pandas as pd
+from torch.utils.tensorboard import SummaryWriter
+
+from msprobe.core.common.log import logger
+from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
+from msprobe.core.common.const import FileCheckConst, MonitorConst
+
+
+class ScanRule(ABC):
+    name = "ScanRule"
+
+    def apply(self, history, cur):
+        raise NotImplementedError("abstract method apply is not implemented")
+
+
+class AnomalyTurbulence(ScanRule):
+    name = "AnomalyTurbulence"
+
+    def __init__(self, threshold) -> None:
+        self.threshold = threshold
+
+    def apply(self, history, cur):
+        baseline = st.mean(history) if isinstance(history, list) else history
+
+        up_bound = baseline + baseline * self.threshold
+        if baseline > 0:
+            return cur > up_bound
+        else:
+            return cur < up_bound
+
+
+class AnomalyScanner:
+
+    @staticmethod
+    def load_rules(specs: List[dict]):
+        """
+        specs: [{"rule_name": "AnomalyTurbulence", "args": {"threshold": 0.5}}]
+        """
+        if specs is None:
+            return []
+        alert_rules = []
+        for spec in specs:
+            # 使用get方法获取键值，如果键不存在则返回None
+            rule_cls_name = spec.get("rule_name")
+            rule_args = spec.get("args")
+
+            # 检查必要的键是否存在
+            if rule_cls_name is None or rule_args is None:
+                logger.warning(f"Spec is missing required keys: {spec}")
+                continue
+
+            cur_module = sys.modules.get(__name__)
+            try:
+                rule_cls = getattr(cur_module, rule_cls_name)
+            except AttributeError:
+                logger.error(f"Rule class '{rule_cls_name}' not found in the current module.")
+                continue
+
+            try:
+                rule_instance = rule_cls(**rule_args)
+                alert_rules.append(rule_instance)
+            except Exception as e:
+                logger.error(f"Error creating instance of rule '{rule_cls_name}': {e}")
+                continue
+
+        return alert_rules
+
+    @staticmethod
+    def scan(scan_rules: List[ScanRule], history, cur):
+        anomaly = False
+        for rule in scan_rules:
+            anomaly = rule.apply(history, cur)
+            if anomaly:
+                return anomaly, rule.name
+        return anomaly, None
+
+
+class BCOLORS:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+class AnomalyDataFactory(ABC):
+    def __init__(self, rank, pp_stage, group_mates):
+        super().__init__()
+        self.rank = rank
+        self.pp_stage = pp_stage
+        self.group_mates = group_mates
+        self.micro_step = 0
+        self.name2callid = {}
+
+    def set_call_id(self, name2callid):
+        """根据当前GradContext信息更新call_id vpp_stage等信息
+        """
+        self.name2callid = name2callid
+
+    def create(self, tag, message, step):
+        """如果检查出异常, 调用当前接口生成GradAnomalyData实例
+        tag (tuple): metric tag ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
+        message (str): anomaly detect message
+        step (int): training step
+        """
+        if not isinstance(tag, tuple) or len(tag) != 2:
+            raise ValueError("tag must be a tuple with length 2")
+        tag_name = tag[0]
+        param_name = tag_name.split('/')[0]
+        call_id = self.name2callid.get(param_name, -1)
+        if MonitorConst.VPP_SEP in param_name:
+            vpp_stage = int(param_name.split(MonitorConst.VPP_SEP)[0])
+        else:
+            vpp_stage = 0
+
+        return GradAnomalyData(
+            self.rank,
+            step,
+            self.micro_step,
+            self.pp_stage,
+            vpp_stage,
+            call_id,
+            tag_name,
+            message,
+            self.group_mates
+        )
+
+
+@dataclass(eq=True)
+class GradAnomalyData:
+    rank: int = 0
+    step: int = 0
+    micro_step: int = 0
+    pp_stage: int = 0
+    vpp_stage: int = 0
+    call_id: int = 0
+    tag_name: str = field(default=None, compare=False)
+    message: str = field(default="", compare=False)
+    group_mates: list = field(default=None, compare=False)
+
+    def __lt__(self, other):
+        if not isinstance(other, GradAnomalyData):
+            return NotImplemented
+        if self.step != other.step:
+            return self.step < other.step
+        if self.micro_step != other.micro_step:
+            return self.micro_step < other.micro_step
+        if self.vpp_stage != other.vpp_stage:
+            return self.vpp_stage > other.vpp_stage
+        if self.pp_stage != other.pp_stage:
+            return self.pp_stage > other.pp_stage
+        if self.call_id != other.call_id:
+            return self.call_id < other.call_id
+        return False
+
+    def __le__(self, other):
+        if not isinstance(other, GradAnomalyData):
+            return NotImplemented
+        return self == other or self < other
+
+    def to_dict(self):
+        return self.__dict__
+
+    def get_key(self):
+        # 0:1.self_attention.core_attention_flash_0/rank0/input_grad
+        return ''.join([str(self.tag_name), "_step_", str(self.step), "_call_", str(self.call_id)])
+
+
+@dataclass
+class WriterInput:
+    path: str
+    ad_rules: list
+    job_id: str
+    anomaly_inform: bool = False
+    anomaly_factory: AnomalyDataFactory = None
+    ndigits: int = 6
+    step_count_per_record: int = 1
+
+
+class BaseWriterWithAD:
+    def __init__(self, writer_input: WriterInput):
+        self.tag2scalars = {}
+        self.ad_rules = writer_input.ad_rules
+        self.job_id = writer_input.job_id
+        self.anomaly_inform = writer_input.anomaly_inform
+        self.anomaly_factory = writer_input.anomaly_factory
+        self.anomalies = []
+        self.ndigits = writer_input.ndigits
+
+    def get_anomalies(self):
+        """返回已检测到的异常列表
+        """
+        return self.anomalies
+
+    def clear_anomalies(self):
+        self.anomalies.clear()
+
+    def add_scalar(self, tag, scalar_value, global_step=None):
+        """If an anomaly is detected, the anomaly information is recorded and added to self.anomalies.
+        Args:
+            tag (tuple): tuple of tag_name and tag like ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min').
+            scalar_value (float): scalar_value.
+            global_step (int): global_step.
+        Returns:
+            None
+        """
+        detected = False
+        if self.ad_rules:
+            avg = self._update_tag2scalars(tag, scalar_value)
+            detected, rule_name = self._ad(scalar_value, history=avg)
+        if detected:
+            exception_message = f"Rule {rule_name} reports anomaly signal in {tag} at step {global_step}."
+            logger.info(f"{BCOLORS.WARNING}> {exception_message}{BCOLORS.ENDC}")
+            # append to self.anomalies for dump
+            if self.anomaly_factory:
+                self.anomalies.append(self.anomaly_factory.create(tag, exception_message, global_step))
+
+    def _ad(self, scalar_value, history):
+        return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)
+
+    def _update_tag2scalars(self, tag, scalar_value):
+        """Update the average and count of a scalar value associated with a tag.
+
+        This method is used to maintain a running average of scalar values for each tag.
+
+
+        Args:
+            tag (str): The tag identifier.
+            scalar_value (float): The scalar value to be added.
+
+        Returns:
+            float: The average value before update.
+        """
+        if tag not in self.tag2scalars:
+            self.tag2scalars[tag] = {'avg': scalar_value, 'count': 0}
+        avg = self.tag2scalars[tag]['avg']
+        new_avg = (avg * self.tag2scalars[tag]['count'] + scalar_value) / (self.tag2scalars[tag]['count'] + 1)
+        self.tag2scalars[tag]['avg'] = new_avg
+        self.tag2scalars[tag]['count'] += 1
+        return avg
+
+
+class CSVWriterWithAD(BaseWriterWithAD):
+    def __init__(self, writer_input: WriterInput):
+        super().__init__(writer_input)
+
+        path = writer_input.path
+        self.log_dir = path
+        create_directory(path)
+        change_mode(path, FileCheckConst.DATA_DIR_AUTHORITY)
+        self.context_dict = defaultdict(list)
+        self.header = []
+        self.step_count_per_record = writer_input.step_count_per_record
+
+    def get_step_interval(self, step):
+        count = step // self.step_count_per_record
+        return count * self.step_count_per_record, (count + 1) * self.step_count_per_record - 1
+
+    def write_csv(self, prefix, step):
+        """
+        Args:
+            prefix[str]: prefix of output csv file e.g. grad_unreduced
+            step[int]
+        """
+        if len(self.context_dict) == 0:
+            return
+        
+        ster_start, step_end = self.get_step_interval(step)
+        filepath = os.path.join(self.log_dir, f'{prefix}_{ster_start}-{step_end}.csv')
+        if not os.path.exists(filepath):
+            data_frame = pd.DataFrame(columns=self.header)
+            write_df_to_csv(data_frame, filepath)
+
+        new_data = []
+        for name, metric_value in self.context_dict.items():
+            if MonitorConst.VPP_SEP not in name:
+                new_data.append([name] + [step] + metric_value)
+            else:
+                new_data.append(name.split(MonitorConst.VPP_SEP) + [step] + metric_value)
+        new_data = pd.DataFrame(new_data).round(self.ndigits)
+        write_df_to_csv(new_data, filepath, mode='a+', header=False)
+        self.context_dict = defaultdict(list)
+
+    def add_scalar(self, tag, scalar_value, global_step):
+        """
+        ('0:1.post_attention_norm.weight/rank0/pre_grad', 'min')
+        """
+        super().add_scalar(tag, scalar_value, global_step)
+
+        name = tag[0].split('/')[0]
+        self.context_dict[name].append(scalar_value.item())
+
+    def close(self):
+        pass
+
+
+class SummaryWriterWithAD(SummaryWriter, BaseWriterWithAD):
+    def __init__(self, writer_input: WriterInput):
+
+        path = writer_input.path
+        if not os.path.exists(path):
+            create_directory(path)
+        try:
+            super(SummaryWriter, self).__init__(writer_input)
+            super().__init__(path)
+        except Exception as e:
+            logger.error(f'error when init summary writer at {path}: {e}')
+            raise ValueError("Init summary writer error.") from e
+
+    def add_scalar(self, tag, scalar_value, global_step):
+        super(SummaryWriter, self).add_scalar(tag, scalar_value, global_step)
+        tag = f'{tag[0]}_{tag[1]}'
+        super().add_scalar(tag, scalar_value, global_step)

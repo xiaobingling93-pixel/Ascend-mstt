@@ -20,8 +20,7 @@ import numpy as np
 from msprobe.pytorch.parse_tool.lib.config import Const
 from msprobe.pytorch.parse_tool.lib.utils import Util
 from msprobe.pytorch.parse_tool.lib.parse_exception import ParseException
-from msprobe.core.common.file_check import FileOpen
-from msprobe.core.common.utils import save_npy_to_txt
+from msprobe.core.common.file_utils import FileOpen, load_npy, save_npy_to_txt
 
 
 class Visualization:
@@ -29,12 +28,7 @@ class Visualization:
         self.util = Util()
 
     def print_npy_summary(self, target_file):
-        try:
-            np_data = np.load(target_file, allow_pickle=True)
-        except UnicodeError as e:
-            self.util.log.error("%s %s" % ("UnicodeError", str(e)))
-            self.util.log.warning("Please check the npy file")
-            raise ParseException(ParseException.PARSE_UNICODE_ERROR) from e
+        np_data = load_npy(target_file)
         table = self.util.create_table('', ['Index', 'Data'])
         flatten_data = np_data.flatten()
         tablesize = 8
@@ -71,6 +65,8 @@ class Visualization:
                     self.util.log.error("%s %s in line %s" % ("JSONDecodeError", str(e), pkl_line))
                     self.util.log.warning("Please check the pkl file")
                     raise ParseException(ParseException.PARSE_JSONDECODE_ERROR) from e
+                if not isinstance(msg, list) or len(msg) == 0:
+                    break
                 info_prefix = msg[0]
                 if not info_prefix.startswith(api_name):
                     continue

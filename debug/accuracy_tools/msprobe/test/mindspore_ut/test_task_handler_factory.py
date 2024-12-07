@@ -25,7 +25,7 @@ from msprobe.mindspore.common.const import Const
 
 
 class TestTaskHandlerFactory(TestCase):
-    @patch.object(DebuggerConfig, "_make_dump_path_if_not_exists")
+    @patch("msprobe.mindspore.debugger.debugger_config.create_directory")
     def test_create(self, _):
         class HandlerFactory:
             def create(self):

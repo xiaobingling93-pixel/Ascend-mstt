@@ -1,0 +1,365 @@
+import json
+import os
+import math
+from enum import Enum, auto
+import torch
+try:
+    import torch_npu
+except ImportError:
+    pass
+from tabulate import tabulate
+
+TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
+TORCH_BOOL_TYPE = ["torch.bool"]
+TORCH_INT_TYPE = ["torch.uint8", "torch.int8", "torch.int16", "torch.short", "torch.int32", "torch.int",
+                  "torch.int64", "torch.long"]
+TORCH_FLOAT_TYPE = ["torch.float16", "torch.half", "torch.bfloat16", "torch.float32", "torch.float",
+                    "torch.float64", "torch.double"]
+TORCH_COMPLEX_TYPE = ["torch.complex32", "torch.chalf", "torch.complex64", "torch.cfloat", "torch.complex128", "torch.cdouble"]
+RAISE_PRECISION = {{
+    "torch.float16": torch.float32,
+    "torch.half": torch.float32,
+    "torch.bfloat16": torch.float32,
+    "torch.float32": torch.float64,
+    "torch.float": torch.float64
+}}
+THOUSANDTH_THRESHOLDING = 0.001
+BACKWARD = 'backward'
+
+class CompareStandard(Enum):
+    BINARY_EQUALITY_STANDARD = auto()
+    ABSOLUTE_THRESHOLD_STANDARD = auto()
+    ULP_ERROR_STANDARD = auto()
+    BENCHMARK_STANDARD = auto()
+    THOUSANDTH_STANDARD = auto()
+
+def load_pt(pt_path, to_cpu=False):
+    pt_path = os.path.realpath(pt_path)
+    try:
+        if to_cpu:
+            pt = torch.load(pt_path, map_location=torch.device("cpu"))
+        else:
+            pt = torch.load(pt_path)
+    except Exception as e:
+        raise RuntimeError(f"load pt file {{pt_path}} failed") from e
+    return pt
+
+def get_device():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch_npu.npu.is_available():
+        device = torch.device("npu")
+    else:
+        raise Exception("Error: This device is not NPU or GPU!")
+    return device
+
+
+def generate_bool_tensor(low, high, shape):
+    low, high = int(low), int(high)
+    tensor = torch.randint(low, high + 1, shape)
+    bool_tensor = torch.gt(tensor, 0)
+    return bool_tensor
+
+
+def generate_numerical_tensor(low, high, shape, data_dtype):
+    if data_dtype in TORCH_FLOAT_TYPE:
+        scale = high - low
+        rand01 = torch.rand(shape, dtype=eval(data_dtype))
+        tensor = rand01 * scale + low
+    elif data_dtype in TORCH_INT_TYPE:
+        low, high = int(low), int(high)
+        tensor = torch.randint(low, high + 1, shape, dtype=eval(data_dtype))
+    else:
+        raise NotImplementedError(f"{{data_dtype}} is not supported!")
+    if torch.numel(tensor) == 0:
+        return tensor
+    tmp_tensor = tensor.reshape(-1)
+    tmp_tensor[0] = low
+    tmp_tensor[-1] = high
+    data = tmp_tensor.reshape(shape)
+    return data
+
+
+def generate_random_tensor(info):
+    low, high = info.get('Min'), info.get('Max')
+    data_dtype = info.get('dtype')
+    shape = tuple(info.get('shape'))
+    if data_dtype == "torch.bool":
+        data = generate_bool_tensor(low, high, shape)
+    else:
+        data = generate_numerical_tensor(low, high, shape, data_dtype)
+    return data
+
+
+def generate_real_tensor(data_path):
+    data_path = os.path.realpath(data_path)
+    data = load_pt(data_path, to_cpu = True)
+    return data
+
+
+def generate_data(info):
+    data_type = info.get("type")
+    data_path = info.get("data_name")
+    data_grad = info.get("requires_grad")
+    if data_type in TENSOR_DATA_LIST:
+        if data_path:
+            data = generate_real_tensor(data_path)
+        else:
+            data = generate_random_tensor(info)
+    else:
+        data = info.get("value")
+    if data_grad == True:
+        data.requires_grad_(True)
+    return data
+
+
+def get_input(propagation):
+{args_element_assignment}
+    args_device = [{args_list_generator_device}]
+    args_bench = [{args_list_generator_bench}]
+{kwargs_value_assignment}
+    kwargs_device = {{{kwargs_dict_generator_device}}}
+    kwargs_bench = {{{kwargs_dict_generator_bench}}}
+{args_element_assignment_backward}
+    args_device_backward = [{args_list_generator_device_backward}]
+    args_bench_backward = [{args_list_generator_bench_backward}]
+    if propagation == BACKWARD:
+        return args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward
+    return args_device, kwargs_device, args_bench, kwargs_bench
+
+def exec_api(args, kwargs, args_grad_input, propagation):
+    output = {api_type}.{api_name}(*args, **kwargs)
+    if propagation == BACKWARD:
+        args_input_tensor = [tensor for tensor in args if isinstance(tensor, torch.Tensor) and tensor.requires_grad]
+        args_input_tensor.extend(
+            [value for value in kwargs.values() if isinstance(value, torch.Tensor) and value.requires_grad])
+        output_backward = torch.autograd.grad(outputs=output, inputs=args_input_tensor, grad_outputs=args_grad_input)
+        return output_backward
+    return output
+
+def compute_inf_nan_proportion(inf_nan_mask, out_device, out_bench, abs_bench_with_eps, rtol):
+    out_bench = out_bench.to(out_device.dtype)
+    min = torch.finfo(out_device.dtype).min
+    max = torch.finfo(out_device.dtype).max
+    bench_clip = torch.clamp(out_bench, min=min, max=max)
+    device_clip = torch.clamp(out_device, min=min, max=max)
+    clipped_abs_ae = torch.abs(device_clip - bench_clip)
+    clipped_re = clipped_abs_ae / abs_bench_with_eps
+    pass_mask = torch.less_equal(clipped_re, rtol)
+    both_nan_mask = torch.logical_and(torch.isnan(out_device), torch.isnan(bench_clip))
+    pass_mask = torch.logical_or(pass_mask, both_nan_mask)
+    not_pass_mask = torch.logical_not(pass_mask)
+    not_pass_mask = torch.logical_and(not_pass_mask, inf_nan_mask)
+    inf_nan_err_cnt = torch.sum(not_pass_mask)
+    return 0 if torch.sum(inf_nan_mask) == 0 else inf_nan_err_cnt / torch.sum(inf_nan_mask)
+
+
+def compute_rmse(abs_err, normal_value_mask):
+    if torch.sum(normal_value_mask) == 0:
+        return 0
+    else:
+        masked_ae = torch.where(normal_value_mask, abs_err, 0)
+        mse = torch.sum(torch.square(masked_ae)) / torch.sum(normal_value_mask)
+        rmse = torch.sqrt(mse)
+        return rmse
+
+
+def compute_error_balance(out_device, out_bench):
+    larger_count = torch.sum(torch.greater(out_device - out_bench.to(out_device.dtype), 0))
+    smaller_count = torch.sum(torch.less(out_device - out_bench.to(out_device.dtype), 0))
+    if torch.numel(out_bench) == 0:
+        raise ZeroDivisionError(f"ERROR: please check torch.numel out_bench, its value is {{torch.numel(out_bench)}}")
+    error_balance = abs(larger_count - smaller_count) / torch.numel(out_bench)
+    return error_balance
+
+
+def compare_tensor(out_device, out_bench, api_name):
+    if out_device.shape != out_bench.shape:
+        print("ERROR: shape of out_device and out_bench is not equal!")
+        return None
+    if torch.numel(out_bench) == 0:
+        print("Both out_device and out_bench have zero elements.")
+        return None
+    dtype_device = out_device.dtype
+    dtype_bench = out_bench.dtype
+    headers = ["Metric", "Value"]
+    table = [
+        ["Shape", out_bench.shape],
+        ["Dtype of out_device", out_device.dtype],
+        ["Dtype of out_bench", out_bench.dtype]
+    ]
+    if str(dtype_device) in TORCH_FLOAT_TYPE and str(dtype_bench) in TORCH_FLOAT_TYPE \
+    or str(dtype_device) in TORCH_INT_TYPE and str(dtype_bench) in TORCH_INT_TYPE \
+    or str(dtype_device) in TORCH_BOOL_TYPE and str(dtype_bench) in TORCH_BOOL_TYPE:
+        out_device = out_device.to(torch.device("cpu"))
+        if str(dtype_device) in TORCH_BOOL_TYPE or str(dtype_device) in TORCH_INT_TYPE or compare_standard == CompareStandard.BINARY_EQUALITY_STANDARD:
+            error_number = torch.sum(out_device != out_bench).item()
+            if torch.numel(out_bench) == 0:
+                raise ZeroDivisionError(f"ERROR: please check torch.numel out_bench, its value is {{torch.numel(out_bench)}}")
+            error_rate = error_number / torch.numel(out_bench)
+            table.append(["Compare Standard", "Binary Equality Standard"])
+            table.append(["Error Rate", error_rate])
+        else:
+            abs_err = torch.abs(out_device - out_bench)
+            abs_bench = torch.abs(out_bench)
+            if dtype_bench == torch.float32:
+                eps = 2 ** -23
+            if dtype_bench == torch.float64:
+                eps = 2 ** -52
+            abs_bench_with_eps = abs_bench + eps
+            rel_err = torch.abs(abs_err / abs_bench_with_eps)
+            device_finite_mask = torch.isfinite(out_device)
+            bench_finite_mask = torch.isfinite(out_bench.to(dtype_device))
+            both_finite_mask = torch.logical_and(device_finite_mask, bench_finite_mask)
+            inf_nan_mask = torch.logical_not(both_finite_mask)
+            if compare_standard == CompareStandard.ABSOLUTE_THRESHOLD_STANDARD:
+                if dtype_device == torch.float16:
+                    rtol, small_value, small_value_atol = 1.0e-3, 1.0e-3, 1.0e-5
+                elif dtype_device == torch.bfloat16:
+                    rtol, small_value, small_value_atol = 4.0e-3, 1.0e-3, 1.0e-5
+                else:
+                    rtol, small_value, small_value_atol = 1.0e-6, 1.0e-6, 1.0e-9
+                small_value_mask = torch.less_equal(abs_bench, small_value)
+                small_value_mask = torch.logical_and(small_value_mask, both_finite_mask)
+                normal_value_mask = torch.logical_and(both_finite_mask, torch.logical_not(small_value_mask))
+                inf_nan_proportion = compute_inf_nan_proportion(inf_nan_mask, out_device, out_bench, abs_bench_with_eps, rtol)
+                rel_err_mask = torch.greater(rel_err, rtol)
+                rel_err_mask = torch.logical_and(rel_err_mask, normal_value_mask)
+                if torch.sum(normal_value_mask) == 0:
+                    rel_err_proportion = 0
+                else:
+                    rel_err_proportion = torch.sum(rel_err_mask) / torch.sum(normal_value_mask)
+                abs_err_mask = torch.greater(abs_err, small_value_atol)
+                abs_err_mask = torch.logical_and(abs_err_mask, small_value_mask)
+                if torch.sum(small_value_mask) == 0:
+                    abs_err_proportion = 0
+                else:
+                    abs_err_proportion = torch.sum(abs_err_mask) / torch.sum(small_value_mask)
+                table.append(["Compare Standard", "Absolute Threshold Standard"])
+                table.append(["Relative Error Ratio", rel_err_proportion])
+                table.append(["Absolute Error Ratio", abs_err_proportion])
+            elif compare_standard == CompareStandard.ULP_ERROR_STANDARD:
+                if dtype_device == torch.float16:
+                    min_eb, exponent_num = -14, 10
+                elif dtype_device == torch.bfloat16:
+                    min_eb, exponent_num = -126, 7
+                else:
+                    min_eb, exponent_num = -126, 23
+                eb = torch.where(abs_bench == 0, torch.zeros(out_bench.shape), torch.floor(torch.log2(abs_bench)))
+                eb = torch.maximum(eb, min_eb * torch.ones(out_bench.shape))
+                if dtype_device == torch.float32:
+                    ulp_err = (out_device.to(torch.float64) - out_bench).to(torch.float64) * torch.exp2(-eb + exponent_num).to(torch.float64)
+                else:
+                    ulp_err = (out_device.to(torch.float32) - out_bench).to(torch.float32) * torch.exp2(-eb + exponent_num).to(torch.float32)
+                ulp_err = torch.abs(ulp_err)
+                max_ulp_err = torch.max(ulp_err)
+                mean_ulp_err = torch.mean(ulp_err)
+                if torch.numel(out_bench) == 0:
+                    raise ZeroDivisionError(f"ERROR: please check torch.numel out_bench, its value is {{torch.numel(out_bench)}}")
+                if dtype_device == torch.float32:
+                    ulp_err_proportion = torch.sum(ulp_err > 32) / torch.numel(out_bench)
+                else:
+                    ulp_err_proportion = torch.sum(ulp_err > 1) / torch.numel(out_bench)
+                table.append(["Compare Standard", "ULP error Standard"])
+                table.append(["Maximum ULP Error", max_ulp_err])
+                table.append(["Mean ULP Error", mean_ulp_err])
+                table.append(["ULP Error Proportion", ulp_err_proportion])
+            elif compare_standard == CompareStandard.THOUSANDTH_STANDARD:
+                rel_err_origin = torch.abs(abs_err / abs_bench_with_eps)
+                if torch.numel(rel_err_origin) == 0:
+                    thousand_res = 1
+                else:
+                    thousand_res = torch.divide(torch.sum(rel_err < THOUSANDTH_THRESHOLDING), torch.numel(rel_err_origin))
+                thousand_status = thousand_res > (1 - THOUSANDTH_THRESHOLDING)
+                table.append(["Compare Standard", "Thousandth Standard"])
+                table.append(["Thousandth ratio", thousand_res])
+            else:
+                if dtype_device == torch.float16:
+                    small_value, small_value_atol = 1.0e-3, 1.0e-5
+                elif dtype_device == torch.bfloat16:
+                    small_value, small_value_atol = 1.0e-3, 1.0e-5
+                else:
+                    small_value, small_value_atol = 1.0e-6, 1.0e-9
+                small_value_mask = torch.less_equal(abs_bench, small_value)
+                small_value_mask = torch.logical_and(small_value_mask, both_finite_mask)
+                normal_value_mask = torch.logical_and(both_finite_mask, torch.logical_not(small_value_mask))
+                abs_err_mask = torch.greater(abs_err, small_value_atol)
+                abs_err_mask = torch.logical_and(abs_err_mask, small_value_mask)
+                if torch.sum(small_value_mask) == 0:
+                    small_value_err_proportion = 0
+                else:
+                    small_value_err_proportion = torch.sum(abs_err_mask) / torch.sum(small_value_mask)
+                rel_err = torch.where(normal_value_mask, rel_err, -1 * torch.ones(out_device.shape))
+                if torch.max(rel_err) >= 0:
+                    max_rel_err = torch.max(rel_err)
+                else:
+                    max_rel_err = 0
+                if torch.sum(normal_value_mask) == 0:
+                    mean_rel_err = 0
+                else:
+                    mean_rel_err = torch.sum(torch.clamp(rel_err, min=0)) / torch.sum(normal_value_mask)
+                rmse = compute_rmse(abs_err, normal_value_mask)
+                error_balance = compute_error_balance(out_device, out_bench)
+                table.append(["Compare Standard", "Benchmark Standard"])
+                table.append(["Small Value Error Proportion", small_value_err_proportion])
+                table.append(["Maximum Relative Error", max_rel_err])
+                table.append(["Mean Relative Error", mean_rel_err])
+                table.append(["Root Mean Squared Error", rmse])
+                table.append(["Error Balance", error_balance])
+    else:
+        print(f"ERROR: out_device dtype is {{dtype_device}}, out_bench dtype is {{dtype_bench}}, not comparable.")
+        return None
+    print(tabulate(table, headers, tablefmt='grid'))
+    return None
+
+
+def compare_element(out_device, out_bench, api_name):
+    if type(out_device) != type(out_bench):
+        print("ERROR: out_device and out_bench is not the same type!")
+        return None
+    if isinstance(out_bench, torch.Tensor):
+        compare_tensor(out_device, out_bench, api_name)
+    elif isinstance(out_bench, (bool, int, float, str)):
+        if out_device == out_bench:
+            print("PASS: out_device and out_bench equals.")
+        else:
+            print("ERROR: out_device and out_bench is not equal!")
+    else:
+        print(f"ERROR: comparison of type {{type(out_bench)}} is not supported.")
+    return None
+
+
+def compare(out_device, out_bench, api_name):
+    print("Compare result:")
+    if type(out_device) != type(out_bench):
+        print("ERROR: out_device and out_bench is not the same type!")
+        return None
+    if isinstance(out_bench, (list, tuple)):
+        if len(out_device) != len(out_bench):
+            print("ERROR: len of out_device and out_bench is different!")
+            return None
+        for index, _ in enumerate(out_bench):
+            print(f"index {{index}}:")
+            compare_element(out_device[index], out_bench[index], api_name)
+    else:
+        compare_element(out_device, out_bench, api_name)
+
+if __name__ == "__main__":
+    device = get_device()
+    api_name = "{api_name}"
+    propagation = "{propagation}"
+    compare_standard = {compare_standard}
+    torch.manual_seed({random_seed})
+    for i in range({iter_times}):
+        print(f"iter: {{i}}:")
+        if propagation == BACKWARD:
+            args_device, kwargs_device, args_bench, kwargs_bench, args_device_backward, args_bench_backward = get_input(propagation)
+            output_device = exec_api(args_device, kwargs_device, args_device_backward, propagation)
+            output_bench = exec_api(args_bench, kwargs_bench, args_bench_backward, propagation)
+            compare(output_device, output_bench, api_name)
+        else:
+            args_device, kwargs_device, args_bench, kwargs_bench = get_input(propagation)
+            output_device = exec_api(args_device, kwargs_device, None, propagation)
+            output_bench = exec_api(args_bench, kwargs_bench, None, propagation)
+            compare(output_device, output_bench, api_name)
+    print("Compare finished.")

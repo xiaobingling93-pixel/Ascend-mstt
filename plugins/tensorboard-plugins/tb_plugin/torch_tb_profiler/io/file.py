@@ -15,32 +15,34 @@ The following functionalities are added after forking:
 """
 import glob as py_glob
 import os
+import platform
+import sys
 import tempfile
 
 from .. import utils
 from .base import BaseFileSystem, LocalPath, RemotePath, StatData
 from .utils import as_bytes, as_text, parse_blob_url
+from ..consts import MAX_FILE_SIZE, MAX_WINDOWS_PATH_LENGTH, MAX_LINUX_PATH_LENGTH
 
 logger = utils.get_logger()
 
+S3_ENABLED = True
 try:
     import boto3
     import botocore.exceptions
-
-    S3_ENABLED = True
 except ImportError:
     S3_ENABLED = False
 
+BLOB_ENABLED = True
 try:
     from azure.storage.blob import ContainerClient
-    BLOB_ENABLED = True
 except ImportError:
     BLOB_ENABLED = False
 
+GS_ENABLED = True
 try:
     # Imports the Google Cloud client library
     from google.cloud import storage
-    GS_ENABLED = True
 except ImportError:
     GS_ENABLED = False
 
@@ -86,19 +88,23 @@ class LocalFileSystem(LocalPath, BaseFileSystem):
     def __init__(self):
         pass
 
+    @staticmethod
+    def islink(path):
+        return os.path.islink(path)
+
     def exists(self, filename):
         return os.path.exists(filename)
 
-    def read(self, filename, binary_mode=False, size=None, continue_from=None):
+    def read(self, file, binary_mode=False, size=None, continue_from=None):
         mode = "rb" if binary_mode else "r"
         encoding = None if binary_mode else "utf8"
-        if not self.exists(filename):
-            raise FileNotFoundError(filename)
+        if not self.exists(file):
+            raise FileNotFoundError(file)
 
         offset = None
         if continue_from is not None:
             offset = continue_from.get("opaque_offset", None)
-        with open(filename, mode, encoding=encoding) as f:
+        with open(file, mode, encoding=encoding) as f:
             if offset is not None:
                 f.seek(offset)
             data = f.read(size)
@@ -194,10 +200,10 @@ class S3FileSystem(RemotePath, BaseFileSystem):
             return True
         return False
 
-    def read(self, filename, binary_mode=False, size=None, continue_from=None):
+    def read(self, file, binary_mode=False, size=None, continue_from=None):
         """Reads contents of a file to a string."""
         s3 = boto3.resource("s3", endpoint_url=self._s3_endpoint)
-        bucket, path = self.bucket_and_path(filename)
+        bucket, path = self.bucket_and_path(file)
         args = {}
 
         # S3 use continuation tokens of the form: {byte_offset: number}
@@ -212,7 +218,7 @@ class S3FileSystem(RemotePath, BaseFileSystem):
         if offset != 0 or endpoint != "":
             args["Range"] = "bytes={}-{}".format(offset, endpoint)
 
-        logger.info("s3: starting reading file %s" % filename)
+        logger.info("s3: starting reading file %s" % file)
         try:
             stream = s3.Object(bucket, path).get(**args)["Body"].read()
         except botocore.exceptions.ClientError as exc:
@@ -234,7 +240,7 @@ class S3FileSystem(RemotePath, BaseFileSystem):
                 raise
 
         logger.info("s3: file %s download is done, size is %d" %
-                    (filename, len(stream)))
+                    (file, len(stream)))
         # `stream` should contain raw bytes here (i.e., there has been neither decoding nor newline translation),
         # so the byte offset increases by the expected amount.
         continuation_token = {"byte_offset": (offset + len(stream))}
@@ -314,14 +320,14 @@ class S3FileSystem(RemotePath, BaseFileSystem):
                     keys.append(key)
         return keys
 
-    def makedirs(self, dirname):
+    def makedirs(self, path):
         """Creates a directory and all parent/intermediate directories."""
-        if not self.exists(dirname):
+        if not self.exists(path):
             client = boto3.client("s3", endpoint_url=self._s3_endpoint)
-            bucket, path = self.bucket_and_path(dirname)
-            if not path.endswith("/"):
-                path += "/"
-            client.put_object(Body="", Bucket=bucket, Key=path)
+            bucket, dir_path = self.bucket_and_path(path)
+            if not dir_path.endswith("/"):
+                dir_path += "/"
+            client.put_object(Body="", Bucket=bucket, Key=dir_path)
 
     def stat(self, filename):
         """Returns file statistics for a given path."""
@@ -613,3 +619,40 @@ def stat(filename):
 def read(file):
     with File(file, 'rb') as f:
         return f.read()
+
+
+def is_link(path):
+    return LocalFileSystem.islink(path)
+
+
+def is_too_big_file(filepath):
+    return stat(filepath).length > MAX_FILE_SIZE
+
+
+def has_too_long_path(filepath):
+    if platform.system() == 'Windows' and len(filepath) > MAX_WINDOWS_PATH_LENGTH:
+        logger.warning(
+            f'The path length of the file "{filepath}" exceeds the maximum limit of {MAX_WINDOWS_PATH_LENGTH} '
+            f'and will be skipped.')
+        return True
+    elif len(filepath) > MAX_WINDOWS_PATH_LENGTH:
+        logger.warning(
+            f'The path length of the file "{filepath}" exceeds the maximum limit of {MAX_LINUX_PATH_LENGTH} '
+            f'and will be skipped.')
+        return True
+    else:
+        return False
+
+
+def check_file_valid(filepath):
+    if is_link(filepath):
+        logger.warning(f'File "{filepath}" is a soft link and will be skipped.')
+        return False
+    if is_too_big_file(filepath):
+        logger.warning(
+            f'File "{filepath}" exceeds the maximum limit size of 500MB and will be skipped.')
+        return False
+    if has_too_long_path(filepath):
+        return False
+    return True
+
