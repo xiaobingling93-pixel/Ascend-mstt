@@ -100,6 +100,9 @@ def run_overflow_check(forward_file):
             elif "expected scalar type Long" in str(err):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
+            elif "could not create a primitive descriptor for a matmul primitive" in str(err):
+                logger.warning(f"API {api_name} not support matmul primitive in CPU dut to pytorch bug, "
+                               "so it will be skipped.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
 
@@ -111,12 +114,12 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
     if not need_grad:
         logger.warning("%s function with out=... arguments don't support automatic differentiation, skip backward." 
                        % api_full_name)
-    device_info_kwargs = kwargs.get("device")
-    if device_info_kwargs and device_info_kwargs.get('value'):
-        kwargs['device'] = device_info_kwargs.get('value')
+    device_info_kwargs = kwargs.get(Const.DEVICE)
+    if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
+        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
-    if kwargs.get("device"):
-        del kwargs["device"]
+    if kwargs.get(Const.DEVICE):
+        del kwargs[Const.DEVICE]
     out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
     npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
     if is_bool_output(out) or is_bool_output(npu_out):

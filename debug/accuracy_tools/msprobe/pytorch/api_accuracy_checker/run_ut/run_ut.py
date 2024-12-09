@@ -250,12 +250,12 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
     need_backward = need_backward and need_grad
     
-    device_info_kwargs = kwargs.get("device")
-    if device_info_kwargs and device_info_kwargs.get('value'):
-        kwargs['device'] = device_info_kwargs.get('value')
+    device_info_kwargs = kwargs.get(Const.DEVICE)
+    if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
+        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
-    if kwargs.get("device"):
-        del kwargs["device"]
+    if kwargs.get(Const.DEVICE):
+        del kwargs[Const.DEVICE]
     cpu_args, cpu_kwargs = generate_cpu_params(args, kwargs, need_backward, api_name)
     bench_grad_out, device_grad_out = None, None
     out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
