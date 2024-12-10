@@ -22,7 +22,6 @@ import re
 import shutil
 from datetime import datetime, timezone
 from dateutil import parser
-import OpenSSL
 import yaml
 import numpy as np
 import pandas as pd
@@ -630,6 +629,7 @@ def check_crt_valid(pem_path):
     Raises:
     RuntimeError: If the SSL certificate is invalid or expired.
     """
+    import OpenSSL
     try:
         with FileOpen(pem_path, "r") as f:
             pem_data = f.read()
