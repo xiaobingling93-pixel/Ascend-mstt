@@ -26,10 +26,6 @@
 
    脚本迁移工具通过后端命令行，将 GPU 上训练的 PyTorch 脚本迁移至 NPU 上，得到新的训练脚本用于训练。
 
-4. [训推一体权重转换工具](https://gitee.com/Ascend/mstt/wikis/%E5%B7%A5%E5%85%B7%E4%BB%8B%E7%BB%8D/%E5%88%86%E6%9E%90%E8%BF%81%E7%A7%BB%E5%B7%A5%E5%85%B7/%E8%AE%AD%E6%8E%A8%E4%B8%80%E4%BD%93%E6%9D%83%E9%87%8D%E8%BD%AC%E6%8D%A2%E5%B7%A5%E5%85%B7%E4%BD%BF%E7%94%A8%E6%8C%87%E5%AF%BC)
-
-   训推一体权重转换工具，支持在 GPU 和 NPU 上训练好的模型转成加速推理支持的格式。
-
 ## [精度工具](./debug/accuracy_tools/)
 
 [MindStudio Probe（msprobe，MindStudio 精度调试工具）](./debug/accuracy_tools/msprobe)。
