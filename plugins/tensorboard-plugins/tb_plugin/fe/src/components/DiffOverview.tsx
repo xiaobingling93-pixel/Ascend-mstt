@@ -57,7 +57,7 @@ const getAngleByDataLength = (data: number) => {
     return 0;
   } else {
     // 数量越大越趋近于旋转90度
-    return 90 * (1 - (10 / data));
+    return 90 * (1 - 10 / data);
   }
 };
 
@@ -79,36 +79,9 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) {return;}
-
-    let left_duration_data: number[] = [];
-    let left_accumulated_duration_data: number[] = [];
-
-    let right_duration_data: number[] = [];
-    let right_accumulated_duration_data: number[] = [];
-
-    for (let i = 0; i < rawData.length; i++) {
-      let curr = rawData[i];
-      left_duration_data.push(curr[1]);
-      right_duration_data.push(curr[2]);
-      left_accumulated_duration_data.push(curr[3]);
-      right_accumulated_duration_data.push(curr[4]);
+    if (!element) {
+      return undefined;
     }
-
-    let left_duration_max = Math.max(...left_duration_data);
-    let right_duration_max = Math.max(...right_duration_data);
-    let duration_max = Math.max(left_duration_max, right_duration_max);
-
-    let left_accumulated_duration_max = Math.max(
-      ...left_accumulated_duration_data
-    );
-    let right_accumulated_duration_max = Math.max(
-      ...right_accumulated_duration_data
-    );
-    let accumulated_max = Math.max(
-      left_accumulated_duration_max,
-      right_accumulated_duration_max
-    );
 
     const chart = echarts.init(element);
 
@@ -183,7 +156,9 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
           formatter: (name: string) => {
             const index = name.indexOf('@');
             const displayName = index > -1 ? name.slice(index + 1) : name; // 创建新变量
-            return displayName.length > 16 ? `${displayName.slice(0, 14)}...` : displayName;
+            return displayName.length > 16
+              ? `${displayName.slice(0, 14)}...`
+              : displayName;
           },
         },
       },
@@ -209,9 +184,9 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
       },
     };
 
-    if(options) {
+    if (options) {
       chart.setOption(options, true);
-    };
+    }
     chart.on('click', (param) => {
       if (param.seriesIndex !== undefined) {
         selectCallback(param.dataIndex, param.seriesIndex + 1);
@@ -239,7 +214,9 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) {return;}
+    if (!element) {
+      return undefined;
+    }
     const chart = echarts.init(element);
     const options: echarts.EChartsOption = {
       title: {
@@ -265,7 +242,9 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
           formatter: (name: string) => {
             const index = name.indexOf('@');
             const displayName = index > -1 ? name.slice(index + 1) : name; // 创建新变量
-            return displayName.length > 16 ? `${displayName.slice(0, 14)}...` : displayName;
+            return displayName.length > 16
+              ? `${displayName.slice(0, 14)}...`
+              : displayName;
           },
         },
       },
@@ -322,9 +301,9 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
       ],
     };
 
-    if(options) {
+    if (options) {
       chart.setOption(options, true);
-    };
+    }
     return () => {
       chart.dispose();
     };
@@ -394,7 +373,6 @@ let columnUnderlyingDataStack: ColumnUnderlyingData[][] = [];
 let columnTableDataSourceStack: TableRow[][] = [];
 
 export const DiffOverview: React.FC<IProps> = (props: IProps) => {
-
   // #region - Constant
   const COMPOSITE_NODES_NAME = 'CompositeNodes';
 
@@ -403,9 +381,9 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Host Duration (us)',
       dataIndex: 'baselineHostDuration',
       key: 'baselineHostDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aBaselineHost = a.baselineHostDuration ?? 0;
-        const bBaselineHost= b.baselineHostDuration ?? 0;
+        const bBaselineHost = b.baselineHostDuration ?? 0;
         return aBaselineHost - bBaselineHost;
       },
     },
@@ -413,7 +391,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Exp Host Duration (us)',
       dataIndex: 'expHostDuration',
       key: 'expHostDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aExpHost = a.expHostDuration ?? 0;
         const bExpHost = b.expHostDuration ?? 0;
         return aExpHost - bExpHost;
@@ -423,7 +401,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Host Duration (us)',
       dataIndex: 'deltaHostDuration',
       key: 'deltaHostDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aDeltaHost = a.deltaHostDuration ?? 0;
         const bDeltaHost = b.deltaHostDuration ?? 0;
         return aDeltaHost - bDeltaHost;
@@ -433,7 +411,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Host Duration%',
       dataIndex: 'deltaHostDurationPercent',
       key: 'deltaHostDurationPercent',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aPercent = a.deltaHostDurationPercentNumber ?? 0;
         const bPercent = b.deltaHostDurationPercentNumber ?? 0;
         return aPercent - bPercent;
@@ -446,21 +424,21 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Self Host Duration (us)',
       dataIndex: 'baselineSelfHostDuration',
       key: 'baselineSelfHostDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.baselineSelfHostDuration - b.baselineSelfHostDuration,
     },
     {
       title: 'Exp Self Host Duration (us)',
       dataIndex: 'expSelfHostDuration',
       key: 'expSelfHostDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.expSelfHostDuration - b.expSelfHostDuration,
     },
     {
       title: 'Delta Self Host Duration (us)',
       dataIndex: 'deltaSelfHostDuration',
       key: 'deltaSelfHostDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aDeltaSelfHost = a.deltaSelfHostDuration ?? 0;
         const bDeltaSelfHost = b.deltaSelfHostDuration ?? 0;
         return aDeltaSelfHost - bDeltaSelfHost;
@@ -470,7 +448,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Self Host Duration%',
       dataIndex: 'deltaSelfHostDurationPercent',
       key: 'deltaSelfHostDurationPercent',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aSelfPercent = a.deltaSelfHostDurationPercentNumber ?? 0;
         const bSelfPercent = b.deltaSelfHostDurationPercentNumber ?? 0;
         return aSelfPercent - bSelfPercent;
@@ -483,21 +461,21 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Device Duration (us)',
       dataIndex: 'baselineDeviceDuration',
       key: 'baselineDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.baselineDeviceDuration - b.baselineDeviceDuration,
     },
     {
       title: 'Exp Device Duration (us)',
       dataIndex: 'expDeviceDuration',
       key: 'expDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.expDeviceDuration - b.expDeviceDuration,
     },
     {
       title: 'Delta Device Duration (us)',
       dataIndex: 'deltaDeviceDuration',
       key: 'deltaDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aDeltaDeviceDuration = a.deltaDeviceDuration ?? 0;
         const bdeltaDeviceDuration = b.deltaDeviceDuration ?? 0;
         return aDeltaDeviceDuration - bdeltaDeviceDuration;
@@ -507,10 +485,14 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Device Duration%',
       dataIndex: 'deltaDeviceDurationPercent',
       key: 'deltaDeviceDurationPercent',
-      sorter: (a: TableRow, b: TableRow) => {
-        const aDeltaDeviceDurationPercentNumber = a.deltaDeviceDurationPercentNumber ?? 0;
-        const bDeltaDeviceDurationPercentNumber = b.deltaDeviceDurationPercentNumber ?? 0;
-        return aDeltaDeviceDurationPercentNumber - bDeltaDeviceDurationPercentNumber;
+      sorter: (a: TableRow, b: TableRow): number => {
+        const aDeltaDeviceDurationPercentNumber =
+          a.deltaDeviceDurationPercentNumber ?? 0;
+        const bDeltaDeviceDurationPercentNumber =
+          b.deltaDeviceDurationPercentNumber ?? 0;
+        return (
+          aDeltaDeviceDurationPercentNumber - bDeltaDeviceDurationPercentNumber
+        );
       },
     },
   ];
@@ -520,21 +502,21 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Self Device Duration (us)',
       dataIndex: 'baselineSelfDeviceDuration',
       key: 'baselineSelfDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.baselineSelfDeviceDuration - b.baselineSelfDeviceDuration,
     },
     {
       title: 'Exp Self Device Duration (us)',
       dataIndex: 'expSelfDeviceDuration',
       key: 'expSelfDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) =>
+      sorter: (a: TableRow, b: TableRow): number =>
         a.expSelfDeviceDuration - b.expSelfDeviceDuration,
     },
     {
       title: 'Delta Self Device Duration (us)',
       dataIndex: 'deltaSelfDeviceDuration',
       key: 'deltaSelfDeviceDuration',
-      sorter: (a: TableRow, b: TableRow) => {
+      sorter: (a: TableRow, b: TableRow): number => {
         const aDeltaSelfDeviceDuration = a.deltaSelfDeviceDuration ?? 0;
         const bDeltaSelfDeviceDuration = b.deltaSelfDeviceDuration ?? 0;
         return aDeltaSelfDeviceDuration - bDeltaSelfDeviceDuration;
@@ -544,10 +526,15 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Self Device Duration%',
       dataIndex: 'deltaSelfDeviceDurationPercent',
       key: 'deltaSelfDeviceDurationPercent',
-      sorter: (a: TableRow, b: TableRow) => {
-        const aDeltaSelfDeviceDurationPercentNumber = a.deltaSelfDeviceDurationPercentNumber ?? 0;
-        const bDeltaSelfDeviceDurationPercentNumber = b.deltaSelfDeviceDurationPercentNumber ?? 0;
-        return aDeltaSelfDeviceDurationPercentNumber - bDeltaSelfDeviceDurationPercentNumber;
+      sorter: (a: TableRow, b: TableRow): number => {
+        const aDeltaSelfDeviceDurationPercentNumber =
+          a.deltaSelfDeviceDurationPercentNumber ?? 0;
+        const bDeltaSelfDeviceDurationPercentNumber =
+          b.deltaSelfDeviceDurationPercentNumber ?? 0;
+        return (
+          aDeltaSelfDeviceDurationPercentNumber -
+          bDeltaSelfDeviceDurationPercentNumber
+        );
       },
     },
   ];
@@ -576,26 +563,28 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Calls',
       dataIndex: 'baselineCalls',
       key: 'baselineCalls',
-      sorter: (a: TableRow, b: TableRow) => a.baselineCalls! - b.baselineCalls!,
+      sorter: (a: TableRow, b: TableRow) =>
+        a.baselineCalls ?? 0 - (b.baselineCalls ?? 0),
     },
     {
       title: 'Exp Calls',
       dataIndex: 'expCalls',
       key: 'expCalls',
-      sorter: (a: TableRow, b: TableRow) => a.expCalls! - b.expCalls!,
+      sorter: (a: TableRow, b: TableRow) => a.expCalls ?? 0 - (b.expCalls ?? 0),
     },
     {
       title: 'Delta Calls',
       dataIndex: 'deltaCalls',
       key: 'deltaCalls',
-      sorter: (a: TableRow, b: TableRow) => a.deltaCalls! - b.deltaCalls!,
+      sorter: (a: TableRow, b: TableRow) =>
+        a.deltaCalls ?? 0 - (b.deltaCalls ?? 0),
     },
     {
       title: 'Delta Calls%',
       dataIndex: 'deltaCallsPercent',
       key: 'deltaCallsPercent',
       sorter: (a: TableRow, b: TableRow) =>
-        a.deltaCallsPercentNumber! - b.deltaCallsPercentNumber!,
+        a.deltaCallsPercentNumber ?? 0 - (b.deltaCallsPercentNumber ?? 0),
     },
   ];
 
@@ -687,9 +676,8 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       if (top) {
         setTableDataSource(top);
       } else {
-        let tableDataSource2 = generateDataSourceFromUnderlyingData(
-          rootUnderlyingData!
-        );
+        let tableDataSource2 =
+          generateDataSourceFromUnderlyingData(rootUnderlyingData);
         setTableDataSource(tableDataSource2);
       }
     }
@@ -713,8 +701,11 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
   };
 
   const generateDataSourceFromUnderlyingData = (
-    selectedUnderlyingData: ColumnUnderlyingData
+    selectedUnderlyingData?: ColumnUnderlyingData
   ) => {
+    if (!selectedUnderlyingData) {
+      return [];
+    }
     let newTableDataSource: TableRow[] = [];
 
     for (let i = 0; i < selectedUnderlyingData.leftAggs.length; i++) {
@@ -798,14 +789,14 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
   };
 
   React.useEffect(() => {
-    if (
+    const hasData =
       run.length > 0 &&
       worker.length > 0 &&
       span.length > 0 &&
       expRun.length > 0 &&
       expWorker.length > 0 &&
-      expSpan.length > 0
-    ) {
+      expSpan.length > 0;
+    if (hasData) {
       setLoading(true);
 
       columnChartDataStack = [];
@@ -826,7 +817,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
 
           setRootUnderlyingData(newRootUnderlyingData);
           let tableDataSource3 = generateDataSourceFromUnderlyingData(
-            newRootUnderlyingData!
+            newRootUnderlyingData
           );
           setTableDataSource(tableDataSource3);
         })
@@ -953,7 +944,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
     columnUnderlyingDataStack.push(underlyingData);
 
     setDataStackLevel(columnChartDataStack.length);
-  };// #endregion
+  }; // #endregion
 
   if (!loading && columnUnderlyingDataStack.length === 0) {
     return (

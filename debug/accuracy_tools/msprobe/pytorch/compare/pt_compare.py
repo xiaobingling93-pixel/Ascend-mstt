@@ -45,6 +45,8 @@ class PTComparator (Comparator):
         return mapping_dict
     
     def read_npy_data(self, dir_path, file_name):
+        if not file_name:
+            return None
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
                                 FileCheckConst.PT_SUFFIX, False)

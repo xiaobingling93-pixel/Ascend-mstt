@@ -19,8 +19,8 @@ from functools import wraps
 
 import torch
 from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.online_dispatch.utils import check_idx_valid
 from prettytable import PrettyTable
-
 
 
 def func_log_wrapper():
@@ -217,12 +217,13 @@ class SingleBenchmarkAccuracyCompare:
             err_for_max = torch.where(abs_err_idx == 1, diff_abs, zeros)
             logging.debug("err_for_max for abs %s", err_for_max)
             max_abs_idx = torch.argmax(err_for_max)
-            max_abs_diff = diff_abs[max_abs_idx]
+            if check_idx_valid(diff_abs, max_abs_idx):
+                max_abs_diff = diff_abs[max_abs_idx]
         elif torch.sum(abs_mask_idx) > 0:
             err_for_max = torch.where(abs_mask_idx == 1, diff_abs, zeros)
             logging.debug("error_for_max for abs %s", err_for_max)
             max_abs_idx = torch.argmax(err_for_max)
-            if err_for_max.max() != 0:
+            if err_for_max.max() != 0 and check_idx_valid(diff_abs, max_abs_idx):
                 max_abs_diff = diff_abs[max_abs_idx]
         return (float(max_abs_diff), int(max_abs_idx) if torch.is_tensor(max_abs_idx) else max_abs_idx)
 
@@ -247,12 +248,13 @@ class SingleBenchmarkAccuracyCompare:
             err_for_max = torch.where(rel_err_idx == 1, diff_rel, zeros)
             logging.debug("error_for_max for rel %s", err_for_max)
             max_rel_idx = torch.argmax(err_for_max)
-            max_rel_diff = diff_rel[max_rel_idx]
+            if check_idx_valid(diff_rel, max_rel_idx):
+                max_rel_diff = diff_rel[max_rel_idx]
         elif torch.sum(rel_mask_idx > 0):
             err_for_max = torch.where(rel_mask_idx == 1, diff_rel, zeros)
             logging.debug("err_for_max for rel %s", err_for_max)
             max_rel_idx = torch.argmax(err_for_max)
-            if torch.sum(err_for_max) != 0:
+            if torch.sum(err_for_max) != 0 and check_idx_valid(diff_rel, max_rel_idx):
                 max_rel_diff = diff_rel[max_rel_idx]
         return (float(max_rel_diff), int(max_rel_idx) if torch.is_tensor(max_rel_idx) else max_rel_idx)
 
@@ -282,7 +284,8 @@ class SingleBenchSummary:
     def get_result_msg(self):
         result_str = ""
         if self.failed_info:
-            return self.failed_info
+            result_str = self.failed_info
+            return result_str
 
         if self.result:
             result_str += "误差均衡性EB: %s <= 阈值%s\n" % (self.error_balance, self.eb_thd)

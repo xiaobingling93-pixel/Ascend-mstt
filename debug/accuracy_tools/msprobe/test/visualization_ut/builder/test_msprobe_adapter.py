@@ -8,8 +8,7 @@ from msprobe.visualization.builder.msprobe_adapter import (
     format_node_data,
     compare_node,
     _format_decimal_string,
-    _format_data,
-    compare_mapping_data
+    _format_data
 )
 from msprobe.visualization.utils import GraphConst
 import torch
@@ -52,7 +51,6 @@ class TestMsprobeAdapter(unittest.TestCase):
     def test_format_node_data(self):
         data_dict = {'node1': {'data_name': 'data1', 'full_op_name': 'op1'}}
         result = format_node_data(data_dict)
-        self.assertNotIn('data_name', result['node1'])
         self.assertNotIn('requires_grad', result['node1'])
 
     @patch('msprobe.visualization.builder.msprobe_adapter.get_accuracy')
@@ -84,19 +82,6 @@ class TestMsprobeAdapter(unittest.TestCase):
         self.assertEqual(data_dict['value4'], 'inf')
         self.assertEqual(data_dict['value5'], '-1')
 
-        all_none_dict = {'a': None, 'b': None, 'c': None, 'd': None, 'e': None}
+        all_none_dict = {'Max': None, 'Min': None, 'Mean': None, 'Norm': None, 'type': None}
         _format_data(all_none_dict)
         self.assertEqual({'value': 'null'}, all_none_dict)
-
-    def test_compare_mapping_data(self):
-        dict1 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}, 'c': {'shape': [1, 2, 3]}}
-        dict2 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}, 'c': {'shape': [1, 2, 3]}}
-        dict3 = {'a': {'shape': [1, 2, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict4 = {'a': {'shape': [2, 1, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict5 = {'a': {'shape': [2, 2, 3]}, 'b': {'shape': [1, 2, 3]}}
-        dict6 = {'a': {'type': 'str'}}
-        self.assertTrue(compare_mapping_data(dict1, dict2))
-        self.assertTrue(compare_mapping_data(dict1, dict3))
-        self.assertTrue(compare_mapping_data(dict1, dict4))
-        self.assertFalse(compare_mapping_data(dict1, dict5))
-        self.assertTrue(compare_mapping_data(dict1, dict6))

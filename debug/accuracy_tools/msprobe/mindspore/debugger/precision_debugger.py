@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -14,13 +14,16 @@
 # limitations under the License.
 
 import os
+from collections import defaultdict
 
 import mindspore as ms
 from mindspore._c_expression import MSContext
 
 from msprobe.core.common.const import Const, MsgConst
+from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.const import Const as MsConst
 from msprobe.mindspore.debugger.debugger_config import DebuggerConfig
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 from msprobe.mindspore.grad_probe.grad_monitor import GradientMonitor
 from msprobe.mindspore.ms_config import parse_json_config
 from msprobe.mindspore.runtime import Runtime
@@ -128,6 +131,9 @@ class PrecisionDebugger:
             return
         if instance.service:
             instance.service.step()
+        HOOKCell.cell_count = defaultdict(int)
+        CellProcessor.reset_cell_stats()
+
         Runtime.step_count += 1
 
     @classmethod

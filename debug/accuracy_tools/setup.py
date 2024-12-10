@@ -14,7 +14,7 @@
 # limitations under the License.
 
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 import setuptools
 
@@ -31,8 +31,7 @@ INSTALL_REQUIRED = [
     "twisted",
     "matplotlib",
     "tensorboard",
-    "sqlalchemy",
-    "pymysql"
+    "tabulate"
 ]
 
 EXCLUDE_PKGS = [

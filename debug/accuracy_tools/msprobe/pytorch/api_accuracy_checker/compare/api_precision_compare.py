@@ -620,7 +620,7 @@ def _api_precision_compare_parser(parser):
     parser.add_argument("-gpu", "--gpu_csv_path", dest="gpu_csv_path", default="", type=str,
                         help="<Required> Accuracy_checking_details.csv generated on the GPU by using the "
                              "api_accuracy_checker tool.",
-                        required=False)
+                        required=True)
     parser.add_argument("-o", "--out_path", dest="out_path", default="", type=str,
                         help="<optional> The api precision compare task result out path.",
                         required=False)

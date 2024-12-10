@@ -18,6 +18,7 @@ from msprobe.core.grad_probe.constant import GradConst
 from msprobe.core.common.log import logger
 from msprobe.core.common.file_utils import write_csv, check_path_before_create, change_mode
 from msprobe.core.common.const import FileCheckConst
+from msprobe.core.common.utils import is_int
 import matplotlib.pyplot as plt
 
 
@@ -43,13 +44,22 @@ def check_str(string, variable_name):
 
 
 def check_bounds_element(bound):
-    return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
+    return GradConst.BOUNDS_MINIMUM <= bound <= GradConst.BOUNDS_MAXIMUM
+
+
+def check_param_element(param):
+    if not re.match(GradConst.PARAM_VALID_PATTERN, param):
+        return False
+    else:
+        return True
 
 
 def check_bounds(bounds):
+    if not isinstance(bounds, list):
+        raise Exception(f"bounds must be a list")
     prev = GradConst.BOUNDS_MINIMUM - 1
     for element in bounds:
-        if not isinstance(element, (int, float)):
+        if not is_int(element) and not isinstance(element, float):
             raise Exception("bounds element is not int or float")
         if not check_bounds_element(element):
             raise Exception("bounds element is out of int64 range")

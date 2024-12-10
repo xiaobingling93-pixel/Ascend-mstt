@@ -65,6 +65,8 @@ class Visualization:
                     self.util.log.error("%s %s in line %s" % ("JSONDecodeError", str(e), pkl_line))
                     self.util.log.warning("Please check the pkl file")
                     raise ParseException(ParseException.PARSE_JSONDECODE_ERROR) from e
+                if not isinstance(msg, list) or len(msg) == 0:
+                    break
                 info_prefix = msg[0]
                 if not info_prefix.startswith(api_name):
                     continue

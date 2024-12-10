@@ -19,7 +19,6 @@
  * Modifications: Offer offline supporting.
  *--------------------------------------------------------------------------------------------*/
 
-import { makeStyles } from '@material-ui/core/styles';
 import * as React from 'react';
 import { Graph } from '../../api';
 import { value } from '../../utils';
@@ -36,9 +35,26 @@ interface IProps {
   tooltip_mode?: string;
 }
 
-const noLegendArea = { left: '5%', width: '90%', top: '5%', height: '90%' };
-const normalArea = { left: '5%', width: '95%' };
-const noTitleArea = { left: '5%', width: '95%', top: '10%', height: '80%' };
+interface IAreaPosition {
+  left: string;
+  width: string;
+  top?: string;
+  height?: string;
+}
+
+const noLegendArea: IAreaPosition = {
+  left: '5%',
+  width: '90%',
+  top: '5%',
+  height: '90%',
+};
+const normalArea: IAreaPosition = { left: '5%', width: '95%' };
+const noTitleArea: IAreaPosition = {
+  left: '5%',
+  width: '95%',
+  top: '10%',
+  height: '80%',
+};
 
 export const PieChart: React.FC<IProps> = (props) => {
   const {
@@ -56,7 +72,9 @@ export const PieChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) {return;}
+    if (!element) {
+      return undefined;
+    }
 
     const chart = echarts.init(element);
 
@@ -101,7 +119,16 @@ export const PieChart: React.FC<IProps> = (props) => {
           white-space:pre-wrap;
           padding-right: 10px`,
       },
-      chartArea: noLegend ? noLegendArea : !title ? noTitleArea : normalArea,
+      chartArea: ((): IAreaPosition => {
+        if (noLegend) {
+          return noLegendArea;
+        }
+        if (!title) {
+          return noTitleArea;
+        } else {
+          return normalArea;
+        }
+      })(),
       legend: {
         type: noLegend ? 'plain' : 'scroll',
         orient: 'vertical',
@@ -112,7 +139,9 @@ export const PieChart: React.FC<IProps> = (props) => {
           // Show legends for datas with the same name.
           const index = name.indexOf('_');
           const processedName = index > -1 ? name.slice(index + 1) : name; // 使用新变量处理
-          return processedName.length > 36 ? `${processedName.slice(0, 34)}...` : processedName;
+          return processedName.length > 36
+            ? `${processedName.slice(0, 34)}...`
+            : processedName;
         },
         tooltip: {
           show: true,
@@ -156,7 +185,7 @@ export const PieChart: React.FC<IProps> = (props) => {
 
     if (option) {
       chart.setOption(option, true);
-    };
+    }
 
     return () => {
       chart.dispose();

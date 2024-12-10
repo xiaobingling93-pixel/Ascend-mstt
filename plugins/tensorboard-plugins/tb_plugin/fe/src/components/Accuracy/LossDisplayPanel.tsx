@@ -129,7 +129,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
   useLayoutEffect(() => {
     const element = chartRef.current;
     if (!element) {
-      return;
+      return undefined;
     }
     const echart = echarts.init(element);
     const dataset: echarts.DatasetComponentOption[] = [];
@@ -170,7 +170,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
         },
         formatter: (name) => {
           // Show ellipsis and set tooltip for legends with too long name
-          return name.length > 50 ? name.slice(0, 48) + '...' : name;
+          return name.length > 50 ? `${name.slice(0, 48)}...` : name;
         },
       },
       xAxis: {
@@ -191,9 +191,9 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
       series,
     };
 
-    if(option) {
+    if (option) {
       echart.setOption(option, true);
-    };
+    }
 
     return () => {
       echart.dispose();
@@ -211,7 +211,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
           dataSource={getTableData()}
           size='small'
           scroll={{
-            x: (150 * fileList.length) + 100,
+            x: 150 * fileList.length + 100,
             y:
               fileList.length < 2
                 ? 'calc(100vh - 240px)'

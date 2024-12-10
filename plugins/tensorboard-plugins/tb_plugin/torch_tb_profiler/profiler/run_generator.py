@@ -2,7 +2,6 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 #
 # Copyright(c) 2023 Huawei Technologies.
-# All rights reserved
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -719,14 +718,16 @@ class RunGenerator(object):
                           '<b>{}: {}us</b><br>'
                           'Percentage: {}%'
                           '</div>')
-            percentage = round(100 * part_cost / costs.costs[ProfileRole.Total], 2)
+            percentage = 0.0 if costs.costs[ProfileRole.Total] == 0 else round(
+                100 * part_cost / costs.costs[ProfileRole.Total], 2)
             return format_str.format(step_name, costs.costs[ProfileRole.Total], part_name, part_cost, percentage)
 
         def build_avg_cost_dict(part_name: str, part_cost: float):
+            profiler_total_cost = self.profile_data.avg_costs.costs[ProfileRole.Total]
             cost_dict = {'name': part_name,
                          'description': '',
                          'value': round(part_cost),
-                         'extra': round(100 * part_cost / self.profile_data.avg_costs.costs[ProfileRole.Total], 2)}
+                         'extra': 0.0 if profiler_total_cost == 0 else round(100 * part_cost / profiler_total_cost, 2)}
             return cost_dict
 
         show_gpu = (self.profile_data.has_runtime

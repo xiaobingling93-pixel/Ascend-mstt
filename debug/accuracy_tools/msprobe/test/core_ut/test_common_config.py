@@ -34,7 +34,6 @@ class TestCommonConfig(TestCase):
         self.assertEqual(common_config.rank, [])
         self.assertEqual(common_config.step, [])
         self.assertIsNone(common_config.level)
-        self.assertIsNone(common_config.acl_config)
         self.assertFalse(common_config.enable_dataloader)
 
         json_config.update({"task": "md5"})
@@ -75,7 +74,6 @@ class TestBaseConfig(TestCase):
         base_config.check_config()
         self.assertIsNone(base_config.scope)
         self.assertIsNone(base_config.list)
-        self.assertIsNone(base_config.backward_input)
         self.assertIsNone(base_config.file_format)
         self.assertIsNone(base_config.summary_mode)
         self.assertIsNone(base_config.overflow_nums)
@@ -113,15 +111,23 @@ class TestBaseConfig(TestCase):
         self.config._check_data_mode()
         self.assertEqual(
             mock_error_log_with_exp.call_args_list[0][0][0],
-            f"data_mode is invalid, it should be a list[str]",
+            "data_mode is invalid, it should be a list[str]"
         )
 
         mock_error_log_with_exp.reset_mock()
-        self.config.data_mode = ["test", "all", "input", "output", "forward", "backward"]
+        self.config.data_mode = ["all", "forward"]
         self.config._check_data_mode()
         self.assertEqual(
             mock_error_log_with_exp.call_args_list[0][0][0],
-            f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST)}.",
+            "'all' cannot be combined with other options in data_mode."
+        )
+
+        mock_error_log_with_exp.reset_mock()
+        self.config.data_mode = ["test", "input", "output", "forward", "backward"]
+        self.config._check_data_mode()
+        self.assertEqual(
+            mock_error_log_with_exp.call_args_list[0][0][0],
+            f"The number of elements in the data_made cannot exceed {len(Const.DUMP_DATA_MODE_LIST) - 1}."
         )
 
         mock_error_log_with_exp.reset_mock()
@@ -129,11 +135,11 @@ class TestBaseConfig(TestCase):
         self.config._check_data_mode()
         self.assertEqual(
             mock_error_log_with_exp.call_args_list[0][0][0],
-            f"data_mode is invalid, it should be a list[str]"
+            "data_mode is invalid, it should be a list[str]"
         )
 
         mock_error_log_with_exp.reset_mock()
-        self.config.data_mode = ['all', 'test_case_1']
+        self.config.data_mode = ['forward', 'test_case_1']
         self.config._check_data_mode()
         self.assertEqual(
             mock_error_log_with_exp.call_args_list[0][0][0],

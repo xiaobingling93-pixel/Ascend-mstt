@@ -149,7 +149,9 @@ export const DistributedView: React.FC<IProps> = (props) => {
     distributedGraph?: DistributedGraph,
     step?: string
   ) => {
-    if (!distributedGraph || !step) {return undefined;}
+    if (!distributedGraph || !step) {
+      return undefined;
+    }
     const barLabels = Object.keys(distributedGraph.data[step]);
     return {
       legends: distributedGraph.metadata.legends,
@@ -166,11 +168,11 @@ export const DistributedView: React.FC<IProps> = (props) => {
     [waittimeGraph, waittimeStep]
   );
 
-  const getTableData = (tableData?: any, worker?: string) => {
-    if (!tableData || !worker) {
+  const getTableData = (tableData?: any, opsWorker?: string): any[] => {
+    if (!tableData || !opsWorker) {
       return [];
     }
-    let dataInfo: api.Graph = tableData[worker];
+    let dataInfo: api.Graph = tableData[opsWorker];
     const stringCompare = (a: string, b: string) => a.localeCompare(b);
     const numberCompare = (a: number, b: number) => a - b;
     let column: any[] = dataInfo.columns.map((item) => {
@@ -179,7 +181,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
         key: item.name,
         dataIndex: item.name,
         sorter:
-          item.type == 'string'
+          item.type === 'string'
             ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
             : (a: any, b: any) => numberCompare(a[item.name], b[item.name]),
       };
@@ -190,8 +192,8 @@ export const DistributedView: React.FC<IProps> = (props) => {
         return null;
       }
       const dataRow: { [column: string]: number | string } = { key: index };
-      dataInfo.columns.forEach((column, index) => {
-        dataRow[column.name] = row[index] as string | number;
+      dataInfo.columns.forEach((item, idx) => {
+        dataRow[item.name] = row[idx] as string | number;
       });
       return dataRow;
     });
@@ -322,8 +324,8 @@ export const DistributedView: React.FC<IProps> = (props) => {
                           value={commopsWorker}
                           onChange={onCommopsWorkerChanged}
                         >
-                          {commopsWorkers.map((worker) => (
-                            <MenuItem value={worker}>{worker}</MenuItem>
+                          {commopsWorkers.map((item) => (
+                            <MenuItem value={item}>{item}</MenuItem>
                           ))}
                         </Select>
                       </Grid>

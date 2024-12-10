@@ -39,6 +39,7 @@ import Tabs from '@material-ui/core/Tabs';
 import Typography from '@material-ui/core/Typography';
 import ChevronLeftIcon from '@material-ui/icons/ChevronLeft';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
+import { message } from 'antd';
 import 'antd/es/button/style/css';
 import 'antd/es/list/style/css';
 import 'antd/es/table/style/css';
@@ -82,8 +83,6 @@ const ViewNames = {
   [Views.Module]: Views.Module,
   [Views.Lightning]: Views.Lightning,
 };
-
-const accViews = ['Loss Comparison'];
 
 const drawerWidth = 340;
 const useStyles = makeStyles((theme) => ({
@@ -209,12 +208,12 @@ export const App = () => {
 
   const [topTab, setTopTab] = React.useState<number>(0);
   const [fileList, setFileList] = React.useState<FileInfo[]>([]);
-  const [uploadedCount, setUploadedCount] = React.useState<number>(0);// #endregion
+  const [uploadedCount, setUploadedCount] = React.useState<number>(0); // #endregion
 
   React.useEffect(() => {
     setup()
       .catch(() => {
-        console.log('google chart is not supported offline');
+        message.warning('google chart is not supported offline');
       })
       .finally(() => {
         setLoaded(true);
@@ -224,11 +223,11 @@ export const App = () => {
   const continuouslyFetchRuns = async () => {
     while (true) {
       try {
-        const runs = await api.defaultApi.runsGet();
-        setRuns(runs.runs);
-        setRunsLoading(runs.loading);
+        const result = await api.defaultApi.runsGet();
+        setRuns(result.runs);
+        setRunsLoading(result.loading);
       } catch (e) {
-        console.info('Cannot fetch runs: ', e);
+        message.warning(`Cannot fetch runs: ${e}`);
       }
       await sleep(5000);
     }
@@ -242,56 +241,52 @@ export const App = () => {
     if (!run || !runs.includes(run)) {
       setRun(firstOrUndefined(runs) ?? '');
     }
-  }, [runs]);// #region - Diff Left
+  }, [runs]); // #region - Diff Left
 
   React.useEffect(() => {
     if (diffLeftRun) {
-      api.defaultApi.workersGet(diffLeftRun, Views.Overview).then((workers) => {
-        setDiffLeftWorkerOptions(workers);
+      api.defaultApi.workersGet(diffLeftRun, Views.Overview).then((data) => {
+        setDiffLeftWorkerOptions(data);
       });
     }
   }, [diffLeftRun]);
 
   React.useEffect(() => {
     if (diffLeftRun && diffLeftWorker) {
-      api.defaultApi.spansGet(diffLeftRun, diffLeftWorker).then((spans) => {
-        setDiffLeftSpansOptions(spans);
+      api.defaultApi.spansGet(diffLeftRun, diffLeftWorker).then((data) => {
+        setDiffLeftSpansOptions(data);
       });
     }
   }, [diffLeftRun, diffLeftWorker]);
 
   // #endregion
   // #region - Diff Right
-
   React.useEffect(() => {
     if (diffRightRun) {
-      api.defaultApi
-        .workersGet(diffRightRun, Views.Overview)
-        .then((workers) => {
-          setDiffRightWorkerOptions(workers);
-        });
+      api.defaultApi.workersGet(diffRightRun, Views.Overview).then((data) => {
+        setDiffRightWorkerOptions(data);
+      });
     }
   }, [diffRightRun]);
 
   React.useEffect(() => {
     if (diffRightRun && diffRightWorker) {
-      api.defaultApi.spansGet(diffRightRun, diffRightWorker).then((spans) => {
-        setDiffRightSpansOptions(spans);
+      api.defaultApi.spansGet(diffRightRun, diffRightWorker).then((data) => {
+        setDiffRightSpansOptions(data);
       });
     }
   }, [diffRightRun, diffRightWorker]);
 
   // #endregion
   // #region - normal
-
   React.useEffect(() => {
     if (run) {
       api.defaultApi.viewsGet(run).then((rawViews) => {
-        const views = rawViews.views
+        const result = rawViews.views
           .map((v) => Views[Views[v as Views]])
           .filter(Boolean);
         setDeviceTarget(rawViews.device_target);
-        setViews(views);
+        setViews(result);
       });
     }
   }, [run]);
@@ -302,8 +297,8 @@ export const App = () => {
 
   React.useEffect(() => {
     if (run && view) {
-      api.defaultApi.workersGet(run, view).then((workers) => {
-        setWorkers(workers);
+      api.defaultApi.workersGet(run, view).then((data) => {
+        setWorkers(data);
       });
     }
   }, [run, view]);
@@ -314,8 +309,8 @@ export const App = () => {
 
   React.useEffect(() => {
     if (run && worker) {
-      api.defaultApi.spansGet(run, worker).then((spans) => {
-        setSpans(spans);
+      api.defaultApi.spansGet(run, worker).then((data) => {
+        setSpans(data);
       });
     }
   }, [run, worker]);
@@ -327,11 +322,17 @@ export const App = () => {
   // #endregion
 
   // #region - Event Handler
-  const handleTabChange = (event: React.ChangeEvent<{}>, value: any) => {
+  const handleTabChange = (
+    event: React.ChangeEvent<Record<string, unknown>>,
+    value: any
+  ): void => {
     setSelectedTab(value as number);
   };
 
-  const handleTopTabChange = (event: React.ChangeEvent<{}>, value: any) => {
+  const handleTopTabChange = (
+    event: React.ChangeEvent<Record<string, unknown>>,
+    value: any
+  ): void => {
     setTopTab(value as number);
   };
 
@@ -407,12 +408,22 @@ export const App = () => {
     }
   };
 
+  const _getViews = (viewName: Views): string => {
+    if (viewName === Views.Kernel) {
+      return deviceTarget === 'Ascend'
+        ? `NPU ${ViewNames[viewName]}`
+        : `GPU ${ViewNames[viewName]}`;
+    } else {
+      return ViewNames[viewName];
+    }
+  };
+
   const _changeUploadCount = (count: number) => {
     setUploadedCount(count);
-  };// #endregion
+  }; // #endregion
 
   const renderContent = () => {
-    if (!runsLoading && runs.length == 0) {
+    if (!runsLoading && runs.length === 0) {
       return (
         <Card variant='outlined'>
           <CardHeader title='No Runs Found'></CardHeader>
@@ -422,8 +433,8 @@ export const App = () => {
         </Card>
       );
     }
-
-    if (!loaded || !run || !worker || !view || !span) {
+    const notReady = !loaded || !run || !worker || !view || !span;
+    if (notReady) {
       return <FullCircularProgress />;
     }
 
@@ -472,6 +483,8 @@ export const App = () => {
         case Views.Module:
         case Views.Lightning:
           return <ModuleView run={run} worker={worker} span={span} />;
+        default:
+          return <></>;
       }
     } else {
       return (
@@ -494,8 +507,8 @@ export const App = () => {
         <ClickAwayListener onClickAway={SetIframeActive}>
           <FormControl variant='outlined' className={classes.formControl}>
             <Select value={span} onChange={handleSpanChange}>
-              {spans.map((span) => (
-                <MenuItem value={span}>{span}</MenuItem>
+              {spans.map((item) => (
+                <MenuItem value={item}>{item}</MenuItem>
               ))}
             </Select>
           </FormControl>
@@ -559,7 +572,7 @@ export const App = () => {
                 <Tab label='Diff' />
               </Tabs>
             </Box>
-            {selectedTab == 0 ? (
+            {selectedTab === 0 ? (
               <>
                 <ListSubheader>Runs</ListSubheader>
                 <ClickAwayListener onClickAway={SetIframeActive}>
@@ -568,8 +581,8 @@ export const App = () => {
                     className={classes.formControl}
                   >
                     <Select value={run} onChange={handleRunChange}>
-                      {runs.map((run) => (
-                        <MenuItem value={run}>{run}</MenuItem>
+                      {runs.map((item) => (
+                        <MenuItem value={item}>{item}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>
@@ -581,14 +594,8 @@ export const App = () => {
                     className={classes.formControl}
                   >
                     <Select value={view} onChange={handleViewChange}>
-                      {views.map((view) => (
-                        <MenuItem value={view}>
-                          {view === Views.Kernel
-                            ? deviceTarget === 'Ascend'
-                              ? `NPU ${ViewNames[view]}`
-                              : `GPU ${ViewNames[view]}`
-                            : ViewNames[view]}
-                        </MenuItem>
+                      {views.map((item) => (
+                        <MenuItem value={item}>{_getViews(item)}</MenuItem>
                       ))}
                     </Select>
                   </FormControl>

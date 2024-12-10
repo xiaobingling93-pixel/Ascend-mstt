@@ -33,7 +33,9 @@ export const TableChart: React.FC<IProps> = (props) => {
 
   React.useLayoutEffect(() => {
     const element = graphRef.current;
-    if (!element) {return;}
+    if (!element || !element.parentElement) {
+      return;
+    }
 
     const data = new google.visualization.DataTable();
     graph.columns.forEach((column) => {
@@ -73,10 +75,10 @@ export const TableChart: React.FC<IProps> = (props) => {
      * if the height/width change to 0. Since we can't change the code of Google Charts, we temporarily lock the dims
      * of the parent container. */
     if (element.offsetHeight > 0) {
-      element.parentElement!.style.height = element.offsetHeight + 'px';
+      element.parentElement.style.height = `${element.offsetHeight}px`;
     }
     chart.draw(data, options);
-    element.parentElement!.style.height = '';
+    element.parentElement.style.height = '';
   }, [graph, resizeEventDependency]);
 
   return (

@@ -70,7 +70,7 @@ class MindsporeDataProcessor(BaseDataProcessor):
             tensor_stat.mean = np.mean(data_abs).item()
             tensor_stat.norm = np.linalg.norm(data_abs).item()
         else:
-            if not ops.is_floating_point(data):
+            if not ops.is_floating_point(data) or data.dtype == ms.float64:
                 data = data.to(ms.float32)
             api_register.norm_inner_op_set_ori_func()
             get_max_value = api_register.mint_ops_ori_attr.get("max", mint.max)

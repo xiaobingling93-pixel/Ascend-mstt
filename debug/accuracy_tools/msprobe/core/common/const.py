@@ -36,6 +36,8 @@ class Const:
     OFF = 'OFF'
     BACKWARD = 'backward'
     FORWARD = 'forward'
+    PROGRESS_TIMEOUT = 3000
+    EXCEPTION_NONE = None
     JIT = 'Jit'
     PRIMITIVE_PREFIX = 'Primitive'
     DEFAULT_LIST = []
@@ -121,6 +123,8 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
+    DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
+                   "Aten", "VF", "NPU", "Jit"]
 
     # struct json param
     ORIGIN_DATA = "origin_data"
@@ -131,7 +135,7 @@ class Const:
     MODULE_WHITE_LIST = ["torch", "numpy"]
 
     FUNC_SKIP_LIST = ["construct", "__call__"]
-    FILE_SKIP_LIST = ["site-packages/mindspore", "package/mindspore", "msprobe", "site-packages/torch", "package/torch", "MindSpeed"]
+    FILE_SKIP_LIST = ["msprobe", "MindSpeed"]
     DATA_TYPE_SKIP_LIST = ["Primitive", "Jit"]
 
     STACK_FILE_INDEX = 0
@@ -149,7 +153,7 @@ class Const:
     TOP_LAYER = "TopLayer"
     CELL = "Cell"
     MODULE = "Module"
-
+    FRAME_FILE_LIST = ["site-packages/torch", "package/torch", "site-packages/mindspore", "package/mindspore"]
     INPLACE_LIST = [
         "broadcast", "all_reduce", "reduce", "all_gather", "gather", "scatter", "reduce_scatter",
         "_reduce_scatter_base", "_all_gather_base", "send", "recv", "irecv", "isend", "all_to_all_single", "all_to_all",
@@ -171,7 +175,8 @@ class Const:
     STEP = "step"
     RANK = "rank"
     HYPHEN = "-"
-    STEP_RANK_MAXIMUM_RANGE = [int(0), int(1e6)]
+    STEP_RANK_MINIMUM_VALUE = 0
+    STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
     FLOAT16 = "Float16"
@@ -240,6 +245,7 @@ class CompareConst:
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
     EPSILON = 1e-10
+    COMPARE_ENDS_SUCCESSFULLY = "msprobe compare ends successfully."
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
@@ -341,6 +347,13 @@ class CompareConst:
         MAX_DIFF: None, MIN_DIFF: None, MEAN_DIFF: None, NORM_DIFF: None, MAX_RELATIVE_ERR: None,
         MIN_RELATIVE_ERR: None, MEAN_RELATIVE_ERR: None, NORM_RELATIVE_ERR: None
     }
+    INPUT_PATTERN = Const.SEP + Const.INPUT + Const.SEP
+    KWARGS_PATTERN = Const.SEP + Const.KWARGS + Const.SEP
+    OUTPUT_PATTERN = Const.SEP + Const.OUTPUT + Const.SEP
+    COMPARE_KEY = 'compare_key'
+    COMPARE_SHAPE = 'compare_shape'
+    INTERNAL_API_MAPPING_FILE = 'ms_to_pt_api.yaml'
+    UNREADABLE = 'unreadable data'
 
 
 class FileCheckConst:
@@ -365,7 +378,7 @@ class FileCheckConst:
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    MAX_YAML_SIZE = 1048576  # 1 * 1024 * 1024
+    MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -394,12 +407,19 @@ class MsCompareConst:
     # api_info field
     MINT = "Mint"
     MINT_FUNCTIONAL = "MintFunctional"
+    TENSOR_API = "Tensor"
+
+    API_NAME_STR_LENGTH = 4
 
     TASK_FIELD = "task"
     STATISTICS_TASK = "statistics"
     TENSOR_TASK = "tensor"
     DUMP_DATA_DIR_FIELD = "dump_data_dir"
     DATA_FIELD = "data"
+
+    # supported api yaml
+    SUPPORTED_API_LIST_FILE = "checker_support_api.yaml"
+    SUPPORTED_TENSOR_LIST_KEY = "tensor"
 
     # detail_csv
     DETAIL_CSV_API_NAME = "API Name"
@@ -454,10 +474,29 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id"]
+    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
+    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage0", "DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
     RULE_NAME = ['AnomalyTurbulence']
+
+    DOT = "."
+    VPP_SEP = ":"
+    ACTV_IN = "input"
+    ACTV_OUT = "output"
+    ACTVGRAD_IN = "input_grad"
+    ACTVGRAD_OUT = "output_grad"
+    POST_GRAD = "post_grad"
+    PRE_GRAD = "pre_grad"
+    PREFIX_POST = "post"
+    PREFIX_PRE = "pre"
+
+
+    ANOMALY_JSON = "anomaly.json"
+    ANALYSE_JSON = "anomaly_analyse.json"
+    TENSORBOARD = "tensorboard"
+    CSV = "csv"
+    API = "api"

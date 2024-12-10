@@ -19,19 +19,9 @@ import os.path
 import re
 
 from common_func.path_manager import PathManager
-from compare_backend.utils.constant import Constant
-from compare_backend.utils.file_reader import FileReader
-
-
-class Singleton(object):
-    def __init__(self, cls):
-        self._cls = cls
-        self._instance = {}
-
-    def __call__(self, args=None):
-        if self._cls not in self._instance:
-            self._instance[self._cls] = self._cls(args)
-        return self._instance[self._cls]
+from compare_backend.utils.singleton import Singleton
+from profiler.prof_common.constant import Constant
+from profiler.prof_common.file_manager import FileManager
 
 
 @Singleton
@@ -104,15 +94,19 @@ class ArgsManager:
     def enable_kernel_compare(self):
         return self._args.enable_kernel_compare
 
+    @property
+    def use_kernel_type(self):
+        return self._args.use_kernel_type
+
     @classmethod
     def check_profiling_path(cls, path_dict: dict):
         PathManager.input_path_common_check(path_dict.get(Constant.PROFILING_PATH))
         path_list = [path_dict.get(Constant.PROFILING_PATH)] if path_dict.get(
             Constant.PROFILING_TYPE) == Constant.GPU else [
-            path_dict.get(Constant.PROFILING_PATH),
-            path_dict.get(Constant.TRACE_PATH),
-            path_dict.get(Constant.ASCEND_OUTPUT_PATH),
-            path_dict.get(Constant.INFO_JSON_PATH),
+            path_dict.get(Constant.PROFILING_PATH, ""),
+            path_dict.get(Constant.TRACE_PATH, ""),
+            path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""),
+            path_dict.get(Constant.INFO_JSON_PATH, ""),
             os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "operator_memory.csv"),
             os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "memory_record.csv"),
             os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "kernel_details.csv"),
@@ -135,7 +129,7 @@ class ArgsManager:
             if extension != ".json":
                 msg = f"Invalid profiling path suffix: {file_path}"
                 raise RuntimeError(msg)
-            json_type = FileReader.check_json_type(file_path)
+            json_type = FileManager.check_json_type(file_path)
             return {
                 Constant.PROFILING_TYPE: json_type, Constant.PROFILING_PATH: file_path, Constant.TRACE_PATH: file_path
             }
@@ -210,6 +204,8 @@ class ArgsManager:
         self._args.enable_operator_compare = False
         self._args.enable_api_compare = False
         self._args.enable_kernel_compare = False
+        self._args.enable_memory_compare = False
+        self._args.enable_communication_compare = False
         if compare_type == Constant.OVERALL_COMPARE:
             self._args.enable_profiling_compare = True
         elif compare_type == Constant.OPERATOR_COMPARE:

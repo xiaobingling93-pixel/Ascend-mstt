@@ -12,11 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import itertools
 import math
+import re
 import statistics
 
-from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm
+import torch
+
+from msprobe.core.common.const import MonitorConst
+from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm, get_mean
 from msprobe.core.common.log import logger
 
 
@@ -24,7 +28,19 @@ def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
     if rank is None:
         return f"{module_or_param_name}/{tag}"
     else:
-        return f"{module_or_param_name}/{rank}/{tag}"
+        return f"{module_or_param_name}/rank{rank}/{tag}"
+
+
+def squash_param_name(param_name):
+    name = ''
+    for pattern in ['layers?\.(.*)', 'embeddings?\.(.*)', 'final.*', 'output.*', 'norm.*']:
+        match = re.findall(pattern, param_name)
+        if match:
+            name += match[0]
+            break
+    if name == '':
+        name = param_name
+    return name
 
 
 # 用于存储所有metric实现类的注册表
@@ -35,21 +51,20 @@ def register_config_metric(key, cls=None):
     """装饰器 用于注册Metric的实现类"""
     if cls is None:
         # 无参数时，返回装饰器函数
-        return lambda cls: register_config_metric(key, cls)
-    config_metric_registry[key] = cls
+        return lambda cls_: register_config_metric(key, cls_)
+    config_metric_registry[key] = cls()
     return cls
 
 
 class TensorMetrics:
+    fun_map = {"norm": get_norm, "max": get_max, "min": get_min, "mean": get_mean}
+
     def __init__(self) -> None:
-        # tensor_tag --> []
-        self.metrics = {}
+        self.metrics = {}  # tensor_tag --> []
         self.cur_idx = {}
 
-    fun_map = {"norm": get_norm, "max": get_max, "min": get_min}
-
-    # get stats and insert into metrics dictionary
-    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank):
+    def stat_insert(self, tensor, stat_ops, module_name, tensor_name, rank, eps=1e-8):
+        """get stats and insert into metrics dictionary"""
         prefix = get_summary_writer_tag_name(module_name, tensor_name, rank)
         for stat_op in stat_ops:
             y = TensorMetrics.fun_map[stat_op](tensor)
@@ -70,17 +85,13 @@ class TensorMetrics:
 class Metric(object):
     @staticmethod
     def get_metric_value(tensor, eps):
-        pass
+        NotImplementedError
 
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        pass
-
-    def get_metrics(self, tag2tensor: dict, eps):
-        metrics_dict = {}
-        for tag, tensor in tag2tensor.items():
-            metrics_dict[tag] = self.get_metric_value(tensor, eps)
-        return metrics_dict
+    def get_metric(self, tensor, eps):
+        try:
+            return self.get_metric_value(tensor, eps)
+        except RuntimeError as e:
+            return torch.tensor(torch.nan).to(tensor.device)
 
 
 @register_config_metric("min")
@@ -89,14 +100,12 @@ class MinMetric(Metric):
     def get_metric_value(tensor, eps):
         return get_min(tensor)
 
+
+@register_config_metric("mean")
+class MeanMetric(Metric):
     @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        try:
-            for key in metric_value[0][metric_name].keys():
-                min_value = min([item[metric_name][key].item() for item in metric_value])
-                summary_writer.add_scalar(f'{key}_min', min_value, step)
-        except Exception as e:
-            logger.error(f"min metric metric_tensorboard error: {e}")
+    def get_metric_value(tensor, eps):
+        return get_mean(tensor)
 
 
 @register_config_metric("max")
@@ -105,62 +114,26 @@ class MaxMetric(Metric):
     def get_metric_value(tensor, eps):
         return get_max(tensor)
 
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        try:
-            for key in metric_value[0][metric_name].keys():
-                max_value = max([item[metric_name][key].item() for item in metric_value])
-                summary_writer.add_scalar(f'{key}_max', max_value, step)
-        except Exception as e:
-            logger.error(f"max metric metric_tensorboard error: {e}")
-
 
 @register_config_metric("norm")
 class NormMetric(Metric):
     @staticmethod
     def get_metric_value(tensor, eps):
-        return square_sum(tensor)
-
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        try:
-            for key in metric_value[0][metric_name].keys():
-                norm_value = math.sqrt(sum([item[metric_name][key].item() for item in metric_value]))
-                summary_writer.add_scalar(f'{key}_norm', norm_value, step)
-        except Exception as e:
-            logger.error(f"norm metric metric_tensorboard error: {e}")
-
+        return get_norm(tensor)
+    
 
 @register_config_metric("zeros")
 class ZerosMetric(Metric):
     @staticmethod
     def get_metric_value(tensor, eps):
         return get_zeros(tensor, eps)
-
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        try:
-            for key in metric_value[0][metric_name].keys():
-                zeros_value = statistics.mean([item[metric_name][key].item() for item in metric_value])
-                summary_writer.add_scalar(f'{key}_zeros', zeros_value, step)
-        except Exception as e:
-            logger.error(f"zeros metric metric_tensorboard error: {e}")
-
+    
 
 @register_config_metric("nans")
 class NaNsMetric(Metric):
     @staticmethod
     def get_metric_value(tensor, eps):
         return get_nans(tensor)
-
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        try:
-            for key in metric_value[0][metric_name].keys():
-                nans_value = sum([v[metric_name][key].item() for v in metric_value])
-                summary_writer.add_scalar(f'{key}_nans', nans_value, step)
-        except Exception as e:
-            logger.error(f"nans metric metric_tensorboard error: {e}")
 
 
 @register_config_metric("id")
@@ -171,34 +144,50 @@ class IdentMetric(Metric):
             return None
         return tensor
 
-    @staticmethod
-    def metric_tensorboard(metric_name, summary_writer, metric_value, step):
-        # metric_value is a dict, key is parameter name and value is a list of scalar tensor
-        try:
-            if len(metric_value) == 1:
-                for key, value in metric_value[0][metric_name].items():
-                    if not value:
-                        continue
-                    summary_writer.add_scalar(f'{key}_identical', value.item(), step)
-        except Exception as e:
-            logger.error(f"id metric metric_tensorboard error: {e}")
+
+def get_metrics(ops, tag2tensor, eps, out_dict=None):
+    if out_dict is None:
+        out_dict = {}
+    for tag, tensor in tag2tensor.items():
+        if tag not in out_dict:
+            out_dict[tag] = {}
+        for metric_name in ops:    
+            fun_metric = config_metric_registry.get(metric_name)
+            out_dict[tag][metric_name] = fun_metric.get_metric(tensor, eps)
+    return out_dict
 
 
-def get_metrics(metric_name, tag2tensor, eps):
-    try:
-        fun_metric = config_metric_registry[metric_name]
-        return fun_metric().get_metrics(tag2tensor, eps)
-    except KeyError as e:
-        raise ValueError(
-            f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: "
-            f"{metric_name}") from e
+def write_metrics_base(ops, summary_writer, metric_value, step, prefix=''):
+    if not metric_value:
+        return
+    tensors = []
+    tags = list(itertools.product(metric_value.keys(), ops))
+    for op2tensor in metric_value.values():
+        tensors.extend(op2tensor.values())
+    with torch.no_grad():
+        metric_list = torch.stack(tensors).cpu()
+    for tag, metric in zip(tags, metric_list):
+        summary_writer.add_scalar(tag, metric, step)
 
 
-def write_metrics_tensorboard(metric_name, summary_writer, metric_value, step):
-    try:
-        fun_metric = config_metric_registry[metric_name]
-        return fun_metric.metric_tensorboard(metric_name, summary_writer, metric_value, step)
-    except KeyError as e:
-        raise ValueError(
-            f"Not supported this metric, expected metric: {config_metric_registry.keys()}, actual metric: "
-            f"{metric_name}") from e
+def write_metrics_csv(ops, summary_writer, metric_value, step, prefix=''):
+    write_metrics_base(ops, summary_writer, metric_value, step, prefix='')
+
+    if not summary_writer.header:
+        # 前向的norm用input.ops_和output.ops_，反向的用input_grad.ops_和output_grad.ops_
+        if prefix in {"actv", "actv_grad"}:
+            if prefix == "actv":
+                input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
+            else:
+                input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
+            ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
+            summary_writer.header = ["module_name", "step", *ops_]
+        else:
+            summary_writer.header = ["param_name", "step", *ops]
+
+        for key in metric_value.keys():
+            if MonitorConst.VPP_SEP in key:
+                summary_writer.header.insert(0, 'vpp_stage')
+            break
+    summary_writer.write_csv(prefix, step)
+    summary_writer.header = []

@@ -1,4 +1,5 @@
-# Copyright 2024 Huawei Technologies Co., Ltd
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,16 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# ============================================================================
 
-import os
 import copy
 import functools
+import os
 from collections import defaultdict
 
 import mindspore as ms
-from mindspore.common.tensor import Tensor
-from mindspore import ops
 from mindspore import nn
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
@@ -30,20 +28,17 @@ else:
     pijit_label = True
 
 
-from msprobe.core.data_dump.data_collector import build_data_collector
-from msprobe.core.data_dump.scope import BaseScope
-from msprobe.mindspore.common.utils import get_rank_if_initialized
+from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
-from msprobe.mindspore.common.log import logger
 from msprobe.core.common.utils import Const, print_tools_ends_info
-from msprobe.core.common.exceptions import DistributedNotInitializedError
+from msprobe.core.data_dump.data_collector import build_data_collector
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs
+from msprobe.core.data_dump.scope import BaseScope
+from msprobe.mindspore.cell_processor import CellProcessor
+from msprobe.mindspore.common.log import logger
+from msprobe.mindspore.common.utils import get_rank_if_initialized
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
-    ModuleBackwardInputs, ModuleBackwardOutputs
-from msprobe.core.common.exceptions import MsprobeException
-from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
-from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.dump.jit_dump import JitDump
 
 
@@ -82,10 +77,12 @@ class Service:
     def build_hook(self, target_type, name):
         def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
+                if hasattr(cell, 'input_kwargs'):
+                    del cell.input_kwargs
                 return None
 
             if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = cell.mindstudio_reserved_name
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                 module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
             else:
                 module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs,
@@ -95,7 +92,7 @@ class Service:
             self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
-            if target_type == BaseScope.Module_Type_API:
+            if hasattr(cell, 'input_kwargs'):
                 del cell.input_kwargs
             return output
 
@@ -103,12 +100,19 @@ class Service:
             if not self.should_excute_hook():
                 return
 
+            need_exchange = True
             if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = cell.mindstudio_reserved_name
+                if not hasattr(cell, 'has_pre_hook_called') or not cell.has_pre_hook_called:
+                    need_exchange = False
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+
             self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:
                 # 框架最新接口变更，grad_input和grad_output的含义发生了变化，与torch含义保持一致，因此此处调换顺序传入
-                module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                if need_exchange:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
+                else:
+                    module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
                 self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
         pid = os.getpid()
@@ -124,7 +128,6 @@ class Service:
             return backward_hook(cell, grad_input, grad_output)
 
         return wrap_forward_hook, wrap_backward_hook
-
 
     def update_primitive_counters(self, primitive_name):
         if primitive_name not in self.primitive_counters:
@@ -149,8 +152,6 @@ class Service:
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-        HOOKCell.cell_count = defaultdict(int)
-        CellProcessor.reset_cell_stats()
         self.primitive_hook_service.primitive_counters.clear()
         self.data_collector.data_writer.reset_cache()
         JitDump.jit_count = defaultdict(int)
@@ -216,6 +217,7 @@ class Service:
             return
         self.primitive_switch = False
         api_register.api_set_ori_func()
+        JitDump.jit_dump_switch = False
 
     def stop(self):
         if self.should_stop_service:

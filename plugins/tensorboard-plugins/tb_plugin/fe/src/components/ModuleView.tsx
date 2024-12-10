@@ -7,7 +7,7 @@ import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import Select, { SelectProps } from '@material-ui/core/Select';
 import { makeStyles } from '@material-ui/core/styles';
-import { Table } from 'antd';
+import { message, Table } from 'antd';
 import * as React from 'react';
 import { FlameGraph } from 'react-flame-graph';
 import {
@@ -134,13 +134,13 @@ export const ModuleView: React.FC<IProps> = (props) => {
         setModuleView(resp);
         if (resp) {
           // set the flamegraph data
-          const flameData: any[] = getFlameGraphData(resp.data);
-          setFlameData(flameData);
-          const flameHeight = Math.max(
-            ...flameData.map((x) => getTreeHeight(x))
+          const flameGraphData: any[] = getFlameGraphData(resp.data);
+          setFlameData(flameGraphData);
+          const flameGraphHeight = Math.max(
+            ...flameGraphData.map((x) => getTreeHeight(x))
           );
-          setFlameHeight(flameHeight * 25);
-          setModules(Array.from(Array(flameData.length).keys()));
+          setFlameHeight(flameGraphHeight * 25);
+          setModules(Array.from(Array(flameGraphData.length).keys()));
           setModule(0);
 
           // set the tree table data
@@ -149,7 +149,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
         }
       })
       .catch((e) => {
-        if (e.status == 404) {
+        if (e.status === 404) {
           setModules([]);
           setFlameData([]);
           setRows([]);
@@ -201,7 +201,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
         });
       }
     } catch (e) {
-      console.warn('Timeline in module view is not supported offline.');
+      message.warning('Timeline in module view is not supported offline.');
     }
   }, [run, worker, span]);
 

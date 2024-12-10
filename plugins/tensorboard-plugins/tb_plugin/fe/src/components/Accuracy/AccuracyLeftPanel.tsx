@@ -186,9 +186,9 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
         return;
       }
       const reader = new FileReader();
-      reader.onload = ((selectedFile) => {
-        return (e) => {
-          addFile(selectedFile.name.trim(), e.target?.result as string);
+      reader.onload = ((loadedFile) => {
+        return (event) => {
+          addFile(loadedFile.name.trim(), event.target?.result as string);
           setImportSpin(false);
         };
       })(file);

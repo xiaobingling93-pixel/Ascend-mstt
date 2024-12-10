@@ -37,7 +37,10 @@ from compare_backend.compare_bean.overall_metrics_bean import OverallMetricsBean
 from compare_backend.data_prepare.module_data_prepare import ModuleDataPrepare
 from compare_backend.data_prepare.operator_data_prepare import OperatorDataPrepare
 from compare_backend.generator.base_generator import BaseGenerator
-from compare_backend.utils.constant import Constant
+
+from profiler.compare_tools.compare_backend.comparator.kernel_type_comparator import KernelTypeComparator
+from profiler.compare_tools.compare_backend.compare_bean.kernel_type_compare_bean import KernelTypeCompareBean
+from profiler.prof_common.constant import Constant
 from compare_backend.view.excel_view import ExcelView
 
 from compare_backend.data_prepare.sequence_pre_matching import SequencePreMatching
@@ -95,7 +98,7 @@ class DetailPerformanceGenerator(BaseGenerator):
         # 算子性能比对-module级
         enable_operator_compare = False
         if self._args.enable_operator_compare:
-            module_compare_result = self._module_match()
+            module_compare_result = self._module_match() if not self._args.disable_module else []
             if module_compare_result:
                 comparator_list.append(ModuleStatisticComparator(module_compare_result, ModuleStatisticBean))
                 if not self._args.disable_details:
@@ -140,7 +143,10 @@ class DetailPerformanceGenerator(BaseGenerator):
                 Constant.BASE_DATA: self._profiling_data_dict.get(Constant.BASE_DATA).kernel_details,
                 Constant.COMPARISON_DATA: self._profiling_data_dict.get(Constant.COMPARISON_DATA).kernel_details,
             }
-            comparator_list.append(KernelCompareComparator(kernel_compare_result, KernelCompareBean))
+            if self._args.use_kernel_type:
+                comparator_list.append(KernelTypeComparator(kernel_compare_result, KernelTypeCompareBean))
+            else:
+                comparator_list.append(KernelCompareComparator(kernel_compare_result, KernelCompareBean))
         return comparator_list
 
     def _module_match(self):

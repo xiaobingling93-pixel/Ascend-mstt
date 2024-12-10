@@ -1,7 +1,7 @@
 # Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
 # All rights reserved.
 #
-# Licensed under the Apache License, Version 2.0  (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
-
-from msprobe.core.common_config import CommonConfig, BaseConfig
-from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
-from msprobe.mindspore.common.const import FreeBenchmarkConst
-from msprobe.mindspore.common.log import logger
+from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.utils import is_int
+from msprobe.core.common_config import BaseConfig, CommonConfig
 from msprobe.core.grad_probe.constant import level_adp
 from msprobe.core.grad_probe.utils import check_numeral_list_ascend
+from msprobe.mindspore.common.const import FreeBenchmarkConst
+from msprobe.mindspore.common.log import logger
 
 
 class TensorConfig(BaseConfig):
@@ -33,9 +32,6 @@ class TensorConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.data_mode is not None and len(self.data_mode) > 0:
-            if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
-                raise Exception("data_mode must be all, input or output")
         if self.file_format and self.file_format not in ["npy", "bin"]:
             raise Exception("file_format is invalid")
 
@@ -49,9 +45,6 @@ class StatisticsConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.data_mode is not None and len(self.data_mode) > 0:
-            if len(self.data_mode) > 1 or self.data_mode[0] not in ["all", "input", "output"]:
-                raise Exception("data_mode must be all, input or output")
         if self.summary_mode and self.summary_mode not in ["statistics", "md5"]:
             raise Exception("summary_mode is invalid")
 
@@ -63,7 +56,7 @@ class OverflowCheckConfig(BaseConfig):
         self._check_config()
 
     def _check_config(self):
-        if self.overflow_nums is not None and not isinstance(self.overflow_nums, int):
+        if self.overflow_nums is not None and not is_int(self.overflow_nums):
             raise Exception("overflow_nums is invalid, it should be an integer")
         if self.overflow_nums is not None and self.overflow_nums != -1 and self.overflow_nums <= 0:
             raise Exception("overflow_nums should be -1 or positive integer")
@@ -87,7 +80,7 @@ class FreeBenchmarkConfig(BaseConfig):
         if self.fuzz_level and self.fuzz_level not in FreeBenchmarkConst.DUMP_LEVEL_LIST:
             raise Exception("fuzz_level must be L1 or empty")
         if self.fuzz_stage and self.fuzz_stage not in FreeBenchmarkConst.STAGE_LIST:
-            raise Exception("fuzz_stage must be forward or empty")
+            raise Exception("fuzz_stage must be forward, backward or empty")
         if self.if_preheat or self.preheat_step or self.max_sample:
             logger.warning("'if_preheat', 'preheat_step' and 'max_sample' settings "
                            "are not supported for mindspore free benchmark task.")

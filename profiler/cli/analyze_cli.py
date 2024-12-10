@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), "cluste
 
 from profiler.advisor.analyzer.analyzer_controller import AnalyzerController
 from profiler.advisor.utils.tools import CONTEXT_SETTINGS, ClickAliasedGroup
-from profiler.advisor.common import constant
+from profiler.prof_common.constant import Constant
 from profiler.advisor.common.enum_params_parser import EnumParamsParser
 from profiler.advisor.utils.utils import debug_option
 from profiler.advisor.interface.interface import Interface
@@ -33,24 +33,25 @@ def analyze_cli(**kwargs):
 @click.option('--output_path', '-o', 'output_path', type=click.Path(),
               help='Path of analysis output')
 @click.option('--cann_version', '-cv', 'cann_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.CANN_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.CANN_VERSION),
+              type=click.Choice(EnumParamsParser().get_options(Constant.CANN_VERSION), case_sensitive=False),
+              default=EnumParamsParser().get_default(Constant.CANN_VERSION),
               help='The CANN software version, which can be viewed by executing the following command: '
                    '"cat /usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/ascend_toolkit_install.info"')
-@click.option('--torch_version', '-tv', 'torch_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.TORCH_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.TORCH_VERSION),
-              help='The runtime torch version, which can be detected by exec command "pip show torch"')
 @click.option("-pt",
               "--profiling_type",
               metavar="",
-              default=EnumParamsParser().get_default(constant.PROFILING_TYPE),
               required=False,
-              type=click.Choice(EnumParamsParser().get_options(constant.PROFILING_TYPE)),
-              help="enter the profiling type, selectable range ascend_pytorch_profiler, mslite ,msprof")
+              type=click.Choice(EnumParamsParser().get_options(Constant.PROFILING_TYPE_UNDER_LINE)),
+              help="enter the profiling type, selectable range pytorch, mindspore, mslite ,msprof")
+@click.option("--force",
+              is_flag=True,
+              help="Indicates whether to skip file size verification and owner verification")
 @debug_option
 def analyze_all(**kwargs) -> None:
-    AnalyzerController().do_analysis(Interface.all_dimension, **kwargs)
+    try:
+        AnalyzerController().do_analysis(Interface.all_dimension, **kwargs)
+    except Exception as e:
+        logger.error(e)
 
 
 @analyze_cli.command(context_settings=CONTEXT_SETTINGS,
@@ -61,24 +62,30 @@ def analyze_all(**kwargs) -> None:
 @click.option('--output_path', '-o', 'output_path', type=click.Path(),
               help='Path of analysis output')
 @click.option('--cann_version', '-cv', 'cann_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.CANN_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.CANN_VERSION),
+              type=click.Choice(EnumParamsParser().get_options(Constant.CANN_VERSION), case_sensitive=False),
+              default=EnumParamsParser().get_default(Constant.CANN_VERSION),
               help='The CANN software version, which can be viewed by executing the following command: '
                    '"cat /usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/ascend_toolkit_install.info"')
 @click.option('--torch_version', '-tv', 'torch_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.TORCH_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.TORCH_VERSION),
+              type=click.Choice(EnumParamsParser().get_options(Constant.TORCH_VERSION), case_sensitive=False),
+              default=EnumParamsParser().get_default(Constant.TORCH_VERSION),
               help='The runtime torch version, which can be detected by exec command "pip show torch"')
 @click.option("-pt",
               "--profiling_type",
               metavar="",
-              default=EnumParamsParser().get_default(constant.PROFILING_TYPE),
+              default=EnumParamsParser().get_default(Constant.PROFILING_TYPE_UNDER_LINE),
               required=False,
-              type=click.Choice(EnumParamsParser().get_options(constant.PROFILING_TYPE)),
+              type=click.Choice(EnumParamsParser().get_options(Constant.PROFILING_TYPE_UNDER_LINE)),
               help="enter the profiling type, selectable range ascend_pytorch_profiler, mslite ,msprof")
+@click.option("--force",
+              is_flag=True,
+              help="Indicates whether to skip file size verification and owner verification")
 @debug_option
 def analyze_schedule(**kwargs) -> None:
-    AnalyzerController().do_analysis([Interface.SCHEDULE], **kwargs)
+    try:
+        AnalyzerController().do_analysis([Interface.SCHEDULE], **kwargs)
+    except Exception as e:
+        logger.error(e)
 
 
 @analyze_cli.command(context_settings=CONTEXT_SETTINGS,
@@ -89,21 +96,27 @@ def analyze_schedule(**kwargs) -> None:
 @click.option('--output_path', '-o', 'output_path', type=click.Path(),
               help='Path of analysis output')
 @click.option('--cann_version', '-cv', 'cann_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.CANN_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.CANN_VERSION),
+              type=click.Choice(EnumParamsParser().get_options(Constant.CANN_VERSION), case_sensitive=False),
+              default=EnumParamsParser().get_default(Constant.CANN_VERSION),
               help='The CANN software version, which can be viewed by executing the following command: '
                    '"cat /usr/local/Ascend/ascend-toolkit/latest/aarch64-linux/ascend_toolkit_install.info"')
 @click.option('--torch_version', '-tv', 'torch_version',
-              type=click.Choice(EnumParamsParser().get_options(constant.TORCH_VERSION), case_sensitive=False),
-              default=EnumParamsParser().get_default(constant.TORCH_VERSION),
+              type=click.Choice(EnumParamsParser().get_options(Constant.TORCH_VERSION), case_sensitive=False),
+              default=EnumParamsParser().get_default(Constant.TORCH_VERSION),
               help='The runtime torch version, which can be detected by exec command "pip show torch"')
 @click.option("-pt",
               "--profiling_type",
               metavar="",
-              default=EnumParamsParser().get_default(constant.PROFILING_TYPE),
+              default=EnumParamsParser().get_default(Constant.PROFILING_TYPE_UNDER_LINE),
               required=False,
-              type=click.Choice(EnumParamsParser().get_options(constant.PROFILING_TYPE)),
+              type=click.Choice(EnumParamsParser().get_options(Constant.PROFILING_TYPE_UNDER_LINE)),
               help="enter the profiling type, selectable range ascend_pytorch_profiler, mslite ,msprof")
+@click.option("--force",
+              is_flag=True,
+              help="Indicates whether to skip file size verification and owner verification")
 @debug_option
 def analyze_computation(**kwargs) -> None:
-    AnalyzerController().do_analysis([Interface.COMPUTATION], **kwargs)
+    try:
+        AnalyzerController().do_analysis([Interface.COMPUTATION], **kwargs)
+    except Exception as e:
+        logger.error(e)
