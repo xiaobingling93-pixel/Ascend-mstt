@@ -386,7 +386,7 @@ class OperatorScriptGenerator:
 
 
 
-def op_generator_parser(parser):
+def _op_generator_parser(parser):
     parser.add_argument("-i", "--config_input", dest="config_input", default='', type=str,
                         help="<Optional> Path of config json file", required=True)
     parser.add_argument("-o", "--api_output_path", dest="api_output_path", type=str,
@@ -401,11 +401,7 @@ def parse_json_config(json_file_path):
     common_config = CommonConfig(json_config)
     return common_config
 
-def main():
-    parser = argparse.ArgumentParser()
-    op_generator_parser(parser)
-    cmd_args = parser.parse_args()
-
+def _run_operator_generate_commond(cmd_args):
     common_config = parse_json_config(cmd_args.config_input)
 
     if common_config.dump_json_path:
@@ -451,4 +447,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    _op_generator_parser(parser)
+    cmd_args = parser.parse_args()
+    _run_operator_generate_commond(cmd_args)
