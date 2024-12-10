@@ -62,11 +62,10 @@ def check_tensor_overflow(x):
 
 
 def check_data_overflow(x, device):
-    if isinstance(x, (tuple, list)) and x:
-        for _, item in enumerate(x):
-            if check_data_overflow(item, device):
-                return True
-        return False
+    if isinstance(x, (tuple, list)):
+        if not x:
+            return False
+        return any(check_data_overflow(item, device) for item in x)
     else:
         if device == Const.CPU_LOWERCASE:
             return check_tensor_overflow(x)
@@ -75,11 +74,10 @@ def check_data_overflow(x, device):
 
 
 def is_bool_output(x):
-    if isinstance(x, (tuple, list)) and x:
-        for _, item in enumerate(x):
-            if is_bool_output(item):
-                return True
-        return False
+    if isinstance(x, (tuple, list)):
+        if not x:
+            return False
+        return any(is_bool_output(item) for item in x)
     else:
         return isinstance(x, bool)
 
@@ -122,12 +120,12 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
         del kwargs[Const.DEVICE]
     out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, args, kwargs)
     npu_out = exec_api(api_type, api_name, Const.NPU_LOWERCASE, npu_args, npu_kwargs)
+    if out is None and npu_out is None:
+        logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
+        return
     if is_bool_output(out) or is_bool_output(npu_out):
         logger.warning("The output of %s is bool type.This dtype not support overflow, so it will be skipped."
                        % api_full_name)
-        return
-    if out is None and npu_out is None:
-        logger.warning("The %s overflow is a normal overflow, out and npu_out is None." % api_full_name)
         return
 
     cpu_overflow = check_data_overflow(out, Const.CPU_LOWERCASE)
