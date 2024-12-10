@@ -179,12 +179,14 @@ class Const:
     STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
+    TORCH_INT_DTYPE = ["torch.int8", "torch.int32", "torch.int64"]
     FLOAT16 = "Float16"
     FLOAT32 = "Float32"
     BFLOAT16 = "BFloat16"
     TORCH_FLOAT16 = "torch.float16"
     TORCH_FLOAT32 = "torch.float32"
     TORCH_BFLOAT16 = "torch.bfloat16"
+    TORCH_FLOAT32 = "torch.float32"
 
     DTYPE = 'dtype'
     SHAPE = 'shape'

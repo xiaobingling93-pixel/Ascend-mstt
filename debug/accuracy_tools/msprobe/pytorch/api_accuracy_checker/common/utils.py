@@ -86,6 +86,8 @@ def api_info_preprocess(api_name, api_info_dict):
     convert_type = check_need_convert(api_name)
     if api_name == 'cross_entropy':
         api_info_dict = cross_entropy_process(api_info_dict)
+    if api_name == 'histc':
+        api_info_dict = histc_process(api_info_dict)
     return convert_type, api_info_dict
 
 
@@ -103,6 +105,15 @@ def cross_entropy_process(api_info_dict):
         if api_info_dict['input_args'][1]['Min'] <= 0:
             # The second argument in cross_entropy should be -100 or not less than 0
             api_info_dict['input_args'][1]['Min'] = 0
+    return api_info_dict
+
+
+def histc_process(api_info_dict):
+    input_args = api_info_dict['input_args']
+    if input_args and input_args[0].get('dtype'):
+        dtype = input_args[0]['dtype']
+        if dtype in Const.TORCH_INT_DTYPE:
+            api_info_dict['input_args'][0]['dtype'] = Const.TORCH_FLOAT32
     return api_info_dict
 
 
