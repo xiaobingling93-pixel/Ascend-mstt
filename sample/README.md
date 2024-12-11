@@ -13,6 +13,14 @@
 source set_env.sh
 ```
 
+### 版本配套   
+| 条件 | 要求 |
+|---|---|
+| CANN版本 | >=8.0.RC1.alpha001 |
+| 硬件要求 | Atlas 800T A2 训练服务器|
+ 
+备注1：固件与驱动版本与CANN版本的配套关系可在[下载固件与驱动](https://www.hiascend.com/hardware/firmware-drivers/community?product=4&model=26&cann=8.0.RC1.alpha001&driver=1.0.0.2.alpha)界面查看。
+
 ## 目录介绍
 整体目录结构如下：
 ```

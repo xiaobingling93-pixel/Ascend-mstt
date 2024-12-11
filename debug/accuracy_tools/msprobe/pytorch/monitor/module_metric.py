@@ -181,9 +181,9 @@ def write_metrics_csv(ops, summary_writer, metric_value, step, prefix=''):
             else:
                 input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
             ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
-            summary_writer.header = ["module_name", *ops_]
+            summary_writer.header = ["module_name", "step", *ops_]
         else:
-            summary_writer.header = ["param_name", *ops]
+            summary_writer.header = ["param_name", "step", *ops]
 
         for key in metric_value.keys():
             if MonitorConst.VPP_SEP in key:
