@@ -44,7 +44,7 @@ def check_str(string, variable_name):
 
 
 def check_bounds_element(bound):
-    return GradConst.BOUNDS_MINIMUM <= bound and bound <= GradConst.BOUNDS_MAXIMUM
+    return GradConst.BOUNDS_MINIMUM <= bound <= GradConst.BOUNDS_MAXIMUM
 
 
 def check_param_element(param):

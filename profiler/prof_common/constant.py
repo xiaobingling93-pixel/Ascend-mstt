@@ -50,6 +50,7 @@ class Constant(object):
     DIR_AUTHORITY = 0o750
     MAX_JSON_SIZE = 1024 * 1024 * 1024 * 10
     MAX_CSV_SIZE = 1024 * 1024 * 1024 * 5
+    MAX_COMMON_SIZE= 1024 * 1024 * 1024
     MAX_TRACE_SIZE = 1024 * 1024 * 1024 * 5
     MAX_PATH_LENGTH = 4096
     MAX_READ_DB_FILE_BYTES = 1024 * 1024 * 1024 * 8
@@ -204,6 +205,7 @@ class Constant(object):
     OVERALL_METRICS_TABLE = "OverallMetrics"
     API_TABLE = "ApiCompare"
     KERNEL_TABLE = "KernelCompare"
+    KERNEL_TYPE_TABLE = "KernelTypeCompare"
 
     # memory
     SIZE = "Size(KB)"

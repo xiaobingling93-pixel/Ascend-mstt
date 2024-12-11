@@ -187,6 +187,8 @@ class MSComparator(Comparator):
         return npu_op_name
 
     def read_npy_data(self, dir_path, file_name, load_pt_file=False):
+        if not file_name:
+            return None
         data_path = os.path.join(dir_path, file_name)
         if load_pt_file:
             import torch
@@ -275,6 +277,16 @@ class MSComparator(Comparator):
         ms_api_indices_dict = get_api_indices_dict(npu_df)
         pt_api_indices_dict = get_api_indices_dict(bench_df)
 
+        def gen_input_compare_key(pattern, term):
+            flag = True
+            for i, prefix in enumerate(mapping_dict.get(f'ms_{term}')):
+                if op_name.split(pattern)[1].startswith(str(prefix)):
+                    npu_df.loc[index, CompareConst.COMPARE_KEY] = (
+                        op_name.replace(pattern + str(prefix),
+                                        pattern + str(mapping_dict.get(f'pt_{term}')[i])))
+                    flag = False
+            return flag
+
         for mapping_dict in self.api_mapping_dict:
             if (len(mapping_dict.get('ms_args')) != len(mapping_dict.get('pt_args')) or
                     len(mapping_dict.get('ms_output')) != len(mapping_dict.get('pt_output'))):
@@ -286,21 +298,15 @@ class MSComparator(Comparator):
                 continue
             for index in ms_api_indices_dict.get(ms_api):
                 op_name = npu_df.loc[index, CompareConst.OP_NAME].replace(ms_api, pt_api, 1)
-                is_abandoned = True
                 if CompareConst.INPUT_PATTERN in op_name:
-                    for i, prefix in enumerate(mapping_dict.get('ms_args')):
-                        if op_name.split(CompareConst.INPUT_PATTERN)[1].startswith(str(prefix)):
-                            npu_df.loc[index, CompareConst.COMPARE_KEY] = (
-                                op_name.replace(CompareConst.INPUT_PATTERN + str(prefix),
-                                                CompareConst.INPUT_PATTERN + str(mapping_dict.get('pt_args')[i])))
-                            is_abandoned = False
+                    is_abandoned = gen_input_compare_key(CompareConst.INPUT_PATTERN, 'args')
+                elif CompareConst.KWARGS_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.KWARGS_PATTERN, 'args')
+                elif CompareConst.OUTPUT_PATTERN in op_name:
+                    is_abandoned = gen_input_compare_key(CompareConst.OUTPUT_PATTERN, 'output')
                 else:
-                    for i, prefix in enumerate(mapping_dict.get('ms_output')):
-                        if op_name.split(CompareConst.OUTPUT_PATTERN)[1].startswith(str(prefix)):
-                            npu_df.loc[index, CompareConst.COMPARE_KEY] = (
-                                op_name.replace(CompareConst.OUTPUT_PATTERN + str(prefix),
-                                                CompareConst.OUTPUT_PATTERN + str(mapping_dict.get('pt_output')[i])))
-                            is_abandoned = False
+                    logger.error(f'Excepted op_name: {op_name}')
+                    raise CompareException(CompareException.INVALID_DATA_ERROR)
                 if is_abandoned:
                     npu_df.loc[index, CompareConst.COMPARE_KEY] = op_name + 'abandoned'
 
@@ -323,7 +329,7 @@ class MSComparator(Comparator):
                 continue
             for op_name in merge_list[CompareConst.OP_NAME]:
                 result[CompareConst.OP_NAME].append(op_name)
-                if CompareConst.INPUT_PATTERN in op_name:
+                if (CompareConst.INPUT_PATTERN in op_name) or (CompareConst.KWARGS_PATTERN in op_name):
                     struct = merge_list[CompareConst.INPUT_STRUCT].pop(0)
                 else:
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
