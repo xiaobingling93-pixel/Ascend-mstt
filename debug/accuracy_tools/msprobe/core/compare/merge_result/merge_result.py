@@ -17,7 +17,9 @@ import os
 import re
 import multiprocessing
 import pandas as pd
+from functools import partial
 from tqdm import tqdm
+
 from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.utils import CompareException, add_time_with_xlsx
@@ -218,9 +220,9 @@ def handle_multi_process(func, func_args, lock):
         except OSError:
             logger.error("Pool terminate failed")
 
-    progress_bar = tqdm(total=len(compare_result_path_list), desc="Result Parsing Process", unit="num", ncols=100)
+    progress_bar = tqdm(total=result_num, desc="Compare Result Parsing Process", unit="num", ncols=100)
 
-    def update_progress(size, progress_lock):
+    def update_progress(size, progress_lock, extra_param=None):
         with progress_lock:
             progress_bar.update(size)
 
@@ -230,7 +232,8 @@ def handle_multi_process(func, func_args, lock):
         result = pool.apply_async(func,     # pool.apply_async立即返回ApplyResult对象，因此results中结果是顺序的
                                   args=(chunk, api_list, compare_index_list),
                                   error_callback=err_call,
-                                  callback=update_progress(chunk_size, lock))
+                                  callback=partial(update_progress, chunk_size, lock)
+                                  )
         results.append(result)
 
     all_compare_index_dict_list = []
@@ -246,7 +249,29 @@ def handle_multi_process(func, func_args, lock):
     return all_compare_index_dict_list, all_rank_num_list
 
 
-def gen_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list):
+def generate_result_df(api_index_dict, header):
+    """
+    Generates a DataFrame from the given api_index_dict and header.
+    api_index_dict:
+    {
+        api_full_name1:{
+            rank1: value,
+            },
+        api_full_name2:{
+            rank1: value
+            },
+        ...
+    }
+    """
+    result = []
+    for api_full_name, rank_value_dict in api_index_dict.items():
+        result_item = [api_full_name]
+        result_item.extend(rank_value_dict.values())
+        result.append(result_item)
+    return pd.DataFrame(result, columns=header, dtype="object")
+
+
+def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list):
     """
     generate merge result from the intermediate dict.
     one compare index, one sheet
@@ -260,13 +285,13 @@ def gen_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir,
             header = [CompareConst.NPU_NAME, "rank" + str(rank_num)]
             result_df_list = []
             for compare_index, api_index_dict in compare_index_dict.items():
-                result = []
-                for api_full_name, rank_value_dict in api_index_dict.items():
-                    result_item = [api_full_name]
-                    for value in rank_value_dict.values():
-                        result_item.append(value)
-                    result.append(result_item)
-                result_df = pd.DataFrame(result, columns=header, dtype="object")
+                result_df = generate_result_df(api_index_dict, header)
+                # result = []
+                # for api_full_name, rank_value_dict in api_index_dict.items():
+                #     result_item = [api_full_name]
+                #     result_item.extend(rank_value_dict.values())
+                #     result.append(result_item)
+                # result_df = pd.DataFrame(result, columns=header, dtype="object") # TODO 注释代码删除
                 result_df_list.append(result_df)
             # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
             all_result_df_list.append(result_df_list)
@@ -315,12 +340,12 @@ def merge_result(input_dir, output_dir, config_path):
     all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args,
                                                                           multiprocessing.Manager().RLock())
 
-    gen_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list)
+    generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list)
 
 
 # TODO 测试代码，后续删除
 if __name__ == "__main__":
-    input_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output'
+    input_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output_bak'
     output_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/merge_output'
     config_path = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output/config.yaml'
     merge_result(input_dir, output_dir, config_path)

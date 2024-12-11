@@ -17,15 +17,6 @@ import argparse
 from msprobe.core.compare.merge_result.merge_result import merge_result
 
 
-def parse_list(value):
-    """Ensure the input is parsed as a list."""
-    if isinstance(value, str):
-        return [value]  # 单个字符串转为列表
-    elif isinstance(value, list):
-        return value  # 已经是列表则返回原值
-    raise argparse.ArgumentTypeError("Input must be a list or a single string.")
-
-
 def _merge_result_parser(parser):
     parser.add_argument("-i", "--input_dir", dest="input_dir", type=str,
                         help="<Required> The compare result path, a dir.", required=True)
