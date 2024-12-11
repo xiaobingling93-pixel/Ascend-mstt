@@ -310,6 +310,13 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
             kwargs_params[key] = gen_list_kwargs(value, api_name, convert_type, real_data_path)
         elif value is None:
             kwargs_params[key] = None
+        elif key == 'atten_mask' and api_name == 'npu_fusion_attention':
+            sparse_mode = value.get('sparse_mode', {})
+            sparse_mode_value = sparse_mode.get('value', 0)
+            if sparse_mode_value in [2, 3, 4]:
+                kwargs_params[key] = gen_atten_mask(value, convert_type, real_data_path)
+            else:
+                kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
         elif value.get('type') in TENSOR_DATA_LIST or value.get('type').startswith("numpy"):
             kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
         elif value.get('type') in TORCH_TYPE:
@@ -317,6 +324,26 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
         else:
             kwargs_params[key] = value.get('value')
     return kwargs_params
+
+
+def gen_atten_mask(info, convert_type, real_data_path):
+    """
+    Function Description:
+        Based on API basic information, generate input parameters: atten_mask, for API forward running
+    Parameter:
+        info: API basic information. Dict
+        convert_type: convert ori_type to dist_type flag.
+        real_data_path: the root directory for storing real data.
+    """
+    check_object_type(info, dict)
+    data_type = info.get('type')
+    data_path = info.get('datapath', info.get('data_name'))
+    data_path = get_full_data_path(data_path, real_data_path)
+    if data_type == 'torch.Tensor':
+        data = gen_real_tensor(data_path, convert_type)
+    else:
+        data = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
+    return data
 
 
 def gen_torch_kwargs(kwargs_params, key, value):
