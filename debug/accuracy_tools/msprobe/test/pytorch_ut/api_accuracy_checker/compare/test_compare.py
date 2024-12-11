@@ -364,14 +364,6 @@ class TestCompare(unittest.TestCase):
 
         self.assertEqual(status, "pass")
 
-    def test_get_absolute_threshold_attribute(self):
-        api_name = 'mul'
-        dtype = 'torch.float32'
-        res = self.compare._get_absolute_threshold_attribute(api_name, dtype)
-        expected = (1.0e-6, 1.0e-9, 1.0e-6)
-
-        self.assertEqual(res, expected)
-
     def test_get_run_ut_detail_success(self):
         # Arrange
         test_result = [

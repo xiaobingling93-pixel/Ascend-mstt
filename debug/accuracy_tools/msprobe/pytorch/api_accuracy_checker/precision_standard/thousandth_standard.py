@@ -38,6 +38,9 @@ class ThousandthStdCompare(BaseCompare):
         self.rel_err_orign = input_data.rel_err_orign
         self.compare_column = input_data.compare_column
 
+    def _pre_compare(self):
+        pass
+
     def _compute_metrics(self):
         """
         Computes the relative error metrics for the comparison, specifically focusing on errors within a thousandth 

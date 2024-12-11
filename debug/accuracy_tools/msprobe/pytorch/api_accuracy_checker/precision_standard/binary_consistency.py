@@ -46,6 +46,9 @@ class BinaryCompare(BaseCompare):
     def __init__(self, input_data):
         super(BinaryCompare, self).__init__(input_data)
 
+    def _pre_compare(self):
+        pass
+
     def _compute_metrics(self):
         """
         Computes the error rate metric for the comparison between benchmark and device outputs.
