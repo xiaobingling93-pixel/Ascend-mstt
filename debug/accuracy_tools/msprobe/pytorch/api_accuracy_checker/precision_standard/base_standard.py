@@ -15,12 +15,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC, abstractmethod
+
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_bench_with_eps, get_abs_err, \
     get_finite_and_infinite_mask, get_small_value_mask
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 
 
-class BaseCompare:
+class BaseCompare(ABC):
     """
     Base comparison class for benchmarking and device output.
 
@@ -57,9 +59,12 @@ class BaseCompare:
     def __init__(self, input_data):
         self.bench_output = input_data.bench_output
         self.device_output = input_data.device_output
-
         self.compare_column = input_data.compare_column
         self.dtype = input_data.dtype
+
+    @abstractmethod
+    def _pre_compare(self):
+        raise NotImplementedError
 
     @staticmethod
     def stat_small_value_mask(abs_bench, both_finite_mask, small_value):
@@ -87,9 +92,6 @@ class BaseCompare:
         self._pre_compare()
         metrics = self._compute_metrics()
         self._post_compare(metrics)
-    
-    def _pre_compare(self):
-        pass
 
     def _compute_metrics(self):
         return {}

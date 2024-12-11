@@ -78,19 +78,17 @@ class AbsolutethdCompare(BaseCompare):
 
     def _pre_compare(self):
         """
-        Computes error ratios based on the prepared masks and error metrics.
+        Prepares the comparison by calculating various metrics.
 
-        This method calculates three key error ratios:
-        1. Infinite/NaN Error Ratio: The proportion of infinite or NaN values in the comparison.
-        2. Relative Error Ratio: The proportion of values where the relative error is within the specified tolerance.
-        3. Absolute Error Ratio: The proportion of values where the absolute error is within the specified tolerance.
-
-        Returns:
-        dict: A dictionary containing the computed error ratios.
-            The dictionary has the following keys:
-            - "inf_nan_error_ratio": The proportion of infinite or NaN values.
-            - "rel_err_ratio": The proportion of values with relative error within tolerance.
-            - "abs_err_ratio": The proportion of values with absolute error within tolerance.
+        This method performs the following steps:
+            1. Calculates the absolute benchmark values and their epsilon-adjusted versions.
+            2. Determines masks for finite and infinite/NaN values in the outputs.
+            3. Computes the absolute error between benchmark and device outputs.
+            4. Retrieves the relative tolerance based on the data type.
+            5. Calculates the relative error using the absolute error and epsilon-adjusted benchmark values.
+            6. Determines the small value threshold and its absolute tolerance.
+            7. Creates a mask for small values based on the benchmark values and finite mask.
+            8. Creates a mask for normal values by excluding small values from the finite mask.
         """
         self.abs_bench, self.abs_bench_with_eps = self.stat_abs_bench_with_eps()
         self.both_finite_mask, self.inf_nan_mask = self.stat_finite_and_infinite_mask()

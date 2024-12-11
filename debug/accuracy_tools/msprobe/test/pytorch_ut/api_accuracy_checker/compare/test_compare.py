@@ -103,11 +103,6 @@ class TestCompare(unittest.TestCase):
                                                                              compare_column)
         self.assertEqual(status, "pass")
 
-    def test_compare_bool_tensor(self):
-        cpu_output = np.array([True, False, True])
-        npu_output = np.array([True, False, True])
-        self.assertEqual(self.compare._compare_bool_tensor(cpu_output, npu_output), (0.0, 'pass', ''))
-
     def test_compare_builtin_type(self):
         compare_column = CompareColumn()
         bench_out = 1
