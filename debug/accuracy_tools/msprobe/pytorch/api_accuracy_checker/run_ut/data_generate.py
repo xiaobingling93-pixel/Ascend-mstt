@@ -311,7 +311,7 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
         elif value is None:
             kwargs_params[key] = None
         elif key == 'atten_mask' and api_name == 'npu_fusion_attention':
-            sparse_mode = value.get('sparse_mode', {})
+            sparse_mode = kwargs_params.get('sparse_mode', {})
             sparse_mode_value = sparse_mode.get('value', 0)
             if sparse_mode_value in [2, 3, 4]:
                 kwargs_params[key] = gen_atten_mask(value, convert_type, real_data_path)
