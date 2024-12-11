@@ -339,10 +339,12 @@ def gen_atten_mask(info, convert_type, real_data_path):
     data_type = info.get('type')
     data_path = info.get('datapath', info.get('data_name'))
     data_path = get_full_data_path(data_path, real_data_path)
-    if data_type == 'torch.Tensor':
-        data = gen_real_tensor(data_path, convert_type)
-    else:
-        data = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
+    data = None
+    if data_type in TENSOR_DATA_LIST:
+        if data_path:
+            data = gen_real_tensor(data_path, convert_type)
+        else:
+            data = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
     return data
 
 
