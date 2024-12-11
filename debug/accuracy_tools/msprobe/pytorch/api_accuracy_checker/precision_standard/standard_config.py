@@ -66,7 +66,7 @@ class StandardConfig:
         torch.float16: 1e-3,
         torch.bfloat16: 4e-3,
         torch.float32: 1e-6,
-        "default": 1e-6  # 默认值也放在配置类中
+        "default": 1e-6
     }
 
     @classmethod

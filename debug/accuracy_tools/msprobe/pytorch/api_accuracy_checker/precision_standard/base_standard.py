@@ -62,14 +62,14 @@ class BaseCompare(ABC):
         self.compare_column = input_data.compare_column
         self.dtype = input_data.dtype
 
-    @abstractmethod
-    def _pre_compare(self):
-        raise NotImplementedError
-
     @staticmethod
     def stat_small_value_mask(abs_bench, both_finite_mask, small_value):
         small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value)
         return small_value_mask
+
+    @abstractmethod
+    def _pre_compare(self):
+        raise NotImplementedError
 
     def get_small_value_threshold(self):
         small_value = StandardConfig.get_small_valuel(self.dtype)
