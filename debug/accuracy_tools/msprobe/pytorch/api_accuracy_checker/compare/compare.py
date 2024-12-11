@@ -70,13 +70,8 @@ class Comparator:
             self.detail_save_path_list = \
                 [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
 
-        self.registry = StandardRegistry()
-        self.registry.register("absolute_threshold", self._absolute_standard_compare)
-        self.registry.register("binary_consistency", self._binary_standard_compare)
-        self.registry.register("ulp_compare", self._ulp_compare)
-        self.registry.register("thousandth_threshold", self._thousandth_standard_compare)
-        self.registry.register("benchmark", self._benchmark_compare)
-        
+        self.registry = self._register_compare_func()
+
         if not is_continue_run_ut:
             self.write_csv_title()
         if stack_info_json_path:
@@ -245,6 +240,15 @@ class Comparator:
         self.record_results(result_info)
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
+
+    def _register_compare_func(self):
+        registry = StandardRegistry()
+        registry.register("absolute_threshold", self._absolute_standard_compare)
+        registry.register("binary_consistency", self._binary_standard_compare)
+        registry.register("ulp_compare", self._ulp_compare)
+        registry.register("thousandth_threshold", self._thousandth_standard_compare)
+        registry.register("benchmark", self._benchmark_compare)
+        return registry
 
     def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
