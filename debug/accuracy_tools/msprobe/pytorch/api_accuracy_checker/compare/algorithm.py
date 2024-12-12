@@ -16,9 +16,9 @@
 # limitations under the License.
 
 # 定义比对算法及比对标准
+import math
 import torch
 import numpy as np
-import math
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
 from msprobe.core.common.const import CompareConst
