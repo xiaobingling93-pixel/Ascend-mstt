@@ -16,8 +16,9 @@
 import os
 import re
 import multiprocessing
-import pandas as pd
 from functools import partial
+
+import pandas as pd
 from tqdm import tqdm
 
 from msprobe.core.common.file_utils import load_yaml, logger, FileChecker, save_excel, read_xlsx, create_directory
@@ -284,14 +285,8 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output
         for compare_index_dict, rank_num in zip(compare_index_dict_list, rank_num_list):
             header = [CompareConst.NPU_NAME, "rank" + str(rank_num)]
             result_df_list = []
-            for compare_index, api_index_dict in compare_index_dict.items():
+            for _,  api_index_dict in compare_index_dict.items():
                 result_df = generate_result_df(api_index_dict, header)
-                # result = []
-                # for api_full_name, rank_value_dict in api_index_dict.items():
-                #     result_item = [api_full_name]
-                #     result_item.extend(rank_value_dict.values())
-                #     result.append(result_item)
-                # result_df = pd.DataFrame(result, columns=header, dtype="object") # TODO 注释代码删除
                 result_df_list.append(result_df)
             # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
             all_result_df_list.append(result_df_list)
@@ -315,8 +310,8 @@ def df_merge(all_result_df_list):
         logger.info("Only one compare result get merge data.")
     merge_df_base = all_result_df_list[0]
     for sublist in all_result_df_list[1:]:
-        for i in range(len(sublist)):
-            merge_df_base[i] = pd.merge(merge_df_base[i], sublist[i], on=CompareConst.NPU_NAME, how='outer')
+        for i, sub_df in enumerate(sublist):
+            merge_df_base[i] = pd.merge(merge_df_base[i], sub_df, on=CompareConst.NPU_NAME, how='outer')
     return merge_df_base
 
 

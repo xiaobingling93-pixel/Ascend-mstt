@@ -1,41 +1,28 @@
 # coding=utf-8
-import json
-import os
-import shutil
 import unittest
-import threading
 import pandas as pd
 import multiprocessing
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from msprobe.core.compare.merge_result.merge_result import check_compare_result_name, reorder_path, get_result_path, \
     get_dump_mode, check_index_dump_mode_consistent, extract_api_full_name, search_api_index_result, \
     table_value_check, result_process, handle_multi_process, generate_result_df, generate_merge_result, df_merge, \
     merge_result
-from msprobe.core.common.const import FileCheckConst, Const, CompareConst
-
-
-base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_merge_result')
+from msprobe.core.common.const import Const, CompareConst
 
 
 class TestUtilsMethods(unittest.TestCase):
     def setUp(self):
-        os.makedirs(base_dir, mode=0o750, exist_ok=True)
-
-        # 设置测试数据
         self.api_list = ['api1', 'api2']
         self.compare_index_list = ['index1', 'index2']
 
-        # 模拟的 DataFrame
         self.result_df = pd.DataFrame({
             CompareConst.NPU_NAME: ['api1', 'api2'],
             'index1': [100, 200],
             'index2': [300, 400]
         })
 
-        # 模拟的 compare_index_dict
         self.compare_index_dict = {}
 
-        # 模拟的 DataFrame
         self.result_df_1 = pd.DataFrame({
             CompareConst.NPU_NAME: ['api1', 'api2'],
             'index1': [100, 200],
@@ -47,18 +34,37 @@ class TestUtilsMethods(unittest.TestCase):
             'index2': [350, 450]
         })
 
-        # 设置测试数据
         self.compare_result_path_list = [
-            "/path/to/compare_result_rank1-rank.xlsx",
-            "/path/to/compare_result_rank2-rank.xlsx"
+            "/path/to/compare_result_rank1-rank1.xlsx",
+            "/path/to/compare_result_rank2-rank2.xlsx"
         ]
 
-    def tearDown(self):
-        if os.path.exists(base_dir):
-            shutil.rmtree(base_dir)
+        self.all_compare_index_dict_list = [
+            [
+                {
+                    'index1': {'api1': {1: 100},
+                               'api2': {1: 200}
+                               },
+                    'index2': {'api1': {1: 300},
+                               'api2': {1: 400}
+                               }
+                }
+            ],
+            [
+                {
+                    'index1': {'api1': {2: 500},
+                               'api2': {2: 600}
+                               },
+                    'index2': {'api1': {2: 700},
+                               'api2': {2: 800}
+                               }
+                }
+            ]
+        ]
+
+        self.all_rank_num_list = [[1], [2]]
 
     def test_check_compare_result_name_multi_rank_pattern(self):
-        # 测试多卡模式
         valid_name = "compare_result_rank1-rank1_20240101010101.xlsx"
 
         result = check_compare_result_name(valid_name)
@@ -66,7 +72,6 @@ class TestUtilsMethods(unittest.TestCase):
 
     @patch('msprobe.core.compare.merge_result.merge_result.logger')
     def test_single_rank_pattern_single_rank_pattern(self, mock_logger):
-        # 测试单卡模式
         valid_name = "compare_result_rank-rank_20240101010101.xlsx"
 
         result = check_compare_result_name(valid_name)
@@ -239,13 +244,31 @@ class TestUtilsMethods(unittest.TestCase):
         mock_logger.info.assert_any_call("Parsing rank1 compare result...")
         mock_logger.warning.assert_not_called()
 
-        # 验证返回的字典结构是否正确
         expected_dict = {
             "index1": {"api1": {1: 100}, "api2": {1: 200}},
             "index2": {"api1": {1: 300}, "api2": {1: 400}},
         }
         self.assertEqual(compare_index_dict_list[0], expected_dict)
         self.assertEqual(compare_index_dict_list[1], expected_dict)
+
+    @patch('multiprocessing.Pool')
+    def test_handle_multi_process(self, mock_pool):
+        mock_pool_instance = MagicMock()
+        mock_pool.return_value = mock_pool_instance
+        mock_result = MagicMock()
+        mock_result.get.return_value = ([{'index1': {'api1': {1: 100}}}], [1])
+        mock_pool_instance.apply_async.return_value = mock_result
+
+        compare_result_path_list = ['/path/to/compare_result_rank1-rank1.xlsx']
+
+        func_args = (compare_result_path_list, self.api_list, self.compare_index_list)
+        lock = multiprocessing.Manager().RLock()
+
+        all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args, lock)
+
+        self.assertEqual(all_compare_index_dict_list, [[{'index1': {'api1': {1: 100}}}]])
+        self.assertEqual(all_rank_num_list, [[1]])
+        self.assertEqual(mock_pool_instance.apply_async.call_count, 1)
 
     def test_generate_result_df_valid_input(self):
         api_index_dict = {
@@ -262,6 +285,22 @@ class TestUtilsMethods(unittest.TestCase):
         ]
         expected_df = pd.DataFrame(expected_data, columns=header, dtype="object")
         pd.testing.assert_frame_equal(result_df, expected_df)
+
+    @patch('msprobe.core.compare.merge_result.merge_result.logger')
+    @patch('msprobe.core.compare.merge_result.merge_result.save_excel')
+    @patch("os.path.join")
+    @patch('msprobe.core.compare.merge_result.merge_result.add_time_with_xlsx')
+    def test_generate_merge_result(self, mock_add_time_with_xlsx, mock_join, mock_save_excel, mock_logger):
+        mock_add_time_with_xlsx.return_value = "multi_ranks_compare_merge_20240101010101.xlsx"
+        mock_join.return_value = "/path/to/multi_ranks_compare_merge_20240101010101.xlsx"
+        output_dir = "/path/to"
+
+        generate_merge_result(self.all_compare_index_dict_list, self.all_rank_num_list, output_dir,
+                              self.compare_index_list)
+
+        mock_save_excel.assert_called_once()
+        mock_logger.info.assert_called_once_with("The compare results of the multi-ranks are merged and saved in: "
+                                                 "/path/to/multi_ranks_compare_merge_20240101010101.xlsx.")
 
     def test_df_merge_multiple_dataframes(self):
         df1 = pd.DataFrame({CompareConst.NPU_NAME: ["api1", "api2"], "rank1": [100, 200]})
@@ -281,3 +320,38 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(len(result), 1)
         pd.testing.assert_frame_equal(result[0], expected_df)
+
+    @patch('msprobe.core.compare.merge_result.merge_result.FileChecker')
+    @patch('msprobe.core.compare.merge_result.merge_result.create_directory')
+    @patch('msprobe.core.compare.merge_result.merge_result.get_result_path')
+    @patch('msprobe.core.compare.merge_result.merge_result.load_yaml')
+    @patch('msprobe.core.compare.merge_result.merge_result.handle_multi_process')
+    @patch('msprobe.core.compare.merge_result.merge_result.generate_merge_result')
+    def test_merge_result(self, mock_generate_merge_result, mock_handle_multi_process, mock_load_yaml,
+                          mock_get_result_path, mock_create_directory, mock_file_checker):
+
+        input_dir = '/path/to/input'
+        output_dir = '/path/to/output'
+        config_path = '/path/to/config.yaml'
+
+        mock_file_checker.return_value.common_check.return_value = input_dir
+        mock_create_directory.return_value = None
+        mock_get_result_path.return_value = ['/path/to/input/compare_result_rank1-rank1_20240101010101.xlsx',
+                                             '/path/to/input/compare_result_rank2-rank2_20240101010101.xlsx']
+        mock_load_yaml.return_value = {
+            'api': ['api1', 'api2'],
+            'compare_index': ['index1', 'index2']
+        }
+        mock_handle_multi_process.return_value = (
+            [[{'index1': {'api1': {1: 100}}}], [{'index1': {'api1': {2: 100}}}]],  # all_compare_index_dict_list
+            [[1], [2]]  # all_rank_num_list
+        )
+
+        merge_result(input_dir, output_dir, config_path)
+
+        mock_file_checker.assert_called_once_with(input_dir, "dir", "read")
+        mock_create_directory.assert_called_once_with(output_dir)
+        mock_get_result_path.assert_called_once_with(input_dir)
+        mock_load_yaml.assert_called_once_with(config_path)
+        mock_handle_multi_process.assert_called_once()
+        mock_generate_merge_result.assert_called_once()
