@@ -7,9 +7,6 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import *
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_command
 from msprobe.core.common.const import CompareConst
-from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionCompare
-from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
-from msprobe.pytorch.api_accuracy_checker.compare.compare_input import PrecisionCompareInput
 
 
 class Args:
@@ -157,26 +154,6 @@ class TestApiPrecisionCompare(unittest.TestCase):
             ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', 
             ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
 
-        compare_column = ApiPrecisionOutputColumn()
-        input_data = PrecisionCompareInput(self.npu_precision, self.gpu_precision, compare_column)
-        self.ulp_standard = UlpPrecisionCompare(input_data)
-        self.benchmark_standard = BenchmarkPrecisionCompare(input_data)
-
-    def test_benchmark_standard_calc_ratio(self):
-        column_name = "TEST_COLUMN"
-        default_value = 0
-        result = BenchmarkStandard._calc_ratio(column_name, '2', '1', default_value)
-        self.assertEqual(result[0], 2.0)
-
-        result = BenchmarkStandard._calc_ratio(column_name, '0', '0', default_value)
-        self.assertEqual(result[0], 1.0)
-
-        result = BenchmarkStandard._calc_ratio(column_name, '1', '0', default_value)
-        self.assertEqual(result[0], default_value)
-
-        result = BenchmarkStandard._calc_ratio(column_name, 'nan', '0', default_value)
-        self.assertTrue(math.isnan(result[0]))
-
     def test_check_csv_columns(self):
         with self.assertRaises(Exception):
             check_csv_columns([], 'test_csv')
@@ -241,21 +218,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         for filename in os.listdir(save_path):
             os.remove(os.path.join(save_path, filename))
         os.rmdir(save_path)
-        
-    def test_ulp_standard(self):
-        self.ulp_standard.get_result()
-        self.assertEqual(self.ulp_standard.ulp_err_status, CompareConst.PASS)
 
-        self.assertEqual(self.ulp_standard._get_ulp_status(torch.float32), CompareConst.PASS)
-
-    def test_benchmark_standard(self):
-        self.benchmark_standard.get_result()
-        self.assertEqual(self.benchmark_standard.final_result, CompareConst.PASS)
-
-        column_list = self.benchmark_standard.to_column_value()
-        expect_column_list = [1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass', 1, 'pass']
-        self.assertEqual(column_list, expect_column_list)
-        
     def test_get_absolute_threshold_result_pass(self):
         row_npu = {
             ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: '0',

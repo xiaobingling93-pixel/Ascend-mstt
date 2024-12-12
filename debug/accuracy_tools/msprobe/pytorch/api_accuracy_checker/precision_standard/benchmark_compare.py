@@ -72,12 +72,12 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
         compare_message += eb_message
         
         metrics = {
-            "small_value_err_ratio": small_value_err_ratio,
-            "rmse_ratio": rmse_ratio,
-            "max_rel_err_ratio": max_rel_err_ratio,
-            "mean_rel_err_ratio": mean_rel_err_ratio,
-            "eb_ratio": eb_ratio,
-            "compare_message": compare_message
+            CompareConst.SMALL_VALUE_ERR_RATIO: small_value_err_ratio,
+            CompareConst.RMSE_RATIO: rmse_ratio,
+            CompareConst.MAX_REL_ERR_RATIO: max_rel_err_ratio,
+            CompareConst.MEAN_REL_ERR_RATIO: mean_rel_err_ratio,
+            CompareConst.EB_RATIO: eb_ratio,
+            CompareConst.COMPARE_MESSAGE: compare_message
         }
         
         return metrics, \

@@ -2,6 +2,8 @@ import unittest
 import pytest
 from dataclasses import dataclass
 
+from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BasePrecisionCompare
+
 @dataclass
 class InputData:
     """模拟输入数据结构"""
