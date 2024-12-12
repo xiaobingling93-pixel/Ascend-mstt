@@ -313,7 +313,7 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
         elif key == 'atten_mask' and api_name == 'npu_fusion_attention':
             sparse_mode = kwargs_params.get('sparse_mode', {})
             sparse_mode_value = sparse_mode.get('value', 0)
-            if sparse_mode_value in [2, 3, 4]:
+            if sparse_mode_value in Const.FA_SPECIAL_SPARSE_MODE:
                 kwargs_params[key] = gen_atten_mask(value, convert_type, real_data_path)
             else:
                 kwargs_params[key] = gen_data(value, api_name, True, convert_type, real_data_path)
@@ -344,6 +344,8 @@ def gen_atten_mask(info, convert_type, real_data_path):
         if data_path:
             data = gen_real_tensor(data_path, convert_type)
         else:
+            # 生成一个2048x2048的三角矩阵，对角线为1，其余为0
+            # 这是npu_fusion_attention的sparese_mode为[2, 3, 4]时，atten_mask的shape
             data = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
     return data
 

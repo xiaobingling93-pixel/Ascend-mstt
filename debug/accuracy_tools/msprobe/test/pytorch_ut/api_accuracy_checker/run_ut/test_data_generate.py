@@ -5,6 +5,7 @@ from unittest.mock import patch
 import copy
 import math
 import numpy as np
+import torch
 
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import *
 from msprobe.core.common.file_utils import get_json_contents, create_directory
@@ -180,6 +181,13 @@ class TestDataGenerateMethods(unittest.TestCase):
         api_info = copy.deepcopy(api_info_dict)
         kwargs_params = gen_kwargs(api_info, None)
         self.assertEqual(kwargs_params, {'dim': -1})
+    
+    def test_gen_kwargs_fa_special_sparse_mode(self):
+        api_info = {"input_kwargs": {"atten_mask": {"type": "torch.Tensor", "shape": [2048, 2048]}, 
+                                     "sparse_mode": {"type": "int", "value": 3}}}
+        kwargs_params = gen_kwargs(api_info, None)
+        self.assertEqual(kwargs_params, {'atten_mask': torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool), 
+                                         'sparse_mode': 3})
 
     def test_gen_kwargs_2(self):
         k_dict = {"dtype": {"type": "torch.dtype", "value": "torch.float16"}}
@@ -193,7 +201,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         convert_type = None
         real_data_path = None
         kwargs = gen_kwargs(api_info, api_name, convert_type, real_data_path)
-        print(kwargs['key'])
         self.assertEqual(kwargs["key"], [1.0])
         
     def test_gen_kwargs_none_kwargs(self):
