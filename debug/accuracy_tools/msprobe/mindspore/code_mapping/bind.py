@@ -158,6 +158,41 @@ def find_statistic_files(directory):
     statistic_files = list(glob.glob(pattern, recursive=True))
     return statistic_files
 
+def check_and_fix_header(file_path: str):
+    """
+    检查 CSV 文件的表头是否以逗号结尾，如果没有则添加一个逗号。
+
+    Parameters:
+        file_path (str): CSV 文件的路径。
+
+    Returns:
+        bool: 如果表头被修改，返回 True；否则，返回 False。
+    """
+
+    with FileOpen(file_path, "r") as f:
+        lines = f.readlines()
+
+    if not lines:
+        logger.warning(f"文件 {file_path} 是空的。")
+        return False
+
+    # 获取表头并去除末尾的换行符
+    header = lines[0].rstrip('\n').rstrip('\r')
+
+    if not header.endswith(','):
+        logger.info(f"表头不以逗号结尾，正在为文件 {file_path} 添加逗号。")
+        # 添加逗号并恢复换行符
+        lines[0] = header + ',\n'
+
+        # 写回修复后的内容到文件
+        with FileOpen(file_path, "w") as f:
+            f.writelines(lines)
+        logger.info(f"已为文件 {file_path} 添加末尾的逗号。")
+        return True
+    else:
+        logger.info(f"表头已以逗号结尾，无需修改。")
+        return False
+
 
 def bind_for_statistic(statistic_files: List[str], match_dict: Dict):
     """
@@ -169,6 +204,10 @@ def bind_for_statistic(statistic_files: List[str], match_dict: Dict):
     """
     for statistic_file in statistic_files:
         # 使用FileOpen安全打开文件
+        header_modified = check_and_fix_header(statistic_file)
+        if header_modified:
+            logger.info(f"文件 {statistic_file} 的表头已被修复。")
+
         with FileOpen(statistic_file, "r") as f:
             df = pd.read_csv(f)
 

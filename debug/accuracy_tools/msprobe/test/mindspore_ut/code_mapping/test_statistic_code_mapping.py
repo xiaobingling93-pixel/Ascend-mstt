@@ -163,6 +163,7 @@ Mul,Default_Mul-op0,0,0,1733905446831365,input,1,4,float32,"()",0.5,0.5,0.5,
 Mul,Default_Mul-op0,0,0,1733905446831510,output,0,4,float32,"()",2,2,2,
 """
 
+
 class TestCodeMapping(unittest.TestCase):
     def test_statistic_code_mapping(self):
         # 使用临时目录创建并测试
@@ -190,6 +191,42 @@ class TestCodeMapping(unittest.TestCase):
 
             # 在此处添加断言检查结果文件的生成或处理后的期望结果
             # 示例：assert os.path.exists(os.path.join(tmpdir, "some_output_file"))
+
+    def test_npy_code_mapping(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ir_file_path = os.path.join(tmpdir, "18_validate_0068.ir")
+
+            # 创建IR文件
+            with open(ir_file_path, 'w') as f:
+                f.write(TEST_IR_CONTENT)
+
+            # 创建包含npy文件的data目录
+            data_dir = os.path.join(tmpdir, "data_dir")
+            os.makedirs(data_dir, exist_ok=True)
+
+            # 准备需要创建的npy文件名列表
+            npy_files = ["Default_Sub-op0.npy", "Default_Add-op0.npy", "Default_Cast-op0.npy", "Default_Div-op0.npy"]
+
+            # 创建空的npy文件，或写入一些数据
+            dummy_data = np.array([1.0, 2.0, 3.0])
+            for fname in npy_files:
+                file_path = os.path.join(data_dir, fname)
+                np.save(file_path, dummy_data)  # 写入测试数据
+
+            # 准备参数
+            parser = argparse.ArgumentParser()
+            add_ir_parser_arguments(parser)
+
+            # 此处 --data 参数传入我们创建的data目录
+            args = parser.parse_args(["--ir", ir_file_path, "--data", data_dir, "--output", tmpdir])
+
+            # 执行主函数
+            code_mapping_main(args)
+
+            # 这里可以根据实际逻辑加入断言
+            # 示例：检查是否生成某个结果文件或日志内容
+            # assert os.path.exists(os.path.join(tmpdir, "some_output_file"))
+
 
 if __name__ == '__main__':
     unittest.main()
