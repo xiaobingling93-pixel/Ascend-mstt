@@ -26,7 +26,7 @@ from msprobe.mindspore.common.log import logger
 
 def add_ir_parser_arguments(parser):
     parser.add_argument('--ir', type=str, required=True, help="Path to the graph file")
-    parser.add_argument('--data', type=str, required=False, default=None, help="Path to data dir")
+    parser.add_argument('--data', type=str, required=True, default=None, help="Path to data dir")
     parser.add_argument('--output', type=str, required=False, default="./", help="Path to output dir")
     #生成mapping用时间戳
 
