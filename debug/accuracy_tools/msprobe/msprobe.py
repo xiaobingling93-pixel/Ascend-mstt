@@ -46,10 +46,13 @@ def main():
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     graph_service_cmd_parser = subparsers.add_parser('graph')
+    code_mapping_cmd_parser = subparsers.add_parser('code_mapping')
+
     _compare_parser(compare_cmd_parser)
+
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
-    code_mapping_cmd_parser = subparsers.add_parser('code_mapping')
+
     if len(sys.argv) < 4:
         parser.print_help()
         sys.exit(0)

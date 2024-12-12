@@ -164,7 +164,7 @@ Mul,Default_Mul-op0,0,0,1733905446831510,output,0,4,float32,"()",2,2,2,
 """
 
 class TestCodeMapping(unittest.TestCase):
-    def test_code_mapping(self):
+    def test_statistic_code_mapping(self):
         # 使用临时目录创建并测试
         with tempfile.TemporaryDirectory() as tmpdir:
             ir_file_path = os.path.join(tmpdir, "18_validate_0068.ir")
