@@ -64,31 +64,32 @@ class UlpPrecisionCompare(BasePrecisionCompare):
 
         if not ulp_inf_nan_consistency:
             status_dict = {
-                "ulp_err_status": CompareConst.ERROR
+                CompareConst.ULP_ERR_STATUS: CompareConst.ERROR
             }
             compare_result = CompareConst.ERROR
-            metrics['compare_message'] =  metrics.get("compare_message", "") + "ERROR: ULP误差不满足标准\n"
-            metrics.update({'compare_result': compare_result})
+            metrics[CompareConst.COMPARE_MESSAGE] =  metrics.get(CompareConst.COMPARE_MESSAGE, "") + \
+                "ERROR: ULP误差不满足标准\n"
+            metrics.update({CompareConst.COMPARE_RESULT: compare_result})
             return metrics
         
         dtype = self.row_npu.get(ApiPrecisionCompareColumn.DEVICE_DTYPE)
-        mean_ulp_err = metrics.get("mean_ulp_error")
-        ulp_err_proportion = metrics.get("ulp_err_proportion")
-        ulp_err_proportion_ratio = metrics.get("ulp_err_proportion_ratio")
+        mean_ulp_err = metrics.get(CompareConst.MEAN_ULP_ERR)
+        ulp_err_proportion = metrics.get(CompareConst.ULP_ERR_PROPORTION)
+        ulp_err_proportion_ratio = metrics.get(CompareConst.ULP_ERR_PROPORTION_RATIO)
         if dtype == 'torch.float32':
             status, final_message = \
                 self._get_fp32_ulp_err_status(mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio)
         else:
             status, final_message = \
                 self._get_fp16_ulp_err_status(ulp_err_proportion, ulp_err_proportion_ratio)
-        metrics['compare_message'] =  metrics.get("compare_message", "") + final_message
+        metrics[CompareConst.COMPARE_MESSAGE] =  metrics.get(CompareConst.COMPARE_MESSAGE, "") + final_message
 
         status_dict = {
-            "ulp_err_status": status
+            CompareConst.ULP_ERR_STATUS: status
         }
         compare_result = status
         metrics.update(status_dict)
-        metrics.update({'compare_result': compare_result})
+        metrics.update({CompareConst.COMPARE_RESULT: compare_result})
         return metrics
 
     def _get_fp32_ulp_err_status(self, mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio):
@@ -122,10 +123,10 @@ class UlpPrecisionCompare(BasePrecisionCompare):
             self._compute_ulp_err_proportion_ratio(npu_ulp_err_proportion, gpu_ulp_err_proportion)
         compare_message += ulp_err_proportion_ratio_message
         metrics = {
-            "mean_ulp_err": mean_ulp_err,
-            "ulp_err_proportion": npu_ulp_err_proportion,
-            "ulp_err_proportion_ratio": ulp_err_proportion_ratio,
-            "compare_message": compare_message
+            CompareConst.MEAN_ULP_ERR: mean_ulp_err,
+            CompareConst.ULP_ERR_PROPORTION: npu_ulp_err_proportion,
+            CompareConst.ULP_ERR_PROPORTION_RATIO: ulp_err_proportion_ratio,
+            CompareConst.COMPARE_MESSAGE: compare_message
         }
         return metrics, UlpInfNanConsistency(mean_ulp_err_inf_nan_consistency, 
                                              ulp_err_proportion_ratio_inf_nan_consistency)

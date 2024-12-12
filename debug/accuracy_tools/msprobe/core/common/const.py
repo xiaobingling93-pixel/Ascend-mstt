@@ -241,6 +241,7 @@ class CompareConst:
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
     COMPARE_RESULT = "compare_result"
+    COMPARE_MESSAGE = "compare_message"
     MAX_EXCEL_LENGTH = 1048576
     YES = "Yes"
     NO = "No"
@@ -280,6 +281,12 @@ class CompareConst:
     MAX_REL_ERR_STATUS = "max_rel_err_status"
     MEAN_REL_ERR_STATUS = "mean_rel_err_status"
     EB_STATUS = "eb_status"
+    
+    MEAN_ULP_ERR = "mean_ulp_err"
+    ULP_ERR_PROPORTION = "ulp_err_proportion"
+    ULP_ERR_PROPORTION_RATIO = "ulp_err_proportion_ratio"
+    
+    ULP_ERR_STATUS = "ulp_err_status"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,
