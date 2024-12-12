@@ -18,27 +18,58 @@
 import torch
 
 
-class BaseConfig:
+class StandardConfig:
+    """
+    Standard configuration class for managing precision and comparison thresholds.
+
+    This class provides a centralized way to manage the small value thresholds, absolute tolerances,
+    and relative tolerances (rtol) used in precision comparisons. It allows for different thresholds
+    based on the data type, with default values provided for common data types.
+
+    Attributes:
+        _small_value (dict): A dictionary mapping data types to their corresponding small value thresholds.
+        _small_value_atol (dict): A dictionary mapping data types to their corresponding absolute tolerances.
+        _rtol (dict): A dictionary mapping data types to their corresponding relative tolerances.
+
+    Methods:
+        get_small_value(dtype): Retrieves the small value threshold for the given data type.
+        get_small_value_atol(dtype): Retrieves the absolute tolerance for the given data type.
+        get_rtol(dtype): Retrieves the relative tolerance for the given data type.
+
+    Example:
+        >>> small_value = StandardConfig.get_small_value(torch.float32)
+        >>> atol = StandardConfig.get_small_value_atol(torch.float32)
+        >>> rtol = StandardConfig.get_rtol(torch.float32)
+        >>> print(small_value, atol, rtol)
+        1e-6 1e-9 1e-6
+
+    Note:
+        The data type is expected to be a PyTorch data type. If the data type is not found in the dictionary,
+        the default value is returned.
+
+    See Also:
+        torch.dtype: PyTorch data types.
+    """
     _small_value = {
         torch.float16: 1e-3,
         torch.bfloat16: 1e-3,
         torch.float32: 1e-6,
         "default": 1e-6
-        }
+    }
     _small_value_atol = {
         torch.float16: 1e-5,
         torch.bfloat16: 1e-5,
         torch.float32: 1e-9,
         "default": 1e-9
-        }
+    }
     _rtol = {
         torch.float16: 1e-3,
         torch.bfloat16: 4e-3,
         torch.float32: 1e-6,
-        "default": 1e-6  # 默认值也放在配置类中
+        "default": 1e-6
     }
     
-    _small_value_threshold =  {
+    _small_value_threshold = {
         'error_threshold': 2,
         'warning_threshold': 1,
         "default": 1
@@ -104,11 +135,11 @@ class BaseConfig:
     @classmethod
     def get_benchmark_threshold(cls, metric):
         metric_threshold_functions = {
-            'small_value': BaseConfig.get_small_value_threshold,
-            'rmse': BaseConfig.get_rmse_threshold,
-            'max_rel_err': BaseConfig.get_max_rel_err_threshold,
-            'mean_rel_err': BaseConfig.get_mean_rel_err_threshold,
-            'eb': BaseConfig.get_eb_threshold
+            'small_value': StandardConfig.get_small_value_threshold,
+            'rmse': StandardConfig.get_rmse_threshold,
+            'max_rel_err': StandardConfig.get_max_rel_err_threshold,
+            'mean_rel_err': StandardConfig.get_mean_rel_err_threshold,
+            'eb': StandardConfig.get_eb_threshold
         }
         
         threshold_func = metric_threshold_functions.get(metric)
@@ -132,12 +163,11 @@ class BaseConfig:
     
     @classmethod
     def get_ulp_threshold(cls, dtype):
+        ulp_err_proportion_ratio_threshold = StandardConfig.get_ulp_err_proportion_ratio_threshold()
         if dtype == torch.float32:
-            mean_ulp_err_threshold = BaseConfig.get_fp32_mean_ulp_err_threshold()
-            ulp_err_proportion_threshold = BaseConfig.get_fp32_ulp_err_proportion_threshold()
-            ulp_err_proportion_ratio_threshold = BaseConfig.get_ulp_err_proportion_ratio_threshold()
+            mean_ulp_err_threshold = StandardConfig.get_fp32_mean_ulp_err_threshold()
+            ulp_err_proportion_threshold = StandardConfig.get_fp32_ulp_err_proportion_threshold()
             return mean_ulp_err_threshold, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold
         else:
-            ulp_err_proportion_threshold = BaseConfig.get_fp16_ulp_err_proportion_threshold()
-            ulp_err_proportion_ratio_threshold = BaseConfig.get_ulp_err_proportion_ratio_threshold()
+            ulp_err_proportion_threshold = StandardConfig.get_fp16_ulp_err_proportion_threshold()
             return None, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold

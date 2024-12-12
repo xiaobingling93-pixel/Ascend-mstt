@@ -32,8 +32,8 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECI
     BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
 from msprobe.pytorch.api_accuracy_checker.compare.compare_input import PrecisionCompareInput
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_register import StandardRegistry
-from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionStandard
-from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionStandard
+from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
@@ -312,7 +312,7 @@ def record_binary_consistency_result(input_data):
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
     compare_column.error_rate_status = new_status
     compare_column.compare_result = new_status
-    compare_column.compare_algorithm = "二进制一致法"
+    compare_column.compare_algorithm = CompareConst.BINARY_CONSISTENCY_ALGORITHM_NAME
     message = ''
     if compare_column.error_rate_status == CompareConst.ERROR:
         message += "ERROR: 二进制一致错误率超过阈值\n"
@@ -331,7 +331,7 @@ def record_absolute_threshold_result(input_data):
     compare_column.abs_err_ratio = absolute_threshold_result.get("abs_err_ratio")
     compare_column.abs_err_ratio_status = absolute_threshold_result.get("abs_err_result")
     compare_column.compare_result = absolute_threshold_result.get("absolute_threshold_result")
-    compare_column.compare_algorithm = "绝对阈值法"
+    compare_column.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD_ALGORITHM_NAME
     message = ''
     if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
         message += "ERROR: inf/nan错误率超过阈值\n"
@@ -344,7 +344,7 @@ def record_absolute_threshold_result(input_data):
 
 
 def record_benchmark_compare_result(input_data):
-    bs = BenchmarkPrecisionStandard(input_data)
+    bs = BenchmarkPrecisionCompare(input_data)
     compare_result = bs.compare()
     for status_attr, messages in benchmark_message.items():
         status_value = getattr(input_data.compare_column, status_attr)
@@ -354,7 +354,7 @@ def record_benchmark_compare_result(input_data):
 
 
 def record_ulp_compare_result(input_data):
-    us = UlpPrecisionStandard(input_data)
+    us = UlpPrecisionCompare(input_data)
     compare_result = us.compare()
     return compare_result
 
@@ -371,7 +371,7 @@ def record_thousandth_threshold_result(input_data):
     compare_column.rel_err_thousandth = row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
     compare_column.rel_err_thousandth_status = new_status
     compare_column.compare_result = new_status
-    compare_column.compare_algorithm = "双千指标法"
+    compare_column.compare_algorithm = CompareConst.THOUSANDTH_STANDARD_ALGORITHM_NAME
     message = ''
     if compare_column.rel_err_thousandth_status == CompareConst.ERROR:
         message += "ERROR: 双千指标不达标\n"

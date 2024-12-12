@@ -19,7 +19,7 @@ from collections import namedtuple
 import numpy as np
 import torch
 
-from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import BaseConfig
+from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BasePrecisionCompare
 from msprobe.core.common.const import CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import calc_ratio
@@ -31,10 +31,10 @@ UlpInfNanConsistency = namedtuple('UlpInfNanConsistency', ['mean_ulp_err_inf_nan
                                              'ulp_err_proportion_ratio_inf_nan_consistency'])
 
 
-class UlpPrecisionStandard(BasePrecisionCompare):
+class UlpPrecisionCompare(BasePrecisionCompare):
     def __init__(self, input_data):
         super().__init__(input_data)
-        self.compare_algorithm = "ULP误差比对法"
+        self.compare_algorithm = CompareConst.ULP_COMPARE_ALGORITHM_NAME
 
     @staticmethod
     def _compute_ulp_err_proportion_ratio(npu_value, gpu_value):
@@ -75,7 +75,7 @@ class UlpPrecisionStandard(BasePrecisionCompare):
         mean_ulp_err = metrics.get("mean_ulp_error")
         ulp_err_proportion = metrics.get("ulp_err_proportion")
         ulp_err_proportion_ratio = metrics.get("ulp_err_proportion_ratio")
-        if dtype == torch.float32:
+        if dtype == 'torch.float32':
             status, final_message = \
                 self._get_fp32_ulp_err_status(mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio)
         else:
@@ -93,7 +93,7 @@ class UlpPrecisionStandard(BasePrecisionCompare):
 
     def _get_fp32_ulp_err_status(self, mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio):
         mean_ulp_err_threshold, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold = \
-                                                        BaseConfig.get_ulp_threshold(torch.float32)
+                                                        StandardConfig.get_ulp_threshold(torch.float32)
         if mean_ulp_err < mean_ulp_err_threshold:
             return CompareConst.PASS, ""
         elif ulp_err_proportion < ulp_err_proportion_threshold:
@@ -105,7 +105,7 @@ class UlpPrecisionStandard(BasePrecisionCompare):
         
     def _get_fp16_ulp_err_status(self, ulp_err_proportion, ulp_err_proportion_ratio):
         _, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold = \
-                                                        BaseConfig.get_ulp_threshold(torch.float16)
+                                                        StandardConfig.get_ulp_threshold(torch.float16)
         if ulp_err_proportion < ulp_err_proportion_threshold:
             return CompareConst.PASS, ""
         elif ulp_err_proportion_ratio < ulp_err_proportion_ratio_threshold:
@@ -126,6 +126,6 @@ class UlpPrecisionStandard(BasePrecisionCompare):
             "ulp_err_proportion": npu_ulp_err_proportion,
             "ulp_err_proportion_ratio": ulp_err_proportion_ratio,
             "compare_message": compare_message
-            }
+        }
         return metrics, UlpInfNanConsistency(mean_ulp_err_inf_nan_consistency, 
                                              ulp_err_proportion_ratio_inf_nan_consistency)

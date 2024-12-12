@@ -103,7 +103,7 @@ class ApiPrecisionOutputColumn:
             if value is None:
                 continue
             if key not in self.__slots__:
-                logger.error(f"The key '{key}' is not a valid attribute of CompareColumn.")
+                logger.error("The key '%s' is not a valid attribute of CompareColumn.", key)
                 continue
             setattr(self, key, value)
 

@@ -15,6 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import ABC, abstractmethod
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_str_to_float
 
 
@@ -25,6 +26,14 @@ class BasePrecisionCompare:
         self.compare_column = input_data.compare_column
         self.compare_algorithm = None
     
+    @abstractmethod
+    def _get_status(self, metrics, inf_nan_consistency):
+        pass
+
+    @abstractmethod
+    def _compute_ratio(self):
+        pass
+
     def compare(self):
         metrics, inf_nan_consistency = self._compute_ratio()
         compare_result = self._post_compare(metrics, inf_nan_consistency)
@@ -40,13 +49,7 @@ class BasePrecisionCompare:
         npu_value = convert_str_to_float(npu_value)
         gpu_value = convert_str_to_float(gpu_value)
         return npu_value, gpu_value
-    
-    def _get_status(self, metrics, inf_nan_consistency):
-        pass
 
-    def _compute_ratio(self):
-        pass
-    
     def _post_compare(self, metrics, inf_nan_consistency):
         metrics = self._get_status(metrics, inf_nan_consistency)
         metrics.update({'compare_algorithm': self.compare_algorithm})

@@ -248,9 +248,8 @@ def calc_ratio(x, y, default_value):
         it returns 1.0.
         Otherwise, it returns the absolute value of x divided by y.
     """
-    message = ""
-    if math.isclose(y, 0.0):
-        if math.isclose(x, 0.0):
+    if math.isclose(y, 0.0, abs_tol=1e-9):
+        if math.isclose(x, 0.0, abs_tol=1e-9):
             return 1.0
         else:
             return default_value
