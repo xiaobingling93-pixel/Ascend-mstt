@@ -39,12 +39,6 @@ ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'ra
                      defaults=['unknown', None, None, None, 0, 0])
 
 
-API_PROCESS_MAP = {
-    'cross_entropy': cross_entropy_process,
-    'histc': histc_process
-}
-
-
 class DumpException(CompareException):
     pass
 
@@ -78,23 +72,6 @@ def check_need_convert(api_name):
     return convert_type
 
 
-def api_info_preprocess(api_name, api_info_dict):
-    """
-    Function Description:
-        Preprocesses the API information.
-    Parameter:
-        api_name: Name of the API.
-        api_info_dict: argument of the API.
-    Return api_info_dict:
-        convert_type: Type of conversion.
-        api_info_dict: Processed argument of the API.
-    """
-    convert_type = check_need_convert(api_name)
-    if api_name in API_PROCESS_MAP:
-        api_info_dict = API_PROCESS_MAP[api_name](api_info_dict)
-    return convert_type, api_info_dict
-
-
 def cross_entropy_process(api_info_dict):
     """
     Function Description:
@@ -119,6 +96,29 @@ def histc_process(api_info_dict):
         if dtype in Const.TORCH_INT_DTYPE:
             api_info_dict['input_args'][0]['dtype'] = Const.TORCH_FLOAT32
     return api_info_dict
+
+
+API_PROCESS_MAP = {
+    'cross_entropy': cross_entropy_process,
+    'histc': histc_process
+}
+
+
+def api_info_preprocess(api_name, api_info_dict):
+    """
+    Function Description:
+        Preprocesses the API information.
+    Parameter:
+        api_name: Name of the API.
+        api_info_dict: argument of the API.
+    Return api_info_dict:
+        convert_type: Type of conversion.
+        api_info_dict: Processed argument of the API.
+    """
+    convert_type = check_need_convert(api_name)
+    if api_name in API_PROCESS_MAP:
+        api_info_dict = API_PROCESS_MAP[api_name](api_info_dict)
+    return convert_type, api_info_dict
 
 
 def initialize_save_path(save_path, dir_name):
