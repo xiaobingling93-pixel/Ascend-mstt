@@ -7,6 +7,9 @@ from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import *
 from msprobe.core.common.exceptions import FileCheckException
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import _api_precision_compare_command
 from msprobe.core.common.const import CompareConst
+from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
+from msprobe.pytorch.api_accuracy_checker.compare.compare_input import PrecisionCompareInput
 
 
 class Args:
@@ -153,9 +156,11 @@ class TestApiPrecisionCompare(unittest.TestCase):
             ApiPrecisionCompareColumn.MAX_REL_ERR: '0.1', ApiPrecisionCompareColumn.MEAN_REL_ERR: '0.1', 
             ApiPrecisionCompareColumn.EB: '0.1', ApiPrecisionCompareColumn.MEAN_ULP_ERR: '0.2', 
             ApiPrecisionCompareColumn.ULP_ERR_PROPORTION: '0.06'}
-        
-        self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
-        self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
+
+        compare_column = ApiPrecisionOutputColumn()
+        input_data = PrecisionCompareInput(self.npu_precision, self.gpu_precision, compare_column)
+        self.ulp_standard = UlpPrecisionCompare(input_data)
+        self.benchmark_standard = BenchmarkPrecisionCompare(input_data)
 
     def test_benchmark_standard_calc_ratio(self):
         column_name = "TEST_COLUMN"
