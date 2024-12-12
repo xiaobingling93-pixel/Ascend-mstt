@@ -39,6 +39,12 @@ ApiData = namedtuple('ApiData', ['name', 'args', 'kwargs', 'result', 'step', 'ra
                      defaults=['unknown', None, None, None, 0, 0])
 
 
+API_PROCESS_MAP = {
+    'cross_entropy': cross_entropy_process,
+    'histc': histc_process
+}
+
+
 class DumpException(CompareException):
     pass
 
@@ -84,10 +90,8 @@ def api_info_preprocess(api_name, api_info_dict):
         api_info_dict: Processed argument of the API.
     """
     convert_type = check_need_convert(api_name)
-    if api_name == 'cross_entropy':
-        api_info_dict = cross_entropy_process(api_info_dict)
-    if api_name == 'histc':
-        api_info_dict = histc_process(api_info_dict)
+    if api_name in API_PROCESS_MAP:
+        api_info_dict = API_PROCESS_MAP[api_name](api_info_dict)
     return convert_type, api_info_dict
 
 
