@@ -185,7 +185,8 @@ class TestDataGenerateMethods(unittest.TestCase):
     def test_gen_kwargs_fa_special_sparse_mode(self):
         api_info = {"input_kwargs": {"atten_mask": {"type": "torch.Tensor", "shape": [2048, 2048]}, 
                                      "sparse_mode": {"type": "int", "value": 3}}}
-        kwargs_params = gen_kwargs(api_info, None)
+        api_name = "npu_fusion_attention"
+        kwargs_params = gen_kwargs(api_info, api_name, None, None)
         self.assertEqual(kwargs_params, {'atten_mask': torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool), 
                                          'sparse_mode': 3})
 
