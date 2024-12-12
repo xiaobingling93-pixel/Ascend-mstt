@@ -89,12 +89,6 @@ class FuzzHandler(ABC):
         )
         return origin_output_chunks, perturbed_output_chunks
 
-    @staticmethod
-    def convert_overflow_ratio_to_consistent(ratio):
-        if math.isnan(ratio) or math.isinf(ratio):
-            return ThresholdConfig.COMP_CONSISTENT
-        return ratio
-
     @abstractmethod
     def get_threshold(self, dtype):
         pass
@@ -107,10 +101,10 @@ class FuzzHandler(ABC):
         self, origin_output, perturbed_output, norm_type, abs_tol
     ):
         if norm_type == NormType.ENDLESS_NORM:
-            return self.calculate_error(origin_output, perturbed_output, abs_tol)
+            return self.calculate_max_ratio(origin_output, perturbed_output, abs_tol)
         return ThresholdConfig.COMP_CONSISTENT
 
-    def calculate_error(self, origin_output, perturbed_output, abs_tol):
+    def calculate_max_ratio(self, origin_output, perturbed_output, abs_tol):
         origin_output_chunks, perturbed_output_chunks = (
             self.tensor_split_for_error_calculate(origin_output, perturbed_output)
         )
@@ -122,42 +116,30 @@ class FuzzHandler(ABC):
             raise FreeBenchmarkException(
                 FreeBenchmarkException.OutputIndexError, err_msg
             )
-        norm1 = -np.inf
-        norm2 = -np.inf
-        norm3 = np.inf
+
+        max_ratio = ThresholdConfig.COMP_CONSISTENT
         for i, chunk_origin in enumerate(origin_output_chunks):
             if chunk_origin.nelement() == 0:
                 break
             chunk_perturbed = perturbed_output_chunks[i]
-            ratio_tensor1 = TorchC.where(
-                TorchC.abs(chunk_perturbed) > abs_tol,
-                TorchC.div(
-                    TorchC.clamp(chunk_origin, min=abs_tol),
-                    TorchC.clamp(chunk_perturbed, min=abs_tol),
-                ),
-                1,
+            # 如果乘积最小值 < 极小值乘积的负值，认为存在非极小值符号相反的情况
+            if TorchC.lt(
+                TorchC.min(TorchC.mul(chunk_origin, chunk_perturbed)), -(abs_tol**2)
+            ):
+                return ThresholdConfig.SYMBOL_FLIPPING
+            # 求A/B B/A的比值前，将值限制在大于极小值范围内
+            clamp_origin = TorchC.clamp(TorchC.abs(chunk_origin), min=abs_tol)
+            clamp_perturbed = TorchC.clamp(TorchC.abs(chunk_perturbed), min=abs_tol)
+            # 对于计算结果为nan的情况，认为两者没有差异
+            ratio_tensor = TorchC.nan_to_num(
+                TorchC.div(clamp_origin, clamp_perturbed),
+                nan=ThresholdConfig.COMP_CONSISTENT,
             )
-            ratio_tensor2 = TorchC.where(
-                TorchC.abs(chunk_origin) > abs_tol,
-                TorchC.div(
-                    TorchC.clamp(chunk_perturbed, min=abs_tol),
-                    TorchC.clamp(chunk_origin, min=abs_tol),
-                ),
-                1,
-            )
-            norm_values = TorchC.stack(
-                [TorchC.max(ratio_tensor1), TorchC.max(ratio_tensor2)]
-            )
-            max_ratio1, max_ratio2 = norm_values.tolist()
-            norm1 = max(norm1, self.convert_overflow_ratio_to_consistent(max_ratio1))
-            norm2 = max(norm2, self.convert_overflow_ratio_to_consistent(max_ratio2))
-            norm3 = min(norm3, self.convert_overflow_ratio_to_consistent(max_ratio1))
-
-        if norm3 < 0:
-            ratio = ThresholdConfig.SYMBOL_FLIPPING
-        else:
-            ratio = max(norm1, norm2)
-        return ratio
+            # 求A/B 和 B/A比值最大值，其中 B/A的最大值为 A/B的最小值的倒数
+            min_ratio, max_ratio = TorchC.stack([*TorchC.aminmax(ratio_tensor)]).tolist()
+            min_ratio_reciprocal = np.inf if min_ratio == 0 else 1 / min_ratio
+            max_ratio = max(max_ratio, min_ratio_reciprocal)
+        return max_ratio
 
     def ratio_calculate(self, origin_output, perturbed_output, norm_type) -> float:
         try:
@@ -220,10 +202,12 @@ class FuzzHandler(ABC):
                 )
                 npu_consistent = is_consistent
                 max_fuzz_ratio = (
-                    max_fuzz_ratio if ratio is None else max(max_fuzz_ratio, ratio)
+                    max_fuzz_ratio
+                    if not isinstance(ratio, (int, float))
+                    else max(max_fuzz_ratio, ratio)
                 )
-                data_params.is_consistent = is_consistent and data_params.is_consistent
-                if not is_consistent and data_params.grad_unequal_flag:
+                data_params.is_consistent = is_consistent
+                if not is_consistent:
                     self.unequal_rows.append(
                         make_unequal_row(data_params, self.params, ratio=ratio)
                     )
@@ -235,12 +219,12 @@ class FuzzHandler(ABC):
                     )
                     npu_consistent = npu_consistent and is_consistent
                     max_fuzz_ratio = (
-                        max_fuzz_ratio if ratio is None else max(max_fuzz_ratio, ratio)
+                        max_fuzz_ratio
+                        if not isinstance(ratio, (int, float))
+                        else max(max_fuzz_ratio, ratio)
                     )
-                    data_params.is_consistent = (
-                        is_consistent and data_params.is_consistent
-                    )
-                    if not is_consistent and data_params.grad_unequal_flag:
+                    data_params.is_consistent = is_consistent
+                    if not is_consistent:
                         self.unequal_rows.append(
                             make_unequal_row(
                                 data_params, self.params, ratio=ratio, index=index_

@@ -82,13 +82,11 @@ class GradSaver:
         data_params = DataParams()
         data_params.original_result = origin_grad
         data_params.perturbed_result = perturbed_grad
-        data_params.grad_unequal_flag = False
         data_params.valid_input_index = index
         try:
             handler.handle(data_params)
             if not data_params.is_consistent:
                 self.is_compare = False
-                data_params.grad_unequal_flag = True
                 data_params.is_consistent = True
                 data_params.perturbed_result = self.perturbed_grad_input
                 data_params.original_result = self.origin_grad_input

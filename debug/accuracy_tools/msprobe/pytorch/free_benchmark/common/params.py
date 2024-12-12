@@ -39,7 +39,6 @@ class DataParams:
     origin_func: Optional[Callable] = None
     api_type: Optional[str] = None
     fuzz_stage: Optional[str] = None
-    grad_unequal_flag: Optional[bool] = True
 
 
 @dataclass
@@ -127,6 +126,8 @@ def make_unequal_row(
     )
     if isinstance(ratio, float):
         row.max_rel = ratio - 1
+    if isinstance(ratio, str):
+        row.max_rel = ratio
     origin_tensor = data_params.original_result
     perturbed_tensor = data_params.perturbed_result
     if index is not None:
