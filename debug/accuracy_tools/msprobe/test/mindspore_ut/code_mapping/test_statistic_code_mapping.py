@@ -8,7 +8,7 @@ from pathlib import Path
 
 # 从你的项目中导入相关函数和类
 from msprobe.mindspore.code_mapping.cmd_parser import add_ir_parser_arguments
-from msprobe.mindspore.code_mapping.main import check_args, code_mapping_main
+from msprobe.mindspore.code_mapping.main import code_mapping_main
 
 # 将ir和csv的测试内容提取为独立变量
 TEST_IR_CONTENT = """# IR entry: @19_1___main___Net_construct_72
@@ -184,8 +184,6 @@ class TestCodeMapping(unittest.TestCase):
 
             args = parser.parse_args(["--ir", ir_file_path, "--data", csv_file_path, "--output", tmpdir])
 
-            # 参数检查
-            check_args(args)
 
             # 执行主函数
             code_mapping_main(args)
