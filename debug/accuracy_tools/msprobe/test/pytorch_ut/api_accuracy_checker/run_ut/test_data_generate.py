@@ -187,8 +187,17 @@ class TestDataGenerateMethods(unittest.TestCase):
                                      "sparse_mode": {"type": "int", "value": 3}}}
         api_name = "npu_fusion_attention"
         kwargs_params = gen_kwargs(api_info, api_name, None, None)
-        self.assertEqual(kwargs_params, {'atten_mask': torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool), 
-                                         'sparse_mode': 3})
+        
+        # 分别验证 kwargs_params 的每个键值
+        self.assertIn('atten_mask', kwargs_params)
+        self.assertIn('sparse_mode', kwargs_params)
+        
+        # 验证 atten_mask 的属性
+        expected_mask = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
+        self.assertTrue(torch.equal(kwargs_params['atten_mask'], expected_mask))
+        
+        # 验证 sparse_mode 的值
+        self.assertEqual(kwargs_params['sparse_mode'], 3)
 
     def test_gen_kwargs_2(self):
         k_dict = {"dtype": {"type": "torch.dtype", "value": "torch.float16"}}
