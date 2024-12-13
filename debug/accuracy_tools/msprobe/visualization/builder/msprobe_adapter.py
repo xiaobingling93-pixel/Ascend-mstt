@@ -179,6 +179,13 @@ def _format_data(data_dict):
     """
     pattern = r'^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)$'
     all_null = False
+
+    keys_to_keep = ['type', 'group_ranks', 'group_id', 'data_name']
+    if data_dict.get('type') == 'torch.ProcessGroup':
+        keys_to_remove = [key for key in data_dict if key not in keys_to_keep]
+        for key in keys_to_remove:
+            del data_dict[key]
+
     for key, value in data_dict.items():
         if isinstance(value, str):
             # 将单引号删掉，None换成null避免前端解析错误

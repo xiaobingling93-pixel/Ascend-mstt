@@ -28,11 +28,12 @@ from msprobe.core.common.log import logger
 from msprobe.visualization.graph.node_colors import NodeColors
 from msprobe.core.compare.layer_mapping import generate_api_mapping_by_layer_mapping
 from msprobe.core.compare.utils import check_and_return_dir_contents
+from msprobe.visualization.graph.distributed_analyzer import DistributedAnalyzer
 
 current_time = time.strftime("%Y%m%d%H%M%S")
 
 
-def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.vis'):
+def _compare_graph(input_param, args):
     logger.info('Start building model graphs...')
     # 对两个数据进行构图
     dump_path_n = input_param.get('npu_path')
@@ -75,8 +76,13 @@ def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.
         graph_n.overflow_check()
         graph_b.overflow_check()
 
-    create_directory(args.output_path)
-    output_path = os.path.join(args.output_path, output_file_name)
+    return CompareGraphResult(graph_n, graph_b, graph_comparator, micro_steps)
+
+
+def _export_compare_graph_result(output_path, graph_n, graph_b, graph_comparator, micro_steps,
+                                 output_file_name=f'compare_{current_time}.vis'):
+    create_directory(output_path)
+    output_path = os.path.join(output_path, output_file_name)
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
@@ -84,7 +90,7 @@ def _compare_graph(input_param, args, output_file_name=f'compare_{current_time}.
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
 
-def _build_graph(dump_path, out_path, overflow_check=False, output_file_name=f'build_{current_time}.vis'):
+def _build_graph(dump_path, overflow_check=False):
     logger.info('Start building model graph...')
     construct_path = FileChecker(os.path.join(dump_path, GraphConst.CONSTRUCT_FILE), FileCheckConst.FILE,
                                  FileCheckConst.READ_ABLE).common_check()
@@ -92,13 +98,17 @@ def _build_graph(dump_path, out_path, overflow_check=False, output_file_name=f'b
                             FileCheckConst.READ_ABLE).common_check()
     stack_path = FileChecker(os.path.join(dump_path, GraphConst.STACK_FILE), FileCheckConst.FILE,
                              FileCheckConst.READ_ABLE).common_check()
-    create_directory(out_path)
-    output_path = os.path.join(out_path, output_file_name)
     graph = GraphBuilder.build(construct_path, data_path, stack_path)
     micro_steps = graph.paging_by_micro_step()
     # 开启溢出检测
     if overflow_check:
         graph.overflow_check()
+    return BuildGraphResult(graph, micro_steps)
+
+
+def _export_build_graph_result(out_path, graph, micro_steps, output_file_name=f'build_{current_time}.vis'):
+    create_directory(out_path)
+    output_path = os.path.join(out_path, output_file_name)
     GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
 
@@ -111,12 +121,28 @@ def _compare_graph_ranks(input_param, args, step=None):
     if npu_ranks != bench_ranks:
         logger.error('The number of ranks in the two runs are different. Unable to match the ranks.')
         raise CompareException(CompareException.INVALID_PATH_ERROR)
+    compare_graph_results = []
     for nr, br in zip(npu_ranks, bench_ranks):
         logger.info(f'Start processing data for {nr}...')
         input_param['npu_path'] = os.path.join(dump_rank_n, nr)
         input_param['bench_path'] = os.path.join(dump_rank_b, br)
         output_file_name = f'compare_{step}_{nr}_{current_time}.vis' if step else f'compare_{nr}_{current_time}.vis'
-        _compare_graph(input_param, args, output_file_name=output_file_name)
+        result = _compare_graph(input_param, args)
+        result.output_file_name = output_file_name
+        try:
+            result.rank = int(nr.replace(Const.RANK, ""))
+        except Exception:
+            logger.error('The folder name format is incorrect, expected rank+number.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        compare_graph_results.append(result)
+
+    # analyze ranks
+    DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
+                        args.overflow_check).distributed_match()
+
+    for result in compare_graph_results:
+        _export_compare_graph_result(args.output_path, result.graph_n, result.graph_b, result.graph_comparator,
+                                     result.micro_steps, output_file_name=result.output_file_name)
 
 
 def _compare_graph_steps(input_param, args):
@@ -140,11 +166,24 @@ def _compare_graph_steps(input_param, args):
 
 def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=None):
     ranks = sorted(check_and_return_dir_contents(dump_ranks_path, Const.RANK))
+    build_graph_results = []
     for rank in ranks:
         logger.info(f'Start processing data for {rank}...')
         dump_path = os.path.join(dump_ranks_path, rank)
         output_file_name = f'build_{step}_{rank}_{current_time}.vis' if step else f'build_{rank}_{current_time}.vis'
-        _build_graph(dump_path, out_path, overflow_check, output_file_name)
+        result = _build_graph(dump_path, overflow_check)
+        result.output_file_name = output_file_name
+        try:
+            result.rank = int(rank.replace(Const.RANK, ""))
+        except Exception:
+            logger.error('The folder name format is incorrect, expected rank+number.')
+            raise CompareException(CompareException.INVALID_PATH_ERROR)
+        build_graph_results.append(result)
+
+    DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, overflow_check).distributed_match()
+
+    for result in build_graph_results:
+        _export_build_graph_result(out_path, result.graph, result.micro_steps, result.output_file_name)
 
 
 def _build_graph_steps(dump_steps_path, out_path, overflow_check=False):
@@ -181,7 +220,8 @@ def _graph_service_command(args):
         elif content == GraphConst.STEPS:
             _build_graph_steps(npu_path, args.output_path, args.overflow_check)
         else:
-            _build_graph(npu_path, args.output_path, args.overflow_check)
+            result = _build_graph(npu_path, args.overflow_check)
+            _export_build_graph_result(args.output_path, result.graph, result.micro_steps)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         content_n = check_directory_content(npu_path)
         content_b = check_directory_content(bench_path)
@@ -192,7 +232,9 @@ def _graph_service_command(args):
         elif content_n == GraphConst.STEPS:
             _compare_graph_steps(input_param, args)
         else:
-            _compare_graph(input_param, args)
+            result = _compare_graph(input_param, args)
+            _export_compare_graph_result(args.output_path, result.graph_n, result.graph_b, result.graph_comparator,
+                                         result.micro_steps)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)
@@ -212,3 +254,21 @@ def _ms_graph_service_parser(parser):
 
 def _ms_graph_service_command(args):
     _graph_service_command(args)
+
+
+class CompareGraphResult:
+    def __init__(self, graph_n, graph_b, graph_comparator, micro_steps, rank=0, output_file_name=''):
+        self.graph_n = graph_n
+        self.graph_b = graph_b
+        self.graph_comparator = graph_comparator
+        self.micro_steps = micro_steps
+        self.rank = rank
+        self.output_file_name = output_file_name
+
+
+class BuildGraphResult:
+    def __init__(self, graph, micro_steps, rank=0, output_file_name=''):
+        self.graph = graph
+        self.micro_steps = micro_steps
+        self.rank = rank
+        self.output_file_name = output_file_name
