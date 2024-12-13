@@ -48,27 +48,27 @@ class TestGraphService(unittest.TestCase):
     @patch('msprobe.core.common.log.logger.info')
     def test_compare_graph(self, mock_log_info):
         args = Args(output_path=self.output, framework='pytorch')
-        _compare_graph(self.input_param, args)
-        self.assertEqual(mock_log_info.call_count, 3)
-        self.assert_log_info(mock_log_info)
+        result = _compare_graph(self.input_param, args)
+        self.assertEqual(mock_log_info.call_count, 2)
+        self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='mindspore')
-        _compare_graph(self.input_param, args)
-        self.assert_log_info(mock_log_info)
+        result = _compare_graph(self.input_param, args)
+        self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', layer_mapping=self.layer_mapping)
-        _compare_graph(self.input_param, args)
-        self.assert_log_info(mock_log_info)
+        result = _compare_graph(self.input_param, args)
+        self.assertIsNotNone(result)
 
         args = Args(output_path=self.output, framework='pytorch', overflow_check=True)
-        _compare_graph(self.input_param, args)
-        self.assert_log_info(mock_log_info)
+        result = _compare_graph(self.input_param, args)
+        self.assertIsNotNone(result)
 
     @patch('msprobe.core.common.log.logger.info')
     def test_build_graph(self, mock_log_info):
-        _build_graph(os.path.join(self.input, 'step0', 'rank0'), self.output, overflow_check=True)
-        self.assertEqual(mock_log_info.call_count, 2)
-        self.assert_log_info(mock_log_info, "Model graph built successfully, the result file is saved in")
+        result = _build_graph(os.path.join(self.input, 'step0', 'rank0'), overflow_check=True)
+        self.assertEqual(mock_log_info.call_count, 1)
+        self.assertIsNotNone(result)
 
     @patch('msprobe.core.common.log.logger.info')
     def test_compare_graph_ranks(self, mock_log_info):
