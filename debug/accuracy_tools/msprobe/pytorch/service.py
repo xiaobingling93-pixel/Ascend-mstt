@@ -27,9 +27,8 @@ from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutput
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import get_rank_if_initialized
+from msprobe.pytorch.common.utils import get_rank_if_initialized, remove_dropout
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
-from msprobe.pytorch.hook_module import remove_dropout
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser

@@ -13,4 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .wrap_functional import remove_dropout
+from msprobe.pytorch.common.utils import remove_dropout

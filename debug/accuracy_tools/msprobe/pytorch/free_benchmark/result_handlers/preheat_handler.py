@@ -75,10 +75,6 @@ class PreheatHandler(FuzzHandler):
         if self.params.preheat_config.get("preheat_step") <= self.params.step:
             return data_params.original_result
 
-        if not data_params.grad_unequal_flag:
-            data_params.grad_unequal_flag = True
-            data_params.is_consistent = False
-            return data_params.original_result
         preheat_counter.add_api_called_time(self.pure_name)
 
         if not self._is_take_a_sample():
