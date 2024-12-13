@@ -1,5 +1,6 @@
 import os
 import logging
+import time
 import glob
 from typing import Dict, List
 from pathlib import Path
@@ -125,14 +126,12 @@ def write_to_csv(param: Dict, output_dir: str, append=False):
         output_dir (str): 输出目录路径。
         append (bool): 是否以追加模式写入。
     """
-    try:
-        # 创建安全的输出目录
-        create_directory(output_dir)
-    except Exception as e:
-        logger.error(f"无法创建目录 {output_dir}: {e}")
-        raise
+    create_directory(output_dir)
 
-    file_path = Path(output_dir) / "code.csv"
+    # 使用时间戳生成文件名
+    timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
+    file_path = Path(output_dir) / f"code_mapping{timestamp}.csv"
+
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
     df = pd.DataFrame(data, columns=['File Path', 'Code Stacks', 'Scope Name'])
 
@@ -157,6 +156,7 @@ def find_statistic_files(directory):
     # 有问题 查找文件的方式
     statistic_files = list(glob.glob(pattern, recursive=True))
     return statistic_files
+
 
 def check_and_fix_header(file_path: str):
     """

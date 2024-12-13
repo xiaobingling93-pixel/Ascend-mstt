@@ -31,9 +31,7 @@ def process(args):
 
     nodes = parser.get_nodes()
 
-    if args.data:
-        bind_result = bind_code_info_for_data(args.data, nodes)
-        if bind_result:
-            # 将 append 参数传递给 write_to_csv
-            write_to_csv(bind_result, args.output)
+    bind_result = bind_code_info_for_data(args.dump_data, nodes)
+    if bind_result:
+        write_to_csv(bind_result, args.output)
 

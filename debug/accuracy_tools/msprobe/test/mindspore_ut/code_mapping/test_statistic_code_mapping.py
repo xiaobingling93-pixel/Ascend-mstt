@@ -146,7 +146,8 @@ subgraph @21_14_✗__main___Net_construct_76(%para5_Parameter_81) {
       # In file test_ir.py:18~19, 8~43/        if b :/
 }"""
 
-TEST_CSV_CONTENT = """Op Type,Op Name,Task ID,Stream ID,Timestamp,IO,Slot,Data Size,Data Type,Shape,Max Value,Min Value,L2Norm Value
+TEST_CSV_CONTENT = """
+Op Type,Op Name,Task ID,Stream ID,Timestamp,IO,Slot,Data Size,Data Type,Shape,Max Value,Min Value,L2Norm Value
 Sub,Default_Sub-op0,0,0,1733905446819790,input,0,4,float32,"()",3,3,3,
 Sub,Default_Sub-op0,0,0,1733905446820357,input,1,4,float32,"()",1,1,1,
 Sub,Default_Sub-op0,0,0,1733905446820495,output,0,4,float32,"()",2,2,2,
@@ -184,7 +185,7 @@ class TestCodeMapping(unittest.TestCase):
             parser = argparse.ArgumentParser()
             add_ir_parser_arguments(parser)
 
-            args = parser.parse_args(["--ir", ir_file_path, "--data", csv_file_path, "--output", tmpdir])
+            args = parser.parse_args(["--ir", ir_file_path, "--dump_data", csv_file_path, "--output", tmpdir])
 
 
             # 执行主函数
@@ -218,8 +219,8 @@ class TestCodeMapping(unittest.TestCase):
             parser = argparse.ArgumentParser()
             add_ir_parser_arguments(parser)
 
-            # 此处 --data 参数传入我们创建的data目录
-            args = parser.parse_args(["--ir", ir_file_path, "--data", data_dir, "--output", tmpdir])
+            # 此处 --dump_data 参数传入我们创建的data目录
+            args = parser.parse_args(["--ir", ir_file_path, "--dump_data", data_dir, "--output", tmpdir])
 
             # 执行主函数
             code_mapping_main(args)
