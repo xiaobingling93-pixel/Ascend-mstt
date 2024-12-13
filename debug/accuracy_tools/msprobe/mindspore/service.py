@@ -102,9 +102,9 @@ class Service:
 
             need_exchange = True
             if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                 if not hasattr(cell, 'has_pre_hook_called') or not cell.has_pre_hook_called:
                     need_exchange = False
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
 
             self.data_collector.update_api_or_module_name(api_or_cell_name)
             if self.data_collector:

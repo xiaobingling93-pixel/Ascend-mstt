@@ -273,7 +273,7 @@ class GraphMSComparator:
                 is_empty = True
             if is_empty or not mode:
                 continue
-            compare_result_df = self._do_multi_process(compare_result_df, mode)
+            compare_result_df = self.do_multi_process(compare_result_df, mode)
             compare_result_name = add_time_with_xlsx(f"compare_result_{str(rank_id)}_{str(step_id)}")
             compare_result_path = os.path.join(os.path.realpath(self.output_path), f"{compare_result_name}")
             self.to_excel(compare_result_df, compare_result_path)
@@ -389,7 +389,7 @@ class GraphMSComparator:
                 rank_step_path_dict[rank_step_key] = [dir_path]
         return dict(sorted(rank_step_path_dict.items()))
 
-    def _do_multi_process(self, result_df, mode):
+    def do_multi_process(self, result_df, mode):
         try:
             result_df = _ms_graph_handle_multi_process(self.compare_ops, result_df, mode)
         except ValueError as e:

@@ -237,14 +237,15 @@ def create_hooks(context, monitor):
         args = args + tuple(kwargs.values())
         if out:  # async
             if isinstance(out, dist.Work):
-                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_], 
-                                                                             module.op_name_, 
+                PENDING_ASYNC_CC_BY_HANDLE[out] = create_async_callback_func(context[module.op_name_],
+                                                                             module.op_name_,
                                                                              monitor.ops, args, MonitorConst.PREFIX_POST)
             elif isinstance(out, list): # batch_isend_irecv
-                for o in out:
-                    PENDING_ASYNC_CC_BY_HANDLE[o] = create_async_callback_func(context[module.op_name_], 
-                                                                               module.op_name_, 
-                                                                               monitor.ops, args, MonitorConst.PREFIX_POST)
+                for out_element in out:
+                    PENDING_ASYNC_CC_BY_HANDLE[out_element] = create_async_callback_func(context[module.op_name_],
+                                                                                         module.op_name_,
+                                                                                         monitor.ops, args,
+                                                                                         MonitorConst.PREFIX_POST)
             return out
         catch_data(context[module.op_name_], module.op_name_, monitor.ops, args, MonitorConst.PREFIX_POST)
         return out

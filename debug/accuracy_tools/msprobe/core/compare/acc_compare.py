@@ -442,7 +442,7 @@ class Comparator:
             return
 
         if dump_mode == Const.ALL:
-            result_df = self._do_multi_process(input_parma, result_df)
+            result_df = self.do_multi_process(input_parma, result_df)
 
         find_compare_result_error_rows(result_df, highlight_dict, dump_mode)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
@@ -495,7 +495,7 @@ class Comparator:
 
         return _save_cmp_result(idx, cr, result_df, lock)
 
-    def _do_multi_process(self, input_parma, result_df):
+    def do_multi_process(self, input_parma, result_df):
         try:
             result_df = _handle_multi_process(self.compare_ops, input_parma, result_df,
                                               multiprocessing.Manager().RLock())

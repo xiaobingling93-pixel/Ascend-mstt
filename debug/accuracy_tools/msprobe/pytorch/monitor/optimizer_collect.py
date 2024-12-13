@@ -23,7 +23,7 @@ from msprobe.core.common.log import logger
 from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 
-class OptimizerMon(ABC):
+class OptimizerMon(object):
     wrapped_optimizer = None
 
     def __init__(self) -> None:
@@ -34,7 +34,6 @@ class OptimizerMon(ABC):
     def set_wrapped_optimizer(cls, wrapped_optimizer):
         cls.wrapped_optimizer = wrapped_optimizer
 
-    @abstractmethod
     def fetch_mv(self, monitor, torch_opt, params2name):
         pass
 
@@ -217,6 +216,19 @@ class DeepSpeedZeroOptimizerStage3Mon(OptimizerMon):
 
 
 class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
+
+    @staticmethod
+    def get_group_index(fp32_length, world_size, index):
+        for i in range(len(fp32_length) - 1):
+            if fp32_length[i] <= index < fp32_length[i + 1]:
+                interval_start = fp32_length[i]
+                interval_length = fp32_length[i + 1] - fp32_length[i]
+                sub_interval_length = interval_length // world_size
+                sub_index = (index - interval_start) // sub_interval_length
+                sub_interval_start = interval_start + sub_index * sub_interval_length
+                return sub_interval_start, min(sub_index, world_size - 1)
+        return fp32_length[-1], 0
+
     def get_param_index(self, params2name, name2index):
         mix_prec_opt = OptimizerMon.wrapped_optimizer
         padding = mix_prec_opt.groups_padding
@@ -224,17 +236,6 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
         fp32_length = [0]
         for fp32_group_index, single_partition_of_fp32_group in enumerate(mix_prec_opt.single_partition_of_fp32_groups):
             fp32_length.append(len(single_partition_of_fp32_group) * world_size + fp32_length[fp32_group_index])
-
-        def get_group_index(fp32_length, world_size, index):
-            for i in range(len(fp32_length) - 1):
-                if fp32_length[i] <= index < fp32_length[i + 1]:
-                    interval_start = fp32_length[i]
-                    interval_length = fp32_length[i + 1] - fp32_length[i]
-                    sub_interval_length = interval_length // world_size
-                    sub_index = (index - interval_start) // sub_interval_length
-                    sub_interval_start = interval_start + sub_index * sub_interval_length
-                    return sub_interval_start, min(sub_index, world_size - 1)
-            return fp32_length[-1], 0
 
         bf16_groups = []
         name2indices = defaultdict()
@@ -245,7 +246,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
             bf16_groups.extend(bf16_group)
             for param in bf16_group:
                 param_length = len(param.flatten())
-                group_index, group_with_rank = get_group_index(fp32_length, world_size, index)
+                group_index, group_with_rank = self.get_group_index(fp32_length, world_size, index)
                 index_length[idx] = (index, index + param_length, group_idx, group_index, group_with_rank)
                 index += param_length
                 idx += 1
