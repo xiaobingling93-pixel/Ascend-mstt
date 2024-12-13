@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import itertools
 import os
 import sys
 import statistics as st
@@ -22,6 +22,7 @@ from typing import List
 from collections import defaultdict
 
 import pandas as pd
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from msprobe.core.common.log import logger
@@ -134,7 +135,7 @@ class AnomalyDataFactory(ABC):
             raise ValueError("tag must be a tuple with length 2")
         tag_name = tag[0]
         param_name = tag_name.split('/')[0]
-        call_id = self.name2callid.get(param_name, -1)
+        call_id = self.name2callid.get(tag_name, -1)
         if MonitorConst.VPP_SEP in param_name:
             vpp_stage = int(param_name.split(MonitorConst.VPP_SEP)[0])
         else:
@@ -153,6 +154,23 @@ class AnomalyDataFactory(ABC):
         )
 
 
+class TrainStage:
+    DEFAULT_STAGE = -1
+    FORWARD_STAGE = 0
+    BACKWARD_STAGE = 1
+    OPTIMIZER_STAGE = 2
+
+
+FORWARD_KEY = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
+BACKWARD_KEY = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT,
+                MonitorConst.PRE_GRAD, MonitorConst.POST_GRAD, MonitorConst.ACC_GRAD]
+OPTIMIZER_KEY = [MonitorConst.EXP_AVG, MonitorConst.EFXP_AVG_SQ]
+TRAIN_STAGE = {
+    **{key_: TrainStage.FORWARD_STAGE for key_ in FORWARD_KEY},
+    **{key_: TrainStage.BACKWARD_STAGE for key_ in BACKWARD_KEY},
+    **{key_: TrainStage.OPTIMIZER_STAGE for key_ in OPTIMIZER_KEY}
+}
+
 @dataclass(eq=True)
 class GradAnomalyData:
     rank: int = 0
@@ -166,24 +184,47 @@ class GradAnomalyData:
     group_mates: list = field(default=None, compare=False)
 
     def __lt__(self, other):
+        """
+        自定义比较函数，用于确定 GradAnomalyData 实例之间的顺序。
+        比较规则为：
+            step 和 micro_step 值越小优先级越高；
+            vpp 和 pp 在前向阶段值越小优先级越高，在非前向阶段值越大优先级越高；
+            call_id 值越小优先级越高。
+        """
         if not isinstance(other, GradAnomalyData):
             return NotImplemented
-        if self.step != other.step:
-            return self.step < other.step
-        if self.micro_step != other.micro_step:
-            return self.micro_step < other.micro_step
-        if self.vpp_stage != other.vpp_stage:
-            return self.vpp_stage > other.vpp_stage
-        if self.pp_stage != other.pp_stage:
-            return self.pp_stage > other.pp_stage
-        if self.call_id != other.call_id:
-            return self.call_id < other.call_id
-        return False
+
+        self_train_stage = self.get_train_stage(self.tag_name)
+        other_train_stage = self.get_train_stage(other.tag_name)
+
+        def vpp_pp_comparator(anomaly):
+            """
+            Determine the priority rule for vpp and pp based on train stage
+            Forward stage prefers smaller vpp and pp
+            Other stages prefer larger vpp and pp
+            """
+            if self_train_stage == TrainStage.FORWARD_STAGE:
+                return anomaly.vpp_stage, anomaly.pp_stage
+            else:
+                return -anomaly.vpp_stage, -anomaly.pp_stage
+
+        self_cmp = [self.step, self.micro_step, self_train_stage, *vpp_pp_comparator(self), self.call_id]
+        other_cmp = [other.step, other.micro_step, other_train_stage, *vpp_pp_comparator(other), other.call_id]
+        return self_cmp < other_cmp
 
     def __le__(self, other):
         if not isinstance(other, GradAnomalyData):
             return NotImplemented
         return self == other or self < other
+
+    @staticmethod
+    def get_train_stage(tag_name):
+        """
+        :param tag_name: "0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/efxp_avg_sq"
+        :return: int, if forward return 0; if backward return 1; if optimizer return 2
+        """
+        key_ = tag_name.split("/")[-1]
+        return TRAIN_STAGE.get(key_, TrainStage.DEFAULT_STAGE)
 
     def to_dict(self):
         return self.__dict__
@@ -209,7 +250,6 @@ class BaseWriterWithAD:
         self.tag2scalars = {}
         self.ad_rules = writer_input.ad_rules
         self.job_id = writer_input.job_id
-        self.anomaly_inform = writer_input.anomaly_inform
         self.anomaly_factory = writer_input.anomaly_factory
         self.anomalies = []
         self.ndigits = writer_input.ndigits
@@ -266,6 +306,18 @@ class BaseWriterWithAD:
         self.tag2scalars[tag]['count'] += 1
         return avg
 
+    def write_metrics(self, ops, metric_value, step, prefix=''):
+        if not metric_value:
+            return
+        tensors = []
+        tags = list(itertools.product(metric_value.keys(), ops))
+        for op2tensor in metric_value.values():
+            tensors.extend(op2tensor.values())
+        with torch.no_grad():
+            metric_list = torch.stack(tensors).cpu()
+        for tag, metric in zip(tags, metric_list):
+            self.add_scalar(tag, metric, step)
+
 
 class CSVWriterWithAD(BaseWriterWithAD):
     def __init__(self, writer_input: WriterInput):
@@ -291,7 +343,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
         """
         if len(self.context_dict) == 0:
             return
-        
+
         ster_start, step_end = self.get_step_interval(step)
         filepath = os.path.join(self.log_dir, f'{prefix}_{ster_start}-{step_end}.csv')
         if not os.path.exists(filepath):
@@ -316,6 +368,31 @@ class CSVWriterWithAD(BaseWriterWithAD):
 
         name = tag[0].split('/')[0]
         self.context_dict[name].append(scalar_value.item())
+
+    def write_metrics(self, ops, metric_value, step, prefix=''):
+        super().write_metrics(ops, metric_value, step, prefix='')
+
+        # generate csv headers
+        # set hashmap to reduce the number of headers generated.
+        # 前向的norm用input.ops_和output.ops_，反向的用input_grad.ops_和output_grad.ops_
+        if prefix in {"actv", "actv_grad"}:
+            if prefix == "actv":
+                input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
+            else:
+                input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
+            ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
+            csv_header = ["module_name", "step", *ops_]
+        else:
+            csv_header = ["param_name", "step", *ops]
+
+        for key in metric_value.keys():
+            if MonitorConst.VPP_SEP in key:
+                csv_header.insert(0, 'vpp_stage')
+            break
+
+        self.header = csv_header
+        self.write_csv(prefix, step)
+        self.header = []
 
     def close(self):
         pass
