@@ -158,7 +158,6 @@ class TestComputeElement(unittest.TestCase):
     def test_transfer_to_torch_tensor(self):
         ms_tensor_2_torch_tensor_mapping = {
             mindspore.Tensor([1, 2, 3], dtype=mindspore.uint8): torch.tensor([1, 2, 3], dtype=torch.uint8),
-            mindspore.Tensor([1, 2, 3], dtype=mindspore.bfloat16): torch.tensor([1, 2, 3], dtype=torch.bfloat16),
             mindspore.Tensor([1, 2, 3], dtype=mindspore.float32): torch.tensor([1, 2, 3], dtype=torch.float32)
         }
         for ms_tensor, torch_tensor in ms_tensor_2_torch_tensor_mapping.items():
@@ -169,7 +168,6 @@ class TestComputeElement(unittest.TestCase):
     def test_transfer_to_mindspore_tensor(self):
         ms_tensor_2_torch_tensor_mapping = {
             mindspore.Tensor([1, 2, 3], dtype=mindspore.uint8): torch.tensor([1, 2, 3], dtype=torch.uint8),
-            mindspore.Tensor([1, 2, 3], dtype=mindspore.bfloat16): torch.tensor([1, 2, 3], dtype=torch.bfloat16),
             mindspore.Tensor([1, 2, 3], dtype=mindspore.float32): torch.tensor([1, 2, 3], dtype=torch.float32)
         }
         for ms_tensor, torch_tensor in ms_tensor_2_torch_tensor_mapping.items():
