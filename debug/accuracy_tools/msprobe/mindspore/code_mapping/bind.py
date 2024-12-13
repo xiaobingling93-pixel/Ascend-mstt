@@ -141,9 +141,9 @@ def write_to_csv(param: Dict, output_dir: str, append=False):
 
     try:
         if append and file_path.exists():
-            write_csv(df, str(file_path), mode="a", header=False, malicious_check=False)
+            write_csv(df, str(file_path), mode="a", malicious_check=False)
         else:
-            write_csv(df, str(file_path), mode="w", header=True, malicious_check=False)
+            write_csv(df, str(file_path), mode="w", malicious_check=False)
     except Exception as e:
         logger.error(f"写入CSV文件失败: {file_path}, 错误: {e}")
         raise

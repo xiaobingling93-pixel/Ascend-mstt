@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import os
 import argparse
+import numpy as np
 from unittest.mock import patch
 from pathlib import Path
 

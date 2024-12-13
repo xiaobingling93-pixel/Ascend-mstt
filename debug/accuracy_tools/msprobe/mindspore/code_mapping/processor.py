@@ -30,7 +30,6 @@ def process(args):
     parser.parse(input_text)
 
     nodes = parser.get_nodes()
-    graph = Graph(nodes)
 
     if args.data:
         bind_result = bind_code_info_for_data(args.data, nodes)
