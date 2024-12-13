@@ -52,12 +52,12 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
     """
     if framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import PTComparator
-        return PTComparator()._do_multi_process(dump_path_param, csv_path)
+        return PTComparator().do_multi_process(dump_path_param, csv_path)
     else:
         from msprobe.mindspore.compare.ms_compare import MSComparator
         ms_comparator = MSComparator()
         ms_comparator.cross_frame = is_cross_frame
-        return ms_comparator._do_multi_process(dump_path_param, csv_path)
+        return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
 
 def get_input_output(node_data, node_id):

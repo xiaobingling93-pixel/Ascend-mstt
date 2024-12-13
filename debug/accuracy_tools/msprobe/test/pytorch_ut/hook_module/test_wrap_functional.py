@@ -1,8 +1,9 @@
 import unittest
 import torch
 import torch.nn.functional as F
-from msprobe.pytorch.hook_module.wrap_functional import remove_dropout, get_functional_ops, \
+from msprobe.pytorch.hook_module.wrap_functional import get_functional_ops, \
     wrap_functional_ops_and_bind, HOOKFunctionalOP
+from msprobe.pytorch.common.utils import remove_dropout
 
 
 class TestDropoutFunctions(unittest.TestCase):

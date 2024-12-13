@@ -284,7 +284,8 @@ class SingleBenchSummary:
     def get_result_msg(self):
         result_str = ""
         if self.failed_info:
-            return self.failed_info
+            result_str = self.failed_info
+            return result_str
 
         if self.result:
             result_str += "误差均衡性EB: %s <= 阈值%s\n" % (self.error_balance, self.eb_thd)

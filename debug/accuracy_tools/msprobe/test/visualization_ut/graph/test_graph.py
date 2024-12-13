@@ -67,17 +67,19 @@ class TestGraph(unittest.TestCase):
                                               'matched_node_link': [], 'suggestions': {}, 'stack_info': []}})
         
     def test_split_nodes_by_micro_step(self):
-        nodes = [BaseNode(NodeOp.module, 'a.0'), BaseNode(NodeOp.module, 'b.0'),
-                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.1'),
-                 BaseNode(NodeOp.module, 'b.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
+        nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),
+                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.forward.1'),
+                 BaseNode(NodeOp.module, 'b.forward.0'), BaseNode(NodeOp.module, 'b.backward.0'),
+                 BaseNode(NodeOp.module, 'a.backward.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
         result = Graph.split_nodes_by_micro_step(nodes)
         self.assertEqual(len(result), 2)
         self.assertEqual(len(result[0]), 3)
 
     def test_paging_by_micro_step(self):
-        nodes = [BaseNode(NodeOp.module, 'a.0'), BaseNode(NodeOp.module, 'b.0'),
-                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.1'),
-                 BaseNode(NodeOp.module, 'b.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
+        nodes = [BaseNode(NodeOp.module, 'a.forward.0'), BaseNode(NodeOp.module, 'a.backward.0'),
+                 BaseNode(NodeOp.api_collection, 'apis.0'), BaseNode(NodeOp.module, 'a.forward.1'),
+                 BaseNode(NodeOp.module, 'b.forward.0'), BaseNode(NodeOp.module, 'b.backward.0'),
+                 BaseNode(NodeOp.module, 'a.backward.1'), BaseNode(NodeOp.api_collection, 'apis.1')]
 
         graph = Graph('Model1')
         graph.root.subnodes = nodes

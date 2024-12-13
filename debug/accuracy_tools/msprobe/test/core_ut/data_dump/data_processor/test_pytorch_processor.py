@@ -1,20 +1,24 @@
+import hashlib
+import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock, Mock
 import zlib
+from unittest.mock import patch, MagicMock, Mock
 
-import torch
 import numpy as np
-
-from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, BaseDataProcessor
+import torch
+from msprobe.core.common.log import logger
+from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutputs, ModuleForwardInputsOutputs, \
+    BaseDataProcessor
 from msprobe.core.data_dump.data_processor.pytorch_processor import (
     PytorchDataProcessor,
     FreeBenchmarkDataProcessor,
     TensorDataProcessor,
-    OverflowCheckDataProcessor, 
-    TensorStatInfo, 
+    OverflowCheckDataProcessor,
+    TensorStatInfo,
     KernelDumpDataProcessor
 )
+from torch import distributed as dist
 
 
 class TestPytorchDataProcessor(unittest.TestCase):
@@ -89,7 +93,7 @@ class TestPytorchDataProcessor(unittest.TestCase):
         self.assertEqual(result.min, False)
         self.assertIsNone(result.mean)
         self.assertIsNone(result.norm)
-        
+
     def test_get_stat_info_with_scalar_tensor(self):
         scalar_tensor = torch.tensor(42.0)
         result = PytorchDataProcessor.get_stat_info(scalar_tensor)
@@ -102,9 +106,9 @@ class TestPytorchDataProcessor(unittest.TestCase):
     def test_get_stat_info_with_complex_tensor(self):
         complex_tensor = torch.tensor([1 + 2j, 3 + 4j], dtype=torch.complex64)
         result = PytorchDataProcessor.get_stat_info(complex_tensor)
-        expected_max = np.abs(np.array([1+2j, 3+4j])).max().item()
-        expected_min = np.abs(np.array([1+2j, 3+4j])).min().item()
-        expected_mean = np.abs(np.array([1+2j, 3+4j])).mean().item()
+        expected_max = np.abs(np.array([1 + 2j, 3 + 4j])).max().item()
+        expected_min = np.abs(np.array([1 + 2j, 3 + 4j])).min().item()
+        expected_mean = np.abs(np.array([1 + 2j, 3 + 4j])).mean().item()
         self.assertIsInstance(result, TensorStatInfo)
         self.assertAlmostEqual(result.max, expected_max, places=6)
         self.assertAlmostEqual(result.min, expected_min, places=6)
@@ -162,10 +166,42 @@ class TestPytorchDataProcessor(unittest.TestCase):
         expected = {'type': 'slice', 'value': [None, None, None]}
         self.assertEqual(result, expected)
 
+    def test_process_group_hash(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor.process_group_hash(process_group_element)
+        expected = hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        self.assertEqual(result, expected)
+
     def test_analyze_torch_size(self):
         size = torch.Size([3, 4, 5])
         result = self.processor._analyze_torch_size(size)
         expected = {'type': 'torch.Size', 'value': [3, 4, 5]}
+        self.assertEqual(result, expected)
+
+    def test_analyze_memory_format(self):
+        memory_format_element = torch.contiguous_format
+        result = self.processor._analyze_memory_format(memory_format_element)
+        expected = {'type': 'torch.memory_format', 'format': 'contiguous_format'}
+        self.assertEqual(result, expected)
+
+    def test_analyze_process_group(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor._analyze_process_group(process_group_element)
+        expected = {
+            'type': 'torch.ProcessGroup',
+            'group_ranks': [0],
+            'group_id': hashlib.md5('[0]'.encode('utf-8')).hexdigest()
+        }
         self.assertEqual(result, expected)
 
     def test_get_special_types(self):
@@ -177,13 +213,28 @@ class TestPytorchDataProcessor(unittest.TestCase):
         result = self.processor.analyze_single_element(size_element, [])
         self.assertEqual(result, self.processor._analyze_torch_size(size_element))
 
+    def test_analyze_single_element_memory_size(self):
+        memory_format_element = torch.contiguous_format
+        result = self.processor.analyze_single_element(memory_format_element, [])
+        self.assertEqual(result, self.processor._analyze_memory_format(memory_format_element))
+
+    def test_analyze_single_element_process_group(self):
+        os.environ['MASTER_ADDR'] = 'localhost'
+        os.environ['MASTER_PORT'] = '12345'
+        if dist.is_initialized():
+            dist.destroy_process_group()
+        dist.init_process_group(backend='gloo', world_size=1, rank=0)
+        process_group_element = dist.group.WORLD
+        result = self.processor.analyze_single_element(process_group_element, [])
+        self.assertEqual(result, self.processor._analyze_process_group(process_group_element))
+
     def test_analyze_single_element_numpy_conversion(self):
         numpy_element = np.int64(1)
         converted_numpy, numpy_type = self.processor._convert_numpy_to_builtin(numpy_element)
         result = self.processor.analyze_single_element(numpy_element, [])
         expected_result = self.processor._analyze_numpy(converted_numpy, numpy_type)
         self.assertEqual(result, expected_result)
-    
+
     def test_analyze_single_element_tensor(self):
         tensor_element = torch.tensor([1, 2, 3])
         result = self.processor.analyze_single_element(tensor_element, ['tensor'])
@@ -303,10 +354,10 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
             self.processor.has_overflow = True
 
         with patch.object(BaseDataProcessor, "analyze_forward_inplace", return_value={"name": {"output": 2}}), \
-            patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
-                self.processor.cached_inplace_api_info = {"name": {"intput": 1}}
-                api_info = self.processor.analyze_forward_inplace("name", "module_input_output")
-                self.assertEqual(api_info, {"name": {"intput": 1, "output": 2}})
+                patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
+            self.processor.cached_inplace_api_info = {"name": {"intput": 1}}
+            api_info = self.processor.analyze_forward_inplace("name", "module_input_output")
+            self.assertEqual(api_info, {"name": {"intput": 1, "output": 2}})
 
     def test_analyze_forward(self):
         def func(_):
@@ -423,7 +474,7 @@ class TestFreeBenchmarkDataProcessor(unittest.TestCase):
         module_input_output.output = "some_output"
 
         new_output = "new_output_value"
-        unequal_rows = []  
+        unequal_rows = []
         self.processor.checker.forward.return_value = (new_output, unequal_rows)
         self.processor.checker.if_fix.return_value = True
         self.processor.analyze_forward(name, module, module_input_output)
@@ -436,3 +487,155 @@ class TestFreeBenchmarkDataProcessor(unittest.TestCase):
         module_io = ModuleBackwardInputsOutputs(grad_output=(torch.tensor([1.0, 2.0]),), grad_input=None)
         self.processor.analyze_backward('test_backward', None, module_io)
         mock_backward.assert_called_once()
+
+
+class TestKernelDumpDataProcessor(unittest.TestCase):
+    def setUp(self):
+        self.config = MagicMock()
+        self.data_writer = MagicMock()
+        self.processor = KernelDumpDataProcessor(self.config, self.data_writer)
+
+    @patch.object(logger, 'warning')
+    def test_print_unsupported_log(self, mock_logger_warning):
+        self.processor._print_unsupported_log("test_api_name")
+        mock_logger_warning.assert_called_with("The kernel dump does not support the test_api_name API.")
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu')
+    @patch.object(logger, 'warning')
+    def test_analyze_pre_forward_with_gpu(self, mock_logger_warning, mock_is_gpu):
+        mock_is_gpu = True
+        self.processor.analyze_pre_forward("test_api_name", None, None)
+        mock_logger_warning.assert_called_with(
+            "The current environment is not a complete NPU environment, and kernel dump cannot be used.")
+        self.assertFalse(self.processor.enable_kernel_dump)
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.is_gpu', new=False)
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.analyze_element')
+    @patch.object(logger, 'warning')
+    def test_analyze_pre_forward_with_not_gpu(self, mock_logger_warning, mock_analyze_element):
+        self.config.is_backward_kernel_dump = True
+        mock_module = MagicMock()
+        mock_module_input_output = MagicMock()
+        self.processor.analyze_pre_forward("test_api_name", mock_module, mock_module_input_output)
+        mock_module.forward.assert_called_once()
+        mock_analyze_element.assert_called()
+        mock_logger_warning.assert_called_with("The kernel dump does not support the test_api_name API.")
+        self.assertFalse(self.processor.enable_kernel_dump)
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.stop_kernel_dump')
+    @patch.object(logger, 'info')
+    def test_analyze_forward_successfully(self, mock_logger_info, mock_stop_kernel_dump):
+        self.processor.enable_kernel_dump = True
+        self.processor.config.is_backward_kernel_dump = False
+        self.processor.analyze_forward('test_api_name', None, None)
+        self.assertFalse(self.processor.enable_kernel_dump)
+        mock_stop_kernel_dump.assert_called_once()
+        mock_logger_info.assert_called_with("The kernel data of test_api_name is dumped successfully.")
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.analyze_element')
+    @patch.object(logger, 'warning')
+    def test_analyze_backward_unsuccessfully(self, mock_logger_warning, mock_analyze_element):
+        self.processor.enable_kernel_dump = True
+        self.processor.is_found_grad_input_tensor = False
+        mock_module_input_output = MagicMock()
+        self.processor.analyze_backward("test_api_name", None, mock_module_input_output)
+        mock_analyze_element.assert_called_once()
+        mock_logger_warning.assert_called_with("The kernel dump does not support the test_api_name API.")
+        self.assertFalse(self.processor.enable_kernel_dump)
+
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.stop_kernel_dump')
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.start_kernel_dump')
+    @patch('msprobe.core.data_dump.data_processor.pytorch_processor.KernelDumpDataProcessor.analyze_element')
+    @patch.object(logger, 'info')
+    def test_analyze_backward_successfully(self, mock_logger_info, mock_analyze_element, mock_start, mock_stop):
+        self.processor.enable_kernel_dump = True
+        self.processor.is_found_grad_input_tensor = True
+        self.processor.forward_output_tensor = MagicMock()
+        mock_module_input_output = MagicMock()
+        self.processor.analyze_backward("test_api_name", None, mock_module_input_output)
+        mock_analyze_element.assert_called_once()
+        self.assertFalse(self.processor.enable_kernel_dump)
+        self.processor.forward_output_tensor.backward.assert_called_once()
+        mock_start.assert_called_once()
+        mock_stop.assert_called_once()
+        mock_logger_info.assert_called_with("The kernel data of test_api_name is dumped successfully.")
+
+    def test_clone_tensor(self):
+        tensor = torch.tensor([1.0, 2.0, 3.0])
+        clone_tensor = self.processor.clone_and_detach_tensor(tensor)
+        self.assertTrue(torch.equal(tensor, clone_tensor))
+        self.assertFalse(clone_tensor.requires_grad)
+
+        tensor = torch.tensor([1.0, 2.0, 3.0], requires_grad=True)
+        clone_tensor = self.processor.clone_and_detach_tensor(tensor)
+        self.assertTrue(torch.equal(tensor, clone_tensor))
+        self.assertTrue(clone_tensor.requires_grad)
+
+        tensor1 = torch.tensor([1.0], requires_grad=True)
+        tensor2 = torch.tensor([1.0])
+        input_tuple = (tensor1, tensor2)
+        clone_tuple = self.processor.clone_and_detach_tensor(input_tuple)
+        self.assertEqual(len(input_tuple), len(clone_tuple))
+        self.assertTrue(clone_tuple[0].requires_grad)
+        self.assertFalse(clone_tuple[1].requires_grad)
+
+        input_list = [tensor1, tensor2]
+        clone_list = self.processor.clone_and_detach_tensor(input_list)
+        self.assertEqual(len(input_list), len(clone_list))
+        self.assertTrue(clone_tuple[0].requires_grad)
+        self.assertFalse(clone_tuple[1].requires_grad)
+
+        input_dict = {'tensor1': tensor1, 'tensor2': tensor2}
+        clone_dict = self.processor.clone_and_detach_tensor(input_dict)
+        self.assertEqual(len(clone_dict), len(input_dict))
+        self.assertTrue(clone_dict["tensor1"].requires_grad)
+        self.assertFalse(clone_dict["tensor2"].requires_grad)
+
+        non_tensor_input = 1
+        result = self.processor.clone_and_detach_tensor(non_tensor_input)
+        self.assertEqual(result, non_tensor_input)
+
+    def test_analyze_single_element_with_output_grad(self):
+        self.processor.is_found_output_tensor = False
+        tensor = torch.tensor([1.0], requires_grad=True)
+        self.processor.analyze_single_element(tensor, None)
+        self.assertTrue(self.processor.is_found_output_tensor)
+
+    def test_analyze_single_element_without_output_grad(self):
+        self.processor.is_found_output_tensor = False
+        tensor = torch.tensor([1.0])
+        self.processor.analyze_single_element(tensor, None)
+        self.assertFalse(self.processor.is_found_output_tensor)
+
+    def test_analyze_single_element_with_grad_input(self):
+        self.processor.is_found_output_tensor = True
+        self.processor.is_found_grad_input_tensor = False
+        tensor = torch.tensor([1.0])
+        self.processor.analyze_single_element(tensor, None)
+        self.assertTrue(self.processor.is_found_grad_input_tensor)
+
+    def test_analyze_single_element_without_grad_input(self):
+        self.processor.is_found_output_tensor = True
+        self.processor.is_found_grad_input_tensor = True
+        tensor = torch.tensor([1.0])
+        self.processor.analyze_single_element(tensor, None)
+        self.assertTrue(self.processor.is_found_grad_input_tensor)
+
+    def test_reset_status(self):
+        self.processor.enable_kernel_dump = False
+        self.processor.is_found_output_tensor = True
+        self.processor.is_found_grad_input_tensor = True
+        self.processor.forward_args = 0
+        self.processor.forward_kwargs = 1
+        self.processor.forward_output_tensor = 2
+        self.processor.grad_input_tensor = 3
+
+        self.processor.reset_status()
+
+        self.assertTrue(self.processor.enable_kernel_dump)
+        self.assertFalse(self.processor.is_found_output_tensor)
+        self.assertFalse(self.processor.is_found_grad_input_tensor)
+        self.assertIsNone(self.processor.forward_args)
+        self.assertIsNone(self.processor.forward_kwargs)
+        self.assertIsNone(self.processor.forward_output_tensor)
+        self.assertIsNone(self.processor.grad_input_tensor)

@@ -2,7 +2,11 @@
 cluster_analyse（集群分析工具）是在集群场景下，通过此工具来进行集群数据的分析，当前主要对基于通信域的迭代内耗时分析、通信时间分析以及通信矩阵分析为主， 从而定位慢卡、慢节点以及慢链路问题。
 
 ## 性能数据采集
-当前集群调优工具主要支持Ascend PyTorch Profiler采集方式下的集群数据。采集方式参考：[Profiling数据采集](https://gitee.com/ascend/mstt/tree/master/profiler)，此工具只需要通过Ascend PyTorch Porfiler工具采集NPU的性能数据即可。
+当前集群调优工具主要支持PyTorch场景的Ascend PyTorch Profiler采集方式和MindSpore场景的MindSpore Profiler采集方式下的集群数据。
+
+此工具只需要NPU的性能数据作为输入。
+
+Ascend PyTorch Profiler采集方法请参见《[NPU性能数据采集](https://gitee.com/ascend/mstt/tree/master/profiler)》，MindSpore Profiler采集方法请参见《[性能调试](https://www.mindspore.cn/mindinsight/docs/zh-CN/r2.3/performance_profiling_ascend.html)》。
 
 我们要求至少是L1级别的数据。
 ```python
@@ -12,7 +16,7 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
 ```
 ### 确认数据是否可用
 
-打开采集到的某张卡数据(*ascend_pt结尾的文件夹)，可用的数据应该具备：
+打开采集到的某张卡数据(\*ascend_pt、\*ascend_ms结尾的文件夹)，可用的数据应该具备：
 
 - ./profiler_info_x.json,
 - ./ASCEND_PROFILER_OUTPUT/step_trace_time.csv,
@@ -26,7 +30,7 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
 - analysis.db
 - ascend_pytorch_profiler_{rank_id}.db
 
-以上csv、json文件与db文件只能存在一类，否则集群分析工具解析异常。
+以上csv、json文件与db文件只能存在一类，否则集群分析工具解析异常。MindSpore场景暂不支持以上db文件。
 
 确认这几个文件生成后，继续下面的集群分析。
 
@@ -39,13 +43,13 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
 2. 将所有卡的数据拷贝并汇集到一个目录下，运行以下命令，在该目录下即可生成cluster_analysis_output文件夹。
 
    ```bash
-   msprof-analyze cluster -d {cluster profiling data path} -m {mode}
+   msprof-analyze cluster -d {cluster profiling data path} [-m mode] [-o output_path] [--data_simplification] [--force]
    ```
 
    或
    
    ```bash
-   python3 cluster_analysis.py -d {cluster profiling data path} -m {mode}
+   python3 cluster_analysis.py -d {cluster profiling data path} [-m mode] [-o output_path] [--data_simplification] [--force]
    ```
 
    参数说明：
@@ -55,8 +59,8 @@ experimental_config = torch_npu.profiler._ExperimentalConfig(
    | --profiling_path或-d  | 性能数据汇集目录。未配置-o参数时，运行分析脚本之后会在该目录下自动创建cluster_analysis_output文件夹，保存分析数据。 | 是       |
    | --output_path或-o     | 自定义输出路径，运行分析脚本之后会在该目录下自动创建cluster_analysis_output文件夹，保存分析数据。 | 否       |
    | --mode或-m            | 数据解析模式，取值详见“**--mode参数说明**”表。               | 否       |
-   | --data_simplification | 数据精简模式。对于数据量过大的性能数据db文件，可以通过配置该参数将数据精简，并提高工具分析效率。 | 否       |
-   | --force               | 强制跳过用户属主（文件是否属于当前用户）及文件大小（csv文件小于5G，json文件小于10G,db文件小于8G）校验。  | 否       |
+   | --data_simplification | 数据精简模式。对于数据量过大的性能数据db文件，可以通过配置该参数将数据精简，并提高工具分析效率。配置该参数表示开启数据精简，默认未配置表示关闭。 | 否       |
+   | --force               | 强制执行cluster。配置后可强制跳过如下情况：<br/>        指定的目录、文件的用户属主不属于当前用户，忽略属主判断直接执行。<br/>        csv文件大于5G、json文件大于10G、db文件大于8G，忽略文件过大判断直接执行。<br/>配置该参数表示开启强制执行，默认未配置表示关闭。 | 否       |
    
    --mode参数说明：
    

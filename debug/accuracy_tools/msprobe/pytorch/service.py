@@ -15,8 +15,8 @@
 
 import functools
 import os
-
 from collections import namedtuple
+
 import torch
 from msprobe.core.common.const import Const
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
@@ -25,13 +25,13 @@ from msprobe.core.common.utils import print_tools_ends_info
 from msprobe.core.data_dump.data_collector import build_data_collector
 from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutputs, ModuleBackwardInputsOutputs
 from msprobe.core.data_dump.scope import BaseScope
+from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import get_rank_if_initialized
-from msprobe.pytorch.hook_module import remove_dropout
+from msprobe.pytorch.common.utils import get_rank_if_initialized, remove_dropout
+from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
 from msprobe.pytorch.module_processer import ModuleProcesser
-from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
@@ -162,7 +162,7 @@ class Service:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
         self.switch = True
         logger.info_on_rank_0(f"Dump switch is turned on at step {self.current_iter}. ")
-        if self.config.level != "L2" and not self.config.online_run_ut:
+        if not self.config.online_run_ut:
             self.create_dirs()
             logger.info_on_rank_0(f"Dump data will be saved in {self.dump_iter_dir}.")
 
@@ -190,6 +190,9 @@ class Service:
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
         self.data_collector.data_writer.reset_cache()
+
+        if self.config.level == Const.LEVEL_L2:
+            self.data_collector.data_processor.reset_status()
 
     def need_stop_service(self):
         if self.should_stop_service:
@@ -221,6 +224,12 @@ class Service:
         create_directory(self.config.dump_path)
         self.dump_iter_dir = os.path.join(self.config.dump_path, f"step{self.current_iter}")
         cur_rank = self.current_rank if self.current_rank is not None else ''
+        if self.config.level == Const.LEVEL_L2:
+            create_directory(self.dump_iter_dir)
+            kernel_config_path = create_kernel_config_json(self.dump_iter_dir, cur_rank)
+            self.config.kernel_config_path = kernel_config_path
+            return
+
         dump_dir = os.path.join(self.dump_iter_dir, f"rank{cur_rank}")
         create_directory(dump_dir)
         if self.config.task in self.data_collector.tasks_need_tensor_data:
