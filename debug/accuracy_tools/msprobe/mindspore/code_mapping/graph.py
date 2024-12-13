@@ -1,10 +1,11 @@
 from typing import List, Dict, Union
-from collections import defaultdict, deque
 
 
 class GraphNode:
-    def __init__(self, name: str, pos: int = -1, unique_name: str = "", operator_name: str = "", return_variable: str = "", return_value: str = "",
-                 var_inputs: List[str] = None, has_constant_input: bool = False, unique_id: str="", scope: str = "", code_info: List[str] = None,
+    def __init__(self, name: str, pos: int = -1, unique_name: str = "", operator_name: str = "",
+                 return_variable: str = "", return_value: str = "",
+                 var_inputs: List[str] = None, has_constant_input: bool = False,
+                 unique_id: str="", scope: str = "", code_info: List[str] = None,
                  is_subgraph: bool = False, attrs: Union[Dict[str, str], List[str]] = None):
         self.name = name
         self.unique_name = unique_name

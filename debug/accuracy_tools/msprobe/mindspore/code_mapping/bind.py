@@ -70,7 +70,7 @@ def match_names(trie, name):
 
 
 def complex_map(df, match_dict):
-# 构建Trie树并插入所有键
+    # 构建Trie树并插入所有键
     trie = Trie()
     for key, value in match_dict.items():
         trie.insert(key, value)
@@ -132,7 +132,6 @@ def find_statistic_files(directory):
         return []
     pattern = os.path.join(directory, '**', "statistic.csv")
 
-    # 有问题 查找文件的方式
     statistic_files = list(glob.glob(pattern, recursive=True))
     return statistic_files
 

@@ -26,7 +26,7 @@ class Parser:
         if match:
             attrs = match.group(1).strip().split('\n')
             for attr in attrs:
-                if not attr:  # if end line
+                if not attr:
                     break
                 key, value = attr.split(':')
                 if isinstance(graph_node.attrs, dict):
@@ -107,7 +107,7 @@ class Parser:
             constants = self.__class__.extract_constants(args_str)
 
             scope_pattern = re.compile(r'# .*scope.*:\s*\((.*?)\)', re.IGNORECASE | re.MULTILINE)
-            # [^:]scope[^:]:\s*\((.*?)\)
+
             scope_match = scope_pattern.search(text, end_pos)
             scope = scope_match.group(1) if scope_match else ""
 
@@ -121,13 +121,14 @@ class Parser:
             else:
                 code_info = None
 
-            node_info = GraphNode(name=variable_name, unique_name=unique_name, operator_name=operator_name, var_inputs=inputs + constants, unique_id=unique_id, scope=scope, code_info=code_info)
+            node_info = GraphNode(name=variable_name, unique_name=unique_name, operator_name=operator_name,
+                                  var_inputs=inputs + constants, unique_id=unique_id, scope=scope, code_info=code_info)
 
             if unique_id and scope and not scope.startswith("Gradients"):
                 self.number_dict[unique_id] = node_info
             
             if subgraph_info:
-                subgraph_info.nodes[variable_name] = node_info # 这里不用unique_name会有事吗
+                subgraph_info.nodes[variable_name] = node_info
 
             if not self.nodes.get(unique_name, None):
                 self.nodes[unique_name] = node_info
@@ -145,19 +146,19 @@ class Parser:
 
             for input_var in node_info.var_inputs:
                 if input_var in self.local_dict or input_var in self.nodes:
-                    input_name = self.local_dict.get(input_var, input_var) # 没有就用原来名字
+                    input_name = self.local_dict.get(input_var, input_var)
                     input_node = self.nodes.get(input_name, None)
                     if input_node:
                         node_info.predecessors.append(input_node)
                         input_node.successors.append(node_info)
                 else:
-                    param_node = GraphNode(name=input_var, operator_name="Param", var_inputs=[], has_constant_input=False)
+                    param_node = GraphNode(name=input_var, operator_name="Param", var_inputs=[],
+                                           has_constant_input=False)
                     if not self.nodes.get(input_var, None):
                         self.nodes[input_var] = param_node
                     node_info.predecessors.append(param_node)
                     param_node.successors.append(node_info)
 
-    # check ok
     def extract_callees(self, text: str) -> None:
         for node_info in self.nodes.values():
             func_start_pos = node_info.pos
@@ -170,7 +171,6 @@ class Parser:
                 if callee_name not in node_info.var_inputs:
                     node_info.var_inputs.append(callee_name)
 
-    # check ok
     def parse_subgraphs(self, text: str) -> None:
         subgraph_pattern = re.compile(r'subgraph\s+@(\S+)(\([^\)]*\))?\s+.*\{')
         matches = list(subgraph_pattern.finditer(text))
