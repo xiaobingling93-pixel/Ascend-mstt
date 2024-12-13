@@ -1,7 +1,6 @@
 import os
 import stat
 import json
-from msprobe.mindspore.code_mapping.graph import Graph, find_boundary_nodes
 from msprobe.mindspore.code_mapping.graph_parser import Parser
 from msprobe.mindspore.code_mapping.bind import bind_code_info_for_data, write_to_csv
 

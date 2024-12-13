@@ -117,35 +117,22 @@ def find_npy_files(npy_path):
     return npy_files
 
 
-def write_to_csv(param: Dict, output_dir: str, append=False):
+def write_to_csv(param: Dict, output_dir: str):
     """
     将参数写入CSV文件。
 
     Parameters:
         param (Dict): 要写入的数据，格式为{文件名: (代码堆栈, 作用域名称)}。
         output_dir (str): 输出目录路径。
-        append (bool): 是否以追加模式写入。
     """
     create_directory(output_dir)
 
     # 使用时间戳生成文件名
     timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
     file_path = Path(output_dir) / f"code_mapping{timestamp}.csv"
-
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
     df = pd.DataFrame(data, columns=['File Path', 'Code Stacks', 'Scope Name'])
-
-    # 清洗数据，筛选掉空字符串
-    df = df[(df['Code Stacks'] != '') | (df['Scope Name'] != '')]
-
-    try:
-        if append and file_path.exists():
-            write_csv(df, str(file_path), mode="a", malicious_check=False)
-        else:
-            write_csv(df, str(file_path), mode="w", malicious_check=False)
-    except Exception as e:
-        logger.error(f"写入CSV文件失败: {file_path}, 错误: {e}")
-        raise
+    df.to_csv(file_path, index=False)
 
 
 def find_statistic_files(directory):
