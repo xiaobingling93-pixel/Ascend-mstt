@@ -95,24 +95,16 @@ def find_npy_files(npy_path):
 
     # 检查当前路径是否是一个以 .npy 结尾的文件
     if npy_path_obj.suffix == '.npy' and npy_path_obj.is_file():
-        try:
-            # 使用FileOpen安全打开文件，虽然这里只是获取路径，但保持一致性
-            with FileOpen(str(npy_path_obj), "rb") as f:
-                # 如果需要，可以在这里进行额外的文件内容检查
-                npy_files.append(npy_path_obj.resolve())
-        except Exception as e:
-            logger.error(f"无法打开.npy文件 {npy_path}: {e}")
+        with FileOpen(str(npy_path_obj), "rb") as f:
+            npy_files.append(npy_path_obj.resolve())
         return npy_files
 
     # 如果是目录，使用Path.rglob查找所有.npy文件
     if npy_path_obj.is_dir():
-        try:
-            for file in npy_path_obj.rglob('*.npy'):
-                npy_files.append(file.resolve())
-        except Exception as e:
-            logger.error(f"查找.npy文件失败: {e}")
+        for file in npy_path_obj.rglob('*.npy'):
+            npy_files.append(file.resolve())
     else:
-        logger.warning(f"指定的路径既不是文件也不是目录: {npy_path}")
+        logger.warning(f"指定的路径既不是npy文件也不是目录: {npy_path}")
 
     return npy_files
 
