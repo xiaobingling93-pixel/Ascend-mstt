@@ -127,10 +127,13 @@ def write_to_csv(param: Dict, output_dir: str):
     df.to_csv(file_path, index=False)
 
 
-def find_statistic_files(directory):
-    if not os.path.isdir(directory):
-        return []
-    pattern = os.path.join(directory, '**', "statistic.csv")
+def find_statistic_files(path):
+    if not os.path.isdir(path):
+        if os.path.basename(path) == 'statistic.csv':
+            return [path]
+        else:
+            return []
+    pattern = os.path.join(path, '**', "statistic.csv")
 
     statistic_files = list(glob.glob(pattern, recursive=True))
     return statistic_files
