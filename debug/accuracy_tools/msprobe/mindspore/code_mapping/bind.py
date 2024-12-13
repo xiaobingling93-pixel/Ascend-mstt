@@ -6,13 +6,11 @@ from typing import Dict, List
 from pathlib import Path
 import pandas as pd
 from msprobe.mindspore.code_mapping.graph import GraphNode
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import (
     FileOpen,
     create_directory,
     write_csv,
-    load_json,
-    load_yaml
+    check_file_or_directory_path
 )
 from msprobe.mindspore.common.log import logger
 
@@ -104,7 +102,7 @@ def find_npy_files(npy_path):
         for file in npy_path_obj.rglob('*.npy'):
             npy_files.append(file.resolve())
     else:
-        logger.warning(f"指定的路径既不是npy文件也不是目录: {npy_path}")
+        logger.info(f"指定的路径既不是npy文件也不是目录: {npy_path}")
 
     return npy_files
 
@@ -122,6 +120,7 @@ def write_to_csv(param: Dict, output_dir: str):
     # 使用时间戳生成文件名
     timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
     file_path = Path(output_dir) / f"code_mapping{timestamp}.csv"
+    check_file_or_directory_path(file_path)
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
     df = pd.DataFrame(data, columns=['File Path', 'Code Stacks', 'Scope Name'])
     df.to_csv(file_path, index=False)
