@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 from msprobe.core.compare.merge_result.merge_result import merge_result
 
 

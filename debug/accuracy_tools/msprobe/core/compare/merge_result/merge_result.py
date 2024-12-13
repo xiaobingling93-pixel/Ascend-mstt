@@ -72,7 +72,7 @@ def get_result_path(input_dir):
 
     if len(filt_compare_result_path_list) < 2:
         logger.warning("Number of compare result is no more than 1, no need to merge.")     # 单卡结果无需合并，直接退出
-        exit()
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
     return filt_compare_result_path_list
 
 
@@ -82,7 +82,8 @@ def get_dump_mode(result_df, rank_num):
     get dump mode from header of first compare result table
     """
     header = result_df.columns.tolist()
-    if header in [CompareConst.COMPARE_RESULT_HEADER, CompareConst.COMPARE_RESULT_HEADER_STACK]:
+    if header in [CompareConst.COMPARE_RESULT_HEADER + [CompareConst.DATA_NAME],
+                  CompareConst.COMPARE_RESULT_HEADER_STACK + [CompareConst.DATA_NAME]]:
         return Const.ALL
     elif header in [CompareConst.SUMMARY_COMPARE_RESULT_HEADER, CompareConst.SUMMARY_COMPARE_RESULT_HEADER_STACK]:
         return Const.SUMMARY
@@ -189,7 +190,7 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
             # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
             compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num)
             if len(compare_index_list) == 0:
-                return compare_index_dict_list, rank_num_list
+                return [], [], []
             compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
             compare_index_dict_list.append(compare_index_dict)
@@ -197,7 +198,7 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
         else:
             logger.warning(f"Rank{rank_num} compare result is empty and will not shown in merged result.")
 
-    return compare_index_dict_list, rank_num_list
+    return compare_index_dict_list, rank_num_list, compare_index_list
 
 
 def handle_multi_process(func, func_args, lock):
@@ -239,15 +240,17 @@ def handle_multi_process(func, func_args, lock):
 
     all_compare_index_dict_list = []
     all_rank_num_list = []
+    all_compare_index_list_list = []
     for result in results:
-        compare_index_dict, rank_num_list = result.get()
+        compare_index_dict, rank_num_list, compare_index_list = result.get()
         all_compare_index_dict_list.append(compare_index_dict)
         all_rank_num_list.append(rank_num_list)
+        all_compare_index_list_list.append(compare_index_list)
 
     pool.close()
     pool.join()
 
-    return all_compare_index_dict_list, all_rank_num_list
+    return all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list
 
 
 def generate_result_df(api_index_dict, header):
@@ -272,13 +275,20 @@ def generate_result_df(api_index_dict, header):
     return pd.DataFrame(result, columns=header, dtype="object")
 
 
-def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list):
+def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list, output_dir):
     """
     generate merge result from the intermediate dict.
     one compare index, one sheet
     """
     file_name = add_time_with_xlsx("multi_ranks_compare_merge")
     output_path = os.path.join(output_dir, file_name)
+
+    for item in all_compare_index_list_list:
+        if len(item):
+            compare_index_list = item
+            break
+        logger.warning("Nothing to merge.")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
     all_result_df_list = []
     for compare_index_dict_list, rank_num_list in zip(all_compare_index_dict_list, all_rank_num_list):
@@ -288,7 +298,7 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output
             for _,  api_index_dict in compare_index_dict.items():
                 result_df = generate_result_df(api_index_dict, header)
                 result_df_list.append(result_df)
-            # [[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
+            # all_result_df_list示例：[[result_df_rank1_index1, result_df_rank1_index2], [result_df_rank2_index1, result_df_rank2_index2]]
             all_result_df_list.append(result_df_list)
 
     merge_df_list = df_merge(all_result_df_list)
@@ -305,7 +315,7 @@ def df_merge(all_result_df_list):
     """
     if len(all_result_df_list) == 0:
         logger.warning("Nothing to merge.")
-        exit()
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
     if len(all_result_df_list) == 1:
         logger.info("Only one compare result get merge data.")
     merge_df_base = all_result_df_list[0]
@@ -332,15 +342,7 @@ def merge_result(input_dir, output_dir, config_path):
     compare_index_list = config.get('compare_index')
 
     func_args = (compare_result_path_list, api_list, compare_index_list)
-    all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args,
-                                                                          multiprocessing.Manager().RLock())
+    all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list = (
+        handle_multi_process(result_process, func_args, multiprocessing.Manager().RLock()))
 
-    generate_merge_result(all_compare_index_dict_list, all_rank_num_list, output_dir, compare_index_list)
-
-
-# TODO 测试代码，后续删除
-if __name__ == "__main__":
-    input_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output_bak'
-    output_dir = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/merge_output'
-    config_path = '/home/yinglinwei/project/ar/merge_result_1206/mstt_3/debug/accuracy_tools/output/config.yaml'
-    merge_result(input_dir, output_dir, config_path)
+    generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list, output_dir)

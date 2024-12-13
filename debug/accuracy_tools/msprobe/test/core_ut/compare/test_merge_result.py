@@ -14,7 +14,7 @@ class TestUtilsMethods(unittest.TestCase):
     def setUp(self):
         self.api_list = ['api1', 'api2']
         self.compare_index_list = ['index1', 'index2']
-
+        self.all_compare_index_list_list = [['index1', 'index2']]
         self.result_df = pd.DataFrame({
             CompareConst.NPU_NAME: ['api1', 'api2'],
             'index1': [100, 200],
@@ -126,7 +126,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_reorder_path.assert_called_once()
 
     def test_get_dump_mode_all_mode(self):
-        header = CompareConst.COMPARE_RESULT_HEADER
+        header = CompareConst.COMPARE_RESULT_HEADER + [CompareConst.DATA_NAME]
         result_df = pd.DataFrame(columns=header)
 
         result = get_dump_mode(result_df, rank_num=1)
@@ -234,12 +234,14 @@ class TestUtilsMethods(unittest.TestCase):
                 {"api1": {1: 300}, "api2": {1: 400}}
         }
 
-        compare_index_dict_list, rank_num_list = result_process(self.compare_result_path_list, self.api_list,
-                                                                self.compare_index_list)
+        compare_index_dict_list, rank_num_list, compare_index_list = result_process(self.compare_result_path_list,
+                                                                                    self.api_list,
+                                                                                    self.compare_index_list)
 
         self.assertEqual(len(compare_index_dict_list), 2)
         self.assertEqual(len(rank_num_list), 2)
         self.assertEqual(rank_num_list, [1, 2])
+        self.assertEqual(compare_index_list, ['index1', 'index2'])
 
         mock_logger.info.assert_any_call("Parsing rank1 compare result...")
         mock_logger.warning.assert_not_called()
@@ -256,7 +258,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_pool_instance = MagicMock()
         mock_pool.return_value = mock_pool_instance
         mock_result = MagicMock()
-        mock_result.get.return_value = ([{'index1': {'api1': {1: 100}}}], [1])
+        mock_result.get.return_value = ([{'index1': {'api1': {1: 100}}}], [1], [['index1']])
         mock_pool_instance.apply_async.return_value = mock_result
 
         compare_result_path_list = ['/path/to/compare_result_rank1-rank1.xlsx']
@@ -264,7 +266,7 @@ class TestUtilsMethods(unittest.TestCase):
         func_args = (compare_result_path_list, self.api_list, self.compare_index_list)
         lock = multiprocessing.Manager().RLock()
 
-        all_compare_index_dict_list, all_rank_num_list = handle_multi_process(result_process, func_args, lock)
+        all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list = handle_multi_process(result_process, func_args, lock)
 
         self.assertEqual(all_compare_index_dict_list, [[{'index1': {'api1': {1: 100}}}]])
         self.assertEqual(all_rank_num_list, [[1]])
@@ -295,8 +297,8 @@ class TestUtilsMethods(unittest.TestCase):
         mock_join.return_value = "/path/to/multi_ranks_compare_merge_20240101010101.xlsx"
         output_dir = "/path/to"
 
-        generate_merge_result(self.all_compare_index_dict_list, self.all_rank_num_list, output_dir,
-                              self.compare_index_list)
+        generate_merge_result(self.all_compare_index_dict_list, self.all_rank_num_list,
+                              self.all_compare_index_list_list, output_dir)
 
         mock_save_excel.assert_called_once()
         mock_logger.info.assert_called_once_with("The compare results of the multi-ranks are merged and saved in: "
@@ -344,7 +346,8 @@ class TestUtilsMethods(unittest.TestCase):
         }
         mock_handle_multi_process.return_value = (
             [[{'index1': {'api1': {1: 100}}}], [{'index1': {'api1': {2: 100}}}]],  # all_compare_index_dict_list
-            [[1], [2]]  # all_rank_num_list
+            [[1], [2]],  # all_rank_num_list
+            [['index1'], ['index2']]    # all_compare_index_list_list
         )
 
         merge_result(input_dir, output_dir, config_path)

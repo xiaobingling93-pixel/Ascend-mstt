@@ -666,7 +666,7 @@ def check_crt_valid(pem_path):
 def read_xlsx(file_path):
     check_file_or_directory_path(file_path)
     try:
-        result_df = pd.read_excel(file_path)
+        result_df = pd.read_excel(file_path, keep_default_na=False)
     except Exception as e:
         logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
         raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
