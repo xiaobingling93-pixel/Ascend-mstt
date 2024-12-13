@@ -10,7 +10,7 @@ from msprobe.core.common.file_utils import (
     FileOpen,
     create_directory,
     write_csv,
-    check_file_or_directory_path
+    check_path_before_create
 )
 from msprobe.mindspore.common.log import logger
 
@@ -120,7 +120,7 @@ def write_to_csv(param: Dict, output_dir: str):
     # 使用时间戳生成文件名
     timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
     file_path = Path(output_dir) / f"code_mapping{timestamp}.csv"
-    check_file_or_directory_path(file_path)
+    check_path_before_create(file_path)
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
     df = pd.DataFrame(data, columns=['File Path', 'Code Stacks', 'Scope Name'])
     df.to_csv(file_path, index=False)
