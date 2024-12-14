@@ -146,8 +146,7 @@ subgraph @21_14_✗__main___Net_construct_76(%para5_Parameter_81) {
       # In file test_ir.py:18~19, 8~43/        if b :/
 }"""
 
-TEST_CSV_CONTENT = """
-Op Type,Op Name,Task ID,Stream ID,Timestamp,IO,Slot,Data Size,Data Type,Shape,Max Value,Min Value,L2Norm Value
+TEST_CSV_CONTENT = """Op Type,Op Name,Task ID,Stream ID,Timestamp,IO,Slot,Data Size,Data Type,Shape,Max Value,Min Value,L2Norm Value
 Sub,Default_Sub-op0,0,0,1733905446819790,input,0,4,float32,"()",3,3,3,
 Sub,Default_Sub-op0,0,0,1733905446820357,input,1,4,float32,"()",1,1,1,
 Sub,Default_Sub-op0,0,0,1733905446820495,output,0,4,float32,"()",2,2,2,
@@ -207,7 +206,7 @@ class TestCodeMapping(unittest.TestCase):
             os.makedirs(data_dir, exist_ok=True)
 
             # 准备需要创建的npy文件名列表
-            npy_files = ["Default_Sub-op0.npy", "Default_Add-op0.npy", "Default_Cast-op0.npy", "Default_Div-op0.npy"]
+            npy_files = ["Add.Default_Add-op0.0.0.1734008383669918.input.0.DefaultFormat.float32.npy"]
 
             # 创建空的npy文件，或写入一些数据
             dummy_data = np.array([1.0, 2.0, 3.0])
