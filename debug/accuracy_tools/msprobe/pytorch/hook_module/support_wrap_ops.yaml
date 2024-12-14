@@ -185,6 +185,7 @@ tensor:
   - __sub__
   - __truediv__
   - __xor__
+  - __pow__
   - abs
   - abs_
   - absolute
