@@ -161,6 +161,12 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.maybe_save_overflow_data()
         return api_info_struct if self.has_overflow else None
+    
+    def analyze_params(self, name, param_name, grad):
+        self.has_overflow = False
+        api_info_struct = super().analyze_params(name, param_name, grad)
+        self.maybe_save_overflow_data()
+        return api_info_struct if self.has_overflow else None
 
     def maybe_save_overflow_data(self):
         if self.has_overflow:

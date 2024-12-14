@@ -15,6 +15,7 @@
 
 import atexit
 import os
+from functools import wraps
 
 from msprobe.core.data_dump.scope import ScopeFactory
 from msprobe.core.data_dump.json_writer import DataWriter
@@ -38,6 +39,7 @@ class DataCollector:
         self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
         self.scope = ScopeFactory(self.config).build_scope()
+        self.backward_module_names = {}
         atexit.register(self.write_json)
 
     @property
@@ -116,6 +118,9 @@ class DataCollector:
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
         if self.config.level == Const.LEVEL_L2:
             return
+        if data_info and name.split(Const.SEP)[0] in Const.MODULE_PREFIX:
+            module_name = name.rsplit(Const.SEP, 2)[0]
+            self.backward_module_names[module_name] = True
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
@@ -153,3 +158,11 @@ class DataCollector:
 
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)
+
+    def params_data_collect(self, name, param_name, pid, data):
+        grad_name = name + Const.SEP + Const.PARAMS_GRAD
+        if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
+            self.data_writer.cache_data.get("data").pop(grad_name, None)
+            return
+        data_info = self.data_processor.analyze_params(grad_name, param_name, data)
+        self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)

@@ -89,6 +89,8 @@ class Const:
     INPUT_KWARGS = 'input_kwargs'
     GRAD_INPUT = 'grad_input'
     GRAD_OUTPUT = 'grad_output'
+    PARAMS = 'parameters'
+    PARAMS_GRAD = 'parameters_grad'
     START = "start"
     STOP = "stop"
     ENV_ENABLE = "1"
@@ -128,6 +130,7 @@ class Const:
     DISTRIBUTED = 'Distributed'
     DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
                    "Aten", "VF", "NPU", "Jit"]
+    MODULE_PREFIX = ["Module", "Cell"]
 
     # struct json param
     ORIGIN_DATA = "origin_data"

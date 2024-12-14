@@ -266,6 +266,13 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         api_info_struct = super().analyze_backward(name, module, module_input_output)
         self.handle_overflow()
         return api_info_struct if self.has_overflow else None
+    
+    def analyze_params(self, name, param_name, grad):
+        self.has_overflow = False
+        self._is_support_inf_nan()
+        api_info_struct = super().analyze_params(name, param_name, grad)
+        self.handle_overflow()
+        return api_info_struct if self.has_overflow else None
 
     def handle_overflow(self):
         if not self.support_inf_nan:

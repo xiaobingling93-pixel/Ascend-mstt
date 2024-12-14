@@ -36,7 +36,7 @@ from msprobe.core.data_dump.data_processor.base import ModuleBackwardInputsOutpu
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.mindspore.cell_processor import CellProcessor
 from msprobe.mindspore.common.log import logger
-from msprobe.mindspore.common.utils import get_rank_if_initialized
+from msprobe.mindspore.common.utils import get_rank_if_initialized, clean_input_kwargs
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
@@ -67,6 +67,14 @@ class Service:
         raise MsprobeException(
             MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是 mindspore.nn.Cell 类型。"
         )
+    
+    @staticmethod
+    def prepare_module_input_output(target_type, cell, input_data, output):
+        if target_type == BaseScope.Module_Type_Module:
+            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
+        else:
+            module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs, output=output)
+        return module_input_output
 
     def check_level_valid(self):
         if self.config.level == Const.LEVEL_L2:
@@ -74,26 +82,47 @@ class Service:
                 MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
             )
 
-    def build_hook(self, target_type, name):
+    def build_hook(self, target_type, name): 
+        def grad_hook(ori_name, param_name):
+            def hook_fn(grad):
+                if not self.should_excute_hook():
+                    return None
+                self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
+                return None
+            return hook_fn
+
+        def register_param_hook(cell_name, cell, params_dict):
+            if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+                if params_dict and hasattr(cell, 'has_param_hook') and not cell.has_param_hook:
+                    ori_name = cell_name.rsplit(Const.SEP, 2)[0]
+                    grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                    data_info = {grad_name: {key: [None] for key in params_dict}}
+                    self.data_collector.handle_data(grad_name, data_info, flush=self.data_collector.data_processor.is_terminated)
+                    for param_name, param in params_dict.items():
+                        param.register_hook(grad_hook(ori_name, param_name))
+                    cell.has_param_hook = True
+            
         def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
-                if hasattr(cell, 'input_kwargs'):
-                    del cell.input_kwargs
+                clean_input_kwargs(cell)
                 return None
-
+            
+            module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
+            params_dict = {}
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs={}, output=output)
-            else:
-                module_input_output = ModuleForwardInputsOutputs(args=input_data, kwargs=cell.input_kwargs,
-                                                                 output=output)
+                params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(recurse=False).items()}
+                setattr(module_input_output, Const.PARAMS, params_dict)
+                if not hasattr(cell, 'has_param_hook'):
+                    setattr(cell, 'has_param_hook', False)
 
             self.data_collector.update_api_or_module_name(api_or_cell_name)
             self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
+            register_param_hook(api_or_cell_name, cell, params_dict)
+
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
-            if hasattr(cell, 'input_kwargs'):
-                del cell.input_kwargs
+            clean_input_kwargs(cell)
             return output
 
         def backward_hook(api_or_cell_name, cell, grad_input, grad_output):

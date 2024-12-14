@@ -54,6 +54,11 @@ def convert_to_int(value):
         return int(value)
     except Exception:
         return -1
+    
+
+def clean_input_kwargs(cell):
+    if hasattr(cell, 'input_kwargs'):
+        del cell.input_kwargs
 
 
 def list_lowest_level_directories(root_dir):

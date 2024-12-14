@@ -89,12 +89,38 @@ class Service:
                 self.data_collector.pre_forward_data_collect(api_or_module_name, module, pid, module_input_output)
             return args, kwargs
 
+        def grad_hook(ori_name, param_name):
+            def hook_fn(grad):
+                if not self.should_execute_hook():
+                    return grad
+                self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
+                return grad
+            return hook_fn
+
+        def register_param_hook(module_name, module, params_dict):
+            if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+                if params_dict and hasattr(module, 'has_param_hook') and not module.has_param_hook:
+                    ori_name = module_name.rsplit(Const.SEP, 2)[0]
+                    grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                    data_info = {grad_name: {key: [None] for key in params_dict}}
+                    self.data_collector.handle_data(grad_name, data_info, flush=self.data_collector.data_processor.is_terminated)
+                    for param_name, param in params_dict.items():
+                        param.register_hook(grad_hook(ori_name, param_name))
+                    module.has_param_hook = True
+
         def forward_hook(api_or_module_name, module, args, kwargs, output):
             if not self.should_execute_hook():
                 return None
 
+            module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+            params_dict = {}
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name
+                params_dict = {key.split(Const.SEP)[-1]: value for key, value in module.named_parameters(recurse=False)}
+                setattr(module_input_output, Const.PARAMS, params_dict)
+                if not hasattr(module, 'has_param_hook'):
+                    setattr(module, 'has_param_hook', False)
+
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
@@ -103,12 +129,12 @@ class Service:
                 api_data = ApiData(name[:-1], args, kwargs, output, self.current_iter, self.current_rank)
                 self.attl_send(api_data)
                 return None
+            
+            self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
+            register_param_hook(api_or_module_name, module, params_dict)
 
-            if self.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
-                self.data_collector.forward_data_collect(api_or_module_name, module, pid, module_input_output)
-                if self.data_collector.if_return_forward_new_output():
-                    return self.data_collector.get_forward_new_output()
+            if self.data_collector.if_return_forward_new_output():
+                return self.data_collector.get_forward_new_output()
             return output
 
         def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
