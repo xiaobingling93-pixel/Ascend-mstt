@@ -79,12 +79,12 @@ def _compare_graph(input_param, args):
     return CompareGraphResult(graph_n, graph_b, graph_comparator, micro_steps)
 
 
-def _export_compare_graph_result(output_path, graph_n, graph_b, graph_comparator, micro_steps,
+def _export_compare_graph_result(output_path, graphs, graph_comparator, micro_steps,
                                  output_file_name=f'compare_{current_time}.vis'):
     create_directory(output_path)
     output_path = os.path.join(output_path, output_file_name)
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
-    export_config = GraphExportConfig(graph_n, graph_b, graph_comparator.ma.get_tool_tip(),
+    export_config = GraphExportConfig(graphs[0], graphs[1], graph_comparator.ma.get_tool_tip(),
                                       NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
     GraphBuilder.to_json(output_path, export_config)
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
@@ -131,9 +131,9 @@ def _compare_graph_ranks(input_param, args, step=None):
         result.output_file_name = output_file_name
         try:
             result.rank = int(nr.replace(Const.RANK, ""))
-        except Exception:
+        except Exception as e:
             logger.error('The folder name format is incorrect, expected rank+number.')
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            raise CompareException(CompareException.INVALID_PATH_ERROR) from e
         compare_graph_results.append(result)
 
     # analyze ranks
@@ -141,7 +141,7 @@ def _compare_graph_ranks(input_param, args, step=None):
                         args.overflow_check).distributed_match()
 
     for result in compare_graph_results:
-        _export_compare_graph_result(args.output_path, result.graph_n, result.graph_b, result.graph_comparator,
+        _export_compare_graph_result(args.output_path, [result.graph_n, result.graph_b], result.graph_comparator,
                                      result.micro_steps, output_file_name=result.output_file_name)
 
 
@@ -175,9 +175,9 @@ def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=Non
         result.output_file_name = output_file_name
         try:
             result.rank = int(rank.replace(Const.RANK, ""))
-        except Exception:
+        except Exception as e:
             logger.error('The folder name format is incorrect, expected rank+number.')
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
+            raise CompareException(CompareException.INVALID_PATH_ERROR) from e
         build_graph_results.append(result)
 
     DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, overflow_check).distributed_match()
@@ -233,8 +233,8 @@ def _graph_service_command(args):
             _compare_graph_steps(input_param, args)
         else:
             result = _compare_graph(input_param, args)
-            _export_compare_graph_result(args.output_path, result.graph_n, result.graph_b, result.graph_comparator,
-                                         result.micro_steps)
+            _export_compare_graph_result(args.output_path, [result.graph_n, result.graph_b],
+                                         result.graph_comparator, result.micro_steps)
     else:
         logger.error("The npu_path or bench_path should be a folder.")
         raise CompareException(CompareException.INVALID_COMPARE_MODE)

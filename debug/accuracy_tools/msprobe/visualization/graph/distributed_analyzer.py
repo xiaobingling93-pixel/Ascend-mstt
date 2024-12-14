@@ -54,19 +54,6 @@ class DistributedAnalyzer:
             'reduce': ['reduce', '1', CommunicationType.RECEIVE.value, DistributedType.COLLECTIVE]
         }
 
-    def distributed_match(self):
-        for rank, graph in self.graphs.items():
-            nodes = graph.node_map
-            for node_id, node in nodes.items():
-                # 不是通信节点或者已经匹配过了
-                if not node_id.startswith(Const.DISTRIBUTED) or node.matched_distributed:
-                    continue
-                api_name, distributed_type = self._get_distributed_name_and_type(node_id)
-                if distributed_type == DistributedType.P2P:
-                    self._p2p_match(node, rank, api_name)
-                else:
-                    self._collective_match(node, rank, api_name)
-
     @staticmethod
     def _get_opposite_communication_type(action):
         if action == CommunicationType.SEND.value:
@@ -116,6 +103,19 @@ class DistributedAnalyzer:
             logger.warning(f'The group_id of node {node.id} does not exist, {CANNOT_MATCH}{rank}')
             return None, None
         return group_ranks, group_id
+
+    def distributed_match(self):
+        for rank, graph in self.graphs.items():
+            nodes = graph.node_map
+            for node_id, node in nodes.items():
+                # 不是通信节点或者已经匹配过了
+                if not node_id.startswith(Const.DISTRIBUTED) or node.matched_distributed:
+                    continue
+                api_name, distributed_type = self._get_distributed_name_and_type(node_id)
+                if distributed_type == DistributedType.P2P:
+                    self._p2p_match(node, rank, api_name)
+                else:
+                    self._collective_match(node, rank, api_name)
 
     def _get_distributed_name_and_type(self, node_id):
         if Const.SEP not in node_id:
