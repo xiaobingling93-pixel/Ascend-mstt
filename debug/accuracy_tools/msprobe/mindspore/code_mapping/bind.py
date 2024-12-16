@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from msprobe.core.common.const import Const, CompareConst, MsCompareConst
+from msprobe.core.common.const import Const
 from msprobe.core.common.file_utils import (
     check_file_or_directory_path,
     FileOpen,
@@ -192,7 +192,7 @@ def bind_for_statistic(statistic_files: List[str], match_dict: Dict):
         # 使用FileOpen安全打开文件
         header_modified = check_and_fix_header(statistic_file)
         if header_modified:
-            logger.info(f"文件 {statistic_file} 的表头已被修复。")
+            logger.info(f"The header of the file {statistic_file} has been fixed.")
 
         df = read_csv(statistic_file, as_pd=True)
 

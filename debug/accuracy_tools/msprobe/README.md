@@ -135,7 +135,7 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
 
-[MindSpore 场景的数码关联](./docs/code_mapping_Mindspore/code_mapping_Mindspore.md)
+[MindSpore 场景的数码关联](./docs/24.code_mapping_Mindspore.md)
 
 ## 🌟 新版本特性
 
