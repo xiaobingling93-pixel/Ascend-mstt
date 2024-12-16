@@ -42,6 +42,7 @@ ResultInfo = namedtuple('ResultInfo', ['full_api_name', 'fwd_success_status', 'b
 
 
 INDEX_TEST_RESULT_GROUP = 3
+BACKWARD_RESULT_GROUP = 4
 INDEX_FIRST_GROUP = 0
 INDEX_MESSAGE = -1
 
@@ -163,6 +164,8 @@ class Comparator:
             df_row = list(test_result[:INDEX_TEST_RESULT_GROUP])
             if test_result[1] == CompareConst.SKIP:
                 df_row.append(test_result[INDEX_TEST_RESULT_GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
+            elif test_result[2] == CompareConst.SKIP:
+                df_row.append(test_result[BACKWARD_RESULT_GROUP][INDEX_FIRST_GROUP][INDEX_MESSAGE])
             if self.stack_info:
                 stack_info = "\n".join(self.stack_info[name])
                 df_row.append(stack_info)
@@ -211,6 +214,7 @@ class Comparator:
         if backward_message:
             backward_column = CompareColumn()
             bwd_compare_alg_results = [backward_column.to_column_value(CompareConst.SKIP, backward_message)]
+            bwd_success_status = CompareConst.SKIP
         else:
             bwd_success_status = bwd_success_status if bwd_compare_alg_results is not None else CompareConst.SPACE
         result_info = ResultInfo(full_api_name,

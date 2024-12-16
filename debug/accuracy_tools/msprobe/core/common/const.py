@@ -179,6 +179,7 @@ class Const:
     STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
+    TORCH_INT_DTYPE = ["torch.int8", "torch.int32", "torch.int64"]
     FLOAT16 = "Float16"
     FLOAT32 = "Float32"
     BFLOAT16 = "BFloat16"

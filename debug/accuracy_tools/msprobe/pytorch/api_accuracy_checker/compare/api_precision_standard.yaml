@@ -66,6 +66,7 @@ BinaryCompareStandard:
   - greater_
   - greater_equal
   - greater_equal_
+  - histc
   - isfinite
   - isnan
   - less
