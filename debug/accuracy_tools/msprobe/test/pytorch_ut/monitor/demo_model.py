@@ -57,4 +57,4 @@ def monitor_demo(config: str = "./config/monitor_config.json"):
         loss.backward()
         optimizer.step()
 
-    del hooker
+    hooker.summary_writer.close()
