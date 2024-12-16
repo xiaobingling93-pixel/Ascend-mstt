@@ -185,7 +185,7 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
         if not result_df.empty:
             dump_mode = get_dump_mode(result_df, rank_num)
             if dump_mode == "":
-                return compare_index_dict_list, rank_num_list
+                return [], [], []
             # 因为compare_index是指定的，固定不变，所以一旦compare_index是确定的，dump_mode也是确定的，
             # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
             compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num)
