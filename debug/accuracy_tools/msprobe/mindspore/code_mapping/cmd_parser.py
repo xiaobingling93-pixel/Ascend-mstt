@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 import os
 
 from msprobe.core.common.file_utils import check_file_or_directory_path, create_directory, FileChecker
