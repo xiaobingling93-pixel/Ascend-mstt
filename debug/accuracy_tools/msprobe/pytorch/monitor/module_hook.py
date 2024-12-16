@@ -193,10 +193,6 @@ class TrainerMon:
 
         self.common_info()
 
-        # targets = self.config.get("targets", {})
-        # if not targets and not self.xy_distribution:
-        #     self.config["targets"] = {"": {}}
-
         alert_setting = self.config.get('alert', {"rules": []})
         self.alert_rules = AnomalyScanner.load_rules(alert_setting["rules"])
 
