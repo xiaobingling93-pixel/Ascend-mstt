@@ -2,6 +2,7 @@
 import unittest
 import tempfile
 import os
+import re
 import argparse
 import numpy as np
 from unittest.mock import patch
@@ -180,18 +181,25 @@ class TestCodeMapping(unittest.TestCase):
             with open(csv_file_path, 'w') as f:
                 f.write(TEST_CSV_CONTENT)
 
+            # 读取运行前的CSV文件内容
+            with open(csv_file_path, 'r') as f:
+                original_csv_content = f.read()
+
             # 准备参数
             parser = argparse.ArgumentParser()
             add_ir_parser_arguments(parser)
 
             args = parser.parse_args(["--ir", ir_file_path, "--dump_data", csv_file_path, "--output", tmpdir])
 
-
             # 执行主函数
             code_mapping_main(args)
 
-            # 在此处添加断言检查结果文件的生成或处理后的期望结果
-            # 示例：assert os.path.exists(os.path.join(tmpdir, "some_output_file"))
+            # 读取运行后的CSV文件内容
+            with open(csv_file_path, 'r') as f:
+                updated_csv_content = f.read()
+
+            # 比较文件内容是否有变化
+            self.assertNotEqual(original_csv_content, updated_csv_content, "CSV文件内容未变化，测试失败")
 
     def test_npy_code_mapping(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -224,9 +232,14 @@ class TestCodeMapping(unittest.TestCase):
             # 执行主函数
             code_mapping_main(args)
 
-            # 这里可以根据实际逻辑加入断言
-            # 示例：检查是否生成某个结果文件或日志内容
-            # assert os.path.exists(os.path.join(tmpdir, "some_output_file"))
+            # 使用正则表达式验证生成的文件名
+            pattern = r"code_mapping_\d{8}\d{6}\.csv"  # 匹配如 code_mapping_YYYYMMDDHHMMSS.csv 格式
+            generated_files = os.listdir(tmpdir)
+
+            # 检查是否有符合格式的文件生成
+            matching_files = [f for f in generated_files if re.match(pattern, f)]
+            self.assertTrue(matching_files,
+                            msg=f"没有生成符合要求的CSV文件。生成的文件列表: {generated_files}. 正则匹配模式: {pattern}")
 
 
 if __name__ == '__main__':

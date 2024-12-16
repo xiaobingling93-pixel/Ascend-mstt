@@ -195,7 +195,7 @@ class Const:
     NORM = 'Norm'
 
     CODE_STACK = 'Code Stack'
-    CP_NAME = 'Op Name'
+    OP_NAME = 'Op Name'
     SCOPE_NAME = 'Scope Name'
     CODE_STACKS = 'Code Stacks'
     FILE_PATH = 'File Path'
