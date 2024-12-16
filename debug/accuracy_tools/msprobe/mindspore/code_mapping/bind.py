@@ -13,7 +13,8 @@ from msprobe.core.common.file_utils import (
     create_directory,
     write_csv,
     check_path_before_create,
-    read_csv
+    read_csv,
+    write_df_to_csv
 )
 from msprobe.mindspore.code_mapping.graph import GraphNode
 from msprobe.mindspore.common.log import logger
@@ -61,14 +62,14 @@ class Trie:
 # 定义匹配函数
 def match_codes(trie, name):
     matched_nodes = trie.search_in_string(name)
-    matched_codes = [Const.New_LINE.join(node.code_info) for node in matched_nodes]
-    return Const.New_LINE.join(matched_codes)
+    matched_codes = [Const.NEW_LINE.join(node.code_info) for node in matched_nodes]
+    return Const.NEW_LINE.join(matched_codes)
 
 
 def match_names(trie, name):
     matched_nodes = trie.search_in_string(name)
     matched_names = [node.scope for node in matched_nodes]
-    return Const.New_LINE.join(matched_names)
+    return Const.NEW_LINE.join(matched_names)
 
 
 def map_op_names_to_codes_and_scopes(df, match_dict):
@@ -128,7 +129,7 @@ def write_to_csv(param: Dict, output_dir: str):
     check_path_before_create(file_path)
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
     df = pd.DataFrame(data, columns=[Const.FILE_PATH, Const.CODE_STACK, Const.SCOPE_NAME])
-    df.to_csv(file_path, index=False)
+    write_df_to_csv(df, file_path)
 
 
 def find_statistic_files(path):
@@ -162,7 +163,7 @@ def check_and_fix_header(file_path: str):
         return False
 
     # 获取表头并去除末尾的换行符
-    header = lines[0].rstrip(Const.New_LINE).rstrip('\r')
+    header = lines[0].rstrip(Const.NEW_LINE).rstrip('\r')
 
     if not header.endswith(','):
         logger.info(f"The header does not end with a comma. Adding a comma to the file: {file_path}.")
@@ -199,7 +200,7 @@ def bind_for_statistic(statistic_files: List[str], match_dict: Dict):
         df = map_op_names_to_codes_and_scopes(df, match_dict)
 
         # 使用write_csv安全写入文件
-        df.to_csv(statistic_file, index=False)
+        write_df_to_csv(df, file_path)
 
 
 def bind_code_info_for_data(input_dir: str, nodes: Dict[str, GraphNode]) -> Dict[str, str]:
@@ -228,7 +229,7 @@ def bind_code_info_for_data(input_dir: str, nodes: Dict[str, GraphNode]) -> Dict
             # 3. 读取find.csv文件
             csv_file_path = os.path.join(directory, 'mapping.csv')
             check_file_or_directory_path(csv_file_path)
-            df = pd.read_csv(csv_file_path, header=None)
+            df = read_csv(csv_file_path, header=None)
 
             # 4. 查找是否有与xxx.npy匹配的条目
             matching_row = df[df[0] == file_name]  # 假设A列存储文件名
