@@ -19,6 +19,7 @@ import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.common.log import logger
 from msprobe.core.compare.compare_cli import compare_cli
+from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 from msprobe.core.common.const import Const
 
 
@@ -46,8 +47,9 @@ def main():
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
     graph_service_cmd_parser = subparsers.add_parser('graph')
-    _compare_parser(compare_cmd_parser)
     merge_result_parser = subparsers.add_parser('merge_result')
+    _compare_parser(compare_cmd_parser)
+    _merge_result_parser(merge_result_parser)
 
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
@@ -64,7 +66,6 @@ def main():
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
         from msprobe.visualization.graph_service import _pt_graph_service_parser, _pt_graph_service_command
-        from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
@@ -73,7 +74,6 @@ def main():
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
         _pt_graph_service_parser(graph_service_cmd_parser)
-        _merge_result_parser(merge_result_parser)
     elif framework_args.framework == Const.MS_FRAMEWORK:
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         from msprobe.visualization.graph_service import _ms_graph_service_parser, _ms_graph_service_command
@@ -114,6 +114,8 @@ def main():
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
             compare_cli(args)
+        elif sys.argv[3] == "merge_result":
+            merge_result_cli(args)
         elif sys.argv[3] == "run_ut":
             from msprobe.mindspore.api_accuracy_checker.main import api_checker_main
             api_checker_main(args)
