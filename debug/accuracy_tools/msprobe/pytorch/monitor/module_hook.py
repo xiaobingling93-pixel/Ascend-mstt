@@ -235,7 +235,6 @@ class TrainerMon:
                     tensorboard_dir,
                     self.alert_rules,
                     unique_id,
-                    None,
                     self.anomaly_data_factory,
                     self.ndigits,
                     self.step_count_per_record
@@ -293,23 +292,6 @@ class TrainerMon:
         OptimizerMon.set_wrapped_optimizer(_wrapped_optimizer)
 
     @staticmethod
-    def adhoc_check(target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
-        rank = None
-        if dist.is_initialized():
-            rank = dist.get_rank()
-            if (rank not in rank_list) and len(rank_list) != 0:
-                return
-        TrainerMon.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
-
-    def build_tbtag_tensor_map(self, module_name, tag, tensor):
-        metrics = {}
-        key = get_summary_writer_tag_name(module_name, tag, self.rank)
-        if torch.is_tensor(tensor):
-            self._register_param_call_id("_hook_module", key)
-            metrics[key] = tensor
-        return metrics
-
-    @staticmethod
     def generate_cc_metrics(cc_name, cc_tensor):
         metrics = defaultdict(dict)
         rank = dist.get_rank() if dist.is_initialized() else None
@@ -318,6 +300,22 @@ class TrainerMon:
                 key = get_summary_writer_tag_name(cc_name, tag, rank)
                 metrics[op].update({key: tensor})
         cc_tensor.reset()
+        return metrics
+
+    def adhoc_check(self, target_tensor: torch.tensor, module_name: str, tensor_name: str, rank_list, ops_list):
+        rank = None
+        if dist.is_initialized():
+            rank = dist.get_rank()
+            if (rank not in rank_list) and len(rank_list) != 0:
+                return
+        self.tensor_metrics.stat_insert(target_tensor, ops_list, module_name, tensor_name, rank)
+
+    def build_tbtag_tensor_map(self, module_name, tag, tensor):
+        metrics = {}
+        key = get_summary_writer_tag_name(module_name, tag, self.rank)
+        if torch.is_tensor(tensor):
+            self._register_param_call_id("_hook_module", key)
+            metrics[key] = tensor
         return metrics
 
     def common_info(self):
@@ -361,7 +359,8 @@ class TrainerMon:
         hooked_count = 0
         for vpp_stage, model_chunk in enumerate(model):
             vpp_stage = f'{vpp_stage}{MonitorConst.VPP_SEP}'
-            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config['targets'].keys()
+            targets = [x for x, _ in model_chunk.named_modules()] if self.print_struct else self.config[
+                'targets'].keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
 
         logger.info_on_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
@@ -509,8 +508,10 @@ class TrainerMon:
             context = self.optimizer_context[optimizer]
             if self.opt_ty in MonitorConst.DEEPSPEED_OPT_TY:
                 if context.step == 0:
-                    self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name, self.name2index)
-                mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name, self.name2indices)
+                    self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name,
+                                                                                         self.name2index)
+                mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name,
+                                                                      self.name2indices)
                 self.param2name = mv_result.grad
             else:
                 mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name)
@@ -567,10 +568,7 @@ class TrainerMon:
             rank = dist.get_rank() if dist.is_initialized() else None
 
             if self.anomaly_data_factory:
-                # print("hook_optimizer  post_step_hook", self.param_name_call_id)
                 self.anomaly_data_factory.set_call_id(self.param_name_call_id)
-                from pprint import pprint
-                pprint(self.param_name_call_id)
             self.write_xy_tb(context.step)
             self.write_grad_tb(context.step)
             self.write_mv_tb(context)
@@ -652,15 +650,16 @@ class TrainerMon:
                 self.param2name[param] = name
                 self.name2param[name] = param
                 self.name2index[name] = index
-                # self._register_param_call_id("_register_chunk", name)
 
                 if self.tp_group and not param_is_not_tensor_parallel_duplicate(param, self.tp_group):
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
                 self.name2tag[name] = {}
-                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank)
-                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD,
+                                                                                         self.rank)
+                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD,
+                                                                                          self.rank)
 
     def _register_param_name(self, model):
         if self.param_registered:
@@ -730,13 +729,14 @@ class TrainerMon:
             if not context.ignore_in:
                 cared_input = module_input if context.focused_in_col is None else module_input[context.focused_in_col]
                 tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN, cared_input))
+                    self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_IN,
+                                                cared_input))
             cared_output = module_output if context.focused_out_col is None else module_output[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT, cared_output))
+                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTV_OUT,
+                                            cared_output))
 
-            get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)  # 这里没有处理 返回值，如何记录前向激活值？ --> inplace
-            # self._register_param_call_id("fwd_hook_fun", name)
+            get_metrics(self.ops, tbtag_tensor_map, self.eps, context.actv)
             context.micro_step += 1
             if context.micro_step == self.micro_batch_number:
                 context.micro_step = 0
@@ -772,10 +772,12 @@ class TrainerMon:
             if not context.ignore_in:
                 cared_input_grad = input_grad if context.focused_in_col is None else input_grad[context.focused_in_col]
                 tbtag_tensor_map.update(
-                    self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN, cared_input_grad))
+                    self.build_tbtag_tensor_map(
+                        f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_IN, cared_input_grad))
             cared_output_grad = output_grad if context.focused_out_col is None else output_grad[context.focused_out_col]
             tbtag_tensor_map.update(
-                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_OUT, cared_output_grad))
+                self.build_tbtag_tensor_map(f'{context.module_name}_{context.micro_step}', MonitorConst.ACTVGRAD_OUT,
+                                            cared_output_grad))
 
             if context.micro_step == 0 and context.actvgrad:
                 logger.warning(f"actvgrad context of {context.module_name} is not empty when first micro_step, "
@@ -878,6 +880,6 @@ class TrainerMon:
         :param key: str, '0:relu_0/output_grad'
         :return:
         """
-        print(hook_name, key, self.call_id)
+        logger.debug(hook_name, key, self.call_id)
         self.param_name_call_id[key] = self.call_id
         self.call_id += 1

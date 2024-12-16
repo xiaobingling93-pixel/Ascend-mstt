@@ -239,7 +239,6 @@ class WriterInput:
     path: str
     ad_rules: list
     job_id: str
-    anomaly_inform: bool = False
     anomaly_factory: AnomalyDataFactory = None
     ndigits: int = 6
     step_count_per_record: int = 1
@@ -282,6 +281,18 @@ class BaseWriterWithAD:
             if self.anomaly_factory:
                 self.anomalies.append(self.anomaly_factory.create(tag, exception_message, global_step))
 
+    def write_metrics(self, ops, metric_value, step, prefix=''):
+        if not metric_value:
+            return
+        tensors = []
+        tags = list(itertools.product(metric_value.keys(), ops))
+        for op2tensor in metric_value.values():
+            tensors.extend(op2tensor.values())
+        with torch.no_grad():
+            metric_list = torch.stack(tensors).cpu()
+        for tag, metric in zip(tags, metric_list):
+            self.add_scalar(tag, metric, step)
+
     def _ad(self, scalar_value, history):
         return AnomalyScanner.scan(self.ad_rules, history, cur=scalar_value)
 
@@ -305,18 +316,6 @@ class BaseWriterWithAD:
         self.tag2scalars[tag]['avg'] = new_avg
         self.tag2scalars[tag]['count'] += 1
         return avg
-
-    def write_metrics(self, ops, metric_value, step, prefix=''):
-        if not metric_value:
-            return
-        tensors = []
-        tags = list(itertools.product(metric_value.keys(), ops))
-        for op2tensor in metric_value.values():
-            tensors.extend(op2tensor.values())
-        with torch.no_grad():
-            metric_list = torch.stack(tensors).cpu()
-        for tag, metric in zip(tags, metric_list):
-            self.add_scalar(tag, metric, step)
 
 
 class CSVWriterWithAD(BaseWriterWithAD):
