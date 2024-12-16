@@ -1,17 +1,21 @@
 import os
-import logging
 import time
 import glob
 from typing import Dict, List
 from pathlib import Path
+
 import pandas as pd
-from msprobe.mindspore.code_mapping.graph import GraphNode
+
+from msprobe.core.common.const import Const, CompareConst, MsCompareConst
 from msprobe.core.common.file_utils import (
+    check_file_or_directory_path,
     FileOpen,
     create_directory,
     write_csv,
-    check_path_before_create
+    check_path_before_create,
+    read_csv
 )
+from msprobe.mindspore.code_mapping.graph import GraphNode
 from msprobe.mindspore.common.log import logger
 
 
@@ -31,10 +35,10 @@ class Trie:
     # 向Trie中插入一个键
     def insert(self, key, value):
         node = self.root
-        for char in key:
-            if char not in node.children:
-                node.children[char] = TrieNode()
-            node = node.children[char]
+        for key_char in key:
+            if key_char not in node.children:
+                node.children[key_char] = TrieNode()
+            node = node.children[key_char]
         # 标记结束位置
         node.is_end_of_key = True
         node.value = value
@@ -57,24 +61,24 @@ class Trie:
 # 定义匹配函数
 def match_codes(trie, name):
     matched_nodes = trie.search_in_string(name)
-    matched_codes = ['\n'.join(ii.code_info) for ii in matched_nodes]
-    return '\n'.join(matched_codes)
+    matched_codes = [Const.New_LINE.join(node.code_info) for node in matched_nodes]
+    return Const.New_LINE.join(matched_codes)
 
 
 def match_names(trie, name):
     matched_nodes = trie.search_in_string(name)
-    matched_names = [ii.scope for ii in matched_nodes]
-    return '\n'.join(matched_names)
+    matched_names = [node.scope for node in matched_nodes]
+    return Const.New_LINE.join(matched_names)
 
 
-def complex_map(df, match_dict):
+def map_op_names_to_codes_and_scopes(df, match_dict):
     # 构建Trie树并插入所有键
     trie = Trie()
     for key, value in match_dict.items():
         trie.insert(key, value)
 
-    df['Code Stack'] = df['Op Name'].apply(lambda name: match_codes(trie, name))
-    df['Scope Name'] = df['Op Name'].apply(lambda name: match_names(trie, name))
+    df[Const.CODE_STACK] = df[Const.OP_NAME].apply(lambda name: match_codes(trie, name))
+    df[Const.SCOPE_NAME] = df[Const.OP_NAME].apply(lambda name: match_names(trie, name))
     return df
 
 
@@ -92,17 +96,18 @@ def find_npy_files(npy_path):
     npy_path_obj = Path(npy_path)
 
     # 检查当前路径是否是一个以 .npy 结尾的文件
-    if npy_path_obj.suffix == '.npy' and npy_path_obj.is_file():
-        with FileOpen(str(npy_path_obj), "rb") as f:
-            npy_files.append(npy_path_obj.resolve())
+    if npy_path_obj.suffix == Const.NUMPY_SUFFIX and npy_path_obj.is_file():
+        check_file_or_directory_path(npy_path_obj)
+        npy_files.append(npy_path_obj.resolve())
         return npy_files
 
     # 如果是目录，使用Path.rglob查找所有.npy文件
     if npy_path_obj.is_dir():
-        for file in npy_path_obj.rglob('*.npy'):
+        for file in npy_path_obj.rglob(Const.NUMPY_PATTERN):
+            check_file_or_directory_path(file)
             npy_files.append(file.resolve())
     else:
-        logger.info(f"指定的路径既不是npy文件也不是目录: {npy_path}")
+        logger.info(f"The specified path is neither an .npy file nor a directory: {npy_path}")
 
     return npy_files
 
@@ -119,10 +124,10 @@ def write_to_csv(param: Dict, output_dir: str):
 
     # 使用时间戳生成文件名
     timestamp = time.strftime("%Y%m%d%H%M%S", time.localtime())
-    file_path = Path(output_dir) / f"code_mapping{timestamp}.csv"
+    file_path = Path(output_dir) / f"code_mapping_{timestamp}.csv"
     check_path_before_create(file_path)
     data = [(name, res1, res2) for name, (res1, res2) in param.items()]
-    df = pd.DataFrame(data, columns=['File Path', 'Code Stacks', 'Scope Name'])
+    df = pd.DataFrame(data, columns=[Const.FILE_PATH, Const.CODE_STACK, Const.SCOPE_NAME])
     df.to_csv(file_path, index=False)
 
 
@@ -153,24 +158,24 @@ def check_and_fix_header(file_path: str):
         lines = f.readlines()
 
     if not lines:
-        logger.warning(f"文件 {file_path} 是空的。")
+        logger.warning(f"The file {file_path} is empty.")
         return False
 
     # 获取表头并去除末尾的换行符
-    header = lines[0].rstrip('\n').rstrip('\r')
+    header = lines[0].rstrip(Const.New_LINE).rstrip('\r')
 
     if not header.endswith(','):
-        logger.info(f"表头不以逗号结尾，正在为文件 {file_path} 添加逗号。")
+        logger.info(f"The header does not end with a comma. Adding a comma to the file: {file_path}.")
         # 添加逗号并恢复换行符
-        lines[0] = header + ',\n'
+        lines[0] = header + Const.CSV_NEWLINE_SEPARATOR
 
         # 写回修复后的内容到文件
         with FileOpen(file_path, "w") as f:
             f.writelines(lines)
-        logger.info(f"已为文件 {file_path} 添加末尾的逗号。")
+        logger.info(f"Added a trailing comma to the file: {file_path}.")
         return True
     else:
-        logger.info(f"表头已以逗号结尾，无需修改。")
+        logger.info(f"The header already ends with a comma. No modification needed for the file: {file_path}.")
         return False
 
 
@@ -188,11 +193,10 @@ def bind_for_statistic(statistic_files: List[str], match_dict: Dict):
         if header_modified:
             logger.info(f"文件 {statistic_file} 的表头已被修复。")
 
-        with FileOpen(statistic_file, "r") as f:
-            df = pd.read_csv(f)
+        df = read_csv(statistic_file, as_pd=True)
 
         # 进行复杂映射
-        df = complex_map(df, match_dict)
+        df = map_op_names_to_codes_and_scopes(df, match_dict)
 
         # 使用write_csv安全写入文件
         df.to_csv(statistic_file, index=False)
@@ -206,7 +210,7 @@ def bind_code_info_for_data(input_dir: str, nodes: Dict[str, GraphNode]) -> Dict
         if node.is_subgraph:
             continue
         # 获取规范化后的scope name
-        scope_name = node.scope.replace("/", "_")
+        scope_name = node.scope.replace(Const.SCOPE_SEPARATOR, Const.REPLACEMENT_CHARACTER)
         match_dict[scope_name] = node
     npy_files = find_npy_files(input_dir)
 
@@ -220,9 +224,10 @@ def bind_code_info_for_data(input_dir: str, nodes: Dict[str, GraphNode]) -> Dict
     for npy_file in npy_files:
         directory, file_name = os.path.split(npy_file)  # 拆分路径
         name_without_ext = os.path.splitext(file_name)[0]  # 提取文件名（去掉扩展名）
-        if '.' not in name_without_ext:
+        if name_without_ext.isdigit():
             # 3. 读取find.csv文件
             csv_file_path = os.path.join(directory, 'mapping.csv')
+            check_file_or_directory_path(csv_file_path)
             df = pd.read_csv(csv_file_path, header=None)
 
             # 4. 查找是否有与xxx.npy匹配的条目

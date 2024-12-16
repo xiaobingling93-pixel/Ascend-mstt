@@ -1,8 +1,8 @@
-# Code Mapping
+# MindSpore 场景的数码关联
 
 ## 介绍
 
-数码关联工具,用于Mindspore静态图场景下将IR图与dump数据进行关联，获取dump数据文件路径和代码调用栈的关联关系。
+数码关联工具,用于 MindSpore 静态图场景下将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
 
 ## 安装教程
 
@@ -30,7 +30,7 @@
 ### 使用方式:
 
 ```
-graph_analyzer --ir <path/to/ir/file> --dump_data </path/to/dump/data/dir> [--output </path/to/output/directory>]
+msprobe -f mindspore graph_analyzer --ir <path/to/ir/file> --dump_data </path/to/dump/data/dir> [--output </path/to/output/directory>]
 ```
 
 
