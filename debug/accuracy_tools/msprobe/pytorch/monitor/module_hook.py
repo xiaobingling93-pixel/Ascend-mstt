@@ -876,6 +876,6 @@ class TrainerMon:
         :param key: str, '0:relu_0/output_grad'
         :return:
         """
-        logger.debug(hook_name, key, self.call_id)
+        logger.debug(f"{hook_name} {key}: {self.call_id}")
         self.param_name_call_id[key] = self.call_id
         self.call_id += 1

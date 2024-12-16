@@ -1,12 +1,11 @@
 import os.path
 import shutil
-import time
 import unittest
-from collections import defaultdict
 from unittest.mock import patch, MagicMock
 
 import pandas as pd
 import torch
+from msprobe.core.common.const import MonitorConst
 from torch import distributed as dist
 
 from msprobe.pytorch.monitor.module_hook import CommunicationContext, GradContext, ModuleHookContext, \
@@ -22,19 +21,19 @@ def clean_output(path):
         shutil.rmtree(path)
 
 
-def get_new_item(list1, list2):
-    """get list1 - list2"""
-    return [x for x in list1 if x not in list2]
-
-
 class TestModuleHook(unittest.TestCase):
     monitor_output = "./monitor_output"
 
-    def setUp(self) -> None:
-        clean_output(self.monitor_output)
+    @staticmethod
+    def get_dist_mock(initialized=False):
+        dist_mock = MagicMock()
+        dist_mock.is_initialized.return_value = initialized
+        dist_mock.get_rank.return_value = 0
+        dist_mock.get_process_group_ranks.return_value = [0]
 
-    def tearDown(self) -> None:
-        clean_output(self.monitor_output)
+        dist.is_initialized = dist_mock.is_initialized
+        dist.get_rank = dist_mock.get_rank
+        dist.get_process_group_ranks = dist_mock.get_process_group_ranks
 
     def test_smallest_rank_print(self):
         xy_config = os.path.join(base_dir, "config/xy_config.json")
@@ -43,12 +42,7 @@ class TestModuleHook(unittest.TestCase):
             params_have_main_grad=False,
             opt_ty='Megatron_FP32Optimizer'
         )
-        # mock dist
-        dist_mock = MagicMock()
-        dist_mock.get_rank.return_value = 0
-        dist_mock.is_initialized.return_value = True
-        dist.is_initialized = dist_mock.is_initialized
-        dist.get_rank = dist_mock.get_rank
+        self.get_dist_mock(True)
 
         hooker._smallest_rank_print("test print")
 
@@ -58,31 +52,23 @@ class TestModuleHook(unittest.TestCase):
 
     def test_print_struct(self):
         print_struct_config = os.path.join(base_dir, "config/struct_config.json")
-
-        dist_mock = MagicMock()
-        dist_mock.is_initialized.return_value = False
-        dist.is_initialized = dist_mock.is_initialized
+        self.get_dist_mock(False)
 
         with self.assertRaises(Exception) as context:
             monitor_demo(print_struct_config)
         self.assertEqual(str(context.exception), "exit after first step when print model struct")
 
-    def test_xy_wg_mv_ur(self):
-        output_list = []
-
-        dist_mock = MagicMock()
-        dist_mock.is_initialized.return_value = False
-        dist.is_initialized = dist_mock.is_initialized
-
-        # # test_xy_distribution
+    def test_xy_distribution(self):
+        xy_monitor_output = "./test_xy_distribution"
+        clean_output(xy_monitor_output)
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = xy_monitor_output
         xy_config = os.path.join(base_dir, "config/xy_config.json")
         monitor_demo(xy_config)
         # validate output file
-        csv_dir = get_new_item(os.listdir(self.monitor_output), output_list)
-        output_list.append(csv_dir[0])
-        self.assertEqual(len(csv_dir), 1)
-        actv_0_csv = os.path.join(self.monitor_output, csv_dir[0], "actv_0-0.csv")
-        actv_grad_0_csv = os.path.join(self.monitor_output, csv_dir[0], "actv_grad_0-0.csv")
+        output_dir_list = os.listdir(xy_monitor_output)
+        self.assertEqual(len(output_dir_list), 1)
+        actv_0_csv = os.path.join(xy_monitor_output, output_dir_list[0], "actv_0-0.csv")
+        actv_grad_0_csv = os.path.join(xy_monitor_output, output_dir_list[0], "actv_grad_0-0.csv")
         self.assertTrue(os.path.exists(actv_0_csv))
         self.assertTrue(os.path.exists(actv_grad_0_csv))
         # validate columns and lines
@@ -94,17 +80,19 @@ class TestModuleHook(unittest.TestCase):
         expect_columns = ['vpp_stage', 'module_name', 'step', 'input_grad.norm', 'output_grad.norm']
         self.assertListEqual(list(actv_grad_0.columns), expect_columns)
         self.assertEqual(actv_0.shape, tuple([3, 5]))
-        time.sleep(20)
 
-        # # test_wg_distribution
-        wg_config = os.path.join(base_dir, "config/wg_config.json")
-        monitor_demo(wg_config)
+    def test_wg_distribution(self):
+        self.get_dist_mock(False)
+        wg_monitor_output = "./test_wg_distribution"
+        clean_output(wg_monitor_output)
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = wg_monitor_output
+        mv_config = os.path.join(base_dir, "config/wg_config.json")
+        monitor_demo(mv_config)
         # validate output file
-        csv_dir = get_new_item(os.listdir(self.monitor_output), output_list)
-        output_list.append(csv_dir[0])
-        self.assertEqual(len(csv_dir), 1)
-        grad_reduced_0_csv = os.path.join(self.monitor_output, csv_dir[0], "grad_reduced_0-0.csv")
-        grad_unreduced_0_csv = os.path.join(self.monitor_output, csv_dir[0], "grad_unreduced_0-0.csv")
+        output_dir_list = os.listdir(wg_monitor_output)
+        self.assertEqual(len(output_dir_list), 1)
+        grad_reduced_0_csv = os.path.join(wg_monitor_output, output_dir_list[0], "grad_reduced_0-0.csv")
+        grad_unreduced_0_csv = os.path.join(wg_monitor_output, output_dir_list[0], "grad_unreduced_0-0.csv")
         self.assertTrue(os.path.exists(grad_reduced_0_csv))
         self.assertTrue(os.path.exists(grad_unreduced_0_csv))
         # validate columns and lines
@@ -115,17 +103,19 @@ class TestModuleHook(unittest.TestCase):
         grad_unreduced_0 = pd.read_csv(grad_unreduced_0_csv)
         self.assertListEqual(list(grad_unreduced_0.columns), expect_columns)
         self.assertEqual(grad_unreduced_0.shape, tuple([2, 4]))
-        time.sleep(20)
 
-        # # test_mv_distribution
+    def test_mv_distribution(self):
+        self.get_dist_mock(False)
+        mv_monitor_output = "./test_mv_distribution"
+        clean_output(mv_monitor_output)
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = mv_monitor_output
         mv_config = os.path.join(base_dir, "config/mv_config.json")
         monitor_demo(mv_config)
         # validate output file
-        csv_dir = get_new_item(os.listdir(self.monitor_output), output_list)
-        output_list.append(csv_dir[0])
-        self.assertEqual(len(csv_dir), 1)
-        exp_avg_1_csv = os.path.join(self.monitor_output, csv_dir[0], "exp_avg_1-1.csv")
-        exp_avg_sq_1_csv = os.path.join(self.monitor_output, csv_dir[0], "exp_avg_sq_1-1.csv")
+        output_dir_list = os.listdir(mv_monitor_output)
+        self.assertEqual(len(output_dir_list), 1)
+        exp_avg_1_csv = os.path.join(mv_monitor_output, output_dir_list[0], "exp_avg_1-1.csv")
+        exp_avg_sq_1_csv = os.path.join(mv_monitor_output, output_dir_list[0], "exp_avg_sq_1-1.csv")
         self.assertTrue(os.path.exists(exp_avg_1_csv))
         self.assertTrue(os.path.exists(exp_avg_sq_1_csv))
         # validate columns and lines
@@ -136,30 +126,24 @@ class TestModuleHook(unittest.TestCase):
         exp_avg_sq_1 = pd.read_csv(exp_avg_sq_1_csv)
         self.assertListEqual(list(exp_avg_sq_1.columns), expect_columns)
         self.assertEqual(exp_avg_sq_1.shape, tuple([2, 4]))
-        time.sleep(20)
 
-        # # test_ur_distribution
+    def test_ur_distribution(self):
+        self.get_dist_mock(False)
+        ur_monitor_output = "./test_ur_distribution"
+        clean_output(ur_monitor_output)
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = ur_monitor_output
         ur_config = os.path.join(base_dir, "config/ur_config.json")
         monitor_demo(ur_config)
         # validate output file
-        csv_dir = get_new_item(os.listdir(self.monitor_output), output_list)
-        output_list.append(csv_dir[0])
-        self.assertEqual(len(csv_dir), 1)
-        tb_dir = os.listdir(os.path.join(self.monitor_output, csv_dir[0]))
+        output_dir_list = os.listdir(ur_monitor_output)
+        self.assertEqual(len(output_dir_list), 1)
+        tb_dir = os.listdir(os.path.join(ur_monitor_output, output_dir_list[0]))
         self.assertEqual(len(tb_dir), 1)
         self.assertTrue(tb_dir[0].startswith("events.out.tfevents."))
 
     def test_cc_distribution(self):
         cc_config = os.path.join(base_dir, "config/cc_config.json")
-
-        dist_mock = MagicMock()
-        dist_mock.get_rank.return_value = 0
-        dist_mock.is_initialized.return_value = True
-        dist_mock.get_process_group_ranks.return_value = [0]
-        dist.is_initialized = dist_mock.is_initialized
-        dist.get_rank = dist_mock.get_rank
-        dist.get_process_group_ranks = dist_mock.get_process_group_ranks
-
+        self.get_dist_mock(True)
         hooker = TrainerMon(
             cc_config,
             params_have_main_grad=False,
@@ -169,25 +153,18 @@ class TestModuleHook(unittest.TestCase):
 
     def test_adhoc_check(self):
         # mock dist
-        dist_mock = MagicMock()
-        dist_mock.get_rank.return_value = 0
-        dist_mock.is_initialized.return_value = True
-        dist.is_initialized = dist_mock.is_initialized
-        dist.get_rank = dist_mock.get_rank
-
+        self.get_dist_mock(True)
         target_tensor = torch.randn(10)
         module_name = 'test_module'
         tensor_name = 'test_tensor'
         rank_list = [1, 2]
         ops_list = ['max', 'min']
-        TrainerMon.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
+        cc_config = os.path.join(base_dir, "config/cc_config.json")
+        hooker = TrainerMon(cc_config, params_have_main_grad=False, opt_ty='Megatron_FP32Optimizer')
+        hooker.adhoc_check(target_tensor, module_name, tensor_name, rank_list, ops_list)
 
     def test_generate_cc_metrics(self):
-        dist_mock = MagicMock()
-        dist_mock.is_initialized.return_value = True
-        dist_mock.get_rank.return_value = 1
-        dist.is_initialized = dist_mock.is_initialized
-        dist.get_rank = dist_mock.get_rank
+        self.get_dist_mock(True)
 
         cc_name = 'test_cc'
         cc_tensor = CommunicationContext()
@@ -201,8 +178,8 @@ class TestModuleHook(unittest.TestCase):
                 'tag4': 'tensor4'
             }
         }
-        expected_metrics = {'min': {'test_cc/rank1/tag1': 'tensor1', 'test_cc/rank1/tag2': 'tensor2'},
-                            'max': {'test_cc/rank1/tag3': 'tensor3', 'test_cc/rank1/tag4': 'tensor4'}}
+        expected_metrics = {'min': {'test_cc/rank0/tag1': 'tensor1', 'test_cc/rank0/tag2': 'tensor2'},
+                            'max': {'test_cc/rank0/tag3': 'tensor3', 'test_cc/rank0/tag4': 'tensor4'}}
         result = TrainerMon.generate_cc_metrics(cc_name, cc_tensor)
         self.assertDictEqual(result, expected_metrics)
 
