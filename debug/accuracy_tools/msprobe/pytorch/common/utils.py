@@ -105,7 +105,48 @@ def get_rank_if_initialized():
         raise DistributedNotInitializedError("torch distributed environment is not initialized")
 
 
-def seed_all(seed=1234, mode=False):
+def remove_dropout():
+    if torch.__version__ > "1.8":
+        logger.info_on_rank_0("For precision comparison, the probability p in the dropout method is set to 0.")
+        import torch.nn.functional as F
+        from torch import _VF
+        from torch.overrides import has_torch_function_unary, handle_torch_function
+
+        def function_dropout(input_tensor: torch.Tensor, p: float = 0.5, training: bool = True,
+                             inplace: bool = False) -> torch.Tensor:
+            if has_torch_function_unary(input_tensor):
+                return handle_torch_function(
+                    function_dropout, (input_tensor,), input_tensor, p=0., training=training, inplace=inplace)
+            if p < 0.0 or p > 1.0:
+                raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
+            return _VF.dropout_(input_tensor, 0., training) if inplace else _VF.dropout(input_tensor, 0., training)
+
+        def function_dropout2d(input_tensor: torch.Tensor, p: float = 0.5, training: bool = True,
+                               inplace: bool = False) -> torch.Tensor:
+            if has_torch_function_unary(input_tensor):
+                return handle_torch_function(
+                    function_dropout2d, (input_tensor,), input_tensor, p=0., training=training, inplace=inplace)
+            if p < 0.0 or p > 1.0:
+                raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
+            return _VF.feature_dropout_(input_tensor, 0., training) if inplace else _VF.feature_dropout(input_tensor,
+                                                                                                        0., training)
+
+        def function_dropout3d(input_tensor: torch.Tensor, p: float = 0.5, training: bool = True,
+                               inplace: bool = False) -> torch.Tensor:
+            if has_torch_function_unary(input_tensor):
+                return handle_torch_function(
+                    function_dropout3d, (input_tensor,), input_tensor, p=0., training=training, inplace=inplace)
+            if p < 0.0 or p > 1.0:
+                raise ValueError("dropout probability has to be between 0 and 1, " "but got {}".format(p))
+            return _VF.feature_dropout_(input_tensor, 0., training) if inplace else _VF.feature_dropout(input_tensor,
+                                                                                                        0., training)
+
+        F.dropout = function_dropout
+        F.dropout2d = function_dropout2d
+        F.dropout3d = function_dropout3d
+
+
+def seed_all(seed=1234, mode=False, rm_dropout=False):
     check_seed_all(seed, mode)
     try:
         random.seed(seed)
@@ -126,6 +167,8 @@ def seed_all(seed=1234, mode=False):
         else:
             torch_npu.npu.manual_seed_all(seed)
             torch_npu.npu.manual_seed(seed)
+        if rm_dropout:
+            remove_dropout()
     except Exception as e:
         logger.error(f"There is an unexpected error while determinating randomness. {e}")
 

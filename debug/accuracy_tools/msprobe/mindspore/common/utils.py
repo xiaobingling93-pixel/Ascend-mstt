@@ -36,14 +36,14 @@ def get_rank_if_initialized():
 
 def convert_bf16_to_fp32(tensor):
     if tensor.dtype == ms.bfloat16:
-        tensor = tensor.to(ms.float32)
+        tensor = tensor.contiguous().to(ms.float32)
     return tensor
 
 
 def save_tensor_as_npy(tensor, file_path):
     if not path_len_exceeds_limit(file_path):
         tensor = convert_bf16_to_fp32(tensor)
-        saved_tensor = tensor.contiguous().asnumpy()
+        saved_tensor = tensor.asnumpy()
         save_npy(saved_tensor, file_path)
     else:
         logger.warning(f'The file path {file_path} length exceeds limit.')
