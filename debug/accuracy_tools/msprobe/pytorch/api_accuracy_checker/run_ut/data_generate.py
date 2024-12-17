@@ -345,7 +345,7 @@ def gen_atten_mask(info, convert_type, real_data_path):
             data = gen_real_tensor(data_path, convert_type)
         else:
             # 生成一个2048x2048的三角矩阵，对角线为1，其余为0
-            # 这是npu_fusion_attention的sparese_mode为[2, 3, 4]时，atten_mask的shape
+            # 这是npu_fusion_attention的sparse_mode为[2, 3, 4]时，atten_mask的shape
             data = torch.triu(torch.ones([2048, 2048]), diagonal=1).to(torch.bool)
     return data
 
