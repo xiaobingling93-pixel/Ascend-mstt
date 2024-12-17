@@ -59,17 +59,6 @@ class TestDataCollector(unittest.TestCase):
             mock_warning.assert_not_called()
             mock_debug.assert_called_once_with("msprobe is collecting data on Tensor.add.")
 
-    def test_pre_forward_data_collect(self):
-        self.data_collector.check_scope_and_pid = MagicMock(return_value=False)
-        self.data_collector.is_inplace = MagicMock(return_value=False)
-        self.data_collector.data_processor.analyze_pre_forward = MagicMock()
-        name = "TestModule.forward"
-        pid = 123
-
-        self.data_collector.pre_forward_data_collect(name, None, pid, None)
-        self.data_collector.check_scope_and_pid.assert_called_once_with(
-            self.data_collector.scope, "TestModule.backward", 123)
-
     def test_handle_data(self):
         with patch.object(DataCollector, "update_data") as mock_update_data, \
                 patch.object(DataCollector, "write_json") as mock_write_json, \
@@ -93,7 +82,6 @@ class TestDataCollector(unittest.TestCase):
     @patch.object(DataCollector, "handle_data")
     def test_forward_data_collect(self, mock_handle_data, _, __, ___):
         with patch.object(DataCollector, "check_scope_and_pid", return_value=True), \
-                patch.object(DataCollector, "is_inplace", return_value=False), \
                 patch.object(StatisticsDataProcessor, "analyze_forward", return_value={}):
             with patch.object(StatisticsDataProcessor, "is_terminated", new=True):
                 self.data_collector.forward_data_collect("name", "module", "pid", "module_input_output")

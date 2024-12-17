@@ -217,7 +217,7 @@ class TestService(unittest.TestCase):
         mock_input = (MagicMock(),)
         mock_output = MagicMock()
 
-        forward_hook, backward_hook = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook")
+        _, forward_hook, backward_hook = self.service.build_hook(BaseScope.Module_Type_Module, "TestHook")
  
         forward_hook(mock_cell, mock_input, mock_output)
         self.service.data_collector.update_api_or_module_name.assert_called_with('TestCell')

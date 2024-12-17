@@ -138,6 +138,7 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
     def __init__(self, config, data_writer):
         super().__init__(config, data_writer)
         self.has_overflow = False
+        self.cached_api_info = {}
         self.cached_tensors_and_file_paths = {}
         self.real_overflow_nums = 0
         self.overflow_nums = config.overflow_nums
@@ -149,6 +150,20 @@ class OverflowCheckDataProcessor(MindsporeDataProcessor):
         if self.real_overflow_nums >= self.overflow_nums:
             return True
         return False
+
+    def analyze_forward_input(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        self.has_overflow = False
+        self.cached_api_info = super().analyze_forward_input(name, module, module_input_output)
+        return None
+
+    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        api_info_struct = super().analyze_forward_output(name, module, module_input_output)
+        if name in self.cached_api_info and name in api_info_struct:
+            self.cached_api_info[name].update(api_info_struct[name])
+        elif name in api_info_struct:
+            self.cached_api_info = api_info_struct
+        self.maybe_save_overflow_data()
+        return self.cached_api_info if self.has_overflow else None
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False

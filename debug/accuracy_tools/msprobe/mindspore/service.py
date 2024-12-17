@@ -20,13 +20,13 @@ from collections import defaultdict
 
 import mindspore as ms
 from mindspore import nn
+
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
 except ImportError:
     pijit_label = False
 else:
     pijit_label = True
-
 
 from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
 from msprobe.core.common.file_utils import create_directory
@@ -67,7 +67,7 @@ class Service:
         raise MsprobeException(
             MsprobeException.INVALID_PARAM_ERROR, "model 参数必须是 mindspore.nn.Cell 类型。"
         )
-    
+
     @staticmethod
     def prepare_module_input_output(target_type, cell, input_data, output):
         if target_type == BaseScope.Module_Type_Module:
@@ -82,7 +82,20 @@ class Service:
                 MsprobeException.INVALID_PARAM_ERROR, "L2 level dump function is currently not supported."
             )
 
-    def build_hook(self, target_type, name): 
+    def build_hook(self, target_type, name):
+        def pre_hook(api_or_cell_name, cell, input_data):
+            if not self.should_excute_hook():
+                clean_input_kwargs(cell)
+                return None
+
+            if target_type == BaseScope.Module_Type_Module:
+                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+
+            module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
+            self.data_collector.update_api_or_module_name(api_or_cell_name)
+            self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
+            return input_data
+
         def grad_hook(ori_name, param_name):
             def hook_fn(grad):
                 if not self.should_excute_hook():
@@ -92,33 +105,39 @@ class Service:
             return hook_fn
 
         def register_param_hook(cell_name, cell, params_dict):
+            # data_mode为forward时，不注册参数hook
             if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
+                # 判断参数是否已经注册过hook
                 if params_dict and hasattr(cell, 'has_param_hook') and not cell.has_param_hook:
                     ori_name = cell_name.rsplit(Const.SEP, 2)[0]
                     grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                    # 注册hook时，初始化grad_name的data_info
                     data_info = {grad_name: {key: [None] for key in params_dict}}
+                    # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
                     self.data_collector.handle_data(grad_name, data_info, flush=self.data_collector.data_processor.is_terminated)
                     for param_name, param in params_dict.items():
                         param.register_hook(grad_hook(ori_name, param_name))
                     cell.has_param_hook = True
-            
+
         def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
                 clean_input_kwargs(cell)
                 return None
-            
+
             module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
-            params_dict = {}
             if target_type == BaseScope.Module_Type_Module:
                 api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
                 params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(recurse=False).items()}
                 setattr(module_input_output, Const.PARAMS, params_dict)
+                # 设置has_param_hook属性，避免重复注册hook
                 if not hasattr(cell, 'has_param_hook'):
                     setattr(cell, 'has_param_hook', False)
-
-            self.data_collector.update_api_or_module_name(api_or_cell_name)
-            self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
-            register_param_hook(api_or_cell_name, cell, params_dict)
+                self.data_collector.update_api_or_module_name(api_or_cell_name)
+                self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
+                register_param_hook(api_or_cell_name, cell, params_dict)
+            else:
+                self.data_collector.update_api_or_module_name(api_or_cell_name)
+                self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
             if self.data_collector.if_return_forward_new_output():
                 return self.data_collector.get_forward_new_output()
@@ -147,8 +166,12 @@ class Service:
         pid = os.getpid()
         forward_name_template = name + Const.FORWARD
         backward_name_template = name + Const.BACKWARD
+        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
         forward_hook = functools.partial(forward_hook, forward_name_template)
         backward_hook = functools.partial(backward_hook, backward_name_template)
+
+        def wrap_pre_forward_hook(cell, input_data):
+            return pre_forward_hook(cell, input_data)
 
         def wrap_forward_hook(cell, input_data, output_data):
             return forward_hook(cell, input_data, output_data)
@@ -156,7 +179,7 @@ class Service:
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
 
-        return wrap_forward_hook, wrap_backward_hook
+        return wrap_pre_forward_hook, wrap_forward_hook, wrap_backward_hook
 
     def update_primitive_counters(self, primitive_name):
         if primitive_name not in self.primitive_counters:
@@ -318,7 +341,7 @@ class Service:
                     continue
                 prefix = 'Cell' + Const.SEP + name + Const.SEP + \
                          cell.__class__.__name__ + Const.SEP
-                forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
+                _, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)
                 cell.register_forward_hook(forward_hook)
                 cell.register_backward_hook(backward_hook)
 

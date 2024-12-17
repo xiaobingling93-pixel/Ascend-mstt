@@ -37,7 +37,8 @@ class HOOKCell(nn.Cell):
 
             HOOKCell.cell_count[self.prefix] += 1
             self.prefix = self.prefix + str(HOOKCell.cell_count[self.prefix] - 1) + Const.SEP
-            forward_hook, backward_hook = build_hook(self.prefix)
+            forward_pre_hook, forward_hook, backward_hook = build_hook(self.prefix)
+            self.register_forward_pre_hook(forward_pre_hook)
             self.register_forward_hook(forward_hook)
             self.register_backward_hook(backward_hook)
 

@@ -64,6 +64,9 @@ class ApiPyNativeSelfCheck:
         api_register.api_set_hook_func()
 
     def build_hook(self, api_name_with_id):
+        def pre_hook(cell, input_data):
+            return None
+
         def forward_hook(api_name_with_id, cell, input_data, output_data):
             ret = None
 
@@ -93,7 +96,7 @@ class ApiPyNativeSelfCheck:
         def wrap_backward_hook(cell, grad_input, grad_output):
             return backward_hook(cell, grad_input, grad_output)
 
-        return wrap_forward_hook, wrap_backward_hook
+        return pre_hook, wrap_forward_hook, wrap_backward_hook
 
     def store_original_func(self):
         for api_name in self.api_list:

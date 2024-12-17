@@ -135,6 +135,34 @@ class PrimitiveHookService:
                 return tuple(hooked_outputs)
             return out
 
+        def pre_forward_hook(primitive_name, primitive_instance, args, kwargs):
+            module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
+            try:
+                self.service_instance.data_collector.forward_input_data_collect(
+                    primitive_name,
+                    primitive_instance,
+                    os.getpid(),
+                    module_input_output
+                )
+            except Exception as exception:
+                logger.error(f"This is a primitive op dump error during forward input data collection: {exception}, "
+                             f"primitive_name: {primitive_name}")
+                raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
+
+        def post_forward_hook(primitive_name, primitive_instance, args, kwargs, output):
+            module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
+            try:
+                self.service_instance.data_collector.forward_output_data_collect(
+                    primitive_name,
+                    primitive_instance,
+                    os.getpid(),
+                    module_input_output
+                )
+            except Exception as exception:
+                logger.error(f"This is a primitive op dump error during forward output data collection: {exception}, "
+                             f"primitive_name: {primitive_name}")
+                raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
+
         def wrapped_primitive_call(instance_self, *args, **kwargs):
             """
             包装后的 primitive 调用函数，添加输入和输出的 hook。
@@ -163,27 +191,17 @@ class PrimitiveHookService:
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.INPUT_HOOK_ERROR) from exception
 
+            forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
+            self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
+
+            pre_forward_hook(forward_primitive_name, instance_self, hooked_inputs, kwargs)
             try:
                 out = origin_func(*hooked_inputs, **kwargs)
             except Exception as exception:
                 logger.error(f"This is a primitive op dump error during function call: {exception}, "
                              f"primitive_name: {primitive_name}")
                 raise DumpException(DumpException.FUNCTION_CALL_ERROR) from exception
-
-            forward_primitive_name = f"{updated_primitive_name}{Const.SEP}{Const.FORWARD}"
-            self.service_instance.data_collector.update_api_or_module_name(forward_primitive_name)
-            if self.service_instance.data_collector:
-                module_input_output = ModuleForwardInputsOutputs(args=hooked_inputs, kwargs=kwargs, output=out)
-                try:
-                    self.service_instance.data_collector.forward_data_collect(forward_primitive_name, instance_self,
-                                                                              os.getpid(), module_input_output)
-                except Exception as exception:
-                    logger.error(f"This is a primitive op dump error during forward data collection: {exception}, "
-                                 f"primitive_name: {primitive_name}")
-                    raise DumpException(DumpException.FORWARD_DATA_COLLECTION_ERROR) from exception
-
-                if self.service_instance.data_collector.if_return_forward_new_output():
-                    out = self.service_instance.data_collector.get_forward_new_output()
+            post_forward_hook(forward_primitive_name, instance_self, hooked_inputs, kwargs, out)
 
             try:
                 out = hook_primitive_outputs(out, captured_grads_output, updated_primitive_name)

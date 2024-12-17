@@ -343,20 +343,20 @@ class TestOverflowCheckDataProcessor(unittest.TestCase):
         self.processor.real_overflow_nums = 1
         self.assertFalse(self.processor.is_terminated)
 
-    def test_analyze_pre_forward_inplace(self):
-        with patch.object(BaseDataProcessor, "analyze_pre_forward_inplace", return_value={"name": 1}):
-            api_info = self.processor.analyze_pre_forward_inplace("name", "module_input_output")
-            self.assertEqual(self.processor.cached_inplace_api_info, {"name": 1})
+    def test_analyze_forward_input(self):
+        with patch.object(BaseDataProcessor, "analyze_forward_input", return_value={"name": 1}):
+            api_info = self.processor.analyze_forward_input("name", "module","module_input_output")
+            self.assertEqual(self.processor.cached_api_info, {"name": 1})
             self.assertIsNone(api_info)
 
-    def test_analyze_forward_inplace(self):
+    def test_analyze_forward_output(self):
         def func(_):
             self.processor.has_overflow = True
 
-        with patch.object(BaseDataProcessor, "analyze_forward_inplace", return_value={"name": {"output": 2}}), \
+        with patch.object(BaseDataProcessor, "analyze_forward_output", return_value={"name": {"output": 2}}), \
                 patch.object(OverflowCheckDataProcessor, "handle_overflow", new=func):
-            self.processor.cached_inplace_api_info = {"name": {"intput": 1}}
-            api_info = self.processor.analyze_forward_inplace("name", "module_input_output")
+            self.processor.cached_api_info = {"name": {"intput": 1}}
+            api_info = self.processor.analyze_forward_output("name", "module", "module_input_output")
             self.assertEqual(api_info, {"name": {"intput": 1, "output": 2}})
 
     def test_analyze_forward(self):
@@ -453,18 +453,18 @@ class TestFreeBenchmarkDataProcessor(unittest.TestCase):
         self.data_writer.write_data_to_csv.assert_not_called()
 
     @patch('msprobe.pytorch.free_benchmark.FreeBenchmarkCheck.pre_forward')
-    def test_analyze_pre_forward(self, mock_pre_forward):
+    def test_analyze_forward_input(self, mock_pre_forward):
         module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=None)
-        self.processor.analyze_pre_forward('test_pre_forward', None, module_io)
+        self.processor.analyze_forward_input('test_analyze_forward_input', None, module_io)
         mock_pre_forward.assert_called_once()
 
     @patch('msprobe.pytorch.free_benchmark.FreeBenchmarkCheck.forward', return_value=(None, []))
-    def test_analyze_forward(self, mock_forward):
+    def test_analyze_forward_output(self, mock_forward):
         module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=(4, 5))
-        self.processor.analyze_forward('test_forward', None, module_io)
+        self.processor.analyze_forward_output('test_analyze_forward_output', None, module_io)
         mock_forward.assert_called_once()
 
-    def test_analyze_forward_if_fix_branch(self):
+    def test_analyze_forward_output_if_fix_branch(self):
         self.processor.checker = MagicMock()
         name = "test_module"
         module = MagicMock()
@@ -477,7 +477,7 @@ class TestFreeBenchmarkDataProcessor(unittest.TestCase):
         unequal_rows = []
         self.processor.checker.forward.return_value = (new_output, unequal_rows)
         self.processor.checker.if_fix.return_value = True
-        self.processor.analyze_forward(name, module, module_input_output)
+        self.processor.analyze_forward_output(name, module, module_input_output)
         self.processor.checker.if_fix.assert_called_once()
         self.assertTrue(self.processor._return_forward_new_output)
         self.assertEqual(self.processor._forward_new_output, new_output)
@@ -504,7 +504,7 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
     @patch.object(logger, 'warning')
     def test_analyze_pre_forward_with_gpu(self, mock_logger_warning, mock_is_gpu):
         mock_is_gpu = True
-        self.processor.analyze_pre_forward("test_api_name", None, None)
+        self.processor.analyze_forward_input("test_api_name", None, None)
         mock_logger_warning.assert_called_with(
             "The current environment is not a complete NPU environment, and kernel dump cannot be used.")
         self.assertFalse(self.processor.enable_kernel_dump)
@@ -516,7 +516,7 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
         self.config.is_backward_kernel_dump = True
         mock_module = MagicMock()
         mock_module_input_output = MagicMock()
-        self.processor.analyze_pre_forward("test_api_name", mock_module, mock_module_input_output)
+        self.processor.analyze_forward_input("test_api_name", mock_module, mock_module_input_output)
         mock_module.forward.assert_called_once()
         mock_analyze_element.assert_called()
         mock_logger_warning.assert_called_with("The kernel dump does not support the test_api_name API.")
@@ -527,7 +527,7 @@ class TestKernelDumpDataProcessor(unittest.TestCase):
     def test_analyze_forward_successfully(self, mock_logger_info, mock_stop_kernel_dump):
         self.processor.enable_kernel_dump = True
         self.processor.config.is_backward_kernel_dump = False
-        self.processor.analyze_forward('test_api_name', None, None)
+        self.processor.analyze_forward_output('test_api_name', None, None)
         self.assertFalse(self.processor.enable_kernel_dump)
         mock_stop_kernel_dump.assert_called_once()
         mock_logger_info.assert_called_with("The kernel data of test_api_name is dumped successfully.")
