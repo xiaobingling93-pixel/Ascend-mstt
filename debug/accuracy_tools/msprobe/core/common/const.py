@@ -73,6 +73,7 @@ class Const:
 
     PKL_SUFFIX = ".pkl"
     NUMPY_SUFFIX = ".npy"
+    NUMPY_PATTERN = "*.npy"
     PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
@@ -193,6 +194,18 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+
+    CODE_STACK = 'Code Stack'
+    OP_NAME = 'Op Name'
+    SCOPE_NAME = 'Scope Name'
+    CODE_STACKS = 'Code Stacks'
+    FILE_PATH = 'File Path'
+    NEW_LINE = '\n'
+    CSV_NEWLINE_SEPARATOR = ',\n'
+    # 分隔符常量
+    SCOPE_SEPARATOR = "/"
+    REPLACEMENT_CHARACTER = "_"
+
 
 
 class CompareConst:

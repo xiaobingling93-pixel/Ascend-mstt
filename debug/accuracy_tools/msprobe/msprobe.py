@@ -46,6 +46,7 @@ def main():
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
+    code_mapping_cmd_parser = subparsers.add_parser('code_mapping')
     graph_service_cmd_parser = subparsers.add_parser('graph')
     merge_result_parser = subparsers.add_parser('merge_result')
     _compare_parser(compare_cmd_parser)
@@ -53,6 +54,7 @@ def main():
 
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
+
     if len(sys.argv) < 4:
         parser.print_help()
         sys.exit(0)
@@ -80,6 +82,8 @@ def main():
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import multi_add_api_accuracy_checker_argument
         multi_add_api_accuracy_checker_argument(multi_run_ut_cmd_parser)
+        from msprobe.mindspore.code_mapping.cmd_parser import add_ir_parser_arguments
+        add_ir_parser_arguments(code_mapping_cmd_parser)
 
         _ms_graph_service_parser(graph_service_cmd_parser)
 
@@ -124,6 +128,11 @@ def main():
             mul_api_checker_main(args)
         elif sys.argv[3] == "graph":
             _ms_graph_service_command(args)
+        elif sys.argv[3] == "code_mapping":
+            from msprobe.mindspore.code_mapping.main import code_mapping_main
+            code_mapping_main(args)
+
+
 
 
 if __name__ == "__main__":

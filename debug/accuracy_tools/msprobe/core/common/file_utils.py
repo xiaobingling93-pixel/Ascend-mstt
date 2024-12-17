@@ -537,11 +537,11 @@ def write_csv(data, filepath, mode="a+", malicious_check=False):
     change_mode(filepath, FileCheckConst.DATA_FILE_AUTHORITY)
 
 
-def read_csv(filepath, as_pd=True):
+def read_csv(filepath, as_pd=True, header='infer'):
     check_file_or_directory_path(filepath)
     try:
         if as_pd:
-            csv_data = pd.read_csv(filepath)
+            csv_data = pd.read_csv(filepath, header=header)
         else:
             with FileOpen(filepath, 'r', encoding='utf-8-sig') as f:
                 csv_reader = csv.reader(f, delimiter=',')

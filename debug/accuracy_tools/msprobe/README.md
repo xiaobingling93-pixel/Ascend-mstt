@@ -131,11 +131,18 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [MindSpore 场景的分级可视化构图比对](./docs/22.visualization_MindSpore.md)
 
+
 ### 11 单算子API自动生成脚本
 
 该功能将msprobe工具dump的精度数据进行解析，自动生成单API脚本，用于复现整网中出现的算子问题，降低用户复现问题的成本，供开发分析算子问题。
 
 [PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
+
+### 12 数码关联
+
+该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
+
+[MindSpore 场景的数码关联](./docs/24.code_mapping_Mindspore.md)
 
 ## 🌟 新版本特性
 
