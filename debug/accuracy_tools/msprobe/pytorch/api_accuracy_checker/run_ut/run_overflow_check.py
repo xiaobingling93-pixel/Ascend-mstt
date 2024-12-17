@@ -74,6 +74,9 @@ def check_data_overflow(x):
 def run_overflow_check(forward_file):
     logger.info("start UT test")
     forward_content, _, real_data_path = parse_json_info_forward_backward(forward_file)
+    if real_data_path:
+        dump_path = os.path.dirname(forward_file)
+        real_data_path = os.path.join(dump_path, Const.DUMP_TENSOR_DATA)
     for api_full_name, api_info_dict in tqdm(forward_content.items()):
         if is_unsupported_api(api_full_name, is_overflow_check=True):
             continue
