@@ -134,10 +134,13 @@ def _compare_graph_ranks(input_param, args, step=None):
         except Exception as e:
             logger.error('The folder name format is incorrect, expected rank+number.')
             raise CompareException(CompareException.INVALID_PATH_ERROR) from e
+        # 暂存所有rank的graph，用于匹配rank间的分布式节点
         compare_graph_results.append(result)
 
-    # analyze ranks
+    # 匹配rank间的分布式节点
     DistributedAnalyzer({obj.rank: obj.graph_n for obj in compare_graph_results},
+                        args.overflow_check).distributed_match()
+    DistributedAnalyzer({obj.rank: obj.graph_b for obj in compare_graph_results},
                         args.overflow_check).distributed_match()
 
     for result in compare_graph_results:

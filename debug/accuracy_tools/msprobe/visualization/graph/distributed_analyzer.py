@@ -44,6 +44,7 @@ class DistributedAnalyzer:
         self.graphs = graphs
         self.overflow_check = overflow_check
         self.config = {
+            # 当前通信api名称: 匹配目标通信api名称, 获取rank信息的位置参数或关键字参数, 通信类型, 分布式类型
             'send': ['recv', GraphConst.DST, CommunicationType.SEND.value, DistributedType.P2P],
             'isend': ['irecv', GraphConst.DST, CommunicationType.SEND.value, DistributedType.P2P],
             'recv': ['send', GraphConst.SRC, CommunicationType.RECEIVE.value, DistributedType.P2P],
@@ -227,9 +228,7 @@ class DistributedAnalyzer:
         if config_info:
             # 此时为一对多通信或多对一通信
             source_rank = self._get_target_rank(node, rank, config_info[1])
-            if source_rank is None:
-                return
-            if str(source_rank) != str(rank):
+            if source_rank is None or str(source_rank) != str(rank):
                 return
             communications_type = config_info[2]
         group_ranks, group_id = self._get_group_info(node, rank)
@@ -255,7 +254,7 @@ class DistributedAnalyzer:
             # 给当前通信节点添加matched_distributed字段信息
             index = target_node.data.get(GraphConst.OVERFLOW_LEVEL, CompareConst.NAN) if self.overflow_check \
                 else target_node.data.get(GraphConst.JSON_INDEX_KEY, CompareConst.NAN)
-            nodes_info[target_rank] = [index, target_node.id]
+            nodes_info[target_rank] = [str(index), target_node.id]
             if config_info:
                 # 给匹配上的目标节点也添加matched_distributed字段信息
                 self._add_node_matched_distributed(target_node, node, api_name, rank, True)
