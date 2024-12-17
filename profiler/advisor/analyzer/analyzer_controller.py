@@ -615,8 +615,10 @@ class AnalyzerController:
         result_list = []
         profiling_path = PathManager.get_realpath(self.kwargs.get("profiling_path"))
         benchmark_profiling_path = self.kwargs.get("benchmark_profiling_path")
+        PathManager.check_path_owner_consistent([profiling_path])
         if benchmark_profiling_path:
             benchmark_profiling_path = PathManager.get_realpath(benchmark_profiling_path)
+            PathManager.check_path_owner_consistent([benchmark_profiling_path])
 
         if not self._check_profiling_path_valid(profiling_path):
             error_msg = f"Got invalid argument '-d/--profiling_path' {profiling_path}, skip analysis"
@@ -653,8 +655,8 @@ class AnalyzerController:
         if not self._is_cluster:
             job_list = self.single_rank_analysis(profiling_path, benchmark_profiling_path)
         else:
-            self.slow_rank_analyzer = SlowRankAnalyzer(profiling_path)
-            self.slow_link_analyzer = SlowLinkAnalyzer(profiling_path)
+            self.slow_rank_analyzer = SlowRankAnalyzer(profiling_path, output_path=self.kwargs.get("output_path"))
+            self.slow_link_analyzer = SlowLinkAnalyzer(profiling_path, output_path=self.kwargs.get("output_path"))
             job_list = self.do_cluster_analysis(profiling_path, benchmark_profiling_path)
 
         for i, (dimension, scope, interface, kwargs) in enumerate(job_list[::-1]):

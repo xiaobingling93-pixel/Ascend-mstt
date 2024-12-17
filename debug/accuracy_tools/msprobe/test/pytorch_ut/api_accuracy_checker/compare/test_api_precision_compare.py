@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, Mock
 
 import pandas as pd
 
@@ -116,7 +116,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         )
 
         self.npu_data = pd.DataFrame({
-            'API_NAME': ['api1.forward', 'api1.backward'],
+            'API_NAME': ['torch.abs.0.forward.output.0', 'torch.matmul.0.forward.output.0'],
             'DEVICE_DTYPE': ['float32', 'float32'],
             'ERROR_RATE': ['0', '0.1'],
             'SMALL_VALUE_ERROR_RATE': ['0.01', '0.02'],
@@ -127,7 +127,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         })
 
         self.gpu_data = pd.DataFrame({
-            'API_NAME': ['api1.forward', 'api1.backward'],
+            'API_NAME': ['torch.abs.0.forward.output.0', 'torch.matmul.0.forward.output.0'],
             'DEVICE_DTYPE': ['float32', 'float32'],
             'ERROR_RATE': ['0', '0'],
             'SMALL_VALUE_ERROR_RATE': ['0.01', '0.01'],
@@ -136,6 +136,43 @@ class TestApiPrecisionCompare(unittest.TestCase):
             'MEAN_REL_ERR': ['0.1', '0.1'],
             'EB': ['0.1', '0.1']
         })
+        
+        self.test_data = {
+            'API Name': ['torch.abs.0.forward.output.0'],
+            'DEVICE Dtype': ['float32'],
+            '小值域错误占比': ['0'],
+            '均方根误差': ['0'],
+            '相对误差最大值': ['0'],
+            '相对误差平均值': ['0'],
+            '误差均衡性': ['0'],
+            '二进制一致错误率': ['0'],
+            'inf/nan错误率': ['0'],
+            '相对误差错误率': ['0'],
+            '绝对误差错误率': ['0'],
+            'ULP误差平均值': ['0'],
+            'ULP误差大于阈值占比': ['0'],
+            '双千指标': ['0'],
+            'Message': ['error']
+        }
+        
+        self.test_data_2 = {
+            'API Name': ['torch.abs.0.forward.output.0', 'torch.matmul.0.forward.output.0', 
+                         'torch.matmul.0.backward.output.0', 'torch.add.0.forward.output.0'],
+            'DEVICE Dtype': ['torch.float32', 'torch.float32', 'torch.float32', 'torch.float64'],
+            '小值域错误占比': ['0', '0', '0', '0'],
+            '均方根误差': ['0', '0', '0', '0'],
+            '相对误差最大值': ['0', '0', '0', '0'],
+            '相对误差平均值': ['0', '0', '0', '0'],
+            '误差均衡性': ['0', '0', '0', '0'],
+            '二进制一致错误率': ['0', '0', '0', '0'],
+            'inf/nan错误率': ['0', '0', '0', '0'],
+            '相对误差错误率': ['0', '0', '0', '0'],
+            '绝对误差错误率': ['0', '0', '0', '0'],
+            'ULP误差平均值': ['0', '0', '0', '0'],
+            'ULP误差大于阈值占比': ['0', '0', '0', '0'],
+            '双千指标': ['0', '0', '0', '0'],
+            'Message': ['error', 'pass', 'error', 'pass']
+        }
         
         self.api_name = "test_api"
         self.npu_precision = {
@@ -157,6 +194,35 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.ulp_standard = ULPStandard(self.api_name, self.npu_precision, self.gpu_precision)
         self.benchmark_standard = BenchmarkStandard(self.api_name, self.npu_precision, self.gpu_precision)
 
+        # 创建 DataFrame
+        self.npu_data = pd.DataFrame(self.test_data)
+        self.gpu_data = pd.DataFrame(self.test_data)
+        
+        self.npu_data_2 = pd.DataFrame(self.test_data_2)
+        self.gpu_data_2 = pd.DataFrame(self.test_data_2)
+    
+        # 使用第一行数据作为测试用例
+        self.row_npu = self.npu_data.iloc[0]
+        self.row_gpu = self.gpu_data.iloc[0]
+
+        # 添加 compare_column
+        self.compare_column = MagicMock()
+        self.compare_column.api_name = MagicMock(return_value="test_api")
+
+    def test_ulp_standard_get_result(self):
+        self.ulp_standard.get_result()
+        self.assertEqual(self.ulp_standard.mean_ulp_err, 0.1)
+        self.assertEqual(self.ulp_standard.ulp_err_proportion, 0.05)
+        self.assertEqual(self.ulp_standard.ulp_err_status, CompareConst.PASS)
+    
+    def test_ulp_standard_get_ulp_status_fp16(self):
+        result = self.ulp_standard._get_ulp_status(torch.float16)
+        self.assertEqual(result, CompareConst.PASS)
+
+    def test_ulp_standard_get_ulp_status_fp32(self):
+        result = self.ulp_standard._get_ulp_status(torch.float32)
+        self.assertEqual(result, CompareConst.PASS)
+        
     def test_benchmark_standard_calc_ratio(self):
         column_name = "TEST_COLUMN"
         default_value = 0
@@ -281,6 +347,229 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.assertEqual(result['abs_err_result'], CompareConst.PASS)
         self.assertEqual(result['absolute_threshold_result'], CompareConst.ERROR)
 
+    def test_api_precision_compare(self):
+        # 准备测试目录和文件
+        base_path = 'test_compare_tmp'
+        os.makedirs(base_path, exist_ok=True)
+        
+        # 创建测试用的CSV文件
+        npu_csv = os.path.join(base_path, 'npu.csv')
+        gpu_csv = os.path.join(base_path, 'gpu.csv')
+        result_csv = os.path.join(base_path, 'result.csv')
+        details_csv = os.path.join(base_path, 'details.csv')
+        
+        # 将测试数据写入CSV文件
+        df = pd.DataFrame(self.test_data)
+        df.to_csv(npu_csv, index=False)
+        df.to_csv(gpu_csv, index=False)
+        
+        try:
+            # 执比较操作
+            config = CompareConfig(npu_csv, gpu_csv, result_csv, details_csv)
+            api_precision_compare(config)
+            
+            # 验证结果文件是否生成
+            self.assertTrue(os.path.exists(result_csv))
+            self.assertTrue(os.path.exists(details_csv))
+            
+            # 读取并验证结果
+            result_df = pd.read_csv(result_csv)
+            self.assertFalse(result_df.empty)
+            
+            details_df = pd.read_csv(details_csv)
+            self.assertFalse(details_df.empty)
+            
+        finally:
+            # 清理测试文件
+            for file_path in [npu_csv, gpu_csv, result_csv, details_csv]:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            if os.path.exists(base_path):
+                os.rmdir(base_path)
+
+    def test_online_api_precision_compare(self):
+        # 准备测试目录和文件
+        base_path = 'test_online_compare_tmp'
+        os.makedirs(base_path, exist_ok=True)
+        
+        # 创建测试用的CSV文件
+        npu_csv = os.path.join(base_path, 'npu.csv')
+        gpu_csv = os.path.join(base_path, 'gpu.csv')
+        result_csv = os.path.join(base_path, 'results_rank1.csv')
+        details_csv = os.path.join(base_path, 'details_rank1.csv')
+        
+        # 准备在线比较的配置
+        online_config = MagicMock()
+        online_config.rank = 1
+        online_config.result_csv_path = os.path.join(base_path, "results_rank*.csv")
+        online_config.details_csv_path = os.path.join(base_path, "details_rank*.csv")
+        
+        # 将测试数据写入CSV文件
+        df = pd.DataFrame(self.test_data)
+        df.to_csv(npu_csv, index=False)
+        df.to_csv(gpu_csv, index=False)
+        
+        # 设置online_config的数据
+        online_config.npu_data = pd.read_csv(npu_csv)
+        online_config.gpu_data = pd.read_csv(gpu_csv)
+        
+        try:
+            # 执行在线比较
+            online_api_precision_compare(online_config)
+            
+            # 验证结果文件是否生成
+            self.assertTrue(os.path.exists(result_csv))
+            self.assertTrue(os.path.exists(details_csv))
+            
+            # 读取并验证结果
+            result_df = pd.read_csv(result_csv)
+            self.assertFalse(result_df.empty)
+            
+            details_df = pd.read_csv(details_csv)
+            self.assertFalse(details_df.empty)
+            
+            # 验证文件权限
+            self.assertEqual(os.stat(result_csv).st_mode & 0o777, FileCheckConst.DATA_FILE_AUTHORITY)
+            self.assertEqual(os.stat(details_csv).st_mode & 0o777, FileCheckConst.DATA_FILE_AUTHORITY)
+            
+        finally:
+            # 清理测试文件
+            for file_path in [npu_csv, gpu_csv, result_csv, details_csv]:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            if os.path.exists(base_path):
+                os.rmdir(base_path)
+                
+    def test_skip_due_to_empty_output(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = ' '
+        api_name = "abs"
+        result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+        self.assertEqual(result, CompareConst.SKIP)
+
+    def test_thousandth_standard(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = 'torch.float16'
+        api_name = "conv2d"
+        with patch(
+            'msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.record_thousandth_threshold_result', 
+                   return_value=CompareConst.PASS) as mock_method:
+            result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+            self.assertEqual(result, CompareConst.PASS)
+            mock_method.assert_called_with(self.compare_column, self.row_npu)
+
+    def test_binary_consistency(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = 'torch.float16'
+        api_name = "abs"
+        with patch(
+            'msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.record_binary_consistency_result', 
+                   return_value=CompareConst.PASS) as mock_method:
+            result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+            self.assertEqual(result, CompareConst.PASS)
+            mock_method.assert_called_with(api_name, self.compare_column, self.row_npu)
+
+    def test_absolute_threshold(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = 'torch.float16'
+        api_name = "mul"
+        with patch(
+            'msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.record_absolute_threshold_result', 
+                   return_value=CompareConst.PASS) as mock_method:
+            result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+            self.assertEqual(result, CompareConst.PASS)
+            mock_method.assert_called_with(self.compare_column, self.row_npu)
+
+    def test_ulp_standard(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = "torch.float16"
+        api_name = "matmul"
+        with patch(
+            'msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.record_ulp_compare_result', 
+                   return_value=CompareConst.PASS) as mock_method:
+            with patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.ULPStandard', 
+                      return_value=Mock()) as mock_ulp:
+                result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+                self.assertEqual(result, CompareConst.PASS)
+                mock_ulp.assert_called_with(self.row_npu[ApiPrecisionCompareColumn.API_NAME], 
+                                            self.row_npu, self.row_gpu)
+
+    def test_benchmark_compare(self):
+        self.row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] = "torch.float16"
+        api_name = "mean"
+        with patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.record_benchmark_compare_result', 
+                   return_value=CompareConst.PASS) as mock_method:
+            with patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.BenchmarkStandard', 
+                      return_value=Mock()) as mock_benchmark:
+                result = get_api_status(self.row_npu, self.row_gpu, api_name, self.compare_column)
+                self.assertEqual(result, CompareConst.PASS)
+                mock_benchmark.assert_called_with(self.row_npu[ApiPrecisionCompareColumn.API_NAME], 
+                                                  self.row_npu, self.row_gpu)
+
+    def test_record_binary_consistency_result_pass(self):
+        self.row_npu[ApiPrecisionCompareColumn.ERROR_RATE] = "0.0"
+        self.compare_column.ERROR = CompareConst.PASS
+        
+        result = record_binary_consistency_result(self.api_name, self.compare_column, self.row_npu)
+        
+        self.assertEqual(result, CompareConst.PASS)
+        self.assertEqual(self.compare_column.compare_algorithm, "二进制一致法")
+
+    def test_record_binary_consistency_result_error(self):
+        self.row_npu[ApiPrecisionCompareColumn.ERROR_RATE] = "2.0"
+        self.compare_column.ERROR = CompareConst.ERROR
+        
+        result = record_binary_consistency_result(self.api_name, self.compare_column, self.row_npu)
+        
+        self.assertEqual(result, CompareConst.ERROR)
+        self.assertIn("ERROR: 二进制一致错误率超过阈值\n", self.compare_column.compare_message)
+
+    def test_record_absolute_threshold_result(self):
+        self.row_npu = {
+            ApiPrecisionCompareColumn.INF_NAN_ERROR_RATIO: "0.0",
+            ApiPrecisionCompareColumn.REL_ERR_RATIO: "0.0",
+            ApiPrecisionCompareColumn.ABS_ERR_RATIO: "0.0"
+        }
+        self.compare_column = MagicMock()
+        
+        result = record_absolute_threshold_result(self.compare_column, self.row_npu)
+        
+        self.assertEqual(result, CompareConst.PASS)
+        self.assertIn("绝对阈值法", self.compare_column.compare_algorithm)
+
+    def test_record_benchmark_compare_result(self):
+        bs = MagicMock()
+        bs.get_result = MagicMock()
+        bs.small_value_err_status = CompareConst.PASS
+        bs.final_result = CompareConst.PASS
+        compare_column = MagicMock()
+        
+        result = record_benchmark_compare_result(compare_column, bs)
+        
+        self.assertEqual(result, CompareConst.PASS)
+        self.assertIn("标杆比对法", compare_column.compare_algorithm)
+
+    def test_record_ulp_compare_result(self):
+        us = MagicMock()
+        us.get_result = MagicMock()
+        us.ulp_err_status = CompareConst.PASS
+        compare_column = MagicMock()
+        
+        result = record_ulp_compare_result(compare_column, us)
+        
+        self.assertEqual(result, CompareConst.PASS)
+        self.assertIn("ULP误差比对法", compare_column.compare_algorithm)
+
+    def test_record_thousandth_threshold_result(self):
+        self.row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH] = 0.999
+        self.compare_column.rel_err_thousandth = 0.999
+        self.compare_column.rel_err_thousandth_status = CompareConst.PASS
+        
+        result = record_thousandth_threshold_result(self.compare_column, self.row_npu)
+        
+        self.assertEqual(result, CompareConst.PASS)
+        self.assertEqual(self.compare_column.compare_algorithm, "双千指标法")
+        self.assertEqual(self.compare_column.compare_message, "")
+
+    @patch('msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare.write_detail_csv')
+    def test_analyse_csv(self, mock_write_detail_csv):
+        analyse_csv(self.npu_data_2, self.gpu_data_2, self.config)
+        mock_write_detail_csv.assert_called()
 
 if __name__ == '__main__':
     unittest.main()

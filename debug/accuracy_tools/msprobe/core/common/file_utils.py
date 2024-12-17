@@ -22,7 +22,6 @@ import re
 import shutil
 from datetime import datetime, timezone
 from dateutil import parser
-import OpenSSL
 import yaml
 import numpy as np
 import pandas as pd
@@ -419,18 +418,34 @@ def save_yaml(yaml_path, data):
 
 
 def save_excel(path, data):
+    def validate_data(data):
+        """Validate that the data is a DataFrame or a list of (DataFrame, sheet_name) pairs."""
+        if isinstance(data, pd.DataFrame):
+            return "single"
+        elif isinstance(data, list):
+            if all(isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], pd.DataFrame) for item in data):
+                return "list"
+        raise ValueError("Data must be a DataFrame or a list of (DataFrame, sheet_name) pairs.")
+
     check_path_before_create(path)
     path = os.path.realpath(path)
+
+    # 验证数据类型
+    data_type = validate_data(data)
+
     try:
-        if isinstance(data, pd.DataFrame):
+        if data_type == "single":
             data.to_excel(path, index=False)
-        else:
-            logger.error(f'unsupported data type.')
-            return
+        elif data_type == "list":
+            with pd.ExcelWriter(path) as writer:
+                for data_df, sheet_name in data:
+                    data_df.to_excel(writer, sheet_name=sheet_name, index=False)
     except Exception as e:
         logger.error(f'Save excel file "{os.path.basename(path)}" failed.')
         raise RuntimeError(f"Save excel file {path} failed.") from e
     change_mode(path, FileCheckConst.DATA_FILE_AUTHORITY)
+
+
 
 
 def move_file(src_path, dst_path):
@@ -630,6 +645,7 @@ def check_crt_valid(pem_path):
     Raises:
     RuntimeError: If the SSL certificate is invalid or expired.
     """
+    import OpenSSL
     try:
         with FileOpen(pem_path, "r") as f:
             pem_data = f.read()
@@ -645,3 +661,13 @@ def check_crt_valid(pem_path):
     now_utc = datetime.now(tz=timezone.utc)
     if cert.has_expired() or not (pem_start <= now_utc <= pem_end):
         raise RuntimeError(f"The SSL certificate has expired and needs to be replaced, {pem_path}")
+
+
+def read_xlsx(file_path):
+    check_file_or_directory_path(file_path)
+    try:
+        result_df = pd.read_excel(file_path, keep_default_na=False)
+    except Exception as e:
+        logger.error(f"The xlsx file failed to load. Please check the path: {file_path}.")
+        raise RuntimeError(f"Read xlsx file {file_path} failed.") from e
+    return result_df

@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from msprobe.core.common.const import Const, CompareConst
+from msprobe.core.common.const import Const, CompareConst, FileCheckConst
 from msprobe.core.common.utils import CompareException, check_regex_prefix_format_valid, logger, safe_get_value
 from msprobe.core.common.file_utils import check_file_or_directory_path
 
@@ -467,11 +467,24 @@ def print_compare_ends_info():
     logger.info('*' * total_len)
 
 
+def table_value_is_valid(value: str) -> bool:
+    if not isinstance(value, str):
+        return True
+    try:
+        # -1.00 or +1.00 should be consdiered as digit numbers
+        float(value)
+    except ValueError:
+        # otherwise, they will be considered as formular injections
+        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
+    return True
+
+
 def _compare_parser(parser):
     parser.add_argument("-i", "--input_path", dest="input_path", type=str,
                         help="<Required> The compare input path, a dict json.", required=True)
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
-                        help="<Required> The compare task result out path.", required=True)
+                        help="<Required> The compare task result out path. Default path: ./output", 
+                        required=False, default="./output", nargs="?", const="./output")
     parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
                         help="<optional> Whether to save stack info.", required=False)
     parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
