@@ -41,6 +41,7 @@ from msprobe.core.common.utils import CompareException
 
 def split_json_file(input_file, num_splits, filter_api):
     forward_data, backward_data, real_data_path = parse_json_info_forward_backward(input_file)
+    input_dir = os.path.dirname(os.path.abspath(input_file))
     if filter_api:
         forward_data = preprocess_forward_content(forward_data)
     for data_name in list(forward_data.keys()):
@@ -71,7 +72,7 @@ def split_json_file(input_file, num_splits, filter_api):
                 **backward_data
             }
         }
-        split_filename = f"temp_part{i}.json"
+        split_filename = os.path.join(input_dir, f"temp_part{i}.json")
         save_json(split_filename, temp_data)
         split_files.append(split_filename)
 

@@ -82,18 +82,12 @@ class TestMsprobeFunctions(unittest.TestCase):
         self.assertEqual(rank, 0)
         mock_get_rank.assert_called_once()
 
-    @patch('mindspore.Tensor')
-    def test_convert_bf16_to_fp32(self, mock_tensor):
-        mock_tensor.dtype = ms.bfloat16
-        mock_tensor.to.return_value = mock_tensor
-        result = convert_bf16_to_fp32(mock_tensor)
-        self.assertEqual(result, mock_tensor)
-        mock_tensor.to.assert_called_once_with(ms.float32)
-
-        # Test when tensor is not bfloat16
-        mock_tensor.dtype = ms.float32
-        result = convert_bf16_to_fp32(mock_tensor)
-        self.assertEqual(result, mock_tensor)
+    def test_convert_bf16_to_fp32(self):
+        original_tensor = ms.Tensor(np.array([1.5, 2.5, 3.5]), dtype=ms.bfloat16)
+        converted_tensor = convert_bf16_to_fp32(original_tensor)
+        self.assertEqual(converted_tensor.dtype, ms.float32)
+        np.testing.assert_array_almost_equal(
+            converted_tensor.asnumpy(), np.array([1.5, 2.5, 3.5], dtype=np.float32))
 
     def test_convert_to_int(self):
         self.assertEqual(convert_to_int("123"), 123)
