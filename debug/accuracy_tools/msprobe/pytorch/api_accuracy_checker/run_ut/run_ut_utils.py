@@ -52,6 +52,7 @@ class BackwardMessage:
     UNSUPPORT_BACKWARD_MESSAGE = "function with out=... arguments don't support automatic differentiation, " \
                                   "skip backward."
     NO_BACKWARD_RESULT_MESSAGE = "This API does not have backward input data, skip backward."
+    UNSUPPORT_API_MESSAGE = "This API does not support backward ut, skip backward."
 
 
 class UtDataInfo:

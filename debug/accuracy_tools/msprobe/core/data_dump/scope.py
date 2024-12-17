@@ -123,6 +123,7 @@ class RangeScope(BaseScope, ABC):
         super().__init__(*args)
         self.in_scope = False
         self.in_list = False
+        self.start_name_set = set()
         self.is_valid = self.check_scope_is_valid()
 
     def check_name_pattern(self, name):
@@ -236,13 +237,14 @@ class MixRangeScope(RangeScope):
         for name in self.api_list:
             if name in module_name:
                 self.in_list = True
+                self.start_name_set.add(module_name)  # 记录每一个开启in_list的module_name
 
     def end_module(self, module_name):
         if self.scope and module_name == self.scope[1]:
             self.in_scope = False
-        for name in self.api_list:
-            if name in module_name:
-                self.in_list = False
+        self.start_name_set.discard(module_name)  # 从集合中删除每一个module_name
+        if not self.start_name_set:  # 如果集合为空，说明当前module_name是最后一个开启in_list的module_name
+            self.in_list = False  # 关闭in_list
 
     def check_api_list(self, api_name):
         if not self.api_list:

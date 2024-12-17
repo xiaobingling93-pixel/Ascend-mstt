@@ -8,7 +8,7 @@ import openpyxl
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 from collections import namedtuple
-from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, csv_value_is_valid, \
+from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
     add_highlight_row_info, update_highlight_err_msg
 from msprobe.core.common.const import CompareConst, Const
 
@@ -180,21 +180,6 @@ class TestUtilsMethods(unittest.TestCase):
         with self.assertRaises(RuntimeError) as context:
             highlight_rows_xlsx(result_df, highlight_dict, file_path)
         self.assertIn("Malicious value", str(context.exception))
-
-    def test_csv_value_is_valid_1(self):
-        result = csv_value_is_valid(1)
-        self.assertTrue(result)
-
-    def test_csv_value_is_valid_2(self):
-        result = csv_value_is_valid("-1.00")
-        self.assertTrue(result)
-
-        result = csv_value_is_valid("+1.00")
-        self.assertTrue(result)
-
-    def test_csv_value_is_valid_3(self):
-        result = csv_value_is_valid("=1.00")
-        self.assertFalse(result)
 
     def test_add_highlight_row_info_existing(self):
         color_list = [(1, ["a", "b"]), (5, ["c"])]

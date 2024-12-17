@@ -255,7 +255,7 @@ class ULPStandard(Standard):
             self.ulp_err_status = CompareConst.ERROR
     
     def _get_ulp_status(self, dtype):
-        if dtype == torch.float32:
+        if dtype == Const.TORCH_FLOAT32:
             if self.mean_ulp_err < 64:
                 return CompareConst.PASS
             elif self.ulp_err_proportion < 0.05:

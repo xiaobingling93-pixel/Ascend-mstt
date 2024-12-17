@@ -26,6 +26,7 @@ from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst, Const
 from msprobe.core.common.utils import safe_get_value
+from msprobe.core.compare.utils import table_value_is_valid
 
 
 class HighlightCheck(abc.ABC):
@@ -255,7 +256,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     # write header
     logger.info('Initializing Excel file.')
     for j, col_name in enumerate(result_df.columns, start=1):
-        if not csv_value_is_valid(col_name):
+        if not table_value_is_valid(col_name):
             raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
         ws.cell(row=1, column=j, value=col_name)
 
@@ -263,7 +264,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
         for j, value in enumerate(row[1], start=1):
             if not isinstance(value, (float, int)) or isinstance(value, bool):
                 value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-            if not csv_value_is_valid(value):
+            if not table_value_is_valid(value):
                 raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
                                    f"{file_path}.")
             ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
@@ -314,15 +315,3 @@ def update_highlight_err_msg(result_df, highlight_dict):
                 red_lines_num_set.add(line_index)
 
     result_df[CompareConst.ERROR_MESSAGE] = err_msg
-
-
-def csv_value_is_valid(value: str) -> bool:
-    if not isinstance(value, str):
-        return True
-    try:
-        # -1.00 or +1.00 should be consdiered as digit numbers
-        float(value)
-    except ValueError:
-        # otherwise, they will be considered as formular injections
-        return not bool(re.compile(FileCheckConst.CSV_BLACK_LIST).search(value))
-    return True

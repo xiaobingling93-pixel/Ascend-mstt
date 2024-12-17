@@ -61,6 +61,7 @@ DETAILS_FILE_NAME = "accuracy_checking_details_" + current_time + ".csv"
 
 
 not_backward_list = ['repeat_interleave']
+unsupported_backward_list = ['masked_select']
 
 
 tqdm_params = {
@@ -248,6 +249,10 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
         need_grad = False
         logger.info("%s %s" % (api_full_name, BackwardMessage.NO_BACKWARD_RESULT_MESSAGE))
         backward_message += BackwardMessage.NO_BACKWARD_RESULT_MESSAGE
+    if api_name in unsupported_backward_list:
+        need_grad = False
+        logger.info("%s %s" % (api_full_name, BackwardMessage.UNSUPPORT_API_MESSAGE))
+        backward_message += BackwardMessage.UNSUPPORT_API_MESSAGE
     need_backward = need_backward and need_grad
     if kwargs.get("device"):
         del kwargs["device"]
@@ -497,6 +502,9 @@ def run_ut_command(args):
                                             ability=FileCheckConst.READ_ABLE, file_type=FileCheckConst.JSON_SUFFIX)
         checked_api_info = api_info_file_checker.common_check()
         forward_content, backward_content, real_data_path = parse_json_info_forward_backward(checked_api_info)
+        if real_data_path:
+            dump_path = os.path.dirname(checked_api_info)
+            real_data_path = os.path.join(dump_path, Const.DUMP_TENSOR_DATA)
         if args.filter_api:
             logger.info("Start filtering the api in the api_info_file.")
             forward_content = preprocess_forward_content(forward_content)
