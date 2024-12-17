@@ -78,12 +78,10 @@ class ComputeElement:
         else:
             torch_dtype = dtype_str_to_torch_dtype.get(dtype_str)
 
-        if dtype_str in float_dtype_str_list:
-            middle_dtype = mindspore.float64
-        elif dtype_str in int_dtype_str_list:
+        if dtype_str in int_dtype_str_list:
             middle_dtype = mindspore.int64
         else:
-            middle_dtype = mindspore.uint64
+            middle_dtype = mindspore.float64
         np_ndarray = ms_tensor.astype(middle_dtype).numpy()
         torch_tensor = torch.from_numpy(np_ndarray).to(torch_dtype)
         return torch_tensor
@@ -106,10 +104,10 @@ class ComputeElement:
         else:
             ms_dtype = dtype_str_to_ms_dtype.get(dtype_str)
 
-        if dtype_str in float_dtype_str_list:
-            middle_dtype = torch.float64
-        elif dtype_str in int_dtype_str_list:
+        if dtype_str in int_dtype_str_list:
             middle_dtype = torch.int64
+        else:
+            middle_dtype = torch.float64
         np_ndarray = torch_tensor.to(middle_dtype, copy=True).numpy()
         ms_tensor = mindspore.Tensor.from_numpy(np_ndarray).astype(ms_dtype)
         return ms_tensor

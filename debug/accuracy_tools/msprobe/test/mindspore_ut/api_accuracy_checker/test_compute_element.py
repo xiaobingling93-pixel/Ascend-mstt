@@ -154,7 +154,26 @@ class TestComputeElement(unittest.TestCase):
         pt_parameter = compute_element.get_parameter(tensor_platform=Const.PT_FRAMEWORK)
         self.assertEqual(ms_parameter, mindspore.float32)
         self.assertEqual(pt_parameter, torch.float32)
-        
+
+    def test_transfer_to_torch_tensor(self):
+        ms_tensor_2_torch_tensor_mapping = {
+            mindspore.Tensor([1, 2, 3], dtype=mindspore.uint8): torch.tensor([1, 2, 3], dtype=torch.uint8),
+            mindspore.Tensor([1, 2, 3], dtype=mindspore.float32): torch.tensor([1, 2, 3], dtype=torch.float32)
+        }
+        for ms_tensor, torch_tensor in ms_tensor_2_torch_tensor_mapping.items():
+            real_torch_tensor = ComputeElement.transfer_to_torch_tensor(ms_tensor)
+            self.assertTrue((real_torch_tensor == torch_tensor).all())
+            self.assertEqual(real_torch_tensor.dtype, torch_tensor.dtype)
+
+    def test_transfer_to_mindspore_tensor(self):
+        ms_tensor_2_torch_tensor_mapping = {
+            mindspore.Tensor([1, 2, 3], dtype=mindspore.uint8): torch.tensor([1, 2, 3], dtype=torch.uint8),
+            mindspore.Tensor([1, 2, 3], dtype=mindspore.float32): torch.tensor([1, 2, 3], dtype=torch.float32)
+        }
+        for ms_tensor, torch_tensor in ms_tensor_2_torch_tensor_mapping.items():
+            real_ms_tensor = ComputeElement.transfer_to_mindspore_tensor(torch_tensor)
+            self.assertTrue((real_ms_tensor == ms_tensor).all())
+            self.assertEqual(real_ms_tensor.dtype, ms_tensor.dtype)
 
 
 if __name__ == '__main__':
