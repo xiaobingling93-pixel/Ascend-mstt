@@ -157,17 +157,9 @@ inplace_tensor_op:
   - trunc_
   - unsqueeze_
   - xlogy_
-  - zero_
-  - swapdims_
   - bitwise_left_shift_
-  - uniform_
-  - detach_
-  - rename_
-  - random_
   - bitwise_right_shift_
   - arctan2_
-  - sparse_resize_
-  - sparse_resize_and_clear_
 
 inplace_torch_op:
   - _add_relu_
