@@ -15,11 +15,12 @@
 
 from msprobe.mindspore.code_mapping.graph_parser import Parser
 from msprobe.mindspore.code_mapping.bind import bind_code_info_for_data, write_to_csv
+from msprobe.core.common.file_utils import FileOpen
 
 
 def process(args):
     ir_file_path = args.ir
-    with open(ir_file_path, 'r') as f:
+    with FileOpen(ir_file_path, 'r') as f:
         input_text = f.read()
 
     parser = Parser()
