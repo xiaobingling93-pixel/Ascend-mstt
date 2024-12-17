@@ -59,7 +59,7 @@ export MSPROBE_LOG_LEVEL={x}
 
 ### 0 用前必看
 
-使用工具前，建议先浏览[**工具功能模块简介、适用场景和当前版本局限性**](./docs/23.tool_function_introduction.md)，了解功能特性。
+使用工具前，建议先浏览[**工具功能模块简介、适用场景和当前版本局限性**](./docs/24.tool_function_introduction.md)，了解功能特性。
 
 ### 1 数据采集
 
@@ -131,7 +131,14 @@ MindSpore 动态图场景的[离线预检](./docs/09.accuracy_checker_MindSpore.
 
 [MindSpore 场景的分级可视化构图比对](./docs/22.visualization_MindSpore.md)
 
-### 11 数码关联
+
+### 11 单算子API自动生成脚本
+
+该功能将msprobe工具dump的精度数据进行解析，自动生成单API脚本，用于复现整网中出现的算子问题，降低用户复现问题的成本，供开发分析算子问题。
+
+[PyTorch 单算子API自动生成脚本](./docs/23.generate_operator_PyTorch.md)
+
+### 12 数码关联
 
 该功能只支持 MindSpore 静态图场景，用于将IR图与dump数据进行关联，获取dump数据和代码调用栈的关联关系。
 
