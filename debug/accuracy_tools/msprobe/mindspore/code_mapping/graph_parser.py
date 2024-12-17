@@ -76,7 +76,6 @@ class Parser:
             content.append(char)
         raise ValueError("Mismatched parentheses")
 
-    # check ok
     @staticmethod
     def find_matching_brace(text: str, start_pos: int) -> int:
         stack = []
@@ -89,7 +88,6 @@ class Parser:
                     return i
         raise ValueError("Matching closing brace not found")
 
-    # check ok
     @staticmethod
     def extract_constants(inputs_str: str) -> List[str]:
         constant_pattern = re.compile(r'\b(\w+\(.*?\))')
@@ -204,13 +202,11 @@ class Parser:
             subgraph_info.end = end_pos
             logging.info('Parsed subgraph: %s', subgraph_name)
 
-    # check ok
     def count_nodes(self) -> Tuple[int, int]:
         total_nodes = len(self.nodes)
         total_cnodes = sum(1 for node in self.nodes.values() if node.name.startswith('CNode'))
         return total_nodes, total_cnodes
 
-    # check ok
     def create_backward_map(self):
         for node in self.nodes.values():
             if node.scope and node.scope.startswith("Gradients"):
