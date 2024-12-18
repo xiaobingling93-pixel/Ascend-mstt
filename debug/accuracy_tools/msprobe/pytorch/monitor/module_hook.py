@@ -622,18 +622,11 @@ class TrainerMon:
             logger.info(msg)
 
     def _save_module_struct(self):
-        flag = False
-        if dist.is_initialized():
-            if self.module_rank_list:
-                if dist.get_rank() == min(self.module_rank_list):
-                    flag = True
-            else:
-                if dist.get_rank() == 0:
-                    flag = True
-        else:
-            flag = True
+        save_module_struct = (not dist.is_initialized()
+                              or (self.module_rank_list and dist.get_rank() == min(self.module_rank_list))
+                              or (not self.module_rank_list and dist.get_rank() == 0))
 
-        if flag:
+        if save_module_struct:
             module_struct_file = os.path.join(get_output_base_dir(), 'module_struct.json')
             save_json(module_struct_file, self.module_struct, indent=2)
             logger.info(f"> module struct: {module_struct_file}")
