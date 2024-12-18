@@ -24,7 +24,7 @@ import pytz
 import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
-from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.file_utils import load_json, save_json
 from msprobe.core.common.log import logger
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
@@ -518,9 +518,7 @@ class TrainerMon:
 
             if (self.print_struct and not all(value == {} for value in self.module_struct.values())
                     and not self.struct_printed):
-                self._smallest_rank_print("> module struct:")
-                self._smallest_rank_print(json.dumps(self.module_struct))
-                self.struct_printed = True
+                self._save_module_struct()
                 if not self.cc_log_only:
                     raise Exception("exit after first step when print model struct")
             if self.cc_log_only and context.step > 0:
@@ -622,6 +620,24 @@ class TrainerMon:
                     logger.info(msg)
         else:
             logger.info(msg)
+
+    def _save_module_struct(self):
+        flag = False
+        if dist.is_initialized():
+            if self.module_rank_list:
+                if dist.get_rank() == min(self.module_rank_list):
+                    flag = True
+            else:
+                if dist.get_rank() == 0:
+                    flag = True
+        else:
+            flag = True
+
+        if flag:
+            module_struct_file = os.path.join(get_output_base_dir(), 'module_struct.json')
+            save_json(module_struct_file, self.module_struct, indent=2)
+            logger.info(f"> module struct: {module_struct_file}")
+        self.struct_printed = True
 
     def _is_target_param(self, param_name, param, prefix):
         squash_name = prefix + squash_param_name(param_name)
