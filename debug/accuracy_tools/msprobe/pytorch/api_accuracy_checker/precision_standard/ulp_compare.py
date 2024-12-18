@@ -21,7 +21,7 @@ import torch
 
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare, BasePrecisionCompare
-from msprobe.core.common.const import CompareConst
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import calc_ratio, get_ulp_err
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ApiPrecisionCompareColumn, check_inf_or_nan, \
     is_inf_or_nan
@@ -144,7 +144,7 @@ class UlpPrecisionCompare(BasePrecisionCompare):
         mean_ulp_err = metrics.get(CompareConst.MEAN_ULP_ERR)
         ulp_err_proportion = metrics.get(CompareConst.ULP_ERR_PROPORTION)
         ulp_err_proportion_ratio = metrics.get(CompareConst.ULP_ERR_PROPORTION_RATIO)
-        if dtype == 'torch.float32':
+        if dtype == Const.TORCH_FLOAT32:
             status, final_message = \
                 self._get_fp32_ulp_err_status(mean_ulp_err, ulp_err_proportion, ulp_err_proportion_ratio)
         else:
