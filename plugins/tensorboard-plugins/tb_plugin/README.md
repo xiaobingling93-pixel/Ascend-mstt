@@ -149,7 +149,7 @@
 
   ![Alt text](./docs/images/kernel_view_group_by_statistic.PNG)
 
-  * 选择 Group By 为 All 时，展示算子信息统计表，此表格展示各算子的执行统计信息，字段说明如下：
+  * 选择 Group By 为 Statistic 时，展示算子信息统计表，此表格展示各算子的执行统计信息，字段说明如下：
 
   | 字段名           | 说明  |
   | ---------------- | -------|
