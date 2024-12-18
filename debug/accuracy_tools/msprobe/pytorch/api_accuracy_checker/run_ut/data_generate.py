@@ -28,6 +28,7 @@ from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
 
+
 TORCH_TYPE = ["torch.device", "torch.dtype"]
 TENSOR_DATA_LIST = ["torch.Tensor", "torch.nn.parameter.Parameter"]
 FLOAT_TYPE = [

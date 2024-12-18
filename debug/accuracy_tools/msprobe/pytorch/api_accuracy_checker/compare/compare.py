@@ -24,15 +24,19 @@ from msprobe.core.common.utils import CompareException
 from msprobe.core.common.file_utils import get_json_contents, write_csv
 import torch
 from msprobe.core.common.const import CompareConst
-from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_rmse, get_error_balance, get_max_rel_err, \
-    get_mean_rel_err, get_rel_err, get_abs_err, get_max_abs_err, get_rel_err_ratio, cosine_sim, get_rel_err_origin, \
-    get_small_value_err_ratio, get_finite_and_infinite_mask, get_small_value_mask, check_inf_nan_value, \
-    check_small_value, check_norm_value, get_abs_bench_with_eps, get_ulp_err
+from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_register import StandardRegistry
+from msprobe.pytorch.api_accuracy_checker.precision_standard.absolute_threshold import AbsolutethdCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.binary_consistency import BinaryCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.thousandth_standard import ThousandthStdCompare
+from msprobe.pytorch.api_accuracy_checker.compare.compare_input import CompareInput
+from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_err, get_max_abs_err, get_rel_err_ratio, \
+    cosine_sim, get_rel_err_origin, get_abs_bench_with_eps, compare_bool_tensor
 from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import check_dtype_comparable, \
-    DETAIL_TEST_ROWS, precision_configs, BENCHMARK_COMPARE_SUPPORT_LIST, absolute_standard_api, binary_standard_api, \
-    ulp_standard_api, thousandth_standard_api, apis_threshold
+    DETAIL_TEST_ROWS, BENCHMARK_COMPARE_SUPPORT_LIST
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_basic_api_segments
 from msprobe.pytorch.common.log import logger
 
@@ -66,6 +70,8 @@ class Comparator:
             self.save_path_list = [self.save_path_str.format(rank) for rank in config.online_config.rank_list]
             self.detail_save_path_list = \
                 [self.detail_save_path_str.format(rank) for rank in config.online_config.rank_list]
+
+        self.registry = self._register_compare_func()
 
         if not is_continue_run_ut:
             self.write_csv_title()
@@ -103,22 +109,6 @@ class Comparator:
         return CompareConst.PASS, compare_column, ""
 
     @staticmethod
-    def _compare_bool_tensor(bench_output, device_output):
-        error_nums = (bench_output != device_output).sum()
-        if bench_output.size == 0:
-            return CompareConst.NAN, CompareConst.ERROR, "There is not bench calculation result."
-        error_rate = float(error_nums / bench_output.size)
-        result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
-        return error_rate, result, ""
-
-    @staticmethod
-    def _get_absolute_threshold_attribute(api_name, dtype):
-        small_value_threshold = apis_threshold.get(api_name).get(dtype).get('small_value')
-        small_value_atol = apis_threshold.get(api_name).get(dtype).get('small_value_atol')
-        rtol = apis_threshold.get(api_name).get(dtype).get('rtol')
-        return small_value_threshold, small_value_atol, rtol
-
-    @staticmethod
     def _get_run_ut_detail(test_result):
         """get run_ut detail before write to csv, called by online run_ut"""
         test_rows = []
@@ -143,6 +133,31 @@ class Comparator:
                                 if isinstance(item, float) else item for item in test_subject]
                 test_rows.append([subject] + list(test_subject))
         return test_rows
+
+    @staticmethod
+    def _binary_standard_compare(input_data):
+        binary_compare = BinaryCompare(input_data)
+        binary_compare.compare()
+    
+    @staticmethod
+    def _thousandth_standard_compare(input_data):
+        thousandth_compare = ThousandthStdCompare(input_data)
+        thousandth_compare.compare()
+    
+    @staticmethod
+    def _absolute_standard_compare(input_data):
+        absolute_compare = AbsolutethdCompare(input_data)
+        absolute_compare.compare()
+
+    @staticmethod
+    def _ulp_compare(input_data):
+        ulp_compare = UlpCompare(input_data)
+        ulp_compare.compare()
+    
+    @staticmethod
+    def _benchmark_compare(input_data):
+        benchmark_compare = BenchmarkCompare(input_data)
+        benchmark_compare.compare()
 
     def write_csv_title(self):
         summary_test_rows = [
@@ -230,6 +245,15 @@ class Comparator:
         return fwd_success_status == CompareConst.PASS, bwd_success_status == CompareConst.PASS \
                or bwd_success_status == CompareConst.SPACE
 
+    def _register_compare_func(self):
+        registry = StandardRegistry()
+        registry.register("absolute_threshold", self._absolute_standard_compare)
+        registry.register("binary_consistency", self._binary_standard_compare)
+        registry.register("ulp_compare", self._ulp_compare)
+        registry.register("thousandth_threshold", self._thousandth_standard_compare)
+        registry.register("benchmark", self._benchmark_compare)
+        return registry
+
     def _compare_core_wrapper(self, api_name, bench_output, device_output):
         detailed_result_total = []
         test_final_success = CompareConst.PASS
@@ -312,11 +336,13 @@ class Comparator:
             return CompareConst.ERROR, compare_column, f"Bench out dtype is {bench_output.dtype} but " \
                                                        f"npu output dtype is {device_output.dtype}, cannot compare."
         message = ""
+        if bench_output.size == 0:
+            return CompareConst.ERROR, compare_column, "There is not bench calculation result."
         if bench_output.dtype in [bool, np.uint8, np.int8, np.int16, np.uint16, np.uint32, np.int32,
                                   np.int64, np.uint64]:
             message += f"Compare algorithm is not supported for {bench_output.dtype} data. " \
                        f"Only judged by Error Rate."
-            err_rate, status, msg = self._compare_bool_tensor(bench_output, device_output)
+            err_rate, status, msg = compare_bool_tensor(bench_output, device_output)
             message += msg + "\n"
             compare_column.error_rate = err_rate
             return status, compare_column, message
@@ -325,56 +351,20 @@ class Comparator:
                                                                          compare_column, npu_dtype)
             return status, compare_column, message
 
+    def _perform_comparison(self, api_name, input_data):
+        comparison_func = self.registry.get_comparison_function(api_name, None)
+        comparison_func(input_data)
+            
     def _compare_float_tensor(self, api_name, bench_output, device_output, compare_column, dtype):
         message = ""
-        abs_bench, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
+        _, abs_bench_with_eps = get_abs_bench_with_eps(bench_output, dtype)
         abs_err = get_abs_err(bench_output, device_output)
         rel_err_orign = get_rel_err_origin(abs_err, abs_bench_with_eps)
-        if api_name in thousandth_standard_api:
-            thousand_res, thousand_status = get_rel_err_ratio(rel_err_orign, CompareConst.THOUSAND_RATIO_THRESHOLD)
-            compare_column.rel_err_thousandth = thousand_res
+        input_data = CompareInput(bench_output, device_output, compare_column, dtype, rel_err_orign)
         if str(dtype) in BENCHMARK_COMPARE_SUPPORT_LIST:
-            both_finite_mask, inf_nan_mask = get_finite_and_infinite_mask(bench_output, device_output)
-            if api_name in binary_standard_api:
-                err_rate, _, _ = self._compare_bool_tensor(bench_output, device_output)
-                compare_column.error_rate = err_rate
-            elif api_name in absolute_standard_api:
-                small_value_threshold, small_value_atol, rtol = self._get_absolute_threshold_attribute(
-                    api_name, str(dtype))
-                rel_err = abs_err / abs_bench_with_eps
-                small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value_threshold)
-                normal_value_mask = np.logical_and(both_finite_mask, np.logical_not(small_value_mask))
-                compare_column.inf_nan_error_ratio = check_inf_nan_value(inf_nan_mask, bench_output, device_output,
-                                                                         dtype, rtol)
-                compare_column.rel_err_ratio = check_norm_value(normal_value_mask, rel_err, rtol)
-                compare_column.abs_err_ratio = check_small_value(abs_err, small_value_mask, small_value_atol)
-            elif api_name in ulp_standard_api:
-                if bench_output.size == 0:
-                    compare_column.max_ulp_error = 0
-                    compare_column.mean_ulp_error = 0
-                    compare_column.ulp_error_proportion = 0
-                else:
-                    ulp_err = get_ulp_err(bench_output, device_output, dtype)
-                    compare_column.max_ulp_error = np.max(ulp_err)
-                    compare_column.mean_ulp_error = np.mean(ulp_err)
-                    if dtype == torch.float32:
-                        compare_column.ulp_error_proportion = \
-                        np.sum(ulp_err > CompareConst.ULP_FLOAT32_THRESHOLD) / bench_output.size
-                    else:
-                        compare_column.ulp_error_proportion = \
-                            np.sum(ulp_err > CompareConst.ULP_FLOAT16_THRESHOLD) / bench_output.size
-            else:
-                dtype_config = precision_configs.get(dtype)
-                small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, dtype_config['small_value'][0])
-                abs_err_greater_mask = np.greater(abs_err, dtype_config['small_value_atol'][0])
-                compare_column.small_value_err_ratio = get_small_value_err_ratio(small_value_mask, abs_err_greater_mask)
-                rel_err = get_rel_err(abs_err, abs_bench_with_eps, small_value_mask, inf_nan_mask)
-                compare_column.rmse = get_rmse(abs_err, np.logical_or(inf_nan_mask, small_value_mask))
-                compare_column.eb = get_error_balance(bench_output, device_output)
-                if rel_err.size == 0:
-                    return CompareConst.ERROR, compare_column, "Relative error result list is empty."
-                compare_column.max_rel_error = get_max_rel_err(rel_err)
-                compare_column.mean_rel_error = get_mean_rel_err(rel_err)
+            self._perform_comparison(api_name, input_data)
+        else:
+            message += f"The data type {dtype} is not supported for new precision standard."
 
         cos_res, cos_status, msg = cosine_sim(bench_output, device_output)
         compare_column.cosine_sim = cos_res
