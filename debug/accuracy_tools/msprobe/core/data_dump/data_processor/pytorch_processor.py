@@ -133,6 +133,10 @@ class PytorchDataProcessor(BaseDataProcessor):
         return group_ranks_hash
 
     @staticmethod
+    def is_distributed_op(module):
+        return getattr(module, "op_is_distributed", False)
+
+    @staticmethod
     def _analyze_torch_size(arg):
         return {"type": "torch.Size", "value": list(arg)}
 
@@ -176,6 +180,11 @@ class PytorchDataProcessor(BaseDataProcessor):
         if isinstance(element, (bool, int, float, str, slice, type(Ellipsis))):
             return self._analyze_builtin(element)
         return {}
+
+    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+        if self.is_distributed_op(module):
+            module_input_output.update_output_with_args_and_kwargs()
+        return super().analyze_forward_output(name, module, module_input_output)
 
     def _analyze_tensor(self, tensor, suffix):
         tensor_stat = self.get_stat_info(tensor)
@@ -223,7 +232,7 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         super().__init__(config, data_writer)
         self.has_overflow = False
         self.support_inf_nan = None
-        self.cached_inplace_api_info = {}
+        self.cached_api_info = {}
         self.cached_tensors_and_file_paths = {}
         self.bits_for_overflow = 8
         self.real_overflow_nums = 0
@@ -237,21 +246,21 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
             return True
         return False
 
-    def analyze_pre_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+    def analyze_forward_input(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
         self._is_support_inf_nan()
-        self.cached_inplace_api_info = super().analyze_pre_forward_inplace(name, module_input_output)
+        self.cached_api_info = super().analyze_forward_input(name, module, module_input_output)
         return None
 
-    def analyze_forward_inplace(self, name, module_input_output: ModuleForwardInputsOutputs):
+    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self._is_support_inf_nan()
-        api_info_struct = super().analyze_forward_inplace(name, module_input_output)
-        if name in self.cached_inplace_api_info and name in api_info_struct:
-            self.cached_inplace_api_info[name].update(api_info_struct[name])
+        api_info_struct = super().analyze_forward_output(name, module, module_input_output)
+        if name in self.cached_api_info and name in api_info_struct:
+            self.cached_api_info[name].update(api_info_struct[name])
         elif name in api_info_struct:
-            self.cached_inplace_api_info = api_info_struct
+            self.cached_api_info = api_info_struct
         self.handle_overflow()
-        return self.cached_inplace_api_info if self.has_overflow else None
+        return self.cached_api_info if self.has_overflow else None
 
     def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.has_overflow = False
@@ -264,6 +273,13 @@ class OverflowCheckDataProcessor(PytorchDataProcessor):
         self.has_overflow = False
         self._is_support_inf_nan()
         api_info_struct = super().analyze_backward(name, module, module_input_output)
+        self.handle_overflow()
+        return api_info_struct if self.has_overflow else None
+    
+    def analyze_params(self, name, param_name, grad):
+        self.has_overflow = False
+        self._is_support_inf_nan()
+        api_info_struct = super().analyze_params(name, param_name, grad)
         self.handle_overflow()
         return api_info_struct if self.has_overflow else None
 
@@ -340,10 +356,10 @@ class FreeBenchmarkDataProcessor(PytorchDataProcessor):
             )
         return
 
-    def analyze_pre_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+    def analyze_forward_input(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         self.checker.pre_forward(name, module, self, module_input_output.args, module_input_output.kwargs)
 
-    def analyze_forward(self, name, module, module_input_output: ModuleForwardInputsOutputs):
+    def analyze_forward_output(self, name, module, module_input_output: ModuleForwardInputsOutputs):
         new_output, unequal_rows = self.checker.forward(
             name,
             module,
@@ -388,7 +404,7 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
     def _print_unsupported_log(api_name):
         logger.warning(f"The kernel dump does not support the {api_name} API.")
 
-    def analyze_pre_forward(self, name, module, module_input_output):
+    def analyze_forward_input(self, name, module, module_input_output):
         if not self.enable_kernel_dump:
             return
         if is_gpu:
@@ -413,7 +429,7 @@ class KernelDumpDataProcessor(PytorchDataProcessor):
             return
         self.start_kernel_dump(self.config.kernel_config_path)
 
-    def analyze_forward(self, name, module, module_input_output):
+    def analyze_forward_output(self, name, module, module_input_output):
         if not self.enable_kernel_dump:
             return
         if self.config.is_backward_kernel_dump:

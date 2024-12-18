@@ -25,9 +25,10 @@ class TestModuleForwardInputsOutputs(unittest.TestCase):
         module = ModuleForwardInputsOutputs(args=None, kwargs=None, output=(4, 5, 6))
         self.assertEqual(module.output_tuple, (4, 5, 6))
 
-    def test_concat_args_and_kwargs(self):
+    def test_update_output_with_args_and_kwargs(self):
         module = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3, 'b': 4}, output=None)
-        self.assertEqual(module.concat_args_and_kwargs(), (1, 2, 3, 4))
+        module.update_output_with_args_and_kwargs()
+        self.assertEqual(module.output, (1, 2, 3, 4))
 
 
 class TestModuleBackwardInputsOutputs(unittest.TestCase):
@@ -191,6 +192,33 @@ class TestBaseDataProcessor(unittest.TestCase):
         self.assertFalse(self.processor.is_dump_for_data_mode("backward", "input"))
 
     @patch.object(BaseDataProcessor, 'analyze_element')
+    def test_analyze_forward_input(self, mock_analyze_element):
+        mock_analyze_element.side_effect = lambda args: args
+        module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=None)
+        self.config.data_mode = ["all"]
+        result = self.processor.analyze_forward_input("test_forward_input", None, module_io)
+        expected = {
+            "test_forward_input": {
+                "input_args": (1, 2),
+                "input_kwargs": {'a': 3}
+            }
+        }
+        self.assertEqual(result, expected)
+
+    @patch.object(BaseDataProcessor, 'analyze_element')
+    def test_analyze_forward_output(self, mock_analyze_element):
+        mock_analyze_element.side_effect = lambda args: args
+        module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=(4, 5))
+        self.config.data_mode = ["all"]
+        result = self.processor.analyze_forward_output("test_forward_output", None, module_io)
+        expected = {
+            "test_forward_output": {
+                "output": (4, 5)
+            }
+        }
+        self.assertEqual(result, expected)
+
+    @patch.object(BaseDataProcessor, 'analyze_element')
     def test_analyze_forward(self, mock_analyze_element):
         mock_analyze_element.side_effect = lambda args: args
         module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=(4, 5))
@@ -201,33 +229,6 @@ class TestBaseDataProcessor(unittest.TestCase):
                 "input_args": (1, 2),
                 "input_kwargs": {'a': 3},
                 "output": (4, 5)
-            }
-        }
-        self.assertEqual(result, expected)
-
-    @patch.object(BaseDataProcessor, 'analyze_element')
-    def test_analyze_pre_forward_inplace(self, mock_analyze_element):
-        mock_analyze_element.side_effect = lambda args: args
-        module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=None)
-        self.config.data_mode = ["all"]
-        result = self.processor.analyze_pre_forward_inplace("test_pre_forward", module_io)
-        expected = {
-            "test_pre_forward": {
-                "input_args": (1, 2),
-                "input_kwargs": {'a': 3}
-            }
-        }
-        self.assertEqual(result, expected)
-
-    @patch.object(BaseDataProcessor, 'analyze_element')
-    def test_analyze_forward_inplace(self, mock_analyze_element):
-        mock_analyze_element.side_effect = lambda args: args
-        module_io = ModuleForwardInputsOutputs(args=(1, 2), kwargs={'a': 3}, output=None)
-        self.config.data_mode = ["all"]
-        result = self.processor.analyze_forward_inplace("test_forward_inplace", module_io)
-        expected = {
-            "test_forward_inplace": {
-                "output": (1, 2, 3)
             }
         }
         self.assertEqual(result, expected)

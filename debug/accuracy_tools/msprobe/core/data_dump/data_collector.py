@@ -38,6 +38,7 @@ class DataCollector:
         self.module_processor = DataProcessorFactory.get_module_processor(self.config.framework)
         self.module_count = {}
         self.scope = ScopeFactory(self.config).build_scope()
+        self.backward_module_names = {}
         atexit.register(self.write_json)
 
     @property
@@ -51,10 +52,6 @@ class DataCollector:
     @staticmethod
     def check_scope_and_pid(scope, name, pid):
         return (not scope or scope.check(name)) and pid == os.getpid()
-
-    @staticmethod
-    def is_inplace(module):
-        return getattr(module, "op_is_inplace", False)
 
     def if_return_forward_new_output(self):
         return self.data_processor.if_return_forward_new_output()
@@ -79,32 +76,38 @@ class DataCollector:
         logger.debug(msg)
         self.data_writer.update_data(data_info)
 
-    def pre_forward_data_collect(self, name, module, pid, module_input_output):
-        if self.config.level == Const.LEVEL_L2 and self.check_scope_and_pid(self.scope, name, pid):
-            self.data_processor.analyze_pre_forward(name, module, module_input_output)
+    def forward_input_data_collect(self, name, module, pid, module_input_output):
+        if self.config.task == Const.FREE_BENCHMARK:
+            backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
+            if self.check_scope_and_pid(self.scope, backward_name, pid):
+                self.data_processor.analyze_forward_input(backward_name, module, module_input_output)
             return
 
-        backward_name = name.replace(Const.FORWARD, Const.BACKWARD)
-        if self.check_scope_and_pid(self.scope, backward_name, pid):
-            self.data_processor.analyze_pre_forward(backward_name, module, module_input_output)
-        if not self.is_inplace(module) or not self.check_scope_and_pid(self.scope, name, pid):
+        if not self.check_scope_and_pid(self.scope, name, pid):
             return
-        logger.info(f"API {name} is inplace.")
-        data_info = self.data_processor.analyze_pre_forward_inplace(name, module_input_output)
+
+        data_info = self.data_processor.analyze_forward_input(name, module, module_input_output)
+        if self.config.level == Const.LEVEL_L2:
+            return
+        self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
+
+    def forward_output_data_collect(self, name, module, pid, module_input_output):
+        self.update_construct(name)
+        if not self.check_scope_and_pid(self.scope, name, pid):
+            return
+
+        data_info = self.data_processor.analyze_forward_output(name, module, module_input_output)
+        if self.config.level == Const.LEVEL_L2:
+            return
+        self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def forward_data_collect(self, name, module, pid, module_input_output):
         self.update_construct(name)
         if not self.check_scope_and_pid(self.scope, name, pid):
             return
-        if self.config.level == Const.LEVEL_L2:
-            self.data_processor.analyze_forward(name, module, module_input_output)
-            return
 
-        if not self.is_inplace(module):
-            data_info = self.data_processor.analyze_forward(name, module, module_input_output)
-        else:
-            data_info = self.data_processor.analyze_forward_inplace(name, module_input_output)
+        data_info = self.data_processor.analyze_forward(name, module, module_input_output)
         self.data_writer.update_stack(self.data_processor.analyze_api_call_stack(name))
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
@@ -116,6 +119,11 @@ class DataCollector:
         data_info = self.data_processor.analyze_backward(name, module, module_input_output)
         if self.config.level == Const.LEVEL_L2:
             return
+        # 获取执行反向的模块名称
+        if data_info and name.split(Const.SEP)[0] in Const.MODULE_PREFIX:
+            module_name = name.rsplit(Const.SEP, 2)[0]
+            # 将模块名称加入到反向模块名称集合中，用于梯度收集时判断是否需要收集梯度
+            self.backward_module_names[module_name] = True
         self.handle_data(name, data_info, flush=self.data_processor.is_terminated)
 
     def backward_input_data_collect(self, name, module, pid, module_input_output):
@@ -153,3 +161,13 @@ class DataCollector:
 
     def update_iter(self, current_iter):
         self.data_processor.update_iter(current_iter)
+
+    def params_data_collect(self, name, param_name, pid, data):
+        grad_name = name + Const.SEP + Const.PARAMS_GRAD
+        # 校验scope和pid，以及当前name是否有过反向计算
+        if not self.check_scope_and_pid(self.scope, name, pid) and not self.backward_module_names.get(name):
+            # 如果没有反向计算，则需要清除之前占位写入的grad数据
+            self.data_writer.cache_data.get("data").pop(grad_name, None)
+            return
+        data_info = self.data_processor.analyze_params(grad_name, param_name, data)
+        self.handle_data(grad_name, data_info, flush=self.data_processor.is_terminated)
