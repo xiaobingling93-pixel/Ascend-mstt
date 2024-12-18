@@ -16,6 +16,7 @@
 # limitations under the License.
 
 # 定义比对算法及比对标准
+import math
 import torch
 import numpy as np
 
@@ -228,6 +229,32 @@ def get_ulp_err(bench_output, device_output, dtype):
 def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
     return (device_output.astype(data_type) - bench_output).astype(data_type) * \
             np.exp2(-eb + exponent_num).astype(data_type)
+
+
+def calc_ratio(x, y, default_value):
+    """
+    Calculate the ratio of statistics from the NPU side to the GPU side.
+
+    Args:
+        x (float): The statistic from the NPU side.
+        y (float): The statistic from the GPU side.
+        default_value (float): The default value to use when y is close to 0 and x is not.
+
+    Returns:
+        float: The ratio of the statistics x and y.
+
+    Note:
+        If y is close to 0, the function returns the default value unless x is also close to 0, in which case 
+        it returns 1.0.
+        Otherwise, it returns the absolute value of x divided by y.
+    """
+    if math.isclose(y, 0.0, abs_tol=1e-9):
+        if math.isclose(x, 0.0, abs_tol=1e-9):
+            return 1.0
+        else:
+            return default_value
+    else:
+        return abs(x / y)
 
 
 def compare_bool_tensor(bench_output, device_output):

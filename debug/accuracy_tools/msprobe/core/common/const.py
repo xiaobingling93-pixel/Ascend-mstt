@@ -258,12 +258,53 @@ class CompareConst:
     KWARGS_STRUCT = "kwargs_struct"
     OUTPUT_STRUCT = "output_struct"
     SUMMARY = "summary"
+    COMPARE_RESULT = "compare_result"
+    COMPARE_MESSAGE = "compare_message"
     MAX_EXCEL_LENGTH = 1048576
     YES = "Yes"
     NO = "No"
     STATISTICS_INDICATOR_NUM = 4
     EPSILON = 1e-10
     COMPARE_ENDS_SUCCESSFULLY = "msprobe compare ends successfully."
+    DEFAULT_RATIO_VALUE = 10000
+    THOUSANDTH_PASS_VALUE = 0.999
+    ZERO_SHAPE = '(0,)'
+    
+    BENCHMARK_COMPARE_ALGORITHM_NAME = "标杆比对法"
+    ULP_COMPARE_ALGORITHM_NAME = "ULP误差比对法"
+    BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
+    ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
+    THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
+    
+    ABSOLUTE_THRESHOLD = 'absolute_threshold'
+    BINARY_CONSISTENCY = 'binary_consistency'
+    ULP_COMPARE = 'ulp_compare'
+    THOUSANDTH_STANDARD = 'thousandth_threshold'
+    BENCHMARK = 'benchmark'
+    
+    SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
+    RMSE_RATIO = "rmse_ratio"
+    MAX_REL_ERR_RATIO = "max_rel_err_ratio"
+    MEAN_REL_ERR_RATIO = "mean_rel_err_ratio"
+    EB_RATIO = "eb_ratio"
+    
+    SMALL_VALUE = "small_value"
+    RMSE = "rmse"
+    MAX_REL_ERR = "max_rel_err"
+    MEAN_REL_ERR = "mean_rel_err"
+    EB = "eb"
+    
+    SMALL_VALUE_ERR_STATUS = "small_value_err_status"
+    RMSE_STATUS = "rmse_status"
+    MAX_REL_ERR_STATUS = "max_rel_err_status"
+    MEAN_REL_ERR_STATUS = "mean_rel_err_status"
+    EB_STATUS = "eb_status"
+    
+    MEAN_ULP_ERR = "mean_ulp_err"
+    ULP_ERR_PROPORTION = "ulp_err_proportion"
+    ULP_ERR_PROPORTION_RATIO = "ulp_err_proportion_ratio"
+    
+    ULP_ERR_STATUS = "ulp_err_status"
 
     COMPARE_RESULT_HEADER = [
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR,

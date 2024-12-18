@@ -68,7 +68,38 @@ class StandardConfig:
         torch.float32: 1e-6,
         "default": 1e-6
     }
-
+    
+    _small_value_threshold = {
+        'error_threshold': 2,
+        'warning_threshold': 1,
+        "default": 1
+    }
+    _rmse_threshold = {
+        'error_threshold': 2,
+        'warning_threshold': 1,
+        "default": 1
+    }
+    _max_rel_err_threshold = {
+        'error_threshold': 10,
+        'warning_threshold': 1,
+        "default": 1
+    }
+    _mean_rel_err_threshold = {
+        'error_threshold': 2,
+        'warning_threshold': 1,
+        "default": 1
+    }
+    _eb_threshold ={
+        'error_threshold': 2,
+        'warning_threshold': 1,
+        "default": 1
+    }
+    
+    _fp32_mean_ulp_err_threshold = 64
+    ulp_err_proportion_ratio = 1
+    _fp32_ulp_err_proportion = 0.05
+    _fp16_ulp_err_proportion = 0.001
+    
     @classmethod
     def get_small_valuel(cls, dtype):
         return cls._small_value.get(dtype, cls._small_value["default"])
@@ -80,3 +111,63 @@ class StandardConfig:
     @classmethod
     def get_rtol(cls, dtype):
         return cls._rtol.get(dtype, cls._rtol["default"])
+    
+    @classmethod
+    def get_small_value_threshold(cls, threshold_type):
+        return cls._small_value_threshold.get(threshold_type, cls._small_value_threshold["default"])
+    
+    @classmethod
+    def get_rmse_threshold(cls, threshold_type):
+        return cls._rmse_threshold.get(threshold_type, cls._rmse_threshold["default"])
+    
+    @classmethod
+    def get_max_rel_err_threshold(cls, threshold_type):
+        return cls._max_rel_err_threshold.get(threshold_type, cls._max_rel_err_threshold["default"])
+    
+    @classmethod
+    def get_mean_rel_err_threshold(cls, threshold_type):
+        return cls._mean_rel_err_threshold.get(threshold_type, cls._mean_rel_err_threshold["default"])
+    
+    @classmethod
+    def get_eb_threshold(cls, threshold_type):
+        return cls._eb_threshold.get(threshold_type, cls._eb_threshold["default"])
+    
+    @classmethod
+    def get_benchmark_threshold(cls, metric):
+        metric_threshold_functions = {
+            'small_value': StandardConfig.get_small_value_threshold,
+            'rmse': StandardConfig.get_rmse_threshold,
+            'max_rel_err': StandardConfig.get_max_rel_err_threshold,
+            'mean_rel_err': StandardConfig.get_mean_rel_err_threshold,
+            'eb': StandardConfig.get_eb_threshold
+        }
+        
+        threshold_func = metric_threshold_functions.get(metric)
+        return threshold_func('error_threshold'), threshold_func('warning_threshold')
+
+    @classmethod
+    def get_fp32_mean_ulp_err_threshold(cls):
+        return cls._fp32_mean_ulp_err_threshold
+
+    @classmethod
+    def get_ulp_err_proportion_ratio_threshold(cls):
+        return cls.ulp_err_proportion_ratio
+
+    @classmethod
+    def get_fp32_ulp_err_proportion_threshold(cls):
+        return cls._fp32_ulp_err_proportion
+
+    @classmethod
+    def get_fp16_ulp_err_proportion_threshold(cls):
+        return cls._fp16_ulp_err_proportion
+    
+    @classmethod
+    def get_ulp_threshold(cls, dtype):
+        ulp_err_proportion_ratio_threshold = StandardConfig.get_ulp_err_proportion_ratio_threshold()
+        if dtype == torch.float32:
+            mean_ulp_err_threshold = StandardConfig.get_fp32_mean_ulp_err_threshold()
+            ulp_err_proportion_threshold = StandardConfig.get_fp32_ulp_err_proportion_threshold()
+            return mean_ulp_err_threshold, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold
+        else:
+            ulp_err_proportion_threshold = StandardConfig.get_fp16_ulp_err_proportion_threshold()
+            return None, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold

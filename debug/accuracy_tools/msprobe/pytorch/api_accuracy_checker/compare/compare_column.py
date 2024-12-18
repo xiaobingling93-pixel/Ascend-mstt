@@ -75,6 +75,14 @@ class CompareColumn:
 
 
 class ApiPrecisionOutputColumn:
+    __slots__ = [
+                'api_name', 'small_value_err_ratio','small_value_err_status', 'rmse_ratio', 'rmse_status', 
+                'max_rel_err_ratio','max_rel_err_status','mean_rel_err_ratio','mean_rel_err_status', 'eb_ratio', 
+                'eb_status', 'inf_nan_error_ratio', 'inf_nan_error_ratio_status','rel_err_ratio', 
+                'rel_err_ratio_status', 'abs_err_ratio', 'abs_err_ratio_status', 'error_rate', 'error_rate_status', 
+                'mean_ulp_err', 'ulp_err_proportion', 'ulp_err_proportion_ratio', 'ulp_err_status','rel_err_thousandth', 
+                'rel_err_thousandth_status', 'compare_result', 'compare_algorithm', 'compare_message'
+                ]
     def __init__(self):
         self.api_name = CompareConst.SPACE
         self.small_value_err_ratio = CompareConst.SPACE
@@ -104,6 +112,24 @@ class ApiPrecisionOutputColumn:
         self.compare_result = CompareConst.SPACE
         self.compare_algorithm = CompareConst.SPACE
         self.compare_message = CompareConst.SPACE
+
+    def update(self, metrics):
+        """
+        Updates the object's attributes with the provided metrics.
+
+        Args:
+            metrics (dict): A dictionary containing attribute names and their corresponding values.
+
+        Raises:
+            AttributeError: If the metric key is not a valid attribute of CompareColumn.
+        """
+        for key, value in metrics.items():
+            if value is None:
+                continue
+            if key not in self.__slots__:
+                logger.error("The key '%s' is not a valid attribute of CompareColumn.", key)
+                continue
+            setattr(self, key, value)
 
     def to_column_value(self):
         return [self.api_name, self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio, 

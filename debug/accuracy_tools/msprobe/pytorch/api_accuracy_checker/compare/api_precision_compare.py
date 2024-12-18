@@ -29,8 +29,11 @@ from msprobe.pytorch.api_accuracy_checker.common.config import msCheckerConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import API_PRECISION_COMPARE_RESULT_FILE_NAME, \
     API_PRECISION_COMPARE_DETAILS_FILE_NAME, BENCHMARK_COMPARE_SUPPORT_LIST, API_PRECISION_COMPARE_UNSUPPORT_LIST, \
     ApiPrecisionCompareColumn, absolute_standard_api, binary_standard_api, ulp_standard_api, thousandth_standard_api, \
-    BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage, is_inf_or_nan, \
-    check_inf_or_nan
+    BINARY_COMPARE_UNSUPPORT_LIST, ULP_COMPARE_SUPPORT_LIST, convert_str_to_float, CompareMessage
+from msprobe.pytorch.api_accuracy_checker.compare.compare_input import PrecisionCompareInput
+from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_register import StandardRegistry
+from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
 from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
@@ -47,30 +50,6 @@ BenchmarkInfNanConsistency = namedtuple('BenchmarkInfNanConsistency', ['small_va
                                                                            'eb_inf_nan_consistency'])
 UNSUPPORTED_MESSAGE = 'This data type does not support benchmark compare.'
 
-DEFAULT_THRESHOLD = 1
-
-benchmark_algorithms_thresholds = {
-    'small_value': {
-        'error_threshold': 2,
-        'warning_threshold': 1
-    },
-    'rmse': {
-        'error_threshold': 2,
-        'warning_threshold': 1
-    },
-    'max_rel_err': {
-        'error_threshold': 10,
-        'warning_threshold': 1
-    },
-    'mean_rel_err': {
-        'error_threshold': 2,
-        'warning_threshold': 1
-    },
-    'eb': {
-        'error_threshold': 2,
-        'warning_threshold': 1
-    }
-}
 
 benchmark_message = {
     "small_value_err_status": {
@@ -92,195 +71,22 @@ benchmark_message = {
 }
 
 
-class Standard:
-    @staticmethod
-    def _calc_ratio(column_name, x, y, default_value):
-        '''
-        计算npu侧和gpu侧统计量的比值
-        输入：
-            column_name：统计量名称
-            x：npu侧统计量
-            y：gpu侧统计量
-            default：当x不接近0，y接近0，设置的比值默认值
-        输出： 
-            ratio：统计量x和y的比值
-            inf_nan_consistency：不出现inf或nan时为True，出现inf或nan时必须同时为inf或-inf或nan才为True，否则为False
-            message：当出现inf或nan时的提示信息
-        '''
-        x, y = convert_str_to_float(x), convert_str_to_float(y)
-
-        if is_inf_or_nan(x) or is_inf_or_nan(y):
-            return check_inf_or_nan(x, y, column_name)
-
-        inf_nan_consistency = True
-        message = ""
-        if math.isclose(y, 0.0):
-            if math.isclose(x, 0.0):
-                return 1.0, inf_nan_consistency, message
-            else:
-                return default_value, inf_nan_consistency, message
-        else:
-            return abs(x / y), inf_nan_consistency, message
-
-
-class BenchmarkStandard(Standard):
-    def __init__(self, api_name, npu_precision, gpu_precision):
-        self.api_name = api_name
-        self.npu_precision = npu_precision
-        self.gpu_precision = gpu_precision
-        self.small_value_err_ratio = 1
-        self.rmse_ratio = 1
-        self.max_rel_err_ratio = 1
-        self.mean_rel_err_ratio = 1
-        self.eb_ratio = 1
-        self.small_value_err_status = CompareConst.PASS
-        self.rmse_status = CompareConst.PASS
-        self.max_rel_err_status = CompareConst.PASS
-        self.mean_rel_err_status = CompareConst.PASS
-        self.eb_status = CompareConst.PASS
-        self.check_result_list = []
-        self.final_result = CompareConst.PASS
-        self.compare_message = ""
-
-    def __str__(self):
-        return "%s" % (self.api_name)
-
-    @staticmethod
-    def _get_status(ratio, algorithm):
-        if math.isnan(ratio) or math.isinf(ratio):
-            return CompareConst.PASS
-        error_threshold = benchmark_algorithms_thresholds.get(algorithm, {}).get('error_threshold', DEFAULT_THRESHOLD)
-        warning_threshold = benchmark_algorithms_thresholds.get(algorithm, {}).get('warning_threshold',
-                                                                                   DEFAULT_THRESHOLD)
-        if ratio > error_threshold:
-            return CompareConst.ERROR
-        elif ratio > warning_threshold:
-            return CompareConst.WARNING
-        return CompareConst.PASS
-
-    def get_result(self):
-        inf_nan_consistency = self._compare_ratio()
-        small_value_inf_nan_consistency = inf_nan_consistency.small_value_inf_nan_consistency
-        rmse_inf_nan_consistency = inf_nan_consistency.rmse_inf_nan_consistency
-        max_rel_inf_nan_consistency = inf_nan_consistency.max_rel_inf_nan_consistency
-        mean_rel_inf_nan_consistency = inf_nan_consistency.mean_rel_inf_nan_consistency
-        eb_inf_nan_consistency = inf_nan_consistency.eb_inf_nan_consistency
-        self.small_value_err_status = self._get_status(self.small_value_err_ratio, 'small_value') if \
-            small_value_inf_nan_consistency else CompareConst.ERROR
-        self.check_result_list.append(self.small_value_err_status)
-        self.rmse_status = self._get_status(self.rmse_ratio, 'rmse') if rmse_inf_nan_consistency \
-            else CompareConst.ERROR
-        self.check_result_list.append(self.rmse_status)
-        self.max_rel_err_status = self._get_status(
-             self.max_rel_err_ratio, 'max_rel_err') if max_rel_inf_nan_consistency else CompareConst.ERROR
-        self.check_result_list.append(self.max_rel_err_status)
-        self.mean_rel_err_status = self._get_status(
-            self.mean_rel_err_ratio, 'mean_rel_err') if mean_rel_inf_nan_consistency else CompareConst.ERROR
-        self.check_result_list.append(self.mean_rel_err_status)
-        self.eb_status = self._get_status(self.eb_ratio, 'eb')
-        if CompareConst.ERROR in self.check_result_list:
-            self.final_result = CompareConst.ERROR
-        elif CompareConst.WARNING in self.check_result_list:
-            self.final_result = CompareConst.WARNING
-
-    def to_column_value(self):
-        return [self.small_value_err_ratio, self.small_value_err_status, self.rmse_ratio,
-                self.rmse_status, self.max_rel_err_ratio, self.max_rel_err_status, self.mean_rel_err_ratio,
-                self.mean_rel_err_status, self.eb_ratio, self.eb_status]
-
-    def _compare_ratio(self):
-        
-        self.small_value_err_ratio, small_value_inf_nan_consistency, small_value_message = self._calc_ratio(
-                                    ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE,
-                                    self.npu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE),
-                                    self.gpu_precision.get(ApiPrecisionCompareColumn.SMALL_VALUE_ERROR_RATE), 10000.0)
-        self.compare_message += small_value_message
-        self.rmse_ratio, rmse_inf_nan_consistency, rmse_message = self._calc_ratio(ApiPrecisionCompareColumn.RMSE,
-                                        self.npu_precision.get(ApiPrecisionCompareColumn.RMSE),
-                                        self.gpu_precision.get(ApiPrecisionCompareColumn.RMSE), 10000.0)
-        self.compare_message += rmse_message
-        self.max_rel_err_ratio, max_rel_inf_nan_consistency, max_rel_message = self._calc_ratio(
-                                        ApiPrecisionCompareColumn.MAX_REL_ERR,
-                                        self.npu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR),
-                                        self.gpu_precision.get(ApiPrecisionCompareColumn.MAX_REL_ERR), 10000.0)
-        self.compare_message += max_rel_message
-        self.mean_rel_err_ratio, mean_rel_inf_nan_consistency, mean_rel_message = self._calc_ratio(
-                                        ApiPrecisionCompareColumn.MEAN_REL_ERR,
-                                        self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR),
-                                        self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_REL_ERR), 10000.0)
-        self.compare_message += mean_rel_message
-        self.eb_ratio, eb_inf_nan_consistency, eb_message = self._calc_ratio(ApiPrecisionCompareColumn.EB,
-                                        self.npu_precision.get(ApiPrecisionCompareColumn.EB),
-                                        self.gpu_precision.get(ApiPrecisionCompareColumn.EB), 10000.0)
-        self.compare_message += eb_message
-        
-        return BenchmarkInfNanConsistency(small_value_inf_nan_consistency, rmse_inf_nan_consistency, 
-                                          max_rel_inf_nan_consistency, mean_rel_inf_nan_consistency,
-                                          eb_inf_nan_consistency)
-
-
-class ULPStandard(Standard):
-    def __init__(self, api_name, npu_precision, gpu_precision):
-        self.api_name = api_name
-        self.npu_precision = npu_precision
-        self.gpu_precision = gpu_precision
-        self.mean_ulp_err = 0
-        self.ulp_err_proportion = 0
-        self.ulp_err_proportion_ratio = 1
-        self.ulp_err_status = CompareConst.PASS
-        self.compare_message = ""
-
-    def __str__(self):
-        return f"{self.api_name}"
-
-    def get_result(self):
-        self.mean_ulp_err = convert_str_to_float(self.npu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
-        gpu_mean_ulp_err = convert_str_to_float(self.gpu_precision.get(ApiPrecisionCompareColumn.MEAN_ULP_ERR))
-        inf_nan_consistency = True
-        if is_inf_or_nan(self.mean_ulp_err) or is_inf_or_nan(gpu_mean_ulp_err):
-            _, inf_nan_consistency, message = check_inf_or_nan(self.mean_ulp_err, gpu_mean_ulp_err,
-                                                                 ApiPrecisionCompareColumn.MEAN_ULP_ERR)
-            self.compare_message += message
-        self.ulp_err_proportion = convert_str_to_float(
-                                                self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION))
-        self.ulp_err_proportion_ratio, ulp_inf_nan_consistency, message = self._calc_ratio(
-                    ApiPrecisionCompareColumn.ULP_ERR_PROPORTION,
-                    self.npu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION),
-                    self.gpu_precision.get(ApiPrecisionCompareColumn.ULP_ERR_PROPORTION), 10000.0)
-        inf_nan_consistency = inf_nan_consistency and ulp_inf_nan_consistency
-        self.compare_message += message
-        if inf_nan_consistency:
-            self.ulp_err_status = self._get_ulp_status(self.npu_precision.get(ApiPrecisionCompareColumn.DEVICE_DTYPE))
-        else:
-            self.ulp_err_status = CompareConst.ERROR
-    
-    def _get_ulp_status(self, dtype):
-        if dtype == Const.TORCH_FLOAT32:
-            if self.mean_ulp_err < 64:
-                return CompareConst.PASS
-            elif self.ulp_err_proportion < 0.05:
-                return CompareConst.PASS
-            elif self.ulp_err_proportion_ratio < 1:
-                return CompareConst.PASS
-            else:
-                self.compare_message += "ERROR: ULP误差不满足标准\n"
-                return CompareConst.ERROR
-        else:
-            if self.ulp_err_proportion < 0.001:
-                return CompareConst.PASS
-            elif self.ulp_err_proportion_ratio < 1:
-                return CompareConst.PASS
-            else:
-                self.compare_message += "ERROR: ULP误差不满足标准\n"
-                return CompareConst.ERROR
-
-
 def write_detail_csv(content, save_path):
     rows = []
     content = ["{:.{}f}".format(item, msCheckerConfig.precision) \
                    if isinstance(item, float) else item for item in content]
     rows.append(content)
     write_csv(rows, save_path)
+
+
+def register_compare_func():
+    registry = StandardRegistry()
+    registry.register("absolute_threshold", record_absolute_threshold_result)
+    registry.register("binary_consistency", record_binary_consistency_result)
+    registry.register("ulp_compare", record_ulp_compare_result)
+    registry.register("thousandth_threshold", record_thousandth_threshold_result)
+    registry.register("benchmark", record_benchmark_compare_result)
+    return registry
 
 
 def api_precision_compare(config):
@@ -337,6 +143,8 @@ def analyse_csv(npu_data, gpu_data, config):
     forward_status, backward_status = [], []
     last_api_name, last_api_dtype, last_api_full_name = None, None, None
     last_api_skip_message = ''
+    registry = register_compare_func()
+    
     for _, row_npu in npu_data.iterrows():
         message = ''
         compare_column = ApiPrecisionOutputColumn()
@@ -362,7 +170,7 @@ def analyse_csv(npu_data, gpu_data, config):
         row_gpu = row_gpu.iloc[0]
         new_status = CompareConst.SPACE
         try:
-            new_status = get_api_status(row_npu, row_gpu, api_name, compare_column)
+            new_status = get_api_status(row_npu, row_gpu, api_name, compare_column, registry)
         except Exception as err:
             logger.error(f"Get api status error: {str(err)}")
             compare_column.api_name = full_api_name_with_direction_status
@@ -422,30 +230,22 @@ def analyse_csv(npu_data, gpu_data, config):
             last_api_skip_message = ''
 
 
-def get_api_status(row_npu, row_gpu, api_name, compare_column):
+def get_api_status(row_npu, row_gpu, api_name, compare_column, registry):
     full_api_name_with_direction_status = row_npu[ApiPrecisionCompareColumn.API_NAME]
     # 当前API的输出为空（例如反向过程中requires_grad=False）,跳过比对
-    if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace():
+    if row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE].isspace() or \
+        row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in API_PRECISION_COMPARE_UNSUPPORT_LIST or \
+        row_npu[ApiPrecisionCompareColumn.SHAPE] == CompareConst.ZERO_SHAPE:
         compare_column.api_name = full_api_name_with_direction_status
         compare_column.compare_result = CompareConst.SKIP
         compare_column.compare_message = row_npu[ApiPrecisionCompareColumn.MESSAGE]
         new_status = CompareConst.SKIP
     else:
         compare_column.api_name = full_api_name_with_direction_status
-        if api_name in thousandth_standard_api:
-            new_status = record_thousandth_threshold_result(compare_column, row_npu)
-        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] not in BINARY_COMPARE_UNSUPPORT_LIST or \
-            api_name in binary_standard_api:
-            new_status = record_binary_consistency_result(api_name, compare_column, row_npu)
-        elif api_name in absolute_standard_api:
-            new_status = record_absolute_threshold_result(compare_column, row_npu)
-        elif api_name in ulp_standard_api and \
-            row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in ULP_COMPARE_SUPPORT_LIST:
-            us = ULPStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_ulp_compare_result(compare_column, us)
-        elif row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE] in BENCHMARK_COMPARE_SUPPORT_LIST:
-            bs = BenchmarkStandard(full_api_name_with_direction_status, row_npu, row_gpu)
-            new_status = record_benchmark_compare_result(compare_column, bs)
+        dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
+        input_data = PrecisionCompareInput(row_npu, row_gpu, compare_column)
+        comparison_func = registry.get_comparison_function(api_name, dtype)
+        new_status = comparison_func(input_data)
     return new_status
 
 
@@ -505,21 +305,24 @@ def check_csv_columns(columns, csv_type):
         raise CompareException(CompareException.INVALID_DATA_ERROR, msg)
 
 
-def record_binary_consistency_result(api_name, compare_column, row_npu):
+def record_binary_consistency_result(input_data):
+    row_npu = input_data.row_npu
+    compare_column = input_data.compare_column
     new_status = check_error_rate(row_npu[ApiPrecisionCompareColumn.ERROR_RATE])
     compare_column.error_rate = row_npu[ApiPrecisionCompareColumn.ERROR_RATE]
     compare_column.error_rate_status = new_status
     compare_column.compare_result = new_status
-    compare_column.compare_algorithm = "二进制一致法"
+    compare_column.compare_algorithm = CompareConst.BINARY_CONSISTENCY_ALGORITHM_NAME
     message = ''
     if compare_column.error_rate_status == CompareConst.ERROR:
         message += "ERROR: 二进制一致错误率超过阈值\n"
-        message += CompareMessage.get(api_name, "")
     compare_column.compare_message = message
     return new_status
 
 
-def record_absolute_threshold_result(compare_column, row_npu):
+def record_absolute_threshold_result(input_data):
+    row_npu = input_data.row_npu
+    compare_column = input_data.compare_column
     absolute_threshold_result = get_absolute_threshold_result(row_npu)
     compare_column.inf_nan_error_ratio = absolute_threshold_result.get("inf_nan_error_ratio")
     compare_column.inf_nan_error_ratio_status = absolute_threshold_result.get("inf_nan_result")
@@ -528,7 +331,7 @@ def record_absolute_threshold_result(compare_column, row_npu):
     compare_column.abs_err_ratio = absolute_threshold_result.get("abs_err_ratio")
     compare_column.abs_err_ratio_status = absolute_threshold_result.get("abs_err_result")
     compare_column.compare_result = absolute_threshold_result.get("absolute_threshold_result")
-    compare_column.compare_algorithm = "绝对阈值法"
+    compare_column.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD_ALGORITHM_NAME
     message = ''
     if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
         message += "ERROR: inf/nan错误率超过阈值\n"
@@ -540,50 +343,35 @@ def record_absolute_threshold_result(compare_column, row_npu):
     return compare_column.compare_result
 
 
-def record_benchmark_compare_result(compare_column, bs):
-    bs.get_result()
-    compare_column.small_value_err_ratio = bs.small_value_err_ratio
-    compare_column.small_value_err_status = bs.small_value_err_status
-    compare_column.rmse_ratio = bs.rmse_ratio
-    compare_column.rmse_status = bs.rmse_status
-    compare_column.max_rel_err_ratio = bs.max_rel_err_ratio
-    compare_column.max_rel_err_status = bs.max_rel_err_status
-    compare_column.mean_rel_err_ratio = bs.mean_rel_err_ratio
-    compare_column.mean_rel_err_status = bs.mean_rel_err_status
-    compare_column.eb_ratio = bs.eb_ratio
-    compare_column.eb_status = bs.eb_status
-    compare_column.compare_result = bs.final_result
-    compare_column.compare_algorithm = "标杆比对法"
-    compare_column.compare_message = bs.compare_message
+def record_benchmark_compare_result(input_data):
+    bs = BenchmarkPrecisionCompare(input_data)
+    compare_result = bs.compare()
     for status_attr, messages in benchmark_message.items():
-        status_value = getattr(compare_column, status_attr)
+        status_value = getattr(input_data.compare_column, status_attr)
         if status_value in messages:
-            compare_column.compare_message += messages[status_value]
-    return compare_column.compare_result
+            input_data.compare_column.compare_message += messages[status_value]
+    return compare_result
 
 
-def record_ulp_compare_result(compare_column, us):
-    us.get_result()
-    compare_column.mean_ulp_err = us.mean_ulp_err
-    compare_column.ulp_err_proportion = us.ulp_err_proportion
-    compare_column.ulp_err_proportion_ratio = us.ulp_err_proportion_ratio
-    compare_column.ulp_err_status = us.ulp_err_status
-    compare_column.compare_result = us.ulp_err_status
-    compare_column.compare_algorithm = "ULP误差比对法"
-    compare_column.compare_message = us.compare_message
-    return compare_column.compare_result
+def record_ulp_compare_result(input_data):
+    us = UlpPrecisionCompare(input_data)
+    compare_result = us.compare()
+    return compare_result
 
 
 def check_thousandth_rate(thousandth_rate):
-    return CompareConst.PASS if convert_str_to_float(thousandth_rate) >= 0.999 else CompareConst.ERROR
+    return CompareConst.PASS if convert_str_to_float(thousandth_rate) >= CompareConst.THOUSANDTH_PASS_VALUE \
+        else CompareConst.ERROR
 
 
-def record_thousandth_threshold_result(compare_column, row_npu):
+def record_thousandth_threshold_result(input_data):
+    row_npu = input_data.row_npu
+    compare_column = input_data.compare_column
     new_status = check_thousandth_rate(row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH])
     compare_column.rel_err_thousandth = row_npu[ApiPrecisionCompareColumn.REL_ERR_THOUSANDTH]
     compare_column.rel_err_thousandth_status = new_status
     compare_column.compare_result = new_status
-    compare_column.compare_algorithm = "双千指标法"
+    compare_column.compare_algorithm = CompareConst.THOUSANDTH_STANDARD_ALGORITHM_NAME
     message = ''
     if compare_column.rel_err_thousandth_status == CompareConst.ERROR:
         message += "ERROR: 双千指标不达标\n"

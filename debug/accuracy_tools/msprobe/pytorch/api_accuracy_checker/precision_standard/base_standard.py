@@ -16,7 +16,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-
+from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_str_to_float
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_bench_with_eps, get_abs_err, \
     get_finite_and_infinite_mask, get_small_value_mask
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
@@ -98,3 +98,42 @@ class BaseCompare(ABC):
     
     def _post_compare(self, metrics):
         self.compare_column.update(metrics)
+
+
+class BasePrecisionCompare:
+    def __init__(self, input_data):
+        self.row_npu = input_data.row_npu
+        self.row_gpu = input_data.row_gpu
+        self.compare_column = input_data.compare_column
+        self.compare_algorithm = None
+    
+    @abstractmethod
+    def _get_status(self, metrics, inf_nan_consistency):
+        pass
+
+    @abstractmethod
+    def _compute_ratio(self):
+        pass
+
+    def compare(self):
+        metrics, inf_nan_consistency = self._compute_ratio()
+        compare_result = self._post_compare(metrics, inf_nan_consistency)
+        return compare_result
+    
+    def _get_and_convert_values(self, column_name):
+        npu_value = self.row_npu.get(column_name)
+        gpu_value = self.row_gpu.get(column_name)
+        if npu_value is None:
+            raise ValueError(f"NPU value for column '{column_name}' is None.")
+        if gpu_value is None:
+            raise ValueError(f"GPU value for column '{column_name}' is None.")
+        npu_value = convert_str_to_float(npu_value)
+        gpu_value = convert_str_to_float(gpu_value)
+        return npu_value, gpu_value
+
+    def _post_compare(self, metrics, inf_nan_consistency):
+        metrics = self._get_status(metrics, inf_nan_consistency)
+        metrics.update({'compare_algorithm': self.compare_algorithm})
+        self.compare_column.update(metrics)
+        compare_result = metrics.get('compare_result')
+        return compare_result

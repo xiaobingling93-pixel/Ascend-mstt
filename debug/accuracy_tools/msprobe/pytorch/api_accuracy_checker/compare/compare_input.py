@@ -40,3 +40,10 @@ class CompareInput:
         self.compare_column = compare_column
         self.dtype = dtype
         self.rel_err_orign = rel_err_orign
+
+
+class PrecisionCompareInput:
+    def __init__(self, row_npu, row_gpu, compare_column):
+        self.row_npu = row_npu
+        self.row_gpu = row_gpu
+        self.compare_column = compare_column
