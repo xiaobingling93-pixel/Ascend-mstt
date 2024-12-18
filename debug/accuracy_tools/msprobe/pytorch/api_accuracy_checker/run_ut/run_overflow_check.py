@@ -99,7 +99,7 @@ def run_overflow_check(forward_file):
                 logger.warning(f"API {api_name} not support int32 tensor in CPU, please add {api_name} to CONVERT_API "
                                "'int32_to_int64' list in accuracy_tools/msprobe/core/common/const.py file.")
             elif "could not create a primitive descriptor for a matmul primitive" in str(err):
-                logger.warning(f"API {api_name} not support matmul primitive in CPU dut to pytorch bug, "
+                logger.warning(f"API {api_name} not support matmul primitive in CPU due to pytorch bug, "
                                "so it will be skipped.")
             else:
                 logger.error(f"Run {api_full_name} UT Error: %s" % str(err))
