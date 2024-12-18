@@ -33,6 +33,7 @@ class BaseNode:
         self.stack_info = []
         self.micro_step_id = None
         self.overflow_level = None
+        self.matched_distributed = {}
 
     def __str__(self):
         info = f'id:\t{self.id}'
@@ -108,8 +109,10 @@ class BaseNode:
         if self.overflow_level and isinstance(self.overflow_level, OverflowLevel):
             if self.data is None:
                 self.data = dict()
-            self.data['overflow_level'] = self.overflow_level.value
+            self.data[GraphConst.OVERFLOW_LEVEL] = self.overflow_level.value
         result['data'] = self.data
+        if self.matched_distributed:
+            result[GraphConst.MATCHED_DISTRIBUTED] = self.matched_distributed
         return result
 
     def get_ancestors(self):

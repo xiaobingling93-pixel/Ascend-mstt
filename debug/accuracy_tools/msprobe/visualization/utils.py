@@ -172,6 +172,8 @@ class GraphConst:
     MAX_RELATIVE_ERR_TH = 0.5
     ROUND_TH = 6
     JSON_INDEX_KEY = 'precision_index'
+    MATCHED_DISTRIBUTED = 'matched_distributed'
+    OVERFLOW_LEVEL = 'overflow_level'
     MAX_INDEX_KEY = 1
     MIN_INDEX_KEY = 0
     SUGGEST_KEY = 'text'
@@ -230,3 +232,6 @@ class GraphConst:
     RANKS = 'ranks'
     STEPS = 'steps'
     FILES = 'files'
+
+    SRC = 'src'
+    DST = 'dst'
