@@ -45,10 +45,6 @@ ulp_standard_api = apis.get('ULPStandard')
 thousandth_standard_api = apis.get('ThousandthStandard')
 
 
-threshold_yaml_path = os.path.join(cur_path, "api_precision_threshold.yaml")
-apis_threshold = load_yaml(threshold_yaml_path)
-
-
 DETAIL_TEST_ROWS = [
             [
             "API Name", "Bench Dtype", "DEVICE Dtype", "Shape",

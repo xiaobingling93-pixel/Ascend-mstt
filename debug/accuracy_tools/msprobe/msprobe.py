@@ -19,6 +19,7 @@ import importlib.util
 from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.common.log import logger
 from msprobe.core.compare.compare_cli import compare_cli
+from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
 from msprobe.core.common.const import Const
 
 
@@ -45,10 +46,16 @@ def main():
     multi_run_ut_cmd_parser = subparsers.add_parser('multi_run_ut')
     api_precision_compare_cmd_parser = subparsers.add_parser('api_precision_compare')
     run_overflow_check_cmd_parser = subparsers.add_parser('run_overflow_check')
+    code_mapping_cmd_parser = subparsers.add_parser('code_mapping')
     graph_service_cmd_parser = subparsers.add_parser('graph')
+    op_generate_cmd_parser = subparsers.add_parser('op_generate')
+    merge_result_parser = subparsers.add_parser('merge_result')
     _compare_parser(compare_cmd_parser)
+    _merge_result_parser(merge_result_parser)
+
     is_torch_available = is_module_available("torch")
     is_mindspore_available = is_module_available("mindspore")
+
     if len(sys.argv) < 4:
         parser.print_help()
         sys.exit(0)
@@ -62,6 +69,8 @@ def main():
         from msprobe.pytorch.api_accuracy_checker.run_ut.run_overflow_check import _run_overflow_check_parser, \
             _run_overflow_check_command
         from msprobe.visualization.graph_service import _pt_graph_service_parser, _pt_graph_service_command
+        from msprobe.pytorch.api_accuracy_checker.generate_op_script.op_generator import _op_generator_parser, \
+            _run_operator_generate_commond
 
         _run_ut_parser(run_ut_cmd_parser)
         _run_ut_parser(multi_run_ut_cmd_parser)
@@ -70,12 +79,15 @@ def main():
         _api_precision_compare_parser(api_precision_compare_cmd_parser)
         _run_overflow_check_parser(run_overflow_check_cmd_parser)
         _pt_graph_service_parser(graph_service_cmd_parser)
+        _op_generator_parser(op_generate_cmd_parser)
     elif framework_args.framework == Const.MS_FRAMEWORK:
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import add_api_accuracy_checker_argument
         from msprobe.visualization.graph_service import _ms_graph_service_parser, _ms_graph_service_command
         add_api_accuracy_checker_argument(run_ut_cmd_parser)
         from msprobe.mindspore.api_accuracy_checker.cmd_parser import multi_add_api_accuracy_checker_argument
         multi_add_api_accuracy_checker_argument(multi_run_ut_cmd_parser)
+        from msprobe.mindspore.code_mapping.cmd_parser import add_ir_parser_arguments
+        add_ir_parser_arguments(code_mapping_cmd_parser)
 
         _ms_graph_service_parser(graph_service_cmd_parser)
 
@@ -97,17 +109,23 @@ def main():
             _run_overflow_check_command(args)
         elif sys.argv[3] == "graph":
             _pt_graph_service_command(args)
+        elif sys.argv[3] == 'op_generate':
+            _run_operator_generate_commond(args)
         elif sys.argv[3] == "compare":
             if args.cell_mapping is not None or args.api_mapping is not None:
                 logger.error("Argument -cm or -am is not supported in PyTorch framework")
                 raise Exception("Argument -cm or -am is not supported in PyTorch framework")
             compare_cli(args)
+        elif sys.argv[3] == "merge_result":
+            merge_result_cli(args)
     else:
         if not is_module_available(Const.MS_FRAMEWORK):
             logger.error("MindSpore does not exist, please install MindSpore library")
             raise Exception("MindSpore does not exist, please install MindSpore library")
         if sys.argv[3] == "compare":
             compare_cli(args)
+        elif sys.argv[3] == "merge_result":
+            merge_result_cli(args)
         elif sys.argv[3] == "run_ut":
             from msprobe.mindspore.api_accuracy_checker.main import api_checker_main
             api_checker_main(args)
@@ -116,6 +134,11 @@ def main():
             mul_api_checker_main(args)
         elif sys.argv[3] == "graph":
             _ms_graph_service_command(args)
+        elif sys.argv[3] == "code_mapping":
+            from msprobe.mindspore.code_mapping.main import code_mapping_main
+            code_mapping_main(args)
+
+
 
 
 if __name__ == "__main__":

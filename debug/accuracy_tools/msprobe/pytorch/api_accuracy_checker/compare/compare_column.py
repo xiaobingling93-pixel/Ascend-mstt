@@ -20,6 +20,12 @@ from msprobe.pytorch.common.log import logger
 
 
 class CompareColumn:
+    __slots__ = [
+        'bench_type', 'npu_type','shape', 'cosine_sim', 'max_abs_err', 'rel_err_hundredth',
+        'rel_err_ten_thousandth', 'inf_nan_error_ratio', 'rel_err_ratio', 'abs_err_ratio', 
+        'small_value_err_ratio', 'max_rel_error', 'mean_rel_error', 'rmse', 'eb', 'max_ulp_error', 
+        'mean_ulp_error', 'ulp_error_proportion', 'error_rate', 'rel_err_thousandth'
+    ]
     def __init__(self):
         self.bench_type = CompareConst.SPACE
         self.npu_type = CompareConst.SPACE
@@ -41,6 +47,24 @@ class CompareColumn:
         self.max_ulp_error = CompareConst.SPACE
         self.mean_ulp_error = CompareConst.SPACE
         self.ulp_error_proportion = CompareConst.SPACE
+
+    def update(self, metrics):
+        """
+        Updates the object's attributes with the provided metrics.
+
+        Args:
+            metrics (dict): A dictionary containing attribute names and their corresponding values.
+
+        Raises:
+            AttributeError: If the metric key is not a valid attribute of CompareColumn.
+        """
+        for key, value in metrics.items():
+            if value is None:
+                continue
+            if key not in self.__slots__:
+                logger.error(f"The key '{key}' is not a valid attribute of CompareColumn.")
+                continue
+            setattr(self, key, value)
 
     def to_column_value(self, is_pass, message):
         return [self.bench_type, self.npu_type, self.shape, self.cosine_sim, self.max_abs_err, self.rel_err_hundredth,

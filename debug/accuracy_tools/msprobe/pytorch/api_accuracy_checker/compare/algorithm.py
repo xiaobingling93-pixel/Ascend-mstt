@@ -255,3 +255,10 @@ def calc_ratio(x, y, default_value):
             return default_value
     else:
         return abs(x / y)
+
+
+def compare_bool_tensor(bench_output, device_output):
+    error_nums = (bench_output != device_output).sum()
+    error_rate = float(error_nums / bench_output.size)
+    result = CompareConst.PASS if error_rate == 0 else CompareConst.ERROR
+    return error_rate, result, ""

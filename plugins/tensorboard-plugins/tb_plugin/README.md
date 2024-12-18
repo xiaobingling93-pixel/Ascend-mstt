@@ -128,25 +128,37 @@
 
 ##### Kernel View
 
-  Kernel View展示算子在加速核上运行的详细信息。
+  Kernel View 展示算子在加速核上运行的详细信息。此视图包含两张饼图和两张表，可通过 Group By 切换表格数据：算子的详情表以及统计表。
+
+  * 上方为饼图，展示耗时最多的数个算子耗时比例信息（左侧饼图）和算子执行在各类加速核上耗时百分比（右侧饼图）
 
   ![Alt text](./docs/images/kernel_view.PNG)
 
-  * Calls: 算子调度的次数。
+  * 选择 Group By 为 All 时，展示算子详情表，部分字段说明如下：
 
-  * Accelerator Core: 计算核。
-
-  * Block Dim: Task运行切分数量，对应Task运行时核数。
+  | 字段名           | 说明                                   |
+  | ---------------- | -------------------------------------- |
+  | Step Id          | 标识在哪个 Step 采集的数据             |
+  | Name             | 运行在 npu 上的算子名称                |
+  | Type             | 算子类型                               |
+  | Accelerator Core | AI 加速核类型，包括 AI Core、AI CPU 等 |
+  | Start Time(us)   | 算子执行开始时间                       |
+  | Duration(us)     | 当前算子执行耗时                     |
+  | Wait Time(us)    | 算子执行等待时间                       |
+  | Block Dim        | 运行切分数量，对应任务执行时的核数     |
 
   ![Alt text](./docs/images/kernel_view_group_by_statistic.PNG)
 
-  * Accelerator Core Utilization: 算子执行在各类core上耗时百分比。
+  * 选择 Group By 为 All 时，展示算子信息统计表，此表格展示各算子的执行统计信息，字段说明如下：
 
-  * Name: 运行在npu上的算子名称。
-
-  * Total Duration、 Max Duration、Avg Duration、Min Duration: 算子调用总耗时、最大耗时、平均耗时以及最小耗时。
-  
-  此视图包含两张饼图和两张表，可通过Group By切换表格数据：算子的详细表以及统计表。
+  | 字段名           | 说明  |
+  | ---------------- | -------|
+  | Name             | 运行在 npu 上的算子名称 |
+  | Calls            | 算子执行次数 |
+  | Total Duration(us) | 算子执行总时间 |
+  | Min Duration(us)  | 算子执行的最小时间 |
+  | Max Duration(us)  | 算子执行的最大时间 |
+  | Avg Duration(us)  | 算子执行平均时间  |
 
 ##### Trace View
 
@@ -162,7 +174,7 @@
 
   ![Alt text](./docs/images/trace_view_launch.PNG)
 
-  选择只展示async_nup，可以查看框架侧算子与昇腾硬件上执行的算子的关联关系。
+  选择只展示async_npu，可以查看框架侧算子与昇腾硬件上执行的算子的下发执行关系。
 
   ![Alt text](./docs/images/trace_view_npu_utilization.PNG)
 

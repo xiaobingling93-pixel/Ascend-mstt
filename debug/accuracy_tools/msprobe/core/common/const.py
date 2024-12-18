@@ -73,6 +73,7 @@ class Const:
 
     PKL_SUFFIX = ".pkl"
     NUMPY_SUFFIX = ".npy"
+    NUMPY_PATTERN = "*.npy"
     PT_SUFFIX = ".pt"
     ONE_GB = 1073741824  # 1 * 1024 * 1024 * 1024
     TEN_GB = 10737418240  # 10 * 1024 * 1024 * 1024
@@ -167,6 +168,8 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+    
+    FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
 
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
@@ -179,6 +182,7 @@ class Const:
     STEP_RANK_MAXIMUM_VALUE = int(1e6)
 
     # data type const
+    TORCH_INT_DTYPE = ["torch.int8", "torch.int32", "torch.int64"]
     FLOAT16 = "Float16"
     FLOAT32 = "Float32"
     BFLOAT16 = "BFloat16"
@@ -192,6 +196,18 @@ class Const:
     MIN = 'Min'
     MEAN = 'Mean'
     NORM = 'Norm'
+
+    CODE_STACK = 'Code Stack'
+    OP_NAME = 'Op Name'
+    SCOPE_NAME = 'Scope Name'
+    CODE_STACKS = 'Code Stacks'
+    FILE_PATH = 'File Path'
+    NEW_LINE = '\n'
+    CSV_NEWLINE_SEPARATOR = ',\n'
+    # 分隔符常量
+    SCOPE_SEPARATOR = "/"
+    REPLACEMENT_CHARACTER = "_"
+
 
 
 class CompareConst:
@@ -304,11 +320,21 @@ class CompareConst:
         NPU_NAME, BENCH_NAME, NPU_DTYPE, BENCH_DTYPE, NPU_SHAPE, BENCH_SHAPE, NPU_MD5, BENCH_MD5, RESULT
     ]
 
+    COMPARE_RESULT_HEADER_STACK = COMPARE_RESULT_HEADER + [STACK]
+
+    SUMMARY_COMPARE_RESULT_HEADER_STACK = SUMMARY_COMPARE_RESULT_HEADER + [STACK]
+
+    MD5_COMPARE_RESULT_HEADER_STACK = MD5_COMPARE_RESULT_HEADER + [STACK]
+
     HEAD_OF_COMPARE_MODE = {
         Const.ALL: COMPARE_RESULT_HEADER,
         Const.SUMMARY: SUMMARY_COMPARE_RESULT_HEADER,
         Const.MD5: MD5_COMPARE_RESULT_HEADER
     }
+
+    ALL_COMPARE_INDEX = [COSINE, MAX_ABS_ERR, MAX_RELATIVE_ERR, ONE_THOUSANDTH_ERR_RATIO, FIVE_THOUSANDTHS_ERR_RATIO]
+    SUMMARY_COMPARE_INDEX = [MAX_DIFF, MIN_DIFF, MEAN_DIFF, NORM_DIFF,
+                             MAX_RELATIVE_ERR, MIN_RELATIVE_ERR, MEAN_RELATIVE_ERR, NORM_RELATIVE_ERR]
 
     # compare standard
     HUNDRED_RATIO_THRESHOLD = 0.01
@@ -413,12 +439,14 @@ class FileCheckConst:
     JSON_SUFFIX = ".json"
     PT_SUFFIX = ".pt"
     CSV_SUFFIX = ".csv"
+    XLSX_SUFFIX = ".xlsx"
     YAML_SUFFIX = ".yaml"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_PT_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
@@ -431,6 +459,7 @@ class FileCheckConst:
         JSON_SUFFIX: MAX_JSON_SIZE,
         PT_SUFFIX: MAX_PT_SIZE,
         CSV_SUFFIX: MAX_CSV_SIZE,
+        XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
