@@ -157,6 +157,9 @@ inplace_tensor_op:
   - trunc_
   - unsqueeze_
   - xlogy_
+  - bitwise_left_shift_
+  - bitwise_right_shift_
+  - arctan2_
 
 inplace_torch_op:
   - _add_relu_

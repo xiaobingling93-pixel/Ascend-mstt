@@ -138,6 +138,10 @@ functional:
   - fold
   - multi_head_attention_forward
   - scaled_dot_product_attention
+  - lp_pool3d
+  - dropout1d
+  - mish
+  - huber_loss
 
 tensor:
   - __add__
@@ -172,6 +176,7 @@ tensor:
   - __sub__
   - __truediv__
   - __xor__
+  - __pow__
   - abs
   - abs_
   - absolute
@@ -557,6 +562,27 @@ tensor:
   - view_as
   - xlogy
   - xlogy_
+  - split
+  - stft
+  - nan_to_num
+  - dsplit
+  - orgqr
+  - bitwise_left_shift_
+  - arctan2
+  - histogram
+  - q_zero_point
+  - adjoint
+  - ormqr
+  - bitwise_right_shift_
+  - nanquantile
+  - lu
+  - quantile
+  - arctan2_
+  - qr
+  - diagonal_scatter
+  - corrcoef
+  - vsplit
+  - aminmax
 
 torch:
   - linalg.norm
@@ -1131,6 +1157,14 @@ torch_npu:
   - npu_lstm
   - npu_apply_adam
   - npu_apply_adam_w
+  - npu_anti_quant
+  - npu_grouped_matmu
+  - npu_quant_scatter
+  - npu_group_norm_silu
+  - npu_format_cast
+  - npu_moe_finalize_routing
+  - npu_moe_gating_top_k_softmax
+  - npu_trans_quant_param
 
 aten:
   - signbit
