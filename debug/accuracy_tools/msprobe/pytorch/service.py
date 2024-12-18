@@ -213,13 +213,13 @@ class Service:
     def stop(self):
         if self.should_stop_service:
             return
-        if self.config.level == "L2":
-            return
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         self.switch = False
+        if self.config.level == Const.LEVEL_L2:
+            return
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, False, self.config.online_run_ut_recompute)
             return
@@ -230,13 +230,7 @@ class Service:
             return
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-
-        ModuleProcesser.reset_module_stats()
-        HOOKModule.reset_module_stats()
-        self.data_collector.data_writer.reset_cache()
-
-        if self.config.level == Const.LEVEL_L2:
-            self.data_collector.data_processor.reset_status()
+        self.reset_status()
 
     def need_stop_service(self):
         if self.should_stop_service:
@@ -362,3 +356,20 @@ class Service:
         elif self.attl.socket_manager is not None:
             logger.info(f"pid: {os.getpid()} finished, start send STOP signal.")
             self.attl.socket_manager.send_stop_signal()
+ 
+    def reset_status(self):
+        ModuleProcesser.reset_module_stats()
+        HOOKModule.reset_module_stats()
+        self.data_collector.data_writer.reset_cache()
+
+        if self.config.level == Const.LEVEL_L2:
+            self.data_collector.data_processor.reset_status()
+            return 
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+        if self.config.rank and self.current_rank not in self.config.rank:
+            return
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
+            for _, module in self.model.named_modules():
+                if hasattr(module, 'has_param_hook'):
+                    del module.has_param_hook
