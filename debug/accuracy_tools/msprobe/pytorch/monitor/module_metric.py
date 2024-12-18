@@ -120,14 +120,14 @@ class NormMetric(Metric):
     @staticmethod
     def get_metric_value(tensor, eps):
         return get_norm(tensor)
-    
+
 
 @register_config_metric("zeros")
 class ZerosMetric(Metric):
     @staticmethod
     def get_metric_value(tensor, eps):
         return get_zeros(tensor, eps)
-    
+
 
 @register_config_metric("nans")
 class NaNsMetric(Metric):
@@ -146,48 +146,25 @@ class IdentMetric(Metric):
 
 
 def get_metrics(ops, tag2tensor, eps, out_dict=None):
+    """
+    :param ops: ["op1", "op2"]
+    :param tag2tensor: {
+    '0:fc_0/input': torch.randn([3, 4]),
+    '0:fc_0/output': torch.randn([3, 3])
+    }
+    :param eps: float 1e-8
+    :param out_dict:{
+    '0:fc_0/input': {"op1": op1(torch.randn([3, 4])), "op2": op2(torch.randn([3, 4]))}
+    '0:fc_0/output': {"op1": op1(torch.randn([3, 3])), "op2": op2(torch.randn([3, 3]))}
+    }
+    :return: out_dict
+    """
     if out_dict is None:
         out_dict = {}
     for tag, tensor in tag2tensor.items():
         if tag not in out_dict:
             out_dict[tag] = {}
-        for metric_name in ops:    
+        for metric_name in ops:
             fun_metric = config_metric_registry.get(metric_name)
             out_dict[tag][metric_name] = fun_metric.get_metric(tensor, eps)
     return out_dict
-
-
-def write_metrics_base(ops, summary_writer, metric_value, step, prefix=''):
-    if not metric_value:
-        return
-    tensors = []
-    tags = list(itertools.product(metric_value.keys(), ops))
-    for op2tensor in metric_value.values():
-        tensors.extend(op2tensor.values())
-    with torch.no_grad():
-        metric_list = torch.stack(tensors).cpu()
-    for tag, metric in zip(tags, metric_list):
-        summary_writer.add_scalar(tag, metric, step)
-
-
-def write_metrics_csv(ops, summary_writer, metric_value, step, prefix=''):
-    write_metrics_base(ops, summary_writer, metric_value, step, prefix='')
-
-    if not summary_writer.header:
-        # 前向的norm用input.ops_和output.ops_，反向的用input_grad.ops_和output_grad.ops_
-        if prefix in {"actv", "actv_grad"}:
-            if prefix == "actv":
-                input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
-            else:
-                input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
-            ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
-            summary_writer.header = ["module_name", "step", *ops_]
-        else:
-            summary_writer.header = ["param_name", "step", *ops]
-
-        for key in metric_value.keys():
-            if MonitorConst.VPP_SEP in key:
-                summary_writer.header.insert(0, 'vpp_stage')
-            break
-    summary_writer.write_csv(prefix, step)
-    summary_writer.header = []

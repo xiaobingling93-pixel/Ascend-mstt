@@ -2,6 +2,8 @@ import os
 import unittest
 from unittest.mock import patch, MagicMock
 
+from msprobe.pytorch.monitor.anomaly_detect import GradAnomalyData
+
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter, AnomalyDataLoader, AnomalyAnalyse, \
     _get_parse_args, _get_step_and_stop, _anomaly_analyse
 
@@ -106,6 +108,7 @@ class TestAnomalyDataLoader(unittest.TestCase):
         # 模拟 GradAnomalyData 的构造函数
         def mock_constructor(**kwargs):
             return None
+
         mock_GradAnomalyData.side_effect = mock_constructor  # 假设构造成功
 
         data = {
@@ -124,11 +127,11 @@ class TestAnomalyDataLoader(unittest.TestCase):
     @patch('msprobe.pytorch.monitor.anomaly_analyse.load_json')
     @patch('msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path')
     @patch('msprobe.pytorch.monitor.anomaly_analyse.GradAnomalyData')
-    def test_get_anomalies_from_jsons(self, mock_GradAnomalyData, mock_check_path, mock_load_json, \
-                                      mock_exists, mock_listdir):
+    def test_get_anomalies_from_jsons(self, mock_GradAnomalyData, mock_check_path, mock_load_json, mock_exists,
+                                      mock_listdir):
         mock_check_path.return_value = None
         mock_listdir.return_value = ['rank0', 'rank1']
-        
+
         # 模拟 rank0/anomaly.json 存在，rank1/anomaly.json 不存在
         mock_exists.side_effect = [True, False]
         mock_load_json.return_value = {
@@ -139,10 +142,11 @@ class TestAnomalyDataLoader(unittest.TestCase):
         # 模拟 GradAnomalyData 的构造函数
         def mock_constructor(**kwargs):
             return None
+
         mock_GradAnomalyData.side_effect = mock_constructor  # 假设构造成功
 
         loader = AnomalyDataLoader('/tmp/data')
-        with patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.isdir', return_value = True):
+        with patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.isdir', return_value=True):
             anomalies = loader.get_anomalies_from_jsons()
 
         # 确保从 rank0 读取了异常数据
@@ -162,19 +166,28 @@ class TestAnomalyAnalyse(unittest.TestCase):
             MagicMock(step=4, value=1),
         ]
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.heapq.nsmallest')
-    def test_get_range_top_k(self, mock_nsmallest):
-        # 设置 mock 的返回值
-        mock_nsmallest.return_value = self.anomalies[:2]
+    def test_get_range_top_k(self):
+        anomalies = [
+            GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0, tag_name=""),
+            GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name=""),
+            GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name=""),
+            GradAnomalyData(step=3, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        ]
 
-        # 测试 step_list 为空
-        result = self.anomaly_analyse.get_range_top_k(2, [], self.anomalies)
-        self.assertEqual(result, [self.anomalies[0], self.anomalies[1]])
+        # step_list not empty
+        result = self.anomaly_analyse.get_range_top_k(3, [1], anomalies)
+        self.assertEqual(len(result), 2)
+        result = self.anomaly_analyse.get_range_top_k(3, [1, 2], anomalies)
+        self.assertEqual(len(result), 3)
 
-        # 测试 step_list 不为空
-        step_list = [1, 2, 3]
-        result = self.anomaly_analyse.get_range_top_k(2, step_list, self.anomalies)
-        self.assertEqual(result, [self.anomalies[0], self.anomalies[1]])  # 应该是 value=3 和 value=5 的异常
+        # top_k greater than anomalies length
+        result = self.anomaly_analyse.get_range_top_k(4, [], anomalies)
+        self.assertEqual(len(result), 4)
+
+        # top_k less than anomalies length
+        result = self.anomaly_analyse.get_range_top_k(3, [], anomalies)
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result, [anomalies[1], anomalies[0], anomalies[2]])
 
     @patch('msprobe.pytorch.monitor.anomaly_analyse.os.path.exists')
     @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyDataWriter.get_anomaly_dict')
@@ -195,8 +208,8 @@ class TestAnomalyAnalyse(unittest.TestCase):
         # 验证调用
         mock_get_anomaly_dict.assert_called_once_with(self.anomaly_analyse.sorted_anomalies)
         mock_save_json.assert_called_once_with(
-            os.path.join(output_path, 'anomaly_analyse.json'), 
-            {'anomalies': 'data'}, 
+            os.path.join(output_path, 'anomaly_analyse.json'),
+            {'anomalies': 'data'},
             indent=1
         )
         mock_logger.info.assert_called_once_with("anomaly_analyse.json is at output_path.")
@@ -210,17 +223,19 @@ class TestAnomalyAnalyse(unittest.TestCase):
 
         # 调用方法
         with patch("msprobe.pytorch.monitor.anomaly_analyse.check_file_or_directory_path", return_value=None), \
-            patch("msprobe.pytorch.monitor.anomaly_analyse.remove_path", return_value=None), \
-            patch("msprobe.pytorch.monitor.anomaly_analyse.save_json", return_value=None):
+                patch("msprobe.pytorch.monitor.anomaly_analyse.remove_path", return_value=None), \
+                patch("msprobe.pytorch.monitor.anomaly_analyse.save_json", return_value=None):
             self.anomaly_analyse.rewrite_sorted_anomalies(output_path)
 
         # 验证日志警告
-        mock_logger.warning.assert_called_once_with(f"The existing file will be deleted: output_path/anomaly_analyse.json.")
+        mock_logger.warning.assert_called_once_with(
+            f"The existing file will be deleted: output_path/anomaly_analyse.json.")
 
 
 class TestParseArgs(unittest.TestCase):
 
-    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv', new=['script_name', '-d', 'path/to/data', '-o', 'path/to/output', '-k', '5', '-s', '[1,2,3]'])
+    @patch('msprobe.pytorch.monitor.anomaly_analyse.sys.argv',
+           new=['script_name', '-d', 'path/to/data', '-o', 'path/to/output', '-k', '5', '-s', '[1,2,3]'])
     def test_parse_args_with_all_arguments(self):
         args = _get_parse_args()
         self.assertEqual(args.data_path_dir, 'path/to/data')
@@ -310,7 +325,8 @@ class TestAnomalyAnalyseFunction(unittest.TestCase):
     @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyDataLoader')  # 模拟数据加载器
     @patch('msprobe.pytorch.monitor.anomaly_analyse.AnomalyAnalyse')  # 模拟异常分析器
     @patch('msprobe.pytorch.monitor.anomaly_analyse.logger')  # 模拟日志记录
-    def test_anomaly_analyse(self, mock_logger, mock_anomaly_analyse, mock_anomaly_data_loader, mock_get_step_and_stop, mock_get_parse_args):
+    def test_anomaly_analyse(self, mock_logger, mock_anomaly_analyse, mock_anomaly_data_loader, mock_get_step_and_stop,
+                             mock_get_parse_args):
         # 模拟命令行参数
         mock_args = MagicMock()
         mock_args.data_path_dir = 'path/to/data'
@@ -358,3 +374,7 @@ class TestAnomalyAnalyseFunction(unittest.TestCase):
         mock_logger.info.assert_any_call(f"Top {mock_top_k_number} anomalies are listed as follows:")
         mock_logger.info.assert_any_call("0: Top Anomaly 1")
         mock_logger.info.assert_any_call("1: Top Anomaly 2")
+
+
+if __name__ == '__main__':
+    unittest.main()

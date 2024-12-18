@@ -1,15 +1,31 @@
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 
 import torch
+from msprobe.core.common.const import MonitorConst
 
 from msprobe.pytorch.monitor.utils import filter_special_chars, MsgConst, get_param_struct, validate_ops, \
     validate_ranks, validate_targets, validate_print_struct, validate_ur_distribution, validate_xy_distribution, \
     validate_mg_distribution, validate_wg_distribution, validate_cc_distribution, validate_alert, validate_config, \
-    is_recomputation
+    is_recomputation, get_output_base_dir
 
 
 class TestValidationFunctions(unittest.TestCase):
+
+    def test_get_output_base_dir(self):
+        # not set env
+        del os.environ[MonitorConst.MONITOR_OUTPUT_DIR]
+        output_base_dir = get_output_base_dir()
+        expect_output_base_dir = "./monitor_output"
+        self.assertEqual(output_base_dir, expect_output_base_dir)
+
+        # set env
+        os.environ[MonitorConst.MONITOR_OUTPUT_DIR] = "test123"
+        output_base_dir = get_output_base_dir()
+        expect_output_base_dir = "test123"
+        self.assertEqual(output_base_dir, expect_output_base_dir)
+
     def test_filter_special_chars(self):
         @filter_special_chars
         def func(msg):

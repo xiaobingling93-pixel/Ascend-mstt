@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import inspect
+import os
 from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
@@ -37,6 +38,10 @@ class MsgConst:
     Class for log messages const
     """
     SPECIAL_CHAR = ["\n", "\r", "\u007F", "\b", "\f", "\t", "\u000B", "%08", "%0a", "%0b", "%0c", "%0d", "%7f"]
+
+
+def get_output_base_dir():
+    return os.getenv(MonitorConst.MONITOR_OUTPUT_DIR, MonitorConst.DEFAULT_MONITOR_OUTPUT_DIR)
 
 
 def filter_special_chars(func):

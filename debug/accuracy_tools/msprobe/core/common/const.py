@@ -522,9 +522,12 @@ class MonitorConst:
     ACTVGRAD_OUT = "output_grad"
     POST_GRAD = "post_grad"
     PRE_GRAD = "pre_grad"
+    ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
 
+    EXP_AVG = "exp_avg"
+    EFXP_AVG_SQ = "efxp_avg_sq"
 
     ANOMALY_JSON = "anomaly.json"
     ANALYSE_JSON = "anomaly_analyse.json"

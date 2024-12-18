@@ -127,6 +127,13 @@ class TestGradAnomalyData(TestCase):
         group_mates = [0]
         self.GradAnomalyData = GradAnomalyData(tag_name=tag_name, message=message, group_mates=group_mates)
 
+    def test_get_train_stage(self):
+        tag_name_list = ["0:fc2_0/rank0/input", "0:fc1.weight/rank0/post_grad", "0:fc2.weight/rank0/efxp_avg_sq", ""]
+        expected_train_stage_list = [0, 1, 2, -1]
+        for tag_name, expected_train_stage in zip(tag_name_list, expected_train_stage_list):
+            train_stage = GradAnomalyData.get_train_stage(tag_name)
+            self.assertEqual(train_stage, expected_train_stage)
+
     def test_to_dict(self):
         expected = {
             'rank': 0,
@@ -148,38 +155,64 @@ class TestGradAnomalyData(TestCase):
         self.assertEqual(self.GradAnomalyData.get_key(), expected)
 
     def test_lt_different_step(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=2, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
         self.assertLess(data1, data2)
         self.assertGreater(data2, data1)
 
     def test_lt_same_step_different_micro_step(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0)
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=1, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
         self.assertLess(data1, data2)
         self.assertGreater(data2, data1)
 
     def test_lt_same_step_same_micro_step_different_vpp_stage(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0)
-        self.assertGreater(data1, data2)
+        # same forward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/input")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/input")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+        # same backward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
         self.assertLess(data2, data1)
+        self.assertGreater(data1, data2)
+
+        # diff train stage
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/input")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=1, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
 
     def test_lt_same_step_same_micro_step_same_vpp_stage_different_pp_stage(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0)
-        self.assertGreater(data1, data2)
+        # same forward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/input")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/input")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
+
+        # same backward
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/post_grad")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/post_grad")
         self.assertLess(data2, data1)
+        self.assertGreater(data1, data2)
+
+        # diff train stage
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="xxx/input")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=1, call_id=0, tag_name="xxx/post_grad")
+        self.assertLess(data1, data2)
+        self.assertGreater(data2, data1)
 
     def test_lt_same_step_same_micro_step_same_vpp_stage_same_pp_stage_different_call_id(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=1)
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=1, tag_name="")
         self.assertLess(data1, data2)
         self.assertGreater(data2, data1)
 
     def test_lt_same_data(self):
-        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
-        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0)
+        data1 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
+        data2 = GradAnomalyData(step=1, micro_step=0, vpp_stage=0, pp_stage=0, call_id=0, tag_name="")
         self.assertGreaterEqual(data1, data2)
         self.assertLessEqual(data1, data2)
 
