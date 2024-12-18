@@ -65,6 +65,7 @@ class Const:
     ONLINE_DUMP_MODE = [ALL, LIST, AUTO, OFF]
     SUMMARY = "summary"
     MD5 = "md5"
+    VALUE = "value"
     SUMMARY_MODE = [ALL, SUMMARY, MD5]
 
     WRITE_FLAGS = os.O_WRONLY | os.O_CREAT
@@ -123,6 +124,7 @@ class Const:
     NPU_LOWERCASE = 'npu'
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
+    DEVICE = 'device'
     DISTRIBUTED = 'Distributed'
     DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
                    "Aten", "VF", "NPU", "Jit"]
