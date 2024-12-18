@@ -168,6 +168,8 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
+    
+    FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
 
     FILL_CHAR_NUMS = 50
     TOOL_ENDS_SUCCESSFULLY = f"{TOOL_NAME} ends successfully."
