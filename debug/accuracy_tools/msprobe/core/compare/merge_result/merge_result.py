@@ -151,6 +151,8 @@ def search_api_index_result(api_list, compare_index_list, result_df, rank_num, c
     }
     """
     api_full_name_list = extract_api_full_name(api_list, result_df, rank_num)
+    if not api_full_name_list:
+        return {}
     for compare_index in compare_index_list:
         api_index_dict = {}
         for api_full_name in api_full_name_list:
@@ -193,6 +195,8 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
                 return [], [], []
             compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
+            if not compare_index_dict:
+                return [], [], []
             compare_index_dict_list.append(compare_index_dict)
             rank_num_list.append(rank_num)
         else:
@@ -322,6 +326,11 @@ def df_merge(all_result_df_list):
     for sublist in all_result_df_list[1:]:
         for i, sub_df in enumerate(sublist):
             merge_df_base[i] = pd.merge(merge_df_base[i], sub_df, on=CompareConst.NPU_NAME, how='outer')
+    for i in range(len(merge_df_base)):
+        merge_df_base[i] = merge_df_base[i].reindex(
+            columns=[CompareConst.NPU_NAME] + [col for col in merge_df_base[i].columns if
+                                               col != CompareConst.NPU_NAME])
+
     return merge_df_base
 
 
