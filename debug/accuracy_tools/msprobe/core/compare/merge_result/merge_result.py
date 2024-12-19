@@ -326,10 +326,9 @@ def df_merge(all_result_df_list):
     for sublist in all_result_df_list[1:]:
         for i, sub_df in enumerate(sublist):
             merge_df_base[i] = pd.merge(merge_df_base[i], sub_df, on=CompareConst.NPU_NAME, how='outer')
-    for i in range(len(merge_df_base)):
-        merge_df_base[i] = merge_df_base[i].reindex(
-            columns=[CompareConst.NPU_NAME] + [col for col in merge_df_base[i].columns if
-                                               col != CompareConst.NPU_NAME])
+    for i, value in enumerate(merge_df_base):
+        merge_df_base[i] = value.reindex(
+            columns=[CompareConst.NPU_NAME] + [col for col in value.columns if col != CompareConst.NPU_NAME])
     return merge_df_base
 
 
