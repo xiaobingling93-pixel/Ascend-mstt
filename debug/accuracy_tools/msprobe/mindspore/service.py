@@ -204,9 +204,7 @@ class Service:
     def step(self):
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
-        self.primitive_hook_service.primitive_counters.clear()
-        self.data_collector.data_writer.reset_cache()
-        JitDump.jit_count = defaultdict(int)
+        self.reset_status()
 
     def start(self, model=None):
         self.start_call = True
@@ -353,3 +351,18 @@ class Service:
                     self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.START))
                 cell.register_backward_hook(
                     self.cell_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
+
+    def reset_status(self):
+        self.primitive_hook_service.primitive_counters.clear()
+        self.data_collector.data_writer.reset_cache()
+        JitDump.jit_count = defaultdict(int)
+
+        if self.config.step and self.current_iter not in self.config.step:
+            return
+        if self.config.rank and self.current_rank not in self.config.rank:
+            return
+
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
+            for _, cell in self.model.cells_and_names():
+                if hasattr(cell, 'has_param_hook'):
+                    del cell.has_param_hook
