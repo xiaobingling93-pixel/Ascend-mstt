@@ -80,6 +80,7 @@ def check_csv_header(headers, required_constants, csv_path):
 class DataManager:
     def __init__(self, csv_dir, result_csv_path):
         self.results = {}
+        self.results_exception_skip = {}
         self.is_first_write = True  # 标记用于添加表头
         self.csv_dir = csv_dir
         self.api_names_set = set()  # 存储已经出现的 API 名称的集合
@@ -184,10 +185,21 @@ class DataManager:
             logger.debug(f"Updated self.results for key {key}: {self.results[key]}")
         logger.debug(f"Complete self.results after recording: {self.results}")
 
+    def record_exception_skip(self, api_name, forward_or_backward, err_msg):
+        '''
+            record exception_skip infomation into self.record_exception_skip.
+            self.record_exception_skip: dict{str: dict{"forward": str/None, "backward": str/None}}
+            string in key is api_name, string in value is err_msg
+        '''
+        if api_name not in self.results_exception_skip:
+            self.results_exception_skip[api_name] = {Const.FORWARD: None, Const.BACKWARD: None}
+        self.results_exception_skip[api_name][forward_or_backward] = err_msg
+
     def clear_results(self):
         """清空 self.results 数据"""
         logger.debug("Clearing self.results data.")
         self.results.clear()
+        self.results_exception_skip.clear()
 
     def to_detail_csv(self, csv_path):
         logger.debug("Preparing detail CSV headers and rows.")
@@ -218,6 +230,9 @@ class DataManager:
         logger.debug(f"Detail CSV written successfully to {csv_path}.")
 
     def to_result_csv(self, csv_path):
+        '''
+            depend on both self.results and self.results_exception_skip
+        '''
         logger.debug("Preparing result CSV data.")
         result_csv = []
 
@@ -254,8 +269,30 @@ class DataManager:
                 entry.backward_pass_status,
                 overall_err_msg
             ]
+            # change row if this api has excption_skip infomation
+            if api_name in self.results_exception_skip:
+                if self.results_exception_skip[api_name][Const.FORWARD] is not None:
+                    row[1] = CompareConst.SKIP
+                    row[-1] += self.results_exception_skip[api_name][Const.FORWARD]
+                if self.results_exception_skip[api_name][Const.BACKWARD] is not None:
+                    row[2] = CompareConst.SKIP
+                    row[-1] += self.results_exception_skip[api_name][Const.BACKWARD]
+                del self.results_exception_skip[api_name]
             result_csv.append(row)
             logger.debug(f"Result CSV row added: {row}")
+        for api_name in self.results_exception_skip:
+            current_exception_skip = self.results_exception_skip[api_name]
+            forward_status = None
+            backward_status = None
+            err_msg = ""
+            if current_exception_skip[Const.FORWARD] is not None:
+                forward_status = CompareConst.SKIP
+                err_msg += current_exception_skip[Const.FORWARD]
+            if current_exception_skip[Const.BACKWARD] is not None:
+                backward_status = CompareConst.SKIP
+                err_msg += current_exception_skip[Const.BACKWARD]
+            row = [api_name, forward_status, backward_status, err_msg]
+            result_csv.append(row)
 
         write_csv(result_csv, csv_path, mode="a+")
         logger.debug(f"Result CSV written successfully to {csv_path}.")

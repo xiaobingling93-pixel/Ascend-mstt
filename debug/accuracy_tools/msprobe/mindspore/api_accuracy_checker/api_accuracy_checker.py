@@ -49,6 +49,12 @@ class ResultCsvEntry:
         self.overall_err_msg = None
 
 
+class ProcessResultPacket:
+    def __init__(self, process_status, result, err_msg) -> None:
+        self.process_status = process_status
+        self.result = result
+        self.err_msg = err_msg
+
 class ApiAccuracyChecker:
     def __init__(self, args):
         self.api_infos = dict()
@@ -188,43 +194,63 @@ class ApiAccuracyChecker:
         """处理前向检查"""
         if not api_info.check_forward_info():
             logger.debug(f"api: {api_name_str} is lack of forward information, skip forward check.")
-            return Const.EXCEPTION_NONE
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.API_NOT_FOUND,
+                                                         result=None,
+                                                         err_msg=f"forward info of {api_name_str} is not found")
+            return process_result_packet
 
         try:
             forward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.FORWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when getting inputs for {api_name_str} forward api. "
                            f"Skipping forward check. Detailed exception information: {e}.")
-            return Const.EXCEPTION_NONE
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                         result=None, err_msg=f"{e}")
+            return process_result_packet
 
-        forward_output_list = None
         try:
             forward_output_list = self.run_and_compare_helper(api_info, api_name_str, forward_inputs_aggregation, Const.FORWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when running and comparing {api_name_str} forward api. "
                            f"Detailed exception information: {e}.")
-        return forward_output_list
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                         result=None, err_msg=f"{e}")
+            return process_result_packet
+
+        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
+                                                     result=forward_output_list, err_msg="")
+        return process_result_packet
 
     def process_backward(self, api_name_str, api_info):
         """处理反向检查"""
         if not api_info.check_backward_info():
             logger.debug(f"api: {api_name_str} is lack of backward information, skipping backward check.")
-            return Const.EXCEPTION_NONE
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.API_NOT_FOUND,
+                                                         result=None,
+                                                         err_msg=f"backward info of {api_name_str} is not found")
+            return process_result_packet
 
         try:
             backward_inputs_aggregation = self.prepare_api_input_aggregation(api_info, Const.BACKWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when getting inputs for {api_name_str} backward api. "
                            f"Skipping backward check. Detailed exception information: {e}.")
-            return Const.EXCEPTION_NONE
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                         result=None, err_msg=f"{e}")
+            return process_result_packet
 
-        backward_output_list = None
         try:
             backward_output_list = self.run_and_compare_helper(api_info, api_name_str, backward_inputs_aggregation, Const.BACKWARD)
         except Exception as e:
             logger.warning(f"Exception occurs when running and comparing {api_name_str} backward api. "
                            f"Detailed exception information: {e}.")
-        return backward_output_list
+            process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+                                                         result=None, err_msg=f"{e}")
+            return process_result_packet
+
+        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
+                                                     result=backward_output_list, err_msg="")
+        return process_result_packet
 
 
 
@@ -234,14 +260,18 @@ class ApiAccuracyChecker:
                 continue
 
             # 处理前向
-            forward_output_list = self.process_forward(api_name_str, api_info)
-            if forward_output_list is not Const.EXCEPTION_NONE:
-                self.data_manager.record(forward_output_list)
+            process_result_packet = self.process_forward(api_name_str, api_info)
+            if process_result_packet.process_status is MsCompareConst.ProcessStatus.SUCCESS:
+                self.data_manager.record(process_result_packet.result)
+            elif process_result_packet.process_status == MsCompareConst.ProcessStatus.EXCEPTION_SKIP:
+                self.data_manager.record_exception_skip(api_name_str, Const.FORWARD, process_result_packet.err_msg)
 
             # 处理反向
-            backward_output_list = self.process_backward(api_name_str, api_info)
-            if backward_output_list is not Const.EXCEPTION_NONE:
-                self.data_manager.record(backward_output_list)
+            process_result_packet = self.process_backward(api_name_str, api_info)
+            if process_result_packet.process_status is MsCompareConst.ProcessStatus.SUCCESS:
+                self.data_manager.record(process_result_packet.result)
+            elif process_result_packet.process_status == MsCompareConst.ProcessStatus.EXCEPTION_SKIP:
+                self.data_manager.record_exception_skip(api_name_str, Const.BACKWARD, process_result_packet.err_msg)
 
             self.data_manager.save_results(api_name_str)
 
