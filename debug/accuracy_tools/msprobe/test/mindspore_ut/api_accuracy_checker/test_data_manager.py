@@ -67,6 +67,10 @@ class TestDataManager(unittest.TestCase):
         self.assertIn(("API1", "FORWARD"), self.data_manager.results)
         self.assertEqual(len(self.data_manager.results[("API1", "FORWARD")]), 1)
 
+    def test_record_exception_skip(self):
+        self.data_manager.record_exception_skip("API3", "FORWARD", "custom err msg")
+        self.assertEqual(self.data_manager.results_exception_skip["API3"]["FORWARD"], "custom err msg")
+
     def tearDown(self):
         # 清理创建的测试目录和文件
         if os.path.exists(self.csv_dir):
