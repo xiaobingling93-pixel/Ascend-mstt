@@ -59,7 +59,7 @@ export MSPROBE_LOG_LEVEL={x}
 
 ### 0 用前必看
 
-使用工具前，建议先浏览[**工具功能模块简介、适用场景和当前版本局限性**](./docs/24.tool_function_introduction.md)，了解功能特性。
+使用工具前，建议先浏览[**工具功能模块简介、适用场景和当前版本局限性**](./docs/25.tool_function_introduction.md)，了解功能特性。
 
 ### 1 数据采集
 
