@@ -330,7 +330,6 @@ def df_merge(all_result_df_list):
         merge_df_base[i] = merge_df_base[i].reindex(
             columns=[CompareConst.NPU_NAME] + [col for col in merge_df_base[i].columns if
                                                col != CompareConst.NPU_NAME])
-
     return merge_df_base
 
 
