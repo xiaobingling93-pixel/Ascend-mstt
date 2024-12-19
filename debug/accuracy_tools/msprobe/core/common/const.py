@@ -124,7 +124,7 @@ class Const:
     CPU_LOWERCASE = 'cpu'
     CUDA_LOWERCASE = 'cuda'
     DISTRIBUTED = 'Distributed'
-    DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive", 
+    DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive",
                    "Aten", "VF", "NPU", "Jit"]
 
     # struct json param
@@ -168,7 +168,7 @@ class Const:
     CONVERT_API = {
         "int32_to_int64": ["cross_entropy"]
     }
-    
+
     FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
 
     FILL_CHAR_NUMS = 50
@@ -465,6 +465,11 @@ class MsCompareConst:
     RESULT_CSV_FILE_NAME = "accuracy_checking_result"
 
     EPSILON = 1e-8
+
+    class ProcessStatus:
+        SUCCESS = "success"
+        API_NOT_FOUND = "api_not_found"
+        EXCEPTION_SKIP = "exception_skip"
 
 
 class MsgConst:
