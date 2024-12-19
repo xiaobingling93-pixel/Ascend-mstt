@@ -188,10 +188,12 @@ class DataManager:
     def record_exception_skip(self, api_name, forward_or_backward, err_msg):
         '''
             record exception_skip infomation into self.record_exception_skip.
-            self.record_exception_skip: dict(tuple(str, str), str)
-            first string in key is api_name, second string in key is "forward" or "backward", value is err_msg
+            self.record_exception_skip: dict{str: dict{"forward": str/None, "backward": str/None}}
+            string in key is api_name, string in value is err_msg
         '''
-        self.results_exception_skip[(api_name, forward_or_backward)] = err_msg
+        if api_name not in self.results_exception_skip:
+            self.results_exception_skip[api_name] = {Const.FORWARD: None, Const.BACKWARD: None}
+        self.results_exception_skip[api_name][forward_or_backward] = err_msg
 
     def clear_results(self):
         """清空 self.results 数据"""
@@ -268,14 +270,29 @@ class DataManager:
                 overall_err_msg
             ]
             # change row if this api has excption_skip infomation
-            if self.results_exception_skip.get((api_name, Const.FORWARD), None) is not None:
-                row[1] = CompareConst.SKIP
-                row[-1] += self.results_exception_skip.get((api_name, Const.FORWARD)) + "\n"
-            if self.results_exception_skip.get((api_name, Const.BACKWARD), None) is not None:
-                row[2] = CompareConst.SKIP
-                row[-1] += self.results_exception_skip.get((api_name, Const.FORWARD)) + "\n"
+            if api_name in self.results_exception_skip:
+                if self.results_exception_skip[api_name][Const.FORWARD] is not None:
+                    row[1] = CompareConst.SKIP
+                    row[-1] += self.results_exception_skip[api_name][Const.FORWARD]
+                if self.results_exception_skip[api_name][Const.BACKWARD] is not None:
+                    row[2] = CompareConst.SKIP
+                    row[-1] += self.results_exception_skip[api_name][Const.BACKWARD]
+                del self.results_exception_skip[api_name]
             result_csv.append(row)
             logger.debug(f"Result CSV row added: {row}")
+        for api_name in self.results_exception_skip:
+            current_exception_skip = self.results_exception_skip[api_name]
+            forward_status = None
+            backward_status = None
+            err_msg = ""
+            if current_exception_skip[Const.FORWARD] is not None:
+                forward_status = CompareConst.SKIP
+                err_msg += current_exception_skip[Const.FORWARD]
+            if current_exception_skip[Const.BACKWARD] is not None:
+                backward_status = CompareConst.SKIP
+                err_msg += current_exception_skip[Const.BACKWARD]
+            row = [api_name, forward_status, backward_status, err_msg]
+            result_csv.append(row)
 
         write_csv(result_csv, csv_path, mode="a+")
         logger.debug(f"Result CSV written successfully to {csv_path}.")
