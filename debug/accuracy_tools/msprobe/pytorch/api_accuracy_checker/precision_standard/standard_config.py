@@ -51,22 +51,22 @@ class StandardConfig:
         torch.dtype: PyTorch data types.
     """
     _small_value = {
-        torch.float16: 1e-3,
-        torch.bfloat16: 1e-3,
-        torch.float32: 1e-6,
-        "default": 1e-6
+        torch.float16: 2**-10,
+        torch.bfloat16: 2**-10,
+        torch.float32: 2**-20,
+        "default": 2**-20
     }
     _small_value_atol = {
-        torch.float16: 1e-5,
-        torch.bfloat16: 1e-5,
-        torch.float32: 1e-9,
-        "default": 1e-9
+        torch.float16: 2**-16,
+        torch.bfloat16: 2**-16,
+        torch.float32: 2**-30,
+        "default": 2**-30
     }
     _rtol = {
-        torch.float16: 1e-3,
-        torch.bfloat16: 4e-3,
-        torch.float32: 1e-6,
-        "default": 1e-6
+        torch.float16: 2**-10,
+        torch.bfloat16: 2**-8,
+        torch.float32: 2**-20,
+        "default": 2**-20
     }
     
     _small_value_threshold = {
@@ -89,10 +89,16 @@ class StandardConfig:
         'warning_threshold': 1,
         "default": 1
     }
-    _eb_threshold ={
+    _eb_threshold = {
         'error_threshold': 2,
         'warning_threshold': 1,
         "default": 1
+    }
+    minmum_err = {
+        'torch.float16': 2**-11,
+        'torch.bfloat16': 2**-8,
+        'torch.float32': 2**-14,
+        'default': 2**-14
     }
     
     _fp32_mean_ulp_err_threshold = 64
@@ -143,7 +149,7 @@ class StandardConfig:
         }
         
         threshold_func = metric_threshold_functions.get(metric)
-        return threshold_func('error_threshold'), threshold_func('warning_threshold')
+        return threshold_func('error_threshold')
 
     @classmethod
     def get_fp32_mean_ulp_err_threshold(cls):
@@ -171,3 +177,7 @@ class StandardConfig:
         else:
             ulp_err_proportion_threshold = StandardConfig.get_fp16_ulp_err_proportion_threshold()
             return None, ulp_err_proportion_threshold, ulp_err_proportion_ratio_threshold
+
+    @classmethod
+    def get_minmum_err(cls, dtype):
+        return cls.minmum_err.get(dtype, cls.minmum_err["default"])
