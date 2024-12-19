@@ -452,7 +452,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.row_npu[ApiPrecisionCompareColumn.ERROR_RATE] = "2.0"
         self.compare_column.ERROR = CompareConst.ERROR
         
-        input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.compare_column)
+        input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.dtype, self.compare_column)
         result = record_binary_consistency_result(input_data)
         
         self.assertEqual(result, CompareConst.ERROR)
@@ -466,7 +466,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         }
         compare_column = MagicMock()
         
-        input_data = PrecisionCompareInput(row_npu, self.row_gpu, compare_column)
+        input_data = PrecisionCompareInput(row_npu, self.row_gpu, self.dtype, compare_column)
         result = record_absolute_threshold_result(input_data)
         
         self.assertEqual(result, CompareConst.PASS)
@@ -497,7 +497,7 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.compare_column.rel_err_thousandth = 0.999
         self.compare_column.rel_err_thousandth_status = CompareConst.PASS
         
-        input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.compare_column)
+        input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.dtype, self.compare_column)
         result = record_thousandth_threshold_result(input_data)
         
         self.assertEqual(result, CompareConst.PASS)
