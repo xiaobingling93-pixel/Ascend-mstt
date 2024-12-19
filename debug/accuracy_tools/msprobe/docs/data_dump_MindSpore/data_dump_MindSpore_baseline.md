@@ -2,7 +2,7 @@
 
 ## "tensor"模式采集数据量参考基线
 
-该基线为MindSpore框架下，使用"tensor"模式采集数据量参考基线。本基线测试了1个PanGu模型在不同采集模式下，不同global_batch_size下，单卡和8卡下，数据量的变化。
+该基线为MindSpore框架下，使用"tensor"模式采集数据量参考基线。本基线测试了PanGu模型在不同采集模式下，不同global_batch_size下，单卡和8卡下，数据量的变化。
 
 ### PanGu大模型
 

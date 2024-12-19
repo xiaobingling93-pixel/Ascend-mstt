@@ -2,7 +2,7 @@
 
 ## "multi_run_ut"模式精度预检耗时参考基线
 
-该基线为MindSpore框架下，使用"multi_run_ut"模式精度预检耗时参考基线。本基线测试了1个PanGu模型在不同卡数下耗时的变化。
+该基线为MindSpore框架下，使用"multi_run_ut"模式精度预检耗时参考基线。本基线测试了PanGu模型在不同卡数下耗时的变化。
 
 ### PanGu大模型
 
