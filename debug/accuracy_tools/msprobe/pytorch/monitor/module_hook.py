@@ -643,15 +643,14 @@ class TrainerMon:
         return False
 
     def _register_chunk(self, model_chunk, prefix):
-        for index, (param_name, param) in enumerate(model_chunk.named_parameters()):
+        index = 0
+        for (param_name, param) in model_chunk.named_parameters():
             if not param.requires_grad:
                 continue
             if self._is_target_param(param_name, param, prefix):
                 name = prefix + squash_param_name(param_name)
                 if name in self.param2name.values():
-                    logger.error(f'same name {name} for different param. Current param is {param_name}. \
-                                    May be error of squash_param_name')
-                    raise Exception("param with same name will be overwritten.")
+                    name = prefix + param_name
                 self.param2name[param] = name
                 self.name2param[name] = param
                 self.name2index[name] = index
@@ -660,11 +659,11 @@ class TrainerMon:
                     self.duplicate_param[name] = True
                 if self.dp_group and param_is_data_parallel_duplicate(self.dp_group):
                     self.duplicate_param[name] = True
-                self.name2tag[name] = {}
-                self.name2tag[name][MonitorConst.PRE_GRAD] = get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD,
-                                                                                         self.rank)
-                self.name2tag[name][MonitorConst.POST_GRAD] = get_summary_writer_tag_name(name, MonitorConst.POST_GRAD,
-                                                                                          self.rank)
+                self.name2tag[name] = {
+                    MonitorConst.PRE_GRAD: get_summary_writer_tag_name(name, MonitorConst.PRE_GRAD, self.rank),
+                    MonitorConst.POST_GRAD: get_summary_writer_tag_name(name, MonitorConst.POST_GRAD, self.rank)
+                }
+                index += 1
 
     def _register_param_name(self, model):
         if self.param_registered:
