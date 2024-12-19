@@ -210,8 +210,10 @@ class TestApiPrecisionCompare(unittest.TestCase):
         self.compare_column.api_name = MagicMock(return_value="test_api")
 
         self.registry = register_compare_func()
+        
+        self.dtype = 'torch.float16'
 
-        self.input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.compare_column)
+        self.input_data = PrecisionCompareInput(self.row_npu, self.row_gpu, self.dtype, self.compare_column)
 
     def test_check_csv_columns(self):
         with self.assertRaises(Exception):
