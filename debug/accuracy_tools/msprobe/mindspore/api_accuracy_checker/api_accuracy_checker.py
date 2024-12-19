@@ -217,7 +217,7 @@ class ApiAccuracyChecker:
                                                          result=None, err_msg=f"{e}")
             return process_result_packet
 
-        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
                                                      result=forward_output_list, err_msg="")
         return process_result_packet
 
@@ -248,7 +248,7 @@ class ApiAccuracyChecker:
                                                          result=None, err_msg=f"{e}")
             return process_result_packet
 
-        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.EXCEPTION_SKIP,
+        process_result_packet =  ProcessResultPacket(process_status=MsCompareConst.ProcessStatus.SUCCESS,
                                                      result=backward_output_list, err_msg="")
         return process_result_packet
 

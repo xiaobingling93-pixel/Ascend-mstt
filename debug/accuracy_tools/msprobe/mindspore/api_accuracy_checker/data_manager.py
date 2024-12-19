@@ -191,7 +191,7 @@ class DataManager:
             self.record_exception_skip: dict(tuple(str, str), str)
             first string in key is api_name, second string in key is "forward" or "backward", value is err_msg
         '''
-        self.record_exception_skip[(api_name, forward_or_backward)] = err_msg
+        self.results_exception_skip[(api_name, forward_or_backward)] = err_msg
 
     def clear_results(self):
         """清空 self.results 数据"""
