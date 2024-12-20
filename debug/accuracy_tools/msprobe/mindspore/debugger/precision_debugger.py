@@ -30,6 +30,10 @@ from msprobe.mindspore.runtime import Runtime
 from msprobe.mindspore.service import Service
 from msprobe.mindspore.task_handler_factory import TaskHandlerFactory
 
+try:
+    from msprobe.lib import _msprobe_c
+except ImportError:
+    _msprobe_c = None
 
 class PrecisionDebugger:
     _instance = None
@@ -57,6 +61,9 @@ class PrecisionDebugger:
             return
         self.config = DebuggerConfig(common_config, task_config)
 
+        if _msprobe_c:
+            _msprobe_c._PrecisionDebugger(framework="MindSpore", config_path=config_path)
+
         Runtime.step_count = 0
         Runtime.is_running = False
 
@@ -83,6 +90,8 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if _msprobe_c:
+            _msprobe_c._PrecisionDebugger().start()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
 
@@ -114,6 +123,8 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if _msprobe_c:
+            _msprobe_c._PrecisionDebugger().stop()
         if instance.task == Const.GRAD_PROBE:
             instance.gm.stop()
         if instance.task in PrecisionDebugger.task_not_need_service:
@@ -127,6 +138,8 @@ class PrecisionDebugger:
         instance = cls._instance
         if not instance:
             raise Exception(MsgConst.NOT_CREATED_INSTANCE)
+        if _msprobe_c:
+            _msprobe_c._PrecisionDebugger().step()
         if instance.task in PrecisionDebugger.task_not_need_service:
             return
         if instance.service:

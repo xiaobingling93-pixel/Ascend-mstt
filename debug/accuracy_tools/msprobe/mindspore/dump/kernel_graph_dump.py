@@ -56,6 +56,13 @@ class KernelGraphDump:
                 self.dump_json["common_dump_settings"]["input_output"] = 2
 
     def handle(self):
+        try:
+            from msprobe.lib import _msprobe_c
+            return
+        except ImportError:
+            # 如果没有_msprobe_ce_c走MindSpore老流程
+            logger.info("Module _msprobe_c has not been installed, use interface in mindspore instead.")
+
         if os.getenv("GRAPH_OP_RUN") == "1":
             raise Exception("Must run in graph mode, not kbk mode")
         json_path = self.dump_json["common_dump_settings"]["path"]
