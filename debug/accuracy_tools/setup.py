@@ -16,6 +16,9 @@
 
 __version__ = '1.1.1'
 
+import subprocess
+import platform
+import sys
 import setuptools
 
 INSTALL_REQUIRED = [
@@ -38,13 +41,52 @@ EXCLUDE_PKGS = [
     "api_accuracy_checker*",
     "grad_tool*",
     "ptdbg_ascend*",
+    "msprobe.ccsrc*",
     "msprobe.test*",
+    "build.sh",
+    "build_dependency*",
+    "cmake*",
+    "output*",
+    "third_party*",
 ]
+
+if "--plat-name" in sys.argv or "--python-tag" in sys.argv:
+    raise SystemError("Specifing platforms or python version is not supported.")
+
+if (platform.system() != "Linux"):
+    raise SystemError("MsProbe is only supported on Linux platforms.")
+
+
+mod_list_range = {"adump",}
+mod_list = []
+for i in range(len(sys.argv)):
+    if sys.argv[i].startswith("--include-mod"):
+        if sys.argv[i].startswith("--include-mod="):
+            mod_list = sys.argv[i][len("--include-mod="):].split(',')
+            sys.argv.remove(sys.argv[i])
+        elif i + 1 < len(sys.argv) and not sys.argv[i + 1].startswith("--"):
+            mod_list = sys.argv[i + 1].split(',')
+            sys.argv.remove(sys.argv[i + 1])
+            sys.argv.remove(sys.argv[i])
+        mod_list = list(set(mod_list) & mod_list_range)
+        break
+
+# 当前只有adump一个mod
+if mod_list:
+    arch = platform.machine()
+    sys.argv.append("--plat-name")
+    sys.argv.append(f"linux_{arch}")
+    sys.argv.append("--python-tag")
+    sys.argv.append(f"cp{sys.version_info.major}{sys.version_info.minor}")
+    build_cmd = f"bash ./build.sh -j16 -a {arch} -v {sys.version_info.major}.{sys.version_info.minor}"
+    p = subprocess.run(build_cmd.split(), shell=False)
+    if p.returncode != 0:
+        raise RuntimeError(f"Failed to build source({p.returncode})")
 
 setuptools.setup(
     name="mindstudio-probe",
     version=__version__,
-    description="Pytorch Ascend Probe Utils",
+    description="Ascend Probe Utils",
     long_description="MindStudio-Probe is a set of tools for diagnosing and improving model accuracy on Ascend NPU, "
                      "including API acc checker, ptdbg, grad tool etc.",
     url="https://gitee.com/ascend/mstt/tree/master/debug/accuracy_tools/msprobe",
@@ -59,6 +101,7 @@ setuptools.setup(
         'Intended Audience :: Education',
         'Intended Audience :: Science/Research',
         'Programming Language :: Python :: 3',
+        'Programming Language :: C++',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Mathematics',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
