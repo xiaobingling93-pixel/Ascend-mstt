@@ -126,9 +126,10 @@ def extract_api_full_name(api_list, result_df, rank_num):
     """
     api_full_name_list = []
     for api in api_list:
-        api_pattern = api + Const.SEP
+        api_pat = api + Const.SEP
+        escaped_api_pat = api_pat.replace('.', r'\.')
         single_api_full_name_list = result_df.loc[
-            result_df[CompareConst.NPU_NAME].str.contains(api_pattern, na=False), CompareConst.NPU_NAME].tolist()
+            result_df[CompareConst.NPU_NAME].str.contains(escaped_api_pat, na=False), CompareConst.NPU_NAME].tolist()
         if len(single_api_full_name_list) == 0:
             logger.warning(f"{api} not found in rank{rank_num} compare result.")
             continue
@@ -152,8 +153,6 @@ def search_api_index_result(api_list, compare_index_list, result_df, rank_num, c
     }
     """
     api_full_name_list = extract_api_full_name(api_list, result_df, rank_num)
-    if not api_full_name_list:
-        return {}
     for compare_index in compare_index_list:
         api_index_dict = {}
         for api_full_name in api_full_name_list:
@@ -196,8 +195,6 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
                 return [], [], []
             compare_index_dict = search_api_index_result(api_list, compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
-            if not compare_index_dict:
-                return [], [], []
             compare_index_dict_list.append(compare_index_dict)
             rank_num_list.append(rank_num)
         else:
