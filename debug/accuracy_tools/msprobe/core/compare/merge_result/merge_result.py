@@ -126,8 +126,9 @@ def extract_api_full_name(api_list, result_df, rank_num):
     """
     api_full_name_list = []
     for api in api_list:
+        api_pattern = api + Const.SEP
         single_api_full_name_list = result_df.loc[
-            result_df[CompareConst.NPU_NAME].str.contains(api, na=False), CompareConst.NPU_NAME].tolist()
+            result_df[CompareConst.NPU_NAME].str.contains(api_pattern, na=False), CompareConst.NPU_NAME].tolist()
         if len(single_api_full_name_list) == 0:
             logger.warning(f"{api} not found in rank{rank_num} compare result.")
             continue
