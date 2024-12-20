@@ -79,6 +79,12 @@ class DumpDataItem:
             )
             raise CompareException(CompareException.INVALID_DATA_ERROR)
 
+        if data_name_list[Const.LAST_INDEX] == Const.PARAMS_GRAD:
+            self.api_type = Const.PARAMS_GRAD
+            self.api_name = data_name_list[Const.PARAMS_GRAD_NAME_INDEX]
+            self.type_name = data_name_list[Const.PARAMS_GRAD_TYPE_NAME_INDEX]
+            return
+
         self.api_type = data_name_list[Const.API_TYPE_INDEX]
         self.type_name = data_name_list[Const.TYPE_NAME_INDEX]
         if self.api_type == self.framework2layername.get(self.framework):
@@ -92,6 +98,8 @@ class DumpDataItem:
             # remove api name
             data_list = self.data_name.split(Const.SEP)
             data_list = data_list[:Const.LAYER_NAME_INDEX] + data_list[Const.TYPE_NAME_INDEX:]
+        elif self.api_type == Const.PARAMS_GRAD:
+            data_list = self.data_name.split(Const.SEP)
         elif construct_info:
             data_list = construct_info.split(Const.SEP)
         else:
