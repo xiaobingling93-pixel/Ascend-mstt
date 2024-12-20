@@ -1,0 +1,798 @@
+/*
+ * Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <unordered_set>
+#include <unordered_map>
+#include <map>
+#include <set>
+#include <stdexcept>
+#include <cstring>
+#include <algorithm>
+
+#include "utils/DataUtils.hpp"
+#include "utils/MathUtils.hpp"
+#include "base/ErrorInfos.hpp"
+#include "AclTensor.hpp"
+
+namespace MindStudioDebugger {
+namespace AclDumpMsg = toolkit::dumpdata;
+namespace AclTensor {
+
+using namespace MathUtils;
+
+constexpr int64_t kCubeSize = 16;
+constexpr int64_t kCube16 = kCubeSize;
+constexpr int64_t kCube32 = 32;
+constexpr int64_t kCube64 = 64;
+constexpr int64_t kCubeSize_C04 = 4;
+
+constexpr size_t hwH = 1;
+constexpr size_t hwW = 2;
+constexpr size_t fnzW1 = 4;
+constexpr size_t fnzH1 = 3;
+constexpr size_t fnzH0 = 2;
+constexpr size_t fnzW0 = 1;
+constexpr size_t fzN0 = 1;
+constexpr size_t fzNi = 2;
+constexpr size_t fzC0 = 3;
+
+using TensorTransFunc = DebuggerErrno (*)(AclTensorInfo &);
+
+static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor);
+static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor);
+static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor);
+static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor);
+static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor);
+static DebuggerErrno NC1HWC0_C04_TO_NCHW(AclTensorInfo& tensor);
+static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor);
+
+const static std::unordered_set<AclDtype> kSupportedDtypes = {
+    AclDtype::DT_UNDEFINED,
+    AclDtype::DT_FLOAT,
+    AclDtype::DT_FLOAT16,
+    AclDtype::DT_INT8,
+    AclDtype::DT_UINT8,
+    AclDtype::DT_INT16,
+    AclDtype::DT_UINT16,
+    AclDtype::DT_INT32,
+    AclDtype::DT_INT64,
+    AclDtype::DT_UINT32,
+    AclDtype::DT_UINT64,
+    AclDtype::DT_BOOL,
+    AclDtype::DT_DOUBLE,
+    AclDtype::DT_BF16,
+    AclDtype::DT_COMPLEX64,
+    AclDtype::DT_COMPLEX128,
+};
+
+const static std::unordered_set<AclFormat> kSupportedFormat = {
+    AclFormat::FORMAT_NCHW,
+    AclFormat::FORMAT_NHWC,
+    AclFormat::FORMAT_ND,
+    AclFormat::FORMAT_NC1HWC0,
+    AclFormat::FORMAT_FRACTAL_Z,
+    AclFormat::FORMAT_NC1HWC0_C04,
+    AclFormat::FORMAT_FRACTAL_Z_C04,
+    AclFormat::FORMAT_NC1KHKWHWC0,
+    AclFormat::FORMAT_HWCN,
+    AclFormat::FORMAT_NDHWC,
+    AclFormat::FORMAT_NCDHW,
+    AclFormat::FORMAT_DHWCN,
+    AclFormat::FORMAT_DHWNC,
+    AclFormat::FORMAT_NDC1HWC0,
+    AclFormat::FORMAT_FRACTAL_Z_3D,
+    AclFormat::FORMAT_C1HWNCoC0,
+    AclFormat::FORMAT_FRACTAL_NZ,
+    AclFormat::FORMAT_FRACTAL_ZN_LSTM,
+    AclFormat::FORMAT_NCL,
+};
+
+const static std::map<std::pair<AclFormat, AclFormat>, TensorTransFunc> formatTransFuncMap = {
+    /* {{from, to}, function} */
+    {{AclFormat::FORMAT_HWCN, AclFormat::FORMAT_NCHW}, nullptr},
+    {{AclFormat::FORMAT_NHWC, AclFormat::FORMAT_NCHW}, nullptr},
+    {{AclFormat::FORMAT_FRACTAL_Z, AclFormat::FORMAT_NCHW}, FRAC_Z_TO_NCHW},
+    {{AclFormat::FORMAT_FRACTAL_NZ, AclFormat::FORMAT_NCHW}, FRAC_NZ_TO_NCHW},
+    {{AclFormat::FORMAT_NC1HWC0, AclFormat::FORMAT_NCHW}, NC1HWC0_TO_NCHW},
+    {{AclFormat::FORMAT_NDC1HWC0, AclFormat::FORMAT_NCHW}, NDC1HWC0_TO_NCDHW},
+    {{AclFormat::FORMAT_C1HWNCoC0, AclFormat::FORMAT_NCHW}, C1HWNCoC0_TO_NCHW},
+    {{AclFormat::FORMAT_NC1HWC0_C04, AclFormat::FORMAT_NCHW}, NC1HWC0_C04_TO_NCHW},
+    {{AclFormat::FORMAT_FRACTAL_Z_3D, AclFormat::FORMAT_NCHW}, FRAC_Z3D_TO_NCDHW},
+};
+
+const static std::unordered_map<AclDumpMsg::OutputDataType, AclDtype> dtypeTransMap = {
+    {AclDumpMsg::OutputDataType::DT_UNDEFINED, AclDtype::DT_UNDEFINED},
+    {AclDumpMsg::OutputDataType::DT_FLOAT, AclDtype::DT_FLOAT},
+    {AclDumpMsg::OutputDataType::DT_FLOAT16, AclDtype::DT_FLOAT16},
+    {AclDumpMsg::OutputDataType::DT_INT8, AclDtype::DT_INT8},
+    {AclDumpMsg::OutputDataType::DT_UINT8, AclDtype::DT_UINT8},
+    {AclDumpMsg::OutputDataType::DT_INT16, AclDtype::DT_INT16},
+    {AclDumpMsg::OutputDataType::DT_UINT16, AclDtype::DT_UINT16},
+    {AclDumpMsg::OutputDataType::DT_INT32, AclDtype::DT_INT32},
+    {AclDumpMsg::OutputDataType::DT_INT64, AclDtype::DT_INT64},
+    {AclDumpMsg::OutputDataType::DT_UINT32, AclDtype::DT_UINT32},
+    {AclDumpMsg::OutputDataType::DT_UINT64, AclDtype::DT_UINT64},
+    {AclDumpMsg::OutputDataType::DT_BOOL, AclDtype::DT_BOOL},
+    {AclDumpMsg::OutputDataType::DT_DOUBLE, AclDtype::DT_DOUBLE},
+    {AclDumpMsg::OutputDataType::DT_STRING, AclDtype::DT_STRING},
+    {AclDumpMsg::OutputDataType::DT_DUAL_SUB_INT8, AclDtype::DT_DUAL_SUB_INT8},
+    {AclDumpMsg::OutputDataType::DT_DUAL_SUB_UINT8, AclDtype::DT_DUAL_SUB_UINT8},
+    {AclDumpMsg::OutputDataType::DT_COMPLEX64, AclDtype::DT_COMPLEX64},
+    {AclDumpMsg::OutputDataType::DT_COMPLEX128, AclDtype::DT_COMPLEX128},
+    {AclDumpMsg::OutputDataType::DT_QINT8, AclDtype::DT_QINT8},
+    {AclDumpMsg::OutputDataType::DT_QINT16, AclDtype::DT_QINT16},
+    {AclDumpMsg::OutputDataType::DT_QINT32, AclDtype::DT_QINT32},
+    {AclDumpMsg::OutputDataType::DT_QUINT8, AclDtype::DT_QUINT8},
+    {AclDumpMsg::OutputDataType::DT_QUINT16, AclDtype::DT_QUINT16},
+    {AclDumpMsg::OutputDataType::DT_RESOURCE, AclDtype::DT_RESOURCE},
+    {AclDumpMsg::OutputDataType::DT_STRING_REF, AclDtype::DT_STRING_REF},
+    {AclDumpMsg::OutputDataType::DT_DUAL, AclDtype::DT_DUAL},
+    {AclDumpMsg::OutputDataType::DT_VARIANT, AclDtype::DT_VARIANT},
+    {AclDumpMsg::OutputDataType::DT_BF16, AclDtype::DT_BF16},
+    {AclDumpMsg::OutputDataType::DT_INT4, AclDtype::DT_INT4},
+    {AclDumpMsg::OutputDataType::DT_UINT1, AclDtype::DT_UINT1},
+    {AclDumpMsg::OutputDataType::DT_INT2, AclDtype::DT_INT2},
+    {AclDumpMsg::OutputDataType::DT_UINT2, AclDtype::DT_UINT2},
+};
+
+const static std::unordered_map<AclDumpMsg::OutputFormat, AclFormat> formatTransMap = {
+    {AclDumpMsg::OutputFormat::FORMAT_NCHW, AclFormat::FORMAT_NCHW},
+    {AclDumpMsg::OutputFormat::FORMAT_NHWC, AclFormat::FORMAT_NHWC},
+    {AclDumpMsg::OutputFormat::FORMAT_ND, AclFormat::FORMAT_ND},
+    {AclDumpMsg::OutputFormat::FORMAT_NC1HWC0, AclFormat::FORMAT_NC1HWC0},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z, AclFormat::FORMAT_FRACTAL_Z},
+    {AclDumpMsg::OutputFormat::FORMAT_NC1C0HWPAD, AclFormat::FORMAT_NC1C0HWPAD},
+    {AclDumpMsg::OutputFormat::FORMAT_NHWC1C0, AclFormat::FORMAT_NHWC1C0},
+    {AclDumpMsg::OutputFormat::FORMAT_FSR_NCHW, AclFormat::FORMAT_FSR_NCHW},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV, AclFormat::FORMAT_FRACTAL_DECONV},
+    {AclDumpMsg::OutputFormat::FORMAT_C1HWNC0, AclFormat::FORMAT_C1HWNC0},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_TRANSPOSE, AclFormat::FORMAT_FRACTAL_DECONV_TRANSPOSE},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE_TRANS, AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE_TRANS},
+    {AclDumpMsg::OutputFormat::FORMAT_NC1HWC0_C04, AclFormat::FORMAT_NC1HWC0_C04},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_C04, AclFormat::FORMAT_FRACTAL_Z_C04},
+    {AclDumpMsg::OutputFormat::FORMAT_CHWN, AclFormat::FORMAT_CHWN},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS, AclFormat::FORMAT_FRACTAL_DECONV_SP_STRIDE8_TRANS},
+    {AclDumpMsg::OutputFormat::FORMAT_HWCN, AclFormat::FORMAT_HWCN},
+    {AclDumpMsg::OutputFormat::FORMAT_NC1KHKWHWC0, AclFormat::FORMAT_NC1KHKWHWC0},
+    {AclDumpMsg::OutputFormat::FORMAT_BN_WEIGHT, AclFormat::FORMAT_BN_WEIGHT},
+    {AclDumpMsg::OutputFormat::FORMAT_FILTER_HWCK, AclFormat::FORMAT_FILTER_HWCK},
+    {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_LOOKUPS, AclFormat::FORMAT_HASHTABLE_LOOKUP_LOOKUPS},
+    {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_KEYS, AclFormat::FORMAT_HASHTABLE_LOOKUP_KEYS},
+    {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_VALUE, AclFormat::FORMAT_HASHTABLE_LOOKUP_VALUE},
+    {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT, AclFormat::FORMAT_HASHTABLE_LOOKUP_OUTPUT},
+    {AclDumpMsg::OutputFormat::FORMAT_HASHTABLE_LOOKUP_HITS, AclFormat::FORMAT_HASHTABLE_LOOKUP_HITS},
+    {AclDumpMsg::OutputFormat::FORMAT_C1HWNCoC0, AclFormat::FORMAT_C1HWNCoC0},
+    {AclDumpMsg::OutputFormat::FORMAT_MD, AclFormat::FORMAT_MD},
+    {AclDumpMsg::OutputFormat::FORMAT_NDHWC, AclFormat::FORMAT_NDHWC},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_ZZ, AclFormat::FORMAT_FRACTAL_ZZ},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_NZ, AclFormat::FORMAT_FRACTAL_NZ},
+    {AclDumpMsg::OutputFormat::FORMAT_NCDHW, AclFormat::FORMAT_NCDHW},
+    {AclDumpMsg::OutputFormat::FORMAT_DHWCN, AclFormat::FORMAT_DHWCN},
+    {AclDumpMsg::OutputFormat::FORMAT_NDC1HWC0, AclFormat::FORMAT_NDC1HWC0},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_3D, AclFormat::FORMAT_FRACTAL_Z_3D},
+    {AclDumpMsg::OutputFormat::FORMAT_CN, AclFormat::FORMAT_CN},
+    {AclDumpMsg::OutputFormat::FORMAT_NC, AclFormat::FORMAT_NC},
+    {AclDumpMsg::OutputFormat::FORMAT_DHWNC, AclFormat::FORMAT_DHWNC},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_3D_TRANSPOSE, AclFormat::FORMAT_FRACTAL_Z_3D_TRANSPOSE},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_ZN_LSTM, AclFormat::FORMAT_FRACTAL_ZN_LSTM},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_G, AclFormat::FORMAT_FRACTAL_Z_G},
+    {AclDumpMsg::OutputFormat::FORMAT_RESERVED, AclFormat::FORMAT_RESERVED},
+    {AclDumpMsg::OutputFormat::FORMAT_ALL, AclFormat::FORMAT_ALL},
+    {AclDumpMsg::OutputFormat::FORMAT_NULL, AclFormat::FORMAT_NULL},
+    {AclDumpMsg::OutputFormat::FORMAT_ND_RNN_BIAS, AclFormat::FORMAT_ND_RNN_BIAS},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_ZN_RNN, AclFormat::FORMAT_FRACTAL_ZN_RNN},
+    {AclDumpMsg::OutputFormat::FORMAT_YUV, AclFormat::FORMAT_YUV},
+    {AclDumpMsg::OutputFormat::FORMAT_YUV_A, AclFormat::FORMAT_YUV_A},
+    {AclDumpMsg::OutputFormat::FORMAT_NCL, AclFormat::FORMAT_NCL},
+    {AclDumpMsg::OutputFormat::FORMAT_FRACTAL_Z_WINO, AclFormat::FORMAT_FRACTAL_Z_WINO},
+    {AclDumpMsg::OutputFormat::FORMAT_C1HWC0, AclFormat::FORMAT_C1HWC0},
+};
+
+enum kAxis4D : int { kN = 0, kC, kH, kW, kNchwDims };
+enum Axis5D : int {
+  N_ncdhw = 0,
+  C_ncdhw,
+  D_ncdhw,
+  H_ncdhw,
+  W_ncdhw,
+  kNcdhw,
+  N_ndc1hwc0 = 0,
+  D_ndc1hwc0,
+  C1_ndc1hwc0,
+  H_ndc1hwc0,
+  W_ndc1hwc0,
+  C0_ndc1hwc0
+};
+
+static inline AclDtype transAclDtype2MS(AclDumpMsg::OutputDataType dt)
+{
+    auto it = dtypeTransMap.find(dt);
+    if (it != dtypeTransMap.end()) {
+        return it->second;
+    }
+    return AclDtype::DT_MAX;
+}
+
+static inline AclFormat transAclFormat2MS(AclDumpMsg::OutputFormat fmt)
+{
+    auto it = formatTransMap.find(fmt);
+    if (it != formatTransMap.end()) {
+        return it->second;
+    }
+    return AclFormat::FORMAT_MAX;
+}
+
+static size_t EleNumOfTensor(const AclTensorInfo& tensor, bool host = true) {
+    size_t num = 1;
+    const AclShape& shape = host ? tensor.hostShape : tensor.deviceShape;
+    for (auto dim : shape) {
+        if (dim <= 0) {
+            /* For dynamic shape which has negative dimensions, data size should be zero. */
+            return 0;
+        }
+
+        if (SIZE_MAX / dim < num) {
+            throw std::out_of_range(tensor + ": Count of element over size_t.");
+        }
+        num *= static_cast<size_t>(dim);
+    }
+  return num;
+}
+
+static inline size_t SizeOfAclDType(const AclTensorInfo& tensor) {
+    return DataUtils::SizeOfDType(tensor.dtype);
+}
+
+static inline size_t SizeOfAclDType(const AclDtype& dtype) {
+    return DataUtils::SizeOfDType(dtype);
+}
+
+size_t SizeOfTensor(const AclTensorInfo& tensor, bool host) {
+    size_t num = EleNumOfTensor(tensor, host);
+    size_t eleSize = SizeOfAclDType(tensor);
+    if (num != 0 && SIZE_MAX / num < eleSize) {
+        throw std::runtime_error(tensor + ": Size over size_t.");
+    }
+    return num * eleSize;
+}
+
+static inline int64_t GetCubeSizeByType(const AclDtype& dtype) {
+    if (dtype == AclDtype::DT_UINT8 || dtype == AclDtype::DT_INT8) {
+        return kCube32;
+    }
+
+    if (dtype == AclDtype::DT_INT4) {
+        return kCube64;
+    }
+
+    return kCube16;
+}
+
+static inline void AssertDim(const AclShape& shape, size_t dim)
+{
+    if (shape.size() != dim) {
+        throw std::runtime_error("Dimension of tensor is expected to be " + std::to_string(dim)  +
+                                 ", but actually " + std::to_string(shape.size()) +".");
+    }
+}
+
+static inline void AssertConsis(const AclTensorInfo& tensor)
+{
+    if (EleNumOfTensor(tensor, false) * SizeOfAclDType(tensor) != tensor.dataSize) {
+        throw std::runtime_error(tensor + ": The internal data of Tensor is inconsistent.");
+    }
+}
+
+template <typename T>
+AclTensorInfo ParseAttrsFromDumpData(const std::string& dumpPath, const uint8_t* data, const T& tensor,
+                                     const std::string& io, uint32_t slot)
+{
+    AclDumpMsg::OutputDataType oriDtype = tensor.data_type();
+    AclDtype dtype = transAclDtype2MS(oriDtype);
+    bool dumpOriginData = false;
+    size_t dataSize = static_cast<size_t>(tensor.size());
+    if (dtype == AclDtype::DT_MAX || kSupportedDtypes.find(dtype) == kSupportedDtypes.end()) {
+        dumpOriginData = true;
+    }
+
+    AclDumpMsg::OutputFormat oriDeviceFmt = tensor.format();
+    AclFormat dFmt = transAclFormat2MS(oriDeviceFmt);
+    if (dFmt == AclFormat::FORMAT_MAX || kSupportedFormat.find(dFmt) == kSupportedFormat.end()) {
+        dumpOriginData = true;
+    }
+
+    AclShape dShape;
+    std::transform(tensor.shape().dim().begin(), tensor.shape().dim().end(), std::back_inserter(dShape),
+                   DataUtils::SizeToS64);
+    AclShape hShape;
+    for (auto d : tensor.original_shape().dim()) {
+        if (d > INT64_MAX) {
+            LOG_WARNING(DebuggerErrno::ERROR_VALUE_OVERFLOW,
+                    "The value(" + std::to_string(d) + ") exceeds the max value of int64_t, " +
+                    "this maybe caused by the unfixed shape operaters.");
+            hShape.clear();
+            break;
+        }
+        hShape.push_back(DataUtils::SizeToS64(d));
+    }
+
+    // convert format to host format. It can be either NCHW or ND (non 4-dimemsions).
+    AclFormat hFmt;
+    if (hShape.size() == kDim4) {
+        hFmt = AclFormat::FORMAT_NCHW;
+    } else if (hShape.empty()) {
+        hFmt = dFmt;
+        hShape = dShape;
+        LOG_WARNING(DebuggerErrno::NONE,
+                    "Tensor(" +  dumpPath + "): The host shape is empty, use device shape as host shape.");
+    } else {
+        hFmt = AclFormat::FORMAT_ND;
+    }
+
+    int32_t subFormat = tensor.sub_format();
+    return AclTensorInfo{dumpPath, data, dtype, dFmt, hFmt, dShape, hShape, dataSize, subFormat, io, slot, dumpOriginData};
+}
+
+template AclTensorInfo ParseAttrsFromDumpData<AclDumpMsg::OpOutput>(
+    const std::string& dumpPath, const uint8_t* data, const AclDumpMsg::OpOutput& tensor, const std::string& io,
+    uint32_t slot);
+template AclTensorInfo ParseAttrsFromDumpData<AclDumpMsg::OpInput>(
+    const std::string& dumpPath, const uint8_t* data, const AclDumpMsg::OpInput& tensor, const std::string& io,
+    uint32_t slot);
+
+static inline void AllocTensorTransBuf(AclTensorInfo& tensor)
+{
+    tensor.transBuf.resize(SizeOfTensor(tensor));
+}
+
+static DebuggerErrno FRAC_Z_TO_NCHW_WITH_GROUPS(AclTensorInfo& tensor)
+{
+    AssertDim(tensor.hostShape, kDim4);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto nDim = tensor.hostShape[kN];
+    auto cDim = tensor.hostShape[kC];
+    auto hDim = tensor.hostShape[kH];
+    auto wDim = tensor.hostShape[kW];
+    auto groups = tensor.subFormat;
+    auto cinOri = cDim;
+    auto coutOri = nDim / groups;
+
+    if (cinOri == 0 || coutOri == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": cin/cout ori must not equal to 0.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
+    auto cubeK = GetCubeSizeByType(tensor.dtype);
+    auto eMult = std::min(Lcm(Lcm(cinOri, cubeK) / cinOri, Lcm(coutOri, kCubeSize) / cinOri),
+                          static_cast<int64_t>(groups));
+    if (eMult == 0) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE,
+                    tensor + ": The value of e_mult should be greater than 0.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
+    auto cinOpt = AlignCeil(eMult * cinOri, cubeK);
+    auto coutOpt = AlignCeil(eMult * coutOri, kCubeSize);
+    auto c1Dim = cinOpt / cubeK;
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+
+    for (int64_t g = 0; g < groups; ++g) {
+        for (int64_t c = 0; c < cDim; ++c) {
+            for (int64_t h = 0; h < hDim; ++h) {
+                for (int64_t w = 0; w < wDim; ++w) {
+                    for (int64_t n = 0; n < coutOri; ++n) {
+                        int64_t eVal = g % eMult;
+                        int64_t dstCi = eVal * cinOri + c;
+                        int64_t dstCo = eVal * coutOri + n;
+                        int64_t srcCo = g * coutOri + n;
+                        int64_t temporary = dstCi % cubeK;
+                        int64_t devIdx = (g / eMult) * c1Dim * hDim * wDim * coutOpt * cubeK +
+                                        (dstCi / cubeK) * hDim * wDim * coutOpt * cubeK + h * wDim * coutOpt * cubeK +
+                                        w * coutOpt * cubeK + dstCo * cubeK + temporary;
+                        int64_t hstIdx = srcCo * cDim * hDim * wDim + c * hDim * wDim + h * wDim + w;
+                        /* 此处由偏移计算逻辑保障不会越界读写 */
+                        std::memcpy(dst + hstIdx * dtypeSize, src + devIdx * dtypeSize, dtypeSize);
+                    }
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static DebuggerErrno FRAC_Z_TO_NCHW(AclTensorInfo& tensor)
+{
+    if (tensor.subFormat > 1) {
+        return FRAC_Z_TO_NCHW_WITH_GROUPS(tensor);
+    }
+
+    AssertDim(tensor.hostShape, kDim4);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto n0 = tensor.deviceShape.at(fzN0);
+    auto ni = tensor.deviceShape.at(fzNi);
+    auto c0 = tensor.deviceShape.at(fzC0);
+    auto n = tensor.hostShape[kN];
+    auto c = tensor.hostShape[kC];
+    auto h = tensor.hostShape[kH];
+    auto w = tensor.hostShape[kW];
+    auto nc = ni * n0;
+    auto ncc0 = nc * c0;
+    auto wncc0 = w * ncc0;
+    auto hwncc0 = h * wncc0;
+    auto hw = h * w;
+    auto chw = c * hw;
+
+    if (c0 == 0) {
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+    for (int64_t nIdx = 0; nIdx < n; nIdx++) {
+        int64_t nHeadAddr = nIdx * chw;
+        for (int64_t cIdx = 0; cIdx < c; cIdx++) {
+            int64_t cHeadAddr = nHeadAddr + cIdx * hw;
+            for (int64_t hIdx = 0; hIdx < h; hIdx++) {
+                int64_t hHeadAddr = cHeadAddr + hIdx * w;
+                for (int64_t wIdx = 0; wIdx < w; wIdx++) {
+                    auto dstIdx = hHeadAddr + wIdx;
+                    auto c1Idx = cIdx / c0;
+                    auto c0Idx = cIdx % c0;
+                    auto ncIdx = nIdx;
+                    auto srcIdx = c1Idx * hwncc0 + hIdx * wncc0 + wIdx * ncc0 + ncIdx * c0 + c0Idx;
+                    /* 此处由偏移计算逻辑保障不会越界读写 */
+                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static void TransShapeToHwNz(const AclShape &hostShape, AclShape& hwShape)
+{
+    if (hostShape.size() == kDim1) {
+        hwShape.push_back(1);
+        hwShape.push_back(1);
+        hwShape.push_back(hostShape[0]);
+        return;
+    }
+    auto size = hostShape.size();
+    int64_t times = 1;
+    for (size_t i = 0; i != size - kDim2; i++) {
+        times *= hostShape[i];
+    }
+    hwShape.push_back(times);
+    hwShape.push_back(hostShape[size - kDim2]);
+    hwShape.push_back(hostShape[size - kDim1]);
+}
+
+static DebuggerErrno FRAC_NZ_TO_NCHW(AclTensorInfo& tensor)
+{
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    AclShape hwShape;
+    TransShapeToHwNz(tensor.hostShape, hwShape);
+    auto times = hwShape.at(0);
+    auto h = hwShape.at(hwH);
+    auto w = hwShape.at(hwW);
+    auto hw = h * w;
+
+    auto shapeSize = tensor.deviceShape.size();
+    if (shapeSize < kDim4) {
+        LOG_WARNING(DebuggerErrno::ERROR_INVALID_VALUE, tensor + ": Invalid shape size.");
+        return DebuggerErrno::ERROR_INVALID_VALUE;
+    }
+
+    auto w1 = tensor.deviceShape[shapeSize - fnzW1];
+    auto h1 = tensor.deviceShape[shapeSize - fnzH1];
+    auto h0 = tensor.deviceShape[shapeSize - fnzH0];
+    auto w0 = tensor.deviceShape[shapeSize - fnzW0];
+    auto h1h0w0 = h1 * h0 * w0;
+    auto w1h1h0w0 = w1 * h1h0w0;
+    auto numW1 = w / w0;
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+
+    for (int64_t timesIdx = 0; timesIdx < times; timesIdx++) {
+        auto timesHead = timesIdx * w1h1h0w0;
+        auto srcTimesHead = timesIdx * hw;
+        for (int64_t h1h0Idx = 0; h1h0Idx < h; h1h0Idx++) {
+            auto h1h0Head = timesHead + h1h0Idx * w0;
+            auto srcHHead = srcTimesHead + h1h0Idx * w;
+            for (int64_t w1Idx = 0; w1Idx < numW1; w1Idx++) {
+                for (int64_t i = 0; i < w0; ++i) {
+                    int64_t srcIdx = h1h0Head + w1Idx * h1h0w0 + i;
+                    int64_t dstIdx = srcHHead + w1Idx * w0 + i;
+                    /* 此处由偏移计算逻辑保障不会越界读写 */
+                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                }
+            }
+            auto w1Head = numW1 * w0;
+            for (int64_t w0Idx = 0; w1Head + w0Idx < w; w0Idx++) {
+                auto srcWIdx = w1Head + w0Idx;
+                int64_t srcIdx = h1h0Head + numW1 * h1h0w0 + w0Idx;
+                int64_t dstIdx = srcHHead + srcWIdx;
+                /* 此处由偏移计算逻辑保障不会越界读写 */
+                std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static DebuggerErrno NC1HWC0_TO_NCHW(AclTensorInfo& tensor)
+{
+    AssertDim(tensor.hostShape, kDim4);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto n = tensor.hostShape[kN];
+    auto c = tensor.hostShape[kC];
+    auto h = tensor.hostShape[kH];
+    auto w = tensor.hostShape[kW];
+    auto c1 = tensor.deviceShape[kDim1];
+    auto c0 = tensor.deviceShape[kDim4];
+
+    auto hw = h * w;
+    auto chw = c * hw;
+    auto wc0 = w * c0;
+    auto hwc0 = h * wc0;
+    auto c1hwc0 = c1 * hwc0;
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+    for (int64_t nIndex = 0; nIndex < n; nIndex++) {
+        int64_t nHeadAddr = nIndex * chw;
+        for (int64_t cIndex = 0; cIndex < c; cIndex++) {
+            int64_t cHeadAddr = nHeadAddr + cIndex * hw;
+            for (int64_t hIndex = 0; hIndex < h; hIndex++) {
+                int64_t hHeadAddr = cHeadAddr + hIndex * w;
+                for (int64_t wIndex = 0; wIndex < w; wIndex++) {
+                    int64_t dstIdx = hHeadAddr + wIndex;
+                    int64_t c1Index = cIndex / c0;
+                    int64_t c0Index = cIndex % c0;
+                    int64_t srcIdx = nIndex * c1hwc0 + c1Index * hwc0 + hIndex * wc0 + wIndex * c0 + c0Index;
+                    /* 此处由偏移计算逻辑保障不会越界读写 */
+                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static DebuggerErrno NDC1HWC0_TO_NCDHW(AclTensorInfo& tensor)
+{
+    AssertDim(tensor.hostShape, kDim5);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto n = tensor.hostShape[N_ncdhw];
+    auto c = tensor.hostShape[C_ncdhw];
+    auto d = tensor.hostShape[D_ncdhw];
+    auto h = tensor.hostShape[H_ncdhw];
+    auto w = tensor.hostShape[W_ncdhw];
+    auto c1 = tensor.deviceShape[C1_ndc1hwc0];
+    auto c0 = tensor.deviceShape[C0_ndc1hwc0];
+
+    const int64_t cdhw = c * d * h * w;
+    const int64_t dhw = d * h * w;
+    const int64_t hw = h * w;
+    const int64_t dc1hwc0 = d * c1 * h * w * c0;
+    const int64_t c1hwc0 = c1 * h * w * c0;
+    const int64_t hwc0 = h * w * c0;
+    const int64_t wc0 = w * c0;
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+    for (int64_t nIndex = 0; nIndex < n; nIndex++) {
+        int64_t nHead = nIndex * cdhw;
+        for (int64_t cIndex = 0; cIndex < c; cIndex++) {
+            int64_t cHead = nHead + cIndex * dhw;
+            for (int64_t dIndex = 0; dIndex < d; dIndex++) {
+                int64_t dHead = cHead + dIndex * hw;
+                for (int64_t hIndex = 0; hIndex < h; hIndex++) {
+                    int64_t hHead = dHead + hIndex * w;
+                    for (int64_t wIndex = 0; wIndex < w; wIndex++) {
+                        int64_t dstIdx = hHead + wIndex;
+                        int64_t c1Index = cIndex / c0;
+                        int64_t c0Index = cIndex % c0;
+                        auto srcIdx = nIndex * dc1hwc0 + dIndex * c1hwc0 + c1Index * hwc0 + hIndex * wc0 +
+                                      wIndex * c0 + c0Index;
+                        /* 此处由偏移计算逻辑保障不会越界读写 */
+                        std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    }
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static DebuggerErrno C1HWNCoC0_TO_NCHW(AclTensorInfo& tensor)
+{
+    AssertDim(tensor.hostShape, kDim4);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto n = tensor.hostShape[kN];
+    auto c = tensor.hostShape[kC];
+    auto h = tensor.hostShape[kH];
+    auto w = tensor.hostShape[kW];
+    const int coIdx = 4;
+    const int c0Idx = 5;
+    auto co = tensor.deviceShape[coIdx];
+    auto c0 = tensor.deviceShape[c0Idx];
+    auto cubeK = GetCubeSizeByType(tensor.dtype);
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+    for (int64_t nIndex = 0; nIndex < n; nIndex++) {
+        for (int64_t cIndex = 0; cIndex < c; cIndex++) {
+            for (int64_t hIndex = 0; hIndex < h; hIndex++) {
+                for (int64_t wIndex = 0; wIndex < w; wIndex++) {
+                    int64_t dstIdx = nIndex * c * h * w + cIndex * h * w + hIndex * w + wIndex;
+                    int64_t c1Index = cIndex / cubeK;
+                    int64_t c0Index = cIndex % cubeK;
+                    int64_t coIndex = c0Index;
+                    int64_t srcIdx = c1Index * h * w * n * co * c0 + hIndex * w * n * co * c0 + wIndex * n * co * c0 +
+                            nIndex * co * c0 + coIndex * c0 + c0Index;
+                    /* 此处由偏移计算逻辑保障不会越界读写 */
+                    std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+static DebuggerErrno NC1HWC0_C04_TO_NCHW(AclTensorInfo& tensor)
+{
+    return NC1HWC0_TO_NCHW(tensor);
+}
+
+static DebuggerErrno FRAC_Z3D_TO_NCDHW(AclTensorInfo& tensor)
+{
+    AssertDim(tensor.hostShape, kDim5);
+    AssertConsis(tensor);
+    AllocTensorTransBuf(tensor);
+
+    auto n = tensor.hostShape[N_ncdhw];
+    auto c = tensor.hostShape[C_ncdhw];
+    auto d = tensor.hostShape[D_ncdhw];
+    auto h = tensor.hostShape[H_ncdhw];
+    auto w = tensor.hostShape[W_ncdhw];
+    constexpr int kFZ3D_C0 = 3;
+    auto c0 = tensor.deviceShape[kFZ3D_C0];
+    auto cube_k = GetCubeSizeByType(tensor.dtype);
+    auto c1 = DivCeil(c, cube_k);
+    constexpr int64_t kNiSize = 16;
+    auto n1n0 = AlignCeil(n, kNiSize);
+    auto n1n0c0 = n1n0 * c0;
+    auto wn1n0c0 = w * n1n0c0;
+    auto hwn1n0c0 = h * wn1n0c0;
+    auto c1hwn1n0c0 = c1 * hwn1n0c0;
+    auto hw = h * w;
+    auto dhw = d * hw;
+    auto cdhw = c * dhw;
+
+    const uint8_t* src = tensor.aclData;
+    uint8_t* dst = tensor.transBuf.data();
+    auto dtypeSize = SizeOfAclDType(tensor);
+    for (int64_t nIdx = 0; nIdx < n; nIdx++) {
+        int64_t nHead = nIdx * cdhw;
+        for (int64_t cIdx = 0; cIdx < c; cIdx++) {
+            int64_t cHead = nHead + cIdx * dhw;
+            for (int64_t dIdx = 0; dIdx < d; dIdx++) {
+                int64_t dHead = cHead + dIdx * hw;
+                for (int64_t hIdx = 0; hIdx < h; hIdx++) {
+                    int64_t hHead = dHead + hIdx * w;
+                    for (int64_t wI = 0; wI < w; wI++) {
+                        int64_t dstIdx = hHead + wI;
+                        int64_t c1I = cIdx / c0;
+                        int64_t c0I = cIdx % c0;
+                        int64_t ncIdx = nIdx;
+                        int64_t srcIdx = dIdx * c1hwn1n0c0 + c1I * c1hwn1n0c0 + hIdx * wn1n0c0 + wI * n1n0c0 +
+                                           ncIdx * c0 + c0I;
+                        /* 此处由偏移计算逻辑保障不会越界读写 */
+                        std::memcpy(dst + dstIdx * dtypeSize, src + srcIdx * dtypeSize, dtypeSize);
+                    }
+                }
+            }
+        }
+    }
+    return DebuggerErrno::OK;
+}
+
+DebuggerErrno TransFormatD2H(AclTensorInfo& tensor)
+{
+    AclFormat from = tensor.deviceFmt;
+    AclFormat to = tensor.hostFmt;
+    auto it = formatTransFuncMap.find(std::make_pair(from, to));
+    if (it == formatTransFuncMap.end()) {
+        return DebuggerErrno::ERROR_UNKNOWN_TRANS;
+    }
+
+    try {
+        return it->second(tensor);
+    } catch (const std::exception& e) {
+        LOG_ERROR(DebuggerErrno::ERROR_OPERATION_FAILED, tensor + ": Failed to conver dtype from " +
+                  std::to_string(from) + " to " + std::to_string(to) + "(" + e.what() + ").");
+        return DebuggerErrno::ERROR_OPERATION_FAILED;
+    }
+}
+
+static void TransBf16ToFp32(const uint8_t* input, size_t num, uint8_t* output, size_t bufferSize)
+{
+    if (bufferSize < num * sizeof(float)) {
+        LOG_ERROR(DebuggerErrno::ERROR_BUFFER_OVERFLOW, "Insufficient space for converting data from bf16 to fp32.");
+        return;
+    }
+    const DataUtils::BFloat16* in = reinterpret_cast<const DataUtils::BFloat16*>(input);
+    float* out = reinterpret_cast<float*>(output);
+
+    for (size_t i = 0; i < num; i++) {
+        out[i] = static_cast<float>(in[i]);
+    }
+}
+
+DebuggerErrno TransDtype(AclTensorInfo& tensor, AclDtype to)
+{
+
+    const static std::set<std::pair<AclDtype, AclDtype>> kSupportedDtypeTrans = {
+        {AclDtype::DT_BF16, AclDtype::DT_FLOAT},
+    };
+
+    if (tensor.dtype == to) {
+        return DebuggerErrno::OK;
+    }
+
+    if (kSupportedDtypeTrans.find({tensor.dtype, to}) == kSupportedDtypeTrans.end()) {
+        return DebuggerErrno::ERROR_UNKNOWN_TRANS;
+    }
+
+    std::vector<uint8_t> buffer;
+    AssertConsis(tensor);
+    size_t bufferSize = EleNumOfTensor(tensor) * SizeOfAclDType(to);
+    buffer.reserve(bufferSize);
+    const uint8_t* input = tensor.transBuf.empty() ? tensor.aclData : tensor.transBuf.data();
+    uint8_t* output = buffer.data();
+
+    /* 目前仅支持bf16->fp32，若有通用转换需求再用更泛化的方式重写 */
+    if (tensor.dtype == AclDtype::DT_BF16 && to == AclDtype::DT_FLOAT) {
+        TransBf16ToFp32(input, EleNumOfTensor(tensor), output, bufferSize);
+    }
+
+    tensor.transBuf = std::move(buffer);
+    return DebuggerErrno::OK;
+}
+
+}
+}
