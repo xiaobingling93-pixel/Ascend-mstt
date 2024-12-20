@@ -165,12 +165,12 @@ class TestUtilsMethods(unittest.TestCase):
     def test_extract_api_full_name_all_apis_found(self):
         api_list = ["api1", "api2"]
         result_df = pd.DataFrame({
-            CompareConst.NPU_NAME: ["api1_full_name", "api2_full_name", "api3_full_name"]
+            CompareConst.NPU_NAME: ["api1.forward", "api2.forward", "api11.forward"]
         })
         rank_num = 1
 
         result = extract_api_full_name(api_list, result_df, rank_num)
-        expected = ["api1_full_name", "api2_full_name"]
+        expected = ["api1.forward", "api2.forward"]
         self.assertEqual(result, expected)
 
     @patch("msprobe.core.compare.merge_result.merge_result.table_value_check")
