@@ -21,6 +21,7 @@ import torch
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import ULP_PARAMETERS
+from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 from msprobe.core.common.const import CompareConst
 
 
@@ -231,30 +232,28 @@ def calc_ulp_err(bench_output, device_output, eb, exponent_num, data_type):
             np.exp2(-eb + exponent_num).astype(data_type)
 
 
-def calc_ratio(x, y, default_value):
+def calc_ratio(x, y, dtype):
     """
-    Calculate the ratio of statistics from the NPU side to the GPU side.
+    Calculate the ratio between NPU and GPU statistical values.
 
     Args:
-        x (float): The statistic from the NPU side.
-        y (float): The statistic from the GPU side.
-        default_value (float): The default value to use when y is close to 0 and x is not.
+        x (float): Statistical value from the NPU side
+        y (float): Statistical value from the GPU side
+        dtype: Data type used to determine the minimum error value
 
     Returns:
-        float: The ratio of the statistics x and y.
+        float: The ratio of NPU to GPU statistical values
 
-    Note:
-        If y is close to 0, the function returns the default value unless x is also close to 0, in which case 
-        it returns 1.0.
-        Otherwise, it returns the absolute value of x divided by y.
+    Notes:
+        - Takes absolute values of both x and y for calculation
+        - Uses StandardConfig.get_minmum_err(dtype) to get minimum error for the specified dtype
+        - Prevents division by zero by ensuring denominator is not less than minimum error
+        - Returns |x| / max(|y|, minimum_error)
     """
-    if math.isclose(y, 0.0, abs_tol=1e-9):
-        if math.isclose(x, 0.0, abs_tol=1e-9):
-            return 1.0
-        else:
-            return default_value
-    else:
-        return abs(x / y)
+    x, y = abs(x), abs(y)
+    minmum_err = StandardConfig.get_minmum_err(dtype)
+    err_y = max(y, minmum_err)
+    return x / err_y
 
 
 def compare_bool_tensor(bench_output, device_output):

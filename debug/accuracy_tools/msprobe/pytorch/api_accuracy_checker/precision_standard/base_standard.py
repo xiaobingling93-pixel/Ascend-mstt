@@ -104,6 +104,7 @@ class BasePrecisionCompare:
     def __init__(self, input_data):
         self.row_npu = input_data.row_npu
         self.row_gpu = input_data.row_gpu
+        self.dtype = input_data.dtype
         self.compare_column = input_data.compare_column
         self.compare_algorithm = None
     

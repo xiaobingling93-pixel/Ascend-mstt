@@ -150,7 +150,7 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
         if is_inf_or_nan(npu_value) or is_inf_or_nan(gpu_value):
             return check_inf_or_nan(npu_value, gpu_value, column_name)
         else:
-            return calc_ratio(npu_value, gpu_value, CompareConst.DEFAULT_RATIO_VALUE), True, ""
+            return calc_ratio(npu_value, gpu_value, str(self.dtype)), True, ""
 
     def _compute_ratio(self):
         compare_message = ""
@@ -183,17 +183,15 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
                                           eb_inf_nan_consistency)
 
     def _get_threshold(self, metric):
-        error_threshold, warning_threshold = StandardConfig.get_benchmark_threshold(metric)
-        return error_threshold, warning_threshold
+        error_threshold = StandardConfig.get_benchmark_threshold(metric)
+        return error_threshold
 
     def _get_single_metric_status(self, ratio, metric):
         if is_inf_or_nan(ratio):
             return CompareConst.PASS
-        error_threshold, warning_threshold = self._get_threshold(metric)
+        error_threshold = self._get_threshold(metric)
         if ratio > error_threshold:
             return CompareConst.ERROR
-        elif ratio > warning_threshold:
-            return CompareConst.WARNING
         return CompareConst.PASS
 
     def _get_status(self, metrics, inf_nan_consistency):
