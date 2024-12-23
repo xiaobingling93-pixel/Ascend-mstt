@@ -28,8 +28,8 @@ class TestAnomalyScene(unittest.TestCase):
     def setUp(self):
         self.api_info = APIInfo(
             api_name="torch.add",
-            input_args=[{"type": "torch.Tensor", "Norm": "nan"}],
-            input_kwargs={"bias": {"type": "torch.Tensor", "Norm": "-inf"}},
+            input_args=[{"type": "torch.Tensor", "Max": "nan"}],
+            input_kwargs={"bias": {"type": "torch.Tensor", "Max": "-inf"}},
             output_data=[{"type": "torch.Tensor", "Norm": 0.8}]
         )
         self.anomaly_scene = InputAnomalyOutputNormalScene(self.api_info)
