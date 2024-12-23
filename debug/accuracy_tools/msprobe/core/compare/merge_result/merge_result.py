@@ -300,6 +300,9 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
         if len(item):
             compare_index_list = item
             break
+    if not compare_index_list:
+        logger.error("No compare index recognized, please check!")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
     all_result_df_list = []
     for compare_index_dict_list, rank_num_list in zip(all_compare_index_dict_list, all_rank_num_list):
