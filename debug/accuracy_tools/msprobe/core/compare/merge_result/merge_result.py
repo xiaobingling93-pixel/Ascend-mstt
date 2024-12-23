@@ -252,6 +252,14 @@ def handle_multi_process(func, func_args, lock):
     pool.close()
     pool.join()
 
+    merge_result_empty_flag = True
+    for item in all_compare_index_dict_list:
+        if item:
+            merge_result_empty_flag = False
+    if merge_result_empty_flag:
+        logger.warning("Nothing to merge.")
+        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
+
     return all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list
 
 
@@ -292,9 +300,6 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
         if len(item):
             compare_index_list = item
             break
-    if not compare_index_list:
-        logger.warning("Nothing to merge.")
-        raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
     all_result_df_list = []
     for compare_index_dict_list, rank_num_list in zip(all_compare_index_dict_list, all_rank_num_list):
