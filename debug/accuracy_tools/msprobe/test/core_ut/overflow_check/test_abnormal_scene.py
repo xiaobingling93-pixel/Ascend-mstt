@@ -48,9 +48,9 @@ class TestInputNormalOutputAnomalyScene(unittest.TestCase):
     def setUp(self):
         self.api_info = APIInfo(
             api_name="torch.mul",
-            input_args=[{"type": "torch.Tensor", "Norm": 0.2}],
+            input_args=[{"type": "torch.Tensor", "Max": 0.2}],
             input_kwargs={},
-            output_data=[{"type": "torch.Tensor", "Norm": "nan"}]
+            output_data=[{"type": "torch.Tensor", "Max": "nan"}]
         )
         self.scene = InputNormalOutputAnomalyScene(self.api_info)
 
@@ -66,9 +66,9 @@ class TestInputAnomalyOutputAnomalyScene(unittest.TestCase):
     def setUp(self):
         self.api_info = APIInfo(
             api_name="torch.div",
-            input_args=[{"type": "torch.Tensor", "Norm": "nan"}],
+            input_args=[{"type": "torch.Tensor", "Max": "nan"}],
             input_kwargs={},
-            output_data=[{"type": "torch.Tensor", "Norm": "nan"}]
+            output_data=[{"type": "torch.Tensor", "Max": "nan"}]
         )
         self.scene = InputAnomalyOutputAnomalyScene(self.api_info)
 
@@ -84,9 +84,9 @@ class TestInputAnomalyOutputNormalScene(unittest.TestCase):
     def setUp(self):
         self.api_info = APIInfo(
             api_name="torch.relu",
-            input_args=[{"type": "torch.Tensor", "Norm": "nan"}],
+            input_args=[{"type": "torch.Tensor", "Max": "nan"}],
             input_kwargs={},
-            output_data=[{"type": "torch.Tensor", "Norm": 0.8}]
+            output_data=[{"type": "torch.Tensor", "Max": 0.8}]
         )
         self.scene = InputAnomalyOutputNormalScene(self.api_info)
 
@@ -103,7 +103,7 @@ class TestInputAnomalyOutputNormalScene(unittest.TestCase):
             input_kwargs={
                 "input1":{
                     "type": "torch.Tensor",
-                    "Norm": "nan",
+                    "Min": "nan",
                     "Max": 1.245486,
                 }
             },
