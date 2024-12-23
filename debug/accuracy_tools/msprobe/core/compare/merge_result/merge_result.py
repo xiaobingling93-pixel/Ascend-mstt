@@ -291,9 +291,7 @@ def generate_merge_result(all_compare_index_dict_list, all_rank_num_list, all_co
 
     compare_index_list = None
     for item in all_compare_index_list_list:
-        if not item:
-            continue
-        if len(item):
+        if item:
             compare_index_list = item
             break
     if not compare_index_list:
