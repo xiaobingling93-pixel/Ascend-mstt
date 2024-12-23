@@ -252,11 +252,7 @@ def handle_multi_process(func, func_args, lock):
     pool.close()
     pool.join()
 
-    merge_result_empty_flag = True
-    for item in all_compare_index_dict_list:
-        if item:
-            merge_result_empty_flag = False
-    if merge_result_empty_flag:
+    if not any(all_compare_index_dict_list):
         logger.warning("Nothing to merge.")
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
 
