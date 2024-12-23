@@ -198,9 +198,15 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 
 def get_name_and_state(name):
-    """Get api/module name and state"""
+    """
+    Get api/module name and state
+    state: input(input, kwargs), output
+    """
     if Const.INPUT in name:
         api_name = name.split(Const.INPUT)[0]
+        state = Const.INPUT
+    elif Const.KWARGS in name:
+        api_name = name.split(Const.KWARGS)[0]
         state = Const.INPUT
     else:
         api_name = name.split(Const.OUTPUT)[0]
@@ -217,7 +223,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     progress_bar = tqdm(total=len(result), desc="API/Module Analyse Progress", unit="item", ncols=100)
     for res_i in result:
         api_full_name = safe_get_value(res_i, 0, "res_i")
-        api_name, state = get_name_and_state(api_full_name)
+        api_name, state = get_name_and_state(api_full_name)     # 获得api的全称，input或output状态
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
@@ -255,6 +261,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     # write header
     logger.info('Initializing Excel file.')
+
     for j, col_name in enumerate(result_df.columns, start=1):
         if not table_value_is_valid(col_name):
             raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
@@ -284,6 +291,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill
+
     logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
 
