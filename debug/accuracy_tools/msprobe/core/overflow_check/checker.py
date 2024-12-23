@@ -62,7 +62,7 @@ class AnomalyDetector:
         """从原始数据创建APIInfo实例"""
         return APIInfo(
             api_name=api_name,
-            input_args=data.get(Const.INPUT_ARGS, []) or data.get(Const.INPUT, []),
+            input_args=data.get(Const.INPUT_ARGS, data.get(Const.INPUT, [])),
             input_kwargs=data.get(Const.INPUT_KWARGS, {}),
             output_data=data.get(Const.OUTPUT, [])
         )
