@@ -200,15 +200,9 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 
 def get_name_and_state(name):
-    """
-    Get api/module name and state
-    state: input(input, kwargs), output
-    """
+    """Get api/module name and state"""
     if Const.INPUT in name:
         api_name = name.split(Const.INPUT)[0]
-        state = Const.INPUT
-    elif Const.KWARGS in name:
-        api_name = name.split(Const.KWARGS)[0]
         state = Const.INPUT
     else:
         api_name = name.split(Const.OUTPUT)[0]
@@ -309,20 +303,6 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     ws.append(result_df_convert.columns.tolist())
     for row in dataframe_to_rows(result_df_convert, index=False, header=True):
         ws.append(row)
-
-    # for j, col_name in enumerate(result_df.columns, start=1):   # start设置为1，因为ws.cell中的row或column需要>=1
-    #     if not table_value_is_valid(col_name):
-    #         raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
-    #     ws.cell(row=1, column=j, value=col_name)
-    #
-    # for i, row in enumerate(result_df.iterrows(), start=2):     # start设置为2，因为ws.cell中的row或column需要>=1,数据从第2行开始
-    #     for j, value in enumerate(row[1], start=1):
-    #         if not isinstance(value, (float, int)) or isinstance(value, bool):
-    #             value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-    #         if not table_value_is_valid(value):
-    #             raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
-    #                                f"{file_path}.")
-    #         ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
     
     # 对可疑数据标色
     logger.info('Coloring Excel in progress.')
