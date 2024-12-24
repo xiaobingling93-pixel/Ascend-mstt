@@ -219,7 +219,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     progress_bar = tqdm(total=len(result), desc="API/Module Analyse Progress", unit="item", ncols=100)
     for res_i in result:
         api_full_name = safe_get_value(res_i, 0, "res_i")
-        api_name, state = get_name_and_state(api_full_name)     # 获得api的全称，input或output状态
+        api_name, state = get_name_and_state(api_full_name)
         if last_api_name:
             if api_name == last_api_name:
                 if state == last_state:
