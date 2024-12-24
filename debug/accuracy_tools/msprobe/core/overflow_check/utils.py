@@ -15,7 +15,7 @@
 
 from typing import Any
 
-CHECK_FIELDS = ['Max', 'Min', 'Mean', 'Norm']
+CHECK_FIELDS = ['Max', 'Min', 'Mean']
 OVERFLOW_VALUES = ['inf', '-inf', 'nan']
 
 
