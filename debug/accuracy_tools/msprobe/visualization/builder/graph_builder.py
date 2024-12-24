@@ -61,6 +61,7 @@ class GraphBuilder:
             result[GraphConst.MICRO_STEPS] = config.micro_steps
         if config.task:
             result[GraphConst.JSON_TASK_KEY] = config.task
+        result[GraphConst.OVERFLOW_CHECK] = config.overflow_check
         save_json_file(filename, result)
 
     @staticmethod
@@ -156,10 +157,12 @@ class GraphBuilder:
 
 
 class GraphExportConfig:
-    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task=''):
+    def __init__(self, graph_n, graph_b=None, tool_tip=None, node_colors=None, micro_steps=None, task='',
+                 overflow_check=False):
         self.graph_n = graph_n
         self.graph_b = graph_b
         self.tool_tip = tool_tip
         self.node_colors = node_colors
         self.micro_steps = micro_steps
         self.task = task
+        self.overflow_check = overflow_check

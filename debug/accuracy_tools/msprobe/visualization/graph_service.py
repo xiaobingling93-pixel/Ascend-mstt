@@ -79,13 +79,14 @@ def _compare_graph(input_param, args):
     return CompareGraphResult(graph_n, graph_b, graph_comparator, micro_steps)
 
 
-def _export_compare_graph_result(output_path, graphs, graph_comparator, micro_steps,
+def _export_compare_graph_result(args, graphs, graph_comparator, micro_steps,
                                  output_file_name=f'compare_{current_time}.vis'):
-    create_directory(output_path)
-    output_path = os.path.join(output_path, output_file_name)
+    create_directory(args.output_path)
+    output_path = os.path.join(args.output_path, output_file_name)
     task = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(graph_comparator.ma.compare_mode)
     export_config = GraphExportConfig(graphs[0], graphs[1], graph_comparator.ma.get_tool_tip(),
-                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task)
+                                      NodeColors.get_node_colors(graph_comparator.ma.compare_mode), micro_steps, task,
+                                      args.overflow_check)
     GraphBuilder.to_json(output_path, export_config)
     logger.info(f'Model graphs compared successfully, the result file is saved in {output_path}')
 
@@ -106,10 +107,11 @@ def _build_graph(dump_path, overflow_check=False):
     return BuildGraphResult(graph, micro_steps)
 
 
-def _export_build_graph_result(out_path, graph, micro_steps, output_file_name=f'build_{current_time}.vis'):
+def _export_build_graph_result(out_path, graph, micro_steps, overflow_check,
+                               output_file_name=f'build_{current_time}.vis'):
     create_directory(out_path)
     output_path = os.path.join(out_path, output_file_name)
-    GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps))
+    GraphBuilder.to_json(output_path, GraphExportConfig(graph, micro_steps=micro_steps, overflow_check=overflow_check))
     logger.info(f'Model graph built successfully, the result file is saved in {output_path}')
 
 
@@ -144,7 +146,7 @@ def _compare_graph_ranks(input_param, args, step=None):
                         args.overflow_check).distributed_match()
 
     for result in compare_graph_results:
-        _export_compare_graph_result(args.output_path, [result.graph_n, result.graph_b], result.graph_comparator,
+        _export_compare_graph_result(args, [result.graph_n, result.graph_b], result.graph_comparator,
                                      result.micro_steps, output_file_name=result.output_file_name)
 
 
@@ -186,7 +188,7 @@ def _build_graph_ranks(dump_ranks_path, out_path, overflow_check=False, step=Non
     DistributedAnalyzer({obj.rank: obj.graph for obj in build_graph_results}, overflow_check).distributed_match()
 
     for result in build_graph_results:
-        _export_build_graph_result(out_path, result.graph, result.micro_steps, result.output_file_name)
+        _export_build_graph_result(out_path, result.graph, result.micro_steps, overflow_check, result.output_file_name)
 
 
 def _build_graph_steps(dump_steps_path, out_path, overflow_check=False):
@@ -224,7 +226,7 @@ def _graph_service_command(args):
             _build_graph_steps(npu_path, args.output_path, args.overflow_check)
         else:
             result = _build_graph(npu_path, args.overflow_check)
-            _export_build_graph_result(args.output_path, result.graph, result.micro_steps)
+            _export_build_graph_result(args.output_path, result.graph, result.micro_steps, args.overflow_check)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         content_n = check_directory_content(npu_path)
         content_b = check_directory_content(bench_path)
@@ -236,7 +238,7 @@ def _graph_service_command(args):
             _compare_graph_steps(input_param, args)
         else:
             result = _compare_graph(input_param, args)
-            _export_compare_graph_result(args.output_path, [result.graph_n, result.graph_b],
+            _export_compare_graph_result(args, [result.graph_n, result.graph_b],
                                          result.graph_comparator, result.micro_steps)
     else:
         logger.error("The npu_path or bench_path should be a folder.")

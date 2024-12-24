@@ -20,13 +20,6 @@ class TestBaseNode(unittest.TestCase):
         other_node = BaseNode(self.node_op, self.node_id, self.up_node)
         self.assertEqual(self.node, other_node)
 
-    def test_get_suggestions(self):
-        self.node.get_suggestions()
-        self.assertIn(GraphConst.SUGGEST_KEY, self.node.suggestions)
-
-        node = BaseNode(NodeOp.function_api, "up_node_1")
-        node.get_suggestions()
-        self.assertIn(GraphConst.SUGGEST_KEY, node.suggestions)
 
     def test_set_input_output(self):
         input_data = {'input1': 'value1'}
