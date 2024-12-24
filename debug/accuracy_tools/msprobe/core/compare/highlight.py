@@ -13,19 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 import abc
-import re
+import math
+import multiprocessing
 from collections import namedtuple
+
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
-from msprobe.core.common.utils import get_header_index
+
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import CompareConst, FileCheckConst, Const
-from msprobe.core.common.utils import safe_get_value
+from msprobe.core.common.utils import get_header_index, safe_get_value
 from msprobe.core.compare.utils import table_value_is_valid
 
 
@@ -251,6 +253,44 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
                         dump_mode)
 
 
+def value_check(value):
+    if not table_value_is_valid(value):
+        raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+
+
+def df_malicious_value_check(df_chunk):
+    df_chunk.applymap(value_check)
+
+
+def handle_multi_process_malicious_value_check(func, result_df):
+    result_total_nums = len(result_df)
+    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+
+    chunk_size = result_total_nums // process_num
+    chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
+
+    pool = multiprocessing.Pool(process_num)
+
+    def err_call(args):
+        logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
+        try:
+            pool.terminate()
+        except OSError:
+            logger.error("Pool terminate failed")
+
+    for i, df_chunk in enumerate(chunks):
+        pool.apply_async(func, args=(df_chunk, ), error_callback=err_call)
+
+    pool.close()
+    pool.join()
+
+
+def compare_result_df_convert(value):
+    if not isinstance(value, (float, int)) or isinstance(value, bool):
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else str(value)
+    return value
+
+
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     """Write and highlight results in Excel"""
 
@@ -262,19 +302,27 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     # write header
     logger.info('Initializing Excel file.')
 
-    for j, col_name in enumerate(result_df.columns, start=1):
-        if not table_value_is_valid(col_name):
-            raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
-        ws.cell(row=1, column=j, value=col_name)
+    handle_multi_process_malicious_value_check(df_malicious_value_check, result_df)
 
-    for i, row in enumerate(result_df.iterrows(), start=2):
-        for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)) or isinstance(value, bool):
-                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-            if not table_value_is_valid(value):
-                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
-                                   f"{file_path}.")
-            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+    result_df_convert = result_df.applymap(compare_result_df_convert)
+
+    ws.append(result_df_convert.columns.tolist())
+    for row in dataframe_to_rows(result_df_convert, index=False, header=True):
+        ws.append(row)
+
+    # for j, col_name in enumerate(result_df.columns, start=1):   # start设置为1，因为ws.cell中的row或column需要>=1
+    #     if not table_value_is_valid(col_name):
+    #         raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
+    #     ws.cell(row=1, column=j, value=col_name)
+    #
+    # for i, row in enumerate(result_df.iterrows(), start=2):     # start设置为2，因为ws.cell中的row或column需要>=1,数据从第2行开始
+    #     for j, value in enumerate(row[1], start=1):
+    #         if not isinstance(value, (float, int)) or isinstance(value, bool):
+    #             value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
+    #         if not table_value_is_valid(value):
+    #             raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
+    #                                f"{file_path}.")
+    #         ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
     
     # 对可疑数据标色
     logger.info('Coloring Excel in progress.')
@@ -287,7 +335,7 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     )
     for i in highlight_dict.get("red_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i + 2, column=j).fill = red_fill
+            ws.cell(row=i + 2, column=j).fill = red_fill    # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill
