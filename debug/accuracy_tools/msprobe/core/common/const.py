@@ -171,10 +171,12 @@ class Const:
 
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
+        "int64_to_fp32": ["torch.int64", "torch.float32"]
     }
 
     CONVERT_API = {
-        "int32_to_int64": ["cross_entropy"]
+        "int32_to_int64": ["cross_entropy"],
+        "int64_to_fp32": ["histc"]
     }
 
     FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
