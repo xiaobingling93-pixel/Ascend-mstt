@@ -272,7 +272,7 @@ def handle_multi_process_malicious_value_check(func, result_df):
         except OSError:
             logger.error("Pool terminate failed")
 
-    for i, df_chunk in enumerate(chunks):
+    for df_chunk in chunks:
         pool.apply_async(func, args=(df_chunk, ), error_callback=err_call)
 
     pool.close()
