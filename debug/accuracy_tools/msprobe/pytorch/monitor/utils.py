@@ -17,12 +17,17 @@ import os
 from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
+from datetime import datetime
+import os
+import re
+
 
 import torch
 
 from msprobe.core.common.const import MonitorConst, Const
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import is_int
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
@@ -253,3 +258,32 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+
+def time_str2time_digit(time_str):
+    time_format = '%b%d_%H-%M-%S'
+    try:
+        time_digit = datetime.strptime(time_str, time_format)
+    except Exception as e:
+        raise RuntimeError(f"illegal timestamp: {time_str}, timestamp should be prefix \
+                           of existing output dirpath, like 'Dec03_21-34-40'.") from e
+    return time_digit
+
+
+def get_target_output_dir(monitor_path, time_start, time_end):
+    check_file_or_directory_path(monitor_path, isdir=True)
+    time_start = time_str2time_digit(time_start)
+    time_end = time_str2time_digit(time_end)
+    if time_start > time_end:
+        raise ValueError(f"time_start({time_start} greater than time_end({time_end }))")
+    result = {}
+    for dirname in os.listdir(monitor_path):
+        match = re.match(MonitorConst.OUTPUT_DIR_PATTERN, dirname)
+        if not match:
+            continue
+        time_tag = match.group(1)
+        target_time = time_str2time_digit(time_tag)
+        if time_start <= target_time <= time_end:
+            rank = match.group(2)
+            result[rank] = os.path.join(monitor_path, dirname)
+    return result

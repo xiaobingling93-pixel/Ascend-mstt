@@ -37,7 +37,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
-    get_output_base_dir
+    get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
@@ -201,11 +201,18 @@ class TrainerMon:
 
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
-
         output_base_dir = get_output_base_dir()
+
+        time_tags = self.config.get("append_output", [])
+        if time_tags:
+            output_append_dirs = get_target_output_dir(output_base_dir, time_tags[0], time_tags[1])
         if dist.is_initialized():
             rank = dist.get_rank()
-            tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
+            if time_tags and str(rank) in output_append_dirs:
+                tensorboard_dir = output_append_dirs[str(rank)]
+                logger.info(f"append rank({rank}) result to {tensorboard_dir}")
+            else:
+                tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
             pp_stage = dist.get_group_rank(self.process_group, rank)
             group_mates = dist.get_process_group_ranks(self.process_group)
         else:
