@@ -121,7 +121,7 @@ class NumericalMutationScene(AnomalyScene):
     """
         检查数值突变，统计输入args、kwargs中norm值，同时统计输出的norm最大值，计算差异，大于 threshold 则认为是异常情况
     """
-    def __init__(self, api_info: APIInfo, threshold: float = 100000.0):
+    def __init__(self, api_info: APIInfo, threshold: float = 100.0):
         super().__init__(api_info)
         self.threshold = threshold
 
