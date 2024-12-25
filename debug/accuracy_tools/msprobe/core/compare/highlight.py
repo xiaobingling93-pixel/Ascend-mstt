@@ -304,7 +304,6 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     result_df_convert = result_df.applymap(compare_result_df_convert)
 
-    ws.append(result_df_convert.columns.tolist())
     for row in dataframe_to_rows(result_df_convert, index=False, header=True):
         ws.append(row)
     
