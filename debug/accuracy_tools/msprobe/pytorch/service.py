@@ -323,9 +323,6 @@ class Service:
                                          self.config.online_run_ut)
             api_register.api_modularity()
 
-        if Const.STATISTICS == self.config.task or Const.TENSOR == self.config.task:
-            remove_dropout()
-
     def attl_init(self):
         if self.config.online_run_ut:
             from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTLConfig, ATTL
