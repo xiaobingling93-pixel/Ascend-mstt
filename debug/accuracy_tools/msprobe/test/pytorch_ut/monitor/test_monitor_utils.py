@@ -95,6 +95,11 @@ class TestValidationFunctions(unittest.TestCase):
             'alert': {'rules': [{'rule_name': 'AnomalyTurbulence', 'args': {'threshold': 10.0}}], 'dump': True}
         }
         validate_config(config)
+        self.assertEqual(config["ops"], [])
+        del config["targets"]
+        validate_config(config)
+        self.assertEqual(config["targets"], {"": {}})
+        self.assertEqual(config["all_xy"], True)
 
 
 class TestIsRecomputation(unittest.TestCase):

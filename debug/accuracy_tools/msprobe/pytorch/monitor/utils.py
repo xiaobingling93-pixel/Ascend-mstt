@@ -258,10 +258,8 @@ def validate_config(config):
 
     if not targets:
         if xy_distribution:
-            config["targets"] = {}
             config["all_xy"] = True
-        else:
-            config["targets"] = {"": {}}
+        config["targets"] = {"": {}}
 
 
 def time_str2time_digit(time_str):
