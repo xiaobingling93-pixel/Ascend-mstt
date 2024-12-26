@@ -15,7 +15,8 @@ class TestValidationFunctions(unittest.TestCase):
 
     def test_get_output_base_dir(self):
         # not set env
-        del os.environ[MonitorConst.MONITOR_OUTPUT_DIR]
+        if os.getenv(MonitorConst.MONITOR_OUTPUT_DIR):
+            del os.environ[MonitorConst.MONITOR_OUTPUT_DIR]
         output_base_dir = get_output_base_dir()
         expect_output_base_dir = "./monitor_output"
         self.assertEqual(output_base_dir, expect_output_base_dir)

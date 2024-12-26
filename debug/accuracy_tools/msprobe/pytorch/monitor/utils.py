@@ -171,6 +171,11 @@ def validate_mg_distribution(mg_distribution):
         raise TypeError('mg_distribution should be a bool')
 
 
+def validate_param_distribution(param_distribution):
+    if not isinstance(param_distribution, bool):
+        raise TypeError('param_distribution should be a bool')
+
+
 def validate_cc_distribution(cc_distribution):
     if not isinstance(cc_distribution, dict):
         raise TypeError('cc_distribution should be a dictionary')
@@ -247,6 +252,9 @@ def validate_config(config):
     mg_distribution = config.get('mg_distribution', False)
     validate_mg_distribution(mg_distribution)
 
+    param_distribution = config.get('param_distribution', False)
+    validate_param_distribution(param_distribution)
+
     cc_distribution = config.get('cc_distribution', {})
     validate_cc_distribution(cc_distribution)
 
@@ -259,7 +267,9 @@ def validate_config(config):
     if not targets:
         if xy_distribution:
             config["all_xy"] = True
-        config["targets"] = {"": {}}
+            config["targets"] = {}
+        if any([ur_distribution, wg_distribution, mg_distribution, param_distribution]):
+            config["targets"] = {"": {}}
 
 
 def time_str2time_digit(time_str):
