@@ -208,41 +208,38 @@ def get_name_and_state(name):
     return api_name, state
 
 
+class ApiBatch:
+    def __init__(self, api_name: str, start: int):
+        self.api_name = api_name
+        self.start = start
+        self.input_len = 1
+        self.output_index = start + 1
+    
+    def increment(self, state: str):
+        if state == Const.INPUT:
+            self.input_len += 1
+        self.output_index += 1
+
+
 def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     """将dataframe根据API分组，并找到有误差的算子用于高亮"""
     result = result_df.values
-    start, input_num, output_num, end = 0, 0, 0, len(result_df)
-    last_api_name, last_state = None, None
-    num, last_len = 0, 0
-    progress_bar = tqdm(total=len(result), desc="API/Module Analyse Progress", unit="item", ncols=100)
-    for res_i in result:
+    api_batches = []
+    for i, res_i in enumerate(result):
         api_full_name = safe_get_value(res_i, 0, "res_i")
         api_name, state = get_name_and_state(api_full_name)
-        if last_api_name:
-            if api_name == last_api_name:
-                if state == last_state:
-                    num += 1
-                else:
-                    input_num = num
-                    num, last_state = 1, state
-            else:
-                output_num = num
-                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                                dump_mode)
-                num, last_api_name, last_state = 1, api_name, state
-                start += input_num + output_num
-                input_num, output_num = 1, 0
+        if not api_batches:
+            api_batches.append(ApiBatch(api_name, i))
+            continue
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name:
+            api_batch.increment(state)
         else:
-            num, last_api_name, last_state = 1, api_name, state
-        progress_bar.update(1)
-    progress_bar.close()
-    if state:
-        if state == Const.INPUT:
-            input_num = num
-        else:
-            output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                        dump_mode)
+            api_batches.append(ApiBatch(api_name, i))
+    progress_bar = tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100)
+    for api_batch in api_batches:
+        find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len, 
+                        highlight_dict, dump_mode)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
