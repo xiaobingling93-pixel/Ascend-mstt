@@ -261,8 +261,8 @@ def handle_multi_process_malicious_value_check(func, result_df):
     process_num = int((multiprocessing.cpu_count() + 1) / 2)
 
     if result_total_nums <= process_num:
-        process_num = result_total_nums
-        chunks = [result_df.iloc[i: i + 1] for i in range(result_total_nums)]
+        process_num = 1
+        chunks = [[result_df]]
     else:
         chunk_size = result_total_nums // process_num
         chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
