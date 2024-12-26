@@ -15,7 +15,7 @@
 
 # List of ops that register hooks
 
-  
+
 ops:
   - adaptive_avg_pool1d
   - adaptive_avg_pool2d
@@ -85,6 +85,7 @@ ops:
   - relu6
   - celu
   - rrelu
+  - rms_norm
   - selu
   - sigmoid
   - silu
