@@ -119,15 +119,12 @@ def is_recomputation():
 def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")
-    if not ops:
-        raise TypeError(f"specify ops to calculate metrics. Optional ops: {MonitorConst.OP_LIST}")
-
     valid_ops = []
     for op in ops:
         if op not in MonitorConst.OP_LIST:
             logger.warning(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
-        else:
-            valid_ops.append(op)
+            continue
+        valid_ops.append(op)
     return valid_ops
 
 
@@ -258,6 +255,13 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+    if not targets:
+        if xy_distribution:
+            config["targets"] = {}
+            config["all_xy"] = True
+        else:
+            config["targets"] = {"": {}}
 
 
 def time_str2time_digit(time_str):
