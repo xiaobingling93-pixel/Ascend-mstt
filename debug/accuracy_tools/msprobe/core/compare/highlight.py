@@ -253,6 +253,8 @@ def value_check(value):
 
 
 def df_malicious_value_check(df_chunk):
+    for column in df_chunk.columns:
+        value_check(column)
     df_chunk.applymap(value_check)
 
 
@@ -262,7 +264,7 @@ def handle_multi_process_malicious_value_check(func, result_df):
 
     if result_total_nums <= process_num:
         process_num = 1
-        chunks = [[result_df]]
+        chunks = [result_df]
     else:
         chunk_size = result_total_nums // process_num
         chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
