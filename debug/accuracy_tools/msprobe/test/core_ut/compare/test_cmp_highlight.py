@@ -1,6 +1,7 @@
 # coding=utf-8
 import os
 import shutil
+import sys
 from collections import namedtuple
 
 import numpy as np
@@ -156,8 +157,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result_yellow.xlsx')))
 
     @patch("msprobe.core.compare.highlight.save_workbook")
-    @patch("builtins.print")
-    def test_highlight_rows_xlsx_malicious_columns(self, mock_print, mock_save_book):
+    def test_highlight_rows_xlsx_malicious_columns(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
@@ -166,13 +166,20 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {}
         file_path = base_dir
+
+        temp_output_file = 'temp_output.txt'
+        sys.stdout = open(temp_output_file, 'w')
+
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        print_txts = [call[0][0] for call in mock_print.call_args_list]
-        self.assertTrue(any("Malicious value [=Data_name]" in print_txt for print_txt in print_txts))
+
+        with open(temp_output_file, 'r') as f:
+            output = f.read()
+        os.remove(temp_output_file)
+
+        self.assertIn('Malicious value [=Data_name]', output)
 
     @patch("msprobe.core.compare.highlight.save_workbook")
-    @patch("builtins.print")
-    def test_highlight_rows_xlsx_malicious_type(self, mock_print, mock_save_book):
+    def test_highlight_rows_xlsx_malicious_type(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  '=torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
@@ -184,9 +191,18 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         file_path = base_dir
+
+        temp_output_file = 'temp_output.txt'
+        sys.stdout = open(temp_output_file, 'w')
+
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        print_txts = [call[0][0] for call in mock_print.call_args_list]
-        self.assertTrue(any("Malicious value [=torch.float32]" in print_txt for print_txt in print_txts))
+
+        with open(temp_output_file, 'r') as f:
+            output = f.read()
+        os.remove(temp_output_file)
+
+        self.assertIn('Malicious value [=torch.float32]', output)
+
 
     def test_add_highlight_row_info_existing(self):
         color_list = [(1, ["a", "b"]), (5, ["c"])]

@@ -249,7 +249,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
 
 def value_check(value):
     if not table_value_is_valid(value):
-        raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+        logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
 
 
 def df_malicious_value_check(df_chunk):
