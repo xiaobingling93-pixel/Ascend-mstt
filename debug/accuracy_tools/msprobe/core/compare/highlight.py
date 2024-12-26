@@ -240,6 +240,7 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     for api_batch in api_batches:
         find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len, 
                         highlight_dict, dump_mode)
+        progress_bar.update(1)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
