@@ -457,7 +457,7 @@ class FileCheckConst:
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
-    IR_SUFFIX = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -471,7 +471,7 @@ class FileCheckConst:
         CSV_SUFFIX: MAX_CSV_SIZE,
         XLSX_SUFFIX: MAX_XLSX_SIZE,
         YAML_SUFFIX: MAX_YAML_SIZE,
-        IR_SUFFIX: IR_SUFFIX
+        IR_SUFFIX: MAX_IR_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
