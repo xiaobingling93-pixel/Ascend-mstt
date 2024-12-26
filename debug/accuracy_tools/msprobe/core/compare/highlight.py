@@ -198,11 +198,25 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 
 def get_name_and_state(name):
-    """Get api/module name and state"""
-    split = re.split(r'(.+\.(?:forward|backward)(?:\.\d+)?)\.(input|output|kwargs)\..+', name)
-    if len(split) < 4:
-        raise CompareException(f'Invalid name: {name}')
-    return split[1], Const.OUTPUT if split[2] == Const.OUTPUT else Const.INPUT
+    """Get api/module name and state
+    example: 
+    name = 'conv2d.forward.1.input.0'
+    return: ('conv2d.forward.1.', 'input')
+    
+    name = 'Functional.pad.0.backward.output.0'
+    return: ('Functional.pad.0.backward.', 'output')
+    
+    state 'kwargs' will be seen as same as 'input'."""
+    split = re.split(r'\.(forward|backward)\.', name)
+    api = f'{split[0]}.{split[1]}'
+    state_str = split[2]
+    match = re.match(r'^(\d+\.)?(input|output|kwargs)\..+$', state_str)
+    if not match:
+        raise CompareException(f'Invalid name string: {name}')
+    if match.group(1):
+        api = f'{api}{match.group(1)}'
+    state = match.group(2)
+    return api, state if state == Const.OUTPUT else Const.INPUT
 
 
 class ApiBatch:
