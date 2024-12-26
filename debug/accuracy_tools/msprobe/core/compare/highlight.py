@@ -15,12 +15,13 @@
 
 import math
 import abc
+import re
 from collections import namedtuple
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
 from tqdm import tqdm
-from msprobe.core.common.utils import get_header_index
+from msprobe.core.common.utils import get_header_index, CompareException
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
 from msprobe.core.common.const import CompareConst, FileCheckConst, Const
@@ -198,13 +199,10 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 def get_name_and_state(name):
     """Get api/module name and state"""
-    if Const.INPUT in name:
-        api_name = name.split(Const.INPUT)[0]
-        state = Const.INPUT
-    else:
-        api_name = name.split(Const.OUTPUT)[0]
-        state = Const.OUTPUT
-    return api_name, state
+    split = re.split(r'(.+\.(?:forward|backward)(?:\.\d+)?)\.(input|output|kwargs)\..+', name)
+    if len(split) < 4:
+        raise CompareException(f'Invalid name: {name}')
+    return split[1], Const.OUTPUT if split[2] == Const.OUTPUT else Const.INPUT
 
 
 class ApiBatch:
