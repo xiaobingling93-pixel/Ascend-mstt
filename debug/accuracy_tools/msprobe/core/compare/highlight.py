@@ -288,6 +288,8 @@ def handle_multi_process_malicious_value_check(func, result_df):
 def compare_result_df_convert(value):
     if not isinstance(value, (float, int)) or isinstance(value, bool):
         value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else str(value)
+    if isinstance(value, float):
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else value
     return value
 
 
