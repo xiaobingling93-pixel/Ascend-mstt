@@ -380,7 +380,7 @@ class Comparator:
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
 
-        # 通过n_value, b_value同时得到错误表示和错误信息
+        # 通过n_value, b_value同时得到错误标志和错误信息
         n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value,
                                                                        error_flag, error_file=error_file)
 
