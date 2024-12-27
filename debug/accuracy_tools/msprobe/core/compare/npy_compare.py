@@ -53,12 +53,14 @@ def handle_inf_nan(n_value, b_value):
     return n_value, b_value
 
 
-def get_error_flag_and_msg(n_value, b_value, error_flag, error_file=None):
+def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
     """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag和error_msg"""
     err_msg = ""
 
     if error_flag:
-        if error_file:
+        if error_file == "no_bench_data":
+            err_msg = "Bench does not have data file."
+        elif error_file:
             err_msg = f"Dump file: {error_file} not found."
         else:
             err_msg = CompareConst.NO_BENCH
@@ -69,17 +71,17 @@ def get_error_flag_and_msg(n_value, b_value, error_flag, error_file=None):
         err_msg = "This is empty data, can not compare."
         n_value = b_value = CompareConst.NONE
         error_flag = True
-    if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
-        err_msg = "Shape of NPU and bench tensor do not match. Skipped."
-        n_value = b_value = CompareConst.SHAPE_UNMATCH
-        error_flag = True
     if not n_value.shape:  # 判断数据是否为0维张量
         err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', "
                    f"{CompareConst.ONE_THOUSANDTH_ERR_RATIO} and {CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}")
         error_flag = False
+    if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
+        err_msg = "Shape of NPU and bench tensor do not match. Skipped."
+        n_value = b_value = CompareConst.SHAPE_UNMATCH
+        error_flag = True
     if n_value.dtype != b_value.dtype:  # 判断数据的dtype是否一致
         err_msg = "Dtype of NPU and bench tensor do not match."
-        error_flag = True
+        error_flag = False
 
     try:
         n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
@@ -193,12 +195,12 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result
 
     def apply(self, n_value, b_value, relative_err=None):
-        if not n_value.shape:   # 0维张量场景
-            return CompareConst.UNSUPPORTED, ""
+        if not n_value.shape:
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
 
         with np.errstate(divide="ignore", invalid="ignore"):
             if len(n_value) == 1:
-                return CompareConst.UNSUPPORTED, "This is a 1-d tensor of length 1."
+                return CompareConst.UNSUPPORTED, "This is a 1-d tensor of length 1."    # TODO 这里的n_value是否已经转换过了
             num = n_value.dot(b_value)
             a_norm = np.linalg.norm(n_value)
             b_norm = np.linalg.norm(b_value)
@@ -244,8 +246,8 @@ class GetMaxRelativeErr(TensorComparisonBasic):
 class GetThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之一的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if not n_value.shape:   # 0维张量场景
-            return CompareConst.UNSUPPORTED, ""
+        if not n_value.shape:
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
@@ -256,8 +258,8 @@ class GetThousandErrRatio(TensorComparisonBasic):
 class GetFiveThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之五的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if not n_value.shape:   # 0维张量场景
-            return CompareConst.UNSUPPORTED, ""
+        if not n_value.shape:
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
