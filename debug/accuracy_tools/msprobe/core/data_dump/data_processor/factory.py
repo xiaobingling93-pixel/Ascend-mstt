@@ -56,7 +56,7 @@ class DataProcessorFactory:
                 FreeBenchmarkDataProcessor as PytorchFreeBenchmarkDataProcessor,
                 KernelDumpDataProcessor as PytorchKernelDumpDataProcessor
             )
-            from msprobe.pytorch.module_processer import ModuleProcesser
+            from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
             cls.register_processor(Const.PT_FRAMEWORK, Const.STATISTICS, PytorchStatisticsDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.TENSOR, PytorchTensorDataProcessor)
             cls.register_processor(Const.PT_FRAMEWORK, Const.OVERFLOW_CHECK, PytorchOverflowCheckDataProcessor)
