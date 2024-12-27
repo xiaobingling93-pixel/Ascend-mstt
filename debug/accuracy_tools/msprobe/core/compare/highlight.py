@@ -204,9 +204,7 @@ def get_name_and_state(name):
     return: ('conv2d.forward.1.', 'input')
     
     name = 'Functional.pad.0.backward.output.0'
-    return: ('Functional.pad.0.backward.', 'output')
-    
-    state 'kwargs' will be seen as same as 'input'."""
+    return: ('Functional.pad.0.backward.', 'output')"""
     split = re.split(r'\.(forward|backward)\.', name)
     api = f'{split[0]}.{split[1]}.'
     state_str = split[2]
@@ -216,7 +214,7 @@ def get_name_and_state(name):
     if match.group(1):
         api = f'{api}{match.group(1)}'
     state = match.group(2)
-    return api, state if state == Const.OUTPUT else Const.INPUT
+    return api, state
 
 
 class ApiBatch:
@@ -225,9 +223,12 @@ class ApiBatch:
         self.start = start
         self.input_len = 1
         self.output_index = start + 1
+        self.input_state = True
     
     def increment(self, state: str):
-        if state == Const.INPUT:
+        if state == Const.OUTPUT:
+            self.input_state = False
+        if self.input_state:
             self.input_len += 1
         self.output_index += 1
 
