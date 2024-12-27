@@ -37,8 +37,8 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value_0, b_value_0, error_flag=error_flag)
 
-        self.assertEqual(n_value, n_value_0)
-        self.assertEqual(b_value, b_value_0)
+        self.assertTrue(np.array_equal(n_value, n_value_0))
+        self.assertTrue(np.array_equal(b_value, b_value_0))
         self.assertFalse(error_flag)
         self.assertEqual(err_msg, "")
 
