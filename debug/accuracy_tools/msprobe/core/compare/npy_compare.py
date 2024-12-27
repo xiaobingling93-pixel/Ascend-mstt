@@ -100,7 +100,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
 
 def reshape_value(n_value, b_value):
     """返回reshape后的数据"""
-    if not n_value.shape:  # 判断数据是否为标量
+    if not n_value.shape:  # 判断数据是否为0维tensor， 如果0维tensor，不会转成1维tensor，直接返回
         if n_value.dtype == bool:
             n_value = n_value.astype(float)
             b_value = b_value.astype(float)
@@ -200,7 +200,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
 
         with np.errstate(divide="ignore", invalid="ignore"):
             if len(n_value) == 1:
-                return CompareConst.UNSUPPORTED, "This is a 1-d tensor of length 1."    # TODO 这里的n_value是否已经转换过了
+                return CompareConst.UNSUPPORTED, "This is a 1-d tensor of length 1."
             num = n_value.dot(b_value)
             a_norm = np.linalg.norm(n_value)
             b_norm = np.linalg.norm(b_value)
