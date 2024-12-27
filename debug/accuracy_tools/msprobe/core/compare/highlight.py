@@ -208,7 +208,7 @@ def get_name_and_state(name):
     
     state 'kwargs' will be seen as same as 'input'."""
     split = re.split(r'\.(forward|backward)\.', name)
-    api = f'{split[0]}.{split[1]}'
+    api = f'{split[0]}.{split[1]}.'
     state_str = split[2]
     match = re.match(r'^(\d+\.)?(input|output|kwargs)\..+$', state_str)
     if not match:
