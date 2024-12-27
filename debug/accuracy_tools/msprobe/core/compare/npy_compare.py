@@ -109,32 +109,6 @@ def reshape_value(n_value, b_value):
     return n_value, b_value
 
 
-def get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=None):
-    """获取异常情况的错误信息"""
-    if error_flag:
-        if n_value == CompareConst.READ_NONE:
-            if error_file == 'no_bench_data':
-                return 'Bench does not have data file.'
-            elif error_file is not None:
-                return "Dump file: {} not found.".format(error_file)
-            return CompareConst.NO_BENCH
-        if n_value == CompareConst.NONE:
-            return "This is empty data, can not compare."
-        if n_value == CompareConst.SHAPE_UNMATCH:
-            return "Shape of NPU and bench Tensor do not match. Skipped."
-        if n_value == CompareConst.NAN:
-            return "The position of inf or nan in NPU and bench Tensor do not match."
-        if n_value == CompareConst.UNREADABLE:
-            return "The npy data is unable to be read or compared, please check dump data files."
-    else:
-        if not n_value.shape:
-            return "This is type of scalar data, can not compare."
-        if n_value.dtype != b_value.dtype:
-            logger.warning("Dtype of NPU and bench Tensor do not match: {}".format(npu_op_name))
-            return "Dtype of NPU and bench Tensor do not match."
-    return ""
-
-
 def npy_data_check(n_value, b_value):
     error_message = ""
     if not isinstance(n_value, np.ndarray) or not isinstance(b_value, np.ndarray):
