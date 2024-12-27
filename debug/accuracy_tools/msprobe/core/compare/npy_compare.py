@@ -56,7 +56,6 @@ def handle_inf_nan(n_value, b_value):
 def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
     """判断数据是否有异常并返回异常的n_value, b_value，同时返回error_flag和error_msg"""
     err_msg = ""
-
     if error_flag:
         if error_file == "no_bench_data":
             err_msg = "Bench does not have data file."
@@ -64,36 +63,38 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
             err_msg = f"Dump file: {error_file} not found."
         else:
             err_msg = CompareConst.NO_BENCH
-        n_value = b_value = CompareConst.READ_NONE
         error_flag = True
+        return CompareConst.READ_NONE, CompareConst.READ_NONE, error_flag, err_msg
 
     if n_value.size == 0:  # 判断读取到的数据是否为空
         err_msg = "This is empty data, can not compare."
-        n_value = b_value = CompareConst.NONE
         error_flag = True
+        return CompareConst.NONE, CompareConst.NONE, error_flag, err_msg
     if not n_value.shape:  # 判断数据是否为0维张量
         err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', "
                    f"{CompareConst.ONE_THOUSANDTH_ERR_RATIO} and {CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}")
         error_flag = False
+        return n_value, b_value, error_flag, err_msg
     if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
         err_msg = "Shape of NPU and bench tensor do not match. Skipped."
-        n_value = b_value = CompareConst.SHAPE_UNMATCH
         error_flag = True
+        return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, error_flag, err_msg
     if n_value.dtype != b_value.dtype:  # 判断数据的dtype是否一致
         err_msg = "Dtype of NPU and bench tensor do not match."
         error_flag = False
+        return n_value, b_value, error_flag, err_msg
 
     try:
         n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
     except CompareException:
         logger.error('Numpy data is unreadable, please check!')
         err_msg = "Data is unreadable."
-        n_value = b_value = CompareConst.UNREADABLE
         error_flag = True
+        return CompareConst.UNREADABLE, CompareConst.UNREADABLE, error_flag, err_msg
     if n_value is CompareConst.NAN or b_value is CompareConst.NAN:
         err_msg = "The position of inf or nan in NPU and bench Tensor do not match."
-        n_value = b_value = CompareConst.NAN
         error_flag = True
+        return CompareConst.NAN, CompareConst.NAN, error_flag, err_msg
 
     return n_value, b_value, error_flag, err_msg
 
