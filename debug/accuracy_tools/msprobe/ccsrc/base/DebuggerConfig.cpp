@@ -185,8 +185,8 @@ void CommonCfgParseTasks(const nlohmann::json& content, std::vector<DebuggerTask
     for (auto& ele : taskNameList) {
         int32_t enumId = GetEnumIdFromName(TaskTypeEnum2Name, ele);
         if (enumId == debuggerInvalidEnum) {
-            LOG_ERROR(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Task " + ele + " is unknown.");
-            return;
+            LOG_WARNING(DebuggerErrno::ERROR_UNKNOWN_VALUE, "Task " + ele + " is unknown.");
+            continue;
         }
         if (!ELE_IN_VECTOR(tasks, static_cast<DebuggerTaskType>(enumId))) {
             tasks.emplace_back(static_cast<DebuggerTaskType>(enumId));
