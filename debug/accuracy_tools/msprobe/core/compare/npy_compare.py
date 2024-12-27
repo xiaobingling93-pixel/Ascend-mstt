@@ -289,6 +289,7 @@ def error_value_process(n_value):
         return CompareConst.SHAPE_UNMATCH, ""
     if n_value == CompareConst.NAN:
         return CompareConst.N_A, ""
+    return CompareConst.N_A, ""
 
 
 def compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=None):
