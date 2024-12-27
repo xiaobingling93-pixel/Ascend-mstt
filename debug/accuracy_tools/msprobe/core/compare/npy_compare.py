@@ -79,10 +79,6 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         err_msg = "Shape of NPU and bench tensor do not match. Skipped."
         error_flag = True
         return CompareConst.SHAPE_UNMATCH, CompareConst.SHAPE_UNMATCH, error_flag, err_msg
-    if n_value.dtype != b_value.dtype:  # 判断数据的dtype是否一致
-        err_msg = "Dtype of NPU and bench tensor do not match."
-        error_flag = False
-        return n_value, b_value, error_flag, err_msg
 
     try:
         n_value, b_value = handle_inf_nan(n_value, b_value)  # 判断是否有nan/inf数据
@@ -95,6 +91,11 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         err_msg = "The position of inf or nan in NPU and bench Tensor do not match."
         error_flag = True
         return CompareConst.NAN, CompareConst.NAN, error_flag, err_msg
+
+    if n_value.dtype != b_value.dtype:  # 判断数据的dtype是否一致
+        err_msg = "Dtype of NPU and bench tensor do not match."
+        error_flag = False
+        return n_value, b_value, error_flag, err_msg
 
     return n_value, b_value, error_flag, err_msg
 
