@@ -23,8 +23,10 @@ try:
     import torch_npu
 except ImportError:
     is_gpu = True
+    current_device = "cuda"
 else:
     is_gpu = False
+    current_device = "npu"
 import torch
 from tqdm import tqdm
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut import generate_device_params, get_api_info
@@ -117,7 +119,7 @@ def run_torch_api(api_full_name, api_info_dict, real_data_path):
                        % api_full_name)
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
-        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
+        kwargs[Const.DEVICE] = current_device
     npu_args, npu_kwargs = generate_device_params(args, kwargs, False, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
