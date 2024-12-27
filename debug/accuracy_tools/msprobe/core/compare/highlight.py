@@ -253,8 +253,6 @@ def value_check(value):
 
 
 def df_malicious_value_check(df_chunk):
-    for column in df_chunk.columns:
-        value_check(column)
     df_chunk.applymap(value_check)
 
 
@@ -278,6 +276,8 @@ def handle_multi_process_malicious_value_check(func, result_df):
         except OSError:
             logger.error("Pool terminate failed")
 
+    for column in result_df.columns:
+        value_check(column)
     for df_chunk in chunks:
         pool.apply_async(func, args=(df_chunk, ), error_callback=err_call)
 
