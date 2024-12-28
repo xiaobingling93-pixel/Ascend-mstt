@@ -203,7 +203,6 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertIn('Malicious value [=torch.float32]', output)
 
-
     def test_add_highlight_row_info_existing(self):
         color_list = [(1, ["a", "b"]), (5, ["c"])]
         num = 5

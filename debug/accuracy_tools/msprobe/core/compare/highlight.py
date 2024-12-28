@@ -247,13 +247,20 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
                         dump_mode)
 
 
-def value_check(value):
+def value_check(value, api_name=None, i=None, result_df_columns=None):
     if not table_value_is_valid(value):
-        logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+        if result_df_columns:
+            logger.error(f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+                         f"is not allowed to be written into the compare result xlsx.")
+        else:
+            logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
 
 
-def df_malicious_value_check(df_chunk):
-    df_chunk.applymap(value_check)
+def df_malicious_value_check(df_chunk, result_df_columns):
+    for row in df_chunk.itertuples(index=False):
+        api_name = row[0]
+        for i, value in enumerate(row):
+            value_check(value, api_name, i, result_df_columns)
 
 
 def handle_multi_process_malicious_value_check(func, result_df):
@@ -276,10 +283,11 @@ def handle_multi_process_malicious_value_check(func, result_df):
         except OSError:
             logger.error("Pool terminate failed")
 
-    for column in result_df.columns:
+    result_df_columns = result_df.columns.tolist()
+    for column in result_df_columns:
         value_check(column)
     for df_chunk in chunks:
-        pool.apply_async(func, args=(df_chunk, ), error_callback=err_call)
+        pool.apply_async(func, args=(df_chunk, result_df_columns, ), error_callback=err_call)
 
     pool.close()
     pool.join()
