@@ -43,13 +43,10 @@ def compare_cli(args):
         input_param["bench_json_path"] = input_param.pop("bench_path")
 
         if frame_name == Const.PT_FRAMEWORK:
-            kwargs = {
-                "data_mapping": args.data_mapping
-            }
-            compare(input_param, args.output_path, auto_analyze=auto_analyze, fuzzy_match=args.fuzzy_match, **kwargs)
+            compare(input_param, args.output_path, auto_analyze=auto_analyze, fuzzy_match=args.fuzzy_match,
+                    data_mapping=args.data_mapping)
         else:
             kwargs = {
-                "stack_mode": args.stack_mode,
                 "auto_analyze": auto_analyze,
                 "fuzzy_match": args.fuzzy_match,
                 "cell_mapping": args.cell_mapping,
@@ -57,11 +54,9 @@ def compare_cli(args):
                 "data_mapping": args.data_mapping,
                 "layer_mapping": args.layer_mapping
             }
-
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {
-            "stack_mode": args.stack_mode,
             "auto_analyze": auto_analyze,
             "fuzzy_match": args.fuzzy_match,
             "is_print_compare_log": input_param.get("is_print_compare_log", True),

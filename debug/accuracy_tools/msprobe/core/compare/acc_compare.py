@@ -136,7 +136,6 @@ class Comparator:
         struct_match = check_struct_match(npu_dict, bench_dict)
         if not self.fuzzy_match:
             return npu_op_name == bench_op_name and struct_match
-        is_match = True
         try:
             is_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
@@ -412,11 +411,7 @@ class Comparator:
         Returns:
         """
         # get kwargs or set default value
-        stack_mode = kwargs.get('stack_mode', False)
-        auto_analyze = kwargs.get('auto_analyze', True)
         suffix = kwargs.get('suffix', '')
-        fuzzy_match = kwargs.get('fuzzy_match', False)
-        dump_mode = kwargs.get('dump_mode', None)
 
         logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
         file_name = add_time_with_xlsx("compare_result" + suffix)

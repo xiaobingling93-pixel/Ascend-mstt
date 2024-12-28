@@ -72,7 +72,7 @@ class PTComparator (Comparator):
         return data_value
 
 
-def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, **kwargs):
+def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, data_mapping=None):
     try:
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
@@ -80,7 +80,6 @@ def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, **kw
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, dump_mode)
-        data_mapping = kwargs.get('data_mapping', None)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error

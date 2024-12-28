@@ -15,7 +15,6 @@
 
 import os
 import re
-
 from collections import defaultdict
 
 import numpy as np
@@ -23,15 +22,14 @@ import pandas as pd
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import (FileOpen, create_directory, load_json,
-                                            load_npy, load_yaml)
+from msprobe.core.common.file_utils import FileOpen, create_directory, load_json, load_npy, load_yaml
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import (CompareException, check_compare_param,
-                                       check_configuration_param,
-                                       get_dump_mode, set_dump_path, check_op_str_pattern_valid)
-from msprobe.core.compare.check import dtype_mapping
+from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, \
+    check_op_str_pattern_valid, get_dump_mode, set_dump_path
 from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
+from msprobe.core.compare.utils import set_stack_json_path
 
 
 class MSComparator(Comparator):
@@ -42,6 +40,7 @@ class MSComparator(Comparator):
     data_mapping: mindspore的cell或api的入参/出参和pytorch之间的映射关系；
     is_cross_framework: 是否跨框架。
     """
+
     def __init__(self, stack_mode, auto_analyze, fuzzy_match, dump_mode, cell_mapping=None, api_mapping=None,
                  data_mapping=None, is_cross_framework=False):
         super().__init__(stack_mode, auto_analyze, fuzzy_match, dump_mode)
@@ -65,9 +64,8 @@ class MSComparator(Comparator):
         else:
             raise TypeError(f"The type of parameter `data_mapping` must be dict, str or None, but got "
                             f"{type(self.data_mapping)}")
-    
-    @classmethod
-    def calc_accuracy(cls, result_df, dump_mode, header):
+
+    def calc_accuracy(self, result_df, header):
         condition_no_bench = result_df[CompareConst.BENCH_NAME] == CompareConst.N_A
         result_df[condition_no_bench] = result_df[condition_no_bench].fillna(CompareConst.N_A)
         result_df.loc[condition_no_bench, CompareConst.ERROR_MESSAGE] = CompareConst.NO_BENCH
@@ -78,10 +76,10 @@ class MSComparator(Comparator):
                 val_str = val.astype(str)
                 check_series[pd.to_numeric(val_str, errors='coerce').notna() | val_str.str.lower().eq('nan')] = True
                 return check_series
-            
+
             def get_number(val):
                 return pd.to_numeric(val.astype(str), errors='coerce')
-            
+
             ms_val = result_df['NPU ' + data_type]
             pt_val = result_df['Bench ' + data_type]
             diff_name = data_type.capitalize() + ' diff'
@@ -95,7 +93,7 @@ class MSComparator(Comparator):
             condition_pt_zero = pt_val == 0
             result_df.loc[condition_not_nan_diff & condition_pt_zero, rel_err_name] = CompareConst.NAN
             condition_ref_err = condition_not_nan_diff & ~condition_pt_zero
-            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, diff_name] / 
+            result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, diff_name] /
                                                               pt_val[condition_ref_err] * 100)
             result_df.loc[condition_ref_err, rel_err_name] = (result_df.loc[condition_ref_err, rel_err_name]
                                                               .abs().astype(str) + '%')
@@ -103,31 +101,30 @@ class MSComparator(Comparator):
                     pd.Series(np.maximum(get_number(ms_val), get_number(pt_val))).abs() + CompareConst.EPSILON)
             return magnitude > CompareConst.MAGNITUDE
 
-        if dump_mode == Const.MD5:
+        if self.dump_mode == Const.MD5:
             condition_md5_equal = result_df[CompareConst.NPU_MD5] == result_df[CompareConst.BENCH_MD5]
             result_df.loc[condition_md5_equal, CompareConst.RESULT] = CompareConst.PASS
             result_df.loc[~condition_md5_equal & ~condition_no_bench, CompareConst.RESULT] = CompareConst.DIFF
-        elif dump_mode == Const.SUMMARY:
+        elif self.dump_mode == Const.SUMMARY:
             warning_list = [calc_summary_diff(data_type) for data_type in ['max', 'min', 'mean', 'l2norm']]
             warning_flag = pd.DataFrame(warning_list).all()
             result_df.loc[~condition_no_bench, [CompareConst.RESULT, CompareConst.ERROR_MESSAGE]] = ''
             result_df.loc[warning_flag, CompareConst.RESULT] = CompareConst.WARNING
             result_df.loc[warning_flag, CompareConst.ERROR_MESSAGE] = 'Need double check api accuracy.'
         else:
-            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR, 
+            fill_cols = [CompareConst.COSINE, CompareConst.MAX_ABS_ERR, CompareConst.MAX_RELATIVE_ERR,
                          CompareConst.ONE_THOUSANDTH_ERR_RATIO, CompareConst.FIVE_THOUSANDTHS_ERR_RATIO,
                          CompareConst.ERROR_MESSAGE]
             result_df.loc[~condition_no_bench, fill_cols] = ''
             result_df.loc[~condition_no_bench, CompareConst.ACCURACY] = CompareConst.ACCURACY_CHECK_YES
         return result_df[header]
 
-    @classmethod
-    def make_result_df(cls, result, stack_mode, dump_mode):
-        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode][:]
+    def make_result_df(self, result):
+        header = CompareConst.HEAD_OF_COMPARE_MODE[self.dump_mode][:]
 
-        if stack_mode:
+        if self.stack_mode:
             header.append(CompareConst.STACK)
-        if dump_mode == Const.ALL:
+        if self.dump_mode == Const.ALL:
             header.append(CompareConst.DATA_NAME)
         result.rename(columns={'op_name_x': CompareConst.NPU_NAME,
                                'op_name_y': CompareConst.BENCH_NAME,
@@ -139,10 +136,11 @@ class MSComparator(Comparator):
                                'md5_y': CompareConst.BENCH_MD5,
                                'data_name_x': CompareConst.DATA_NAME,
                                'stack_info_x': CompareConst.STACK}, inplace=True)
-        
+
         npu_summary = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN, 
+        bench_summary = [CompareConst.BENCH_MAX, CompareConst.BENCH_MIN, CompareConst.BENCH_MEAN,
                          CompareConst.BENCH_NORM]
+
         def set_summary(summary):
             if summary == CompareConst.N_A:
                 return [CompareConst.N_A] * 4
@@ -155,14 +153,14 @@ class MSComparator(Comparator):
                 else:
                     summary_list.append(i)
             return summary_list
-        
+
         result[npu_summary] = result['summary_x'].apply(set_summary).tolist()
         result[bench_summary] = result['summary_y'].apply(set_summary).tolist()
         result_df = pd.DataFrame(columns=header)
         for h in header:
             if h in result.columns:
                 result_df[h] = result[h]
-        return cls.calc_accuracy(result_df, dump_mode, header)
+        return self.calc_accuracy(result_df, header)
 
     def load_internal_api(self):
         cur_path = os.path.dirname(os.path.realpath(__file__))
@@ -200,7 +198,7 @@ class MSComparator(Comparator):
                 data_value = data_value.to(torch.float32)
             data_value = data_value.numpy()
         else:
-            data_value = load_npy(data_path) 
+            data_value = load_npy(data_path)
         return data_value
 
     def process_internal_api_mapping(self, npu_op_name):
@@ -216,7 +214,7 @@ class MSComparator(Comparator):
             return npu_op_name.replace(ms_api_name, self.ms_to_pt_mapping.get(ms_api_name))
         else:
             return npu_op_name
-    
+
     def get_api_name(self, api_list):
         try:
             api_name = api_list[0] + Const.SEP + api_list[1]
@@ -225,14 +223,14 @@ class MSComparator(Comparator):
             raise CompareException(CompareException.INDEX_OUT_OF_BOUNDS_ERROR) from error
         return api_name
 
-    def compare_process(self, file_lists, stack_mode, fuzzy_match, dump_mode):
+    def compare_process(self, file_lists):
         npu_json_path, bench_json_path, stack_json_path = file_lists
         npu_json_data = load_json(npu_json_path)
         bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path)
+        stack_json_data = load_json(stack_json_path)  # TODO 需要修改
 
-        npu_df = self.gen_data_df(npu_json_data, stack_json_data, dump_mode)
-        bench_df = self.gen_data_df(bench_json_data, stack_json_data, dump_mode)
+        npu_df = self.gen_data_df(npu_json_data, stack_json_data)
+        bench_df = self.gen_data_df(bench_json_data, stack_json_data)
         if self.cell_mapping:
             npu_df[CompareConst.COMPARE_KEY] = npu_df[CompareConst.OP_NAME].apply(self.process_cell_mapping)
         elif self.api_mapping:
@@ -264,9 +262,9 @@ class MSComparator(Comparator):
                     ((npu_dtype == Const.TORCH_FLOAT32) & (bench_dtype == Const.TORCH_FLOAT16)) |
                     ((npu_dtype == Const.TORCH_FLOAT16) & (bench_dtype == Const.TORCH_BFLOAT16)) |
                     ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
-        
+
         match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
-        return MSComparator.make_result_df(match_result, stack_mode, dump_mode)
+        return MSComparator.make_result_df(match_result)
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
         def get_api_indices_dict(op_name_df):
@@ -312,7 +310,7 @@ class MSComparator(Comparator):
                 if is_abandoned:
                     npu_df.loc[index, CompareConst.COMPARE_KEY] = op_name + 'abandoned'
 
-    def gen_data_df(self, data_json, stack_json, dump_mode):
+    def gen_data_df(self, data_json, stack_json):
         result = {
             CompareConst.OP_NAME: [],
             Const.DTYPE: [],
@@ -320,13 +318,13 @@ class MSComparator(Comparator):
             Const.SUMMARY: [],
             'stack_info': []
         }
-        if dump_mode == Const.ALL:
+        if self.dump_mode == Const.ALL:
             result['data_name'] = []
-        elif dump_mode == Const.MD5:
+        elif self.dump_mode == Const.MD5:
             result[Const.MD5] = []
         for data_name in data_json['data']:
             check_op_str_pattern_valid(data_name)
-            merge_list = self.gen_merge_list(data_json, data_name, stack_json, dump_mode)
+            merge_list = self.gen_merge_list(data_json, data_name, stack_json, self.dump_mode)
             if not merge_list:
                 continue
             for op_name in merge_list[CompareConst.OP_NAME]:
@@ -337,11 +335,11 @@ class MSComparator(Comparator):
                     struct = merge_list[CompareConst.OUTPUT_STRUCT].pop(0)
                 result[Const.DTYPE].append(struct[0])
                 result[Const.SHAPE].append(struct[1])
-                if dump_mode == Const.MD5:
+                if self.dump_mode == Const.MD5:
                     result[Const.MD5].append(struct[2])
                 result[Const.SUMMARY].append(merge_list[Const.SUMMARY].pop(0))
                 result['stack_info'].append(merge_list['stack_info'][0])
-                if dump_mode == Const.ALL:
+                if self.dump_mode == Const.ALL:
                     result['data_name'].append(merge_list['data_name'].pop(0))
         return pd.DataFrame(result)
 
@@ -357,7 +355,6 @@ def check_cross_framework(bench_json_path):
 
 def ms_compare(input_param, output_path, **kwargs):
     try:
-        stack_mode = kwargs.get('stack_mode', False)
         auto_analyze = kwargs.get('auto_analyze', True)
         fuzzy_match = kwargs.get('fuzzy_match', False)
         cell_mapping = kwargs.get('cell_mapping', None)
@@ -368,6 +365,7 @@ def ms_compare(input_param, output_path, **kwargs):
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
+        stack_mode = set_stack_json_path(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, dump_mode)
@@ -377,6 +375,6 @@ def ms_compare(input_param, output_path, **kwargs):
     if layer_mapping:
         data_mapping = generate_data_mapping_by_layer_mapping(input_param, layer_mapping, output_path)
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
-    ms_comparator = MSComparator(cell_mapping, api_mapping, data_mapping, is_cross_framework)
-    ms_comparator.compare_core(input_param, output_path, stack_mode=stack_mode, suffix=suffix,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)
+    ms_comparator = MSComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode,
+                                 cell_mapping, api_mapping, data_mapping, is_cross_framework)
+    ms_comparator.compare_core(input_param, output_path, suffix=suffix)
