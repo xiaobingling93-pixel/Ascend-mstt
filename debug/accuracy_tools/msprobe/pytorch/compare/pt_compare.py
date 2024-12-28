@@ -14,19 +14,23 @@
 # limitations under the License.
 
 import os.path
+
 import torch
+
 from msprobe.core.common.const import FileCheckConst
-from msprobe.pytorch.common.log import logger
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.common.utils import check_configuration_param, check_compare_param, \
-    CompareException, set_dump_path, get_dump_mode
 from msprobe.core.common.file_utils import FileChecker, create_directory, load_yaml
+from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, get_dump_mode, \
+    set_dump_path
+from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.utils import set_stack_json_path
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
 
 
 class PTComparator (Comparator):
-    def __init__(self, data_mapping=None):
+    def __init__(self, stack_mode, fuzzy_match, auto_analyze, dump_mode, data_mapping=None):
+        super().__init__(stack_mode, fuzzy_match, auto_analyze, dump_mode)
         self.frame_name = PTComparator.__name__
         self.data_mapping = data_mapping
         if isinstance(self.data_mapping, str) or self.data_mapping is None:
@@ -65,13 +69,14 @@ class PTComparator (Comparator):
         if data_value.dtype == torch.bfloat16:
             data_value = data_value.to(torch.float32)
         data_value = data_value.numpy()
-        return data_value  
-    
-    
-def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy_match=False, **kwargs):
+        return data_value
+
+
+def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, **kwargs):
     try:
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
+        stack_mode = set_stack_json_path(input_param)
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, dump_mode)
@@ -79,6 +84,5 @@ def compare(input_param, output_path, stack_mode=False, auto_analyze=True, fuzzy
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    pt_comparator = PTComparator(data_mapping)
-    pt_comparator.compare_core(input_param, output_path, stack_mode=stack_mode,
-                 auto_analyze=auto_analyze, fuzzy_match=fuzzy_match, dump_mode=dump_mode)
+    pt_comparator = PTComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode, data_mapping)
+    pt_comparator.compare_core(input_param, output_path)

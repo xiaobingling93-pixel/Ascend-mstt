@@ -14,20 +14,21 @@
 # limitations under the License.
 
 import os
-from msprobe.core.common.utils import CompareException, check_compare_param, \
-    check_configuration_param, set_dump_path, get_dump_mode
-from msprobe.core.common.file_utils import create_directory
+
 from msprobe.core.common.exceptions import FileCheckException
+from msprobe.core.common.file_utils import create_directory
+from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, get_dump_mode, \
+    set_dump_path
+from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, set_stack_json_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.compare.pt_compare import PTComparator
-from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
-    if kwargs.get('suffix'):
+    if kwargs.get("suffix"):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    stack_mode = kwargs.get('stack_mode', False)
+    # stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
     fuzzy_match = kwargs.get('fuzzy_match', False)
     is_print_compare_log = kwargs.get('is_print_compare_log', True)
@@ -35,31 +36,31 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
     if len(npu_ranks) != len(bench_ranks):
-        logger.error('The number of ranks in the two runs are different. '
-                        'Unable to match the ranks. Please use another folder to compare '
-                        'or use compare() api and manually match the ranks.')
+        logger.error(
+            "The number of ranks in the two runs are different. "
+            "Unable to match the ranks. "
+            "Please use another folder to compare or use compare() api and manually match the ranks.")
         raise CompareException(CompareException.INVALID_PATH_ERROR)
     for nr, br in zip(npu_ranks, bench_ranks):
         npu_data_dir = os.path.join(npu_dump_dir, nr)
         bench_data_dir = os.path.join(bench_dump_dir, br)
         npu_path = extract_json(npu_data_dir, stack_json=False)
         bench_path = extract_json(bench_data_dir, stack_json=False)
-        stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
-            'npu_json_path': npu_path,
-            'bench_json_path': bench_path,
-            'stack_json_path': stack_path,
-            'is_print_compare_log': is_print_compare_log
+            "npu_json_path": npu_path,
+            "bench_json_path": bench_path,
+            "is_print_compare_log": is_print_compare_log
         }
         try:
             set_dump_path(dump_result_param)
             dump_mode = get_dump_mode(dump_result_param)
+            stack_mode = set_stack_json_path(dump_result_param)
             check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
             create_directory(output_path)
             check_compare_param(dump_result_param, output_path, dump_mode)
         except (CompareException, FileCheckException) as error:
-            logger.error('Compare failed. Please check the arguments and do it again!')
+            logger.error("Compare failed. Please check the arguments and do it again!")
             raise CompareException(error.code) from error
-        pt_comparator = PTComparator()
+        pt_comparator = PTComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode)
         pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)

@@ -42,7 +42,9 @@ class MSComparator(Comparator):
     data_mapping: mindspore的cell或api的入参/出参和pytorch之间的映射关系；
     is_cross_framework: 是否跨框架。
     """
-    def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None, is_cross_framework=False):
+    def __init__(self, stack_mode, auto_analyze, fuzzy_match, dump_mode, cell_mapping=None, api_mapping=None,
+                 data_mapping=None, is_cross_framework=False):
+        super().__init__(stack_mode, auto_analyze, fuzzy_match, dump_mode)
         self.frame_name = MSComparator.__name__
         self.cell_mapping = cell_mapping
         self.api_mapping = api_mapping

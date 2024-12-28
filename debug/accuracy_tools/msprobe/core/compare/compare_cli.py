@@ -39,18 +39,14 @@ def compare_cli(args):
         from msprobe.mindspore.compare.ms_compare import ms_compare
         from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed, ms_graph_compare
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
-        if "stack_path" not in input_param:
-            logger.error(f"Missing stack_path in configuration file {args.input_path}, please check!")
-            raise CompareException(CompareException.INVALID_PATH_ERROR)
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
-        input_param["stack_json_path"] = input_param.pop("stack_path")
+
         if frame_name == Const.PT_FRAMEWORK:
             kwargs = {
                 "data_mapping": args.data_mapping
             }
-            compare(input_param, args.output_path, stack_mode=args.stack_mode, auto_analyze=auto_analyze,
-                    fuzzy_match=args.fuzzy_match, **kwargs)
+            compare(input_param, args.output_path, auto_analyze=auto_analyze, fuzzy_match=args.fuzzy_match, **kwargs)
         else:
             kwargs = {
                 "stack_mode": args.stack_mode,

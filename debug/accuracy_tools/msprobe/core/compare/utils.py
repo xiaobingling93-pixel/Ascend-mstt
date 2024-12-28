@@ -40,8 +40,15 @@ def extract_json(dirname, stack_json=False):
             logger.error(f'stack.json is not found in dump dir {dirname}.')
         else:
             logger.error(f'dump.json is not found in dump dir {dirname}.')
-        raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
+            raise CompareException(CompareException.NO_DUMP_FILE_ERROR)
     return json_path
+
+
+def set_stack_json_path(input_param):
+    npu_data_dir = os.path.dirname(input_param.get("npu_path"))
+    stack_path = extract_json(npu_data_dir, stack_json=True)
+    input_param["stack_path"] = stack_path if stack_path else None
+    return bool(stack_path)
 
 
 def check_and_return_dir_contents(dump_dir, prefix):
