@@ -267,9 +267,7 @@ def validate_config(config):
     if not targets:
         if xy_distribution:
             config["all_xy"] = True
-            config["targets"] = {}
-        if any([ur_distribution, wg_distribution, mg_distribution, param_distribution]):
-            config["targets"] = {"": {}}
+        config["targets"] = {"": {}}
 
 
 def time_str2time_digit(time_str):
