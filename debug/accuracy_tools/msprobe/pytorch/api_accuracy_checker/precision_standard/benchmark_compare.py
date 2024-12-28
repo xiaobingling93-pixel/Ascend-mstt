@@ -78,6 +78,7 @@ class BenchmarkCompare(BaseCompare):
 
     def __init__(self, input_data):
         super(BenchmarkCompare, self).__init__(input_data)
+        self.compare_algorithm = CompareConst.BENCHMARK
 
     def _get_abs_err_greater_mask(self, small_value_atol):
         abs_err_greater_mask = np.greater(self.abs_err, small_value_atol)

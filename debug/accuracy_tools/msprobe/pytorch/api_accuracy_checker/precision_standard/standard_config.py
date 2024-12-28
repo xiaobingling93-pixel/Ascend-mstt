@@ -17,6 +17,8 @@
 
 import torch
 
+from msprobe.core.common.const import CompareConst
+
 
 class StandardConfig:
     """
@@ -56,9 +58,15 @@ class StandardConfig:
         torch.float32: 2**-20,
         "default": 2**-20
     }
-    _small_value_atol = {
+    _threshold_small_value_atol = {
         torch.float16: 2**-16,
-        torch.bfloat16: 2**-16,
+        torch.bfloat16: 1e-16,
+        torch.float32: 2**-30,
+        "default": 2**-30
+    }
+    _benchmark_small_value_atol = {
+        torch.float16: 1e-16,
+        torch.bfloat16: 1e-16,
         torch.float32: 2**-30,
         "default": 2**-30
     }
@@ -111,8 +119,12 @@ class StandardConfig:
         return cls._small_value.get(dtype, cls._small_value["default"])
     
     @classmethod
-    def get_small_value_atol(cls, dtype):
-        return cls._small_value_atol.get(dtype, cls._small_value_atol["default"])
+    def get_small_value_atol(cls, dtype, standard):
+        standard_dict = {
+            CompareConst.ABSOLUTE_THRESHOLD: cls._threshold_small_value_atol,
+            CompareConst.BENCHMARK: cls._benchmark_small_value_atol
+        }
+        return standard_dict.get(standard, cls._benchmark_small_value_atol).get(dtype, cls._small_value_atol["default"])
     
     @classmethod
     def get_rtol(cls, dtype):

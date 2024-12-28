@@ -21,6 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.algorithm import check_inf_nan
     check_small_value
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
+from msprobe.core.common.const import CompareConst
 
 
 
@@ -65,6 +66,7 @@ class AbsolutethdCompare(BaseCompare):
     """
     def __init__(self, input_data):
         super(AbsolutethdCompare, self).__init__(input_data)
+        self.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD
 
     def _get_rtol(self):
         return StandardConfig.get_rtol(self.dtype)

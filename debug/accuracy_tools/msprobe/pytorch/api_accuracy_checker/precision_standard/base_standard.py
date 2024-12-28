@@ -61,6 +61,7 @@ class BaseCompare(ABC):
         self.device_output = input_data.device_output
         self.compare_column = input_data.compare_column
         self.dtype = input_data.dtype
+        self.compare_algorithm = None
 
     @staticmethod
     def stat_small_value_mask(abs_bench, both_finite_mask, small_value):
@@ -73,7 +74,7 @@ class BaseCompare(ABC):
 
     def get_small_value_threshold(self):
         small_value = StandardConfig.get_small_valuel(self.dtype)
-        small_value_atol = StandardConfig.get_small_value_atol(self.dtype)
+        small_value_atol = StandardConfig.get_small_value_atol(self.dtype, self.compare_algorithm)
         return small_value, small_value_atol
     
     def stat_abs_bench_with_eps(self):
