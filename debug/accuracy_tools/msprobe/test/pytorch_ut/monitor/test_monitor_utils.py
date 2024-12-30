@@ -44,6 +44,12 @@ class TestValidationFunctions(unittest.TestCase):
         valid_ops = validate_ops(ops)
         self.assertEqual(valid_ops, ['norm', 'max'])
 
+    def test_no_valid_ops(self):
+        ops = ['op1', 'op2']
+        valid_ops = validate_ops(ops)
+        target_ops = [MonitorConst.OP_LIST[0]]
+        self.assertEqual(valid_ops, target_ops)
+
     def test_validate_ranks(self):
         ranks = [0, 1, 2, 3]
         res = validate_ranks(ranks)
@@ -96,7 +102,8 @@ class TestValidationFunctions(unittest.TestCase):
             'alert': {'rules': [{'rule_name': 'AnomalyTurbulence', 'args': {'threshold': 10.0}}], 'dump': True}
         }
         validate_config(config)
-        self.assertEqual(config["ops"], [])
+        target_ops = [MonitorConst.OP_LIST[0]]
+        self.assertEqual(config["ops"], target_ops)
         del config["targets"]
         validate_config(config)
         self.assertEqual(config["targets"], {"": {}})
