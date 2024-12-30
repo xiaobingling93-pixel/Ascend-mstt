@@ -5,7 +5,7 @@ import torch
 
 from msprobe.core.data_dump.scope import ModuleRangeScope
 from msprobe.pytorch.common.utils import Const
-from msprobe.pytorch.module_processer import ModuleProcesser
+from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 
 
 class TestModuleProcesser(unittest.TestCase):
@@ -28,6 +28,7 @@ class TestModuleProcesser(unittest.TestCase):
     def test_filter_tensor_and_tuple(self):
         def func(nope, x):
             return x * 2
+
         result_1 = ModuleProcesser.filter_tensor_and_tuple(func)(None, torch.tensor([1]))
         self.assertEqual(result_1, torch.tensor([2]))
         result_2 = ModuleProcesser.filter_tensor_and_tuple(func)(None, "test")
@@ -118,7 +119,7 @@ class TestModuleProcesser(unittest.TestCase):
     def test_node_hook_backward(self):
         name_prefix = "backward_layer"
         hook = self.processor.node_hook(name_prefix, start_or_stop=Const.START)
-        
+
         module = MagicMock()
         input = (self.mock_tensor,)
         module.mindstudio_reserved_name = None
@@ -127,3 +128,10 @@ class TestModuleProcesser(unittest.TestCase):
         expected_name = f"backward_layer{Const.SEP}0"
         self.assertEqual(module.mindstudio_reserved_name, expected_name)
         self.assertIn(expected_name, ModuleProcesser.module_node)
+
+    def test_remove_deprecated_backward_hook_if_exist(self):
+        module = MagicMock()
+        module._backward_hooks = {0: lambda: None}
+        module._is_full_backward_hook = False
+        self.processor.remove_deprecated_backward_hook_if_exist(module)
+        self.assertIsNone(module._is_full_backward_hook)

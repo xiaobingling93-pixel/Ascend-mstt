@@ -19,7 +19,7 @@ from collections import namedtuple
 
 import torch
 from msprobe.core.common.const import Const
-from msprobe.core.common.exceptions import DistributedNotInitializedError, MsprobeException
+from msprobe.core.common.exceptions import DistributedNotInitializedError
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.utils import print_tools_ends_info
 from msprobe.core.data_dump.data_collector import build_data_collector
@@ -29,9 +29,9 @@ from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import get_rank_if_initialized, remove_dropout
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
+from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_registry import api_register
 from msprobe.pytorch.hook_module.hook_module import HOOKModule
-from msprobe.pytorch.module_processer import ModuleProcesser
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 if torch_version_above_or_equal_2:
@@ -58,20 +58,6 @@ class Service:
     def forward_backward_dump_end():
         logger.info_on_rank_0("Data needed ends here.")
         api_register.api_originality()
-
-    @staticmethod
-    def is_registered_backward_hook(module):
-        if hasattr(module, '_backward_hooks') and \
-                len(module._backward_hooks) > 0 and \
-                module._is_full_backward_hook is False:
-            return True
-        return False
-
-    def check_register_full_backward_hook(self, module):
-        if self.is_registered_backward_hook(module):
-            module._backward_hooks.clear()
-            module._is_full_backward_hook = None
-            logger.warning("Found deprecated backward hooks. Removing them and switching to full backward hooks.")
 
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
@@ -285,42 +271,14 @@ class Service:
 
     def register_hook_new(self):
         logger.info_on_rank_0("The {} hook function is successfully mounted to the model.".format(self.config.task))
-        if self.config.level in ["L0", "mix"]:
-            if self.model is None:
-                logger.error_log_with_exp("The model is None.", MsprobeException.INVALID_PARAM_ERROR)
-            logger.info_on_rank_0("The init dump mode is enabled, and the module dump function will not be available")
-            for name, module in self.model.named_modules():
-                if module == self.model:
-                    continue
-                prefix = BaseScope.Module_Type_Module + Const.SEP + name + Const.SEP + \
-                         module.__class__.__name__ + Const.SEP
+        if self.config.level in [Const.LEVEL_L0, Const.LEVEL_MIX]:
+            self.module_processor.hook_modules(self.model, self.build_hook)
 
-                pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = self.build_hook(
-                    BaseScope.Module_Type_Module, prefix)
-                if torch_version_above_or_equal_2:
-                    module.register_forward_hook(forward_hook, with_kwargs=True)
-                else:
-                    self.check_register_full_backward_hook(module)
-                    module.register_full_backward_hook(
-                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
-                    module.register_forward_hook(forward_hook_torch_version_below_2)
-                self.check_register_full_backward_hook(module)
-                module.register_full_backward_hook(backward_hook)
-
-                module.register_forward_pre_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.START))
-                module.register_forward_hook(
-                    self.module_processor.node_hook(prefix + Const.FORWARD, Const.STOP))
-                if torch_version_above_or_equal_2:
-                    module.register_full_backward_pre_hook(
-                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-                    self.check_register_full_backward_hook(module)
-                    module.register_full_backward_hook(
-                        self.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
-
-        if self.config.level in ["mix", "L1", "L2"]:
-            api_register.initialize_hook(functools.partial(self.build_hook, BaseScope.Module_Type_API),
-                                         self.config.online_run_ut)
+        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L1, Const.LEVEL_L2]:
+            api_register.initialize_hook(
+                functools.partial(self.build_hook, BaseScope.Module_Type_API),
+                self.config.online_run_ut
+            )
             api_register.api_modularity()
 
     def attl_init(self):
@@ -367,6 +325,7 @@ class Service:
         if self.config.rank and self.current_rank not in self.config.rank:
             return
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
-            for _, module in self.model.named_modules():
-                if hasattr(module, 'has_param_hook'):
-                    del module.has_param_hook
+            for single_model in self.model:
+                for _, module in single_model.named_modules():
+                    if hasattr(module, 'has_param_hook'):
+                        del module.has_param_hook
