@@ -124,7 +124,8 @@ class StandardConfig:
             CompareConst.ABSOLUTE_THRESHOLD: cls._threshold_small_value_atol,
             CompareConst.BENCHMARK: cls._benchmark_small_value_atol
         }
-        return standard_dict.get(standard, cls._benchmark_small_value_atol).get(dtype, cls._small_value_atol["default"])
+        small_value_atol_standard = standard_dict.get(standard, cls._benchmark_small_value_atol)
+        return small_value_atol_standard.get(dtype, small_value_atol_standard["default"])
     
     @classmethod
     def get_rtol(cls, dtype):
