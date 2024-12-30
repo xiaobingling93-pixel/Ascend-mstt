@@ -592,3 +592,5 @@ class MonitorConst:
     TENSORBOARD = "tensorboard"
     CSV = "csv"
     API = "api"
+    OPS_START_INDEX = 3
+    HEADER_NAME_INDEX = 1
