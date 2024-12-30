@@ -75,12 +75,10 @@ class TestUtilsMethods(unittest.TestCase):
         generate_stack_json(base_dir2)
 
         dump_path = os.path.join(base_dir2, 'dump.json')
-        stack_path = os.path.join(base_dir2, 'stack.json')
 
         input_param = {
             'npu_json_path': dump_path,
             'bench_json_path': dump_path,
-            'stack_json_path': stack_path,
             'is_print_compare_log': True
         }
         output_path = base_dir2
@@ -92,7 +90,6 @@ class TestUtilsMethods(unittest.TestCase):
         input_param2 = {
             'npu_json_path': '',
             'bench_json_path': dump_path,
-            'stack_json_path': stack_path,
             'is_print_compare_log': True
         }
         with self.assertRaises(CompareException) as context:

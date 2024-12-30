@@ -57,7 +57,7 @@ class MSComparator(Comparator):
         self.dump_mode = mode_config.dump_mode
 
         self.cell_mapping = mapping_config.cell_mapping
-        self.api_mapping = mapping_config.cell_mapping
+        self.api_mapping = mapping_config.api_mapping
         self.data_mapping = mapping_config.data_mapping
 
         if self.data_mapping:

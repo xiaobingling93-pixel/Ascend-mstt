@@ -62,8 +62,8 @@ class PTComparator(Comparator):
                                    FileCheckConst.PT_SUFFIX, False)
         data_path = path_checker.common_check()
         try:
-            data_value = load_pt(data_path,
-                                 to_cpu=True).detach()  # detach because numpy can not process gradient information
+            # detach because numpy can not process gradient information
+            data_value = load_pt(data_path, to_cpu=True).detach()
         except RuntimeError as e:
             # 这里捕获 load_pt 中抛出的异常
             logger.error(f"Failed to load the .pt file at {data_path}.")

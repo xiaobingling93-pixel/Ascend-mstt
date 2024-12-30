@@ -451,14 +451,13 @@ class TestUtilsMethods(unittest.TestCase):
             'summary': [[1, 1, 1, 1]]
         }
 
-        stack_mode = False
+        stack_mode = True
         auto_analyze = True
         fuzzy_match = False
         dump_mode = Const.SUMMARY
         mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
 
-        result = Comparator(mode_config).gen_merge_list(json_data, op_name,
-                                                                                             stack_json_data)
+        result = Comparator(mode_config).gen_merge_list(json_data, op_name, stack_json_data)
         self.assertEqual(result, merge_list)
 
     def test_check_op_fuzzy_false(self):

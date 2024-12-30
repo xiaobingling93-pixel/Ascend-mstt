@@ -370,7 +370,6 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(args.input_path, "input.json")
         self.assertEqual(args.output_path, "output.json")
-        self.assertTrue(args.stack_mode)
         self.assertTrue(args.compare_only)
         self.assertTrue(args.fuzzy_match)
 
