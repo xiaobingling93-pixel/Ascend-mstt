@@ -248,12 +248,11 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
             api_batch.increment(state)
         else:
             api_batches.append(ApiBatch(api_name, i))
-    progress_bar = tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100)
-    for api_batch in api_batches:
-        find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len, 
-                        highlight_dict, dump_mode)
-        progress_bar.update(1)
-    progress_bar.close()
+    with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
+        for api_batch in api_batches:
+            find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len, 
+                            highlight_dict, dump_mode)
+            progress_bar.update(1)
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
