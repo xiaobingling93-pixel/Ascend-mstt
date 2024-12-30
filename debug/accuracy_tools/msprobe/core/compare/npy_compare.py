@@ -74,7 +74,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', "
                    f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and '{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. ")
         error_flag = False  # 0-d tensor 最大绝对误差、最大相对误差仍然支持计算，因此error_flag设置为False，不做统一处理
-        return CompareConst.UNSUPPORTED, CompareConst.UNSUPPORTED, error_flag, err_msg
+        return n_value, b_value, error_flag, err_msg
     if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
         err_msg = "Shape of NPU and bench tensor do not match. Skipped."
         error_flag = True
@@ -197,7 +197,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result
 
     def apply(self, n_value, b_value, relative_err=None):
-        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
+        if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
 
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -248,7 +248,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
 class GetThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之一的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
+        if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
 
         if relative_err is None:
@@ -261,7 +261,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
 class GetFiveThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之五的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
+        if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
 
         if relative_err is None:
@@ -294,12 +294,14 @@ def error_value_process(n_value):
     return CompareConst.N_A, ""
 
 
-def compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=None):
+def compare_ops_apply(n_value, b_value, error_flag, err_msg):
     result_list = []
     for op in CompareOps.compare_ops.values():
         if error_flag:
             result, msg = error_value_process(n_value)
         else:
+            relative_err = get_relative_err(n_value, b_value)
+            n_value, b_value = reshape_value(n_value, b_value)
             result, msg = op.apply(n_value, b_value, relative_err=relative_err)
         err_msg += msg
         result_list.append(result)
