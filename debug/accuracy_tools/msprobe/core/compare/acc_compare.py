@@ -19,30 +19,38 @@ import re
 from copy import deepcopy
 
 import pandas as pd
+from tqdm import tqdm
+
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import load_json
-from msprobe.core.common.file_utils import remove_path
+from msprobe.core.common.file_utils import load_json, remove_path
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid, safe_get_value
-from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
-    check_stack_json_str
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, safe_get_value
+from msprobe.core.compare.check import check_dump_json_str, check_graph_mode, check_stack_json_str, \
+    check_struct_match, fuzzy_check_op
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
-from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
-    get_error_message
-from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
-    get_rela_diff_summary_mode, print_compare_ends_info
-from tqdm import tqdm
+from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
+from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_message, get_error_type, get_relative_err, \
+    reshape_value
+from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
+    print_compare_ends_info, read_op
 
 
-class Comparator:
+class ModeConfig:
     def __init__(self, stack_mode, auto_analyze, fuzzy_match, dump_mode):
         self.stack_mode = stack_mode
         self.auto_analyze = auto_analyze
         self.fuzzy_match = fuzzy_match
         self.dump_mode = dump_mode
+
+
+class Comparator:
+    def __init__(self, mode_config: ModeConfig):
+        self.stack_mode = mode_config.stack_mode
+        self.auto_analyze = mode_config.auto_analyze
+        self.fuzzy_match = mode_config.fuzzy_match
+        self.dump_mode = mode_config.dump_mode
 
     @staticmethod
     def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
@@ -494,6 +502,7 @@ class Comparator:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
+
 def get_bench_data_name(bench_op_name, bench_data):
     bench_name_list = re.split(r'\.(input|output|kwargs)\.', bench_op_name)
     bench_data_bundle = bench_data.get(bench_name_list[0], {})
@@ -525,4 +534,3 @@ def get_bench_data_name(bench_op_name, bench_data):
         return get_by_layer(bench_data_bundle.get(Const.OUTPUT))
     else:
         return None
-

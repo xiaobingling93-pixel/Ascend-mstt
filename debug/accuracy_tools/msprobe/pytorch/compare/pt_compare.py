@@ -22,15 +22,21 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import FileChecker, create_directory, load_yaml
 from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, get_dump_mode, \
     set_dump_path
-from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.utils import set_stack_json_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.common.utils import load_pt
 
 
-class PTComparator (Comparator):
-    def __init__(self, stack_mode, fuzzy_match, auto_analyze, dump_mode, data_mapping=None):
-        super().__init__(stack_mode, fuzzy_match, auto_analyze, dump_mode)
+class PTComparator(Comparator):
+    def __init__(self, mode_config, data_mapping=None):
+        super().__init__(mode_config)
+
+        self.stack_mode = mode_config.stack_mode
+        self.auto_analyze = mode_config.auto_analyze
+        self.fuzzy_match = mode_config.fuzzy_match
+        self.dump_mode = mode_config.dump_mode
+
         self.frame_name = PTComparator.__name__
         self.data_mapping = data_mapping
         if isinstance(self.data_mapping, str) or self.data_mapping is None:
@@ -47,13 +53,13 @@ class PTComparator (Comparator):
         else:
             mapping_dict = {}
         return mapping_dict
-    
+
     def read_npy_data(self, dir_path, file_name):
         if not file_name:
             return None
         data_path = os.path.join(dir_path, file_name)
         path_checker = FileChecker(data_path, FileCheckConst.FILE, FileCheckConst.READ_ABLE,
-                                FileCheckConst.PT_SUFFIX, False)
+                                   FileCheckConst.PT_SUFFIX, False)
         data_path = path_checker.common_check()
         try:
             data_value = load_pt(data_path,
@@ -83,5 +89,7 @@ def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, data
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
-    pt_comparator = PTComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode, data_mapping)
+
+    mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+    pt_comparator = PTComparator(mode_config, data_mapping)
     pt_comparator.compare_core(input_param, output_path)

@@ -19,6 +19,7 @@ from msprobe.core.common.exceptions import FileCheckException
 from msprobe.core.common.file_utils import create_directory
 from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, get_dump_mode, \
     set_dump_path
+from msprobe.core.compare.acc_compare import ModeConfig
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, set_stack_json_path
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.compare.pt_compare import PTComparator
@@ -61,5 +62,6 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         except (CompareException, FileCheckException) as error:
             logger.error("Compare failed. Please check the arguments and do it again!")
             raise CompareException(error.code) from error
-        pt_comparator = PTComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        pt_comparator = PTComparator(mode_config)
         pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)

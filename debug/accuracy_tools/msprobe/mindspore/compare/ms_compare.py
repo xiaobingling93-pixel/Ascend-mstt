@@ -26,10 +26,17 @@ from msprobe.core.common.file_utils import FileOpen, create_directory, load_json
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import CompareException, check_compare_param, check_configuration_param, \
     check_op_str_pattern_valid, get_dump_mode, set_dump_path
-from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 from msprobe.core.compare.check import dtype_mapping
 from msprobe.core.compare.layer_mapping import generate_data_mapping_by_layer_mapping
 from msprobe.core.compare.utils import set_stack_json_path
+
+
+class MappingConfig:
+    def __init__(self, cell_mapping=None, api_mapping=None, data_mapping=None):
+        self.cell_mapping = cell_mapping
+        self.api_mapping = api_mapping
+        self.data_mapping = data_mapping
 
 
 class MSComparator(Comparator):
@@ -40,21 +47,26 @@ class MSComparator(Comparator):
     data_mapping: mindspore的cell或api的入参/出参和pytorch之间的映射关系；
     is_cross_framework: 是否跨框架。
     """
-
-    def __init__(self, stack_mode, auto_analyze, fuzzy_match, dump_mode, cell_mapping=None, api_mapping=None,
-                 data_mapping=None, is_cross_framework=False):
-        super().__init__(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+    def __init__(self, mode_config, mapping_config, is_cross_framework=False):
+        super().__init__(mode_config)
         self.frame_name = MSComparator.__name__
-        self.cell_mapping = cell_mapping
-        self.api_mapping = api_mapping
-        self.data_mapping = data_mapping
-        if data_mapping:
+
+        self.stack_mode = mode_config.stack_mode
+        self.auto_analyze = mode_config.auto_analyze
+        self.fuzzy_match = mode_config.fuzzy_match
+        self.dump_mode = mode_config.dump_mode
+
+        self.cell_mapping = mapping_config.cell_mapping
+        self.api_mapping = mapping_config.cell_mapping
+        self.data_mapping = mapping_config.data_mapping
+
+        if self.data_mapping:
             self.cross_frame = is_cross_framework
         else:
-            self.cross_frame = cell_mapping is not None or api_mapping is not None
+            self.cross_frame = self.cell_mapping is not None or self.api_mapping is not None
         self.cell_mapping_dict = self.load_mapping_file(self.cell_mapping)
         self.api_mapping_dict = self.load_mapping_file(self.api_mapping)
-        if api_mapping is not None:
+        if self.api_mapping is not None:
             self.ms_to_pt_mapping = self.load_internal_api()
 
         if isinstance(self.data_mapping, str) or self.data_mapping is None:
@@ -374,7 +386,9 @@ def ms_compare(input_param, output_path, **kwargs):
         raise CompareException(error.code) from error
     if layer_mapping:
         data_mapping = generate_data_mapping_by_layer_mapping(input_param, layer_mapping, output_path)
+
+    mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+    mapping_config = MappingConfig(cell_mapping, api_mapping, data_mapping)
     is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
-    ms_comparator = MSComparator(stack_mode, auto_analyze, fuzzy_match, dump_mode,
-                                 cell_mapping, api_mapping, data_mapping, is_cross_framework)
+    ms_comparator = MSComparator(mode_config, mapping_config, is_cross_framework)
     ms_comparator.compare_core(input_param, output_path, suffix=suffix)
