@@ -169,33 +169,27 @@ class TestUtilsMethods(unittest.TestCase):
     def test_GetCosineSimilarity_error_flag_False(self):
         op = GetCosineSimilarity()
 
-        n_value_1 = np.array(1)
-        b_value_1 = np.array(1)
+        n_value_1 = np.array([1, 2])
+        b_value_1 = np.array([1, 2])
         result, err_msg = op.apply(n_value_1, b_value_1)
-        self.assertEqual(result, CompareConst.UNSUPPORTED)
-        self.assertEqual(err_msg, "This is a 0-d tensor.")
+        self.assertEqual(result, 1.0)
+        self.assertEqual(err_msg, "")
 
-        n_value_2 = np.array([1, 2])
-        b_value_2 = np.array([1, 2])
+        n_value_2 = np.array([0, 0])
+        b_value_2 = np.array([0, 0])
         result, err_msg = op.apply(n_value_2, b_value_2)
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
         n_value_3 = np.array([0, 0])
-        b_value_3 = np.array([0, 0])
+        b_value_3 = np.array([1, 2])
         result, err_msg = op.apply(n_value_3, b_value_3)
-        self.assertEqual(result, 1.0)
-        self.assertEqual(err_msg, "")
-
-        n_value_4 = np.array([0, 0])
-        b_value_4 = np.array([1, 2])
-        result, err_msg = op.apply(n_value_4, b_value_4)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.')
 
-        n_value_5 = np.array([1, 2])
-        b_value_5 = np.array([0, 0])
-        result, err_msg = op.apply(n_value_5, b_value_5)
+        n_value_4 = np.array([1, 2])
+        b_value_4 = np.array([0, 0])
+        result, err_msg = op.apply(n_value_4, b_value_4)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.')
 
