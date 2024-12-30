@@ -68,6 +68,7 @@ class BaseNode:
         if not level or not isinstance(level, OverflowLevel):
             return
         self.overflow_level = level
+        self.data[GraphConst.OVERFLOW_LEVEL] = self.overflow_level.value
 
     def add_upnode(self, node):
         """
@@ -105,11 +106,6 @@ class BaseNode:
         }
         if self.micro_step_id is not None:
             result['micro_step_id'] = self.micro_step_id
-        # 是否存在overflow，并保存结果
-        if self.overflow_level and isinstance(self.overflow_level, OverflowLevel):
-            if self.data is None:
-                self.data = dict()
-            self.data[GraphConst.OVERFLOW_LEVEL] = self.overflow_level.value
         result['data'] = self.data
         if self.matched_distributed:
             result[GraphConst.MATCHED_DISTRIBUTED] = self.matched_distributed

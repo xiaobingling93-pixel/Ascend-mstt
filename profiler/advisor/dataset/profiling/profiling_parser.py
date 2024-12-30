@@ -16,6 +16,7 @@
 import csv
 import os
 import re
+from abc import abstractmethod
 from typing import List, Dict
 
 from profiler.advisor.dataset.profiling.info_collection import logger
@@ -81,8 +82,8 @@ class ProfilingParser:
                 title_dict[idx] = title.replace(" ", "_")
         return title_dict
 
-    @staticmethod
-    def parse_from_file(file):
+    @abstractmethod
+    def parse_from_file(self, file: str):
         """
         parse from file as a static method
         """

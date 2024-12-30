@@ -146,8 +146,8 @@ def remove_dropout():
         F.dropout3d = function_dropout3d
 
 
-def seed_all(seed=1234, mode=False, rm_dropout=False):
-    check_seed_all(seed, mode)
+def seed_all(seed=1234, mode=False, rm_dropout=True):
+    check_seed_all(seed, mode, rm_dropout)
     try:
         random.seed(seed)
         os.environ['PYTHONHASHSEED'] = str(seed)

@@ -48,7 +48,7 @@ from msprobe.core.common.file_utils import FileChecker, change_mode, \
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.pt_config import parse_json_config
 from msprobe.core.common.const import Const, FileCheckConst, CompareConst
-from msprobe.core.common.utils import safe_get_value
+from msprobe.core.common.utils import safe_get_value, CompareException
 from msprobe.pytorch.common.utils import seed_all
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import ATTL, ATTLConfig, move2device_exec
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.device_dispatch import ConsumerDispatcher
@@ -258,7 +258,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
-        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
+        kwargs[Const.DEVICE] = current_device
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
@@ -333,13 +333,23 @@ def run_backward(args, grad, grad_index, out):
         out[grad_index].backward(grad)
     else:
         out.backward(grad)
-    args_grad = []
-    for arg in args:
-        if isinstance(arg, torch.Tensor):
-            args_grad.append(arg.grad)
-    grad_out = args_grad
+
+    grad_out = extract_tensors_grad(args)
 
     return grad_out
+
+
+def extract_tensors_grad(args, depth=0):
+    if depth > Const.MAX_DEPTH:
+        logger.error("The depth of arg_in is too large, please check the arg_in.")
+        raise CompareException(CompareException.RECURSION_LIMIT_ERROR)
+    grads = []
+    for arg in args:
+        if isinstance(arg, torch.Tensor):
+            grads.append(arg.grad)
+        elif isinstance(arg, (list, tuple)):
+            grads.extend(extract_tensors_grad(arg, depth+1))
+    return grads
 
 
 def initialize_save_error_data(error_data_path):

@@ -36,7 +36,7 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import 
 from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
-from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments, extract_basic_api_segments
 from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -191,7 +191,8 @@ def analyse_csv(npu_data, gpu_data, config):
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
-                message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+                _, base_api_name = extract_basic_api_segments(last_api_name)
+                message += CompareMessage.get(base_api_name, "") if forward_result == CompareConst.ERROR else ""
                 message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 print_test_success(last_api_name, forward_result, backward_result)
@@ -223,7 +224,8 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
-            message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+            _, base_api_name = extract_basic_api_segments(last_api_name)
+            message += CompareMessage.get(base_api_name, "") if forward_result == CompareConst.ERROR else ""
             message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
             print_test_success(last_api_name, forward_result, backward_result)

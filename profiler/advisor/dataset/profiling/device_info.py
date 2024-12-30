@@ -1,3 +1,16 @@
+# Copyright (C) 2024-2024. Huawei Technologies Co., Ltd. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 profiling info
 """
@@ -23,19 +36,6 @@ class DeviceInfoParser:
     def __init__(self, path) -> None:
         self._path = path
 
-    def parse_data(self) -> bool:
-        """
-        parse profiling data
-        :return: true for success or false
-        """
-        file_list = get_file_path_from_directory(self._path, lambda x: x.startswith("info.json."))
-        if not file_list:
-            return False
-        for info in file_list:
-            if self._parse(info):
-                return True
-        return False
-
     @staticmethod
     def _parse(info_file: str) -> bool:
         if info_file.endswith("done"):
@@ -60,4 +60,17 @@ class DeviceInfoParser:
                 config.set_config("ai_core_num", device_info["ai_core_num"])
                 return True
         logger.error("No ai_core_num in json info file %s", info_file)
+        return False
+
+    def parse_data(self) -> bool:
+        """
+        parse profiling data
+        :return: true for success or false
+        """
+        file_list = get_file_path_from_directory(self._path, lambda x: x.startswith("info.json."))
+        if not file_list:
+            return False
+        for info in file_list:
+            if self._parse(info):
+                return True
         return False

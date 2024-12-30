@@ -1,3 +1,17 @@
+# Copyright (c) 2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import os
 import sys
 import logging
@@ -24,7 +38,7 @@ class NPUProfilingParser(BaseProfilingParser):
 
     def __init__(self, args: any, path_dict: dict, step_id: int = Constant.VOID_STEP):
         super().__init__(args, path_dict, step_id)
-        self._path_level = self._get_path_level(path_dict)
+        self._path_level = NPUProfilingParser._get_path_level(path_dict)
         self._operator_memory_path = os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "operator_memory.csv")
         self._memory_record_path = os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "memory_record.csv")
         self._kernel_detail_path = os.path.join(path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""), "kernel_details.csv")
@@ -49,6 +63,8 @@ class NPUProfilingParser(BaseProfilingParser):
 
     @staticmethod
     def _get_path_level(path_dict):
+        if not path_dict.get(Constant.PROFILING_PATH, ""):
+            return Constant.PROFILING_PATH
         if path_dict.get(Constant.PROFILING_PATH, "") == path_dict.get(Constant.TRACE_PATH, ""):
             return Constant.TRACE_PATH
         if path_dict.get(Constant.PROFILING_PATH, "") == path_dict.get(Constant.ASCEND_OUTPUT_PATH, ""):
@@ -112,6 +128,8 @@ class NPUProfilingParser(BaseProfilingParser):
         return list(func_list)
 
     def _update_kernel_details(self):
+        if self._path_level == Constant.TRACE_PATH:
+            return
         if self._args.use_kernel_type:
             op_statistics = self._read_csv_data(self._op_statistic_path, OpStatisticBean)
             if not op_statistics:
@@ -143,6 +161,8 @@ class NPUProfilingParser(BaseProfilingParser):
         self._result_data.update_kernel_details(kernels_dict)
 
     def _update_memory_list(self):
+        if self._path_level == Constant.TRACE_PATH:
+            return
         memory_data = self._read_csv_data(self._operator_memory_path, OperatorMemoryBean)
         if memory_data:
             self._dequeue_data.sort(key=lambda x: x.start_time)
@@ -165,7 +185,9 @@ class NPUProfilingParser(BaseProfilingParser):
                                                       Constant.RELEASE_TIME: data.release_time})
 
     def _update_kernel_dict(self):
-        kernel_details = self._read_csv_data(self._kernel_detail_path, KernelDetailsBean)
+        kernel_details=[]
+        if self._path_level != Constant.TRACE_PATH:
+            kernel_details = self._read_csv_data(self._kernel_detail_path, KernelDetailsBean)
         input_shape_dict = {kernel.start_time: kernel.input_shapes for kernel in kernel_details}
         for kernel in self._all_kernels.values():
             input_shape = input_shape_dict.get(kernel.start_time, "")
@@ -186,6 +208,8 @@ class NPUProfilingParser(BaseProfilingParser):
                                                    self._dequeue_data[left].end_time else Constant.INVALID_VALUE
 
     def _update_bandwidth(self):
+        if self._path_level == Constant.TRACE_PATH:
+            return
         try:
             communication_json = FileManager.read_json_file(self._communication_path)
         except FileNotFoundError:
@@ -213,8 +237,8 @@ class NPUProfilingParser(BaseProfilingParser):
                     sdma_time_ms += sdma_info.get("Transit Time(ms)", 0)  # 单位为 MS
                 rdma_bandwidth = rdma_size_mb / rdma_time_ms if rdma_time_ms > 0 else 0
                 sdma_bandwidth = sdma_size_mb / sdma_time_ms if sdma_time_ms > 0 else 0
-        self._result_data.overall_metrics.set_RDMA_bandwidth(rdma_bandwidth)
-        self._result_data.overall_metrics.set_SDMA_bandwidth(sdma_bandwidth)
+        self._result_data.overall_metrics.set_rdma_bandwidth(rdma_bandwidth)
+        self._result_data.overall_metrics.set_sdma_bandwidth(sdma_bandwidth)
 
     def _update_overall_metrics(self):
         if self._path_level==Constant.PROFILING_PATH:
@@ -390,6 +414,8 @@ class NPUProfilingParser(BaseProfilingParser):
                 self._result_data.overall_metrics.update_lccl_info(event.dur)
 
     def __parse_kernel_csv(self):
+        if self._path_level == Constant.TRACE_PATH:
+            return
         try:
             kernel_details = self._read_csv_data(self._kernel_detail_path, KernelDetailsBean)
         except Exception:
@@ -408,6 +434,8 @@ class NPUProfilingParser(BaseProfilingParser):
             self.categorize_computing_performance_data(event, flow_start_time)
 
     def __parse_mem_csv(self):
+        if self._path_level == Constant.TRACE_PATH:
+            return
         try:
             memory_record = self._read_csv_data(self._memory_record_path, MemoryRecordBean)
         except FileNotFoundError:

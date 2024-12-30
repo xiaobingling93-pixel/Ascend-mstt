@@ -37,7 +37,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
-    get_output_base_dir
+    get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
@@ -201,11 +201,18 @@ class TrainerMon:
 
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
-
         output_base_dir = get_output_base_dir()
+
+        time_tags = self.config.get("append_output", [])
+        if time_tags:
+            output_append_dirs = get_target_output_dir(output_base_dir, time_tags[0], time_tags[1])
         if dist.is_initialized():
             rank = dist.get_rank()
-            tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
+            if time_tags and str(rank) in output_append_dirs:
+                tensorboard_dir = output_append_dirs[str(rank)]
+                logger.info(f"append rank({rank}) result to {tensorboard_dir}")
+            else:
+                tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
             pp_stage = dist.get_group_rank(self.process_group, rank)
             group_mates = dist.get_process_group_ranks(self.process_group)
         else:
@@ -269,7 +276,7 @@ class TrainerMon:
         self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
-        self.module_struct = {}
+        self.module_struct = defaultdict(dict)
 
     def __del__(self):
         if hasattr(self, "summary_writer"):
@@ -282,6 +289,8 @@ class TrainerMon:
     @ops.setter
     def ops(self, value):
         self._ops = validate_ops(value)
+        if not self._ops:
+            logger.warning(f"There is no valid ops. Optional ops: {MonitorConst.OP_LIST}")
 
     @staticmethod
     def set_wrapped_optimizer(_wrapped_optimizer):
@@ -359,7 +368,7 @@ class TrainerMon:
                 'targets'].keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
 
-        logger.info_on_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
         def clone_if_tensor(args):
             if isinstance(args, tuple):
@@ -705,11 +714,11 @@ class TrainerMon:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTV_IN: get_param_struct(module_input),
-                                  MonitorConst.ACTV_OUT: get_param_struct(module_output)}
+                context.struct = {
+                    MonitorConst.ACTV_IN: get_param_struct(module_input),
+                    MonitorConst.ACTV_OUT: get_param_struct(module_output)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not module.training:
@@ -750,11 +759,11 @@ class TrainerMon:
         def bwd_hook_fun(module, input_grad, output_grad):
             context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
-                                  MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)}
+                context.struct = {
+                    MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
+                    MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not context.format_by_arg:
