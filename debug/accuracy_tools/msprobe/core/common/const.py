@@ -171,10 +171,12 @@ class Const:
 
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
+        "int64_to_fp32": ["torch.int64", "torch.float32"]
     }
 
     CONVERT_API = {
-        "int32_to_int64": ["cross_entropy"]
+        "int32_to_int64": ["cross_entropy"],
+        "int64_to_fp32": ["histc"]
     }
 
     FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
@@ -449,6 +451,7 @@ class FileCheckConst:
     CSV_SUFFIX = ".csv"
     XLSX_SUFFIX = ".xlsx"
     YAML_SUFFIX = ".yaml"
+    IR_SUFFIX = ".ir"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -456,6 +459,7 @@ class FileCheckConst:
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -468,7 +472,8 @@ class FileCheckConst:
         PT_SUFFIX: MAX_PT_SIZE,
         CSV_SUFFIX: MAX_CSV_SIZE,
         XLSX_SUFFIX: MAX_XLSX_SIZE,
-        YAML_SUFFIX: MAX_YAML_SIZE
+        YAML_SUFFIX: MAX_YAML_SIZE,
+        IR_SUFFIX: MAX_IR_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
@@ -587,3 +592,5 @@ class MonitorConst:
     TENSORBOARD = "tensorboard"
     CSV = "csv"
     API = "api"
+    OPS_START_INDEX = 3
+    HEADER_NAME_INDEX = 1

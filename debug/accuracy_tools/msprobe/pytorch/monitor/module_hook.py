@@ -276,7 +276,7 @@ class TrainerMon:
         self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
-        self.module_struct = {}
+        self.module_struct = defaultdict(dict)
 
     def __del__(self):
         if hasattr(self, "summary_writer"):
@@ -289,6 +289,8 @@ class TrainerMon:
     @ops.setter
     def ops(self, value):
         self._ops = validate_ops(value)
+        if not self._ops:
+            logger.warning(f"There is no valid ops. Optional ops: {MonitorConst.OP_LIST}")
 
     @staticmethod
     def set_wrapped_optimizer(_wrapped_optimizer):
@@ -366,7 +368,7 @@ class TrainerMon:
                 'targets'].keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
 
-        logger.info_on_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
         def clone_if_tensor(args):
             if isinstance(args, tuple):
@@ -712,11 +714,11 @@ class TrainerMon:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTV_IN: get_param_struct(module_input),
-                                  MonitorConst.ACTV_OUT: get_param_struct(module_output)}
+                context.struct = {
+                    MonitorConst.ACTV_IN: get_param_struct(module_input),
+                    MonitorConst.ACTV_OUT: get_param_struct(module_output)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not module.training:
@@ -757,11 +759,11 @@ class TrainerMon:
         def bwd_hook_fun(module, input_grad, output_grad):
             context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
-                                  MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)}
+                context.struct = {
+                    MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
+                    MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not context.format_by_arg:

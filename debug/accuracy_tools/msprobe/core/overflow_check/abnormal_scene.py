@@ -37,7 +37,11 @@ class AnomalyScene:
     @staticmethod
     def _has_anomaly(data: Union[Dict, Any]) -> bool:
         """检查张量是否包含异常值"""
-        return has_nan_inf(data)
+        if isinstance(data, dict):
+            return has_nan_inf(data)
+        elif isinstance(data, list):
+            return any(AnomalyScene._has_anomaly(x) for x in data)
+        return False
 
     def get_details(self) -> Dict:
         """获取异常详情"""
@@ -70,14 +74,14 @@ class InputOutputAnomalyScene(AnomalyScene):
     def has_input_anomaly(self) -> bool:
         """检查输入是否有异常（包括args和kwargs）"""
         # args
-        args_anomaly = any(self._has_anomaly(x) for x in self.api_data.input_args if isinstance(x, dict))
+        args_anomaly = any(self._has_anomaly(x) for x in self.api_data.input_args)
         # kwargs
-        kwargs_anomaly = any(self._has_anomaly(x) for x in self.api_data.input_kwargs.values() if isinstance(x, dict))
+        kwargs_anomaly = any(self._has_anomaly(x) for x in self.api_data.input_kwargs.values())
         return args_anomaly or kwargs_anomaly
 
     def has_output_anomaly(self) -> bool:
         """检查输出是否有异常"""
-        return any(self._has_anomaly(x) for x in self.api_data.output_data if isinstance(x, dict))
+        return any(self._has_anomaly(x) for x in self.api_data.output_data)
 
     def matches(self) -> bool:
         """判断是否匹配该场景"""

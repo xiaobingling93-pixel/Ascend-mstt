@@ -396,20 +396,23 @@ def get_real_step_or_rank(step_or_rank_input, obj):
         if not is_int(element) and not isinstance(element, str):
             raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
                                    f"{obj} element {element} must be an integer or string.")
-        if isinstance(element, int) and element < 0:
-            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR,
-                                   f"Each element of {obj} must be non-negative, currently it is {element}.")
-        if isinstance(element, int) and Const.STEP_RANK_MINIMUM_VALUE <= element <= Const.STEP_RANK_MAXIMUM_VALUE:
+        if is_int(element):
+            if not Const.STEP_RANK_MINIMUM_VALUE <= element <= Const.STEP_RANK_MAXIMUM_VALUE:
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR,
+                    f"Each element of {obj} must be between {Const.STEP_RANK_MINIMUM_VALUE} and {Const.STEP_RANK_MAXIMUM_VALUE}, "
+                    f"currently it is {element}."
+                )
             real_step_or_rank.append(element)
-        elif isinstance(element, str) and Const.HYPHEN in element:
-            continual_step_or_rank = get_step_or_rank_from_string(element, obj)
-            real_step_or_rank.extend(continual_step_or_rank)
+            continue
+        continual_step_or_rank = get_step_or_rank_from_string(element, obj)
+        real_step_or_rank.extend(continual_step_or_rank)
     real_step_or_rank = list(set(real_step_or_rank))
     real_step_or_rank.sort()
     return real_step_or_rank
 
 
-def check_seed_all(seed, mode):
+def check_seed_all(seed, mode, rm_dropout):
     if is_int(seed):
         if seed < 0 or seed > Const.MAX_SEED_VALUE:
             logger.error(f"Seed must be between 0 and {Const.MAX_SEED_VALUE}.")
@@ -419,6 +422,9 @@ def check_seed_all(seed, mode):
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
     if not isinstance(mode, bool):
         logger.error("seed_all mode must be bool.")
+        raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
+    if not isinstance(rm_dropout, bool):
+        logger.error("The rm_dropout parameter must be bool.")
         raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR)
 
 

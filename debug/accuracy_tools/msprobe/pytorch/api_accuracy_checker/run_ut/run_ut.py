@@ -258,7 +258,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
-        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
+        kwargs[Const.DEVICE] = current_device
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]

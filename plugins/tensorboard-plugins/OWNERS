@@ -3,7 +3,8 @@ options:
 approvers:
 - wo-wenjie
 - ly-qianxiao
-reviewers:
-- wo-wenjie
-- ly-qianxiao
 - leo920320
+- ninghuang
+reviewers:
+- leo920320
+- ninghuang

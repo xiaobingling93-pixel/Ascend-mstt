@@ -271,7 +271,7 @@ class DeepSpeedZeroOptimizerStage1or2Mon(OptimizerMon):
 
 class DummyOptimizerMon(OptimizerMon):
     def fetch_mv(self, monitor, torch_opt, params2name):
-        return MVResult(exp_avg=None, exp_avg_sq=None, update=None, ratio=None)
+        return self._fetch_mv_in_adam(monitor, torch_opt, params2name)
 
 
 class OptimizerMonFactory:

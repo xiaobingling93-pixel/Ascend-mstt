@@ -30,6 +30,9 @@ constexpr const char* kFrameworkMindSpore = "MindSpore";
 constexpr const char* kTaskStatistics = "statistics";
 constexpr const char* kTaskDumpTensor = "tensor";
 constexpr const char* kTaskOverflowCheck = "overflow_check";
+constexpr const char* kFreeBenchmark = "free_benchmark";
+constexpr const char* kRunUT = "run_ut";
+constexpr const char* kGradProbe = "grad_probe";
 
 constexpr const char* kLevel0 = "L0";
 constexpr const char* kLevel1 = "L1";
@@ -94,6 +97,9 @@ const std::map<int32_t, std::string> TaskTypeEnum2Name = {
     {static_cast<int32_t>(DebuggerTaskType::TASK_DUMP_TENSOR), kTaskDumpTensor},
     {static_cast<int32_t>(DebuggerTaskType::TASK_DUMP_STATISTICS), kTaskStatistics},
     {static_cast<int32_t>(DebuggerTaskType::TASK_OVERFLOW_CHECK), kTaskOverflowCheck},
+    {static_cast<int32_t>(DebuggerTaskType::TASK_FREE_BENCHMARK), kFreeBenchmark},
+    {static_cast<int32_t>(DebuggerTaskType::TASK_RUN_UT), kRunUT},
+    {static_cast<int32_t>(DebuggerTaskType::TASK_GRAD_PROBE), kGradProbe},
 };
 
 const std::map<int32_t, std::string> DebuggerLevelEnum2Name = {
