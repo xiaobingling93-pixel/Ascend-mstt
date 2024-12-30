@@ -28,7 +28,6 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get("suffix"):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    # stack_mode = kwargs.get('stack_mode', False)
     auto_analyze = kwargs.get('auto_analyze', True)
     fuzzy_match = kwargs.get('fuzzy_match', False)
     is_print_compare_log = kwargs.get('is_print_compare_log', True)

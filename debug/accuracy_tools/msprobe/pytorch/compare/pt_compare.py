@@ -76,7 +76,7 @@ def compare(input_param, output_path, auto_analyze=True, fuzzy_match=False, data
     try:
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
-        stack_mode = set_stack_json_path(input_param)
+        stack_mode = set_stack_json_path(input_param)  # set stack_mode and set "stack_json_path" in input_param
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
         check_compare_param(input_param, output_path, dump_mode)

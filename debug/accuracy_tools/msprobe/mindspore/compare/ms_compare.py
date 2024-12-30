@@ -227,7 +227,7 @@ class MSComparator(Comparator):
         npu_json_path, bench_json_path, stack_json_path = file_lists
         npu_json_data = load_json(npu_json_path)
         bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path)  # TODO 需要修改
+        stack_json_data = load_json(stack_json_path) if self.stack_mode else None
 
         npu_df = self.gen_data_df(npu_json_data, stack_json_data)
         bench_df = self.gen_data_df(bench_json_data, stack_json_data)
@@ -264,7 +264,7 @@ class MSComparator(Comparator):
                     ((npu_dtype == Const.TORCH_BFLOAT16) & (bench_dtype == Const.TORCH_FLOAT16)))
 
         match_result.loc[~gen_dtype_condition(), [i + '_y' for i in bench_df.columns]] = CompareConst.N_A
-        return MSComparator.make_result_df(match_result)
+        return self.make_result_df(match_result)
 
     def modify_compare_data_with_user_mapping(self, npu_df, bench_df):
         def get_api_indices_dict(op_name_df):
@@ -310,7 +310,7 @@ class MSComparator(Comparator):
                 if is_abandoned:
                     npu_df.loc[index, CompareConst.COMPARE_KEY] = op_name + 'abandoned'
 
-    def gen_data_df(self, data_json, stack_json):
+    def gen_data_df(self, data_json, stack_json_data):
         result = {
             CompareConst.OP_NAME: [],
             Const.DTYPE: [],
@@ -324,7 +324,7 @@ class MSComparator(Comparator):
             result[Const.MD5] = []
         for data_name in data_json['data']:
             check_op_str_pattern_valid(data_name)
-            merge_list = self.gen_merge_list(data_json, data_name, stack_json, self.dump_mode)
+            merge_list = self.gen_merge_list(data_json, data_name, stack_json_data)
             if not merge_list:
                 continue
             for op_name in merge_list[CompareConst.OP_NAME]:
