@@ -88,7 +88,7 @@ class ModeAdapter:
                 headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in key_list]
                 ModeAdapter._match_data(data_info, compare_data, key_list, id_list)
-                for index, item in enumerate(key_list[4:]):
+                for item in key_list[4:]:
                     relative_err = str2float(data_info.get(item))
                     max_relative_err = max(max_relative_err, relative_err)
                 node_data[key] = data_info
