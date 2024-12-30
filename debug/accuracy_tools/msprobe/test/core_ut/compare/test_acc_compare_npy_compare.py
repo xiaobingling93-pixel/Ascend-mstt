@@ -4,7 +4,7 @@ import numpy as np
 
 from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, get_error_flag_and_msg, \
     npy_data_check, statistics_data_check, get_relative_err, GetCosineSimilarity, GetMaxAbsErr, GetMaxRelativeErr, \
-    GetThousandErrRatio, GetFiveThousandErrRatio, error_value_process, compare_ops_apply
+    GetErrRatio, error_value_process, compare_ops_apply
 from msprobe.core.common.const import CompareConst
 
 
@@ -220,7 +220,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, "")
 
     def test_GetThousandErrRatio_error_flag_False(self):
-        op = GetThousandErrRatio()
+        op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
 
         n_value = np.array([1, 2])
         b_value = np.array([1, 1])
@@ -231,7 +231,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, "")
 
     def test_GetFiveThousandErrRatio_error_flag_False(self):
-        op = GetFiveThousandErrRatio()
+        op = GetErrRatio(CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD)
 
         n_value = np.array([1, 2])
         b_value = np.array([1, 1])

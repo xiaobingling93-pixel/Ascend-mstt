@@ -245,8 +245,11 @@ class GetMaxRelativeErr(TensorComparisonBasic):
         return format_value(max_relative_err), ""
 
 
-class GetThousandErrRatio(TensorComparisonBasic):
-    """计算相对误差小于千分之一的比例"""
+class GetErrRatio(TensorComparisonBasic):
+    """计算相对误差小于指定阈值(千分之一、千分之五)的比例"""
+    def __init__(self, threshold):
+        self.threshold = threshold
+
     def apply(self, n_value, b_value, relative_err=None):
         if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
@@ -255,21 +258,9 @@ class GetThousandErrRatio(TensorComparisonBasic):
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
             return CompareConst.NAN, ""
-        return format_value(np.sum(relative_err < CompareConst.THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
 
-
-class GetFiveThousandErrRatio(TensorComparisonBasic):
-    """计算相对误差小于千分之五的比例"""
-    def apply(self, n_value, b_value, relative_err=None):
-        if not n_value.shape:
-            return CompareConst.UNSUPPORTED, ""
-
-        if relative_err is None:
-            relative_err = get_relative_err(n_value, b_value)
-        if not np.size(relative_err):
-            return CompareConst.NAN, ""
-        return format_value(
-            np.sum(relative_err < CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD) / np.size(relative_err)), ""
+        ratio = np.sum(relative_err < self.threshold) / np.size(relative_err)
+        return format_value(ratio), ""
 
 
 class CompareOps:
@@ -277,8 +268,8 @@ class CompareOps:
         "cosine_similarity": GetCosineSimilarity(),
         "max_abs_error": GetMaxAbsErr(),
         "max_relative_error": GetMaxRelativeErr(),
-        "one_thousand_err_ratio": GetThousandErrRatio(),
-        "five_thousand_err_ratio": GetFiveThousandErrRatio()
+        "one_thousand_err_ratio": GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD),
+        "five_thousand_err_ratio": GetErrRatio(CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD)
     }
 
 
