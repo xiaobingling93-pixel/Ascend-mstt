@@ -83,27 +83,13 @@ class ModeAdapter:
                 continue
             compare_data = compare_data_dict.get(key)
             if compare_data:
-                dtype = data_info.get(Const.DTYPE)
                 # 对应比对结果csv的列
                 key_list = GraphConst.SUMMARY_INDEX_LIST
                 headers = CompareConst.SUMMARY_COMPARE_RESULT_HEADER
                 id_list = [headers.index(x) for x in key_list]
                 ModeAdapter._match_data(data_info, compare_data, key_list, id_list)
                 for index, item in enumerate(key_list[4:]):
-                    value = data_info.get(GraphConst.VALUE_INDEX_LIST[index])
-                    value_diff = data_info.get(key_list[index])
                     relative_err = str2float(data_info.get(item))
-                    if isinstance(value, float) and isinstance(value_diff, float) \
-                            and dtype in GraphConst.SMALL_VALUES.keys():
-                        small_value = GraphConst.SMALL_VALUES.get(dtype)
-                        # 小值域
-                        if abs(value) <= small_value:
-                            data_info[item] = ToolTip.SMALL_VALUE_TIP.format(data_info.get(item),
-                                                                             GraphConst.VALUE_INDEX_LIST[index],
-                                                                             small_value)
-                            relative_err = GraphConst.MIN_INDEX_KEY \
-                                if abs(value_diff) <= GraphConst.SMALL_VALUES_ABS_ERROR.get(dtype) \
-                                else GraphConst.MAX_INDEX_KEY
                     max_relative_err = max(max_relative_err, relative_err)
                 node_data[key] = data_info
         max_relative_err = 1 if max_relative_err > 1 else max_relative_err

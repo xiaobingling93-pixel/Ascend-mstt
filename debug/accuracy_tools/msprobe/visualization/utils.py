@@ -203,22 +203,6 @@ class GraphConst:
         SUMMARY_COMPARE: Const.SUMMARY,
         MD5_COMPARE: Const.MD5
     }
-    SMALL_VALUES = {
-        Const.TORCH_FLOAT32: 1e-6,
-        Const.TORCH_FLOAT16: 1e-3,
-        Const.TORCH_BFLOAT16: 1e-3,
-        Const.FLOAT32: 1e-6,
-        Const.FLOAT16: 1e-3,
-        Const.BFLOAT16: 1e-3
-    }
-    SMALL_VALUES_ABS_ERROR = {
-        Const.TORCH_FLOAT32: 1e-6,
-        Const.TORCH_FLOAT16: 1e-3,
-        Const.TORCH_BFLOAT16: 1e-3,
-        Const.FLOAT32: 1e-6,
-        Const.FLOAT16: 1e-3,
-        Const.BFLOAT16: 1e-3
-    }
 
     RANKS = 'ranks'
     STEPS = 'steps'
