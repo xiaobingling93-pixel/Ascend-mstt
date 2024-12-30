@@ -197,7 +197,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
         return result
 
     def apply(self, n_value, b_value, relative_err=None):
-        if n_value == CompareConst.UNSUPPORTED:
+        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
             return CompareConst.UNSUPPORTED, ""
 
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -248,7 +248,7 @@ class GetMaxRelativeErr(TensorComparisonBasic):
 class GetThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之一的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if n_value == CompareConst.UNSUPPORTED:
+        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
             return CompareConst.UNSUPPORTED, ""
 
         if relative_err is None:
@@ -261,7 +261,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
 class GetFiveThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之五的比例"""
     def apply(self, n_value, b_value, relative_err=None):
-        if n_value == CompareConst.UNSUPPORTED:
+        if isinstance(n_value, str) and n_value == CompareConst.UNSUPPORTED:
             return CompareConst.UNSUPPORTED, ""
 
         if relative_err is None:
