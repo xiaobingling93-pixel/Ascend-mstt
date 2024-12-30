@@ -492,8 +492,6 @@ def _compare_parser(parser):
     parser.add_argument("-o", "--output_path", dest="output_path", type=str,
                         help="<Required> The compare task result out path. Default path: ./output", 
                         required=False, default="./output", nargs="?", const="./output")
-    parser.add_argument("-s", "--stack_mode", dest="stack_mode", action="store_true",
-                        help="<optional> Whether to save stack info.", required=False)
     parser.add_argument("-c", "--compare_only", dest="compare_only", action="store_true",
                         help="<optional> Whether to give advisor.", required=False)
     parser.add_argument("-f", "--fuzzy_match", dest="fuzzy_match", action="store_true",
