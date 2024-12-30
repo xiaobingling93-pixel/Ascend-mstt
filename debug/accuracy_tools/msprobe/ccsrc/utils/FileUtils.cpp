@@ -15,8 +15,9 @@
  */
 
 #include <string>
-#include <regex>
-#include <string>
+#include <cstring>
+#include <algorithm>
+#include <cctype>
 #include <map>
 #include <cerrno>
 #include <sys/stat.h>
@@ -143,9 +144,13 @@ bool IsFileSymbolLink(const std::string& path) {
     return false;
 }
 
-bool IsPathCharactersValid(const std::string& path)
-{
-    return std::regex_match(path, std::regex(FILE_VALID_PATTERN));
+bool IsPathCharactersValid(const std::string& path) {
+    for (const char& ch : path) {
+        if (!std::isalnum(ch) && ch != '_' && ch != '.' && ch != ':' && ch != '/' && ch != '-') {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool IsFileReadable(const std::string& path)

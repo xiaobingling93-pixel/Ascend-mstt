@@ -38,7 +38,14 @@ class HookInput:
 
     def __init__(self, opt) -> None:
         self.func = opt.construct
-        self.g_names = [param.name for param in opt._parameters]
+        if hasattr(opt, "_parameters"):
+            parameter_list = opt._parameters
+        elif hasattr(opt, "parameters"):
+            parameter_list = opt.parameters
+        else:
+            logger.error_log_with_exp("Given optimizer has no attributes: '_parameters' or 'parameters'. \
+                                      Please check the type of the given optimizer.", ValueError)
+        self.g_names = [param.name for param in parameter_list]
         self.param_list = grad_context.get_context(GradConst.PARAM_LIST)
         self.rank_id = get_rank_id()
         output_path = grad_context.get_context(GradConst.OUTPUT_PATH)
