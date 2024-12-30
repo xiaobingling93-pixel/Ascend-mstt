@@ -13,19 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 import abc
+import math
+import multiprocessing
 import re
 from collections import namedtuple
+
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
-from msprobe.core.common.utils import get_header_index, CompareException
+
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import CompareConst, FileCheckConst, Const
-from msprobe.core.common.utils import safe_get_value
+from msprobe.core.common.utils import CompareException, get_header_index, safe_get_value
 from msprobe.core.compare.utils import table_value_is_valid
 
 
@@ -199,10 +202,10 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 def get_name_and_state(name):
     """Get api/module name and state
-    example: 
+    example:
     name = 'conv2d.forward.1.input.0'
     return: ('conv2d.forward.1.', 'input')
-    
+
     name = 'Functional.pad.0.backward.output.0'
     return: ('Functional.pad.0.backward.', 'output')"""
     split = re.split(r'\.(forward|backward)\.', name)
@@ -224,7 +227,7 @@ class ApiBatch:
         self.input_len = 1
         self.output_index = start + 1
         self.input_state = True
-    
+
     def increment(self, state: str):
         if state == Const.OUTPUT:
             self.input_state = False
@@ -250,9 +253,63 @@ def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
             api_batches.append(ApiBatch(api_name, i))
     with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
         for api_batch in api_batches:
-            find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len, 
+            find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len,
                             highlight_dict, dump_mode)
             progress_bar.update(1)
+
+
+def value_check(value, api_name=None, i=None, result_df_columns=None):
+    if not table_value_is_valid(value):
+        if result_df_columns:
+            logger.error(f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+                         f"is not allowed to be written into the compare result xlsx.")
+        else:
+            logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+
+
+def df_malicious_value_check(df_chunk, result_df_columns):
+    for row in df_chunk.itertuples(index=False):
+        api_name = row[0]
+        for i, value in enumerate(row):
+            value_check(value, api_name, i, result_df_columns)
+
+
+def handle_multi_process_malicious_value_check(func, result_df):
+    result_total_nums = len(result_df)
+    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+
+    if result_total_nums <= process_num:
+        process_num = 1
+        chunks = [result_df]
+    else:
+        chunk_size = result_total_nums // process_num
+        chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
+
+    pool = multiprocessing.Pool(process_num)
+
+    def err_call(args):
+        logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
+        try:
+            pool.terminate()
+        except OSError:
+            logger.error("Pool terminate failed")
+
+    result_df_columns = result_df.columns.tolist()
+    for column in result_df_columns:
+        value_check(column)
+    for df_chunk in chunks:
+        pool.apply_async(func, args=(df_chunk, result_df_columns, ), error_callback=err_call)
+
+    pool.close()
+    pool.join()
+
+
+def compare_result_df_convert(value):
+    if not isinstance(value, (float, int)) or isinstance(value, bool):  # bool类型或者非数字类型转str
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else str(value)
+    if isinstance(value, float):
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else value
+    return value
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
@@ -265,19 +322,13 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     # write header
     logger.info('Initializing Excel file.')
-    for j, col_name in enumerate(result_df.columns, start=1):
-        if not table_value_is_valid(col_name):
-            raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
-        ws.cell(row=1, column=j, value=col_name)
 
-    for i, row in enumerate(result_df.iterrows(), start=2):
-        for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)) or isinstance(value, bool):
-                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-            if not table_value_is_valid(value):
-                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
-                                   f"{file_path}.")
-            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+    handle_multi_process_malicious_value_check(df_malicious_value_check, result_df)
+
+    result_df_convert = result_df.applymap(compare_result_df_convert)
+
+    for row in dataframe_to_rows(result_df_convert, index=False, header=True):
+        ws.append(row)
     
     # 对可疑数据标色
     logger.info('Coloring Excel in progress.')
@@ -290,10 +341,11 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     )
     for i in highlight_dict.get("red_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i + 2, column=j).fill = red_fill
+            ws.cell(row=i + 2, column=j).fill = red_fill    # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill
+
     logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
 
