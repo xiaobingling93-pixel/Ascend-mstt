@@ -104,6 +104,12 @@ class GraphBuilder:
             input_data, output_data = get_input_output(node_data, node.id)
             # 更新数据
             node.set_input_output(input_data, output_data)
+            # 反向节点使用对应前向节点的堆栈信息
+            backward_pattern = r"(\.backward\.)(\d+)$"
+            if re.search(backward_pattern, name) and not node_stack_info:
+                forward_node = graph.get_node(re.sub(backward_pattern, r".forward.\2", name))
+                if forward_node:
+                    node_stack_info = forward_node.stack_info
             node.stack_info = node_stack_info
         # 添加节点
         node.add_upnode(upnode)
