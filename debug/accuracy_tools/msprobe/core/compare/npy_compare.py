@@ -72,7 +72,7 @@ def get_error_flag_and_msg(n_value, b_value, error_flag=False, error_file=None):
         return CompareConst.NONE, CompareConst.NONE, error_flag, err_msg
     if not n_value.shape:  # 判断数据是否为0维张量
         err_msg = (f"This is type of 0-d tensor, can not calculate '{CompareConst.COSINE}', "
-                   f"{CompareConst.ONE_THOUSANDTH_ERR_RATIO} and {CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}")
+                   f"'{CompareConst.ONE_THOUSANDTH_ERR_RATIO}' and '{CompareConst.FIVE_THOUSANDTHS_ERR_RATIO}'. ")
         error_flag = False
         return n_value, b_value, error_flag, err_msg
     if n_value.shape != b_value.shape:  # 判断NPU和bench的数据结构是否一致
@@ -198,7 +198,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
 
     def apply(self, n_value, b_value, relative_err=None):
         if not n_value.shape:
-            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor. "
 
         with np.errstate(divide="ignore", invalid="ignore"):
             if len(n_value) == 1:
@@ -249,7 +249,7 @@ class GetThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之一的比例"""
     def apply(self, n_value, b_value, relative_err=None):
         if not n_value.shape:
-            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor. "
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
@@ -261,7 +261,7 @@ class GetFiveThousandErrRatio(TensorComparisonBasic):
     """计算相对误差小于千分之五的比例"""
     def apply(self, n_value, b_value, relative_err=None):
         if not n_value.shape:
-            return CompareConst.UNSUPPORTED, "This is a 0-d tensor."
+            return CompareConst.UNSUPPORTED, "This is a 0-d tensor. "
         if relative_err is None:
             relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
