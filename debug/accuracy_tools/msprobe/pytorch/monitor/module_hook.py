@@ -95,11 +95,11 @@ class ModuleHookContext:
         elif key_name in ['input', 'input_grad']:
             self.ignore_in = True
 
-START_STEP = 0
+start_step = 0
 
 class OptimizerContext:
     def __init__(self) -> None:
-        self.step = START_STEP
+        self.step = start_step
         self.param_effective_rank = defaultdict(float)
         self.param_mg_direction = defaultdict(float)
         self.param_adam_update = defaultdict()
@@ -433,8 +433,8 @@ class TrainerMon:
 
     def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None, start_iteration=0):
         """External interface"""
-        global START_STEP
-        START_STEP = start_iteration
+        global start_step
+        start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
         self.hook_optimizer(optimizer)
         self.micro_batch_number = grad_acc_steps
