@@ -13,13 +13,23 @@ class TestStandardConfig(unittest.TestCase):
         self.assertEqual(StandardConfig.get_small_valuel(torch.int32), 2**-20)
 
     def test_get_small_value_atol(self):
+        standard = 'absolute_threshold'
         # 测试已定义的数据类型
-        self.assertEqual(StandardConfig.get_small_value_atol(torch.float16), 2**-16)
-        self.assertEqual(StandardConfig.get_small_value_atol(torch.bfloat16), 2**-16)
-        self.assertEqual(StandardConfig.get_small_value_atol(torch.float32), 2**-30)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.float16, standard), 2**-16)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.bfloat16, standard), 1e-16)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.float32, standard), 2**-30)
         
         # 测试未定义的数据类型（应返回默认值）
-        self.assertEqual(StandardConfig.get_small_value_atol(torch.int32), 2**-30)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.int32, standard), 2**-30)
+        
+        standard = 'benchmark'
+        # 测试已定义的数据类型
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.float16, standard), 1e-16)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.bfloat16, standard), 1e-16)
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.float32, standard), 2**-30)
+        
+        # 测试未定义的数据类型（应返回默认值）
+        self.assertEqual(StandardConfig.get_small_value_atol(torch.int32, standard), 2**-30)
 
     def test_get_rtol(self):
         # 测试已定义的数据类型
