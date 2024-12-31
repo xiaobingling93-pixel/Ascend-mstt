@@ -141,16 +141,6 @@ class ToolTip:
     SMALL_VALUE_TIP = '{}, 由于{}小于{}, 建议不参考此相对误差，请参考绝对误差'
 
 
-class Suggestions:
-    Module = '此模块精度比对结果疑似异常，请使用msprobe工具的数据采集功能对模块中的api进行dump比对'
-    API = '此api精度比对结果疑似异常，请使用msprobe工具的预检功能对api进行精度检测'
-    DUMP = 'msprobe工具的数据采集功能'
-    DUMP_URL = 'https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/pytorch/doc/dump.md'
-    API_ACCURACY_CHECKER = 'msprobe工具的预检功能'
-    API_ACCURACY_CHECKER_URL = \
-        'https://gitee.com/ascend/mstt/blob/master/debug/accuracy_tools/msprobe/pytorch/doc/api_accuracy_checker.md'
-
-
 class GraphConst:
     CONSTRUCT_FILE = 'construct.json'
     DUMP_FILE = 'dump.json'
@@ -200,6 +190,7 @@ class GraphConst:
     DESCRIPTION = 'description'
     COLORS = 'Colors'
     MICRO_STEPS = 'MicroSteps'
+    OVERFLOW_CHECK = 'OverflowCheck'
 
     DUMP_MODE_TO_GRAPHCOMPARE_MODE_MAPPING = {
         Const.ALL: REAL_DATA_COMPARE,
@@ -211,22 +202,6 @@ class GraphConst:
         REAL_DATA_COMPARE: Const.ALL,
         SUMMARY_COMPARE: Const.SUMMARY,
         MD5_COMPARE: Const.MD5
-    }
-    SMALL_VALUES = {
-        Const.TORCH_FLOAT32: 1e-6,
-        Const.TORCH_FLOAT16: 1e-3,
-        Const.TORCH_BFLOAT16: 1e-3,
-        Const.FLOAT32: 1e-6,
-        Const.FLOAT16: 1e-3,
-        Const.BFLOAT16: 1e-3
-    }
-    SMALL_VALUES_ABS_ERROR = {
-        Const.TORCH_FLOAT32: 1e-6,
-        Const.TORCH_FLOAT16: 1e-3,
-        Const.TORCH_BFLOAT16: 1e-3,
-        Const.FLOAT32: 1e-6,
-        Const.FLOAT16: 1e-3,
-        Const.BFLOAT16: 1e-3
     }
 
     RANKS = 'ranks'
