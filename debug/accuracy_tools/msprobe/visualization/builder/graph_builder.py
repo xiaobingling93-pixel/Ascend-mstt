@@ -22,6 +22,8 @@ from msprobe.core.common.file_utils import load_json
 
 
 class GraphBuilder:
+    backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
+
     @staticmethod
     def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
         """
@@ -105,9 +107,8 @@ class GraphBuilder:
             # 更新数据
             node.set_input_output(input_data, output_data)
             # 反向节点使用对应前向节点的堆栈信息
-            backward_pattern = r"(\.backward\.)(\d+)$"
-            if re.search(backward_pattern, name) and not node_stack_info:
-                forward_node = graph.get_node(re.sub(backward_pattern, r".forward.\2", name))
+            if GraphBuilder.backward_pattern.search(name) and not node_stack_info:
+                forward_node = graph.get_node(GraphBuilder.backward_pattern.sub(r".forward.\2", name))
                 if forward_node:
                     node_stack_info = forward_node.stack_info
             node.stack_info = node_stack_info
