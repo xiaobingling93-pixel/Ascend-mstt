@@ -187,7 +187,6 @@ class GraphMSComparator:
             result_dict[CompareConst.ERROR_MESSAGE] = error_message
 
             if not error_flag:
-                n_value, b_value = reshape_value(n_value, b_value)
                 result_list, err_msg = compare_ops_apply(n_value, b_value, False, "")
                 result_dict[CompareConst.COSINE] = result_list[0]
                 result_dict[CompareConst.MAX_ABS_ERR] = result_list[1]
