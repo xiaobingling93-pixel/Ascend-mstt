@@ -499,6 +499,10 @@ def run_ut_command(args):
 
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
+        if args.jit_compile:
+            torch.npu.config.allow_internal_format = True
+        else:
+            torch.npu.config.allow_internal_format = False
     used_device = current_device + ":" + str(args.device_id[0])
     try:
         if is_gpu:
