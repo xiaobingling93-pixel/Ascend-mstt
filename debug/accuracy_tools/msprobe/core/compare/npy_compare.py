@@ -288,8 +288,8 @@ def compare_ops_apply(n_value, b_value, error_flag, err_msg):
         err_msg += msg * len(CompareOps.compare_ops)
         return result_list, err_msg
 
-    relative_err = get_relative_err(n_value, b_value)
     n_value, b_value = reshape_value(n_value, b_value)
+    relative_err = get_relative_err(n_value, b_value)
 
     for op in CompareOps.compare_ops.values():
         result, msg = op.apply(n_value, b_value, relative_err)
