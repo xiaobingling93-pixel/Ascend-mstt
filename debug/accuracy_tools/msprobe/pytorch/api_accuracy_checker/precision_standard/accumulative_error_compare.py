@@ -18,14 +18,14 @@
 import numpy as np
 
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import check_inf_nan_value, check_norm_value, \
-    check_small_value
+    check_small_value, get_error_balance
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 from msprobe.core.common.const import CompareConst
 
 
 
-class AbsolutethdCompare(BaseCompare):
+class AccumulativeErrorCompare(BaseCompare):
     """
     Absolute threshold compare class.
 
@@ -41,7 +41,7 @@ class AbsolutethdCompare(BaseCompare):
         abs_bench_with_eps (np.ndarray): The absolute value of the benchmark output with epsilon.
         both_finite_mask (np.ndarray): A mask indicating where both outputs are finite.
         inf_nan_mask (np.ndarray): A mask indicating where either output is infinite or NaN.
-        rtol (float): The relative tolerance for comparison.
+        bound (float): The tolerance for comparison.
         rel_err (np.ndarray): The relative error between the benchmark and device outputs.
         small_value (float): The small value threshold for comparison.
         small_value_atol (float): The absolute tolerance for small values.
@@ -65,11 +65,11 @@ class AbsolutethdCompare(BaseCompare):
         StandardConfig: The class containing standard configuration values.
     """
     def __init__(self, input_data):
-        super(AbsolutethdCompare, self).__init__(input_data)
-        self.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD
+        super(AccumulativeErrorCompare, self).__init__(input_data)
+        self.compare_algorithm = CompareConst.ACCUMULATIVE_ERROR_COMPARE
 
-    def _get_rtol(self):
-        return StandardConfig.get_rtol(self.dtype)
+    def _get_bound(self):
+        return StandardConfig.get_accumulative_error_bound(self.dtype)
 
     def _pre_compare(self):
         """
@@ -79,7 +79,7 @@ class AbsolutethdCompare(BaseCompare):
             1. Calculates the absolute benchmark values and their epsilon-adjusted versions.
             2. Determines masks for finite and infinite/NaN values in the outputs.
             3. Computes the absolute error between benchmark and device outputs.
-            4. Retrieves the relative tolerance based on the data type.
+            4. Retrieves the tolerance based on the data type.
             5. Calculates the relative error using the absolute error and epsilon-adjusted benchmark values.
             6. Determines the small value threshold and its absolute tolerance.
             7. Creates a mask for small values based on the benchmark values and finite mask.
@@ -88,7 +88,7 @@ class AbsolutethdCompare(BaseCompare):
         self.abs_bench, self.abs_bench_with_eps = self.stat_abs_bench_with_eps()
         self.both_finite_mask, self.inf_nan_mask = self.stat_finite_and_infinite_mask()
         self.abs_err = self.stat_abs_error()
-        self.rtol = self._get_rtol()
+        self.bound = self._get_bound()
         self.rel_err = self._get_rel_err(self.abs_err, self.abs_bench_with_eps)
         self.small_value, self.small_value_atol = self.get_small_value_threshold()
         self.small_value_mask = self.stat_small_value_mask(self.abs_bench, self.both_finite_mask, self.small_value)
@@ -96,11 +96,13 @@ class AbsolutethdCompare(BaseCompare):
 
     def _compute_metrics(self):
         inf_nan_error_ratio = check_inf_nan_value(self.inf_nan_mask, self.bench_output, self.device_output, self.dtype,
-                                                  self.rtol)
-        rel_err_ratio = check_norm_value(self.normal_value_mask, self.rel_err, self.rtol)
-        abs_err_ratio = check_small_value(self.abs_err, self.small_value_mask, self.small_value_atol)
+                                                  self.bound)
+        rel_err_ratio = check_norm_value(self.normal_value_mask, self.rel_err, self.bound)
+        abs_err_ratio = check_small_value(self.abs_err, self.small_value_mask, self.bound)
+        eb = get_error_balance(self.bench_output, self.device_output)
         return {
             "inf_nan_error_ratio": inf_nan_error_ratio,
             "rel_err_ratio": rel_err_ratio,
-            "abs_err_ratio": abs_err_ratio
+            "abs_err_ratio": abs_err_ratio,
+            "eb": eb
         }

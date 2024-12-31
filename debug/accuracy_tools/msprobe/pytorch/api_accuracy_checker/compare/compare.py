@@ -30,6 +30,7 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare i
 from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.binary_consistency import BinaryCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.thousandth_standard import ThousandthStdCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.accumulative_error_compare import AccumulativeErrorCompare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_input import CompareInput
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_err, get_max_abs_err, get_rel_err_ratio, \
     cosine_sim, get_rel_err_origin, get_abs_bench_with_eps, compare_bool_tensor
@@ -158,6 +159,11 @@ class Comparator:
     def _benchmark_compare(input_data):
         benchmark_compare = BenchmarkCompare(input_data)
         benchmark_compare.compare()
+    
+    @staticmethod
+    def _accumulative_error_compare(input_data):
+        accumulative_error_compare = AccumulativeErrorCompare(input_data)
+        accumulative_error_compare.compare()
 
     def write_csv_title(self):
         summary_test_rows = [
@@ -247,11 +253,12 @@ class Comparator:
 
     def _register_compare_func(self):
         registry = StandardRegistry()
-        registry.register("absolute_threshold", self._absolute_standard_compare)
-        registry.register("binary_consistency", self._binary_standard_compare)
-        registry.register("ulp_compare", self._ulp_compare)
-        registry.register("thousandth_threshold", self._thousandth_standard_compare)
-        registry.register("benchmark", self._benchmark_compare)
+        registry.register(CompareConst.ABSOLUTE_THRESHOLD, self._absolute_standard_compare)
+        registry.register(CompareConst.BINARY_CONSISTENCY, self._binary_standard_compare)
+        registry.register(CompareConst.ULP_COMPARE, self._ulp_compare)
+        registry.register(CompareConst.THOUSANDTH_STANDARD, self._thousandth_standard_compare)
+        registry.register(CompareConst.BENCHMARK, self._benchmark_compare)
+        registry.register(CompareConst.ACCUMULATIVE_ERROR_COMPARE, self._accumulative_error_compare)
         return registry
 
     def _compare_core_wrapper(self, api_name, bench_output, device_output):

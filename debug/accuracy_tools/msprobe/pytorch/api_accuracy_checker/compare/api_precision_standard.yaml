@@ -131,4 +131,6 @@ ULPStandard:
 ThousandthStandard:
   - conv1d
   - conv2d
-  
+
+AccumulativeErrorStandard:
+  - test_api

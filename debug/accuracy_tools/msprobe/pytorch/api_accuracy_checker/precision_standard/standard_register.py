@@ -17,7 +17,7 @@
 
 from typing import Callable
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import absolute_standard_api, binary_standard_api, \
-    ulp_standard_api, thousandth_standard_api, BINARY_COMPARE_UNSUPPORT_LIST
+    ulp_standard_api, thousandth_standard_api, accumulative_error_standard_api, BINARY_COMPARE_UNSUPPORT_LIST
 from msprobe.core.common.const import CompareConst
 
 class StandardRegistry:
@@ -50,7 +50,8 @@ class StandardRegistry:
             CompareConst.ABSOLUTE_THRESHOLD: absolute_standard_api,
             CompareConst.BINARY_CONSISTENCY: binary_standard_api,
             CompareConst.ULP_COMPARE: ulp_standard_api,
-            CompareConst.THOUSANDTH_STANDARD: thousandth_standard_api
+            CompareConst.THOUSANDTH_STANDARD: thousandth_standard_api,
+            CompareConst.ACCUMULATIVE_ERROR_COMPARE: accumulative_error_standard_api
         }
 
     def register(self, standard: str, func: Callable) -> None:

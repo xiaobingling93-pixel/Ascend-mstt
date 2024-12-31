@@ -76,7 +76,12 @@ class StandardConfig:
         torch.float32: 2**-20,
         "default": 2**-20
     }
-    
+    _accumulative_error_bound = {
+        torch.float16: 2**-8,
+        torch.bfloat16: 2**-7,
+        torch.float32: 2**-11,
+        "default": 2**-11
+    }
     _small_value_threshold = {
         'error_threshold': 2,
         'warning_threshold': 1,
@@ -102,9 +107,15 @@ class StandardConfig:
         'warning_threshold': 1,
         "default": 1
     }
-    minmum_err = {
+    _minmum_err = {
         'torch.float16': 2**-11,
         'torch.bfloat16': 2**-8,
+        'torch.float32': 2**-14,
+        'default': 2**-14
+    }
+    _accumulative_error_eb_threshold = {
+        'torch.float16': 2**-20,
+        'torch.bfloat16': 2**-7,
         'torch.float32': 2**-14,
         'default': 2**-14
     }
@@ -113,9 +124,12 @@ class StandardConfig:
     ulp_err_proportion_ratio = 1
     _fp32_ulp_err_proportion = 0.05
     _fp16_ulp_err_proportion = 0.001
+    _special_samll_value = 1
     
     @classmethod
-    def get_small_valuel(cls, dtype):
+    def get_small_value(cls, dtype, standard):
+        if standard == CompareConst.ACCUMULATIVE_ERROR_COMPARE:
+            return cls._special_samll_value
         return cls._small_value.get(dtype, cls._small_value["default"])
     
     @classmethod
@@ -193,4 +207,12 @@ class StandardConfig:
 
     @classmethod
     def get_minmum_err(cls, dtype):
-        return cls.minmum_err.get(dtype, cls.minmum_err["default"])
+        return cls._minmum_err.get(dtype, cls._minmum_err["default"])
+    
+    @classmethod
+    def get_accumulative_error_bound(cls, dtype):
+        return cls._accumulative_error_bound.get(dtype, cls._accumulative_error_bound["default"])
+    
+    @classmethod
+    def get_accumulative_error_eb_threshold(cls, dtype):
+        return cls._accumulative_error_eb_threshold.get(dtype, cls._accumulative_error_eb_threshold["default"])
