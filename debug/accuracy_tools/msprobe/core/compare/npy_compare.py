@@ -16,11 +16,10 @@
 import abc
 
 import numpy as np
-from msprobe.core.common.utils import format_value
+
 from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.common.log import logger
-
-from msprobe.core.common.utils import CompareException
+from msprobe.core.common.utils import CompareException, format_value
 
 
 def handle_inf_nan(n_value, b_value):
@@ -285,14 +284,14 @@ def error_value_process(n_value):
     return CompareConst.N_A, ""
 
 
-def compare_ops_apply(n_value, b_value, error_flag, err_msg):
+def compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=None):
     result_list = []
     for op in CompareOps.compare_ops.values():
         if error_flag:
             result, msg = error_value_process(n_value)
         else:
-            relative_err = get_relative_err(n_value, b_value)
-            n_value, b_value = reshape_value(n_value, b_value)
+            # relative_err = get_relative_err(n_value, b_value)
+            # n_value, b_value = reshape_value(n_value, b_value)
             result, msg = op.apply(n_value, b_value, relative_err=relative_err)
         err_msg += msg
         result_list.append(result)

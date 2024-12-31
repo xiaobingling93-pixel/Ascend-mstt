@@ -384,7 +384,11 @@ class Comparator:
         n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value,
                                                                        error_flag=error_flag, error_file=error_file)
 
-        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
+        if not error_flag:
+            relative_err = get_relative_err(n_value, b_value)
+            n_value, b_value = reshape_value(n_value, b_value)
+
+        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
 
         if npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."
