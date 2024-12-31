@@ -20,7 +20,6 @@ from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.core.common.file_utils import load_json
 from msprobe.core.common.const import Const
-from msprobe.core.common.log import logger
 
 
 class GraphBuilder:
@@ -117,11 +116,8 @@ class GraphBuilder:
                     GraphBuilder.backward_pattern.sub(f'{Const.SEP}{Const.FORWARD}{Const.SEP}0', name)) \
                     if GraphBuilder.backward_pattern.search(name) \
                     else graph.get_node(name.replace(Const.BACKWARD, Const.FORWARD))
-                if forward_node:
-                    node_stack_info = forward_node.stack_info
-                else:
-                    logger.warning(f'The backward node {name} cannot find the forward node '
-                                   f'and cannot retrieve stack information.')
+                node_stack_info = forward_node.stack_info if forward_node \
+                    else ['This backward node cannot find the forward node and cannot retrieve stack information.']
             node.stack_info = node_stack_info
         # 添加节点
         node.add_upnode(upnode)
