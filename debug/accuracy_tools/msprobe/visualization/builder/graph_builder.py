@@ -19,9 +19,12 @@ from msprobe.visualization.graph.node_op import NodeOp
 from msprobe.visualization.utils import save_json_file, GraphConst
 from msprobe.visualization.builder.msprobe_adapter import get_input_output
 from msprobe.core.common.file_utils import load_json
+from msprobe.core.common.const import Const
 
 
 class GraphBuilder:
+    backward_pattern = re.compile(r"(\.backward\.)(\d+)$")
+
     @staticmethod
     def build(construct_path, data_path, stack_path, model_name='DefaultModel'):
         """
@@ -105,6 +108,17 @@ class GraphBuilder:
             input_data, output_data = get_input_output(node_data, node.id)
             # 更新数据
             node.set_input_output(input_data, output_data)
+            # 反向节点使用对应前向节点的堆栈信息
+            # 模块命名举例：Module.module.module.GPTModel.backward.0; API命名举例：Tensor.permute.1.backward
+            if (not node_stack_info and
+                    (GraphBuilder.backward_pattern.search(name) or name.endswith(f'{Const.SEP}{Const.BACKWARD}'))):
+                forward_node = graph.get_node(
+                    # 同名模块全局唯一，无论调用几次堆栈信息都一致，直接使用编号0的同名模块堆栈信息，避免遗漏
+                    GraphBuilder.backward_pattern.sub(f'{Const.SEP}{Const.FORWARD}{Const.SEP}0', name)) \
+                    if GraphBuilder.backward_pattern.search(name) \
+                    else graph.get_node(name.replace(Const.BACKWARD, Const.FORWARD))
+                node_stack_info = forward_node.stack_info if forward_node \
+                    else ['This backward node cannot find the forward node and cannot retrieve stack information.']
             node.stack_info = node_stack_info
         # 添加节点
         node.add_upnode(upnode)
