@@ -171,31 +171,41 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value_1 = np.array(1)
         b_value_1 = np.array(1)
-        result, err_msg = op.apply(n_value_1, b_value_1)
+        relative_err = get_relative_err(n_value_1, b_value_1)
+        n_value_1, b_value_1 = reshape_value(n_value_1, b_value_1)
+        result, err_msg = op.apply(n_value_1, b_value_1, relative_err)
         self.assertEqual(result, CompareConst.UNSUPPORTED)
         self.assertEqual(err_msg, "")
 
         n_value_2 = np.array([1, 2])
         b_value_2 = np.array([1, 2])
-        result, err_msg = op.apply(n_value_2, b_value_2)
+        relative_err = get_relative_err(n_value_2, b_value_2)
+        n_value_2, b_value_2 = reshape_value(n_value_2, b_value_2)
+        result, err_msg = op.apply(n_value_2, b_value_2, relative_err)
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
         n_value_3 = np.array([0, 0])
         b_value_3 = np.array([0, 0])
-        result, err_msg = op.apply(n_value_3, b_value_3)
+        relative_err = get_relative_err(n_value_3, b_value_3)
+        n_value_3, b_value_3 = reshape_value(n_value_3, b_value_3)
+        result, err_msg = op.apply(n_value_3, b_value_3, relative_err)
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
         n_value_4 = np.array([0, 0])
         b_value_4 = np.array([1, 2])
-        result, err_msg = op.apply(n_value_4, b_value_4)
+        relative_err = get_relative_err(n_value_4, b_value_4)
+        n_value_4, b_value_4 = reshape_value(n_value_4, b_value_4)
+        result, err_msg = op.apply(n_value_4, b_value_4, relative_err)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in npu dump data.')
 
         n_value_5 = np.array([1, 2])
         b_value_5 = np.array([0, 0])
-        result, err_msg = op.apply(n_value_5, b_value_5)
+        relative_err = get_relative_err(n_value_5, b_value_5)
+        n_value_5, b_value_5 = reshape_value(n_value_5, b_value_5)
+        result, err_msg = op.apply(n_value_5, b_value_5, relative_err)
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.')
 
@@ -204,7 +214,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value = np.array([1, 2])
         b_value = np.array([0, 0])
-        result, err_msg = op.apply(n_value, b_value)
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
 
         self.assertEqual(result, 2.0)
         self.assertEqual(err_msg, "")
@@ -214,7 +227,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value = np.array([1, 2])
         b_value = np.array([1, 1])
-        result, err_msg = op.apply(n_value, b_value)
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
 
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
@@ -224,8 +240,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value = np.array([1, 2])
         b_value = np.array([1, 1])
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
 
-        result, err_msg = op.apply(n_value, b_value)
+        result, err_msg = op.apply(n_value, b_value, relative_err)
 
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
@@ -235,8 +253,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         n_value = np.array([1, 2])
         b_value = np.array([1, 1])
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
 
-        result, err_msg = op.apply(n_value, b_value)
+        result, err_msg = op.apply(n_value, b_value, relative_err)
 
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
