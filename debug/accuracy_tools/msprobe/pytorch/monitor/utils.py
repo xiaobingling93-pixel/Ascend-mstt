@@ -125,6 +125,10 @@ def validate_ops(ops):
             logger.warning(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
             continue
         valid_ops.append(op)
+    if not valid_ops:
+        default_op = MonitorConst.OP_LIST[0]
+        valid_ops.append(default_op)
+        logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
     return valid_ops
 
 

@@ -289,8 +289,6 @@ class TrainerMon:
     @ops.setter
     def ops(self, value):
         self._ops = validate_ops(value)
-        if not self._ops:
-            logger.warning(f"There is no valid ops. Optional ops: {MonitorConst.OP_LIST}")
 
     @staticmethod
     def set_wrapped_optimizer(_wrapped_optimizer):
