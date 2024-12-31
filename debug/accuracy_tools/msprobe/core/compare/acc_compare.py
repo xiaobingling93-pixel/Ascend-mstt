@@ -30,7 +30,7 @@ from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuz
     check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
-from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg, reshape_value, get_relative_err
+from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
     get_rela_diff_summary_mode, print_compare_ends_info
 from tqdm import tqdm

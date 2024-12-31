@@ -107,7 +107,7 @@ def reshape_value(n_value, b_value):
             b_value = b_value.astype(float)
         return n_value, b_value
 
-    n_value = n_value.reshape(-1).astype(float)
+    n_value = n_value.reshape(-1).astype(float)  # 32转64为了防止某些数转dataframe时出现误差
     b_value = b_value.reshape(-1).astype(float)
     return n_value, b_value
 
@@ -179,8 +179,8 @@ def get_relative_err(n_value, b_value):
         if b_value.dtype not in CompareConst.FLOAT_TYPE:
             n_value, b_value = n_value.astype(float), b_value.astype(float)
         zero_mask = (b_value == 0)
-        b_value[zero_mask] += np.finfo(b_value.dtype).eps
-        n_value[zero_mask] += np.finfo(b_value.dtype).eps
+        b_value[zero_mask] += np.finfo(np.float64).eps
+        n_value[zero_mask] += np.finfo(np.float64).eps
         relative_err = np.divide((n_value - b_value), b_value)
     return np.abs(relative_err)
 
@@ -288,8 +288,8 @@ def compare_ops_apply(n_value, b_value, error_flag, err_msg):
         err_msg += msg * len(CompareOps.compare_ops)
         return result_list, err_msg
 
-    n_value, b_value = reshape_value(n_value, b_value)
     relative_err = get_relative_err(n_value, b_value)
+    n_value, b_value = reshape_value(n_value, b_value)
 
     for op in CompareOps.compare_ops.values():
         result, msg = op.apply(n_value, b_value, relative_err)
