@@ -169,7 +169,7 @@ def statistics_data_check(result_dict):
 class TensorComparisonBasic(abc.ABC):
     """NPU和bench中npy数据的比较模板"""
     @abc.abstractmethod
-    def apply(self, n_value, b_value, relative_err=None):
+    def apply(self, n_value, b_value, relative_err):
         raise NotImplementedError
 
 
@@ -195,7 +195,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
             return round(float(result), 6)
         return result
 
-    def apply(self, n_value, b_value, relative_err=None):
+    def apply(self, n_value, b_value, relative_err):
         if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
 
@@ -223,7 +223,7 @@ class GetCosineSimilarity(TensorComparisonBasic):
 
 class GetMaxAbsErr(TensorComparisonBasic):
     """计算最大绝对误差"""
-    def apply(self, n_value, b_value, relative_err=None):
+    def apply(self, n_value, b_value, relative_err):
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
         if np.isnan(max_value):
@@ -234,9 +234,7 @@ class GetMaxAbsErr(TensorComparisonBasic):
 
 class GetMaxRelativeErr(TensorComparisonBasic):
     """计算最大相对误差"""
-    def apply(self, n_value, b_value, relative_err=None):
-        if relative_err is None:
-            relative_err = get_relative_err(n_value, b_value)
+    def apply(self, n_value, b_value, relative_err):
         max_relative_err = np.max(np.abs(relative_err))
         if np.isnan(max_relative_err):
             msg = "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data."
@@ -249,12 +247,10 @@ class GetErrRatio(TensorComparisonBasic):
     def __init__(self, threshold):
         self.threshold = threshold
 
-    def apply(self, n_value, b_value, relative_err=None):
+    def apply(self, n_value, b_value, relative_err):
         if not n_value.shape:
             return CompareConst.UNSUPPORTED, ""
 
-        if relative_err is None:
-            relative_err = get_relative_err(n_value, b_value)
         if not np.size(relative_err):
             return CompareConst.NAN, ""
 
@@ -284,15 +280,19 @@ def error_value_process(n_value):
     return CompareConst.N_A, ""
 
 
-def compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=None):
+def compare_ops_apply(n_value, b_value, error_flag, err_msg):
     result_list = []
+    if error_flag:
+        result, msg = error_value_process(n_value)
+        result_list = [result] * len(CompareOps.compare_ops)
+        err_msg += msg * len(CompareOps.compare_ops)
+        return result_list, err_msg
+
+    relative_err = get_relative_err(n_value, b_value)
+    n_value, b_value = reshape_value(n_value, b_value)
+
     for op in CompareOps.compare_ops.values():
-        if error_flag:
-            result, msg = error_value_process(n_value)
-        else:
-            # relative_err = get_relative_err(n_value, b_value)
-            # n_value, b_value = reshape_value(n_value, b_value)
-            result, msg = op.apply(n_value, b_value, relative_err=relative_err)
-        err_msg += msg
+        result, msg = op.apply(n_value, b_value, relative_err)
         result_list.append(result)
+        err_msg += msg
     return result_list, err_msg
