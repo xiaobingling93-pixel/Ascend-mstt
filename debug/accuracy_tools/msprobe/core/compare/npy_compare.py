@@ -178,10 +178,13 @@ def get_relative_err(n_value, b_value):
     with np.errstate(divide='ignore', invalid='ignore'):
         if b_value.dtype not in CompareConst.FLOAT_TYPE:
             n_value, b_value = n_value.astype(float), b_value.astype(float)
-        zero_mask = (b_value == 0)
-        b_value[zero_mask] += np.finfo(np.float64).eps
-        n_value[zero_mask] += np.finfo(np.float64).eps
-        relative_err = np.divide((n_value - b_value), b_value)
+
+        n_value_copy = n_value.copy()
+        b_value_copy = b_value.copy()
+        zero_mask = (b_value_copy == 0)
+        b_value_copy[zero_mask] += Const.FLOAT_EPSILON
+        n_value_copy[zero_mask] += Const.FLOAT_EPSILON
+        relative_err = np.divide((n_value_copy - b_value_copy), b_value_copy)
     return np.abs(relative_err)
 
 
