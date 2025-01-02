@@ -24,7 +24,6 @@ from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config imp
 from msprobe.core.common.const import CompareConst
 
 
-
 class AccumulativeErrorCompare(BaseCompare):
     """
     Absolute threshold compare class.
