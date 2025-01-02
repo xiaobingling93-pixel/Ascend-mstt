@@ -38,31 +38,38 @@ def compare_cli(args):
     else:
         from msprobe.mindspore.compare.ms_compare import ms_compare
         from msprobe.mindspore.compare.distributed_compare import ms_compare_distributed, ms_graph_compare
+
+    common_kwargs = {
+        "auto_analyze": auto_analyze,
+        "fuzzy_match": args.fuzzy_match,
+        "data_mapping": args.data_mapping,
+    }
+
     if check_file_type(npu_path) == FileCheckConst.FILE and check_file_type(bench_path) == FileCheckConst.FILE:
         input_param["npu_json_path"] = input_param.pop("npu_path")
         input_param["bench_json_path"] = input_param.pop("bench_path")
+        if "stack_path" not in input_param:
+            logger.warning(f"Missing stack_path in the configuration file. "
+                           f"Automatically detecting stack.json to determine whether to display NPU_Stack_Info.")
+        else:
+            input_param["stack_json_path"] = input_param.pop("stack_path")
 
         if frame_name == Const.PT_FRAMEWORK:
-            compare(input_param, args.output_path, auto_analyze=auto_analyze, fuzzy_match=args.fuzzy_match,
-                    data_mapping=args.data_mapping)
+            kwargs = {**common_kwargs, "stack_mode": args.stack_mode}
+            compare(input_param, args.output_path, **kwargs)
         else:
             kwargs = {
-                "auto_analyze": auto_analyze,
-                "fuzzy_match": args.fuzzy_match,
+                "stack_mode": args.stack_mode,
                 "cell_mapping": args.cell_mapping,
                 "api_mapping": args.api_mapping,
-                "data_mapping": args.data_mapping,
                 "layer_mapping": args.layer_mapping
             }
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {
-            "auto_analyze": auto_analyze,
-            "fuzzy_match": args.fuzzy_match,
             "is_print_compare_log": input_param.get("is_print_compare_log", True),
             "cell_mapping": args.cell_mapping,
             "api_mapping": args.api_mapping,
-            "data_mapping": args.data_mapping,
             "layer_mapping": args.layer_mapping
         }
         if input_param.get("rank_id") is not None:
