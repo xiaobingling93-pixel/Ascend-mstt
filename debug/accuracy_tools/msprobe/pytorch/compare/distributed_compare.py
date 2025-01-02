@@ -22,16 +22,14 @@ from msprobe.core.common.utils import CompareException, check_compare_param, che
 from msprobe.core.compare.acc_compare import ModeConfig
 from msprobe.core.compare.utils import check_and_return_dir_contents, extract_json, set_stack_json_path
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.compare.pt_compare import PTComparator
+from msprobe.pytorch.compare.pt_compare import PTComparator, compare
 
 
 def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
     if kwargs.get("suffix"):
         logger.error("Argument 'suffix' is not supported for compare_distributed.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
-    auto_analyze = kwargs.get('auto_analyze', True)
-    fuzzy_match = kwargs.get('fuzzy_match', False)
-    is_print_compare_log = kwargs.get('is_print_compare_log', True)
+    is_print_compare_log = kwargs.get("is_print_compare_log", True)
     # get the ranks and match by order
     npu_ranks = sorted(check_and_return_dir_contents(npu_dump_dir, 'rank'))
     bench_ranks = sorted(check_and_return_dir_contents(bench_dump_dir, 'rank'))
@@ -46,22 +44,12 @@ def compare_distributed(npu_dump_dir, bench_dump_dir, output_path, **kwargs):
         bench_data_dir = os.path.join(bench_dump_dir, br)
         npu_path = extract_json(npu_data_dir, stack_json=False)
         bench_path = extract_json(bench_data_dir, stack_json=False)
+        stack_path = extract_json(npu_data_dir, stack_json=True)
 
         dump_result_param = {
             "npu_json_path": npu_path,
             "bench_json_path": bench_path,
+            "stack_json_path": stack_path,
             "is_print_compare_log": is_print_compare_log
         }
-        try:
-            set_dump_path(dump_result_param)
-            dump_mode = get_dump_mode(dump_result_param)
-            stack_mode = set_stack_json_path(dump_result_param)
-            check_configuration_param(stack_mode, auto_analyze, fuzzy_match, is_print_compare_log)
-            create_directory(output_path)
-            check_compare_param(dump_result_param, output_path, dump_mode)
-        except (CompareException, FileCheckException) as error:
-            logger.error("Compare failed. Please check the arguments and do it again!")
-            raise CompareException(error.code) from error
-        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
-        pt_comparator = PTComparator(mode_config)
-        pt_comparator.compare_core(dump_result_param, output_path, suffix=f'_{nr}-{br}', dump_mode=dump_mode, **kwargs)
+        compare(input_param=dump_result_param, output_path=output_path, suffix=f'_{nr}-{br}', **kwargs)

@@ -377,7 +377,7 @@ def ms_compare(input_param, output_path, **kwargs):
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
-        if "stack_json_path" in input_param:
+        if 'stack_json_path' in input_param:
             stack_mode = kwargs.get('stack_mode', False)
         else:
             stack_mode = set_stack_json_path(input_param)  # set stack_mode and set "stack_json_path" in input_param
@@ -392,6 +392,6 @@ def ms_compare(input_param, output_path, **kwargs):
 
     mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
     mapping_config = MappingConfig(cell_mapping, api_mapping, data_mapping)
-    is_cross_framework = check_cross_framework(input_param.get("bench_json_path"))
+    is_cross_framework = check_cross_framework(input_param.get('bench_json_path'))
     ms_comparator = MSComparator(mode_config, mapping_config, is_cross_framework)
     ms_comparator.compare_core(input_param, output_path, suffix=suffix)

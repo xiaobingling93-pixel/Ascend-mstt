@@ -365,11 +365,12 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(op_dict, result_op_dict_md5)
 
     def test_compare_parser_1(self):
-        test_args = ["-i", "input.json", "-o", "output.json", "-c", "-f"]
+        test_args = ["-i", "input.json", "-o", "output.json", "-s", "-c", "-f"]
         args = self.parser.parse_args(test_args)
 
         self.assertEqual(args.input_path, "input.json")
         self.assertEqual(args.output_path, "output.json")
+        self.assertTrue(args.stack_mode)
         self.assertTrue(args.compare_only)
         self.assertTrue(args.fuzzy_match)
 
