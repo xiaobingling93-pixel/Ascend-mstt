@@ -52,11 +52,11 @@ import { LossComparison } from './components/Accuracy/LossComparison';
 import { DiffOverview } from './components/DiffOverview';
 import { DistributedView } from './components/DistributedView';
 import { FullCircularProgress } from './components/FullCircularProgress';
-import { Kernel } from './components/Kernel';
+import { Kernel as KernelView } from './components/Kernel';
 import { MemoryView } from './components/MemoryView';
 import { ModuleView } from './components/ModuleView';
-import { Operator } from './components/Operator';
-import { Overview } from './components/Overview';
+import { Operator as OperatorView } from './components/Operator';
+import { Overview as OverviewPage } from './components/Overview';
 import { TraceView } from './components/TraceView';
 import { setup } from './setup';
 import './styles.css';
@@ -73,7 +73,7 @@ export enum Views {
   Lightning = 'Lightning',
 }
 
-const ViewNames = {
+const viewNames = {
   [Views.Overview]: Views.Overview,
   [Views.Operator]: Views.Operator,
   [Views.Kernel]: 'Kernel',
@@ -162,7 +162,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-export const App = () => {
+export const App = (): JSX.Element => {
   const classes = useStyles();
 
   // #region - State
@@ -184,22 +184,14 @@ export const App = () => {
   const iframeRef = React.useRef<HTMLIFrameElement>(null);
   const [deviceTarget, setDeviceTarget] = React.useState<string>('GPU');
 
-  const [diffLeftWorkerOptions, setDiffLeftWorkerOptions] = React.useState<
-    string[]
-  >([]);
-  const [diffLeftSpansOptions, setDiffLeftSpansOptions] = React.useState<
-    string[]
-  >([]);
+  const [diffLeftWorkerOptions, setDiffLeftWorkerOptions] = React.useState<string[]>([]);
+  const [diffLeftSpansOptions, setDiffLeftSpansOptions] = React.useState<string[]>([]);
   const [diffLeftRun, setDiffLeftRun] = React.useState<string>('');
   const [diffLeftWorker, setDiffLeftWorker] = React.useState<string>('');
   const [diffLeftSpan, setDiffLeftSpan] = React.useState<string | ''>('');
 
-  const [diffRightWorkerOptions, setDiffRightWorkerOptions] = React.useState<
-    string[]
-  >([]);
-  const [diffRightSpansOptions, setDiffRightSpansOptions] = React.useState<
-    string[]
-  >([]);
+  const [diffRightWorkerOptions, setDiffRightWorkerOptions] = React.useState<string[]>([]);
+  const [diffRightSpansOptions, setDiffRightSpansOptions] = React.useState<string[]>([]);
   const [diffRightRun, setDiffRightRun] = React.useState<string>('');
   const [diffRightWorker, setDiffRightWorker] = React.useState<string>('');
   const [diffRightSpan, setDiffRightSpan] = React.useState<string | ''>('');
@@ -220,7 +212,7 @@ export const App = () => {
       });
   }, []);
 
-  const continuouslyFetchRuns = async () => {
+  const continuouslyFetchRuns = async (): Promise<never> => {
     while (true) {
       try {
         const result = await api.defaultApi.runsGet();
@@ -282,9 +274,7 @@ export const App = () => {
   React.useEffect(() => {
     if (run) {
       api.defaultApi.viewsGet(run).then((rawViews) => {
-        const result = rawViews.views
-          .map((v) => Views[Views[v as Views]])
-          .filter(Boolean);
+        const result = rawViews.views.map((v) => Views[Views[v as Views]]).filter(Boolean);
         setDeviceTarget(rawViews.device_target);
         setViews(result);
       });
@@ -322,17 +312,11 @@ export const App = () => {
   // #endregion
 
   // #region - Event Handler
-  const handleTabChange = (
-    event: React.ChangeEvent<Record<string, unknown>>,
-    value: any
-  ): void => {
+  const handleTabChange = (event: React.ChangeEvent<Record<string, unknown>>, value: any): void => {
     setSelectedTab(value as number);
   };
 
-  const handleTopTabChange = (
-    event: React.ChangeEvent<Record<string, unknown>>,
-    value: any
-  ): void => {
+  const handleTopTabChange = (event: React.ChangeEvent<Record<string, unknown>>, value: any): void => {
     setTopTab(value as number);
   };
 
@@ -388,21 +372,21 @@ export const App = () => {
     setDiffRightSpan(event.target.value as string);
   };
 
-  const handleDrawerOpen = () => {
+  const handleDrawerOpen = (): void => {
     setOpen(true);
-    SetIframeActive();
+    setIframeActive();
   };
 
-  const handleDrawerClose = () => {
+  const handleDrawerClose = (): void => {
     setOpen(false);
-    SetIframeActive();
+    setIframeActive();
   };
 
-  const SetIframeActive = () => {
+  const setIframeActive = (): void => {
     iframeRef.current?.focus();
   };
 
-  const _changeFileList = (files: FileInfo[]) => {
+  const _changeFileList = (files: FileInfo[]): void => {
     if (JSON.stringify(files) !== JSON.stringify(fileList)) {
       setFileList(files);
     }
@@ -410,19 +394,17 @@ export const App = () => {
 
   const _getViews = (viewName: Views): string => {
     if (viewName === Views.Kernel) {
-      return deviceTarget === 'Ascend'
-        ? `NPU ${ViewNames[viewName]}`
-        : `GPU ${ViewNames[viewName]}`;
+      return deviceTarget === 'Ascend' ? `NPU ${viewNames[viewName]}` : `GPU ${viewNames[viewName]}`;
     } else {
-      return ViewNames[viewName];
+      return viewNames[viewName];
     }
   };
 
-  const _changeUploadCount = (count: number) => {
+  const _changeUploadCount = (count: number): void => {
     setUploadedCount(count);
   }; // #endregion
 
-  const renderContent = () => {
+  const renderContent = (): JSX.Element => {
     if (!runsLoading && runs.length === 0) {
       return (
         <Card variant='outlined'>
@@ -441,45 +423,17 @@ export const App = () => {
     if (selectedTab === 0) {
       switch (view) {
         case Views.Overview:
-          return <Overview run={run} worker={worker} span={span} />;
+          return <OverviewPage run={run} worker={worker} span={span} />;
         case Views.Operator:
-          return (
-            <Operator
-              run={run}
-              worker={worker}
-              span={span}
-              deviceTarget={deviceTarget}
-            />
-          );
+          return <OperatorView run={run} worker={worker} span={span} deviceTarget={deviceTarget} />;
         case Views.Kernel:
-          return (
-            <Kernel
-              run={run}
-              worker={worker}
-              span={span}
-              deviceTarget={deviceTarget}
-            />
-          );
+          return <KernelView run={run} worker={worker} span={span} deviceTarget={deviceTarget} />;
         case Views.Trace:
-          return (
-            <TraceView
-              run={run}
-              worker={worker}
-              span={span}
-              iframeRef={iframeRef}
-            />
-          );
+          return <TraceView run={run} worker={worker} span={span} iframeRef={iframeRef} />;
         case Views.Distributed:
           return <DistributedView run={run} worker={worker} span={span} />;
         case Views.Memory:
-          return (
-            <MemoryView
-              run={run}
-              worker={worker}
-              span={span}
-              deviceTarget={deviceTarget}
-            />
-          );
+          return <MemoryView run={run} worker={worker} span={span} deviceTarget={deviceTarget} />;
         case Views.Module:
         case Views.Lightning:
           return <ModuleView run={run} worker={worker} span={span} />;
@@ -500,11 +454,11 @@ export const App = () => {
     }
   };
 
-  const spanComponent = () => {
+  const spanComponent = (): JSX.Element => {
     const spanFragment = (
       <React.Fragment>
         <ListSubheader>Spans</ListSubheader>
-        <ClickAwayListener onClickAway={SetIframeActive}>
+        <ClickAwayListener onClickAway={setIframeActive}>
           <FormControl variant='outlined' className={classes.formControl}>
             <Select value={span} onChange={handleSpanChange}>
               {spans.map((item) => (
@@ -539,23 +493,16 @@ export const App = () => {
             [classes.drawerClose]: !open,
           }),
         }}
-        onClick={SetIframeActive}
+        onClick={setIframeActive}
       >
         <div className={classes.toolbar}>
-          <IconButton
-            className={classes.iconButton}
-            onClick={handleDrawerClose}
-          >
+          <IconButton className={classes.iconButton} onClick={handleDrawerClose}>
             <ChevronLeftIcon />
           </IconButton>
         </div>
         <Divider />
         <Box>
-          <Tabs
-            value={topTab}
-            onChange={handleTopTabChange}
-            aria-label='top tabs example'
-          >
+          <Tabs value={topTab} onChange={handleTopTabChange} aria-label='top tabs example'>
             <Tab label='Profiling' />
             <Tab label='Accuracy' />
           </Tabs>
@@ -563,11 +510,7 @@ export const App = () => {
         {topTab === 0 ? (
           <>
             <Box>
-              <Tabs
-                value={selectedTab}
-                onChange={handleTabChange}
-                aria-label='basic tabs example'
-              >
+              <Tabs value={selectedTab} onChange={handleTabChange} aria-label='basic tabs example'>
                 <Tab label='Normal' />
                 <Tab label='Diff' />
               </Tabs>
@@ -575,11 +518,8 @@ export const App = () => {
             {selectedTab === 0 ? (
               <>
                 <ListSubheader>Runs</ListSubheader>
-                <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl
-                    variant='outlined'
-                    className={classes.formControl}
-                  >
+                <ClickAwayListener onClickAway={setIframeActive}>
+                  <FormControl variant='outlined' className={classes.formControl}>
                     <Select value={run} onChange={handleRunChange}>
                       {runs.map((item) => (
                         <MenuItem value={item}>{item}</MenuItem>
@@ -588,11 +528,8 @@ export const App = () => {
                   </FormControl>
                 </ClickAwayListener>
                 <ListSubheader>Views</ListSubheader>
-                <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl
-                    variant='outlined'
-                    className={classes.formControl}
-                  >
+                <ClickAwayListener onClickAway={setIframeActive}>
+                  <FormControl variant='outlined' className={classes.formControl}>
                     <Select value={view} onChange={handleViewChange}>
                       {views.map((item) => (
                         <MenuItem value={item}>{_getViews(item)}</MenuItem>
@@ -601,11 +538,8 @@ export const App = () => {
                   </FormControl>
                 </ClickAwayListener>
                 <ListSubheader>Workers</ListSubheader>
-                <ClickAwayListener onClickAway={SetIframeActive}>
-                  <FormControl
-                    variant='outlined'
-                    className={classes.formControl}
-                  >
+                <ClickAwayListener onClickAway={setIframeActive}>
+                  <FormControl variant='outlined' className={classes.formControl}>
                     <Select value={worker} onChange={handleWorkerChange}>
                       {workers.map((worker1) => (
                         <MenuItem value={worker1}>{worker1}</MenuItem>
@@ -620,22 +554,16 @@ export const App = () => {
                 <Typography variant='h6'>&nbsp;&nbsp;Baseline</Typography>
                 <ListSubheader>Runs</ListSubheader>
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffLeftRun}
-                    onChange={handleDiffLeftRunChange}
-                  >
-                    {runs.map((run) => (
-                      <MenuItem value={run}>{run}</MenuItem>
+                  <Select value={diffLeftRun} onChange={handleDiffLeftRunChange}>
+                    {runs.map((item) => (
+                      <MenuItem value={item}>{item}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <ListSubheader>Workers</ListSubheader>
 
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffLeftWorker}
-                    onChange={handleDiffLeftWorkerChange}
-                  >
+                  <Select value={diffLeftWorker} onChange={handleDiffLeftWorkerChange}>
                     {diffLeftWorkerOptions.map((worker2) => (
                       <MenuItem value={worker2}>{worker2}</MenuItem>
                     ))}
@@ -643,10 +571,7 @@ export const App = () => {
                 </FormControl>
                 <ListSubheader>Spans</ListSubheader>
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffLeftSpan}
-                    onChange={handleDiffLeftSpanChange}
-                  >
+                  <Select value={diffLeftSpan} onChange={handleDiffLeftSpanChange}>
                     {diffLeftSpansOptions.map((span1) => (
                       <MenuItem value={span1}>{span1}</MenuItem>
                     ))}
@@ -658,21 +583,15 @@ export const App = () => {
                 <Typography variant='h6'>&nbsp;&nbsp;Experimental</Typography>
                 <ListSubheader>Runs</ListSubheader>
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffRightRun}
-                    onChange={handleDiffRightRunChange}
-                  >
-                    {runs.map((run) => (
-                      <MenuItem value={run}>{run}</MenuItem>
+                  <Select value={diffRightRun} onChange={handleDiffRightRunChange}>
+                    {runs.map((item) => (
+                      <MenuItem value={item}>{item}</MenuItem>
                     ))}
                   </Select>
                 </FormControl>
                 <ListSubheader>Workers</ListSubheader>
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffRightWorker}
-                    onChange={handleDiffRightWorkerChange}
-                  >
+                  <Select value={diffRightWorker} onChange={handleDiffRightWorkerChange}>
                     {diffRightWorkerOptions.map((worker3) => (
                       <MenuItem value={worker3}>{worker3}</MenuItem>
                     ))}
@@ -680,10 +599,7 @@ export const App = () => {
                 </FormControl>
                 <ListSubheader>Spans</ListSubheader>
                 <FormControl variant='outlined' className={classes.formControl}>
-                  <Select
-                    value={diffRightSpan}
-                    onChange={handleDiffRightSpanChange}
-                  >
+                  <Select value={diffRightSpan} onChange={handleDiffRightSpanChange}>
                     {diffRightSpansOptions.map((span2) => (
                       <MenuItem value={span2}>{span2}</MenuItem>
                     ))}
@@ -693,29 +609,16 @@ export const App = () => {
             )}
           </>
         ) : (
-          <AccuracyLeftPanel
-            onChangeCheckedFileList={_changeFileList}
-            onChangeUploadedCount={_changeUploadCount}
-          />
+          <AccuracyLeftPanel onChangeCheckedFileList={_changeFileList} onChangeUploadedCount={_changeUploadCount} />
         )}
       </Drawer>
       {!open && (
-        <Fab
-          className={classes.fab}
-          size='small'
-          color='primary'
-          aria-label='show menu'
-          onClick={handleDrawerOpen}
-        >
+        <Fab className={classes.fab} size='small' color='primary' aria-label='show menu' onClick={handleDrawerOpen}>
           <ChevronRightIcon />
         </Fab>
       )}
       <main className={classes.content}>
-        {topTab === 0 ? (
-          renderContent()
-        ) : (
-          <LossComparison fileList={fileList} fileCount={uploadedCount} />
-        )}
+        {topTab === 0 ? renderContent() : <LossComparison fileList={fileList} fileCount={uploadedCount} />}
       </main>
     </div>
   );

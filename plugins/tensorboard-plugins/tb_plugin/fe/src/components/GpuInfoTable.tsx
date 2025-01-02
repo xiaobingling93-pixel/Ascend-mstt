@@ -49,44 +49,44 @@ interface TableCellInfo {
 
 function makeTableCellInfo(gpuInfo: any): TableCellInfo[][] {
   const rows: TableCellInfo[][] = [];
-  let curr_row: TableCellInfo[] = [];
-  rows.push(curr_row);
-  Object.keys(gpuInfo.data).forEach((node_name) => {
-    const node_cell = {
-      content: node_name,
+  let currRow: TableCellInfo[] = [];
+  rows.push(currRow);
+  Object.keys(gpuInfo.data).forEach((nodeName) => {
+    const nodeCell = {
+      content: nodeName,
       rowspan: 0,
       cellType: 'node' as const,
     };
     const i = rows.length;
-    curr_row.push(node_cell);
-    Object.keys(gpuInfo.data[node_name]).forEach((pid) => {
-      const pid_cell = { content: pid, rowspan: 0, cellType: 'pid' as const };
+    currRow.push(nodeCell);
+    Object.keys(gpuInfo.data[nodeName]).forEach((pid) => {
+      const pidCell = { content: pid, rowspan: 0, cellType: 'pid' as const };
       const j = rows.length;
-      curr_row.push(pid_cell);
-      Object.keys(gpuInfo.data[node_name][pid]).forEach((gpu) => {
-        const gpu_cell = { content: gpu, rowspan: 0, cellType: 'gpu' as const };
+      currRow.push(pidCell);
+      Object.keys(gpuInfo.data[nodeName][pid]).forEach((gpu) => {
+        const gpuCell = { content: gpu, rowspan: 0, cellType: 'gpu' as const };
         const k = rows.length;
-        curr_row.push(gpu_cell);
-        Object.keys(gpuInfo.data[node_name][pid][gpu]).forEach((key_name) => {
-          curr_row.push({
-            content: key_name,
+        currRow.push(gpuCell);
+        Object.keys(gpuInfo.data[nodeName][pid][gpu]).forEach((keyName) => {
+          currRow.push({
+            content: keyName,
             rowspan: 1,
             cellType: 'key' as const,
           });
-          const value: string = gpuInfo.data[node_name][pid][gpu][key_name];
-          curr_row.push({
+          const value: string = gpuInfo.data[nodeName][pid][gpu][keyName];
+          currRow.push({
             content: value,
             rowspan: 1,
             cellType: 'value' as const,
           });
-          curr_row = [];
-          rows.push(curr_row);
+          currRow = [];
+          rows.push(currRow);
         });
-        gpu_cell.rowspan = rows.length - k;
+        gpuCell.rowspan = rows.length - k;
       });
-      pid_cell.rowspan = rows.length - j;
+      pidCell.rowspan = rows.length - j;
     });
-    node_cell.rowspan = rows.length - i;
+    nodeCell.rowspan = rows.length - i;
   });
   rows.pop();
   return rows;
@@ -100,10 +100,7 @@ export const GpuInfoTable: React.FC<IProps> = (props) => {
     cellType: 'node' | 'pid' | 'gpu' | 'key' | 'value';
   }
 
-  const rows = React.useMemo(
-    () => makeTableCellInfo(props.gpuInfo),
-    [props.gpuInfo]
-  );
+  const rows = React.useMemo(() => makeTableCellInfo(props.gpuInfo), [props.gpuInfo]);
 
   const cellToClass = {
     node: classes.nodeTd,
@@ -113,7 +110,7 @@ export const GpuInfoTable: React.FC<IProps> = (props) => {
     value: classes.valueTd,
   };
 
-  const renderCell = function (info: TableCellInfoNoLast) {
+  const renderCell = function (info: TableCellInfoNoLast): JSX.Element {
     let cellClass = cellToClass[info.cellType];
     let content = info.cellType === 'key' ? `${info.content}:` : info.content;
     return (

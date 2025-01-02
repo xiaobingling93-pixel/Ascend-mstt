@@ -51,61 +51,44 @@ const expandIcon = makeExpandIcon<TransformedCallStackDataInner>(
   (record) => !record.callStackFrames.length
 );
 
-const rowExpandable = (record: TransformedCallStackDataInner) =>
-  !!record.callStackFrames.length;
-const expandedRowRender = (record: TransformedCallStackDataInner) => (
+const rowExpandable = (record: TransformedCallStackDataInner): boolean => !!record.callStackFrames.length;
+const expandedRowRender = (record: TransformedCallStackDataInner): React.JSX.Element => (
   <CallFrameList callFrames={record.callStackFrames} />
 );
 
-export const CallStackTable = (props: IProps) => {
+export const CallStackTable = (props: IProps): React.JSX.Element => {
   const { data, run, worker, span, groupBy, deviceTarget } = props;
   const { name, input_shape } = data;
   const classes = useStyles(props);
 
-  const [stackData, setStackData] = React.useState<
-    CallStackTableData | undefined
-  >(undefined);
+  const [stackData, setStackData] = React.useState<CallStackTableData | undefined>(undefined);
   const [tooltips, setTooltips] = React.useState<any | undefined>();
 
   React.useEffect(() => {
-    api.defaultApi
-      .operationStackGet(run, worker, span, groupBy, name, input_shape)
-      .then((resp) => {
-        setTooltips(resp.metadata.tooltips);
-        setStackData(resp.data);
-      });
+    api.defaultApi.operationStackGet(run, worker, span, groupBy, name, input_shape).then((resp) => {
+      setTooltips(resp.metadata.tooltips);
+      setStackData(resp.data);
+    });
   }, [name, input_shape, run, worker, span, groupBy]);
 
-  const transformedData = React.useMemo(
-    () => stackData && transformTableData(attachId(stackData)),
-    [stackData]
-  );
+  const transformedData = React.useMemo(() => stackData && transformTableData(attachId(stackData)), [stackData]);
 
   const columns = React.useMemo(
-    () =>
-      transformedData &&
-      getCommonOperationColumns(
-        transformedData,
-        deviceTarget,
-        undefined,
-        tooltips,
-        classes
-      ),
+    () => transformedData && getCommonOperationColumns(transformedData, deviceTarget, undefined, tooltips, classes),
     [transformedData]
   );
 
   const expandIconColumnIndex = columns?.length;
 
-  const expandable: TableProps<TransformedCallStackDataInner>['expandable'] =
-    React.useMemo(
-      () => ({
-        expandIconColumnIndex,
-        expandIcon,
-        expandedRowRender,
-        rowExpandable,
-      }),
-      [expandIconColumnIndex]
-    );
+  const expandable: TableProps<TransformedCallStackDataInner>['expandable'] = React.useMemo(
+    () => ({
+      expandIconColumnIndex,
+      expandIcon,
+      expandedRowRender,
+      rowExpandable,
+    }),
+    [expandIconColumnIndex]
+  );
 
   return (
     <Table

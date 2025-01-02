@@ -5,9 +5,7 @@
 import * as api from '../api';
 import { assertDef, isDef } from '../utils/def';
 
-export function transformPerformanceIntoTable(
-  performances: api.Performance[]
-): api.Graph {
+export function transformPerformanceIntoTable(performances: api.Performance[]): api.Graph {
   const columns: api.GraphColumn[] = [
     { type: 'string', name: 'Category' },
     { type: 'number', name: 'Time Duration (us)' },
@@ -43,7 +41,10 @@ export function transformPerformanceIntoTable(
   };
 }
 
-export function transformPerformanceIntoPie(performances: api.Performance[]) {
+export function transformPerformanceIntoPie(performances: api.Performance[]): {
+  columns: api.GraphColumn[];
+  rows: (string | number | boolean | api.ValueAndFormat)[][];
+} {
   const columns: api.GraphColumn[] = [
     { type: 'string', name: 'Name' },
     { type: 'number', name: 'Value' },

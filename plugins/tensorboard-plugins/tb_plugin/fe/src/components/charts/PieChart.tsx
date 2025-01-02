@@ -32,7 +32,7 @@ interface IProps {
   noLegend?: boolean;
   title?: string;
   colors?: Array<string>;
-  tooltip_mode?: string;
+  tooltipMode?: string;
 }
 
 interface IAreaPosition {
@@ -57,15 +57,7 @@ const noTitleArea: IAreaPosition = {
 };
 
 export const PieChart: React.FC<IProps> = (props) => {
-  const {
-    graph,
-    height = 300,
-    top,
-    noLegend,
-    title,
-    colors,
-    tooltip_mode = 'both',
-  } = props;
+  const { graph, height = 300, top, noLegend, title, colors, tooltipMode: tooltip_mode = 'both' } = props;
   const graphRef = React.useRef<HTMLDivElement>(null);
 
   const [resizeEventDependency] = useResizeEventDependency();
@@ -104,14 +96,10 @@ export const PieChart: React.FC<IProps> = (props) => {
         formatter: (data) => {
           const typedData = data as echarts.DefaultLabelFormatterCallbackParams;
           const index = typedData.name.indexOf('_');
-          const safeName = typedData.name
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-          return `${
-            index > -1 ? safeName.slice(index + 1) : safeName
-          }<br /><b>${tooltip_mode === 'both' ? typedData.value : ''}(${
-            typedData.percent
-          }%)<b />`;
+          const safeName = typedData.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${
+            tooltip_mode === 'both' ? typedData.value : ''
+          }(${typedData.percent}%)<b />`;
         },
         confine: true,
         extraCssText: `max-width: 300px;
@@ -139,28 +127,17 @@ export const PieChart: React.FC<IProps> = (props) => {
           // Show legends for datas with the same name.
           const index = name.indexOf('_');
           const processedName = index > -1 ? name.slice(index + 1) : name; // 使用新变量处理
-          return processedName.length > 36
-            ? `${processedName.slice(0, 34)}...`
-            : processedName;
+          return processedName.length > 36 ? `${processedName.slice(0, 34)}...` : processedName;
         },
         tooltip: {
           show: true,
           triggerOn: 'mousemove',
           formatter: (data) => {
-            const currentItem = rowsWithUniqueName.find(
-              (item) => item.name === data.name
-            );
+            const currentItem = rowsWithUniqueName.find((item) => item.name === data.name);
             const index = data.name.indexOf('_');
-            const percent = (
-              ((currentItem?.value || 0) * 100) /
-              totalValue
-            ).toFixed(2);
-            const safeName = data.name
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;');
-            return `${
-              index > -1 ? safeName.slice(index + 1) : safeName
-            }<br /><b>${
+            const percent = (((currentItem?.value || 0) * 100) / totalValue).toFixed(2);
+            const safeName = data.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${
               tooltip_mode === 'both' ? currentItem?.value || 0 : ''
             }(${percent}%)<b />`;
           },

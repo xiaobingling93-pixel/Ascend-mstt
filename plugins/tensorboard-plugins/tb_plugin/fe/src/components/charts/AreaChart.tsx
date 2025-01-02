@@ -15,7 +15,7 @@ interface IProps {
 
 const useStyles = makeStyles(() => ({
   root: {
-    height: (props: Pick<IProps, 'height'>) => props.height,
+    height: (props: Pick<IProps, 'height'>): number | undefined => props.height,
   },
 }));
 

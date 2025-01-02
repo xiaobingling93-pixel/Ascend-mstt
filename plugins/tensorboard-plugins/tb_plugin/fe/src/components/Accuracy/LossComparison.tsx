@@ -58,7 +58,7 @@ export const LossComparison: React.FC<IProps> = (props) => {
   const { fileList, fileCount } = props;
   const classes = useStyles();
 
-  const onImportFile = () => {
+  const onImportFile = (): void => {
     if (fileCount >= MAX_FILE_COUNT) {
       message.warn(`You can import no more than ${MAX_FILE_COUNT} files.`);
       return;
@@ -72,8 +72,7 @@ export const LossComparison: React.FC<IProps> = (props) => {
         <>
           <span className='welcomeLabel'>Welcome to loss comparison</span>
           <div className='importText'>
-            Select left files or{' '}
-            <span onClick={onImportFile}>Import files</span>
+            Select left files or <span onClick={onImportFile}>Import files</span>
           </div>
           <Empty description={false} />
         </>

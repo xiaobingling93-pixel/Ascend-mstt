@@ -1,13 +1,13 @@
 export function binarySearch(
   arr: Array<any>,
   key: any,
-  compare_fn: (key: number, mid: Array<number>) => number
+  compareFn: (key: number, mid: Array<number>) => number
 ): number {
   let low = 0;
   let high = arr.length - 1;
   while (low <= high) {
     let mid = Math.round((high + low) / 2);
-    let cmp = compare_fn(key, arr[mid]);
+    let cmp = compareFn(key, arr[mid]);
     if (cmp > 0) {
       low = mid + 1;
     } else if (cmp < 0) {

@@ -12,16 +12,12 @@ interface IProps {
   sortColumn?: number;
   height?: number;
   allowHtml?: boolean;
-  setCellProperty?: (
-    row: number,
-    column: number,
-    cb: (key: string, value: any) => void
-  ) => void;
+  setCellProperty?: (row: number, column: number, cb: (key: string, value: any) => void) => void;
 }
 
 const useStyles = makeStyles(() => ({
   root: {
-    height: (props: IProps) => props.height,
+    height: (props: IProps): number | undefined => props.height,
   },
 }));
 

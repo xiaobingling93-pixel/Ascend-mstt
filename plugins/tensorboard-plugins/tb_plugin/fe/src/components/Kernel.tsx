@@ -30,10 +30,7 @@ import Radio from '@material-ui/core/Radio';
 import RadioGroup, { RadioGroupProps } from '@material-ui/core/RadioGroup';
 import Select, { SelectProps } from '@material-ui/core/Select';
 import { makeStyles } from '@material-ui/core/styles';
-import TextField, {
-  StandardTextFieldProps,
-  TextFieldProps,
-} from '@material-ui/core/TextField';
+import TextField, { StandardTextFieldProps, TextFieldProps } from '@material-ui/core/TextField';
 import * as React from 'react';
 import * as api from '../api';
 import { Graph } from '../api';
@@ -45,9 +42,9 @@ import { PieChart } from './charts/PieChart';
 import { DataLoading } from './DataLoading';
 import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers';
 import {
-  GPUKernelTotalTimeTooltip,
-  TensorCoresPieChartTooltip,
-  TensorCoresPieChartTooltipAscend,
+  gpuKernelTotalTimeTooltip,
+  tensorCoresPieChartTooltip,
+  tensorCoresPieChartTooltipAscend,
 } from './TooltipDescriptions';
 
 export interface IProps {
@@ -86,21 +83,17 @@ export const Kernel: React.FC<IProps> = (props) => {
     [tooltipCommonClasses]
   );
 
-  const [kernelGraph, setKernelGraph] = React.useState<Graph | undefined>(
-    undefined
-  );
+  const [kernelGraph, setKernelGraph] = React.useState<Graph | undefined>(undefined);
   const [tcGraph, setTcGraph] = React.useState<Graph | undefined>(undefined);
-  const [kernelTable, setKernelTable] = React.useState<Graph | undefined>(
-    undefined
-  );
-  const [groupBy, setGroupBy] = React.useState(KernelGroupBy.Kernel);
+  const [kernelTable, setKernelTable] = React.useState<Graph | undefined>(undefined);
+  const [groupBy, setGroupBy] = React.useState(KernelGroupBy.KERNEL);
   const [searchKernelName, setSearchKernelName] = React.useState('');
   const [searchOpName, setSearchOpName] = React.useState('');
   const [sortColumn, setSortColumn] = React.useState('');
   const [hasStep, setHasStep] = React.useState(false);
 
   const [topText, actualTop, useTop, setTopText, setUseTop] = useTopN({
-    defaultUseTop: UseTop.Use,
+    defaultUseTop: UseTop.USE,
     defaultTop: 10,
   });
 
@@ -118,24 +111,16 @@ export const Kernel: React.FC<IProps> = (props) => {
     api.defaultApi.kernelTableGet(run, worker, span, groupBy).then((resp) => {
       setSortColumn(resp.metadata.sort);
       setKernelTable(resp.data);
-      const nameColumnIdx = resp.data.columns.findIndex(
-        (c) => c.name.toLowerCase() === 'step id'
-      );
+      const nameColumnIdx = resp.data.columns.findIndex((c) => c.name.toLowerCase() === 'step id');
       setHasStep(nameColumnIdx > -1);
     });
   }, [run, worker, span, groupBy]);
 
   React.useEffect(() => {
-    api.defaultApi
-      .kernelGet(run, worker, span, KernelGroupBy.Kernel)
-      .then((resp) => {
-        setKernelGraph(resp.total);
-        setGroupBy(
-          resp.device_target === 'Ascend'
-            ? KernelGroupBy.KernelNameAndOpName
-            : KernelGroupBy.Kernel
-        );
-      });
+    api.defaultApi.kernelGet(run, worker, span, KernelGroupBy.KERNEL).then((resp) => {
+      setKernelGraph(resp.total);
+      setGroupBy(resp.device_target === 'Ascend' ? KernelGroupBy.KERNEL_NAME_AND_OP_NAME : KernelGroupBy.KERNEL);
+    });
   }, [run, worker, span]);
 
   React.useEffect(() => {
@@ -144,11 +129,7 @@ export const Kernel: React.FC<IProps> = (props) => {
     });
   }, [run, worker, span]);
 
-  const [searchedKernelTable] = useSearch(
-    searchKernelName,
-    'name',
-    kernelTable
-  );
+  const [searchedKernelTable] = useSearch(searchKernelName, 'name', kernelTable);
   const [searchedOpTable] = useSearch(
     searchOpName,
     deviceTarget === 'Ascend' ? 'step id' : 'operator',
@@ -171,7 +152,7 @@ export const Kernel: React.FC<IProps> = (props) => {
     setUseTop(event.target.value as UseTop);
   };
 
-  const onTopChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onTopChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setTopText(event.target.value);
   };
 
@@ -180,21 +161,15 @@ export const Kernel: React.FC<IProps> = (props) => {
   };
 
   const GPUKernelTotalTimeTitle = React.useMemo(
-    () => chartHeaderRenderer('Total Time (us)', GPUKernelTotalTimeTooltip),
+    () => chartHeaderRenderer('Total Time (us)', gpuKernelTotalTimeTooltip),
     [chartHeaderRenderer]
   );
 
   const TensorCoresTitle = React.useMemo(
     () =>
       deviceTarget === 'Ascend'
-        ? chartHeaderRenderer(
-            'Accelerator Core Utilization',
-            TensorCoresPieChartTooltipAscend
-          )
-        : chartHeaderRenderer(
-            'Tensor Cores Utilization',
-            TensorCoresPieChartTooltip
-          ),
+        ? chartHeaderRenderer('Accelerator Core Utilization', tensorCoresPieChartTooltipAscend)
+        : chartHeaderRenderer('Tensor Cores Utilization', tensorCoresPieChartTooltip),
     [chartHeaderRenderer, deviceTarget]
   );
 
@@ -207,19 +182,11 @@ export const Kernel: React.FC<IProps> = (props) => {
             <Grid item container sm={12}>
               <Grid item>
                 <RadioGroup row value={useTop} onChange={onUseTopChanged}>
-                  <FormControlLabel
-                    value={UseTop.NotUse}
-                    control={<Radio />}
-                    label='All kernels'
-                  />
-                  <FormControlLabel
-                    value={UseTop.Use}
-                    control={<Radio />}
-                    label='Top kernels to show'
-                  />
+                  <FormControlLabel value={UseTop.NOT_USE} control={<Radio />} label='All kernels' />
+                  <FormControlLabel value={UseTop.USE} control={<Radio />} label='Top kernels to show' />
                 </RadioGroup>
               </Grid>
-              {useTop === UseTop.Use && (
+              {useTop === UseTop.USE && (
                 <Grid item className={classes.verticalInput}>
                   <TextField
                     classes={{ root: classes.inputWidth }}
@@ -234,21 +201,17 @@ export const Kernel: React.FC<IProps> = (props) => {
             </Grid>
             <Grid item sm={6}>
               <DataLoading value={kernelGraph}>
-                {(graph) => (
+                {(graph): JSX.Element => (
                   <Card elevation={0}>
                     <CardHeader title={GPUKernelTotalTimeTitle} />
-                    <PieChart
-                      title={graph.title}
-                      graph={graph}
-                      top={actualTop}
-                    />
+                    <PieChart title={graph.title} graph={graph} top={actualTop} />
                   </Card>
                 )}
               </DataLoading>
             </Grid>
             <Grid item sm={6}>
               <DataLoading value={tcGraph}>
-                {(graph) => (
+                {(graph): JSX.Element => (
                   <Card elevation={0}>
                     <CardHeader title={TensorCoresTitle} />
                     <PieChart
@@ -256,7 +219,7 @@ export const Kernel: React.FC<IProps> = (props) => {
                       graph={graph}
                       colors={['#0099C6', '#DD4477', '#66AA00', '#B82E2E']}
                       top={actualTop}
-                      tooltip_mode='percentage'
+                      tooltipMode='percentage'
                     />
                   </Card>
                 )}
@@ -267,17 +230,11 @@ export const Kernel: React.FC<IProps> = (props) => {
                 <Grid sm={6} item container justify='space-around'>
                   <Grid item>
                     <InputLabel id='kernel-group-by'>Group By</InputLabel>
-                    <Select
-                      labelId='kernel-group-by'
-                      value={groupBy}
-                      onChange={onGroupByChanged}
-                    >
-                      <MenuItem value={KernelGroupBy.KernelNameAndOpName}>
-                        {deviceTarget === 'Ascend'
-                          ? 'Statistic'
-                          : 'Kernel Properties + Op Name'}
+                    <Select labelId='kernel-group-by' value={groupBy} onChange={onGroupByChanged}>
+                      <MenuItem value={KernelGroupBy.KERNEL_NAME_AND_OP_NAME}>
+                        {deviceTarget === 'Ascend' ? 'Statistic' : 'Kernel Properties + Op Name'}
                       </MenuItem>
-                      <MenuItem value={KernelGroupBy.Kernel}>
+                      <MenuItem value={KernelGroupBy.KERNEL}>
                         {deviceTarget === 'Ascend' ? 'All' : 'Kernel Name'}
                       </MenuItem>
                     </Select>
@@ -297,7 +254,7 @@ export const Kernel: React.FC<IProps> = (props) => {
                     />
                   </Grid>
                   {deviceTarget === 'Ascend'
-                    ? groupBy === KernelGroupBy.Kernel &&
+                    ? groupBy === KernelGroupBy.KERNEL &&
                       hasStep && (
                         <Grid item>
                           <TextField
@@ -312,7 +269,7 @@ export const Kernel: React.FC<IProps> = (props) => {
                           />
                         </Grid>
                       )
-                    : groupBy === KernelGroupBy.KernelNameAndOpName && (
+                    : groupBy === KernelGroupBy.KERNEL_NAME_AND_OP_NAME && (
                         <Grid item>
                           <TextField
                             classes={{ root: classes.inputWidthOverflow }}
@@ -331,9 +288,7 @@ export const Kernel: React.FC<IProps> = (props) => {
               <Grid item container>
                 <Grid item sm={12}>
                   <DataLoading value={searchedOpTable}>
-                    {(graph) => (
-                      <AntTableChart graph={graph} sortColumn={sortColumn} />
-                    )}
+                    {(graph): JSX.Element => <AntTableChart graph={graph} sortColumn={sortColumn} />}
                   </DataLoading>
                 </Grid>
               </Grid>
