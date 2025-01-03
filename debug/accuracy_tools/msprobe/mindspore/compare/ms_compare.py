@@ -351,7 +351,8 @@ class MSComparator(Comparator):
                 if self.dump_mode == Const.MD5:
                     result[Const.MD5].append(struct[2])
                 result[Const.SUMMARY].append(merge_list[Const.SUMMARY].pop(0))
-                result['stack_info'].append(merge_list['stack_info'][0])
+                if self.stack_mode:
+                    result['stack_info'].append(merge_list['stack_info'][0])
                 if self.dump_mode == Const.ALL:
                     result['data_name'].append(merge_list['data_name'].pop(0))
         return pd.DataFrame(result)
