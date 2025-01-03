@@ -514,7 +514,7 @@ class TrainerMon:
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
             if self.opt_ty in MonitorConst.DEEPSPEED_OPT_TY:
-                if context.step == 0:
+                if not self.name2indices:
                     self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name,
                                                                                          self.name2index)
                 mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name,
