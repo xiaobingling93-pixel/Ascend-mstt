@@ -338,11 +338,11 @@ def record_absolute_threshold_result(input_data):
     compare_column.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD_ALGORITHM_NAME
     message = ''
     if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
-        message += "ERROR: inf/nan错误率超过阈值\n"
+        message += "ERROR: inf/nan错误率超过阈值"
     if compare_column.rel_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 相对误差错误率超过阈值\n"
+        message += "ERROR: 相对误差错误率超过阈值"
     if compare_column.abs_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 绝对误差错误率超过阈值\n"
+        message += "ERROR: 绝对误差错误率超过阈值"
     compare_column.compare_message = message
     return compare_column.compare_result
 
