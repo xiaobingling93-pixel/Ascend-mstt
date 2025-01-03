@@ -34,7 +34,7 @@ interface IProps {
 
 const useStyles = makeStyles(() => ({
   root: {
-    height: (props: Pick<IProps, 'height'>) => props.height,
+    height: (props: Pick<IProps, 'height'>): number | undefined => props.height,
   },
 }));
 
@@ -77,9 +77,7 @@ export const SteppedAreaChart: React.FC<IProps> = (props) => {
       tooltip: {
         trigger: 'item',
         formatter: (params: any) => {
-          return (
-            graph.rows[params.dataIndex][params.seriesIndex + 1]?.tooltip || ''
-          );
+          return graph.rows[params.dataIndex][params.seriesIndex + 1]?.tooltip || '';
         },
       },
       dataset: {

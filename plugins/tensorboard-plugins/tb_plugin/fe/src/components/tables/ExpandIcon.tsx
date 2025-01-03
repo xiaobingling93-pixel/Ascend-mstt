@@ -11,10 +11,10 @@ type Types<T> = NonNullable<TableProps<T>['expandable']>['expandIcon'];
 type BasePropType<T> = Arguments<NonNullable<Types<T>>>[0];
 type PropType<T> = BasePropType<T> & { text: string; disabled?: boolean };
 
-export function ExpandIcon<
-  T extends OperationTableDataInner | CallStackTableDataInner
->(props: PropType<T>) {
-  const onClick = (e: React.MouseEvent<HTMLElement, MouseEvent>) => {
+export function ExpandIcon<T extends OperationTableDataInner | CallStackTableDataInner>(
+  props: PropType<T>
+): React.JSX.Element {
+  const onClick = (e: React.MouseEvent<HTMLElement, MouseEvent>): void => {
     props.onExpand(props.record, e);
   };
 
@@ -25,10 +25,11 @@ export function ExpandIcon<
   );
 }
 
-export function makeExpandIcon<
-  T extends OperationTableDataInner | CallStackTableDataInner
->(text: string, disabled?: (v: T) => boolean) {
-  return (props: BasePropType<T>) => (
+export function makeExpandIcon<T extends OperationTableDataInner | CallStackTableDataInner>(
+  text: string,
+  disabled?: (v: T) => boolean
+) {
+  return (props: BasePropType<T>): React.JSX.Element => (
     <ExpandIcon {...props} text={text} disabled={disabled?.(props.record)} />
   );
 }

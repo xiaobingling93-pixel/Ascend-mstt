@@ -21,10 +21,10 @@ import { DataLoading } from './DataLoading';
 import { GpuInfoTable } from './GpuInfoTable';
 import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers';
 import {
-  DistributedCommopsTableTooltip,
-  DistributedGpuInfoTableTooltip,
-  DistributedOverlapGraphTooltip,
-  DistributedWaittimeGraphTooltip,
+  distributedCommopsTableTooltip,
+  distributedGpuInfoTableTooltip,
+  distributedOverlapGraphTooltip,
+  distributedWaittimeGraphTooltip,
 } from './TooltipDescriptions';
 
 export interface IProps {
@@ -74,15 +74,9 @@ export const DistributedView: React.FC<IProps> = (props) => {
   let { run, worker, span } = props;
   const classes = useStyles();
 
-  const [overlapGraph, setOverlapGraph] = React.useState<
-    DistributedGraph | undefined
-  >(undefined);
-  const [waittimeGraph, setWaittimeGraph] = React.useState<
-    DistributedGraph | undefined
-  >(undefined);
-  const [commopsTableData, setCommopsTableData] = React.useState<
-    any | undefined
-  >(undefined);
+  const [overlapGraph, setOverlapGraph] = React.useState<DistributedGraph | undefined>(undefined);
+  const [waittimeGraph, setWaittimeGraph] = React.useState<DistributedGraph | undefined>(undefined);
+  const [commopsTableData, setCommopsTableData] = React.useState<any | undefined>(undefined);
   const [gpuInfo, setGpuInfo] = React.useState<GpuInfo | undefined>(undefined);
   const [commopsTableTitle, setCommopsTableTitle] = React.useState('');
   const [commopsWorkers, setCommopsWorkers] = React.useState<string[]>([]);
@@ -145,10 +139,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
     setWaittimeStep(event.target.value as string);
   };
 
-  const getColumnChartData = (
-    distributedGraph?: DistributedGraph,
-    step?: string
-  ) => {
+  const getColumnChartData = (distributedGraph?: DistributedGraph, step?: string): any => {
     if (!distributedGraph || !step) {
       return undefined;
     }
@@ -159,10 +150,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
       barHeights: barLabels.map((label) => distributedGraph.data[step][label]),
     };
   };
-  const overlapData = React.useMemo(
-    () => getColumnChartData(overlapGraph, overlapStep),
-    [overlapGraph, overlapStep]
-  );
+  const overlapData = React.useMemo(() => getColumnChartData(overlapGraph, overlapStep), [overlapGraph, overlapStep]);
   const waittimeData = React.useMemo(
     () => getColumnChartData(waittimeGraph, waittimeStep),
     [waittimeGraph, waittimeStep]
@@ -173,8 +161,8 @@ export const DistributedView: React.FC<IProps> = (props) => {
       return [];
     }
     let dataInfo: api.Graph = tableData[opsWorker];
-    const stringCompare = (a: string, b: string) => a.localeCompare(b);
-    const numberCompare = (a: number, b: number) => a - b;
+    const stringCompare = (a: string, b: string): number => a.localeCompare(b);
+    const numberCompare = (a: number, b: number): number => a - b;
     let column: any[] = dataInfo.columns.map((item) => {
       return {
         title: item.name,
@@ -182,8 +170,8 @@ export const DistributedView: React.FC<IProps> = (props) => {
         dataIndex: item.name,
         sorter:
           item.type === 'string'
-            ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
-            : (a: any, b: any) => numberCompare(a[item.name], b[item.name]),
+            ? (a: any, b: any): number => stringCompare(a[item.name], b[item.name])
+            : (a: any, b: any): number => numberCompare(a[item.name], b[item.name]),
       };
     });
     setColumns(column);
@@ -202,7 +190,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
     return getTableData(commopsTableData, commopsWorker);
   }, [commopsTableData, commopsWorker]);
 
-  const onShowSizeChange = (current: number, size: number) => {
+  const onShowSizeChange = (current: number, size: number): void => {
     setPageSize(size);
   };
 
@@ -215,12 +203,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
             {gpuInfo && (
               <Grid item sm={12}>
                 <Card elevation={0}>
-                  <CardHeader
-                    title={chartHeaderRenderer(
-                      gpuInfo.metadata.title,
-                      DistributedGpuInfoTableTooltip
-                    )}
-                  />
+                  <CardHeader title={chartHeaderRenderer(gpuInfo.metadata.title, distributedGpuInfoTableTooltip)} />
                   <CardContent>
                     <GpuInfoTable gpuInfo={gpuInfo} />
                   </CardContent>
@@ -229,7 +212,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
             )}
             <Grid item sm={6}>
               <DataLoading value={overlapData}>
-                {(chartData) => (
+                {(chartData): JSX.Element => (
                   <Card elevation={0}>
                     <CardContent>
                       <Grid container spacing={1} alignItems='center'>
@@ -237,11 +220,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
                           <InputLabel id='overlap-step'>Step</InputLabel>
                         </Grid>
                         <Grid item>
-                          <Select
-                            labelId='overlap-step'
-                            value={overlapStep}
-                            onChange={onOverlapStepChanged}
-                          >
+                          <Select labelId='overlap-step' value={overlapStep} onChange={onOverlapStepChanged}>
                             {overlapSteps.map((step) => (
                               <MenuItem value={step}>{step}</MenuItem>
                             ))}
@@ -251,23 +230,17 @@ export const DistributedView: React.FC<IProps> = (props) => {
                     </CardContent>
                     {overlapGraph?.metadata?.title && (
                       <CardHeader
-                        title={chartHeaderRenderer(
-                          overlapGraph?.metadata?.title,
-                          DistributedOverlapGraphTooltip
-                        )}
+                        title={chartHeaderRenderer(overlapGraph?.metadata?.title, distributedOverlapGraphTooltip)}
                       />
                     )}
-                    <ColumnChart
-                      units={overlapGraph?.metadata?.units}
-                      chartData={chartData}
-                    />
+                    <ColumnChart units={overlapGraph?.metadata?.units} chartData={chartData} />
                   </Card>
                 )}
               </DataLoading>
             </Grid>
             <Grid item sm={6}>
               <DataLoading value={waittimeData}>
-                {(chartData) => (
+                {(chartData): JSX.Element => (
                   <Card elevation={0}>
                     <CardContent>
                       <Grid container spacing={1} alignItems='center'>
@@ -275,11 +248,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
                           <InputLabel id='waittime-step'>Step</InputLabel>
                         </Grid>
                         <Grid item>
-                          <Select
-                            labelId='waittime-step'
-                            value={waittimeStep}
-                            onChange={onWaittimeStepChanged}
-                          >
+                          <Select labelId='waittime-step' value={waittimeStep} onChange={onWaittimeStepChanged}>
                             {waittimeSteps.map((step) => (
                               <MenuItem value={step}>{step}</MenuItem>
                             ))}
@@ -289,10 +258,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
                     </CardContent>
                     {waittimeGraph?.metadata?.title && (
                       <CardHeader
-                        title={chartHeaderRenderer(
-                          waittimeGraph?.metadata?.title,
-                          DistributedWaittimeGraphTooltip
-                        )}
+                        title={chartHeaderRenderer(waittimeGraph?.metadata?.title, distributedWaittimeGraphTooltip)}
                       />
                     )}
                     <ColumnChart
@@ -306,12 +272,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
             </Grid>
             <Grid item sm={12}>
               <Grid container direction='column' spacing={0}>
-                <CardHeader
-                  title={chartHeaderRenderer(
-                    commopsTableTitle,
-                    DistributedCommopsTableTooltip
-                  )}
-                />
+                <CardHeader title={chartHeaderRenderer(commopsTableTitle, distributedCommopsTableTooltip)} />
                 <Card elevation={0}>
                   <CardContent>
                     <Grid item container spacing={1} alignItems='center'>
@@ -319,11 +280,7 @@ export const DistributedView: React.FC<IProps> = (props) => {
                         <InputLabel id='table-worker'>Worker</InputLabel>
                       </Grid>
                       <Grid item>
-                        <Select
-                          labelId='table-worker'
-                          value={commopsWorker}
-                          onChange={onCommopsWorkerChanged}
-                        >
+                        <Select labelId='table-worker' value={commopsWorker} onChange={onCommopsWorkerChanged}>
                           {commopsWorkers.map((item) => (
                             <MenuItem value={item}>{item}</MenuItem>
                           ))}

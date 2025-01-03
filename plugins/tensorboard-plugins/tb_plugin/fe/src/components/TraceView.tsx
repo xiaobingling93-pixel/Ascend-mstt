@@ -29,9 +29,7 @@ export const TraceView: React.FC<IProps> = (props) => {
   const { run, worker, span, iframeRef } = props;
   const classes = useStyles();
 
-  const [traceData, setTraceData] = React.useState<Promise<string> | null>(
-    null
-  );
+  const [traceData, setTraceData] = React.useState<Promise<string> | null>(null);
   const [traceViewReady, setTraceViewReady] = React.useState(false);
 
   React.useEffect(() => {
@@ -43,7 +41,7 @@ export const TraceView: React.FC<IProps> = (props) => {
   }, [run, worker, span]);
 
   React.useEffect(() => {
-    function callback(event: MessageEvent) {
+    function callback(event: MessageEvent): void {
       const data = event.data || {};
       if (data.msg === 'ready') {
         setTraceViewReady(true);
@@ -59,26 +57,19 @@ export const TraceView: React.FC<IProps> = (props) => {
   React.useEffect(() => {
     if (traceData && traceViewReady) {
       traceData.then((data) => {
-        iframeRef.current?.contentWindow?.postMessage(
-          { msg: 'data', data },
-          window.origin
-        );
+        iframeRef.current?.contentWindow?.postMessage({ msg: 'data', data }, window.origin);
       });
     }
   }, [traceData, traceViewReady]);
-  const SetIframeActive = () => {
+  const setIframeActive = (): void => {
     iframeRef.current?.focus();
   };
   return (
     <div className={classes.root}>
       {React.useMemo(
         () => (
-          <ClickAwayListener onClickAway={SetIframeActive}>
-            <iframe
-              className={classes.frame}
-              ref={iframeRef}
-              src='./trace_embedding.html'
-            ></iframe>
+          <ClickAwayListener onClickAway={setIframeActive}>
+            <iframe className={classes.frame} ref={iframeRef} src='./trace_embedding.html'></iframe>
           </ClickAwayListener>
         ),
         []

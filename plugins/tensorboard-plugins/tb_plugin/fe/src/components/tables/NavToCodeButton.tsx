@@ -11,11 +11,11 @@ interface IProps {
   frame: CallStackFrame;
 }
 
-export const NavToCodeButton = (props: IProps) => {
+export const NavToCodeButton = (props: IProps): React.JSX.Element => {
   const { raw, line, file } = props.frame;
   const couldNavToFile = line && file;
 
-  const onClick = () => {
+  const onClick = (): void => {
     if (line && file) {
       navToCode(file, line - 1);
     }

@@ -10,7 +10,7 @@ interface IProps<T> {
   children: (t: T) => JSX.Element;
 }
 
-export function DataLoading<T>(props: IProps<T>) {
+export function DataLoading<T>(props: IProps<T>): JSX.Element {
   if (props.value === undefined || props.value === null) {
     return <FullCircularProgress />;
   }

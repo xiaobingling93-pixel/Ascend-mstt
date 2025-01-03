@@ -10,13 +10,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { message, Table } from 'antd';
 import * as React from 'react';
 import { FlameGraph } from 'react-flame-graph';
-import {
-  defaultApi,
-  KeyedColumn,
-  ModuleStats,
-  ModuleViewData,
-  OperatorNode,
-} from '../api';
+import { defaultApi, KeyedColumn, ModuleStats, ModuleViewData, OperatorNode } from '../api';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -33,7 +27,7 @@ export interface IProps {
   span: string;
 }
 
-const getKeyedTableColumns = (columns: KeyedColumn[]) => {
+const getKeyedTableColumns = (columns: KeyedColumn[]): any[] => {
   return columns.map((col) => {
     return {
       dataIndex: col.key,
@@ -43,7 +37,7 @@ const getKeyedTableColumns = (columns: KeyedColumn[]) => {
   });
 };
 
-const getTableRows = (key: number, rows: ModuleStats[]) => {
+const getTableRows = (key: number, rows: ModuleStats[]): any[] => {
   let initialKey = key;
   return rows.map((row) => {
     const currentKey = initialKey++;
@@ -66,7 +60,7 @@ const getTableRows = (key: number, rows: ModuleStats[]) => {
   });
 };
 
-const getFlameGraphData = (rows: ModuleStats[]) => {
+const getFlameGraphData = (rows: ModuleStats[]): any[] => {
   return rows.map((row) => {
     const data: any = {
       name: row.name,
@@ -90,11 +84,7 @@ const getTreeHeight = (row: ModuleStats): number => {
   }
 };
 
-const getOperatorTree = (
-  level: number,
-  row: OperatorNode,
-  result: object[]
-) => {
+const getOperatorTree = (level: number, row: OperatorNode, result: object[]): void => {
   result.push({
     level: level,
     name: row.name,
@@ -110,9 +100,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
   const { run, worker, span } = props;
   const classes = useStyles();
 
-  const [moduleView, setModuleView] = React.useState<
-    ModuleViewData | undefined
-  >(undefined);
+  const [moduleView, setModuleView] = React.useState<ModuleViewData | undefined>(undefined);
   const [flameData, setFlameData] = React.useState<any[]>([]);
   const [flameHeight, setFlameHeight] = React.useState<number>(0);
   const [modules, setModules] = React.useState<number[]>([]);
@@ -122,9 +110,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
   const [rows, setRows] = React.useState<any[]>([]);
 
   const cardRef = React.useRef<HTMLDivElement>(null);
-  const [cardWidth, setCardWidth] = React.useState<number | undefined>(
-    undefined
-  );
+  const [cardWidth, setCardWidth] = React.useState<number | undefined>(undefined);
   const timelineRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -136,9 +122,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
           // set the flamegraph data
           const flameGraphData: any[] = getFlameGraphData(resp.data);
           setFlameData(flameGraphData);
-          const flameGraphHeight = Math.max(
-            ...flameGraphData.map((x) => getTreeHeight(x))
-          );
+          const flameGraphHeight = Math.max(...flameGraphData.map((x) => getTreeHeight(x)));
           setFlameHeight(flameGraphHeight * 25);
           setModules(Array.from(Array(flameGraphData.length).keys()));
           setModule(0);
@@ -170,11 +154,11 @@ export const ModuleView: React.FC<IProps> = (props) => {
             data.addColumn({ type: 'number', id: 'Start' });
             data.addColumn({ type: 'number', id: 'End' });
 
-            let timeline_data: any[] = [];
-            getOperatorTree(0, resp, timeline_data);
-            timeline_data.sort((a, b) => a.level - b.level);
-            const max_level = timeline_data[timeline_data.length - 1].level;
-            timeline_data.forEach((d) => {
+            let timelineData: any[] = [];
+            getOperatorTree(0, resp, timelineData);
+            timelineData.sort((a, b) => a.level - b.level);
+            const maxLevel = timelineData[timelineData.length - 1].level;
+            timelineData.forEach((d) => {
               data.addRow([
                 d.level.toString(),
                 d.name,
@@ -184,11 +168,9 @@ export const ModuleView: React.FC<IProps> = (props) => {
               ]);
             });
 
-            const chart = new google.visualization.Timeline(
-              timelineRef.current
-            );
+            const chart = new google.visualization.Timeline(timelineRef.current);
             const options = {
-              height: (max_level + 1) * 50,
+              height: (maxLevel + 1) * 50,
               tooltip: {
                 isHtml: true,
               },
@@ -209,7 +191,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
     setModule(event.target.value as number);
   };
 
-  const moduleComponent = () => {
+  const moduleComponent = (): JSX.Element => {
     const moduleFragment = (
       <React.Fragment>
         <InputLabel id='module-graph'>Module</InputLabel>
@@ -251,7 +233,7 @@ export const ModuleView: React.FC<IProps> = (props) => {
             data={flameData[module]}
             height={flameHeight}
             width={cardWidth}
-            onChange={(node: any) => {}}
+            onChange={(node: any): void => {}}
           />
         )}
 

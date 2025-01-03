@@ -100,9 +100,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [compareWay, setCompareWay] = useState<number>(0);
   const [pageSize, setPageSize] = useState(20);
-  const [lineData, setLineData] = useState<ILineDataList | undefined>(
-    undefined
-  );
+  const [lineData, setLineData] = useState<ILineDataList | undefined>(undefined);
   const [tableData, setTableData] = useState<any[]>([]);
   const chartRef = useRef<HTMLDivElement>(null);
 
@@ -129,7 +127,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
     return columns;
   };
 
-  const compareFile = (fileNames: string[]) => {
+  const compareFile = (fileNames: string[]): void => {
     if (fileNames.length < 2) {
       return;
     }
@@ -137,14 +135,8 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
     const expFile = fileList.find((item) => item.fileName === fileNames[1]);
     if (!!baseFile && !!expFile) {
       const commonIters: number[] = [];
-      const lessIters =
-        baseFile.iters.length <= expFile.iters.length
-          ? baseFile.iters
-          : expFile.iters;
-      const moreIters =
-        baseFile.iters.length > expFile.iters.length
-          ? baseFile.iters
-          : expFile.iters;
+      const lessIters = baseFile.iters.length <= expFile.iters.length ? baseFile.iters : expFile.iters;
+      const moreIters = baseFile.iters.length > expFile.iters.length ? baseFile.iters : expFile.iters;
       lessIters.forEach((iter) => {
         if (moreIters.includes(iter)) {
           commonIters.push(iter);
@@ -168,26 +160,23 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
         });
         tempChartData.normal.push([iter, expLoss - baseLoss]);
         tempChartData.absolute.push([iter, Math.abs(expLoss - baseLoss)]);
-        tempChartData.relative.push([
-          iter,
-          baseLoss === 0 ? 0 : Math.abs(expLoss - baseLoss) / baseLoss,
-        ]);
+        tempChartData.relative.push([iter, baseLoss === 0 ? 0 : Math.abs(expLoss - baseLoss) / baseLoss]);
       });
       setTableData(tempTableData);
       setLineData(tempChartData);
     }
   };
 
-  const onSelectChange = (value: string[]) => {
+  const onSelectChange = (value: string[]): void => {
     setSelectedFiles(value);
     compareFile(value);
   };
 
-  const onRadioChange = (e: RadioChangeEvent) => {
+  const onRadioChange = (e: RadioChangeEvent): void => {
     setCompareWay(e.target.value);
   };
 
-  const onShowSizeChange = (current: number, size: number) => {
+  const onShowSizeChange = (current: number, size: number): void => {
     setPageSize(size);
   };
 
@@ -277,9 +266,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
             return {
               value: file.fileName,
               label: file.fileName,
-              disabled:
-                !selectedFiles.includes(file.fileName) &&
-                selectedFiles.length > 1,
+              disabled: !selectedFiles.includes(file.fileName) && selectedFiles.length > 1,
             };
           })}
         />
@@ -299,8 +286,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
                 <b>Absolute:</b> The absolute value of difference.
               </div>
               <div>
-                <b>Relative:</b> The absolute value of difference divided by the
-                loss value of the first file.
+                <b>Relative:</b> The absolute value of difference divided by the loss value of the first file.
               </div>
             </>
           }
@@ -309,10 +295,7 @@ export const ComparisonPanel: React.FC<IProps> = (props) => {
         </Popover>
       </div>
       {selectedFiles.length < 2 ? (
-        <Empty
-          className={classes.empty}
-          description='Select 2 comparison files in the drop-down list'
-        />
+        <Empty className={classes.empty} description='Select 2 comparison files in the drop-down list' />
       ) : (
         <div className={classes.content}>
           <div ref={chartRef} className={classes.lossChart}></div>

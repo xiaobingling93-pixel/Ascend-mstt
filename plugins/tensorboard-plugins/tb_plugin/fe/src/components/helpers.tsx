@@ -29,17 +29,10 @@ export const useTooltipCommonStyles = makeStyles((theme) => ({
 
 export const makeChartHeaderRenderer =
   (classes: ReturnType<typeof useTooltipCommonStyles>, smallTitleText = true) =>
-  (title: string, tooltip: string) => {
+  (title: string, tooltip: string): JSX.Element => {
     return (
       <span className={classes.cardTitle}>
-        <span
-          className={clsx(
-            classes.titleText,
-            smallTitleText && classes.smallTitleText
-          )}
-        >
-          {title}
-        </span>
+        <span className={clsx(classes.titleText, smallTitleText && classes.smallTitleText)}>{title}</span>
         <Tooltip arrow classes={{ tooltip: classes.tooltip }} title={tooltip}>
           <HelpOutline fontSize={smallTitleText ? 'small' : undefined} />
         </Tooltip>

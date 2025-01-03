@@ -5,7 +5,7 @@
 import * as React from 'react';
 import debounce from '@material-ui/core/utils/debounce';
 
-export function useResizeEventDependency() {
+export function useResizeEventDependency(): readonly [number] {
   const [version, setVersion] = React.useState(0);
 
   const increaseVersion = React.useCallback(
@@ -18,7 +18,7 @@ export function useResizeEventDependency() {
   React.useEffect(() => {
     window.addEventListener('resize', increaseVersion);
 
-    return () => {
+    return (): void => {
       window.removeEventListener('resize', increaseVersion);
     };
   }, []);

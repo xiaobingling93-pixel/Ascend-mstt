@@ -32,17 +32,10 @@ import Radio from '@material-ui/core/Radio';
 import RadioGroup, { RadioGroupProps } from '@material-ui/core/RadioGroup';
 import Select, { SelectProps } from '@material-ui/core/Select';
 import { makeStyles } from '@material-ui/core/styles';
-import TextField, {
-  StandardTextFieldProps,
-  TextFieldProps,
-} from '@material-ui/core/TextField';
+import TextField, { StandardTextFieldProps, TextFieldProps } from '@material-ui/core/TextField';
 import * as React from 'react';
 import * as api from '../api';
-import {
-  OperationTableData,
-  OperationTableDataInner,
-  OperatorGraph,
-} from '../api';
+import { OperationTableData, OperationTableDataInner, OperatorGraph } from '../api';
 import { OperationGroupBy } from '../constants/groupBy';
 import { useSearchDirectly } from '../utils/search';
 import { topIsValid, UseTop, useTopN } from '../utils/top';
@@ -51,12 +44,12 @@ import { DataLoading } from './DataLoading';
 import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers';
 import { OperationTable } from './tables/OperationTable';
 import {
-  DeviceSelfTimeTooltip,
-  DeviceSelfTimeTooltipAscend,
-  DeviceTotalTimeTooltip,
-  DeviceTotalTimeTooltipAscend,
-  HostSelfTimeTooltip,
-  HostTotalTimeTooltip,
+  deviceSelfTimeTooltip,
+  deviceSelfTimeTooltipAscend,
+  deviceTotalTimeTooltip,
+  deviceTotalTimeTooltipAscend,
+  hostSelfTimeTooltip,
+  hostTotalTimeTooltip,
 } from './TooltipDescriptions';
 
 const useStyles = makeStyles((theme) => ({
@@ -98,32 +91,19 @@ export const Operator: React.FC<IProps> = (props) => {
     [tooltipCommonClasses]
   );
 
-  const [operatorGraph, setOperatorGraph] = React.useState<
-    OperatorGraph | undefined
-  >(undefined);
-  const [operatorTable, setOperatorTable] = React.useState<
-    OperationTableData | undefined
-  >(undefined);
+  const [operatorGraph, setOperatorGraph] = React.useState<OperatorGraph | undefined>(undefined);
+  const [operatorTable, setOperatorTable] = React.useState<OperationTableData | undefined>(undefined);
   const [sortColumn, setSortColumn] = React.useState('');
-  const [tableTooltips, setTableTooltips] = React.useState<any | undefined>(
-    undefined
-  );
-  const [groupBy, setGroupBy] = React.useState(OperationGroupBy.Operation);
+  const [tableTooltips, setTableTooltips] = React.useState<any | undefined>(undefined);
+  const [groupBy, setGroupBy] = React.useState(OperationGroupBy.OPERATION);
   const [searchOperatorName, setSearchOperatorName] = React.useState('');
   const [topText, actualTop, useTop, setTopText, setUseTop] = useTopN({
-    defaultUseTop: UseTop.Use,
+    defaultUseTop: UseTop.USE,
     defaultTop: 10,
   });
 
-  const getName = React.useCallback(
-    (row: OperationTableDataInner) => row.name,
-    []
-  );
-  const [searchedOperatorTable] = useSearchDirectly(
-    searchOperatorName,
-    getName,
-    operatorTable
-  );
+  const getName = React.useCallback((row: OperationTableDataInner) => row.name, []);
+  const [searchedOperatorTable] = useSearchDirectly(searchOperatorName, getName, operatorTable);
 
   const onSearchOperatorChanged: TextFieldProps['onChange'] = (event) => {
     setSearchOperatorName(event.target.value as string);
@@ -142,13 +122,11 @@ export const Operator: React.FC<IProps> = (props) => {
   }, [operatorGraph]);
 
   React.useEffect(() => {
-    api.defaultApi
-      .operationTableGet(run, worker, span, groupBy)
-      .then((resp) => {
-        setSortColumn(resp.metadata.sort);
-        setTableTooltips(resp.metadata.tooltips);
-        setOperatorTable(resp.data);
-      });
+    api.defaultApi.operationTableGet(run, worker, span, groupBy).then((resp) => {
+      setSortColumn(resp.metadata.sort);
+      setTableTooltips(resp.metadata.tooltips);
+      setOperatorTable(resp.data);
+    });
   }, [run, worker, span, groupBy]);
 
   React.useEffect(() => {
@@ -165,7 +143,7 @@ export const Operator: React.FC<IProps> = (props) => {
     setUseTop(event.target.value as UseTop);
   };
 
-  const onTopChanged = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const onTopChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
     setTopText(event.target.value);
   };
 
@@ -173,7 +151,7 @@ export const Operator: React.FC<IProps> = (props) => {
     min: 1,
   };
 
-  const renderCharts = (graph: api.OperatorGraph) => {
+  const renderCharts = (graph: api.OperatorGraph): JSX.Element => {
     return (
       <GridList className={classes.full} cellHeight='auto' cols={2}>
         {graph.device_self_time && (
@@ -183,9 +161,7 @@ export const Operator: React.FC<IProps> = (props) => {
                 <CardHeader
                   title={chartHeaderRenderer(
                     graph.device_self_time.title,
-                    deviceTarget === 'Ascend'
-                      ? DeviceSelfTimeTooltipAscend
-                      : DeviceSelfTimeTooltip
+                    deviceTarget === 'Ascend' ? deviceSelfTimeTooltipAscend : deviceSelfTimeTooltip
                   )}
                 />
               )}
@@ -200,9 +176,7 @@ export const Operator: React.FC<IProps> = (props) => {
                 <CardHeader
                   title={chartHeaderRenderer(
                     graph.device_total_time.title,
-                    deviceTarget === 'Ascend'
-                      ? DeviceTotalTimeTooltipAscend
-                      : DeviceTotalTimeTooltip
+                    deviceTarget === 'Ascend' ? deviceTotalTimeTooltipAscend : deviceTotalTimeTooltip
                   )}
                 />
               )}
@@ -213,12 +187,7 @@ export const Operator: React.FC<IProps> = (props) => {
         <GridListTile>
           <Card>
             {graph.host_self_time.title && (
-              <CardHeader
-                title={chartHeaderRenderer(
-                  graph.host_self_time.title,
-                  HostSelfTimeTooltip
-                )}
-              />
+              <CardHeader title={chartHeaderRenderer(graph.host_self_time.title, hostSelfTimeTooltip)} />
             )}
             <PieChart graph={graph.host_self_time} top={actualTop} />
           </Card>
@@ -226,12 +195,7 @@ export const Operator: React.FC<IProps> = (props) => {
         <GridListTile>
           <Card>
             {graph.host_total_time.title && (
-              <CardHeader
-                title={chartHeaderRenderer(
-                  graph.host_total_time.title,
-                  HostTotalTimeTooltip
-                )}
-              />
+              <CardHeader title={chartHeaderRenderer(graph.host_total_time.title, hostTotalTimeTooltip)} />
             )}
             <PieChart graph={graph.host_total_time} top={actualTop} />
           </Card>
@@ -249,19 +213,11 @@ export const Operator: React.FC<IProps> = (props) => {
             <Grid container item md={12}>
               <Grid item>
                 <RadioGroup row value={useTop} onChange={onUseTopChanged}>
-                  <FormControlLabel
-                    value={UseTop.NotUse}
-                    control={<Radio />}
-                    label='All operators'
-                  />
-                  <FormControlLabel
-                    value={UseTop.Use}
-                    control={<Radio />}
-                    label='Top operators to show'
-                  />
+                  <FormControlLabel value={UseTop.NOT_USE} control={<Radio />} label='All operators' />
+                  <FormControlLabel value={UseTop.USE} control={<Radio />} label='Top operators to show' />
                 </RadioGroup>
               </Grid>
-              {useTop === UseTop.Use && (
+              {useTop === UseTop.USE && (
                 <Grid item className={classes.verticalInput}>
                   <TextField
                     classes={{ root: classes.inputWidth }}
@@ -282,17 +238,9 @@ export const Operator: React.FC<IProps> = (props) => {
                 <Grid container justify='space-around'>
                   <Grid item>
                     <InputLabel id='operator-group-by'>Group By</InputLabel>
-                    <Select
-                      labelId='operator-group-by'
-                      value={groupBy}
-                      onChange={onGroupByChanged}
-                    >
-                      <MenuItem value={OperationGroupBy.OperationAndInputShape}>
-                        Operator + Input Shape
-                      </MenuItem>
-                      <MenuItem value={OperationGroupBy.Operation}>
-                        Operator
-                      </MenuItem>
+                    <Select labelId='operator-group-by' value={groupBy} onChange={onGroupByChanged}>
+                      <MenuItem value={OperationGroupBy.OPERATION_AND_INPUT_SHAPE}>Operator + Input Shape</MenuItem>
+                      <MenuItem value={OperationGroupBy.OPERATION}>Operator</MenuItem>
                     </Select>
                   </Grid>
                   <Grid item>
@@ -311,7 +259,7 @@ export const Operator: React.FC<IProps> = (props) => {
               </Grid>
               <Grid>
                 <DataLoading value={searchedOperatorTable}>
-                  {(table) => (
+                  {(table): JSX.Element => (
                     <OperationTable
                       data={table}
                       groupBy={groupBy}

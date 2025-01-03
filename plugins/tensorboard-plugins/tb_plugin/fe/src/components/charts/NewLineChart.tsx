@@ -33,16 +33,7 @@ interface IProps {
 }
 
 export const LineChart: React.FC<IProps> = (props) => {
-  const {
-    graph,
-    height = 400,
-    deviceTarget,
-    tag,
-    hAxisTitle,
-    vAxisTitle,
-    onSelectionChanged,
-    record,
-  } = props;
+  const { graph, height = 400, deviceTarget, tag, hAxisTitle, vAxisTitle, onSelectionChanged, record } = props;
   const graphRef = React.useRef<HTMLDivElement>(null);
   const [resizeEventDependency] = useResizeEventDependency();
   const [chartObj, setChartObj] = React.useState<echarts.ECharts | undefined>();
@@ -53,7 +44,7 @@ export const LineChart: React.FC<IProps> = (props) => {
     if (!element) {
       return undefined;
     }
-    element.oncontextmenu = () => {
+    element.oncontextmenu = (): boolean => {
       return false;
     };
 
@@ -115,25 +106,18 @@ export const LineChart: React.FC<IProps> = (props) => {
         if (graph.columns.length <= 4) {
           let finalRows = graph.rows.PTA ?? graph.rows.GE;
           if (graph.columns.length === 4) {
-            const mergedAPPRows = graph.rows.APP.map(
-              (item: Array<number | null>) => {
-                return [item[0], null, null, item[1]];
-              }
-            );
-            finalRows = finalRows
-              .concat(mergedAPPRows)
-              .sort((a: any, b: any) => {
-                return a[0] - b[0];
-              });
+            const mergedAPPRows = graph.rows.APP.map((item: Array<number | null>) => {
+              return [item[0], null, null, item[1]];
+            });
+            finalRows = finalRows.concat(mergedAPPRows).sort((a: any, b: any) => {
+              return a[0] - b[0];
+            });
           }
           option = {
             ...option,
             tooltip: mixedTooltip,
             dataset: {
-              source: [
-                graph.columns.map((column) => column.name),
-                ...finalRows,
-              ],
+              source: [graph.columns.map((column) => column.name), ...finalRows],
             },
             series: Array(graph.columns.length - 1).fill({
               type: 'line',
@@ -158,18 +142,14 @@ export const LineChart: React.FC<IProps> = (props) => {
             return [item[0], null, null, item[1], item[2]];
           });
           if (graph.columns.length === 6) {
-            const mergedAPPRows = graph.rows.APP.map(
-              (item: Array<number | null>) => {
-                return [item[0], null, null, null, null, item[2]];
-              }
-            );
+            const mergedAPPRows = graph.rows.APP.map((item: Array<number | null>) => {
+              return [item[0], null, null, null, null, item[2]];
+            });
             mergedGERows = mergedGERows.concat(mergedAPPRows);
           }
-          const finalRows = graph.rows.PTA.concat(mergedGERows).sort(
-            (a: any, b: any) => {
-              return a[0] - b[0];
-            }
-          );
+          const finalRows = graph.rows.PTA.concat(mergedGERows).sort((a: any, b: any) => {
+            return a[0] - b[0];
+          });
           option = {
             ...option,
             tooltip: mixedTooltip,
@@ -361,17 +341,17 @@ export const LineChart: React.FC<IProps> = (props) => {
   }, [graph, height, resizeEventDependency]);
 
   React.useEffect(() => {
-    const compare_fn = (key: number, mid: Array<number>) => key - mid[0];
+    const compareFn = (key: number, mid: Array<number>): number => key - mid[0];
     if (chartObj && tag === 'Operator') {
       if (record) {
         let startId = -1;
         let endId = -1;
         if (deviceTarget === 'Ascend') {
-          startId = binarySearch(graph.rows.Allocated, record.col2, compare_fn);
-          endId = binarySearch(graph.rows.Allocated, record.col3, compare_fn);
+          startId = binarySearch(graph.rows.Allocated, record.col2, compareFn);
+          endId = binarySearch(graph.rows.Allocated, record.col3, compareFn);
         } else {
-          startId = binarySearch(graph.rows, record.col2, compare_fn);
-          endId = binarySearch(graph.rows, record.col3, compare_fn);
+          startId = binarySearch(graph.rows, record.col2, compareFn);
+          endId = binarySearch(graph.rows, record.col3, compareFn);
         }
         let selection = [];
         if (startId >= 0) {

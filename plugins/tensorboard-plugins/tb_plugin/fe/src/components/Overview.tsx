@@ -16,11 +16,8 @@ import { SteppedAreaChart } from './charts/SteppedAreaChart';
 import { DataLoading } from './DataLoading';
 import { makeChartHeaderRenderer, useTooltipCommonStyles } from './helpers';
 import { TextListItem } from './TextListItem';
-import { StepTimeBreakDownTooltip } from './TooltipDescriptions';
-import {
-  transformPerformanceIntoPie,
-  transformPerformanceIntoTable,
-} from './transform';
+import { stepTimeBreakDownTooltip } from './TooltipDescriptions';
+import { transformPerformanceIntoPie, transformPerformanceIntoTable } from './transform';
 
 const topGraphHeight = 230;
 
@@ -72,14 +69,10 @@ export interface IProps {
 export const Overview: React.FC<IProps> = (props) => {
   const { run, worker, span } = props;
 
-  const [steps, setSteps] = React.useState<api.StepedGraph | undefined>(
-    undefined
-  );
+  const [steps, setSteps] = React.useState<api.StepedGraph | undefined>(undefined);
   const [performances, setPerformances] = React.useState<api.Performance[]>([]);
   const [environments, setEnvironments] = React.useState<api.Environment[]>([]);
-  const [gpuMetrics, setGpuMetrics] = React.useState<
-    api.GpuMetrics | undefined
-  >(undefined);
+  const [gpuMetrics, setGpuMetrics] = React.useState<api.GpuMetrics | undefined>(undefined);
   const [recommendations, setRecommendations] = React.useState('');
   const [columns, setColumns] = React.useState<ColumnsType<any>>([]);
 
@@ -88,8 +81,8 @@ export const Overview: React.FC<IProps> = (props) => {
     if (dataInfo.columns.length < 3) {
       return [];
     }
-    const stringCompare = (a: string, b: string) => a.localeCompare(b);
-    const numberCompare = (a: number, b: number) => a - b;
+    const stringCompare = (a: string, b: string): number => a.localeCompare(b);
+    const numberCompare = (a: number, b: number): number => a - b;
     let column: any[] = dataInfo.columns.map((item) => {
       return {
         title: item.name,
@@ -97,8 +90,8 @@ export const Overview: React.FC<IProps> = (props) => {
         dataIndex: item.name,
         sorter:
           item.type === 'string'
-            ? (a: any, b: any) => stringCompare(a[item.name], b[item.name])
-            : (a: any, b: any) => numberCompare(a[item.name], b[item.name]),
+            ? (a: any, b: any): number => stringCompare(a[item.name], b[item.name])
+            : (a: any, b: any): number => numberCompare(a[item.name], b[item.name]),
       };
     });
     setColumns(column);
@@ -137,13 +130,11 @@ export const Overview: React.FC<IProps> = (props) => {
   );
 
   const stepTimeBreakDownTitle = React.useMemo(
-    () => chartHeaderRenderer('Step Time Breakdown', StepTimeBreakDownTooltip),
+    () => chartHeaderRenderer('Step Time Breakdown', stepTimeBreakDownTooltip),
     [tooltipCommonClasses, chartHeaderRenderer]
   );
 
-  const cardSizes = gpuMetrics
-    ? ([2, 3, 7] as const)
-    : ([4, undefined, 8] as const);
+  const cardSizes = gpuMetrics ? ([2, 3, 7] as const) : ([4, undefined, 8] as const);
 
   return (
     <div className={classes.root}>
@@ -156,10 +147,7 @@ export const Overview: React.FC<IProps> = (props) => {
                   <CardHeader title='Configuration' />
                   <CardContent className={classes.topGraph}>
                     {environments.map((environment) => (
-                      <TextListItem
-                        name={environment.title}
-                        value={environment.value}
-                      />
+                      <TextListItem name={environment.title} value={environment.value} />
                     ))}
                   </CardContent>
                 </Card>
@@ -170,19 +158,10 @@ export const Overview: React.FC<IProps> = (props) => {
           {gpuMetrics && (
             <Grid item sm={cardSizes[1]}>
               <Card variant='outlined'>
-                <CardHeader
-                  title={chartHeaderRenderer('GPU Summary', gpuMetrics.tooltip)}
-                />
-                <CardContent
-                  className={classes.topGraph}
-                  style={{ overflow: 'auto' }}
-                >
+                <CardHeader title={chartHeaderRenderer('GPU Summary', gpuMetrics.tooltip)} />
+                <CardContent className={classes.topGraph} style={{ overflow: 'auto' }}>
                   {gpuMetrics.data.map((metric) => (
-                    <TextListItem
-                      name={metric.title}
-                      value={metric.value}
-                      dangerouslyAllowHtml
-                    />
+                    <TextListItem name={metric.title} value={metric.value} dangerouslyAllowHtml />
                   ))}
                 </CardContent>
               </Card>
@@ -203,10 +182,7 @@ export const Overview: React.FC<IProps> = (props) => {
                     />
                   </Grid>
                   <Grid item sm={5}>
-                    <PieChart
-                      graph={synthesizedPieGraph}
-                      height={topGraphHeight}
-                    />
+                    <PieChart graph={synthesizedPieGraph} height={topGraphHeight} />
                   </Grid>
                 </Grid>
               </CardContent>
@@ -219,12 +195,8 @@ export const Overview: React.FC<IProps> = (props) => {
               <CardHeader title={stepTimeBreakDownTitle} />
               <CardContent>
                 <DataLoading value={steps}>
-                  {(graph) => (
-                    <SteppedAreaChart
-                      graph={graph}
-                      hAxisTitle='Step'
-                      vAxisTitle={'Step Time (microseconds)'}
-                    />
+                  {(graph): JSX.Element => (
+                    <SteppedAreaChart graph={graph} hAxisTitle='Step' vAxisTitle={'Step Time (microseconds)'} />
                   )}
                 </DataLoading>
               </CardContent>

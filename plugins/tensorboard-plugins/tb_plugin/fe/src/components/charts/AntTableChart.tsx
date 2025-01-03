@@ -23,30 +23,24 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const getTableColumns = function (
-  columns: any,
-  sort: string | undefined,
-  tooltipClass: string
-) {
+const getTableColumns = function (columns: any, sort: string | undefined, tooltipClass: string): any {
   let i = 0;
   return columns.map((col: any) => {
     const key = `col${i++}`;
-    const stringCompare = (a: any, b: any) => a[key].localeCompare(b[key]);
-    const numberCompare = (a: any, b: any) => (a[key] || 0) - (b[key] || 0);
+    const stringCompare = (a: any, b: any): number => a[key].localeCompare(b[key]);
+    const numberCompare = (a: any, b: any): number => (a[key] || 0) - (b[key] || 0);
     return {
       dataIndex: key,
       key: key,
       title: col.name,
       sorter: col.type === 'string' ? stringCompare : numberCompare,
       defaultSortOrder: sort === col.name ? ('descend' as const) : undefined,
-      showSorterTooltip: col.tooltip
-        ? { title: col.tooltip, overlayClassName: tooltipClass }
-        : true,
+      showSorterTooltip: col.tooltip ? { title: col.tooltip, overlayClassName: tooltipClass } : true,
     };
   });
 };
 
-const getTableRows = function (rows: any) {
+const getTableRows = function (rows: any): any {
   return rows.map((row: any) => {
     let i = 0;
     const res: any = {};
@@ -72,18 +66,24 @@ export const AntTableChart: React.FC<IProps> = (props) => {
   const key: string = React.useMemo(() => `${Math.random()}`, [graph.columns]);
 
   const [pageSize, setPageSize] = React.useState(initialPageSize ?? 30);
-  const onShowSizeChange = (current: number, size: number) => {
+  const onShowSizeChange = (current: number, size: number): void => {
     setPageSize(size);
   };
 
-  const onRow = (record: object, rowIndex?: number) => {
+  const onRow = (
+    record: object,
+    rowIndex?: number
+  ): {
+    onMouseEnter: (event: any) => void;
+    onMouseLeave: (event: any) => void;
+  } => {
     return {
-      onMouseEnter: (event: any) => {
+      onMouseEnter: (event: any): void => {
         if (onRowSelected) {
           onRowSelected(record, rowIndex);
         }
       },
-      onMouseLeave: (event: any) => {
+      onMouseLeave: (event: any): void => {
         if (onRowSelected) {
           onRowSelected(undefined, undefined);
         }

@@ -19,7 +19,7 @@ const useStyles = makeStyles(() => ({
   },
 }));
 
-export const CallFrameList = (props: IProps) => {
+export const CallFrameList = (props: IProps): React.JSX.Element => {
   const classes = useStyles();
 
   const renderItem = React.useCallback(
@@ -31,12 +31,5 @@ export const CallFrameList = (props: IProps) => {
     [classes.item]
   );
 
-  return (
-    <List
-      pagination={false}
-      size='small'
-      dataSource={props.callFrames}
-      renderItem={renderItem}
-    />
-  );
+  return <List pagination={false} size='small' dataSource={props.callFrames} renderItem={renderItem} />;
 };
