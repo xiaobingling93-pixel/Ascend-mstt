@@ -383,16 +383,16 @@ def record_accumulative_error_compare_result(input_data):
     compare_column.eb_status = eb_result
     compare_column.compare_result = accumulative_error_compare_result
     compare_column.compare_algorithm = CompareConst.ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME
-    message = ''
+    message = []
     if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
-        message += "ERROR: inf/nan错误率超过阈值\n"
+        message.append("ERROR: inf/nan错误率超过阈值\n")
     if compare_column.rel_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 相对误差错误率超过阈值\n"
+        message.append("ERROR: 相对误差错误率超过阈值\n")
     if compare_column.abs_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 绝对误差错误率超过阈值\n"
+        message.append("ERROR: 绝对误差错误率超过阈值\n")
     if compare_column.eb_status == CompareConst.ERROR:
-        message += "ERROR: 误差均衡性超过阈值\n"
-    compare_column.compare_message = message
+        message.append("ERROR: 误差均衡性超过阈值\n")
+    compare_column.compare_message = "\n".join(message)
     return compare_column.compare_result
 
 
