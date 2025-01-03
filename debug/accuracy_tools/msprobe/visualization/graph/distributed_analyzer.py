@@ -146,7 +146,7 @@ class DistributedAnalyzer:
                 if distributed_type == DistributedType.P2P:
                     config_info = self.config.get(api_name)
                     target_rank = self._get_target_rank(node, rank, config_info[1])
-                    if not target_rank:
+                    if target_rank is not None:
                         continue
                     # p2p通信节点，api名称+传输目标rank作为group_id
                     group_id = api_name + Const.RANK + str(target_rank)
@@ -237,7 +237,7 @@ class DistributedAnalyzer:
         target_rank = self._get_target_rank(node, rank, config_info[1])
         if target_rank is None:
             return
-        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id)
+        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
         target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
         if not target_node:
             return
@@ -288,7 +288,7 @@ class DistributedAnalyzer:
         group_ranks, group_id = self._get_group_info(node, rank)
         if not group_ranks or not group_id:
             return
-        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id)
+        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
         matched_distributed = {'communications_type': communications_type}
         nodes_info = {}
         for target_rank in group_ranks:
