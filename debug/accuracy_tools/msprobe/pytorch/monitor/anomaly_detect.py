@@ -25,7 +25,7 @@ import pandas as pd
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.file_utils import change_mode, create_directory, write_df_to_csv
 from msprobe.core.common.const import FileCheckConst, MonitorConst
 

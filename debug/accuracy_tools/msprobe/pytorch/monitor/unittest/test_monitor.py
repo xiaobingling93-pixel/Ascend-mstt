@@ -5,7 +5,7 @@ from glob import glob
 
 import pandas as pd
 
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 
 
 def parse_logfile(logfile):

@@ -25,7 +25,7 @@ import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import load_json, save_json
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -831,8 +831,9 @@ class TrainerMon:
         def patch_sync(sync_grad_func):
             def wrapper(bucket):
                 grad_dict = {}
+                bucket_params_id_list = [id(params) for params in bucket.params_list]
                 for param, name in self.param2name.items():
-                    if param not in bucket.params_list:
+                    if id(param) not in bucket_params_id_list:
                         continue
                     grad = param.main_grad if self.params_have_main_grad else param.grad
                     if grad is None:
