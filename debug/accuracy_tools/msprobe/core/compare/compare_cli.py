@@ -59,6 +59,7 @@ def compare_cli(args):
             compare(input_param, args.output_path, **kwargs)
         else:
             kwargs = {
+                **common_kwargs,
                 "stack_mode": args.stack_mode,
                 "cell_mapping": args.cell_mapping,
                 "api_mapping": args.api_mapping,
@@ -67,6 +68,7 @@ def compare_cli(args):
             ms_compare(input_param, args.output_path, **kwargs)
     elif check_file_type(npu_path) == FileCheckConst.DIR and check_file_type(bench_path) == FileCheckConst.DIR:
         kwargs = {
+            **common_kwargs,
             "is_print_compare_log": input_param.get("is_print_compare_log", True),
             "cell_mapping": args.cell_mapping,
             "api_mapping": args.api_mapping,
