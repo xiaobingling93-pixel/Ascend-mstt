@@ -31,6 +31,8 @@ except ImportError:
 else:
     is_gpu = False
     current_device = "npu"
+    from torch_npu.contrib import transfer_to_npu
+from torch.cuda.amp import autocast
 import torch
 from tqdm import tqdm
 
@@ -315,7 +317,7 @@ def get_api_info(api_info_dict, api_name, real_data_path):
     need_grad = True
     if api_info_dict.get("input_kwargs") and "out" in api_info_dict.get("input_kwargs"):
         need_grad = False
-    args, kwargs = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
+    args, kwargs, output_dtype = gen_api_params(api_info_dict, api_name, need_grad, convert_type, real_data_path)
     return args, kwargs, need_grad
 
 

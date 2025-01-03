@@ -378,6 +378,22 @@ def gen_list_kwargs(kwargs_item_value, api_name, convert_type, real_data_path=No
     return kwargs_item_result
 
 
+def get_output_dtype(api_info):
+    """
+    Function Description:
+        Based on API basic information, get the output data dtype
+    Parameter:
+        api_info: API basic information. Dict
+    """
+    dtype = None
+    output_info = api_info.get("output")
+    if output_info:
+        output_type = output_info.get("type")
+        if output_type in TENSOR_DATA_LIST:
+            return output_info.get("dtype")
+    return dtype
+
+
 def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
     """
     Function Description:
@@ -404,4 +420,5 @@ def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_d
     else:
         logger.warning(f'Warning: No args in {api_info} ')
         args_params = []
-    return args_params, kwargs_params
+    output_dtype = get_output_dtype(api_info)
+    return args_params, kwargs_params, output_dtype
