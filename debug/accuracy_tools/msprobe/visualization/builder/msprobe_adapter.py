@@ -18,6 +18,8 @@ from msprobe.core.compare.acc_compare import read_op, merge_tensor, get_accuracy
 from msprobe.core.common.utils import set_dump_path, get_dump_mode
 from msprobe.visualization.utils import GraphConst
 from msprobe.core.common.const import Const
+from msprobe.core.compare.acc_compare import ModeConfig
+
 
 # 用于将节点名字解析成对应的NodeOp的规则
 op_patterns = [
@@ -50,12 +52,14 @@ def run_real_data(dump_path_param, csv_path, framework, is_cross_frame=False):
         framework: 框架类型, pytorch或mindspore
         is_cross_frame: 是否进行跨框架比对，仅支持mindspore比pytorch, 其中pytorch为标杆
     """
+    mode_config = ModeConfig(stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=Const.ALL)
+
     if framework == Const.PT_FRAMEWORK:
         from msprobe.pytorch.compare.pt_compare import PTComparator
-        return PTComparator().do_multi_process(dump_path_param, csv_path)
+        return PTComparator(mode_config).do_multi_process(dump_path_param, csv_path)
     else:
         from msprobe.mindspore.compare.ms_compare import MSComparator
-        ms_comparator = MSComparator()
+        ms_comparator = MSComparator(mode_config)
         ms_comparator.cross_frame = is_cross_frame
         return ms_comparator.do_multi_process(dump_path_param, csv_path)
 
