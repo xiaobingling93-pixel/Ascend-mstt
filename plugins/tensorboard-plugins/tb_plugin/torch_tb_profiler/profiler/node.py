@@ -6,7 +6,7 @@ from abc import ABC
 from typing import List, Optional, Tuple
 
 from .. import utils
-from .tensor_core import TC_Allowlist, TC_OP_Allowlist
+from .tensor_core import TcAllowlist, TcOpAllowlist
 from .trace import (DurationEvent, EventTypes, KernelEvent, ModuleEvent,
                     OperatorEvent, PLProfileEvent, NcclOpNameSet, GlooOpNameSet)
 
@@ -84,14 +84,18 @@ class OperatorNode(HostNode):
         self.callstack = callstack
         self.self_host_duration = self_host_duration
         self.self_device_duration = self_device_duration
-        self.tc_eligible = self.name in TC_OP_Allowlist
+        self.tc_eligible = self.name in TcOpAllowlist
         self.tc_self_duration = 0  # Time of TC kernels launched by this op excluding its children operators.
         self.tc_total_duration = 0  # Time of TC kernels launched by this op including its children operators.
 
     def fill_stats(self):
+        def sort_key(x):
+            if x.start_time and x.end_time:
+                return x.start_time, -x.end_time
+            else:
+                return sys.maxsize, -sys.maxsize - 1
         self.children.sort(key=lambda x: (x.start_time, -x.end_time))
-        self.runtimes.sort(key=lambda x: (x.start_time, -x.end_time)
-                           if x.start_time and x.end_time else (sys.maxsize, -sys.maxsize - 1))
+        self.runtimes.sort(key=sort_key)
 
         for child in self.children:
             child.fill_stats()
@@ -272,7 +276,7 @@ class DeviceNode(BaseNode):
         self.block = block
         self.regs_per_thread = regs_per_thread
         self.shared_memory = shared_memory
-        self.tc_used = self.name in TC_Allowlist
+        self.tc_used = self.name in TcAllowlist
         self.device_id = device_id
 
     @classmethod

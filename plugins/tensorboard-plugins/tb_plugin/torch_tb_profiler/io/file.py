@@ -465,7 +465,7 @@ class File(object):
                 if line and (line[-1] == "\n" or not self.buff):
                     return line
                 if not self.buff:
-                    raise StopIteration()
+                    return None
             else:
                 index = self.buff.find("\n", self.buff_offset)
                 if index != -1:
@@ -480,7 +480,7 @@ class File(object):
                 if line and (line[-1] == "\n" or not self.buff):
                     return line
                 if not self.buff:
-                    raise StopIteration()
+                    return None
 
     def next(self):
         return self.__next__()

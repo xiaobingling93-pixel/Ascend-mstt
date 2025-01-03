@@ -49,7 +49,6 @@ def aggregate_ops(op_list: List[OperatorNode],
         agg.self_device_duration += op.self_device_duration
         agg.tc_self_duration += op.tc_self_duration
         agg.tc_total_duration += op.tc_total_duration
-        return agg
 
     agg_dicts: List[Dict[str, OperatorAgg]] = [{} for _ in range(len(keys_func))]
     for op in op_list:

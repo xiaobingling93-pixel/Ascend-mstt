@@ -3,6 +3,7 @@
 # -------------------------------------------------------------------------
 import sys
 from collections import defaultdict
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -29,6 +30,17 @@ class ProfileRole(IntEnum):
     CpuOp = 6
     Other = 7
     Total = 8
+
+
+@dataclass
+class NodeInfoParams:
+    event: DurationEvent
+    corrid_to_device: Dict[int, List[DeviceNode]]
+    corrid_to_runtime: Dict[int, RuntimeNode]
+    externalid_to_runtime: Dict[int, List[RuntimeNode]]
+    tid2list: Dict[int, List[OperatorNode]]
+    pl_tid2list: Dict[int, List[PLProfileNode]]
+    tid2zero_rt_list: Dict[int, List[RuntimeNode]]
 
 
 class NodeParserMixin:
@@ -65,14 +77,9 @@ class NodeParserMixin:
         for event in events:
             if event.type == EventTypes.MEMORY:
                 continue
-            self._parse_node(
-                event,
-                corrid_to_device,
-                corrid_to_runtime,
-                externalid_to_runtime,
-                tid2list,
-                pl_tid2list,
-                tid2zero_rt_list)
+            params = NodeInfoParams(event, corrid_to_device, corrid_to_runtime, externalid_to_runtime, tid2list,
+                                    pl_tid2list, tid2zero_rt_list)
+            self._parse_node(params)
 
         if CommLibTypes.Nccl in self.comm_lib:
             for event in events:
@@ -113,14 +120,14 @@ class NodeParserMixin:
 
         return comm_node is not None
 
-    def _parse_node(self,
-                    event: DurationEvent,
-                    corrid_to_device: Dict[int, List[DeviceNode]],
-                    corrid_to_runtime: Dict[int, RuntimeNode],
-                    externalid_to_runtime: Dict[int, List[RuntimeNode]],
-                    tid2list: Dict[int, List[OperatorNode]],
-                    pl_tid2list: Dict[int, List[PLProfileNode]],
-                    tid2zero_rt_list: Dict[int, List[RuntimeNode]]):
+    def _parse_node(self, params: NodeInfoParams):
+        event = params.event
+        corrid_to_device = params.corrid_to_device
+        corrid_to_runtime = params.corrid_to_runtime
+        externalid_to_runtime = params.externalid_to_runtime
+        tid2list = params.tid2list
+        pl_tid2list = params.pl_tid2list
+        tid2zero_rt_list = params.tid2zero_rt_list
         corrid = event.correlation_id
         tid = event.tid
         if event.type in [EventTypes.KERNEL, EventTypes.MEMCPY, EventTypes.MEMSET]:
@@ -223,8 +230,8 @@ class StepParser:
             self.steps.append((self.cpu_min_ts, self.cpu_max_ts))
             self.steps_names.append('0')
 
-        for i in range(len(self.role_ranges)):
-            self.role_ranges[i] = merge_ranges(self.role_ranges[i])
+        for i, role_range in enumerate(self.role_ranges):
+            self.role_ranges[i] = merge_ranges(role_range)
 
     def update_device_steps(self, runtime_node_list: List[RuntimeNode]):
         self._update_steps_duration(*self._find_device_steps(runtime_node_list))
@@ -359,9 +366,9 @@ class StepParser:
         # Change step time to device side on the condition that any step have device time.
         is_use_gpu = prev_step_end_time is not None
         if is_use_gpu:
-            for i_step in range(len(self.steps)):
-                step_start_time = max(prev_step_end_time, self.steps[i_step][0])
-                step_end_time = self.steps[i_step][1]
+            for i_step, step in enumerate(self.steps):
+                step_start_time = max(prev_step_end_time, step[0])
+                step_end_time = step[1]
                 if steps_device[i_step][0] == sys.maxsize:  # When step i_step has no device event.
                     # Assign to step_start_time when kernel is behind host step end.
                     step_end_time = max(step_end_time, step_start_time)
