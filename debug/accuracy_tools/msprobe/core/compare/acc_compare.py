@@ -38,7 +38,7 @@ from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode,
 
 
 class ModeConfig:
-    def __init__(self, stack_mode, auto_analyze, fuzzy_match, dump_mode):
+    def __init__(self, stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=None):
         self.stack_mode = stack_mode
         self.auto_analyze = auto_analyze
         self.fuzzy_match = fuzzy_match
