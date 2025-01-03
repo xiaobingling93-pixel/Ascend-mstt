@@ -84,6 +84,7 @@ def compare(input_param, output_path, **kwargs):
         auto_analyze = kwargs.get('auto_analyze', True)
         fuzzy_match = kwargs.get('fuzzy_match', False)
         data_mapping = kwargs.get('data_mapping', None)
+        suffix = kwargs.get('suffix', '')
 
         set_dump_path(input_param)
         dump_mode = get_dump_mode(input_param)
@@ -100,4 +101,4 @@ def compare(input_param, output_path, **kwargs):
 
     mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
     pt_comparator = PTComparator(mode_config, data_mapping)
-    pt_comparator.compare_core(input_param, output_path)
+    pt_comparator.compare_core(input_param, output_path, suffix=suffix)
