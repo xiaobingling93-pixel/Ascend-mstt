@@ -385,13 +385,11 @@ def get_output_dtype(api_info):
     Parameter:
         api_info: API basic information. Dict
     """
-    dtype = None
+    output_dtype = None
     output_info = api_info.get("output")
     if output_info:
-        output_type = output_info.get("type")
-        if output_type in TENSOR_DATA_LIST:
-            return output_info.get("dtype")
-    return dtype
+        output_dtype = output_info[0].get("dtype")
+    return output_dtype
 
 
 def gen_api_params(api_info, api_name, need_grad=True, convert_type=None, real_data_path=None):
