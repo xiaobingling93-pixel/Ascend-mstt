@@ -110,7 +110,7 @@ def is_json_file(file_path):
         return False
 
 
-def check_compare_param(input_param, output_path, dump_mode):
+def check_compare_param(input_param, output_path, dump_mode, stack_mode):
     if not isinstance(input_param, dict):
         logger.error(f"Invalid input parameter 'input_param', the expected type dict but got {type(input_param)}.")
         raise CompareException(CompareException.INVALID_PARAM_ERROR)
@@ -128,7 +128,8 @@ def check_compare_param(input_param, output_path, dump_mode):
 
     check_json_path("npu_json_path")
     check_json_path("bench_json_path")
-    check_json_path("stack_json_path")
+    if stack_mode:
+        check_json_path("stack_json_path")
 
     if dump_mode == Const.ALL:
         check_file_or_directory_path(input_param.get("npu_dump_data_dir"), True)

@@ -94,7 +94,7 @@ def compare(input_param, output_path, **kwargs):
             stack_mode = set_stack_json_path(input_param)  # set stack_mode and set "stack_json_path" in input_param
         check_configuration_param(stack_mode, auto_analyze, fuzzy_match, input_param.get('is_print_compare_log', True))
         create_directory(output_path)
-        check_compare_param(input_param, output_path, dump_mode)
+        check_compare_param(input_param, output_path, dump_mode, stack_mode)
     except (CompareException, FileCheckException) as error:
         logger.error('Compare failed. Please check the arguments and do it again!')
         raise CompareException(error.code) from error
