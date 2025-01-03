@@ -437,9 +437,11 @@ def merge_tensor(tensor_list, dump_mode):
         op_dict["data_name"] = []
 
     for tensor in tensor_list:
+        # A dict(len=2) with 'full_op_name' and 'full_info' is added to the tensor only if self.stack_mode is True
         if len(tensor) == 2:
             op_dict['stack_info'].append(tensor['full_info'])
             break
+
         op_dict["op_name"].append(tensor['full_op_name'])
         name_ele_list = tensor['full_op_name'].split(Const.SEP)
         name_to_struct_mapping = {
