@@ -15,17 +15,17 @@
 
 import functools
 import threading
+from collections import defaultdict
 
 import torch
 import torch.nn as nn
 import torch.utils.hooks as full_hooks
 
-from msprobe.core.common.const import Const
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
 
 class HOOKModule(nn.Module):
-    module_count = {}
+    module_count = defaultdict(int)
     inner_stop_hook = {}
 
     def __init__(self, build_hook) -> None:
@@ -41,12 +41,7 @@ class HOOKModule(nn.Module):
             if hasattr(self, "prefix_op_name_"):
                 self.prefix = self.prefix_op_name_
 
-            if self.prefix not in HOOKModule.module_count:
-                HOOKModule.module_count[self.prefix] = 1
-                self.prefix += '0' + Const.SEP
-            else:
-                HOOKModule.module_count[self.prefix] += 1
-                self.prefix = self.prefix + str(HOOKModule.module_count[self.prefix] - 1) + Const.SEP
+            self.forward_data_collected= False
             forward_pre_hook, forward_hook, backward_hook, _ = build_hook(self.prefix)
             if torch_version_above_or_equal_2:
                 self.register_forward_pre_hook(forward_pre_hook, with_kwargs=True)
@@ -66,9 +61,17 @@ class HOOKModule(nn.Module):
             HOOKModule.inner_stop_hook[self.current_thread] = False
         return result
 
-    @classmethod
-    def reset_module_stats(cls):
-        cls.module_count = {}
+    @staticmethod
+    def reset_module_stats():
+        HOOKModule.module_count = defaultdict(int)
+
+    @staticmethod
+    def add_module_count(name):
+        HOOKModule.module_count[name] += 1
+
+    @staticmethod
+    def get_module_count(name):
+        return HOOKModule.module_count[name]
 
     def _call_func(self, *args, **kwargs):
         full_backward_hooks, non_full_backward_hooks = [], []

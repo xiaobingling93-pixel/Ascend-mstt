@@ -40,6 +40,7 @@ from msprobe.mindspore.common.utils import get_rank_if_initialized, clean_input_
 from msprobe.mindspore.dump.hook_cell.api_registry import api_register
 from msprobe.mindspore.dump.hook_cell.primitive_hooks import PrimitiveHookService
 from msprobe.mindspore.dump.jit_dump import JitDump
+from msprobe.mindspore.dump.hook_cell.hook_cell import HOOKCell
 
 
 class Service:
@@ -51,6 +52,7 @@ class Service:
         self.cell_processor = CellProcessor(self.data_collector.scope)
         self.primitive_hook_service = PrimitiveHookService(self)
         self.switch = False
+        self.inner_switch = False
         self.primitive_switch = False
         self.current_iter = 0
         self.first_start = True
@@ -84,23 +86,31 @@ class Service:
 
     def build_hook(self, target_type, name):
         def pre_hook(api_or_cell_name, cell, input_data):
-            if not self.should_excute_hook():
+            if not self.should_execute_hook():
                 clean_input_kwargs(cell)
                 return None
+
             with _no_grad():
+                self.inner_switch = True
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+                else:
+                    HOOKCell.add_cell_count(name)
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
                 self.data_collector.update_api_or_module_name(api_or_cell_name)
                 self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
+                self.inner_switch = False
                 return input_data
 
-        def grad_hook(ori_name, param_name):
+        def grad_hook(cell, ori_name, param_name):
             def hook_fn(grad):
-                if not self.should_excute_hook():
+                if not self.should_execute_hook(cell):
                     return None
+                self.inner_switch = True
                 self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
+                self.inner_switch = False
                 return None
+
             return hook_fn
 
         def register_param_hook(cell_name, cell, params_dict):
@@ -113,16 +123,19 @@ class Service:
                     # 注册hook时，初始化grad_name的data_info
                     data_info = {grad_name: {key: [None] for key in params_dict}}
                     # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                    self.data_collector.handle_data(grad_name, data_info, flush=self.data_collector.data_processor.is_terminated)
+                    self.data_collector.handle_data(grad_name, data_info,
+                                                    flush=self.data_collector.data_processor.is_terminated)
                     for param_name, param in params_dict.items():
-                        param.register_hook(grad_hook(ori_name, param_name))
+                        param.register_hook(grad_hook(cell, ori_name, param_name))
                     cell.has_param_hook = True
 
         def forward_hook(api_or_cell_name, cell, input_data, output):
-            if not self.should_excute_hook():
+            if not self.should_execute_hook():
                 clean_input_kwargs(cell)
                 return None
             with _no_grad():
+                self.inner_switch = True
+                cell.forward_data_collected= True
                 module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
                 if target_type == BaseScope.Module_Type_Module:
                     api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
@@ -139,13 +152,17 @@ class Service:
                     self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
                 if self.data_collector.if_return_forward_new_output():
-                    return self.data_collector.get_forward_new_output()
+                    forward_new_output = self.data_collector.get_forward_new_output()
+                    self.inner_switch = False
+                    return forward_new_output
                 clean_input_kwargs(cell)
+                self.inner_switch = False
                 return output
 
         def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
-            if not self.should_excute_hook():
+            if not self.should_execute_hook(cell):
                 return
+            self.inner_switch = True
 
             need_exchange = True
             if target_type == BaseScope.Module_Type_Module:
@@ -161,13 +178,18 @@ class Service:
                 else:
                     module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_input, grad_output=grad_output)
                 self.data_collector.backward_data_collect(api_or_cell_name, cell, pid, module_input_output)
+            self.inner_switch = False
 
         pid = os.getpid()
-        forward_name_template = name + Const.FORWARD
-        backward_name_template = name + Const.BACKWARD
-        pre_forward_hook = functools.partial(pre_hook, forward_name_template)
-        forward_hook = functools.partial(forward_hook, forward_name_template)
-        backward_hook = functools.partial(backward_hook, backward_name_template)
+        if target_type == BaseScope.Module_Type_Module:
+            full_forward_name = name + Const.FORWARD
+            full_backward_name = name + Const.BACKWARD
+        else:
+            full_forward_name = name + str(HOOKCell.get_cell_count(name)) + Const.SEP + Const.FORWARD
+            full_backward_name = name + str(HOOKCell.get_cell_count(name)) + Const.SEP + Const.BACKWARD
+        pre_forward_hook = functools.partial(pre_hook, full_forward_name)
+        forward_hook = functools.partial(forward_hook, full_forward_name)
+        backward_hook = functools.partial(backward_hook, full_backward_name)
 
         def wrap_pre_forward_hook(cell, input_data):
             return pre_forward_hook(cell, input_data)
@@ -201,6 +223,7 @@ class Service:
             primitive.__class__ = new_primitive
 
     def step(self):
+        self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         self.reset_status()
@@ -249,25 +272,6 @@ class Service:
         logger.info(f"Dump data will be saved in {self.dump_iter_dir}.")
         JitDump.jit_dump_switch = True
 
-    def forward_backward_dump_end(self):
-        if self.should_stop_service:
-            return
-        logger.info(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() is set successfully. ")
-        if not self.start_call:
-            logger.error(f"{Const.TOOL_NAME}: debugger.start() is not set in the current scope.")
-            raise Exception("debugger.start() is not set in the current scope.")
-        if not self.switch:
-            logger.error(f"{Const.TOOL_NAME}: debugger.forward_backward_dump_end() should be called between "
-                         "debugger.start() and debugger.stop() ")
-            raise Exception("debugger.stop() is already called. ")
-        if self.config.step and self.current_iter not in self.config.step:
-            return
-        if self.config.rank and self.current_rank not in self.config.rank:
-            return
-        self.primitive_switch = False
-        api_register.api_set_ori_func()
-        JitDump.jit_dump_switch = False
-
     def stop(self):
         if self.should_stop_service:
             return
@@ -293,8 +297,12 @@ class Service:
             return True
         return False
 
-    def should_excute_hook(self):
-        if not self.switch:
+    def should_execute_hook(self, cell=None):
+        if cell is None and not self.switch:
+            return False
+        if cell is not None and not cell.forward_data_collected:
+            return False
+        if self.inner_switch:
             return False
         if not self.data_collector or self.data_collector.data_processor.is_terminated:
             return False
@@ -336,6 +344,7 @@ class Service:
             for name, cell in self.model.cells_and_names():
                 if cell == self.model:
                     continue
+                cell.forward_data_collected= False
                 prefix = 'Cell' + Const.SEP + name + Const.SEP + \
                          cell.__class__.__name__ + Const.SEP
                 _, forward_hook, backward_hook = self.build_hook(BaseScope.Module_Type_Module, prefix)

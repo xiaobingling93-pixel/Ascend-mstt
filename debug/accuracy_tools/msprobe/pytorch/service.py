@@ -27,7 +27,7 @@ from msprobe.core.data_dump.data_processor.base import ModuleForwardInputsOutput
 from msprobe.core.data_dump.scope import BaseScope
 from msprobe.pytorch.api_accuracy_checker.common.utils import ApiData
 from msprobe.pytorch.common.log import logger
-from msprobe.pytorch.common.utils import get_rank_if_initialized, remove_dropout
+from msprobe.pytorch.common.utils import get_rank_if_initialized
 from msprobe.pytorch.dump.kernel_dump.kernel_config import create_kernel_config_json
 from msprobe.pytorch.dump.module_dump.module_processer import ModuleProcesser
 from msprobe.pytorch.hook_module.api_registry import api_register
@@ -39,6 +39,7 @@ if torch_version_above_or_equal_2:
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
+
 class Service:
     def __init__(self, config):
         self.model = None
@@ -46,6 +47,7 @@ class Service:
         self.data_collector = build_data_collector(config)
         self.module_processor = ModuleProcesser(self.data_collector.scope)
         self.switch = False
+        self.inner_switch = False
         self.current_iter = 0
         self.first_start = True
         self.current_rank = None
@@ -53,32 +55,35 @@ class Service:
         self.should_stop_service = False
         self.attl = None
 
-    @staticmethod
-    def forward_backward_dump_end():
-        logger.info_on_rank_0("Data needed ends here.")
-        api_register.api_originality()
-
     def build_hook(self, module_type, name):
         def pre_hook(api_or_module_name, module, args, kwargs):
             if not self.should_execute_hook():
                 return args, kwargs
 
+            self.inner_switch = True
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name[-1]
+            else:
+                HOOKModule.add_module_count(name)
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
+                self.inner_switch = False
                 return None, None
             if self.data_collector:
                 module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=None)
                 self.data_collector.forward_input_data_collect(api_or_module_name, module, pid, module_input_output)
+
+            self.inner_switch = False
             return args, kwargs
 
-        def grad_hook(ori_name, param_name):
+        def grad_hook(module, ori_name, param_name):
             def hook_fn(grad):
-                if not self.should_execute_hook():
+                if not self.should_execute_hook(module):
                     return grad
+                self.inner_switch = True
                 self.data_collector.params_data_collect(ori_name, param_name, pid, grad)
+                self.inner_switch = False
                 return grad
 
             return hook_fn
@@ -96,19 +101,29 @@ class Service:
                     self.data_collector.handle_data(grad_name, data_info,
                                                     flush=self.data_collector.data_processor.is_terminated)
                     for param_name, param in params_dict.items():
-                        param.register_hook(grad_hook(ori_name, param_name))
+                        param.register_hook(grad_hook(module, ori_name, param_name))
                     module.has_param_hook = True
 
         def forward_hook(api_or_module_name, module, args, kwargs, output):
             if not self.should_execute_hook():
                 return None
 
+            self.inner_switch = True
+            module.forward_data_collected= True
             if self.config.online_run_ut:
                 self.data_collector.update_api_or_module_name(api_or_module_name)
                 if self.data_collector.scope and not self.data_collector.scope.check(api_or_module_name):
                     return None
-                api_data = ApiData(name[:-1], args, kwargs, output, self.current_iter, self.current_rank)
+                api_data = ApiData(
+                    api_or_module_name[:-len(Const.FORWARD_NAME_SUFFIX)],
+                    args,
+                    kwargs,
+                    output,
+                    self.current_iter,
+                    self.current_rank
+                )
                 self.attl_send(api_data)
+                self.inner_switch = False
                 return None
 
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
@@ -137,39 +152,50 @@ class Service:
                 )
 
             if self.data_collector.if_return_forward_new_output():
-                return self.data_collector.get_forward_new_output()
+                forward_new_output = self.data_collector.get_forward_new_output()
+                self.inner_switch = False
+                return forward_new_output
+            self.inner_switch = False
             return output
 
         def forward_hook_torch_version_below_2(api_or_module_name, module, args, output):
             return forward_hook(api_or_module_name, module, args, {}, output)
 
         def backward_hook(api_or_module_name, module, grad_input, grad_output):
-            if not self.should_execute_hook():
+            if not self.should_execute_hook(module):
                 return
 
+            self.inner_switch = True
             if module_type == BaseScope.Module_Type_Module:
                 api_or_module_name = module.mindstudio_reserved_name[-1]
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
+                self.inner_switch = False
                 return
 
             if self.data_collector:
                 # 此处获取到的grad_input实际为反向过程的输出数据，grad_output为反向过程的输入数据，因此传入时调换顺序
                 module_input_output = ModuleBackwardInputsOutputs(grad_input=grad_output, grad_output=grad_input)
                 self.data_collector.backward_data_collect(api_or_module_name, module, pid, module_input_output)
+            self.inner_switch = False
 
         pid = os.getpid()
-        forward_name_template = name + Const.FORWARD
-        backward_name_template = name + Const.BACKWARD
-        pre_forward_hook_fn = functools.partial(pre_hook, forward_name_template)
-        forward_hook_fn = functools.partial(forward_hook, forward_name_template)
-        backward_hook_fn = functools.partial(backward_hook, backward_name_template)
-        forward_hook_torch_version_below_2_fn = functools.partial(forward_hook_torch_version_below_2,
-                                                                  forward_name_template)
+        full_forward_name = None
+        full_backward_name = None
+        if module_type == BaseScope.Module_Type_API:
+            full_forward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.FORWARD
+            full_backward_name = name + str(HOOKModule.get_module_count(name)) + Const.SEP + Const.BACKWARD
+        pre_forward_hook_fn = functools.partial(pre_hook, full_forward_name)
+        forward_hook_fn = functools.partial(forward_hook, full_forward_name)
+        backward_hook_fn = functools.partial(backward_hook, full_backward_name)
+        forward_hook_torch_version_below_2_fn = functools.partial(
+            forward_hook_torch_version_below_2,
+            full_forward_name
+        )
         return HookFn(pre_forward_hook_fn, forward_hook_fn, backward_hook_fn, forward_hook_torch_version_below_2_fn)
 
-    def start(self, model, api_origin=False):
+    def start(self, model):
         if self.need_stop_service():
             return
 
@@ -185,8 +211,6 @@ class Service:
                 return
             self.register_hook_new()
             self.first_start = False
-        if api_origin:
-            api_register.api_modularity()
         if self.config.online_run_ut and torch_version_above_or_equal_2:
             run_ut_dispatch(self.attl, True, self.config.online_run_ut_recompute)
         self.switch = True
@@ -213,6 +237,7 @@ class Service:
     def step(self):
         if self.should_stop_service:
             return
+        self.data_collector.write_json()
         self.current_iter += 1
         self.data_collector.update_iter(self.current_iter)
         self.reset_status()
@@ -236,8 +261,12 @@ class Service:
             return True
         return False
 
-    def should_execute_hook(self):
-        if not self.switch:
+    def should_execute_hook(self, module=None):
+        if module is None and not self.switch:
+            return False
+        if module is not None and not module.forward_data_collected:
+            return False
+        if self.inner_switch:
             return False
         if self.data_collector and self.data_collector.data_processor.is_terminated:
             return False
@@ -310,7 +339,7 @@ class Service:
         elif self.attl.socket_manager is not None:
             logger.info(f"pid: {os.getpid()} finished, start send STOP signal.")
             self.attl.socket_manager.send_stop_signal()
- 
+
     def reset_status(self):
         ModuleProcesser.reset_module_stats()
         HOOKModule.reset_module_stats()
@@ -318,7 +347,7 @@ class Service:
 
         if self.config.level == Const.LEVEL_L2:
             self.data_collector.data_processor.reset_status()
-            return 
+            return
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:

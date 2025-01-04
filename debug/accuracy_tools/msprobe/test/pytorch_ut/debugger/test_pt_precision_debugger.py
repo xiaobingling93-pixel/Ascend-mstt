@@ -83,19 +83,17 @@ class TestPrecisionDebugger(unittest.TestCase):
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
         debugger.config = MagicMock()
-        debugger.model = 'model'
-        debugger.api_origin = 'api_origin'
-        debugger.task = ''
+        debugger.task = 'statistics'
         debugger.start()
-        debugger.service.start.assert_called_once_with('model', 'api_origin')
-        self.assertFalse(debugger.api_origin)
+        debugger.service.start.assert_called_once()
 
     def test_forward_backward_dump_end(self):
         debugger = PrecisionDebugger(dump_path="./dump_path")
         debugger.service = MagicMock()
+        debugger.config = MagicMock()
+        debugger.task = 'statistics'
         debugger.forward_backward_dump_end()
-        debugger.service.forward_backward_dump_end.assert_called_once()
-        self.assertTrue(debugger.api_origin)
+        debugger.service.stop.assert_called_once()
 
     def test_stop_grad_probe(self):
         with self.assertRaises(Exception) as context:

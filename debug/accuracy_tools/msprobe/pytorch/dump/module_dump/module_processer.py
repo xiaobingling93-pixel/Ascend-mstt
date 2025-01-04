@@ -120,6 +120,7 @@ class ModuleProcesser:
         for name, module in model.named_modules():
             if module == model:
                 continue
+            module.forward_data_collected= False
             prefix_name = (
                     BaseScope.Module_Type_Module + Const.SEP +
                     name + Const.SEP +

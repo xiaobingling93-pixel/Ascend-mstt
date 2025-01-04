@@ -131,6 +131,7 @@ class Const:
     DUMP_PREFIX = ["Distributed", "Functional", "Torch", "Tensor", "Mint", "MintFunctional", "Primitive",
                    "Aten", "VF", "NPU", "Jit"]
     MODULE_PREFIX = ["Module", "Cell"]
+    FORWARD_NAME_SUFFIX = ".forward"
 
     # struct json param
     ORIGIN_DATA = "origin_data"
@@ -219,7 +220,6 @@ class Const:
     REPLACEMENT_CHARACTER = "_"
 
 
-
 class CompareConst:
     """
     Class for compare module const
@@ -277,43 +277,43 @@ class CompareConst:
     DEFAULT_RATIO_VALUE = 10000
     THOUSANDTH_PASS_VALUE = 0.999
     ZERO_SHAPE = '(0,)'
-    
+
     BENCHMARK_COMPARE_ALGORITHM_NAME = "标杆比对法"
     ULP_COMPARE_ALGORITHM_NAME = "ULP误差比对法"
     BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
     ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
     THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
     ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME = "累积误差比对法"
-    
+
     ABSOLUTE_THRESHOLD = 'absolute_threshold'
     BINARY_CONSISTENCY = 'binary_consistency'
     ULP_COMPARE = 'ulp_compare'
     THOUSANDTH_STANDARD = 'thousandth_threshold'
     BENCHMARK = 'benchmark'
     ACCUMULATIVE_ERROR_COMPARE = 'accumulative_error_compare'
-    
+
     SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
     RMSE_RATIO = "rmse_ratio"
     MAX_REL_ERR_RATIO = "max_rel_err_ratio"
     MEAN_REL_ERR_RATIO = "mean_rel_err_ratio"
     EB_RATIO = "eb_ratio"
-    
+
     SMALL_VALUE = "small_value"
     RMSE = "rmse"
     MAX_REL_ERR = "max_rel_err"
     MEAN_REL_ERR = "mean_rel_err"
     EB = "eb"
-    
+
     SMALL_VALUE_ERR_STATUS = "small_value_err_status"
     RMSE_STATUS = "rmse_status"
     MAX_REL_ERR_STATUS = "max_rel_err_status"
     MEAN_REL_ERR_STATUS = "mean_rel_err_status"
     EB_STATUS = "eb_status"
-    
+
     MEAN_ULP_ERR = "mean_ulp_err"
     ULP_ERR_PROPORTION = "ulp_err_proportion"
     ULP_ERR_PROPORTION_RATIO = "ulp_err_proportion_ratio"
-    
+
     ULP_ERR_STATUS = "ulp_err_status"
 
     COMPARE_RESULT_HEADER = [
@@ -570,7 +570,11 @@ class MonitorConst:
     DATABASE = "database"
     EMAIL = "email"
     OPT_TY = ['Megatron_DistributedOptimizer', 'Megatron_Float16OptimizerWithFloat16Params']
-    DEEPSPEED_OPT_TY = ("DeepSpeedZeroOptimizer_Stage0", "DeepSpeedZeroOptimizer_Stage1_or_2", "DeepSpeedZeroOptimizer_Stage3")
+    DEEPSPEED_OPT_TY = (
+        "DeepSpeedZeroOptimizer_Stage0",
+        "DeepSpeedZeroOptimizer_Stage1_or_2",
+        "DeepSpeedZeroOptimizer_Stage3"
+    )
     RULE_NAME = ['AnomalyTurbulence']
 
     DOT = "."
