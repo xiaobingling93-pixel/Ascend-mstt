@@ -132,7 +132,7 @@ class MemorySnapshot:
                     for i in range(self_metric_length, metric_length):
                         memory_metrics_keyed_by_node[node][device][i] += metrics[i]
 
-        for tid, root in tid2tree.items():
+        for _, root in tid2tree.items():
             for child in root.children:
                 traverse_node_memory(child)
 

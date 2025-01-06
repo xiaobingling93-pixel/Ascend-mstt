@@ -92,7 +92,7 @@ class OverallParser(object):
         for i, step in enumerate(steps):
             steps_stat = global_stats.intersection_with_step(step)
             self.steps_costs.append(OverallParser.Costs.create_from_statistics(steps_stat, step[1] - step[0]))
-            for cost_index in range(len(self.avg_costs.costs)):
+            for cost_index, _ in enumerate(self.avg_costs.costs):
                 self.avg_costs.costs[cost_index] += self.steps_costs[i].costs[cost_index]
 
             comm_costs = OverallParser.StepCommunicationCosts()
@@ -110,5 +110,5 @@ class OverallParser(object):
             self.communication_overlap.append(comm_costs)
 
         valid_steps = len(steps)
-        for i in range(len(self.avg_costs.costs)):
+        for i, _ in enumerate(self.avg_costs.costs):
             self.avg_costs.costs[i] /= valid_steps

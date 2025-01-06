@@ -1,12 +1,12 @@
 # -------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # --------------------------------------------------------------------------
+__all__ = ['EventTypes', 'create_event']
+
 from enum import IntEnum
 from typing import Dict, Optional
 
 from .. import utils
-
-__all__ = ['EventTypes', 'create_event']
 
 logger = utils.get_logger()
 

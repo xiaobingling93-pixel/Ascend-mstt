@@ -1,13 +1,13 @@
 # -------------------------------------------------------------------------
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # -------------------------------------------------------------------------
-class TC_Allowlist_Meta(type):
-    # Enable grammar sugar as 'v in TC_Allowlist'.
+class TcAllowlistMeta(type):
+    # Enable grammar sugar as 'v in TcAllowlist'.
     def __contains__(cls, item):
         return cls.__contains__(item)
 
 
-class TC_Allowlist(metaclass=TC_Allowlist_Meta):
+class TcAllowlist(metaclass=TcAllowlistMeta):
     allowlist = ['h884', 's884', 'h1688', 's1688', 'hmma', 'i8816', '16816',
                  'dgrad_1x1_stride_2x2', 'first_layer_wgrad_kernel', 'conv1x1',
                  'conv2d_c1_k1', 'direct_group', 'xmma_implicit_gemm',
@@ -23,7 +23,7 @@ class TC_Allowlist(metaclass=TC_Allowlist_Meta):
         return False
 
 
-class TC_OP_Allowlist(metaclass=TC_Allowlist_Meta):
+class TcOpAllowlist(metaclass=TcAllowlistMeta):
     allowlist = ['aten::_convolution', 'aten::conv1d', 'aten::conv2d', 'aten::conv3d', 'aten::conv_tbc',
                  'aten::conv_transpose1d', 'aten::conv_transpose2d', 'aten::conv_transpose3d',
                  'aten::convolution', 'aten::cudnn_convolution', 'aten::cudnn_convolution_transpose',
