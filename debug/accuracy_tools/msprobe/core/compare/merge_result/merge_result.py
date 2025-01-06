@@ -110,13 +110,17 @@ def check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num):
         Const.SUMMARY: CompareConst.SUMMARY_COMPARE_INDEX
     }
     valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
+
+    # 如果传入的compare_index_list为空，则比对指标为dump_mode对应的全部比对指标
     if not compare_index_list:
         return valid_compare_index
     if set(compare_index_list).issubset(valid_compare_index):
         return compare_index_list
     else:
-        logger.warning(f"Compare indexes in rank{rank_num} compare result are not consistent with dump task, please "
-                       f"check! The compare result will not be shown in merged result.")
+        invalid_compare_index = set(compare_index_list) - set(valid_compare_index)
+        logger.warning(f"Compare indexes in rank{rank_num} compare result are not consistent with "
+                       f"dump task({dump_mode}), please check! The compare result will not be shown in merged result. "
+                       f"The invalid compare indexes: {invalid_compare_index}.")
         return []
 
 
