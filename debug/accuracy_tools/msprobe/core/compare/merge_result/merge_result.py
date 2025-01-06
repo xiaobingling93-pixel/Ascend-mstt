@@ -95,7 +95,7 @@ def get_dump_mode(result_df, rank_num):
         return ""
 
 
-def check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num):
+def check_index_dump_mode_consistent(dump_mode, rank_num):
     """
     check compare index to merge is consistent with dump mode
     if compare_index_list is None, return all compare_indexes of dump mode
@@ -111,16 +111,20 @@ def check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num):
     }
     valid_compare_index = dump_mode_compare_index_map.get(dump_mode)
 
+    share_list = list(share_compare_index_list)
+
     # 如果传入的compare_index_list为空，则比对指标为dump_mode对应的全部比对指标
-    if not compare_index_list:
-        return valid_compare_index
-    if set(compare_index_list).issubset(valid_compare_index):
-        return compare_index_list
+    if not share_list:
+        share_compare_index_list.extend(valid_compare_index)
+        return list(share_compare_index_list)
+    if set(share_list).issubset(valid_compare_index):
+        return share_list
     else:
-        invalid_compare_index = set(compare_index_list) - set(valid_compare_index)
+        invalid_compare_index = set(valid_compare_index) - set(share_list)
         logger.warning(f"Compare indexes in rank{rank_num} compare result are not consistent with "
-                       f"dump task({dump_mode}), please check! The compare result will not be shown in merged result. "
-                       f"The invalid compare indexes: {invalid_compare_index}.")
+                       f"those in other compare results, please check!")
+        logger.warning(f"The compare result will not be shown in merged result.")
+        logger.warning(f"The invalid compare indexes: {invalid_compare_index}")
         return []
 
 
@@ -175,12 +179,14 @@ def table_value_check(value):
             f"Malicious value [{value}] is not allowed to be written into the merged xlsx.")
 
 
-def result_process(compare_result_path_list, api_list, compare_index_list):
+def result_process(compare_result_path_list, api_list):
     """
     process compare results into target intermediate dict list
     """
     compare_index_dict_list = []
     rank_num_list = []
+    compare_index_list = []
+
     for compare_result_path in compare_result_path_list:
         compare_index_dict = {}
         result_df = read_xlsx(compare_result_path)
@@ -194,10 +200,10 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
                 return [], [], []
             # 因为compare_index是指定的，固定不变，所以一旦compare_index是确定的，dump_mode也是确定的，
             # 所以只要校验compare_index和dump_mode一致性就能保证所有rank的结果都是dump_mode一致的
-            compare_index_list = check_index_dump_mode_consistent(compare_index_list, dump_mode, rank_num)
+            compare_index_list = check_index_dump_mode_consistent(dump_mode, rank_num)
             if len(compare_index_list) == 0:
                 return [], [], []
-            compare_index_dict = search_api_index_result(api_list, compare_index_list,
+            compare_index_dict = search_api_index_result(api_list, share_compare_index_list,
                                                          result_df, rank_num, compare_index_dict)
             compare_index_dict_list.append(compare_index_dict)
             rank_num_list.append(rank_num)
@@ -208,7 +214,7 @@ def result_process(compare_result_path_list, api_list, compare_index_list):
 
 
 def handle_multi_process(func, func_args, lock):
-    compare_result_path_list, api_list, compare_index_list = func_args
+    compare_result_path_list, api_list = func_args
 
     result_num = len(compare_result_path_list)
     process_num = int((multiprocessing.cpu_count() + 1) / 2)
@@ -238,7 +244,7 @@ def handle_multi_process(func, func_args, lock):
     for chunk in chunks:
         chunk_size = len(chunk)
         result = pool.apply_async(func,     # pool.apply_async立即返回ApplyResult对象，因此results中结果是顺序的
-                                  args=(chunk, api_list, compare_index_list),
+                                  args=(chunk, api_list),
                                   error_callback=err_call,
                                   callback=partial(update_progress, chunk_size, lock)
                                   )
@@ -329,7 +335,7 @@ def df_merge(all_result_df_list):
         logger.warning("Nothing to merge.")
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
     if len(all_result_df_list) == 1:
-        logger.info("Only one compare result get merge data.")
+        logger.info("Only one compare result gets merge data.")
     merge_df_base = all_result_df_list[0]
     for sublist in all_result_df_list[1:]:
         for i, sub_df in enumerate(sublist):
@@ -338,6 +344,12 @@ def df_merge(all_result_df_list):
         merge_df_base[i] = value.reindex(
             columns=[CompareConst.NPU_NAME] + [col for col in value.columns if col != CompareConst.NPU_NAME])
     return merge_df_base
+
+
+def initialize_compare_index(config):
+    global share_compare_index_list
+    manager = multiprocessing.Manager()
+    share_compare_index_list = manager.list(config.get("compare_index", []))  # 创建共享全局列表
 
 
 def merge_result(input_dir, output_dir, config_path):
@@ -354,9 +366,11 @@ def merge_result(input_dir, output_dir, config_path):
     if not api_list:
         logger.error('The APIs required to merge data were not found')
         raise CompareException(CompareException.MERGE_COMPARE_RESULT_ERROR)
-    compare_index_list = config.get('compare_index')
 
-    func_args = (compare_result_path_list, api_list, compare_index_list)
+    # 初始化共享全局变量share_compare_index_list
+    initialize_compare_index(config)
+
+    func_args = (compare_result_path_list, api_list)
     all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list = (
         handle_multi_process(result_process, func_args, multiprocessing.Manager().RLock()))
 
