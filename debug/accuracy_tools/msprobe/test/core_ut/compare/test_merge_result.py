@@ -1,13 +1,29 @@
 # coding=utf-8
+"""
+# Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
 import unittest
-import pandas as pd
 import multiprocessing
 from unittest.mock import patch, MagicMock
+
+import pandas as pd
+
+from msprobe.core.common.const import Const, CompareConst
 from msprobe.core.compare.merge_result.merge_result import check_compare_result_name, reorder_path, get_result_path, \
     get_dump_mode, check_index_dump_mode_consistent, extract_api_full_name, search_api_index_result, \
     table_value_check, result_process, handle_multi_process, generate_result_df, generate_merge_result, df_merge, \
-    merge_result
-from msprobe.core.common.const import Const, CompareConst
+    initialize_compare_index, merge_result
 
 
 class TestUtilsMethods(unittest.TestCase):
@@ -148,7 +164,7 @@ class TestUtilsMethods(unittest.TestCase):
 
     @patch("msprobe.core.compare.merge_result.merge_result.logger")
     def test_check_index_dump_mode_consistent_md5(self, mock_logger):
-        result = check_index_dump_mode_consistent(["index1", "index2"], Const.MD5, rank_num=1)
+        result = check_index_dump_mode_consistent(Const.MD5, rank_num=1)
 
         self.assertEqual(result, [])
         mock_logger.warning.assert_called_once_with(
@@ -157,9 +173,12 @@ class TestUtilsMethods(unittest.TestCase):
         )
 
     def test_check_index_dump_mode_consistent_valid_compare_index_subset(self):
-        compare_index_list = ["Cosine", "MaxAbsErr"]
-        result = check_index_dump_mode_consistent(compare_index_list, Const.ALL, rank_num=2)
+        config = {"compare_index": ["Cosine", "MaxAbsErr"]}
+        initialize_compare_index(config)
 
+        result = check_index_dump_mode_consistent(Const.ALL, rank_num=2)
+
+        compare_index_list = ["Cosine", "MaxAbsErr"]
         self.assertEqual(result, compare_index_list)
 
     def test_extract_api_full_name_all_apis_found(self):
@@ -233,10 +252,11 @@ class TestUtilsMethods(unittest.TestCase):
             "index2":
                 {"api1": {1: 300}, "api2": {1: 400}}
         }
+        config = {"compare_index": ["index1", "index2"]}
+        initialize_compare_index(config)
 
         compare_index_dict_list, rank_num_list, compare_index_list = result_process(self.compare_result_path_list,
-                                                                                    self.api_list,
-                                                                                    self.compare_index_list)
+                                                                                    self.api_list)
 
         self.assertEqual(len(compare_index_dict_list), 2)
         self.assertEqual(len(rank_num_list), 2)
@@ -263,7 +283,10 @@ class TestUtilsMethods(unittest.TestCase):
 
         compare_result_path_list = ['/path/to/compare_result_rank1-rank1.xlsx']
 
-        func_args = (compare_result_path_list, self.api_list, self.compare_index_list)
+        config = {"compare_index": ["index1", "index2"]}
+        initialize_compare_index(config)
+
+        func_args = (compare_result_path_list, self.api_list)
         lock = multiprocessing.Manager().RLock()
 
         all_compare_index_dict_list, all_rank_num_list, all_compare_index_list_list = handle_multi_process(result_process, func_args, lock)
