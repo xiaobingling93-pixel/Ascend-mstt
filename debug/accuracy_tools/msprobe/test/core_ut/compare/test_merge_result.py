@@ -346,6 +346,23 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(len(result), 1)
         pd.testing.assert_frame_equal(result[0], expected_df)
 
+    @patch("multiprocessing.Manager")
+    def test_initialize_compare_index(self, mock_manager):
+        mock_list = MagicMock()
+        mock_manager_instance = MagicMock()
+        mock_manager_instance.list.return_value = mock_list
+        mock_manager.return_value = mock_manager_instance
+
+        config = {"compare_index": [1, 2, 3]}
+
+        initialize_compare_index(config)
+
+        mock_manager.assert_called_once()
+        mock_manager_instance.list.assert_called_once_with([1, 2, 3])
+
+        global share_compare_index_list
+        self.assertIs(share_compare_index_list, mock_list)
+
     @patch('msprobe.core.compare.merge_result.merge_result.FileChecker')
     @patch('msprobe.core.compare.merge_result.merge_result.create_directory')
     @patch('msprobe.core.compare.merge_result.merge_result.get_result_path')
