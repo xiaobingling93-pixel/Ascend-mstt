@@ -17,7 +17,7 @@ import re
 import abc
 import torch
 
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 
 # 用于存储所有validator实现类的注册表
 config_validator_registry = {}

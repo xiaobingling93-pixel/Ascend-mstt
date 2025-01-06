@@ -25,7 +25,7 @@ import re
 import torch
 
 from msprobe.core.common.const import MonitorConst, Const
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
 from msprobe.core.common.file_utils import check_file_or_directory_path
 

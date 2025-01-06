@@ -15,7 +15,7 @@
 
 import torch
 from torch.autograd.functional import jacobian
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 
 
 @torch.no_grad()
@@ -30,12 +30,12 @@ def get_min(x: torch.tensor):
 
 @torch.no_grad()
 def get_mean(x: torch.tensor):
-    return torch.mean(x)
+    return torch.mean(x.to(torch.float64))
 
 
 @torch.no_grad()
 def get_norm(x: torch.tensor):
-    return torch.norm(x, p=2)
+    return torch.norm(x.to(torch.float64), p=2)
 
 
 @torch.no_grad()

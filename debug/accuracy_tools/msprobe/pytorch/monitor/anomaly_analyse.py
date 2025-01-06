@@ -19,7 +19,7 @@ import argparse
 import ast
 import heapq
 
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import check_path_before_create, save_json, create_directory, remove_path, \
     check_file_or_directory_path, load_json
