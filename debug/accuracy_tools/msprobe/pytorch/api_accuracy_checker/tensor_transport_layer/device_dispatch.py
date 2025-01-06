@@ -24,7 +24,7 @@ from msprobe.core.common.const import Const, CompareConst
 from msprobe.pytorch.api_accuracy_checker.compare.api_precision_compare import online_api_precision_compare
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import DETAIL_TEST_ROWS, thousandth_standard_api, \
     binary_standard_api, absolute_standard_api
-from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api
+from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import UtDataInfo, exec_api, ExecParams
 from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.api_accuracy_checker.tensor_transport_layer.attl import move2target_device
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import generate_cpu_params
@@ -92,8 +92,10 @@ def online_precision_compare(api_data, device, common_config, api_precision_csv_
 
     try:
         # NPU vs CPU
-        cpu_args, cpu_kwargs = generate_cpu_params(npu_args, npu_kwargs, False, api_name)
-        cpu_out = exec_api(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs)
+        cpu_params = generate_cpu_params(npu_args, npu_kwargs, False, api_name)
+        cpu_args, cpu_kwargs = cpu_params.cpu_args, cpu_params.cpu_kwargs
+        cpu_exec_params = ExecParams(api_type, api_name, Const.CPU_LOWERCASE, cpu_args, cpu_kwargs, False, None)
+        cpu_out = exec_api(cpu_exec_params)
         npu_data_info = UtDataInfo(None, None, npu_out, cpu_out, None, [], None, rank=api_data.rank)
         npu_detail = compare.compare_output(api_full_name, npu_data_info, True)
         npu_data = pd.DataFrame(npu_detail, columns=DETAIL_TEST_ROWS[-1])
