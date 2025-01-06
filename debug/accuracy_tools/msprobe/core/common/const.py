@@ -282,12 +282,14 @@ class CompareConst:
     BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
     ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
     THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
+    ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME = "累积误差比对法"
     
     ABSOLUTE_THRESHOLD = 'absolute_threshold'
     BINARY_CONSISTENCY = 'binary_consistency'
     ULP_COMPARE = 'ulp_compare'
     THOUSANDTH_STANDARD = 'thousandth_threshold'
     BENCHMARK = 'benchmark'
+    ACCUMULATIVE_ERROR_COMPARE = 'accumulative_error_compare'
     
     SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
     RMSE_RATIO = "rmse_ratio"
@@ -561,7 +563,7 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
+    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -591,3 +593,5 @@ class MonitorConst:
     TENSORBOARD = "tensorboard"
     CSV = "csv"
     API = "api"
+    OPS_START_INDEX = 3
+    HEADER_NAME_INDEX = 1

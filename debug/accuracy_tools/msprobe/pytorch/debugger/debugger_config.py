@@ -80,23 +80,30 @@ class DebuggerConfig:
         return True
 
     def check_model(self, instance, start_model):
-        if self.level not in ["L0", "mix"]:
+        if self.level not in [Const.LEVEL_L0, Const.LEVEL_MIX]:
             if instance.model is not None or start_model is not None:
-                logger.warning_on_rank_0(
+                logger.info_on_rank_0(
                     f"The current level is not L0 or mix level, so the model parameters will not be used.")
             return
-        if start_model is None:
-            if instance.model is None:
+        if start_model is None and instance.model is None:
+            logger.error_on_rank_0(
+                f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' parameter.")
+            raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
+        if instance.model and not isinstance(instance.model, list):
+            instance.model = [instance.model]
+        if start_model:
+            if not isinstance(start_model, list):
+                instance.model = [start_model]
+            else:
+                instance.model = start_model
+        for single_model in instance.model:
+            if not isinstance(single_model, torch.nn.Module):
                 logger.error_on_rank_0(
-                    f"For level {self.level}, PrecisionDebugger or start interface must receive a 'model' argument.")
-                raise MsprobeException(MsprobeException.INVALID_PARAM_ERROR, f"missing the parameter 'model'")
-            return
-        if isinstance(start_model, torch.nn.Module):
-            instance.model = start_model
-        else:
-            logger.error_on_rank_0(f"The 'model' parameter of start must be a torch.nn.Module type.")
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")
+                    f"The 'model' parameter must be a torch.nn.Module or list[torch.nn.Module] type, "
+                    f"currently there is a {type(single_model)} type."
+                )
+                raise MsprobeException(
+                    MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module or list[torch.nn.Module]")
 
     def _check_and_adjust_config_with_l2(self):
         if self.scope:

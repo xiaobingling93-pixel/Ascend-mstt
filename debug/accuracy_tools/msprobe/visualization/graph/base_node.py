@@ -14,7 +14,7 @@
 # limitations under the License.
 from msprobe.core.overflow_check.level import OverflowLevel
 from msprobe.visualization.graph.node_op import NodeOp
-from msprobe.visualization.utils import Suggestions, GraphConst
+from msprobe.visualization.utils import GraphConst
 from msprobe.visualization.builder.msprobe_adapter import format_node_data, compare_data
 
 
@@ -48,17 +48,6 @@ class BaseNode:
         if not compare_data(self.output_data, other.output_data):
             return False
         return True
-
-    def get_suggestions(self):
-        """
-        精度疑似有问题时，提供一些建议
-        """
-        if self.op == NodeOp.module:
-            self.suggestions[GraphConst.SUGGEST_KEY] = Suggestions.Module
-            self.suggestions[Suggestions.DUMP] = Suggestions.DUMP_URL
-        elif self.op == NodeOp.function_api:
-            self.suggestions[GraphConst.SUGGEST_KEY] = Suggestions.API
-            self.suggestions[Suggestions.API_ACCURACY_CHECKER] = Suggestions.API_ACCURACY_CHECKER_URL
 
     def set_input_output(self, input_data, output_data):
         self.input_data = input_data

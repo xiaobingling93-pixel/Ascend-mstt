@@ -122,7 +122,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
     return dataSource;
   };
 
-  const onShowSizeChange = (current: number, size: number) => {
+  const onShowSizeChange = (current: number, size: number): void => {
     setPageSize(size);
   };
 
@@ -212,10 +212,7 @@ export const LossDisplayPanel: React.FC<IProps> = (props) => {
           size='small'
           scroll={{
             x: 150 * fileList.length + 100,
-            y:
-              fileList.length < 2
-                ? 'calc(100vh - 240px)'
-                : 'calc(50vh - 185px)',
+            y: fileList.length < 2 ? 'calc(100vh - 240px)' : 'calc(50vh - 185px)',
           }}
           pagination={{
             pageSize,

@@ -1,16 +1,20 @@
 # coding=utf-8
-import unittest
 import os
 import shutil
-import pandas as pd
+import sys
+from collections import namedtuple
+
 import numpy as np
 import openpyxl
+import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
-from collections import namedtuple
+import unittest
+from unittest.mock import patch
+
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
     add_highlight_row_info, update_highlight_err_msg
-from msprobe.core.common.const import CompareConst, Const
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -152,7 +156,8 @@ class TestUtilsMethods(unittest.TestCase):
         generate_result_xlsx(base_dir)
         self.assertTrue(compare_excel_files_with_highlight(file_path, os.path.join(base_dir, 'target_result_yellow.xlsx')))
 
-    def test_highlight_rows_xlsx_2(self):
+    @patch("msprobe.core.compare.highlight.save_workbook")
+    def test_highlight_rows_xlsx_malicious_columns(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
@@ -161,11 +166,20 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {}
         file_path = base_dir
-        with self.assertRaises(RuntimeError) as context:
-            highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        self.assertIn("Malicious value", str(context.exception))
 
-    def test_highlight_rows_xlsx_3(self):
+        temp_output_file = 'temp_output.txt'
+        sys.stdout = open(temp_output_file, 'w')
+
+        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
+        with open(temp_output_file, 'r') as f:
+            output = f.read()
+        os.remove(temp_output_file)
+
+        self.assertIn('Malicious value [=Data_name]', output)
+
+    @patch("msprobe.core.compare.highlight.save_workbook")
+    def test_highlight_rows_xlsx_malicious_type(self, mock_save_book):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  '=torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1'],
@@ -177,9 +191,17 @@ class TestUtilsMethods(unittest.TestCase):
         result_df = pd.DataFrame(data, columns=columns)
         highlight_dict = {'red_rows': [], 'yellow_rows': []}
         file_path = base_dir
-        with self.assertRaises(RuntimeError) as context:
-            highlight_rows_xlsx(result_df, highlight_dict, file_path)
-        self.assertIn("Malicious value", str(context.exception))
+
+        temp_output_file = 'temp_output.txt'
+        sys.stdout = open(temp_output_file, 'w')
+
+        highlight_rows_xlsx(result_df, highlight_dict, file_path)
+
+        with open(temp_output_file, 'r') as f:
+            output = f.read()
+        os.remove(temp_output_file)
+
+        self.assertIn('Malicious value [=torch.float32]', output)
 
     def test_add_highlight_row_info_existing(self):
         color_list = [(1, ["a", "b"]), (5, ["c"])]

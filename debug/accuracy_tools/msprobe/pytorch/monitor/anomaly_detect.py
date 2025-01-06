@@ -289,7 +289,7 @@ class BaseWriterWithAD:
         for op2tensor in metric_value.values():
             tensors.extend(op2tensor.values())
         with torch.no_grad():
-            metric_list = torch.stack(tensors).cpu()
+            metric_list = torch.stack(tensors).cpu() if tensors else []
         for tag, metric in zip(tags, metric_list):
             self.add_scalar(tag, metric, step)
 
@@ -384,10 +384,9 @@ class CSVWriterWithAD(BaseWriterWithAD):
         else:
             csv_header = ["param_name", "step", *ops]
 
-        for key in metric_value.keys():
-            if MonitorConst.VPP_SEP in key:
-                csv_header.insert(0, 'vpp_stage')
-            break
+        keys = list(metric_value.keys())
+        if keys and MonitorConst.VPP_SEP in keys[0]:
+            csv_header.insert(0, "vpp_stage")
 
         self.header = csv_header
         self.write_csv(prefix, step)

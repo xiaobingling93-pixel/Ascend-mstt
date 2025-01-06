@@ -43,6 +43,7 @@ absolute_standard_api = apis.get('AbsoluteThreshStandard')
 binary_standard_api = apis.get('BinaryCompareStandard')
 ulp_standard_api = apis.get('ULPStandard')
 thousandth_standard_api = apis.get('ThousandthStandard')
+accumulative_error_standard_api = apis.get('AccumulativeErrorStandard')
 
 
 DETAIL_TEST_ROWS = [

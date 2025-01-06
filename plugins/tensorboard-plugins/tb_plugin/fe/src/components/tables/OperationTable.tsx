@@ -21,14 +21,10 @@
 
 import * as React from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import {
-  OperationTableData,
-  OperationTableDataInner,
-  TableMetadata,
-} from '../../api';
+import { OperationTableData, OperationTableDataInner, TableMetadata } from '../../api';
 import { OperationGroupBy } from '../../constants/groupBy';
 import { attachId, getCommonOperationColumns } from './common';
-import { Table, TablePaginationConfig, TableProps } from 'antd';
+import { Table, TableProps } from 'antd';
 import { makeExpandIcon } from './ExpandIcon';
 import { CallStackTable } from './CallStackTable';
 
@@ -49,41 +45,21 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const rowExpandable = (record: OperationTableDataInner) =>
-  record.has_call_stack;
-const expandIcon = makeExpandIcon<OperationTableDataInner>(
-  'View CallStack',
-  (record) => !record.has_call_stack
-);
-export const OperationTable = (props: IProps) => {
-  const {
-    data,
-    run,
-    worker,
-    span,
-    groupBy,
-    sortColumn,
-    tooltips,
-    deviceTarget,
-  } = props;
+const rowExpandable = (record: OperationTableDataInner): boolean => record.has_call_stack;
+const expandIcon = makeExpandIcon<OperationTableDataInner>('View CallStack', (record) => !record.has_call_stack);
+export const OperationTable = (props: IProps): React.JSX.Element => {
+  const { data, run, worker, span, groupBy, sortColumn, tooltips, deviceTarget } = props;
   const classes = useStyles(props);
 
   const rows = React.useMemo(() => attachId(data), [data]);
 
   const columns = React.useMemo(
-    () =>
-      getCommonOperationColumns(
-        rows,
-        deviceTarget,
-        sortColumn,
-        tooltips,
-        classes
-      ),
+    () => getCommonOperationColumns(rows, deviceTarget, sortColumn, tooltips, classes),
     [rows]
   );
 
   const [pageSize, setPageSize] = React.useState(30);
-  const onShowSizeChange = (current: number, size: number) => {
+  const onShowSizeChange = (current: number, size: number): void => {
     setPageSize(size);
   };
 
@@ -102,16 +78,15 @@ export const OperationTable = (props: IProps) => {
     [run, worker, span, groupBy]
   );
 
-  const expandable: TableProps<OperationTableDataInner>['expandable'] =
-    React.useMemo(
-      () => ({
-        expandIconColumnIndex,
-        expandIcon,
-        expandedRowRender,
-        rowExpandable,
-      }),
-      [expandIconColumnIndex, expandedRowRender]
-    );
+  const expandable: TableProps<OperationTableDataInner>['expandable'] = React.useMemo(
+    () => ({
+      expandIconColumnIndex,
+      expandIcon,
+      expandedRowRender,
+      rowExpandable,
+    }),
+    [expandIconColumnIndex, expandedRowRender]
+  );
 
   return (
     <Table

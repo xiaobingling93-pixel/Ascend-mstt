@@ -151,6 +151,12 @@ class TestCommonFetchMv(unittest.TestCase):
         res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
         self.assertIsInstance(res, MVResult)
 
+    def test_dummy_optimizer_mon(self):
+        self.optimizer = DummyOptimizerMon()
+        self.optimizer.wrapped_optimizer = self.mock_wrapped_optimizer
+        res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
+        self.assertIsInstance(res, MVResult)
+
 
 class TestDeepSpeedZeroOptimizerStage3Mon(unittest.TestCase):
     def test_get_param_index(self):
@@ -238,23 +244,6 @@ class TestDeepSpeedZeroOptimizerStage1or2Mon(unittest.TestCase):
 
         res = self.optimizer.fetch_mv(self.monitor, self.torch_opt, self.params2name)
         self.assertIsInstance(res, MVGradResult)
-
-
-class TestDummyOptimizerMon(unittest.TestCase):
-
-    def test_fetch_mv(self):
-        dummy_opt_mon = DummyOptimizerMon()
-
-        monitor = object()
-        torch_opt = object()
-        params2name = {}
-
-        result = dummy_opt_mon.fetch_mv(monitor, torch_opt, params2name)
-        self.assertIsInstance(result, MVResult)
-        self.assertIsNone(result.exp_avg)
-        self.assertIsNone(result.exp_avg_sq)
-        self.assertIsNone(result.update)
-        self.assertIsNone(result.ratio)
 
 
 class TestOptimizerMonFactory(unittest.TestCase):

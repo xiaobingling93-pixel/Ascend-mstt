@@ -52,7 +52,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const getAngleByDataLength = (data: number) => {
+const getAngleByDataLength = (data: number): number => {
   if (data < 10) {
     return 0;
   } else {
@@ -70,9 +70,7 @@ export interface DiffStepChartIProps {
   rawData: any[];
 }
 
-const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
-  props: DiffColumnChartIProps
-) => {
+const DiffColumnChart: React.FC<DiffColumnChartIProps> = (props: DiffColumnChartIProps) => {
   const { rawData, selectCallback } = props;
   const graphRef = React.useRef<HTMLDivElement>(null);
   const [resizeEventDependency] = useResizeEventDependency();
@@ -97,12 +95,8 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
         trigger: 'axis',
         formatter: function (params: any) {
           const index = params[0].name.indexOf('@');
-          const safeName = params[0].name
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-          let res = `<b>${
-            index > -1 ? safeName.slice(index + 1) : safeName
-          }<b/> <br/>`;
+          const safeName = params[0].name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          let res = `<b>${index > -1 ? safeName.slice(index + 1) : safeName}<b/> <br/>`;
           for (const item of params) {
             if (typeof item.value[item.encode.y[0]] === 'number') {
               res += `<span style="background: ${item.color};
@@ -156,9 +150,7 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
           formatter: (name: string) => {
             const index = name.indexOf('@');
             const displayName = index > -1 ? name.slice(index + 1) : name; // 创建新变量
-            return displayName.length > 16
-              ? `${displayName.slice(0, 14)}...`
-              : displayName;
+            return displayName.length > 16 ? `${displayName.slice(0, 14)}...` : displayName;
           },
         },
       },
@@ -205,9 +197,7 @@ const DiffColumnChart: React.FC<DiffColumnChartIProps> = (
   );
 };
 
-const DiffStepChart: React.FC<DiffStepChartIProps> = (
-  props: DiffStepChartIProps
-) => {
+const DiffStepChart: React.FC<DiffStepChartIProps> = (props: DiffStepChartIProps) => {
   const { rawData } = props;
   const graphRef = React.useRef<HTMLDivElement>(null);
   const [resizeEventDependency] = useResizeEventDependency();
@@ -242,9 +232,7 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
           formatter: (name: string) => {
             const index = name.indexOf('@');
             const displayName = index > -1 ? name.slice(index + 1) : name; // 创建新变量
-            return displayName.length > 16
-              ? `${displayName.slice(0, 14)}...`
-              : displayName;
+            return displayName.length > 16 ? `${displayName.slice(0, 14)}...` : displayName;
           },
         },
       },
@@ -256,12 +244,8 @@ const DiffStepChart: React.FC<DiffStepChartIProps> = (
         trigger: 'axis',
         formatter: function (params: any) {
           const index = params[0].name.indexOf('@');
-          const safeName = params[0].name
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-          let res = `<b>${
-            index > -1 ? safeName.slice(index + 1) : safeName
-          }<b/> <br/>`;
+          const safeName = params[0].name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          let res = `<b>${index > -1 ? safeName.slice(index + 1) : safeName}<b/> <br/>`;
           for (const item of params) {
             if (typeof item.value[item.encode.y[0]] === 'number') {
               res += `<span style="background: ${item.color};
@@ -424,15 +408,13 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Self Host Duration (us)',
       dataIndex: 'baselineSelfHostDuration',
       key: 'baselineSelfHostDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.baselineSelfHostDuration - b.baselineSelfHostDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.baselineSelfHostDuration - b.baselineSelfHostDuration,
     },
     {
       title: 'Exp Self Host Duration (us)',
       dataIndex: 'expSelfHostDuration',
       key: 'expSelfHostDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.expSelfHostDuration - b.expSelfHostDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.expSelfHostDuration - b.expSelfHostDuration,
     },
     {
       title: 'Delta Self Host Duration (us)',
@@ -461,15 +443,13 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Device Duration (us)',
       dataIndex: 'baselineDeviceDuration',
       key: 'baselineDeviceDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.baselineDeviceDuration - b.baselineDeviceDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.baselineDeviceDuration - b.baselineDeviceDuration,
     },
     {
       title: 'Exp Device Duration (us)',
       dataIndex: 'expDeviceDuration',
       key: 'expDeviceDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.expDeviceDuration - b.expDeviceDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.expDeviceDuration - b.expDeviceDuration,
     },
     {
       title: 'Delta Device Duration (us)',
@@ -486,13 +466,9 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       dataIndex: 'deltaDeviceDurationPercent',
       key: 'deltaDeviceDurationPercent',
       sorter: (a: TableRow, b: TableRow): number => {
-        const aDeltaDeviceDurationPercentNumber =
-          a.deltaDeviceDurationPercentNumber ?? 0;
-        const bDeltaDeviceDurationPercentNumber =
-          b.deltaDeviceDurationPercentNumber ?? 0;
-        return (
-          aDeltaDeviceDurationPercentNumber - bDeltaDeviceDurationPercentNumber
-        );
+        const aDeltaDeviceDurationPercentNumber = a.deltaDeviceDurationPercentNumber ?? 0;
+        const bDeltaDeviceDurationPercentNumber = b.deltaDeviceDurationPercentNumber ?? 0;
+        return aDeltaDeviceDurationPercentNumber - bDeltaDeviceDurationPercentNumber;
       },
     },
   ];
@@ -502,15 +478,13 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Baseline Self Device Duration (us)',
       dataIndex: 'baselineSelfDeviceDuration',
       key: 'baselineSelfDeviceDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.baselineSelfDeviceDuration - b.baselineSelfDeviceDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.baselineSelfDeviceDuration - b.baselineSelfDeviceDuration,
     },
     {
       title: 'Exp Self Device Duration (us)',
       dataIndex: 'expSelfDeviceDuration',
       key: 'expSelfDeviceDuration',
-      sorter: (a: TableRow, b: TableRow): number =>
-        a.expSelfDeviceDuration - b.expSelfDeviceDuration,
+      sorter: (a: TableRow, b: TableRow): number => a.expSelfDeviceDuration - b.expSelfDeviceDuration,
     },
     {
       title: 'Delta Self Device Duration (us)',
@@ -527,14 +501,9 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       dataIndex: 'deltaSelfDeviceDurationPercent',
       key: 'deltaSelfDeviceDurationPercent',
       sorter: (a: TableRow, b: TableRow): number => {
-        const aDeltaSelfDeviceDurationPercentNumber =
-          a.deltaSelfDeviceDurationPercentNumber ?? 0;
-        const bDeltaSelfDeviceDurationPercentNumber =
-          b.deltaSelfDeviceDurationPercentNumber ?? 0;
-        return (
-          aDeltaSelfDeviceDurationPercentNumber -
-          bDeltaSelfDeviceDurationPercentNumber
-        );
+        const aDeltaSelfDeviceDurationPercentNumber = a.deltaSelfDeviceDurationPercentNumber ?? 0;
+        const bDeltaSelfDeviceDurationPercentNumber = b.deltaSelfDeviceDurationPercentNumber ?? 0;
+        return aDeltaSelfDeviceDurationPercentNumber - bDeltaSelfDeviceDurationPercentNumber;
       },
     },
   ];
@@ -556,15 +525,13 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Operator',
       dataIndex: 'operator',
       key: 'operator',
-      sorter: (a: TableRow, b: TableRow) =>
-        a.operator.localeCompare(b.operator),
+      sorter: (a: TableRow, b: TableRow) => a.operator.localeCompare(b.operator),
     },
     {
       title: 'Baseline Calls',
       dataIndex: 'baselineCalls',
       key: 'baselineCalls',
-      sorter: (a: TableRow, b: TableRow) =>
-        a.baselineCalls ?? 0 - (b.baselineCalls ?? 0),
+      sorter: (a: TableRow, b: TableRow) => a.baselineCalls ?? 0 - (b.baselineCalls ?? 0),
     },
     {
       title: 'Exp Calls',
@@ -576,15 +543,13 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       title: 'Delta Calls',
       dataIndex: 'deltaCalls',
       key: 'deltaCalls',
-      sorter: (a: TableRow, b: TableRow) =>
-        a.deltaCalls ?? 0 - (b.deltaCalls ?? 0),
+      sorter: (a: TableRow, b: TableRow) => a.deltaCalls ?? 0 - (b.deltaCalls ?? 0),
     },
     {
       title: 'Delta Calls%',
       dataIndex: 'deltaCallsPercent',
       key: 'deltaCallsPercent',
-      sorter: (a: TableRow, b: TableRow) =>
-        a.deltaCallsPercentNumber ?? 0 - (b.deltaCallsPercentNumber ?? 0),
+      sorter: (a: TableRow, b: TableRow) => a.deltaCallsPercentNumber ?? 0 - (b.deltaCallsPercentNumber ?? 0),
     },
   ];
 
@@ -594,21 +559,18 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
   const [tableDataSource, setTableDataSource] = React.useState<TableRow[]>([]);
   const { run, worker, span, expRun, expWorker, expSpan } = props;
 
-  const [columnUnderlyingData, setColumnUnderlyingData] = React.useState<
-    ColumnUnderlyingData[]
-  >([]);
+  const [columnUnderlyingData, setColumnUnderlyingData] = React.useState<ColumnUnderlyingData[]>([]);
 
-  const [rootUnderlyingData, setRootUnderlyingData] =
-    React.useState<ColumnUnderlyingData>();
+  const [rootUnderlyingData, setRootUnderlyingData] = React.useState<ColumnUnderlyingData>();
 
   const [columnChartData, setColumnChartData] = React.useState<any[]>([]);
   const [stepChartData, setStepChartData] = React.useState<any[]>([]);
 
-  const [selectedTableColumnsOptions, setSelectedTableColumnsOptions] =
-    React.useState<[key: string]>(['hostDuration']);
-  const [selectedTableColumns, setSelectedTableColumns] = React.useState<any[]>(
-    [...baseTableColumns, ...hostDurationColumns]
-  );
+  const [selectedTableColumnsOptions, setSelectedTableColumnsOptions] = React.useState<[key: string]>(['hostDuration']);
+  const [selectedTableColumns, setSelectedTableColumns] = React.useState<any[]>([
+    ...baseTableColumns,
+    ...hostDurationColumns,
+  ]);
 
   const [dataStackLevel, setDataStackLevel] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -617,7 +579,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
   const classes = useStyles();
 
   // #region - Event Handler
-  const handleChartColumnSelect = (row: number, column: number) => {
+  const handleChartColumnSelect = (row: number, column: number): void => {
     if (columnUnderlyingData.length === 0) {
       return;
     }
@@ -627,29 +589,19 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       return;
     }
 
-    let tableDataSource1 = generateDataSourceFromUnderlyingData(
-      selectedUnderlyingData
-    );
+    let tableDataSource1 = generateDataSourceFromUnderlyingData(selectedUnderlyingData);
     setTableDataSource(tableDataSource1);
     columnTableDataSourceStack.push(tableDataSource1);
 
     setLoading(true);
 
     api.defaultApi
-      .diffnodeGet(
-        run,
-        worker,
-        span,
-        expRun,
-        expWorker,
-        expSpan,
-        selectedUnderlyingData.path
-      )
+      .diffnodeGet(run, worker, span, expRun, expWorker, expSpan, selectedUnderlyingData.path)
       .then((resp) => handleDiffNodeResp(resp))
       .finally(() => setLoading(false));
   };
 
-  const handleGoBack = () => {
+  const handleGoBack = (): void => {
     if (columnChartDataStack.length > 1) {
       columnChartDataStack.pop();
       let top = columnChartDataStack[columnChartDataStack.length - 1];
@@ -670,14 +622,12 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
 
     if (columnTableDataSourceStack.length > 0) {
       columnTableDataSourceStack.pop();
-      let top =
-        columnTableDataSourceStack[columnTableDataSourceStack.length - 1];
+      let top = columnTableDataSourceStack[columnTableDataSourceStack.length - 1];
 
       if (top) {
         setTableDataSource(top);
       } else {
-        let tableDataSource2 =
-          generateDataSourceFromUnderlyingData(rootUnderlyingData);
+        let tableDataSource2 = generateDataSourceFromUnderlyingData(rootUnderlyingData);
         setTableDataSource(tableDataSource2);
       }
     }
@@ -685,7 +635,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
     setDataStackLevel(dataStackLevel - 1);
   };
 
-  const toPercentString = (percentNumber: number) => {
+  const toPercentString = (percentNumber: number): string => {
     if (isNaN(percentNumber)) {
       return 'N/A';
     }
@@ -693,16 +643,14 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
     return `${percentNumber.toFixed(2)}%`;
   };
 
-  const handleColumnSelectionChange = (value: [key: string]) => {
+  const handleColumnSelectionChange = (value: [key: string]): void => {
     let columns = value.map((x) => tableSourceColumnMap[x]).flat();
     let r = [...baseTableColumns, ...columns];
     setSelectedTableColumnsOptions(value);
     setSelectedTableColumns(r);
   };
 
-  const generateDataSourceFromUnderlyingData = (
-    selectedUnderlyingData?: ColumnUnderlyingData
-  ) => {
+  const generateDataSourceFromUnderlyingData = (selectedUnderlyingData?: ColumnUnderlyingData): TableRow[] => {
     if (!selectedUnderlyingData) {
       return [];
     }
@@ -712,26 +660,18 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
       let left = selectedUnderlyingData.leftAggs[i];
       let right = selectedUnderlyingData.rightAggs[i];
 
-      let deltaCallsPercentNumber =
-        ((right.calls - left.calls) / left.calls) * 100;
+      let deltaCallsPercentNumber = ((right.calls - left.calls) / left.calls) * 100;
 
-      let deltaHostDurationPercentNumber =
-        ((right.host_duration - left.host_duration) / left.host_duration) * 100;
+      let deltaHostDurationPercentNumber = ((right.host_duration - left.host_duration) / left.host_duration) * 100;
 
       let deltaSelfHostDurationPercentNumber =
-        ((right.self_host_duration - left.self_host_duration) /
-          left.self_host_duration) *
-        100;
+        ((right.self_host_duration - left.self_host_duration) / left.self_host_duration) * 100;
 
       let deltaDeviceDurationPercentNumber =
-        ((right.device_duration - left.device_duration) /
-          left.device_duration) *
-        100;
+        ((right.device_duration - left.device_duration) / left.device_duration) * 100;
 
       let deltaSelfDeviceDurationPercentNumber =
-        ((right.self_device_duration - left.self_device_duration) /
-          left.self_device_duration) *
-        100;
+        ((right.self_device_duration - left.self_device_duration) / left.self_device_duration) * 100;
 
       newTableDataSource.push({
         key: i,
@@ -744,44 +684,27 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
 
         baselineHostDuration: left.host_duration,
         expHostDuration: right.host_duration,
-        deltaHostDuration: parseFloat(
-          (right.host_duration - left.host_duration).toFixed(3)
-        ),
+        deltaHostDuration: parseFloat((right.host_duration - left.host_duration).toFixed(3)),
         deltaHostDurationPercentNumber: deltaHostDurationPercentNumber,
-        deltaHostDurationPercent: toPercentString(
-          deltaHostDurationPercentNumber
-        ),
+        deltaHostDurationPercent: toPercentString(deltaHostDurationPercentNumber),
 
         baselineSelfHostDuration: left.self_host_duration,
         expSelfHostDuration: right.self_host_duration,
-        deltaSelfHostDuration: parseFloat(
-          (right.self_host_duration - left.self_host_duration).toFixed(3)
-        ),
+        deltaSelfHostDuration: parseFloat((right.self_host_duration - left.self_host_duration).toFixed(3)),
         deltaSelfHostDurationPercentNumber: deltaSelfHostDurationPercentNumber,
-        deltaSelfHostDurationPercent: toPercentString(
-          deltaSelfHostDurationPercentNumber
-        ),
+        deltaSelfHostDurationPercent: toPercentString(deltaSelfHostDurationPercentNumber),
 
         baselineDeviceDuration: left.device_duration,
         expDeviceDuration: right.device_duration,
-        deltaDeviceDuration: parseFloat(
-          (right.device_duration - left.device_duration).toFixed(3)
-        ),
+        deltaDeviceDuration: parseFloat((right.device_duration - left.device_duration).toFixed(3)),
         deltaDeviceDurationPercentNumber: deltaDeviceDurationPercentNumber,
-        deltaDeviceDurationPercent: toPercentString(
-          deltaDeviceDurationPercentNumber
-        ),
+        deltaDeviceDurationPercent: toPercentString(deltaDeviceDurationPercentNumber),
 
         baselineSelfDeviceDuration: left.self_device_duration,
         expSelfDeviceDuration: right.self_device_duration,
-        deltaSelfDeviceDuration: parseFloat(
-          (right.self_device_duration - left.self_device_duration).toFixed(3)
-        ),
-        deltaSelfDeviceDurationPercentNumber:
-          deltaSelfDeviceDurationPercentNumber,
-        deltaSelfDeviceDurationPercent: toPercentString(
-          deltaSelfDeviceDurationPercentNumber
-        ),
+        deltaSelfDeviceDuration: parseFloat((right.self_device_duration - left.self_device_duration).toFixed(3)),
+        deltaSelfDeviceDurationPercentNumber: deltaSelfDeviceDurationPercentNumber,
+        deltaSelfDeviceDurationPercent: toPercentString(deltaSelfDeviceDurationPercentNumber),
       });
     }
 
@@ -816,9 +739,7 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
           };
 
           setRootUnderlyingData(newRootUnderlyingData);
-          let tableDataSource3 = generateDataSourceFromUnderlyingData(
-            newRootUnderlyingData
-          );
+          let tableDataSource3 = generateDataSourceFromUnderlyingData(newRootUnderlyingData);
           setTableDataSource(tableDataSource3);
         })
         .finally(() => setLoading(false));
@@ -827,24 +748,18 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
     }
   }, [run, worker, span, expRun, expWorker, expSpan]);
 
-  const handleDiffNodeResp = (resp: any) => {
+  const handleDiffNodeResp = (resp: any): void => {
     let newColumnChartData: any[] = [];
     let newStepChartData: any[] = [];
     let underlyingData: ColumnUnderlyingData[] = [];
 
-    newColumnChartData.push([
-      'Call',
-      'Baseline',
-      'Experiment',
-      'Baseline Trend',
-      'Exp Trend',
-    ]);
+    newColumnChartData.push(['Call', 'Baseline', 'Experiment', 'Baseline Trend', 'Exp Trend']);
     newStepChartData.push(['Call', 'Diff', 'Accumulated Diff']);
 
     if (resp.children.length > 0) {
-      let accumulated_left_duration = 0;
-      let accumulated_right_duration = 0;
-      let accumulated_step_diff = 0;
+      let accumulatedLeftDuration = 0;
+      let accumulatedRightDuration = 0;
+      let accumulatedStepDiff = 0;
       for (let i = 0; i < resp.children.length; i++) {
         let left = resp.children[i].left;
         let right = resp.children[i].right;
@@ -885,11 +800,11 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
         currColumn.push(left.total_duration);
         currColumn.push(right.total_duration);
 
-        accumulated_left_duration += left.total_duration;
-        currColumn.push(accumulated_left_duration);
+        accumulatedLeftDuration += left.total_duration;
+        currColumn.push(accumulatedLeftDuration);
 
-        accumulated_right_duration += right.total_duration;
-        currColumn.push(accumulated_right_duration);
+        accumulatedRightDuration += right.total_duration;
+        currColumn.push(accumulatedRightDuration);
         newColumnChartData.push(currColumn);
 
         underlyingData.push({
@@ -903,8 +818,8 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
         let stepDiff = right.total_duration - left.total_duration;
         currStep.push(stepDiff);
 
-        accumulated_step_diff += stepDiff;
-        currStep.push(accumulated_step_diff);
+        accumulatedStepDiff += stepDiff;
+        currStep.push(accumulatedStepDiff);
 
         newStepChartData.push(currStep);
       }
@@ -980,16 +895,11 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
                 </Button>
                 {columnChartData.length > 1 && (
                   <>
-                    <DiffColumnChart
-                      rawData={columnChartData}
-                      selectCallback={handleChartColumnSelect}
-                    />
+                    <DiffColumnChart rawData={columnChartData} selectCallback={handleChartColumnSelect} />
                     <DiffStepChart rawData={stepChartData} />
                   </>
                 )}
-                {columnChartData.length === 1 && (
-                  <Typography>No more level to show.</Typography>
-                )}
+                {columnChartData.length === 1 && <Typography>No more level to show.</Typography>}
               </CardContent>
             </Card>
           </Grid>
@@ -1016,18 +926,12 @@ export const DiffOverview: React.FC<IProps> = (props: IProps) => {
                   <Option value='deviceDuration' label='Device Duration'>
                     <div>Device Duration</div>
                   </Option>
-                  <Option
-                    value='selfDeviceDuration'
-                    label='Self Device Duration'
-                  >
+                  <Option value='selfDeviceDuration' label='Self Device Duration'>
                     <div>Self Device Duration</div>
                   </Option>
                 </Select>
                 &nbsp;
-                <Table
-                  dataSource={tableDataSource}
-                  columns={selectedTableColumns}
-                />
+                <Table dataSource={tableDataSource} columns={selectedTableColumns} />
               </CardContent>
             </Card>
           </Grid>

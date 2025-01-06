@@ -60,8 +60,6 @@ class GraphComparator:
             self.ma.parse_result(node, [compare_in_dict, compare_out_dict]))
         node.data[GraphConst.JSON_INDEX_KEY] = precision_index
         node.data.update(other_dict)
-        if NodeColors.get_node_error_status(self.ma.compare_mode, precision_index):
-            node.get_suggestions()
     
     def _parse_param(self, dump_path_param, output_path):
         self.dump_path_param = dump_path_param
@@ -82,8 +80,6 @@ class GraphComparator:
         for node in self.ma.compare_nodes:
             precision_index, _ = self.ma.parse_result(node, [compare_data_dict])
             node.data[GraphConst.JSON_INDEX_KEY] = precision_index
-            if NodeColors.get_node_error_status(self.ma.compare_mode, precision_index):
-                node.get_suggestions()
 
     def _handle_api_collection_index(self):
         """

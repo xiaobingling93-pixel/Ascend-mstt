@@ -26,10 +26,12 @@ from contextlib import contextmanager
 
 from . import consts
 
+predefined_logging_level = ('CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'NOTSET')
+
 
 def get_logging_level():
     log_level = os.environ.get('TORCH_PROFILER_LOG_LEVEL', 'INFO').upper()
-    if log_level not in logging._levelToName.values():
+    if log_level not in predefined_logging_level:
         log_level = logging.getLevelName(logging.INFO)
     return log_level
 

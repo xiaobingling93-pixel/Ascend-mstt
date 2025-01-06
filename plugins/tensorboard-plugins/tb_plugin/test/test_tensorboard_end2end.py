@@ -13,7 +13,7 @@ from urllib.error import HTTPError
 
 
 def get_samples_dir():
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '../samples')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources')
 
 
 class TestEnd2End(unittest.TestCase):

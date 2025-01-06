@@ -61,11 +61,6 @@ class TestPrecisionDebugger(unittest.TestCase):
             PrecisionDebugger.check_input_params(args)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
 
-        args = Args(model = 1)
-        with self.assertRaises(MsprobeException) as context:
-            PrecisionDebugger.check_input_params(args)
-        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-
         args = Args(config_path = os.path.join(os.path.dirname(__file__), "../../../config.json"), 
                     task = Const.TASK_LIST[0], 
                     dump_path="./dump_path", 

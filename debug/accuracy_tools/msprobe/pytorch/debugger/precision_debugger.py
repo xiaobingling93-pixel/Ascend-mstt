@@ -105,9 +105,11 @@ class PrecisionDebugger:
             raise MsprobeException(
                 MsprobeException.INVALID_PARAM_ERROR, f"level must be one of {Const.LEVEL_LIST}")
 
-        if args.model is not None and not isinstance(args.model, torch.nn.Module):
-            raise MsprobeException(
-                MsprobeException.INVALID_PARAM_ERROR, f"model must be a torch.nn.Module")
+        if args.model is not None:
+            logger.warning_on_rank_0(
+                "The 'model' parameter in the PrecisionDebugger will be deprecated in the future."
+                "It is recommended to pass the 'model' parameter in the start interface instead."
+            )
 
     @classmethod
     def start(cls, model=None):

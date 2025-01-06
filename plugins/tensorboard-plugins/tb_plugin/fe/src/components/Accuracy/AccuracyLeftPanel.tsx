@@ -22,13 +22,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
 import { Button, Checkbox, Spin, Modal, message } from 'antd';
 import { CheckboxChangeEvent } from 'antd/es/checkbox';
-import {
-  DeleteOutlined,
-  DownloadOutlined,
-  ImportOutlined,
-  SettingOutlined,
-  WarningTwoTone,
-} from '@ant-design/icons';
+import { DeleteOutlined, DownloadOutlined, ImportOutlined, SettingOutlined, WarningTwoTone } from '@ant-design/icons';
 import { RegexConfigModal } from './RegexConfigModal';
 import { FileInfo } from './entity';
 
@@ -117,9 +111,7 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
   const [deleteModalVis, setDeleteModalVis] = useState<boolean>(false);
   const [fileList, setFileList] = useState<FileInfo[]>([]);
   const [importSpin, setImportSpin] = useState<boolean>(false);
-  const [selectedFile, setSelectedFile] = useState<FileInfo | undefined>(
-    undefined
-  );
+  const [selectedFile, setSelectedFile] = useState<FileInfo | undefined>(undefined);
   const downLoadRef = useRef<HTMLAnchorElement>(null);
 
   const parseFile = (file: FileInfo): FileInfo => {
@@ -139,11 +131,7 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     return file;
   };
 
-  const parseByTag = (
-    line: string,
-    tag: string,
-    isLoss: boolean
-  ): number | null => {
+  const parseByTag = (line: string, tag: string, isLoss: boolean): number | null => {
     let pos = line.indexOf(tag);
     let result: number | null = null;
     if (pos !== -1) {
@@ -160,21 +148,17 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
           result = parseInt(res[0]);
         }
       } else {
-        console.log(
-          `Found ${
-            isLoss ? 'loss' : 'iteration'
-          } text, but parse value with error: [${line}]`
-        );
+        console.warn(`Found ${isLoss ? 'loss' : 'iteration'} text, but parse value with error: [${line}]`);
       }
     }
     return result;
   };
 
-  const importFile = () => {
+  const importFile = (): void => {
     document.getElementById('accComparisonSelectFile')?.click();
   };
 
-  const uploadFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const uploadFile = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setImportSpin(true);
     const file = e.target.files?.[0];
     if (file) {
@@ -198,16 +182,14 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     e.target.value = '';
   };
 
-  const addFile = (fileName: string, fileContent: string) => {
+  const addFile = (fileName: string, fileContent: string): void => {
     const fileLength = fileName.length;
     const tempList: FileInfo[] = JSON.parse(JSON.stringify(fileList));
     let updatedFileName = fileName; // 新变量用于存储更新后的文件名
     // 上传同名文件加上(1~最大文件数减1)标识
     if (!!tempList.find((item) => item.fileName === fileName)) {
       for (let i = 1; i < MAX_FILE_COUNT; i++) {
-        let temp = `${fileName.slice(0, fileLength - 4)}(${i})${fileName.slice(
-          fileLength - 4
-        )}`;
+        let temp = `${fileName.slice(0, fileLength - 4)}(${i})${fileName.slice(fileLength - 4)}`;
         if (tempList.find((item) => item.fileName === temp) === undefined) {
           updatedFileName = temp;
           break;
@@ -229,7 +211,7 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     setFileList(tempList);
   };
 
-  const exportCsv = (data: FileInfo) => {
+  const exportCsv = (data: FileInfo): void => {
     let csvContent = `data:text/csv;charset=utf-8,${data.iterTag},${data.lossTag}\n`;
     data.losses.forEach((item) => {
       csvContent += `${item[0]},${item[1]}\n`;
@@ -239,23 +221,23 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     downLoadRef.current?.click();
   };
 
-  const onCheckChange = (e: CheckboxChangeEvent, index: number) => {
+  const onCheckChange = (e: CheckboxChangeEvent, index: number): void => {
     const tempList: FileInfo[] = JSON.parse(JSON.stringify(fileList));
     tempList[index].checked = e.target.checked;
     setFileList(tempList);
   };
 
-  const onConfigIconClick = (data: FileInfo) => {
+  const onConfigIconClick = (data: FileInfo): void => {
     setSelectedFile(data);
     setConfigModalVis(true);
   };
 
-  const onDeleteIconClick = (data: FileInfo) => {
+  const onDeleteIconClick = (data: FileInfo): void => {
     setSelectedFile(data);
     setDeleteModalVis(true);
   };
 
-  const configModalOk = (data: FileInfo) => {
+  const configModalOk = (data: FileInfo): void => {
     const tempList = fileList.map((item) => {
       return item.id === data.id ? parseFile(data) : item;
     });
@@ -263,11 +245,11 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     setConfigModalVis(false);
   };
 
-  const configModalCancel = () => {
+  const configModalCancel = (): void => {
     setConfigModalVis(false);
   };
 
-  const deleteModalOk = () => {
+  const deleteModalOk = (): void => {
     const tempList = JSON.parse(JSON.stringify(fileList));
     let founded = false;
     let index = 0;
@@ -291,29 +273,14 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
     return fileList.map((item) => {
       return (
         <div key={item.id} className={classes.fileContainer}>
-          <Checkbox
-            checked={item.checked}
-            onChange={(e) => onCheckChange(e, item.id)}
-          />
+          <Checkbox checked={item.checked} onChange={(e): void => onCheckChange(e, item.id)} />
           <span className='fileNameLabel' title={item.fileName}>
             {item.fileName}
           </span>
           <div className='btns'>
-            <SettingOutlined
-              className='icon iconLeft'
-              title='Config'
-              onClick={() => onConfigIconClick(item)}
-            />
-            <DownloadOutlined
-              className='icon iconLeft'
-              title='Export'
-              onClick={() => exportCsv(item)}
-            />
-            <DeleteOutlined
-              className='icon'
-              title='Delete'
-              onClick={() => onDeleteIconClick(item)}
-            />
+            <SettingOutlined className='icon iconLeft' title='Config' onClick={(): void => onConfigIconClick(item)} />
+            <DownloadOutlined className='icon iconLeft' title='Export' onClick={(): void => exportCsv(item)} />
+            <DeleteOutlined className='icon' title='Delete' onClick={(): void => onDeleteIconClick(item)} />
           </div>
         </div>
       );
@@ -337,37 +304,25 @@ export const AccuracyLeftPanel: React.FC<IProps> = (props) => {
           >
             Import files
           </Button>
-          <input
-            id='accComparisonSelectFile'
-            style={{ display: 'none' }}
-            type='file'
-            onChange={uploadFile}
-          />
+          <input id='accComparisonSelectFile' style={{ display: 'none' }} type='file' onChange={uploadFile} />
         </div>
         {renderFileItems()}
       </Spin>
       {configModalVis && (
-        <RegexConfigModal
-          file={selectedFile as FileInfo}
-          onOk={configModalOk}
-          onCancel={configModalCancel}
-        />
+        <RegexConfigModal file={selectedFile as FileInfo} onOk={configModalOk} onCancel={configModalCancel} />
       )}
       <Modal
         title='Delete reminder'
         open={deleteModalVis}
         centered
         maskClosable={false}
-        onCancel={() => setDeleteModalVis(false)}
+        onCancel={(): void => setDeleteModalVis(false)}
         onOk={deleteModalOk}
         width={500}
         className={classes.deleteModal}
       >
         <div className='deleteModalBody'>
-          <WarningTwoTone
-            className='warningIcon'
-            twoToneColor='rgb(252, 197, 96)'
-          />
+          <WarningTwoTone className='warningIcon' twoToneColor='rgb(252, 197, 96)' />
           <span className='warningText' title={selectedFile?.fileName}>
             Are you sure to delete "<b>{selectedFile?.fileName}</b>"?
           </span>

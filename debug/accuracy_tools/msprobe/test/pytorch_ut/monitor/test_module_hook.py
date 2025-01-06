@@ -75,11 +75,11 @@ class TestModuleHook(unittest.TestCase):
         actv_0 = pd.read_csv(actv_0_csv)
         expect_columns = ['vpp_stage', 'module_name', 'step', 'input.norm', 'output.norm']
         self.assertListEqual(list(actv_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([3, 5]))
+        self.assertEqual(actv_0.shape, tuple([2, 5]))
         actv_grad_0 = pd.read_csv(actv_grad_0_csv)
         expect_columns = ['vpp_stage', 'module_name', 'step', 'input_grad.norm', 'output_grad.norm']
         self.assertListEqual(list(actv_grad_0.columns), expect_columns)
-        self.assertEqual(actv_0.shape, tuple([3, 5]))
+        self.assertEqual(actv_0.shape, tuple([2, 5]))
 
     def test_wg_distribution(self):
         self.get_dist_mock(False)

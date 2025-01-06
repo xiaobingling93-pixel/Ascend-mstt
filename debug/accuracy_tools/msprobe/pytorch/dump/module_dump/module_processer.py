@@ -17,7 +17,8 @@ from functools import wraps
 
 import torch
 from msprobe.core.common.const import Const
-from msprobe.core.data_dump.scope import ModuleRangeScope, MixRangeScope
+from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
+from msprobe.pytorch.common.log import logger
 from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
@@ -63,7 +64,7 @@ class ModuleProcesser:
             return ModuleProcesser.clone_if_tensor(result)
 
         return clone_return_value_func
-    
+
     @staticmethod
     def clone_if_tensor(result):
         if isinstance(result, torch.Tensor):
@@ -85,12 +86,55 @@ class ModuleProcesser:
             ModuleProcesser.module_count[module_name] += 1
         return ModuleProcesser.module_count[module_name]
 
+    @staticmethod
+    def remove_deprecated_backward_hook_if_exist(module):
+        if hasattr(module, '_backward_hooks') and \
+                len(module._backward_hooks) > 0 and \
+                module._is_full_backward_hook is False:
+            module._backward_hooks.clear()
+            module._is_full_backward_hook = None
+            logger.warning("Found deprecated backward hooks. Removing them and switching to full backward hooks.")
+
     @classmethod
     def reset_module_stats(cls):
         cls.module_count = {}
         cls.module_stack = []
         cls.api_parent_node = ""
         cls.module_node = {}
+
+    def hook_modules(self, models, build_hook):
+        logger.info_on_rank_0("The init dump is enabled, and the module dump function will not be available.")
+        for model in models:
+            self.register_module_hook(model, build_hook)
+
+    def register_module_hook(self, model, build_hook):
+        for name, module in model.named_modules():
+            if module == model:
+                continue
+            prefix_name = (
+                    BaseScope.Module_Type_Module + Const.SEP +
+                    name + Const.SEP +
+                    module.__class__.__name__ + Const.SEP
+            )
+            pre_forward_hook, forward_hook, backward_hook, forward_hook_torch_version_below_2 = build_hook(
+                BaseScope.Module_Type_Module,
+                prefix_name
+            )
+            if torch_version_above_or_equal_2:
+                module.register_forward_hook(forward_hook, with_kwargs=True)
+            else:
+                self.remove_deprecated_backward_hook_if_exist(module)
+                module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
+                module.register_forward_hook(forward_hook_torch_version_below_2)
+            self.remove_deprecated_backward_hook_if_exist(module)
+            module.register_full_backward_hook(backward_hook)
+
+            module.register_forward_pre_hook(self.node_hook(prefix_name + Const.FORWARD, Const.START))
+            module.register_forward_hook(self.node_hook(prefix_name + Const.FORWARD, Const.STOP))
+            if torch_version_above_or_equal_2:
+                module.register_full_backward_pre_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.START))
+                self.remove_deprecated_backward_hook_if_exist(module)
+                module.register_full_backward_hook(self.node_hook(prefix_name + Const.BACKWARD, Const.STOP))
 
     def node_hook(self, name_prefix, start_or_stop, **kwargs):
 

@@ -119,15 +119,16 @@ def is_recomputation():
 def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")
-    if not ops:
-        raise TypeError(f"specify ops to calculate metrics. Optional ops: {MonitorConst.OP_LIST}")
-
     valid_ops = []
     for op in ops:
         if op not in MonitorConst.OP_LIST:
             logger.warning(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
-        else:
-            valid_ops.append(op)
+            continue
+        valid_ops.append(op)
+    if not valid_ops:
+        default_op = MonitorConst.OP_LIST[0]
+        valid_ops.append(default_op)
+        logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
     return valid_ops
 
 
@@ -172,6 +173,11 @@ def validate_wg_distribution(wg_distribution):
 def validate_mg_distribution(mg_distribution):
     if not isinstance(mg_distribution, bool):
         raise TypeError('mg_distribution should be a bool')
+
+
+def validate_param_distribution(param_distribution):
+    if not isinstance(param_distribution, bool):
+        raise TypeError('param_distribution should be a bool')
 
 
 def validate_cc_distribution(cc_distribution):
@@ -250,6 +256,9 @@ def validate_config(config):
     mg_distribution = config.get('mg_distribution', False)
     validate_mg_distribution(mg_distribution)
 
+    param_distribution = config.get('param_distribution', False)
+    validate_param_distribution(param_distribution)
+
     cc_distribution = config.get('cc_distribution', {})
     validate_cc_distribution(cc_distribution)
 
@@ -258,6 +267,11 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+    if not targets:
+        if xy_distribution:
+            config["all_xy"] = True
+        config["targets"] = {"": {}}
 
 
 def time_str2time_digit(time_str):
