@@ -104,7 +104,6 @@ class TestUtils(TestCase):
         call_args = [
             ("npu_path.json", False),
             ("bench_path.json", False),
-            ("stack_path.json", False),
             ("npu_dump_data_dir", True),
             ("bench_dump_data_dir", True),
             ("output_path", True),
@@ -121,16 +120,16 @@ class TestUtils(TestCase):
                                       "the expected type dict but got <class 'str'>.")
 
         mock_check_file_or_directory_path = MagicMock()
-        mock_check_json_file = MagicMock()
+        mock__check_json = MagicMock()
         with patch("msprobe.core.common.utils.FileOpen", mock_open(read_data="")), \
-                patch("msprobe.core.common.utils.check_json_file", new=mock_check_json_file), \
-                patch("msprobe.core.common.utils.check_file_or_directory_path", new=mock_check_file_or_directory_path):
+                patch("msprobe.core.common.utils._check_json", mock__check_json), \
+                patch("msprobe.core.common.utils.check_file_or_directory_path", mock_check_file_or_directory_path):
             check_compare_param(params, "output_path", dump_mode=Const.ALL, stack_mode=False)
-            check_compare_param(params, "output_path", dump_mode=Const.MD5, stack_mode=False)
+            check_compare_param(params, "output_path", dump_mode=Const.MD5, stack_mode=True)
         for i in range(len(call_args)):
             self.assertEqual(mock_check_file_or_directory_path.call_args_list[i][0], call_args[i])
-        self.assertEqual(len(mock_check_json_file.call_args[0]), 4)
-        self.assertEqual(mock_check_json_file.call_args[0][0], params)
+        self.assertEqual(len(mock__check_json.call_args[0]), 2)
+        self.assertEqual(mock__check_json.call_args[0][1], "stack_path.json")
 
     @patch.object(logger, "error")
     def test_check_configuration_param(self, mock_error):
