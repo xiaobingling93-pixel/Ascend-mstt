@@ -144,8 +144,14 @@ def generate_data_name(data_path):
         mode = GraphMode.STATISTIC_MODE
     else:
         mode = GraphMode.ERROR_MODE
-        logger.error(f"Error mode.")
+        logger.error("Error mode.")
     return mode, data_list
+
+
+def transform_special_string_into_float(data_frame):
+    data_frame[data_frame == "null"] = '0'
+    data_frame[data_frame == "False"] = '0'
+    data_frame[data_frame == "True"] = '1'
 
 
 class GraphMSComparator:
@@ -334,13 +340,17 @@ class GraphMSComparator:
                                                   CompareConst.BENCH_NORM])
 
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(float)
+            npu_float_data_df = npu_data_df[npu_float_type].astype(str)
+            transform_special_string_into_float(npu_float_data_df)
+            npu_data_df[npu_float_type] = npu_float_data_df.astype(float)
 
             bench_float_type = [
                 CompareConst.BENCH_MAX, CompareConst.BENCH_MIN,
                 CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM
             ]
-            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)
+            bench_float_data_df = bench_data_df[bench_float_type].astype(str)
+            transform_special_string_into_float(bench_float_data_df)
+            bench_data_df[bench_float_type] = bench_float_data_df.astype(float)
 
         npu_data_df['Local Index'] = npu_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
         bench_data_df['Local Index'] = bench_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
