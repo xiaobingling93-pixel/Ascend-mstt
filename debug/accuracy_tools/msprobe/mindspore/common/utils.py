@@ -36,7 +36,7 @@ def get_rank_if_initialized():
 
 def convert_bf16_to_fp32(tensor):
     if tensor.dtype == ms.bfloat16:
-        tensor = tensor.contiguous().to(ms.float32)
+        tensor = tensor.to(ms.float32)
     return tensor
 
 
