@@ -16,6 +16,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
+import numpy as np
 from msprobe.pytorch.api_accuracy_checker.compare.compare_utils import convert_str_to_float
 from msprobe.pytorch.api_accuracy_checker.compare.algorithm import get_abs_bench_with_eps, get_abs_err, \
     get_finite_and_infinite_mask, get_small_value_mask
@@ -67,13 +68,22 @@ class BaseCompare(ABC):
     def stat_small_value_mask(abs_bench, both_finite_mask, small_value):
         small_value_mask = get_small_value_mask(abs_bench, both_finite_mask, small_value)
         return small_value_mask
+    
+    @staticmethod
+    def _get_rel_err(abs_err, abs_bench_with_eps):
+        rel_err = abs_err / abs_bench_with_eps
+        return rel_err
+    
+    @staticmethod
+    def _get_normal_value_mask(both_finite_mask, small_value_mask):
+        return np.logical_and(both_finite_mask, np.logical_not(small_value_mask))
 
     @abstractmethod
     def _pre_compare(self):
         raise NotImplementedError
 
     def get_small_value_threshold(self):
-        small_value = StandardConfig.get_small_valuel(self.dtype)
+        small_value = StandardConfig.get_small_value(self.dtype, self.compare_algorithm)
         small_value_atol = StandardConfig.get_small_value_atol(self.dtype, self.compare_algorithm)
         return small_value, small_value_atol
     

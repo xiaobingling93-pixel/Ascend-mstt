@@ -283,12 +283,14 @@ class CompareConst:
     BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
     ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
     THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
+    ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME = "累积误差比对法"
     
     ABSOLUTE_THRESHOLD = 'absolute_threshold'
     BINARY_CONSISTENCY = 'binary_consistency'
     ULP_COMPARE = 'ulp_compare'
     THOUSANDTH_STANDARD = 'thousandth_threshold'
     BENCHMARK = 'benchmark'
+    ACCUMULATIVE_ERROR_COMPARE = 'accumulative_error_compare'
     
     SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
     RMSE_RATIO = "rmse_ratio"
