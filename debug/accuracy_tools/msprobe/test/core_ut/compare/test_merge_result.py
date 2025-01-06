@@ -360,7 +360,7 @@ class TestUtilsMethods(unittest.TestCase):
         mock_manager.assert_called_once()
         mock_manager_instance.list.assert_called_once_with([1, 2, 3])
 
-        global share_compare_index_list
+        from msprobe.core.compare.merge_result.merge_result import share_compare_index_list
         self.assertIs(share_compare_index_list, mock_list)
 
     @patch('msprobe.core.compare.merge_result.merge_result.FileChecker')

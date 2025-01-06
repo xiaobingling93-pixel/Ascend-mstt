@@ -346,6 +346,9 @@ def df_merge(all_result_df_list):
     return merge_df_base
 
 
+share_compare_index_list = []
+
+
 def initialize_compare_index(config):
     global share_compare_index_list
     manager = multiprocessing.Manager()
