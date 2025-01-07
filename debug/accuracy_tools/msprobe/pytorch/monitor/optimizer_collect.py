@@ -19,7 +19,7 @@ from collections import defaultdict
 import torch
 import torch.distributed as dist
 
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.utils import MVResult, MVGradResult
 
 

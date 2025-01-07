@@ -35,12 +35,12 @@ class BitNoisePerturbation(BasePerturbation):
                 noise_type = list(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.keys())[
                              list(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.values()).index(bit_len_type)]
                 noise = ops.full(inputs.shape, 1, dtype=noise_type)
-                input_np = inputs.contiguous().asnumpy()
+                input_np = inputs.asnumpy()
                 input_np_int = input_np.view(bit_len_type)
                 result = Tensor(input_np_int)
                 result = ops.where(ops.abs(inputs) > sub_normal,
                                    ops.bitwise_xor(result, noise), result)
-                result_np = result.contiguous().asnumpy()
+                result_np = result.asnumpy()
                 result_np_float = result_np.view(FreeBenchmarkConst.MS_NUMPY_DTYPE_DICT.get(inputs.dtype))
                 self.is_fuzzed = True
                 return Tensor(result_np_float)

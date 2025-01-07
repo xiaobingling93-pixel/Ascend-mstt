@@ -21,7 +21,7 @@ import torch
 
 from msprobe.core.common.const import MonitorConst
 from msprobe.pytorch.monitor.features import square_sum, get_max, get_min, get_zeros, get_nans, get_norm, get_mean
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 
 
 def get_summary_writer_tag_name(module_or_param_name: str, tag: str, rank):
