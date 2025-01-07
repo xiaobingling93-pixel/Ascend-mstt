@@ -67,6 +67,17 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(error_flag)
         self.assertEqual(err_msg, "This is empty data, can not compare.")
 
+    def test_get_error_flag_and_0d_tensor(self):
+        n_value = np.array(1)
+        b_value = np.array(1)
+        error_flag = False
+
+        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
+
+        self.assertFalse(error_flag)
+        self.assertEqual(err_msg, "This is type of 0-d tensor, can not calculate 'Cosine', "
+                                  "'One Thousandth Err Ratio' and 'Five Thousandths Err Ratio'. ")
+
     def test_get_error_flag_and_msg_shape_unmatch(self):
         n_value = np.array([1, 2, 3, 4])
         b_value = np.array([1, 2, 3, 4, 5])
@@ -91,6 +102,16 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(error_flag)
         self.assertEqual(err_msg, "The position of inf or nan in NPU and bench Tensor do not match.")
 
+    def test_get_error_flag_and_msg_diff_dtype(self):
+        n_value = np.array([1, 2, 3, 4])
+        b_value = np.array([1.0, 2.0, 3.0, 4.0])
+        error_flag = False
+
+        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value, error_flag=error_flag)
+
+        self.assertFalse(error_flag)
+        self.assertEqual(err_msg, "Dtype of NPU and bench tensor do not match.")
+
     def test_reshape_value_normal(self):
         n_value = np.array([[1, 2], [3, 4]])
         b_value = np.array([[1, 2, 3], [3, 4, 5]])
@@ -101,7 +122,7 @@ class TestUtilsMethods(unittest.TestCase):
         n_value = np.array([])
         b_value = np.array([])
         a, b = reshape_value(n_value, b_value)
-        self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
+        self.assertTrue(np.array_equal(a, np.array(1.)) and np.array_equal(b, np.array(1.)))
 
     def test_reshape_value_bool(self):
         n_value = np.array(True)
