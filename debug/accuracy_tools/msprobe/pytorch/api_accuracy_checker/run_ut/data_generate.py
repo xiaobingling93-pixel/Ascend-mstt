@@ -386,9 +386,11 @@ def get_output_dtype(api_info):
         api_info: API basic information. Dict
     """
     output_dtype = None
-    output_info = api_info.get("output")
+    output_info = api_info.get(Const.OUTPUT)
     if output_info:
-        output_dtype = output_info[0].get("dtype")
+        output_dtype = output_info[0].get(Const.DTYPE)
+        module_name, attribute_name = get_module_and_atttribute_name(output_dtype)
+        output_dtype = get_attribute(module_name, attribute_name)
     return output_dtype
 
 

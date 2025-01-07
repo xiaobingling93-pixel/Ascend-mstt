@@ -44,7 +44,7 @@ class TestDataGenerateMethods(unittest.TestCase):
     
     def test_gen_api_params(self):
         api_info = copy.deepcopy(api_info_dict)
-        args_params, kwargs_params = gen_api_params(api_info, "conv2d", True, None, None)
+        args_params, kwargs_params, output_dtype = gen_api_params(api_info, "conv2d", True, None, None)
         max_diff = abs(args_params[0].max() - max_value)
         min_diff = abs(args_params[0].min() - min_value)
         self.assertEqual(len(args_params), 2)
@@ -54,6 +54,7 @@ class TestDataGenerateMethods(unittest.TestCase):
         self.assertLessEqual(min_diff, 0.001)
         self.assertEqual(args_params[0].shape, torch.Size([2048, 2, 1, 256]))
         self.assertEqual(kwargs_params, {'dim': -1})
+        self.assertEqual(output_dtype, torch.float16)
 
     def test_gen_args(self):
         func_options = {}

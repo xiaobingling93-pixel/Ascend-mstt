@@ -39,8 +39,7 @@ from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import BackwardMes
     get_validated_result_csv_path, get_validated_details_csv_path, exec_api, record_skip_info, is_unsupported_api
 from msprobe.pytorch.api_accuracy_checker.run_ut.data_generate import gen_api_params, gen_args
 from msprobe.pytorch.api_accuracy_checker.common.utils import api_info_preprocess, \
-    initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData, get_module_and_atttribute_name, \
-    get_attribute
+    initialize_save_path, UtDataProcessor, extract_basic_api_segments, ApiData
 from msprobe.pytorch.api_accuracy_checker.compare.compare import Comparator
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import CompareColumn
 from msprobe.pytorch.api_accuracy_checker.common.config import CheckerConfig
@@ -269,9 +268,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     cpu_params = generate_cpu_params(args, kwargs, need_backward, api_name)
     cpu_args, cpu_kwargs = cpu_params.cpu_args, cpu_params.cpu_kwargs
     autocast_dtype, is_autocast = cpu_params.autocast_dtype, cpu_params.is_autocast
-    module_name, attribute_name = get_module_and_atttribute_name(output_dtype)
-    output_dtype = get_attribute(module_name, attribute_name)
-    if not is_autocast:
+    if not is_autocast and output_dtype:
         is_autocast = autocast_dtype != output_dtype
         autocast_dtype = output_dtype
     bench_grad_out, device_grad_out = None, None
@@ -327,7 +324,7 @@ def run_torch_api_online(api_full_name, api_data, backward_content):
 
 def check_need_grad(api_info_dict):
     need_grad = True
-    if api_info_dict.get("input_kwargs") and "out" in api_info_dict.get("input_kwargs"):
+    if api_info_dict.get(Const.INPUT_KWARGS) and "out" in api_info_dict.get(Const.INPUT_KWARGS):
         need_grad = False
     return need_grad
 
