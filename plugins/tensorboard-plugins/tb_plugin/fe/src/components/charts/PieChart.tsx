@@ -57,7 +57,7 @@ const noTitleArea: IAreaPosition = {
 };
 
 export const PieChart: React.FC<IProps> = (props) => {
-  const { graph, height = 300, top, noLegend, title, colors, tooltipMode: tooltip_mode = 'both' } = props;
+  const { graph, height = 300, top, noLegend, title, colors, tooltipMode = 'both' } = props;
   const graphRef = React.useRef<HTMLDivElement>(null);
 
   const [resizeEventDependency] = useResizeEventDependency();
@@ -98,7 +98,7 @@ export const PieChart: React.FC<IProps> = (props) => {
           const index = typedData.name.indexOf('_');
           const safeName = typedData.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
           return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${
-            tooltip_mode === 'both' ? typedData.value : ''
+            tooltipMode === 'both' ? typedData.value : ''
           }(${typedData.percent}%)<b />`;
         },
         confine: true,
@@ -138,7 +138,7 @@ export const PieChart: React.FC<IProps> = (props) => {
             const percent = (((currentItem?.value || 0) * 100) / totalValue).toFixed(2);
             const safeName = data.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
             return `${index > -1 ? safeName.slice(index + 1) : safeName}<br /><b>${
-              tooltip_mode === 'both' ? currentItem?.value || 0 : ''
+              tooltipMode === 'both' ? currentItem?.value || 0 : ''
             }(${percent}%)<b />`;
           },
         },
