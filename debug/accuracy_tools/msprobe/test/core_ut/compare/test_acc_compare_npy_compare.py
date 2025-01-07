@@ -91,15 +91,21 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertTrue(error_flag)
         self.assertEqual(err_msg, "The position of inf or nan in NPU and bench Tensor do not match.")
 
-    def test_reshape_value_1(self):
+    def test_reshape_value_normal(self):
         n_value = np.array([[1, 2], [3, 4]])
         b_value = np.array([[1, 2, 3], [3, 4, 5]])
         a, b = reshape_value(n_value, b_value)
         self.assertTrue(np.array_equal(a, np.array([1., 2., 3., 4.])) and np.array_equal(b, np.array([1., 2., 3., 3., 4., 5.])))
 
-    def test_reshape_value_2(self):
+    def test_reshape_value_not_shape(self):
         n_value = np.array([])
         b_value = np.array([])
+        a, b = reshape_value(n_value, b_value)
+        self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
+
+    def test_reshape_value_bool(self):
+        n_value = np.array(True)
+        b_value = np.array(True)
         a, b = reshape_value(n_value, b_value)
         self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
 
@@ -337,7 +343,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         result, err_msg = op.apply(n_value, b_value, relative_err)
 
-        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, "")
 
     def test_GetFiveThousandErrRatio_normal(self):
