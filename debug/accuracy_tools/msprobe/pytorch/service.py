@@ -327,5 +327,7 @@ class Service:
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
             for single_model in self.model:
                 for _, module in single_model.named_modules():
+                    if module == single_model:
+                        continue
                     if hasattr(module, 'has_param_hook'):
                         del module.has_param_hook
