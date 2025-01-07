@@ -24,9 +24,7 @@ import { CallStackTableDataInner, OperationTableDataInner } from '../../api';
 import type { ColumnsType } from 'antd/es/table';
 import { ClassNameMap } from '@material-ui/styles';
 
-export function getCommonOperationColumns<
-  T extends OperationTableDataInner | CallStackTableDataInner
->(
+export function getCommonOperationColumns<T extends OperationTableDataInner | CallStackTableDataInner>(
   data?: T[],
   deviceTarget?: string,
   defaultSort?: string,
@@ -36,30 +34,23 @@ export function getCommonOperationColumns<
   const firstData = firstOrUndefined(data);
 
   const hasInputShape = !firstData || isDef(firstData.input_shape);
-  const hasDeviceSelfDuration =
-    !firstData || isDef(firstData.device_self_duration);
-  const hasDeviceTotalDuration =
-    !firstData || isDef(firstData.device_total_duration);
+  const hasDeviceSelfDuration = !firstData || isDef(firstData.device_self_duration);
+  const hasDeviceTotalDuration = !firstData || isDef(firstData.device_total_duration);
   const hasTcEligible = !firstData || isDef(firstData.tc_eligible);
   const hasTcSelfRatio = !firstData || isDef(firstData.tc_self_ratio);
   const hasTcTotalRatio = !firstData || isDef(firstData.tc_total_ratio);
 
-  const nameCompare = (a: T, b: T) => a.name.localeCompare(b.name);
-  const callsCompare = (a: T, b: T) => a.calls - b.calls;
-  const deviceSelfDurationCompare = (a: T, b: T) =>
+  const nameCompare = (a: T, b: T): number => a.name.localeCompare(b.name);
+  const callsCompare = (a: T, b: T): number => a.calls - b.calls;
+  const deviceSelfDurationCompare = (a: T, b: T): number =>
     (a.device_self_duration || 0) - (b.device_self_duration || 0);
-  const deviceTotalDurationCompare = (a: T, b: T) =>
+  const deviceTotalDurationCompare = (a: T, b: T): number =>
     (a.device_total_duration || 0) - (b.device_total_duration || 0);
-  const hostSelfDurationCompare = (a: T, b: T) =>
-    (a.host_self_duration || 0) - (b.host_self_duration || 0);
-  const hostTotalDurationCompare = (a: T, b: T) =>
-    (a.host_total_duration || 0) - (b.host_total_duration || 0);
-  const tcEligibleCompare = (a: T, b: T) =>
-    (a.tc_eligible ?? '').localeCompare(b.tc_eligible ?? '');
-  const tcSelfRatioCompare = (a: T, b: T) =>
-    (a.tc_self_ratio || 0) - (b.tc_self_ratio || 0);
-  const tcTotalRatioCompare = (a: T, b: T) =>
-    (a.tc_total_ratio || 0) - (b.tc_total_ratio || 0);
+  const hostSelfDurationCompare = (a: T, b: T): number => (a.host_self_duration || 0) - (b.host_self_duration || 0);
+  const hostTotalDurationCompare = (a: T, b: T): number => (a.host_total_duration || 0) - (b.host_total_duration || 0);
+  const tcEligibleCompare = (a: T, b: T): number => (a.tc_eligible ?? '').localeCompare(b.tc_eligible ?? '');
+  const tcSelfRatioCompare = (a: T, b: T): number => (a.tc_self_ratio || 0) - (b.tc_self_ratio || 0);
+  const tcTotalRatioCompare = (a: T, b: T): number => (a.tc_total_ratio || 0) - (b.tc_total_ratio || 0);
 
   const columns: ColumnsType<T> = [
     {
@@ -115,10 +106,7 @@ export function getCommonOperationColumns<
       ? {
           dataIndex: 'tc_eligible',
           key: 'tc_eligible',
-          title:
-            deviceTarget === 'Ascend'
-              ? 'AI Cores Eligible'
-              : 'Tensor Cores Eligible',
+          title: deviceTarget === 'Ascend' ? 'AI Cores Eligible' : 'Tensor Cores Eligible',
           sorter: tcEligibleCompare,
         }
       : undefined,
@@ -126,10 +114,7 @@ export function getCommonOperationColumns<
       ? {
           dataIndex: 'tc_self_ratio',
           key: 'tc_self_ratio',
-          title:
-            deviceTarget === 'Ascend'
-              ? 'AI Cores Self(%)'
-              : 'Tensor Cores Self(%)',
+          title: deviceTarget === 'Ascend' ? 'AI Cores Self(%)' : 'Tensor Cores Self(%)',
           sorter: tcSelfRatioCompare,
         }
       : undefined,
@@ -137,10 +122,7 @@ export function getCommonOperationColumns<
       ? {
           dataIndex: 'tc_total_ratio',
           key: 'tc_total_ratio',
-          title:
-            deviceTarget === 'Ascend'
-              ? 'AI Cores Total(%)'
-              : 'Tensor Cores Total(%)',
+          title: deviceTarget === 'Ascend' ? 'AI Cores Total(%)' : 'Tensor Cores Total(%)',
           sorter: tcTotalRatioCompare,
         }
       : undefined,
@@ -160,9 +142,7 @@ export function getCommonOperationColumns<
 }
 
 let uid = 1;
-export function attachId<
-  T extends CallStackTableDataInner | OperationTableDataInner
->(data: T[]): T[] {
+export function attachId<T extends CallStackTableDataInner | OperationTableDataInner>(data: T[]): T[] {
   return data.map((d) => ({
     ...d,
     key: uid++,

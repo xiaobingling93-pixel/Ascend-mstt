@@ -17,12 +17,17 @@ import os
 from collections import namedtuple
 from datetime import timezone, timedelta
 from functools import wraps
+from datetime import datetime
+import os
+import re
+
 
 import torch
 
 from msprobe.core.common.const import MonitorConst, Const
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import is_int
+from msprobe.core.common.file_utils import check_file_or_directory_path
 
 FILE_MAX_SIZE = 10 * 1024 * 1024 * 1024
 FILE_NAME_MAX_LENGTH = 255
@@ -114,15 +119,16 @@ def is_recomputation():
 def validate_ops(ops):
     if not isinstance(ops, list):
         raise TypeError("ops should be a list")
-    if not ops:
-        raise TypeError(f"specify ops to calculate metrics. Optional ops: {MonitorConst.OP_LIST}")
-
     valid_ops = []
     for op in ops:
         if op not in MonitorConst.OP_LIST:
             logger.warning(f"op {op} is not supported. Optional ops: {MonitorConst.OP_LIST}")
-        else:
-            valid_ops.append(op)
+            continue
+        valid_ops.append(op)
+    if not valid_ops:
+        default_op = MonitorConst.OP_LIST[0]
+        valid_ops.append(default_op)
+        logger.info_on_rank_0(f"There is no valid ops, default op {default_op} is used")
     return valid_ops
 
 
@@ -167,6 +173,11 @@ def validate_wg_distribution(wg_distribution):
 def validate_mg_distribution(mg_distribution):
     if not isinstance(mg_distribution, bool):
         raise TypeError('mg_distribution should be a bool')
+
+
+def validate_param_distribution(param_distribution):
+    if not isinstance(param_distribution, bool):
+        raise TypeError('param_distribution should be a bool')
 
 
 def validate_cc_distribution(cc_distribution):
@@ -245,6 +256,9 @@ def validate_config(config):
     mg_distribution = config.get('mg_distribution', False)
     validate_mg_distribution(mg_distribution)
 
+    param_distribution = config.get('param_distribution', False)
+    validate_param_distribution(param_distribution)
+
     cc_distribution = config.get('cc_distribution', {})
     validate_cc_distribution(cc_distribution)
 
@@ -253,3 +267,37 @@ def validate_config(config):
 
     step_count_per_record = config.get('step_count_per_record', 1)
     validate_step_count_per_record(step_count_per_record)
+
+    if not targets:
+        if xy_distribution:
+            config["all_xy"] = True
+        config["targets"] = {"": {}}
+
+
+def time_str2time_digit(time_str):
+    time_format = '%b%d_%H-%M-%S'
+    try:
+        time_digit = datetime.strptime(time_str, time_format)
+    except Exception as e:
+        raise RuntimeError(f"illegal timestamp: {time_str}, timestamp should be prefix \
+                           of existing output dirpath, like 'Dec03_21-34-40'.") from e
+    return time_digit
+
+
+def get_target_output_dir(monitor_path, time_start, time_end):
+    check_file_or_directory_path(monitor_path, isdir=True)
+    time_start = time_str2time_digit(time_start)
+    time_end = time_str2time_digit(time_end)
+    if time_start > time_end:
+        raise ValueError(f"time_start({time_start} greater than time_end({time_end }))")
+    result = {}
+    for dirname in os.listdir(monitor_path):
+        match = re.match(MonitorConst.OUTPUT_DIR_PATTERN, dirname)
+        if not match:
+            continue
+        time_tag = match.group(1)
+        target_time = time_str2time_digit(time_tag)
+        if time_start <= target_time <= time_end:
+            rank = match.group(2)
+            result[rank] = os.path.join(monitor_path, dirname)
+    return result

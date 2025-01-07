@@ -17,6 +17,8 @@
 
 import torch
 
+from msprobe.core.common.const import CompareConst
+
 
 class StandardConfig:
     """
@@ -56,9 +58,15 @@ class StandardConfig:
         torch.float32: 2**-20,
         "default": 2**-20
     }
-    _small_value_atol = {
+    _threshold_small_value_atol = {
         torch.float16: 2**-16,
-        torch.bfloat16: 2**-16,
+        torch.bfloat16: 1e-16,
+        torch.float32: 2**-30,
+        "default": 2**-30
+    }
+    _benchmark_small_value_atol = {
+        torch.float16: 1e-16,
+        torch.bfloat16: 1e-16,
         torch.float32: 2**-30,
         "default": 2**-30
     }
@@ -68,7 +76,12 @@ class StandardConfig:
         torch.float32: 2**-20,
         "default": 2**-20
     }
-    
+    _accumulative_error_bound = {
+        torch.float16: 2**-8,
+        torch.bfloat16: 2**-7,
+        torch.float32: 2**-11,
+        "default": 2**-11
+    }
     _small_value_threshold = {
         'error_threshold': 2,
         'warning_threshold': 1,
@@ -94,9 +107,15 @@ class StandardConfig:
         'warning_threshold': 1,
         "default": 1
     }
-    minmum_err = {
+    _minmum_err = {
         'torch.float16': 2**-11,
         'torch.bfloat16': 2**-8,
+        'torch.float32': 2**-14,
+        'default': 2**-14
+    }
+    _accumulative_error_eb_threshold = {
+        'torch.float16': 2**-20,
+        'torch.bfloat16': 2**-7,
         'torch.float32': 2**-14,
         'default': 2**-14
     }
@@ -105,14 +124,22 @@ class StandardConfig:
     ulp_err_proportion_ratio = 1
     _fp32_ulp_err_proportion = 0.05
     _fp16_ulp_err_proportion = 0.001
+    _special_samll_value = 1
     
     @classmethod
-    def get_small_valuel(cls, dtype):
+    def get_small_value(cls, dtype, standard):
+        if standard == CompareConst.ACCUMULATIVE_ERROR_COMPARE:
+            return cls._special_samll_value
         return cls._small_value.get(dtype, cls._small_value["default"])
     
     @classmethod
-    def get_small_value_atol(cls, dtype):
-        return cls._small_value_atol.get(dtype, cls._small_value_atol["default"])
+    def get_small_value_atol(cls, dtype, standard):
+        standard_dict = {
+            CompareConst.ABSOLUTE_THRESHOLD: cls._threshold_small_value_atol,
+            CompareConst.BENCHMARK: cls._benchmark_small_value_atol
+        }
+        small_value_atol_standard = standard_dict.get(standard, cls._benchmark_small_value_atol)
+        return small_value_atol_standard.get(dtype, small_value_atol_standard["default"])
     
     @classmethod
     def get_rtol(cls, dtype):
@@ -180,4 +207,12 @@ class StandardConfig:
 
     @classmethod
     def get_minmum_err(cls, dtype):
-        return cls.minmum_err.get(dtype, cls.minmum_err["default"])
+        return cls._minmum_err.get(dtype, cls._minmum_err["default"])
+    
+    @classmethod
+    def get_accumulative_error_bound(cls, dtype):
+        return cls._accumulative_error_bound.get(dtype, cls._accumulative_error_bound["default"])
+    
+    @classmethod
+    def get_accumulative_error_eb_threshold(cls, dtype):
+        return cls._accumulative_error_eb_threshold.get(dtype, cls._accumulative_error_eb_threshold["default"])

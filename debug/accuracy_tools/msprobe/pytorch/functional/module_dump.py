@@ -55,12 +55,12 @@ def register_hook(module, dump_name):
         forward_hook_handle = module.register_forward_hook(forward_hook, with_kwargs=True)
         hook_handle_list.append(forward_hook_handle)
     else:
-        pdg.service.check_register_full_backward_hook(module)
+        pdg.service.module_processor.remove_deprecated_backward_hook_if_exist(module)
         full_backward_hook_handle = module.register_full_backward_hook(
             pdg.service.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
         forward_hook_handle = module.register_forward_hook(forward_hook_torch_version_below_2)
         hook_handle_list.extend([full_backward_hook_handle, forward_hook_handle])
-    pdg.service.check_register_full_backward_hook(module)
+    pdg.service.module_processor.remove_deprecated_backward_hook_if_exist(module)
     full_backward_hook_handle = module.register_full_backward_hook(backward_hook)
 
     forward_pre_hook_handle = module.register_forward_pre_hook(
@@ -72,7 +72,7 @@ def register_hook(module, dump_name):
     if torch_version_above_or_equal_2:
         backward_pre_hook_handle = module.register_full_backward_pre_hook(
             pdg.service.module_processor.node_hook(prefix + Const.BACKWARD, Const.START))
-        pdg.service.check_register_full_backward_hook(module)
+        pdg.service.module_processor.remove_deprecated_backward_hook_if_exist(module)
         full_backward_hook_handle = module.register_full_backward_hook(
             pdg.service.module_processor.node_hook(prefix + Const.BACKWARD, Const.STOP))
         hook_handle_list.extend([backward_pre_hook_handle, full_backward_hook_handle])

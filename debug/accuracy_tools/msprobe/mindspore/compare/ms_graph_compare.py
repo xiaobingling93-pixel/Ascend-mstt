@@ -25,7 +25,7 @@ from msprobe.core.common.file_utils import load_npy, read_csv, save_excel
 from msprobe.core.common.log import logger
 from msprobe.core.common.utils import add_time_with_xlsx, CompareException
 from msprobe.core.compare.multiprocessing_compute import _ms_graph_handle_multi_process, check_accuracy
-from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, reshape_value, compare_ops_apply
+from msprobe.core.compare.npy_compare import npy_data_check, statistics_data_check, compare_ops_apply
 from msprobe.mindspore.common.utils import convert_to_int, list_lowest_level_directories
 
 
@@ -144,8 +144,14 @@ def generate_data_name(data_path):
         mode = GraphMode.STATISTIC_MODE
     else:
         mode = GraphMode.ERROR_MODE
-        logger.error(f"Error mode.")
+        logger.error("Error mode.")
     return mode, data_list
+
+
+def transform_special_string_into_float(data_frame):
+    data_frame[data_frame == "null"] = '0'
+    data_frame[data_frame == "False"] = '0'
+    data_frame[data_frame == "True"] = '1'
 
 
 class GraphMSComparator:
@@ -187,7 +193,6 @@ class GraphMSComparator:
             result_dict[CompareConst.ERROR_MESSAGE] = error_message
 
             if not error_flag:
-                n_value, b_value = reshape_value(n_value, b_value)
                 result_list, err_msg = compare_ops_apply(n_value, b_value, False, "")
                 result_dict[CompareConst.COSINE] = result_list[0]
                 result_dict[CompareConst.MAX_ABS_ERR] = result_list[1]
@@ -334,13 +339,17 @@ class GraphMSComparator:
                                                   CompareConst.BENCH_NORM])
 
             npu_float_type = [CompareConst.NPU_MAX, CompareConst.NPU_MIN, CompareConst.NPU_MEAN, CompareConst.NPU_NORM]
-            npu_data_df[npu_float_type] = npu_data_df[npu_float_type].astype(float)
+            npu_float_data_df = npu_data_df[npu_float_type].astype(str)
+            transform_special_string_into_float(npu_float_data_df)
+            npu_data_df[npu_float_type] = npu_float_data_df.astype(float)
 
             bench_float_type = [
                 CompareConst.BENCH_MAX, CompareConst.BENCH_MIN,
                 CompareConst.BENCH_MEAN, CompareConst.BENCH_NORM
             ]
-            bench_data_df[bench_float_type] = bench_data_df[bench_float_type].astype(float)
+            bench_float_data_df = bench_data_df[bench_float_type].astype(str)
+            transform_special_string_into_float(bench_float_data_df)
+            bench_data_df[bench_float_type] = bench_float_data_df.astype(float)
 
         npu_data_df['Local Index'] = npu_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()
         bench_data_df['Local Index'] = bench_data_df.sort_values('TimeStamp').groupby('Compare Key').cumcount()

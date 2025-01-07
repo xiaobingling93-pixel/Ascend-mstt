@@ -35,7 +35,7 @@ const useStyles = makeStyles((theme) => ({
 export const TextListItem: React.FC<IProps> = (props) => {
   const classes = useStyles();
 
-  const getSizes = function () {
+  const getSizes = function (): readonly any[] {
     if (props.value && props.extra) {
       return [4, 4, 4] as const;
     }
@@ -50,14 +50,9 @@ export const TextListItem: React.FC<IProps> = (props) => {
 
   const sizes = getSizes();
 
-  const renderSpan = function (content: string, className?: string) {
+  const renderSpan = function (content: string, className?: string): React.JSX.Element {
     if (props.dangerouslyAllowHtml) {
-      return (
-        <span
-          className={className}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
-      );
+      return <span className={className} dangerouslySetInnerHTML={{ __html: content }} />;
     }
     return <span className={className}>{content}</span>;
   };
@@ -69,9 +64,7 @@ export const TextListItem: React.FC<IProps> = (props) => {
           <Grid item className={classes.label}>
             {renderSpan(props.name, props.classes?.name)}
           </Grid>
-          {props.description && (
-            <Grid item>{renderSpan(props.description)}</Grid>
-          )}
+          {props.description && <Grid item>{renderSpan(props.description)}</Grid>}
         </Grid>
       </Grid>
       {props.value && (

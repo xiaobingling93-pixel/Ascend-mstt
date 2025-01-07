@@ -21,6 +21,7 @@ from msprobe.pytorch.api_accuracy_checker.compare.algorithm import check_inf_nan
     check_small_value
 from msprobe.pytorch.api_accuracy_checker.precision_standard.base_standard import BaseCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
+from msprobe.core.common.const import CompareConst
 
 
 
@@ -65,16 +66,10 @@ class AbsolutethdCompare(BaseCompare):
     """
     def __init__(self, input_data):
         super(AbsolutethdCompare, self).__init__(input_data)
+        self.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD
 
     def _get_rtol(self):
         return StandardConfig.get_rtol(self.dtype)
-
-    def _get_rel_err(self, abs_err, abs_bench_with_eps):
-        rel_err = abs_err / abs_bench_with_eps
-        return rel_err
-
-    def _get_normal_value_mask(self, small_value_mask):
-        return np.logical_and(self.both_finite_mask, np.logical_not(small_value_mask))
 
     def _pre_compare(self):
         """
@@ -97,7 +92,7 @@ class AbsolutethdCompare(BaseCompare):
         self.rel_err = self._get_rel_err(self.abs_err, self.abs_bench_with_eps)
         self.small_value, self.small_value_atol = self.get_small_value_threshold()
         self.small_value_mask = self.stat_small_value_mask(self.abs_bench, self.both_finite_mask, self.small_value)
-        self.normal_value_mask = self._get_normal_value_mask(self.small_value_mask)
+        self.normal_value_mask = self._get_normal_value_mask(self.both_finite_mask, self.small_value_mask)
 
     def _compute_metrics(self):
         inf_nan_error_ratio = check_inf_nan_value(self.inf_nan_mask, self.bench_output, self.device_output, self.dtype,

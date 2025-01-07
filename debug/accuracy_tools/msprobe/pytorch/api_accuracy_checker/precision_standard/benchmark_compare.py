@@ -78,6 +78,7 @@ class BenchmarkCompare(BaseCompare):
 
     def __init__(self, input_data):
         super(BenchmarkCompare, self).__init__(input_data)
+        self.compare_algorithm = CompareConst.BENCHMARK
 
     def _get_abs_err_greater_mask(self, small_value_atol):
         abs_err_greater_mask = np.greater(self.abs_err, small_value_atol)
@@ -211,7 +212,7 @@ class BenchmarkPrecisionCompare(BasePrecisionCompare):
                                         if inf_nan_consistency.mean_rel_inf_nan_consistency else CompareConst.ERROR
         eb_status = self._get_single_metric_status(eb_ratio, CompareConst.EB) \
                                         if inf_nan_consistency.eb_inf_nan_consistency else CompareConst.ERROR
-        status_list = [small_value_err_status, rmse_status, max_rel_err_status, mean_rel_err_status, eb_status]
+        status_list = [small_value_err_status, rmse_status, max_rel_err_status, mean_rel_err_status]
         compare_result = self.get_final_status(status_list)
         status_dict = {
             CompareConst.SMALL_VALUE_ERR_STATUS: small_value_err_status,

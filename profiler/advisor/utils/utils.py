@@ -119,10 +119,10 @@ def singleton(cls):
         members = inspect.getmembers(base_class)
 
         # 过滤出函数对象
-        function_objs = [
-            member[1] for member in members 
-            if inspect.isfunction(member[1]) or inspect.ismethod(member[1])
-        ]
+        function_objs = [member[1]
+                         for member in members
+                         if inspect.isfunction(member[1]) or inspect.ismethod(member[1])
+                         ]
         for function_obj in function_objs:
             if inspect.isfunction(function_obj) and not is_static_func(function_obj):
                 continue
@@ -302,12 +302,12 @@ def safe_division(numerator, denominator):
     return denominator and numerator / denominator
 
 
-def safe_write(content, save_path):
+def safe_write(content, save_path, encoding=None):
     if os.path.dirname(save_path) != "":
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
 
     with os.fdopen(os.open(save_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
-                           stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), "w") as f:
+                           stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP), "w", encoding=encoding) as f:
         f.write(content)
 
 
@@ -526,6 +526,6 @@ def convert_to_int(data: any) -> int:
 
 def convert_to_int_with_exception(data: any) -> int:
     if data == "":
-        logger.warning("convert_to_int_with_exception: a empty string was encountered.")
+        logger.warning("convert_to_int_with_exception: an empty string was encountered.")
         return 0
     return convert_to_int(data)

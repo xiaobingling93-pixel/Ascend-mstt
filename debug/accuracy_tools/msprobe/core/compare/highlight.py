@@ -13,19 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import math
 import abc
+import math
+import multiprocessing
 import re
 from collections import namedtuple
+
 import numpy as np
 import openpyxl
 from openpyxl.styles import PatternFill
+from openpyxl.utils.dataframe import dataframe_to_rows
 from tqdm import tqdm
-from msprobe.core.common.utils import get_header_index
+
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.file_utils import save_workbook
 from msprobe.core.common.log import logger
-from msprobe.core.common.const import CompareConst, FileCheckConst, Const
-from msprobe.core.common.utils import safe_get_value
+from msprobe.core.common.utils import CompareException, get_header_index, safe_get_value
 from msprobe.core.compare.utils import table_value_is_valid
 
 
@@ -95,8 +98,8 @@ class CheckMaxRelativeDiff(HighlightCheck):
         api_in, api_out, num = info
         max_diff_index = get_header_index(CompareConst.MAX_DIFF, dump_mode)
         bench_max_index = get_header_index(CompareConst.BENCH_MAX, dump_mode)
-        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(0.01, api_in[bench_max_index])))
-        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(0.01, api_out[bench_max_index])))
+        input_max_relative_diff = np.abs(np.divide(api_in[max_diff_index], max(Const.FLOAT_EPSILON, api_in[bench_max_index])))
+        output_max_relative_diff = np.abs(np.divide(api_out[max_diff_index], max(Const.FLOAT_EPSILON, api_out[bench_max_index])))
         if not isinstance(input_max_relative_diff, (float, int)) or not isinstance(output_max_relative_diff,
                                                                                    (float, int)):
             return
@@ -198,51 +201,115 @@ def find_error_rows(result, last_len, n_num_input, highlight_dict, dump_mode):
 
 
 def get_name_and_state(name):
-    """Get api/module name and state"""
-    if Const.INPUT in name:
-        api_name = name.split(Const.INPUT)[0]
-        state = Const.INPUT
-    else:
-        api_name = name.split(Const.OUTPUT)[0]
-        state = Const.OUTPUT
-    return api_name, state
+    """Get api/module name and state
+    example:
+    name = 'conv2d.forward.1.input.0'
+    return: ('conv2d.forward.1.', 'input')
+
+    name = 'Functional.pad.0.backward.output.0'
+    return: ('Functional.pad.0.backward.', 'output')"""
+    split = re.split(r'\.(forward|backward)\.', name)
+    api = f'{split[0]}.{split[1]}.'
+    state_str = split[2]
+    match = re.match(r'^(\d+\.)?(input|output|kwargs)\..+$', state_str)
+    if not match:
+        raise CompareException(f'Invalid name string: {name}')
+    if match.group(1):
+        api = f'{api}{match.group(1)}'
+    state = match.group(2)
+    return api, state
+
+
+class ApiBatch:
+    def __init__(self, api_name: str, start: int):
+        self.api_name = api_name
+        self.start = start
+        self.input_len = 1
+        self.output_index = start + 1
+        self.input_state = True
+
+    def increment(self, state: str):
+        if state == Const.OUTPUT:
+            self.input_state = False
+        if self.input_state:
+            self.input_len += 1
+        self.output_index += 1
 
 
 def find_compare_result_error_rows(result_df, highlight_dict, dump_mode):
     """将dataframe根据API分组，并找到有误差的算子用于高亮"""
     result = result_df.values
-    start, input_num, output_num, end = 0, 0, 0, len(result_df)
-    last_api_name, last_state = None, None
-    num, last_len = 0, 0
-    progress_bar = tqdm(total=len(result), desc="API/Module Analyse Progress", unit="item", ncols=100)
-    for res_i in result:
+    api_batches = []
+    for i, res_i in enumerate(result):
         api_full_name = safe_get_value(res_i, 0, "res_i")
         api_name, state = get_name_and_state(api_full_name)
-        if last_api_name:
-            if api_name == last_api_name:
-                if state == last_state:
-                    num += 1
-                else:
-                    input_num = num
-                    num, last_state = 1, state
-            else:
-                output_num = num
-                find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                                dump_mode)
-                num, last_api_name, last_state = 1, api_name, state
-                start += input_num + output_num
-                input_num, output_num = 1, 0
+        if not api_batches:
+            api_batches.append(ApiBatch(api_name, i))
+            continue
+        api_batch = api_batches[-1]
+        if api_batch.api_name == api_name:
+            api_batch.increment(state)
         else:
-            num, last_api_name, last_state = 1, api_name, state
-        progress_bar.update(1)
-    progress_bar.close()
-    if state:
-        if state == Const.INPUT:
-            input_num = num
+            api_batches.append(ApiBatch(api_name, i))
+    with tqdm(total=len(api_batches), desc="API/Module Analyse Progress", unit="item", ncols=100) as progress_bar:
+        for api_batch in api_batches:
+            find_error_rows(result[api_batch.start: api_batch.output_index], api_batch.start, api_batch.input_len,
+                            highlight_dict, dump_mode)
+            progress_bar.update(1)
+
+
+def value_check(value, api_name=None, i=None, result_df_columns=None):
+    if not table_value_is_valid(value):
+        if result_df_columns:
+            logger.error(f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+                         f"is not allowed to be written into the compare result xlsx.")
         else:
-            output_num = num
-        find_error_rows(result[start:start + input_num + output_num], start, input_num, highlight_dict,
-                        dump_mode)
+            logger.error(f"Malicious value [{value}] is not allowed to be written into the compare result xlsx.")
+
+
+def df_malicious_value_check(df_chunk, result_df_columns):
+    for row in df_chunk.itertuples(index=False):
+        api_name = row[0]
+        for i, value in enumerate(row):
+            value_check(value, api_name, i, result_df_columns)
+
+
+def handle_multi_process_malicious_value_check(func, result_df):
+    result_total_nums = len(result_df)
+    process_num = int((multiprocessing.cpu_count() + 1) / 2)
+
+    if result_total_nums <= process_num:
+        process_num = 1
+        chunks = [result_df]
+    else:
+        chunk_size = result_total_nums // process_num
+        chunks = [result_df.iloc[i: i + chunk_size] for i in range(0, result_total_nums, chunk_size)]
+
+    pool = multiprocessing.Pool(process_num)
+
+    def err_call(args):
+        logger.error("Multiprocessing malicious value check failed! Reason: {}".format(args))
+        try:
+            pool.terminate()
+        except OSError:
+            logger.error("Pool terminate failed")
+
+    result_df_columns = result_df.columns.tolist()
+    for column in result_df_columns:
+        value_check(column)
+    for df_chunk in chunks:
+        pool.apply_async(func, args=(df_chunk, result_df_columns, ), error_callback=err_call)
+
+    pool.close()
+    pool.join()
+
+
+def compare_result_df_convert(value):
+    if not isinstance(value, (float, int)) or isinstance(value, bool):  # bool类型或者非数字类型转str
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else str(value)
+    if isinstance(value, float):
+        value = f"{str(value)}\t" if str(value) in ("inf", "-inf", "nan") else value
+    return value
 
 
 def highlight_rows_xlsx(result_df, highlight_dict, file_path):
@@ -255,19 +322,13 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
 
     # write header
     logger.info('Initializing Excel file.')
-    for j, col_name in enumerate(result_df.columns, start=1):
-        if not table_value_is_valid(col_name):
-            raise RuntimeError(f"Malicious value [{col_name}] is not allowed to be written into the xlsx: {file_path}.")
-        ws.cell(row=1, column=j, value=col_name)
 
-    for i, row in enumerate(result_df.iterrows(), start=2):
-        for j, value in enumerate(row[1], start=1):
-            if not isinstance(value, (float, int)) or isinstance(value, bool):
-                value = f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else str(value)
-            if not table_value_is_valid(value):
-                raise RuntimeError(f"Malicious value [{value}] is not allowed to be written into the xlsx: "
-                                   f"{file_path}.")
-            ws.cell(row=i, column=j, value=f'{str(value)}\t' if str(value) in ('inf', '-inf', 'nan') else value)
+    handle_multi_process_malicious_value_check(df_malicious_value_check, result_df)
+
+    result_df_convert = result_df.applymap(compare_result_df_convert)
+
+    for row in dataframe_to_rows(result_df_convert, index=False, header=True):
+        ws.append(row)
     
     # 对可疑数据标色
     logger.info('Coloring Excel in progress.')
@@ -280,10 +341,11 @@ def highlight_rows_xlsx(result_df, highlight_dict, file_path):
     )
     for i in highlight_dict.get("red_rows", []):
         for j in range(1, col_len + 1):
-            ws.cell(row=i + 2, column=j).fill = red_fill
+            ws.cell(row=i + 2, column=j).fill = red_fill    # 2因为ws.cell中的row或column需要>=1,数据从第2行开始
     for i in highlight_dict.get("yellow_rows", []):
         for j in range(1, col_len + 1):
             ws.cell(row=i + 2, column=j).fill = yellow_fill
+
     logger.info('Saving Excel file to disk: %s' % file_path)
     save_workbook(wb, file_path)
 

@@ -63,15 +63,15 @@ export const RegexConfigModal: React.FC<IProps> = (props) => {
   const [lossTag, setLossTag] = useState<string>(props.file.lossTag);
   const [iterTag, setIterTag] = useState<string>(props.file.iterTag);
 
-  const lossTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const lossTagChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setLossTag(e.target.value);
   };
 
-  const iterTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const iterTagChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setIterTag(e.target.value);
   };
 
-  const configModalOk = () => {
+  const configModalOk = (): void => {
     if (lossTag.trim() === '') {
       message.warning('Loss Tag cannot be empty or only spaces!');
       return;

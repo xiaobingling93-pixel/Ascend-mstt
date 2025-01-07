@@ -3,11 +3,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 export enum OperationGroupBy {
-  Operation = 'Operation',
-  OperationAndInputShape = 'OperationAndInputShape',
+  OPERATION = 'Operation',
+  OPERATION_AND_INPUT_SHAPE = 'OperationAndInputShape',
 }
 
 export enum KernelGroupBy {
-  Kernel = 'Kernel',
-  KernelNameAndOpName = 'KernelNameAndOpName',
+  KERNEL = 'Kernel',
+  KERNEL_NAME_AND_OP_NAME = 'KernelNameAndOpName',
 }

@@ -181,13 +181,13 @@ def check_inf_nan_value(inf_nan_mask, bench_output, device_output, dtype, rtol):
 
 def check_small_value(abs_err, small_value_mask, small_value_atol):
     '''
-    新精度标准的相对阈值法中，检查npu和golden小值域输出的相对误差是否满足阈值
+    新精度标准的绝对阈值法中，检查npu和golden正常值输出的绝对误差是否满足阈值
     输入：
-        rel_err：npu输出和golden输出的相对误差
+        abs_err：npu输出和golden输出的绝对误差
         normal_value_mask：npu输出和golden输出的正常值mask
-        rtol：相对误差的阈值
+        atol：绝对误差的阈值
     输出： 
-        rel_err_ratio：npu输出和golden输出的相对误差不满足阈值的比例
+        abs_err_ratio：npu输出和golden输出的绝对误差不满足阈值的比例
     '''
     greater_mask = np.greater(abs_err, small_value_atol)
     err_mask = np.logical_and(greater_mask, small_value_mask)
@@ -197,13 +197,13 @@ def check_small_value(abs_err, small_value_mask, small_value_atol):
 
 def check_norm_value(normal_value_mask, rel_err, rtol):
     '''
-    新精度标准的绝对阈值法中，检查npu和golden正常值输出的绝对误差是否满足阈值
+    新精度标准的相对阈值法中，检查npu和golden小值域输出的相对误差是否满足阈值
     输入：
-        abs_err：npu输出和golden输出的绝对误差
+        rel_err：npu输出和golden输出的相对误差
         normal_value_mask：npu输出和golden输出的正常值mask
-        atol：绝对误差的阈值
+        rtol：相对误差的阈值
     输出： 
-        abs_err_ratio：npu输出和golden输出的绝对误差不满足阈值的比例
+        rel_err_ratio：npu输出和golden输出的相对误差不满足阈值的比例
     '''
     err_mask = np.greater(rel_err, rtol)
     err_mask = np.logical_and(err_mask, normal_value_mask)

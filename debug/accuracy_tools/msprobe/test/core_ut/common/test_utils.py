@@ -279,6 +279,9 @@ class TestUtils(TestCase):
         with self.assertRaises(MsprobeException) as context:
             get_real_step_or_rank([True, 1, 2], "step")
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+        with self.assertRaises(MsprobeException) as context:
+            get_real_step_or_rank([10000000], "step")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         result = get_real_step_or_rank([1, 10, 50], "step")
         self.assertEqual(result, [1, 10, 50])
 
@@ -349,24 +352,27 @@ class TestUtils(TestCase):
         self.assertEqual(context.exception.code, MsprobeException.RECURSION_LIMIT_ERROR)
         mock_error.assert_called_with("call test func_info exceeds the recursion limit.")
         self.assertEqual(len(call_record), Const.MAX_DEPTH)
-        
+
     def test_check_seed_all(self):
         with self.assertRaises(MsprobeException) as context:
-            check_seed_all(-1, True)
+            check_seed_all(-1, True, True)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         with self.assertRaises(MsprobeException) as context:
-            check_seed_all(Const.MAX_SEED_VALUE + 1, True)
+            check_seed_all(Const.MAX_SEED_VALUE + 1, True, True)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         with self.assertRaises(MsprobeException) as context:
-            check_seed_all("1", True)
+            check_seed_all("1", True, True)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         with self.assertRaises(MsprobeException) as context:
-            check_seed_all(True, True)
+            check_seed_all(True, True, True)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
         with self.assertRaises(MsprobeException) as context:
-            check_seed_all(True, 1)
+            check_seed_all(True, 1, True)
         self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
-        
+        with self.assertRaises(MsprobeException) as context:
+            check_seed_all(1, True, "test")
+        self.assertEqual(context.exception.code, MsprobeException.INVALID_PARAM_ERROR)
+
     def test_safe_get_value_dict_valid_key_index(self):
         # Test valid key and index in a dictionary
         dict_container = {'a': [1, 2, 3], 'b': [4, 5, 6]}

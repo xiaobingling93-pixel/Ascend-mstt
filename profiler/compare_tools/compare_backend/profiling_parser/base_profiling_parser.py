@@ -14,7 +14,6 @@
 # limitations under the License.
 from abc import abstractmethod, ABC
 from decimal import Decimal
-import logging
 
 import ijson
 
@@ -24,9 +23,10 @@ from compare_backend.compare_bean.origin_data_bean.trace_event_bean import Trace
 from compare_backend.compare_bean.profiling_info import ProfilingInfo
 from profiler.prof_common.constant import Constant
 from profiler.prof_common.file_manager import FileManager
+from profiler.prof_common.loger import get_logger
 from profiler.prof_common.path_manager import PathManager
 
-logger = logging.getLogger()
+logger = get_logger()
 
 
 class ProfilingResult:
@@ -339,6 +339,8 @@ class BaseProfilingParser(ABC):
                 task_index += 1
 
     def _check_result_data(self):
+        if self._json_path == self._profiling_path:
+            return
         if self._enable_operator_compare or self._enable_memory_compare or self._enable_api_compare:
             if not self._result_data.torch_op_data:
                 logger.warning("Can't find any torch op in the file: %s", self._profiling_path)

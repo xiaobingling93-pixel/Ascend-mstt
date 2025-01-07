@@ -20,7 +20,7 @@ from collections import defaultdict
 
 import mindspore as ms
 from mindspore import nn
-
+from mindspore.common.api import _no_grad
 try:
     from mindspore.common._pijit_context import PIJitCaptureContext
 except ImportError:
@@ -87,14 +87,13 @@ class Service:
             if not self.should_excute_hook():
                 clean_input_kwargs(cell)
                 return None
-
-            if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-
-            module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
-            self.data_collector.update_api_or_module_name(api_or_cell_name)
-            self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
-            return input_data
+            with _no_grad():
+                if target_type == BaseScope.Module_Type_Module:
+                    api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, None)
+                self.data_collector.update_api_or_module_name(api_or_cell_name)
+                self.data_collector.forward_input_data_collect(api_or_cell_name, cell, pid, module_input_output)
+                return input_data
 
         def grad_hook(ori_name, param_name):
             def hook_fn(grad):
@@ -123,26 +122,26 @@ class Service:
             if not self.should_excute_hook():
                 clean_input_kwargs(cell)
                 return None
+            with _no_grad():
+                module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
+                if target_type == BaseScope.Module_Type_Module:
+                    api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
+                    params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(recurse=False).items()}
+                    setattr(module_input_output, Const.PARAMS, params_dict)
+                    # 设置has_param_hook属性，避免重复注册hook
+                    if not hasattr(cell, 'has_param_hook'):
+                        setattr(cell, 'has_param_hook', False)
+                    self.data_collector.update_api_or_module_name(api_or_cell_name)
+                    self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
+                    register_param_hook(api_or_cell_name, cell, params_dict)
+                else:
+                    self.data_collector.update_api_or_module_name(api_or_cell_name)
+                    self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
 
-            module_input_output = self.prepare_module_input_output(target_type, cell, input_data, output)
-            if target_type == BaseScope.Module_Type_Module:
-                api_or_cell_name = self.cell_processor.set_and_get_reserved_name(cell, api_or_cell_name)
-                params_dict = {key.split(Const.SEP)[-1]: value for key, value in cell.parameters_dict(recurse=False).items()}
-                setattr(module_input_output, Const.PARAMS, params_dict)
-                # 设置has_param_hook属性，避免重复注册hook
-                if not hasattr(cell, 'has_param_hook'):
-                    setattr(cell, 'has_param_hook', False)
-                self.data_collector.update_api_or_module_name(api_or_cell_name)
-                self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
-                register_param_hook(api_or_cell_name, cell, params_dict)
-            else:
-                self.data_collector.update_api_or_module_name(api_or_cell_name)
-                self.data_collector.forward_output_data_collect(api_or_cell_name, cell, pid, module_input_output)
-
-            if self.data_collector.if_return_forward_new_output():
-                return self.data_collector.get_forward_new_output()
-            clean_input_kwargs(cell)
-            return output
+                if self.data_collector.if_return_forward_new_output():
+                    return self.data_collector.get_forward_new_output()
+                clean_input_kwargs(cell)
+                return output
 
         def backward_hook(api_or_cell_name, cell, grad_input, grad_output):
             if not self.should_excute_hook():
@@ -364,5 +363,7 @@ class Service:
 
         if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
             for _, cell in self.model.cells_and_names():
+                if cell == self.model:
+                    continue
                 if hasattr(cell, 'has_param_hook'):
                     del cell.has_param_hook

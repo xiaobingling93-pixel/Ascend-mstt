@@ -183,6 +183,7 @@ class Constant(object):
     MEMORY_COMPARE = "MemoryCompare"
     API_COMPARE = "ApiCompare"
     KERNEL_COMPARE = "KernelCompare"
+    KERNEL_TYPE_COMPARE = "KernelTypeCompare"
 
     # sheet name
     OPERATOR_SHEET = "OperatorCompare"
@@ -307,6 +308,7 @@ class Constant(object):
 
     ADVISOR_LOG_LEVEL = "ADVISOR_LOG_LEVEL"
     DEFAULT_LOG_LEVEL = "INFO"
+    MSPROF_ANALYZE_LOG_LEVEL = "MSPROF_ANALYZE_LOG_LEVEL"
     SUPPORTED_LOG_LEVEL = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
     RULE_BUCKET = "RULE-BUCKET"

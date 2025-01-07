@@ -34,9 +34,10 @@ from msprobe.pytorch.api_accuracy_checker.compare.compare_input import Precision
 from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_register import StandardRegistry
 from msprobe.pytorch.api_accuracy_checker.precision_standard.ulp_compare import UlpPrecisionCompare
 from msprobe.pytorch.api_accuracy_checker.precision_standard.benchmark_compare import BenchmarkPrecisionCompare
+from msprobe.pytorch.api_accuracy_checker.precision_standard.standard_config import StandardConfig
 from msprobe.pytorch.api_accuracy_checker.compare.compare_column import ApiPrecisionOutputColumn
 from msprobe.pytorch.api_accuracy_checker.run_ut.run_ut_utils import get_validated_result_csv_path
-from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments
+from msprobe.pytorch.api_accuracy_checker.common.utils import extract_detailed_api_segments, extract_basic_api_segments
 from msprobe.core.common.file_utils import FileChecker, change_mode, create_directory
 from msprobe.pytorch.common.log import logger
 from msprobe.core.common.utils import CompareException
@@ -81,11 +82,12 @@ def write_detail_csv(content, save_path):
 
 def register_compare_func():
     registry = StandardRegistry()
-    registry.register("absolute_threshold", record_absolute_threshold_result)
-    registry.register("binary_consistency", record_binary_consistency_result)
-    registry.register("ulp_compare", record_ulp_compare_result)
-    registry.register("thousandth_threshold", record_thousandth_threshold_result)
-    registry.register("benchmark", record_benchmark_compare_result)
+    registry.register(CompareConst.ABSOLUTE_THRESHOLD, record_absolute_threshold_result)
+    registry.register(CompareConst.BINARY_CONSISTENCY, record_binary_consistency_result)
+    registry.register(CompareConst.ULP_COMPARE, record_ulp_compare_result)
+    registry.register(CompareConst.THOUSANDTH_STANDARD, record_thousandth_threshold_result)
+    registry.register(CompareConst.BENCHMARK, record_benchmark_compare_result)
+    registry.register(CompareConst.ACCUMULATIVE_ERROR_COMPARE, record_accumulative_error_compare_result)
     return registry
 
 
@@ -191,7 +193,8 @@ def analyse_csv(npu_data, gpu_data, config):
             else:
                 forward_result = get_api_checker_result(forward_status)
                 backward_result = get_api_checker_result(backward_status)
-                message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+                _, base_api_name = extract_basic_api_segments(last_api_name)
+                message += CompareMessage.get(base_api_name, "") if forward_result == CompareConst.ERROR else ""
                 message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
                 write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
                 print_test_success(last_api_name, forward_result, backward_result)
@@ -223,7 +226,8 @@ def analyse_csv(npu_data, gpu_data, config):
         else:
             forward_result = get_api_checker_result(forward_status)
             backward_result = get_api_checker_result(backward_status)
-            message += CompareMessage.get(last_api_name, "") if forward_result == CompareConst.ERROR else ""
+            _, base_api_name = extract_basic_api_segments(last_api_name)
+            message += CompareMessage.get(base_api_name, "") if forward_result == CompareConst.ERROR else ""
             message += last_api_skip_message if forward_result == CompareConst.SKIP else ""
             write_csv([[last_api_name, forward_result, backward_result, message]], config.result_csv_path)
             print_test_success(last_api_name, forward_result, backward_result)
@@ -334,11 +338,11 @@ def record_absolute_threshold_result(input_data):
     compare_column.compare_algorithm = CompareConst.ABSOLUTE_THRESHOLD_ALGORITHM_NAME
     message = ''
     if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
-        message += "ERROR: inf/nan错误率超过阈值\n"
+        message += "ERROR: inf/nan错误率超过阈值"
     if compare_column.rel_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 相对误差错误率超过阈值\n"
+        message += "ERROR: 相对误差错误率超过阈值"
     if compare_column.abs_err_ratio_status == CompareConst.ERROR:
-        message += "ERROR: 绝对误差错误率超过阈值\n"
+        message += "ERROR: 绝对误差错误率超过阈值"
     compare_column.compare_message = message
     return compare_column.compare_result
 
@@ -357,6 +361,47 @@ def record_ulp_compare_result(input_data):
     us = UlpPrecisionCompare(input_data)
     compare_result = us.compare()
     return compare_result
+
+
+def record_accumulative_error_compare_result(input_data):
+    row_npu = input_data.row_npu
+    compare_column = input_data.compare_column
+    absolute_threshold_result = get_absolute_threshold_result(row_npu)
+    threshold_result = absolute_threshold_result.get("absolute_threshold_result")
+    eb, eb_result = check_eb(row_npu)
+    accumulative_error_compare_result = CompareConst.PASS
+    if CompareConst.ERROR in [threshold_result, eb_result]:
+        accumulative_error_compare_result = CompareConst.ERROR
+    
+    compare_column.inf_nan_error_ratio = absolute_threshold_result.get("inf_nan_error_ratio")
+    compare_column.inf_nan_error_ratio_status = absolute_threshold_result.get("inf_nan_result")
+    compare_column.rel_err_ratio = absolute_threshold_result.get("rel_err_ratio")
+    compare_column.rel_err_ratio_status = absolute_threshold_result.get("rel_err_result")
+    compare_column.abs_err_ratio = absolute_threshold_result.get("abs_err_ratio")
+    compare_column.abs_err_ratio_status = absolute_threshold_result.get("abs_err_result")
+    compare_column.eb_ratio = eb
+    compare_column.eb_status = eb_result
+    compare_column.compare_result = accumulative_error_compare_result
+    compare_column.compare_algorithm = CompareConst.ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME
+    message = []
+    if compare_column.inf_nan_error_ratio_status == CompareConst.ERROR:
+        message.append("ERROR: inf/nan错误率超过阈值\n")
+    if compare_column.rel_err_ratio_status == CompareConst.ERROR:
+        message.append("ERROR: 相对误差错误率超过阈值\n")
+    if compare_column.abs_err_ratio_status == CompareConst.ERROR:
+        message.append("ERROR: 绝对误差错误率超过阈值\n")
+    if compare_column.eb_status == CompareConst.ERROR:
+        message.append("ERROR: 误差均衡性超过阈值\n")
+    compare_column.compare_message = "\n".join(message)
+    return compare_column.compare_result
+
+
+def check_eb(row_npu):
+    eb = convert_str_to_float(row_npu[ApiPrecisionCompareColumn.EB])
+    dtype = row_npu[ApiPrecisionCompareColumn.DEVICE_DTYPE]
+    eb_threshold = StandardConfig.get_accumulative_error_eb_threshold(dtype)
+    eb_result = CompareConst.PASS if eb <= eb_threshold else CompareConst.ERROR
+    return eb, eb_result
 
 
 def check_thousandth_rate(thousandth_rate):

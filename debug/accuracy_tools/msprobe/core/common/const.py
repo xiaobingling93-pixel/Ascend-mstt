@@ -171,10 +171,12 @@ class Const:
 
     CONVERT = {
         "int32_to_int64": ["torch.int32", "torch.int64"],
+        "int64_to_fp32": ["torch.int64", "torch.float32"]
     }
 
     CONVERT_API = {
-        "int32_to_int64": ["cross_entropy"]
+        "int32_to_int64": ["cross_entropy"],
+        "int64_to_fp32": ["histc"]
     }
 
     FA_SPECIAL_SPARSE_MODE = [2, 3, 4]
@@ -281,12 +283,14 @@ class CompareConst:
     BINARY_CONSISTENCY_ALGORITHM_NAME = "二进制一致法"
     ABSOLUTE_THRESHOLD_ALGORITHM_NAME = "绝对阈值法"
     THOUSANDTH_STANDARD_ALGORITHM_NAME = "双千指标法"
+    ACCUMULATIVE_ERROR_COMPARE_ALGORITHM_NAME = "累积误差比对法"
     
     ABSOLUTE_THRESHOLD = 'absolute_threshold'
     BINARY_CONSISTENCY = 'binary_consistency'
     ULP_COMPARE = 'ulp_compare'
     THOUSANDTH_STANDARD = 'thousandth_threshold'
     BENCHMARK = 'benchmark'
+    ACCUMULATIVE_ERROR_COMPARE = 'accumulative_error_compare'
     
     SMALL_VALUE_ERR_RATIO = "small_value_err_ratio"
     RMSE_RATIO = "rmse_ratio"
@@ -449,6 +453,7 @@ class FileCheckConst:
     CSV_SUFFIX = ".csv"
     XLSX_SUFFIX = ".xlsx"
     YAML_SUFFIX = ".yaml"
+    IR_SUFFIX = ".ir"
     MAX_PKL_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_NUMPY_SIZE = 10737418240  # 10 * 1024 * 1024 * 1024
     MAX_JSON_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
@@ -456,6 +461,7 @@ class FileCheckConst:
     MAX_CSV_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_XLSX_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     MAX_YAML_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
+    MAX_IR_SIZE = 1073741824  # 1 * 1024 * 1024 * 1024
     COMMOM_FILE_SIZE = 1048576  # 1 * 1024 * 1024
     DIR = "dir"
     FILE = "file"
@@ -468,7 +474,8 @@ class FileCheckConst:
         PT_SUFFIX: MAX_PT_SIZE,
         CSV_SUFFIX: MAX_CSV_SIZE,
         XLSX_SUFFIX: MAX_XLSX_SIZE,
-        YAML_SUFFIX: MAX_YAML_SIZE
+        YAML_SUFFIX: MAX_YAML_SIZE,
+        IR_SUFFIX: MAX_IR_SIZE
     }
     CSV_BLACK_LIST = r'^[＋－＝％＠\+\-=%@]|;[＋－＝％＠\+\-=%@]'
 
@@ -557,7 +564,7 @@ class MonitorConst:
     """
     Class for monitor const
     """
-    OP_LIST = ["min", "max", "norm", "zeros", "nans", "id", "mean"]
+    OP_LIST = ["norm", "min", "max", "zeros", "nans", "id", "mean"]
     MONITOR_OUTPUT_DIR = "MONITOR_OUTPUT_DIR"
     DEFAULT_MONITOR_OUTPUT_DIR = "./monitor_output"
     DATABASE = "database"
@@ -577,6 +584,7 @@ class MonitorConst:
     ACC_GRAD = "acc_grad"
     PREFIX_POST = "post"
     PREFIX_PRE = "pre"
+    OUTPUT_DIR_PATTERN = r"([\w-]{0,20})-rank(\d{1,5})-"
 
     EXP_AVG = "exp_avg"
     EFXP_AVG_SQ = "efxp_avg_sq"
@@ -586,3 +594,5 @@ class MonitorConst:
     TENSORBOARD = "tensorboard"
     CSV = "csv"
     API = "api"
+    OPS_START_INDEX = 3
+    HEADER_NAME_INDEX = 1

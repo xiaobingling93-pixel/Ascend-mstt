@@ -6,8 +6,8 @@ import debounce from '@material-ui/core/utils/debounce';
 import * as React from 'react';
 
 export enum UseTop {
-  NotUse = 'NotUse',
-  Use = 'Use',
+  NOT_USE = 'NotUse',
+  USE = 'Use',
 }
 
 interface IOptions {
@@ -17,24 +17,26 @@ interface IOptions {
   wait?: number;
 }
 
-export function useTopN(options?: IOptions) {
+export function useTopN(
+  options?: IOptions
+): readonly [
+  string,
+  number | undefined,
+  UseTop,
+  React.Dispatch<React.SetStateAction<string>>,
+  React.Dispatch<React.SetStateAction<UseTop>>
+] {
   let realOptions = options ?? {};
 
-  const [topText, setTopText] = React.useState(
-    String(realOptions.defaultTop ?? 15)
-  );
-  const [actualTop, setActualTop] = React.useState<number | undefined>(
-    Number(topText)
-  );
-  const [useTop, setUseTop] = React.useState(
-    realOptions.defaultUseTop ?? UseTop.NotUse
-  );
+  const [topText, setTopText] = React.useState(String(realOptions.defaultTop ?? 15));
+  const [actualTop, setActualTop] = React.useState<number | undefined>(Number(topText));
+  const [useTop, setUseTop] = React.useState(realOptions.defaultUseTop ?? UseTop.NOT_USE);
 
   const setActualDebounce = !realOptions.noDebounce
     ? React.useCallback(debounce(setActualTop, realOptions.wait ?? 500), [])
     : setActualTop;
   React.useEffect(() => {
-    if (useTop !== UseTop.Use) {
+    if (useTop !== UseTop.USE) {
       setActualDebounce(undefined);
     } else if (topIsValid(topText)) {
       setActualDebounce(Number(topText));
@@ -46,7 +48,7 @@ export function useTopN(options?: IOptions) {
   return [topText, actualTop, useTop, setTopText, setUseTop] as const;
 }
 
-export function topIsValid(topText: string) {
+export function topIsValid(topText: string): boolean {
   const top = Number(topText);
   return !Number.isNaN(top) && top > 0 && Number.isInteger(top);
 }

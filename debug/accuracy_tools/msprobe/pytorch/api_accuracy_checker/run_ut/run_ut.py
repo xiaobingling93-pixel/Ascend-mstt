@@ -258,7 +258,7 @@ def run_torch_api(api_full_name, real_data_path, backward_content, api_info_dict
     
     device_info_kwargs = kwargs.get(Const.DEVICE)
     if device_info_kwargs and device_info_kwargs.get(Const.VALUE):
-        kwargs[Const.DEVICE] = device_info_kwargs.get(Const.VALUE)
+        kwargs[Const.DEVICE] = current_device
     device_args, device_kwargs = generate_device_params(args, kwargs, need_backward, api_name)
     if kwargs.get(Const.DEVICE):
         del kwargs[Const.DEVICE]
@@ -499,6 +499,10 @@ def run_ut_command(args):
 
     if not is_gpu:
         torch.npu.set_compile_mode(jit_compile=args.jit_compile)
+        if args.jit_compile:
+            torch.npu.config.allow_internal_format = True
+        else:
+            torch.npu.config.allow_internal_format = False
     used_device = current_device + ":" + str(args.device_id[0])
     try:
         if is_gpu:

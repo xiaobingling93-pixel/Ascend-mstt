@@ -25,7 +25,7 @@ import torch
 import torch.distributed as dist
 from msprobe.core.common.const import MonitorConst
 from msprobe.core.common.file_utils import load_json, save_json
-from msprobe.core.common.log import logger
+from msprobe.pytorch.common.log import logger
 from msprobe.pytorch.monitor.anomaly_analyse import AnomalyDataWriter
 from msprobe.pytorch.monitor.anomaly_detect import AnomalyScanner, SummaryWriterWithAD, AnomalyDataFactory, \
     CSVWriterWithAD, BaseWriterWithAD, WriterInput
@@ -37,7 +37,7 @@ from msprobe.pytorch.monitor.module_metric import get_metrics, get_summary_write
 from msprobe.pytorch.monitor.module_spec_verifier import validate_config_spec
 from msprobe.pytorch.monitor.optimizer_collect import OptimizerMonFactory, OptimizerMon
 from msprobe.pytorch.monitor.utils import get_param_struct, validate_config, validate_ops, is_recomputation, \
-    get_output_base_dir
+    get_output_base_dir, get_target_output_dir
 from msprobe.pytorch.monitor.visualizer import HeatmapVisualizer
 from torch.optim.optimizer import register_optimizer_step_pre_hook, register_optimizer_step_post_hook
 from torch.utils.hooks import BackwardHook
@@ -95,10 +95,11 @@ class ModuleHookContext:
         elif key_name in ['input', 'input_grad']:
             self.ignore_in = True
 
+start_step = 0
 
 class OptimizerContext:
     def __init__(self) -> None:
-        self.step = 0
+        self.step = start_step
         self.param_effective_rank = defaultdict(float)
         self.param_mg_direction = defaultdict(float)
         self.param_adam_update = defaultdict()
@@ -201,11 +202,18 @@ class TrainerMon:
 
         cur_time = datetime.now(local_tz).strftime('%b%d_%H-%M-%S')
         unique_id = str(uuid.uuid4())[:8]
-
         output_base_dir = get_output_base_dir()
+
+        time_tags = self.config.get("append_output", [])
+        if time_tags:
+            output_append_dirs = get_target_output_dir(output_base_dir, time_tags[0], time_tags[1])
         if dist.is_initialized():
             rank = dist.get_rank()
-            tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
+            if time_tags and str(rank) in output_append_dirs:
+                tensorboard_dir = output_append_dirs[str(rank)]
+                logger.info(f"append rank({rank}) result to {tensorboard_dir}")
+            else:
+                tensorboard_dir = os.path.join(output_base_dir, f"{cur_time}-rank{rank}-{unique_id}")
             pp_stage = dist.get_group_rank(self.process_group, rank)
             group_mates = dist.get_process_group_ranks(self.process_group)
         else:
@@ -269,7 +277,7 @@ class TrainerMon:
         self.mix_precision_optimizer_mon = OptimizerMonFactory.create_optimizer_mon(opt_ty)
         self.print_struct = self.config.get("print_struct", False)
         self.struct_printed = False
-        self.module_struct = {}
+        self.module_struct = defaultdict(dict)
 
     def __del__(self):
         if hasattr(self, "summary_writer"):
@@ -359,7 +367,7 @@ class TrainerMon:
                 'targets'].keys()
             hooked_count += self._hook_module(targets, model_chunk, vpp_stage)
 
-        logger.info_on_rank_0(f"> {hooked_count} out of {len(self.config['targets'])} are monitored.")
+        logger.info_on_rank_0(f"> {hooked_count} modules are monitored.")
 
         def clone_if_tensor(args):
             if isinstance(args, tuple):
@@ -421,14 +429,17 @@ class TrainerMon:
         get_metrics(self.ops, grad_dict, self.eps, self.grad_context.post)
         return self.grad_context.post, self.grad_context.pre
 
-    def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None):
+    def monitor_gnorm_with_ad(self, model, grad_acc_steps=1, optimizer=None, tp_group=None, dp_group=None, start_iteration=0):
         """External interface"""
+        global start_step
+        start_step = start_iteration
         logger.info(f'grad acc steps {grad_acc_steps}')
         self.hook_optimizer(optimizer)
         self.micro_batch_number = grad_acc_steps
 
         self.dp_group = dp_group
         self.tp_group = tp_group
+        
 
         self._register_param_name(model)
         self._patch_grad_sync()
@@ -503,7 +514,7 @@ class TrainerMon:
         def optimizer_pre_step_hook(optimizer, args, kwargs):
             context = self.optimizer_context[optimizer]
             if self.opt_ty in MonitorConst.DEEPSPEED_OPT_TY:
-                if context.step == 0:
+                if not self.name2indices:
                     self.name2indices = self.mix_precision_optimizer_mon.get_param_index(self.param2name,
                                                                                          self.name2index)
                 mv_result = self.mix_precision_optimizer_mon.fetch_mv(self, optimizer, self.param2name,
@@ -705,11 +716,11 @@ class TrainerMon:
                 self.module_fwd_hook_context_by_module[module] = ModuleHookContext(name)
             context: ModuleHookContext = self.module_fwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTV_IN: get_param_struct(module_input),
-                                  MonitorConst.ACTV_OUT: get_param_struct(module_output)}
+                context.struct = {
+                    MonitorConst.ACTV_IN: get_param_struct(module_input),
+                    MonitorConst.ACTV_OUT: get_param_struct(module_output)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not module.training:
@@ -750,11 +761,11 @@ class TrainerMon:
         def bwd_hook_fun(module, input_grad, output_grad):
             context: ModuleHookContext = self.module_bwd_hook_context_by_module[module]
             if not context.struct:
-                context.struct = {MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
-                                  MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)}
+                context.struct = {
+                    MonitorConst.ACTVGRAD_IN: get_param_struct(input_grad),
+                    MonitorConst.ACTVGRAD_OUT: get_param_struct(output_grad)
+                }
             if self.print_struct:
-                if context.module_name not in self.module_struct:
-                    self.module_struct[context.module_name] = {}
                 self.module_struct[context.module_name].update(context.struct)
                 return
             if not context.format_by_arg:
@@ -820,8 +831,9 @@ class TrainerMon:
         def patch_sync(sync_grad_func):
             def wrapper(bucket):
                 grad_dict = {}
+                bucket_params_id_list = [id(params) for params in bucket.params_list]
                 for param, name in self.param2name.items():
-                    if param not in bucket.params_list:
+                    if id(param) not in bucket_params_id_list:
                         continue
                     grad = param.main_grad if self.params_have_main_grad else param.grad
                     if grad is None:

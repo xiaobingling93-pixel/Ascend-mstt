@@ -42,7 +42,7 @@ export const ColumnChart: React.FC<IProps> = (props) => {
   const graphRef = React.useRef<HTMLDivElement>(null);
   const [resizeEventDependency] = useResizeEventDependency();
 
-  const getAngleByDataLength = (data: number) => {
+  const getAngleByDataLength = (data: number): number => {
     if (data < 10) {
       return 0;
     } else {
@@ -80,9 +80,7 @@ export const ColumnChart: React.FC<IProps> = (props) => {
           formatter: (name: string) => {
             const index = name.indexOf('@');
             const processedName = index > -1 ? name.slice(index + 1) : name; // 使用新变量处理
-            return processedName.length > 16
-              ? `${processedName.slice(0, 14)}...`
-              : processedName;
+            return processedName.length > 16 ? `${processedName.slice(0, 14)}...` : processedName;
           },
         },
       },

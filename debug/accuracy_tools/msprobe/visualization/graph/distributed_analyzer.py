@@ -54,6 +54,8 @@ class DistributedAnalyzer:
             'gather': ['gather', GraphConst.DST, CommunicationType.RECEIVE.value, DistributedType.COLLECTIVE],
             'reduce': ['reduce', '1', CommunicationType.RECEIVE.value, DistributedType.COLLECTIVE]
         }
+        self.group_node_mapping = {}
+        self._make_group_node_mapping()
 
     @staticmethod
     def _get_opposite_communication_type(action):
@@ -118,6 +120,50 @@ class DistributedAnalyzer:
                 else:
                     self._collective_match(node, rank, api_name)
 
+    def _make_group_node_mapping(self):
+        """
+        建立通信节点的全局唯一标识映射
+        key: rank号, value: unique_group_id与node_id之间的映射
+        {
+            "0": {
+                "unique_group_id1": "node_id1",
+                "unique_group_id2": "node_id2",
+                "node_id1": "unique_group_id1",
+                "node_id2": "unique_group_id2"
+            },
+            "1": {},
+            "2": {}
+        }
+        """
+        for rank, graph in self.graphs.items():
+            group_count = {}
+            group_info = {}
+            nodes = graph.node_map
+            for node_id, node in nodes.items():
+                if not node_id.startswith(Const.DISTRIBUTED):
+                    continue
+                api_name, distributed_type = self._get_distributed_name_and_type(node_id)
+                if distributed_type == DistributedType.P2P:
+                    config_info = self.config.get(api_name)
+                    target_rank = self._get_target_rank(node, rank, config_info[1])
+                    if target_rank is not None:
+                        continue
+                    # p2p通信节点，api名称+传输目标rank作为group_id
+                    group_id = api_name + Const.RANK + str(target_rank)
+                else:
+                    # 其他通信节点直接获取group_id, 并拼接api名称
+                    _, group_id = self._get_group_info(node, rank)
+                    if not group_id:
+                        continue
+                    group_id += api_name
+                # 同group_id的调用次数累计
+                group_count[group_id] = group_count.get(group_id, 0) + 1
+                # group_id+同group_id的调用次数作为唯一的unique_group_id
+                unique_group_id = group_id + Const.REPLACEMENT_CHARACTER + str(group_count.get(group_id))
+                group_info[unique_group_id] = node_id
+                group_info[node_id] = unique_group_id
+            self.group_node_mapping[rank] = group_info
+
     def _get_distributed_name_and_type(self, node_id):
         if Const.SEP not in node_id:
             raise ValueError(f'Invalid node id {node_id}.')
@@ -126,20 +172,27 @@ class DistributedAnalyzer:
             return api_name, self.config.get(api_name)[3]
         return api_name, DistributedType.COLLECTIVE
 
-    def _get_target_node(self, node_id, api_name, target_rank, target_api_name=None):
+    def _get_target_node(self, rank, unique_group_id, api_name, target_rank, target_api_name=None):
         """
         获取名称匹配上的目标节点
-        :param node_id: 当前节点id
+        :param rank: 当前rank
+        :param unique_group_id: 当前节点唯一group id
         :param api_name: 当前节点的api名称, 例如Distributed.isend.0.forward, api名称为isend
         :param target_rank: 与当前节点产生通信的rank
-        :param target_api_name: 与当前节点产生通信的节点api名称
+        :param target_api_name: 与当前节点产生通信的节点api名称, 仅p2p通信需要配置
         :return: 目标节点
         """
         target_graph = self.graphs.get(target_rank)
         if not target_graph:
             logger.warning(f'Graph data does not exist, {CANNOT_MATCH}{target_rank}')
             return None
-        target_node_id = node_id.replace(api_name, target_api_name) if target_api_name else node_id
+        target_group_mapping = self.group_node_mapping.get(target_rank)
+        # p2p通信，想要获取目标节点，需要替换unique_group_id中的rank和api name,
+        # 例如isend发送到rank1，对应的irecv接收自rank0, isend_rank1与irecv_rank0对应
+        target_unique_group_id = (unique_group_id
+                                  .replace(Const.RANK + str(target_rank), Const.RANK + str(rank))
+                                  .replace(api_name, target_api_name)) if target_api_name else unique_group_id
+        target_node_id = target_group_mapping.get(target_unique_group_id, '')
         target_node = target_graph.node_map.get(target_node_id)
         if not target_node:
             logger.warning(f'Node {target_node_id} does not exist, {CANNOT_MATCH}{target_rank}')
@@ -184,7 +237,8 @@ class DistributedAnalyzer:
         target_rank = self._get_target_rank(node, rank, config_info[1])
         if target_rank is None:
             return
-        target_node = self._get_target_node(node.id, api_name, target_rank, target_api_name)
+        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
+        target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank, target_api_name)
         if not target_node:
             return
         target_config_info = self.config.get(target_api_name)
@@ -234,12 +288,13 @@ class DistributedAnalyzer:
         group_ranks, group_id = self._get_group_info(node, rank)
         if not group_ranks or not group_id:
             return
+        unique_group_id = self.group_node_mapping.get(rank, {}).get(node.id, '')
         matched_distributed = {'communications_type': communications_type}
         nodes_info = {}
         for target_rank in group_ranks:
             if str(target_rank) == str(rank):
                 continue
-            target_node = self._get_target_node(node.id, api_name, target_rank)
+            target_node = self._get_target_node(rank, unique_group_id, api_name, target_rank)
             if not target_node:
                 continue
             _, target_group_id = self._get_group_info(target_node, target_rank)

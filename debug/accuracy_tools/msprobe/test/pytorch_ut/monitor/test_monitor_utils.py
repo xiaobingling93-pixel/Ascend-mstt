@@ -15,7 +15,8 @@ class TestValidationFunctions(unittest.TestCase):
 
     def test_get_output_base_dir(self):
         # not set env
-        del os.environ[MonitorConst.MONITOR_OUTPUT_DIR]
+        if os.getenv(MonitorConst.MONITOR_OUTPUT_DIR):
+            del os.environ[MonitorConst.MONITOR_OUTPUT_DIR]
         output_base_dir = get_output_base_dir()
         expect_output_base_dir = "./monitor_output"
         self.assertEqual(output_base_dir, expect_output_base_dir)
@@ -42,6 +43,12 @@ class TestValidationFunctions(unittest.TestCase):
         ops = ['op1', 'op2', 'norm', 'max']
         valid_ops = validate_ops(ops)
         self.assertEqual(valid_ops, ['norm', 'max'])
+
+    def test_no_valid_ops(self):
+        ops = ['op1', 'op2']
+        valid_ops = validate_ops(ops)
+        target_ops = [MonitorConst.OP_LIST[0]]
+        self.assertEqual(valid_ops, target_ops)
 
     def test_validate_ranks(self):
         ranks = [0, 1, 2, 3]
@@ -95,6 +102,12 @@ class TestValidationFunctions(unittest.TestCase):
             'alert': {'rules': [{'rule_name': 'AnomalyTurbulence', 'args': {'threshold': 10.0}}], 'dump': True}
         }
         validate_config(config)
+        target_ops = [MonitorConst.OP_LIST[0]]
+        self.assertEqual(config["ops"], target_ops)
+        del config["targets"]
+        validate_config(config)
+        self.assertEqual(config["targets"], {"": {}})
+        self.assertEqual(config["all_xy"], True)
 
 
 class TestIsRecomputation(unittest.TestCase):

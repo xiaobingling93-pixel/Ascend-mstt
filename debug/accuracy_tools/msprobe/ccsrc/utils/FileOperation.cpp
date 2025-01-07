@@ -52,8 +52,7 @@ static const std::unordered_map<DataType, NpyDtypeDescr> npyTypeDescMap = {
     {DataType::DT_UINT16, NpyDtypeDescr{'<', 'u', 2}},    {DataType::DT_UINT32, NpyDtypeDescr{'<', 'u', 4}},
     {DataType::DT_UINT64, NpyDtypeDescr{'<', 'u', 8}},    {DataType::DT_FLOAT16, NpyDtypeDescr{'<', 'f', 2}},
     {DataType::DT_FLOAT, NpyDtypeDescr{'<', 'f', 4}},     {DataType::DT_DOUBLE, NpyDtypeDescr{'<', 'f', 8}},
-    {DataType::DT_BF16, NpyDtypeDescr{'<', 'T', 2}},      {DataType::DT_COMPLEX128, NpyDtypeDescr{'<', 'c', 16}},
-    {DataType::DT_COMPLEX64, NpyDtypeDescr{'<', 'c', 8}},
+    {DataType::DT_COMPLEX128, NpyDtypeDescr{'<', 'c', 16}}, {DataType::DT_COMPLEX64, NpyDtypeDescr{'<', 'c', 8}},
 };
 
 DebuggerErrno DumpJson(const std::string &path, const nlohmann::json& content)

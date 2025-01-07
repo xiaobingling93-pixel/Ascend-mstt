@@ -30,8 +30,7 @@ from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuz
     check_stack_json_str
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
 from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
-from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_type, reshape_value, get_relative_err, \
-    get_error_message
+from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
 from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
     get_rela_diff_summary_mode, print_compare_ends_info
 from tqdm import tqdm
@@ -381,13 +380,11 @@ class Comparator:
                 n_value, b_value = CompareConst.READ_NONE, CompareConst.READ_NONE
                 error_flag = True
 
-        n_value, b_value, error_flag = get_error_type(n_value, b_value, error_flag)
-        if not error_flag:
-            relative_err = get_relative_err(n_value, b_value)
-            n_value, b_value = reshape_value(n_value, b_value)
+        # 通过n_value, b_value同时得到错误标志和错误信息
+        n_value, b_value, error_flag, err_msg = get_error_flag_and_msg(n_value, b_value,
+                                                                       error_flag=error_flag, error_file=error_file)
 
-        err_msg = get_error_message(n_value, b_value, npu_op_name, error_flag, error_file=error_file)
-        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg, relative_err=relative_err)
+        result_list, err_msg = compare_ops_apply(n_value, b_value, error_flag, err_msg)
 
         if npu_op_name != bench_op_name and bench_op_name != CompareConst.N_A:
             err_msg += " Fuzzy matching data, the comparison accuracy may be affected."

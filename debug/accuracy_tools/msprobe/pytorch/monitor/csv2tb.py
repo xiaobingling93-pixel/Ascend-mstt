@@ -1,0 +1,146 @@
+# Copyright (c) 2024-2024, Huawei Technologies Co., Ltd.
+# All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0  (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import os
+import re
+from multiprocessing import Process
+
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
+
+from msprobe.core.common.file_utils import read_csv, create_directory, remove_path
+from msprobe.pytorch.common.log import logger
+from msprobe.pytorch.monitor.utils import get_target_output_dir
+from msprobe.core.common.const import MonitorConst
+from msprobe.core.common.utils import is_int
+
+
+def parse_step_line(data, line_id, name, ops):
+    vp_id = data["vpp_stage"][line_id]
+    module_name = data[name][line_id]
+    step = data["step"][line_id]
+    vpp_name = f"vp{vp_id}:{module_name}"
+    ops_result = {}
+    for op in ops:
+        ops_result[op] = data[op][line_id]
+    return vpp_name, step, ops_result
+
+
+def parse_step_fn(filepath):
+    data = read_csv(filepath)
+
+    header = list(data.keys())
+    name = header[MonitorConst.HEADER_NAME_INDEX]
+    ops = header[MonitorConst.OPS_START_INDEX:]
+
+    parse_step_result = {}
+
+    for line_id in range(len(data)):
+        vpp_name, step, ops_result = parse_step_line(data, line_id, name, ops)
+        if vpp_name not in parse_step_result:
+            parse_step_result[vpp_name] = {}
+        if step in parse_step_result[vpp_name]:
+            raise Exception(f"duplicated step({step})")
+        parse_step_result[vpp_name][step] = ops_result
+    return parse_step_result
+
+
+def write_step(output_dirpath, parse_step_result, rank, data_type):
+    tb_output_path = os.path.join(output_dirpath, f"rank{rank}", data_type)
+    if os.path.exists(tb_output_path):
+        remove_path(tb_output_path)
+        logger.warning(f"existing path {tb_output_path} will be recovered") 
+    writer = SummaryWriter(tb_output_path)
+    for vpp_name, step_data_dict in parse_step_result.items():
+        step_data_list = [(step, ops) for step, ops in step_data_dict.items()]
+        step_data_list.sort(key=lambda x: x[0])
+        for step_data in step_data_list:
+            step = step_data[0]
+            ops = step_data[1]
+            for op, value in ops.items():
+                tag = f"{vpp_name}/{op}"
+                writer.add_scalar(tag, value, step)
+
+
+def update_dict(dict1, dict2):
+    for key, value in dict2.items():
+        if key in dict1:
+            if isinstance(dict1[key], dict) and isinstance(value, dict):
+                update_dict(dict1[key], value)
+            else:
+                raise Exception(f"duplicate key: {key}")
+        else:
+            dict1[key] = value
+    return dict1
+
+
+csv_file_suffix = r"_\d+-\d+\.csv"
+def csv2tb_by_step_work(target_output_dirs, output_dirpath, data_type_list):
+    for dir in tqdm(target_output_dirs):
+        dirpath = dir["path"]
+        rank = dir["rank"]
+        for data_type in data_type_list:
+            all_step_result = {}
+            for filename in os.listdir(dirpath):
+                if not re.match(f"{data_type}{csv_file_suffix}", filename):
+                    continue
+                filepath = os.path.join(dirpath, filename)
+                try:
+                    parse_step_result = parse_step_fn(filepath)
+                except Exception as e:
+                    logger.error(f"csv2tensorboard parse {filepath} failed \n {e}")
+                    break
+                
+                all_step_result = update_dict(all_step_result, parse_step_result)
+            if all_step_result:
+                write_step(output_dirpath, all_step_result, rank, data_type)
+
+
+def check_process_num(process_num):
+    if not is_int(process_num) or process_num <= 0:
+        raise ValueError(f"process_num({process_num}) is not a positive integer")
+
+
+def check_data_type_list(data_type_list):
+    if not isinstance(data_type_list, list):
+        raise ValueError(f"data_type_list({data_type_list}) is not a list")
+    for data_type in data_type_list:
+        if data_type not in all_data_type_list:
+            raise ValueError(f"data type({data_type}) is not supported, supported data type: {all_data_type_list}")
+
+
+all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
+def csv2tensorboard_by_step(monitor_path, time_start, time_end, process_num=1, data_type_list=None):
+    check_process_num(process_num)
+    check_data_type_list(data_type_list)
+    target_output_dirs = get_target_output_dir(monitor_path, time_start, time_end)
+    target_output_dirs = [{"rank": rank, "path": path} for rank, path in target_output_dirs.items()]
+    output_dirpath = os.path.join(monitor_path, f"{time_end}-csv2tensorboard_by_step")
+    create_directory(output_dirpath)
+
+    task_num = len(target_output_dirs)
+    task_num_per_pro = task_num // process_num
+    target_data_type = data_type_list if data_type_list else all_data_type_list
+
+    processes = []
+    for pro_id in range(process_num):
+        task_start_id = pro_id * task_num_per_pro
+        task_end_id = (pro_id + 1) * task_num_per_pro if pro_id != process_num - 1 else task_num
+        task_dirs = target_output_dirs[task_start_id: task_end_id]
+
+        p = Process(target=csv2tb_by_step_work, args=(task_dirs, output_dirpath, target_data_type))
+        processes.append(p)
+        p.start()
+    for p in processes:
+        p.join()

@@ -23,7 +23,7 @@ class TestMathFunctions(unittest.TestCase):
     def test_get_norm(self):
         tensor = torch.tensor([1.0, 2.0, 3.0])
         result = get_norm(tensor)
-        self.assertTrue(torch.allclose(result, torch.tensor(3.7417), atol=1e-4))
+        self.assertTrue(torch.allclose(result, torch.tensor(3.7417, dtype=torch.float64), atol=1e-4))
 
     def test_get_max(self):
         tensor = torch.tensor([1.0, 2.0, 3.0])
