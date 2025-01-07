@@ -1,6 +1,7 @@
 # coding=utf-8
 import unittest
 import numpy as np
+from unittest.mock import patch, MagicMock
 
 from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, get_error_flag_and_msg, \
     npy_data_check, statistics_data_check, get_relative_err, GetCosineSimilarity, GetMaxAbsErr, GetMaxRelativeErr, \
@@ -222,7 +223,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, 2.0)
         self.assertEqual(err_msg, "")
 
-    def test_GetMaxRelativeErr_error_flag_False(self):
+    def test_GetMaxRelativeErr_normal(self):
         op = GetMaxRelativeErr()
 
         n_value = np.array([1, 2])
@@ -234,6 +235,21 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
+
+    @patch("np.isnan", return_value=True)
+    def test_GetMaxRelativeErr_isnan(self, mock_isnan):
+        op = GetMaxRelativeErr()
+
+        n_value = np.array([1, 2])
+        b_value = np.array([1, 1])
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
+
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertEqual(err_msg, "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data.")
+        mock_isnan.assert_called_once()
 
     def test_GetThousandErrRatio_error_flag_False(self):
         op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
@@ -261,14 +277,14 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
 
-    def error_value_process_read_none(self):
+    def test_error_value_process_read_none(self):
         n_value = CompareConst.READ_NONE
         result, err_msg = error_value_process(n_value)
 
         self.assertEqual(result, CompareConst.UNSUPPORTED)
         self.assertEqual(err_msg, "")
 
-    def error_value_process_unreadable(self):
+    def test_error_value_process_unreadable(self):
         n_value = CompareConst.UNREADABLE
 
         result, err_msg = error_value_process(n_value)
@@ -276,15 +292,15 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, CompareConst.UNSUPPORTED)
         self.assertEqual(err_msg, "")
 
-    def error_value_process_none(self):
-        n_value = CompareConst.UNREADABLE
+    def test_error_value_process_none(self):
+        n_value = CompareConst.NONE
 
         result, err_msg = error_value_process(n_value)
 
         self.assertEqual(result, 0)
         self.assertEqual(err_msg, "")
 
-    def error_value_process_shape_unmatch(self):
+    def test_error_value_process_shape_unmatch(self):
         n_value = CompareConst.SHAPE_UNMATCH
 
         result, err_msg = error_value_process(n_value)
@@ -292,8 +308,16 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, CompareConst.SHAPE_UNMATCH)
         self.assertEqual(err_msg, "")
 
-    def error_value_process_shape_nan(self):
+    def test_error_value_process_nan(self):
         n_value = CompareConst.NAN
+
+        result, err_msg = error_value_process(n_value)
+
+        self.assertEqual(result, CompareConst.N_A)
+        self.assertEqual(err_msg, "")
+
+    def test_error_value_process_other(self):
+        n_value = np.array([1, 1])
 
         result, err_msg = error_value_process(n_value)
 
