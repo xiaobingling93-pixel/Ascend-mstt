@@ -379,7 +379,7 @@ class CSVWriterWithAD(BaseWriterWithAD):
                 input_and_output = [MonitorConst.ACTV_IN, MonitorConst.ACTV_OUT]
             else:
                 input_and_output = [MonitorConst.ACTVGRAD_IN, MonitorConst.ACTVGRAD_OUT]
-            ops_ = [MonitorConst.DOT.join(i[::-1]) for i in itertools.product(ops, input_and_output)]
+            ops_ = [MonitorConst.DOT.join(i) for i in itertools.product(input_and_output, ops)]
             csv_header = ["module_name", "step", *ops_]
         else:
             csv_header = ["param_name", "step", *ops]

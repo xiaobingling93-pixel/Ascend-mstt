@@ -4,5 +4,5 @@
     "xy_distribution": true,
     "all_xy": true,
     "format": "csv",
-    "ops": ["norm"]
+    "ops": ["norm", "nans"]
 }
