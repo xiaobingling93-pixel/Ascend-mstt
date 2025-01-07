@@ -16,6 +16,8 @@
 from functools import wraps
 
 import torch
+from torch.utils.checkpoint import set_checkpoint_early_stop
+from torch.utils.checkpoint import checkpoint as origin_checkpoint
 from msprobe.core.common.const import Const
 from msprobe.core.data_dump.scope import BaseScope, ModuleRangeScope, MixRangeScope
 from msprobe.pytorch.common.log import logger
@@ -23,6 +25,12 @@ from torch.utils.hooks import BackwardHook
 
 torch_version_above_or_equal_2 = torch.__version__.split('+')[0] >= '2.0'
 
+def checkpoint_without_early_stop(*args, **kwargs):
+    with set_checkpoint_early_stop(False):
+        return origin_checkpoint(*args, **kwargs)
+
+def replace_checkpoint():
+    torch.utils.checkpoint.checkpoint = checkpoint_without_early_stop
 
 class ModuleProcesser:
     module_count = {}
@@ -35,6 +43,7 @@ class ModuleProcesser:
         BackwardHook.setup_input_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_input_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.clone_return_value(BackwardHook.setup_output_hook)
         BackwardHook.setup_output_hook = ModuleProcesser.filter_tensor_and_tuple(BackwardHook.setup_output_hook)
+        replace_checkpoint()
 
     @staticmethod
     def filter_tensor_and_tuple(func):
@@ -144,7 +153,10 @@ class ModuleProcesser:
             except IndexError as e:
                 index = None
                 pass
-            module.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
+            full_name = name_prefix + Const.SEP + str(index)
+            if not hasattr(module, "mindstudio_reserved_name") or not module.mindstudio_reserved_name:
+                module.mindstudio_reserved_name = []
+            module.mindstudio_reserved_name.append(full_name)
             if self.module_stack:
                 ModuleProcesser.module_node[full_name] = self.module_stack[-1]
             else:
@@ -163,8 +175,11 @@ class ModuleProcesser:
                 ModuleProcesser.api_parent_node = self.module_stack[-1]
             else:
                 ModuleProcesser.api_parent_node = None
+            if not hasattr(module, "mindstudio_reserved_name") or not module.mindstudio_reserved_name:
+                raise RuntimeError(f"module reserve name is None when pop")
+            current_name = module.mindstudio_reserved_name.pop()
             if self.scope:
-                self.scope.end_module(module.mindstudio_reserved_name)
+                self.scope.end_module(current_name)
 
         def backward_hook(module, input, output=None):
             try:
@@ -172,7 +187,10 @@ class ModuleProcesser:
             except IndexError as e:
                 index = None
                 pass
-            module.mindstudio_reserved_name = full_name = name_prefix + Const.SEP + str(index)
+            full_name = name_prefix + Const.SEP + str(index)
+            if not hasattr(module, "mindstudio_reserved_name") or not module.mindstudio_reserved_name:
+                module.mindstudio_reserved_name = []
+            module.mindstudio_reserved_name.append(full_name)
             forward_full_name = full_name.replace(Const.BACKWARD, Const.FORWARD)
             ModuleProcesser.module_node[full_name] = ModuleProcesser.module_node[forward_full_name].replace(
                 Const.FORWARD, Const.BACKWARD) if ModuleProcesser.module_node[forward_full_name] else None

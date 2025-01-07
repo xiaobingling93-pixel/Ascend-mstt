@@ -88,7 +88,7 @@ class TestModuleProcesser(unittest.TestCase):
         module.mindstudio_reserved_name = None
         hook(module, input)
         expected_name = f"forward_layer{Const.SEP}0"
-        self.assertEqual(module.mindstudio_reserved_name, expected_name)
+        self.assertEqual(module.mindstudio_reserved_name, [expected_name])
         self.assertIn(expected_name, ModuleProcesser.module_stack)
         self.assertEqual(ModuleProcesser.api_parent_node, expected_name)
 
@@ -99,22 +99,11 @@ class TestModuleProcesser(unittest.TestCase):
 
         module = MagicMock()
         input = (self.mock_tensor,)
-        module.mindstudio_reserved_name = f"forward_layer{Const.SEP}0"
+        reserved_name = f"forward_layer{Const.SEP}0"
+        module.mindstudio_reserved_name = [reserved_name]
         hook(module, input)
         self.assertNotIn([f"forward_layer{Const.SEP}0"], ModuleProcesser.module_stack)
-        self.assertEqual(ModuleProcesser.api_parent_node, module.mindstudio_reserved_name)
-
-    def test_node_hook_forward_stop(self):
-        name_prefix = "forward_layer"
-        hook = self.processor.node_hook(name_prefix, start_or_stop=Const.STOP)
-        ModuleProcesser.module_stack.append(f"forward_layer{Const.SEP}0")
-
-        module = MagicMock()
-        input = (self.mock_tensor,)
-        module.mindstudio_reserved_name = f"forward_layer{Const.SEP}0"
-        hook(module, input)
-        self.assertNotIn([f"forward_layer{Const.SEP}0"], ModuleProcesser.module_stack)
-        self.assertEqual(ModuleProcesser.api_parent_node, module.mindstudio_reserved_name)
+        self.assertEqual(ModuleProcesser.api_parent_node, reserved_name)
 
     def test_node_hook_backward(self):
         name_prefix = "backward_layer"
@@ -126,7 +115,7 @@ class TestModuleProcesser(unittest.TestCase):
         ModuleProcesser.module_node[f"forward_layer{Const.SEP}0"] = None
         hook(module, input)
         expected_name = f"backward_layer{Const.SEP}0"
-        self.assertEqual(module.mindstudio_reserved_name, expected_name)
+        self.assertEqual(module.mindstudio_reserved_name, [expected_name])
         self.assertIn(expected_name, ModuleProcesser.module_node)
 
     def test_remove_deprecated_backward_hook_if_exist(self):
