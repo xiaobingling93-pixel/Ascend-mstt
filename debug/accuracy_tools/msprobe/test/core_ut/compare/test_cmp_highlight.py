@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
-    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert
+    add_highlight_row_info, update_highlight_err_msg
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -130,12 +130,7 @@ class TestUtilsMethods(unittest.TestCase):
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
 
-    def test_compare_result_df_convert(self):
-        value = float("nan")
-        result = compare_result_df_convert(value)
-        self.assertEqual(result, "nan\t")
-
-    def test_highlight_rows_xlsx_red(self):
+    def test_highlight_rows_xlsx_1(self):
         data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
                  'torch.float32', 'torch.float32', [2, 2], [2, 2],
                  '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '', '-1']
@@ -249,18 +244,6 @@ class TestUtilsMethods(unittest.TestCase):
                   ]
         target_result_df = pd.DataFrame(t_data, columns=columns)
         self.assertTrue(result_df.equals(target_result_df))
-
-    def test_update_highlight_err_msg_md5(self):
-        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
-                 'torch.float32', 'torch.float32', [2, 2], [2, 2], 'abc', 'abc', 'pass']
-                ]
-        columns = CompareConst.MD5_COMPARE_RESULT_HEADER
-        result_df = pd.DataFrame(data, columns=columns)
-        highlight_dict = {}
-
-        result = update_highlight_err_msg(result_df, highlight_dict)
-
-        self.assertEqual(result, None)
 
     def test_update_highlight_err_msg_fail(self):
         data = [
