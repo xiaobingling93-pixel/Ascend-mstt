@@ -1,12 +1,26 @@
 # coding=utf-8
+"""
+# Copyright (C) 2024-2025. Huawei Technologies Co., Ltd. All rights reserved.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""
 import unittest
 import numpy as np
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+from msprobe.core.common.const import CompareConst
 from msprobe.core.compare.npy_compare import handle_inf_nan, reshape_value, get_error_flag_and_msg, \
     npy_data_check, statistics_data_check, get_relative_err, GetCosineSimilarity, GetMaxAbsErr, GetMaxRelativeErr, \
     GetErrRatio, error_value_process, compare_ops_apply
-from msprobe.core.common.const import CompareConst
 
 
 op_name = 'Functional.conv2d.0.backward.input.0'
@@ -18,7 +32,7 @@ class TestUtilsMethods(unittest.TestCase):
         b_value = np.array([1, 2, 3, 4])
 
         a, b = handle_inf_nan(n_value, b_value)
-        
+
         self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
 
     def test_handle_inf_nan_with_inf(self):
