@@ -13,23 +13,47 @@ op_name = 'Functional.conv2d.0.backward.input.0'
 
 
 class TestUtilsMethods(unittest.TestCase):
-    def test_handle_inf_nan_1(self):
+    def test_handle_inf_nan_normal(self):
+        n_value = np.array([1, 2, 3, 4])
+        b_value = np.array([1, 2, 3, 4])
+
+        a, b = handle_inf_nan(n_value, b_value)
+        
+        self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
+
+    def test_handle_inf_nan_with_inf(self):
         n_value = np.array([1, 2, np.inf, 4])
         b_value = np.array([1, 2, 3, 4])
+
         a, b = handle_inf_nan(n_value, b_value)
+
         self.assertTrue(a == CompareConst.NAN and b == CompareConst.NAN)
 
-    def test_handle_inf_nan_2(self):
+    def test_handle_inf_nan_with_nan(self):
         n_value = np.array([1, 2, 3, 4])
         b_value = np.array([1, 2, np.nan, 4])
+
         a, b = handle_inf_nan(n_value, b_value)
+
         self.assertTrue(a == CompareConst.NAN and b == CompareConst.NAN)
 
-    def test_handle_inf_nan_3(self):
-        n_value = np.array([1, 2, 3, 4])
-        b_value = np.array([1, 2, 3, 4])
+    def test_handle_inf_nan_both_nan(self):
+        n_value = np.array([1, 2, np.nan, 4])
+        b_value = np.array([1, 2, np.nan, 4])
+
         a, b = handle_inf_nan(n_value, b_value)
-        self.assertTrue(np.array_equal(a, n_value) and np.array_equal(b, b_value))
+
+        self.assertTrue(np.array_equal(a, np.array([1, 2, 0, 4])))
+        self.assertTrue(np.array_equal(b, np.array([1, 2, 0, 4])))
+
+    def test_handle_inf_nan_both_inf(self):
+        n_value = np.array([1, 2, np.inf, 4])
+        b_value = np.array([1, 2, np.inf, 4])
+
+        a, b = handle_inf_nan(n_value, b_value)
+
+        self.assertTrue(np.array_equal(a, np.array([1, 2, 0, 4])))
+        self.assertTrue(np.array_equal(b, np.array([1, 2, 0, 4])))
 
     def test_get_error_flag_and_msg_normal(self):
         n_value_0 = np.array([1, 2, 3, 4])
