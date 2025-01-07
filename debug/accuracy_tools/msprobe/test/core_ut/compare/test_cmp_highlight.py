@@ -245,6 +245,18 @@ class TestUtilsMethods(unittest.TestCase):
         target_result_df = pd.DataFrame(t_data, columns=columns)
         self.assertTrue(result_df.equals(target_result_df))
 
+    def test_update_highlight_err_msg_md5(self):
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2], 'abc', 'abc', 'pass']
+                ]
+        columns = CompareConst.MD5_COMPARE_RESULT_HEADER
+        result_df = pd.DataFrame(data, columns=columns)
+        highlight_dict = {}
+
+        result = update_highlight_err_msg(result_df, highlight_dict)
+
+        self.assertEqual(result, None)
+
     def test_update_highlight_err_msg_fail(self):
         data = [
             ['err_msg1'],
