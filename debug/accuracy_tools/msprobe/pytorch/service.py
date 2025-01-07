@@ -39,7 +39,6 @@ if torch_version_above_or_equal_2:
 
 HookFn = namedtuple('hookFn', ['pre_hook', 'forward_hook', 'backward_hook', 'forward_hook_torch_version_below_2'])
 
-
 class Service:
     def __init__(self, config):
         self.model = None
@@ -65,7 +64,7 @@ class Service:
                 return args, kwargs
 
             if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
+                api_or_module_name = module.mindstudio_reserved_name[-1]
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
@@ -114,7 +113,7 @@ class Service:
 
             module_input_output = ModuleForwardInputsOutputs(args=args, kwargs=kwargs, output=output)
             if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
+                api_or_module_name = module.mindstudio_reserved_name[-1]
                 self.data_collector.update_api_or_module_name(api_or_module_name)
                 params_dict = {key.split(Const.SEP)[-1]: value for key, value in module.named_parameters(recurse=False)}
                 setattr(module_input_output, Const.PARAMS, params_dict)
@@ -149,7 +148,7 @@ class Service:
                 return
 
             if module_type == BaseScope.Module_Type_Module:
-                api_or_module_name = module.mindstudio_reserved_name
+                api_or_module_name = module.mindstudio_reserved_name[-1]
             self.data_collector.update_api_or_module_name(api_or_module_name)
 
             if self.config.online_run_ut:
