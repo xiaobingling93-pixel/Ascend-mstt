@@ -372,6 +372,6 @@ class TestDataGenerateMethods(unittest.TestCase):
         convert_type = None
         api_info = {"input_args": None, "input_kwargs": {}}
         with patch('msprobe.pytorch.common.log.logger.warning') as mock_logger:
-            result_args, result_kwargs = gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
+            result_args, result_kwargs, _ = gen_api_params(api_info, api_name, need_grad, convert_type, real_data_path)
             self.assertEqual(result_args, [])
             mock_logger.assert_called_once_with(f'Warning: No args in {api_info} ')
