@@ -167,7 +167,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertTrue(np.array_equal(result, [0.0, 1.0]))
 
-    def test_GetCosineSimilarity_error_flag_False(self):
+    def test_GetCosineSimilarity_normal(self):
         op = GetCosineSimilarity()
 
         n_value_1 = np.array(1)
@@ -210,7 +210,44 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, CompareConst.NAN)
         self.assertEqual(err_msg, 'Cannot compare by Cosine Similarity, All the data is Zero in Bench dump data.')
 
-    def test_GetMaxAbsErr_error_flag_False(self):
+    def test_GetCosineSimilarity_not_shape(self):
+        op = GetCosineSimilarity()
+
+        n_value_1 = np.array([1])
+        b_value_1 = np.array([1])
+        relative_err = get_relative_err(n_value_1, b_value_1)
+        n_value_1, b_value_1 = reshape_value(n_value_1, b_value_1)
+        result, err_msg = op.apply(n_value_1, b_value_1, relative_err)
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertEqual(err_msg, "This is a 1-d tensor of length 1.")
+
+    @patch("numpy.isnan", return_value=True)
+    def test_GetCosineSimilarity_isnan(self, mock_isnan):
+        op = GetCosineSimilarity()
+
+        n_value = np.array([1, 2])
+        b_value = np.array([1, 1])
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
+
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertEqual(err_msg, "Cannot compare by Cosine Similarity, the dump data has NaN.")
+        mock_isnan.assert_called_once()
+
+    def test_GetCosineSimilarity_correct_data(self):
+        op = GetCosineSimilarity()
+
+        result_origin = CompareConst.NAN
+        result = op.correct_data(result_origin)
+        self.assertEqual(result, CompareConst.NAN)
+
+        result_origin = 1
+        result = op.correct_data(result_origin)
+        self.assertEqual(result, float(result_origin))
+
+    def test_GetMaxAbsErr_normal(self):
         op = GetMaxAbsErr()
 
         n_value = np.array([1, 2])
@@ -222,6 +259,21 @@ class TestUtilsMethods(unittest.TestCase):
 
         self.assertEqual(result, 2.0)
         self.assertEqual(err_msg, "")
+
+    @patch("numpy.isnan", return_value=True)
+    def test_GetMaxAbsErr_isnan(self, mock_isnan):
+        op = GetMaxAbsErr()
+
+        n_value = np.array([1, 2])
+        b_value = np.array([1, 1])
+        relative_err = get_relative_err(n_value, b_value)
+        n_value, b_value = reshape_value(n_value, b_value)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
+
+        self.assertEqual(result, CompareConst.NAN)
+        self.assertEqual(err_msg, "Cannot compare by MaxAbsError, the data contains nan/inf/-inf in dump data.")
+        mock_isnan.assert_called_once()
 
     def test_GetMaxRelativeErr_normal(self):
         op = GetMaxRelativeErr()
@@ -236,7 +288,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, 1.0)
         self.assertEqual(err_msg, "")
 
-    @patch("np.isnan", return_value=True)
+    @patch("numpy.isnan", return_value=True)
     def test_GetMaxRelativeErr_isnan(self, mock_isnan):
         op = GetMaxRelativeErr()
 
@@ -251,7 +303,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data.")
         mock_isnan.assert_called_once()
 
-    def test_GetThousandErrRatio_error_flag_False(self):
+    def test_GetThousandErrRatio_normal(self):
         op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
 
         n_value = np.array([1, 2])
@@ -264,7 +316,31 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, 0.5)
         self.assertEqual(err_msg, "")
 
-    def test_GetFiveThousandErrRatio_error_flag_False(self):
+    def test_GetThousandErrRatio_not_shape(self):
+        op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
+
+        n_value = np.array(1)   # 标量
+        b_value = np.array(1)
+        relative_err = np.array(0)
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
+
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertEqual(err_msg, "")
+
+    def test_GetThousandErrRatio_not_size(self):
+        op = GetErrRatio(CompareConst.THOUSAND_RATIO_THRESHOLD)
+
+        n_value = np.array([1, 2])
+        b_value = np.array([1, 2])
+        relative_err = np.array([])     # 空数组
+
+        result, err_msg = op.apply(n_value, b_value, relative_err)
+
+        self.assertEqual(result, CompareConst.UNSUPPORTED)
+        self.assertEqual(err_msg, "")
+
+    def test_GetFiveThousandErrRatio_normal(self):
         op = GetErrRatio(CompareConst.FIVE_THOUSAND_RATIO_THRESHOLD)
 
         n_value = np.array([1, 2])

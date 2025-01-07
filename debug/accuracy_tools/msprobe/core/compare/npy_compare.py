@@ -230,7 +230,7 @@ class GetMaxAbsErr(TensorComparisonBasic):
         temp_res = n_value - b_value
         max_value = np.max(np.abs(temp_res))
         if np.isnan(max_value):
-            msg = "Cannot compare by MaxRelativeError, the data contains nan/inf/-inf in dump data."
+            msg = "Cannot compare by MaxAbsError, the data contains nan/inf/-inf in dump data."
             return CompareConst.NAN, msg
         return format_value(max_value), ""
 
