@@ -29,7 +29,7 @@ class TestAbsolutethdCompare(unittest.TestCase):
     def test_get_rtol(self):
         # 测试_get_rtol方法
         rtol = self.compare._get_rtol()
-        self.assertEqual(rtol, 1e-6)
+        self.assertEqual(rtol, 2**-20)
 
     def test_get_rel_err(self):
         # 测试_get_rel_err方法
@@ -40,12 +40,12 @@ class TestAbsolutethdCompare(unittest.TestCase):
 
     def test_get_normal_value_mask(self):
         # 测试_get_normal_value_mask方法
-        self.compare._pre_compare()  # 需要先运行_pre_compare来初始化both_finite_mask
+        self.compare._pre_compare()
         
         # 创建一个示例small_value_mask
         small_value_mask = np.array([True, False, False, False, False])
         
-        normal_mask = self.compare._get_normal_value_mask(small_value_mask)
+        normal_mask = self.compare._get_normal_value_mask(self.compare.both_finite_mask, small_value_mask)
         
         # 验证返回值是布尔数组
         self.assertTrue(isinstance(normal_mask, np.ndarray))
