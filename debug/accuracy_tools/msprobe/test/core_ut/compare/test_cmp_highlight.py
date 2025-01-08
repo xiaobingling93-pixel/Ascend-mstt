@@ -3,21 +3,22 @@ import os
 import shutil
 import sys
 from collections import namedtuple
-
-import numpy as np
-import openpyxl
-import pandas as pd
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+import pandas as pd
+import openpyxl
+from openpyxl import load_workbook
+from openpyxl.styles import PatternFill
+
+
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
-from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
-    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, \
-    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity, \
-    get_name_and_state, ApiBatch
+from msprobe.core.compare.highlight import ApiBatch, CheckMaxRelativeDiff, CheckOrderMagnitude, \
+    CheckOneThousandErrorRatio, CheckCosineSimilarity, add_highlight_row_info, compare_result_df_convert, \
+    df_malicious_value_check, find_error_rows, get_name_and_state, highlight_rows_xlsx, update_highlight_err_msg, \
+    value_check
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
