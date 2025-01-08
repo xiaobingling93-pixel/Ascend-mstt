@@ -16,11 +16,12 @@
 import argparse
 import sys
 import importlib.util
-from msprobe.core.compare.utils import _compare_parser
+
+from msprobe.core.common.const import Const
 from msprobe.core.common.log import logger
+from msprobe.core.compare.utils import _compare_parser
 from msprobe.core.compare.compare_cli import compare_cli
 from msprobe.core.compare.merge_result.merge_result_cli import _merge_result_parser, merge_result_cli
-from msprobe.core.common.const import Const
 
 
 def is_module_available(module_name):
@@ -137,8 +138,6 @@ def main():
         elif sys.argv[3] == "code_mapping":
             from msprobe.mindspore.code_mapping.main import code_mapping_main
             code_mapping_main(args)
-
-
 
 
 if __name__ == "__main__":

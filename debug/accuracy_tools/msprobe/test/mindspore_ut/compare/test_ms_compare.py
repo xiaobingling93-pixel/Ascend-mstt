@@ -11,7 +11,8 @@ import torch
 import yaml
 
 from msprobe.core.common.utils import CompareException
-from msprobe.mindspore.compare.ms_compare import MSComparator, check_cross_framework
+from msprobe.core.compare.acc_compare import ModeConfig
+from msprobe.mindspore.compare.ms_compare import MappingConfig, MSComparator, check_cross_framework
 from msprobe.core.common.const import Const
 
 npu_dict = {'op_name': ['Functional.conv2d.0.forward.input.0', 'Functional.conv2d.0.forward.input.1',
@@ -190,7 +191,16 @@ def gen_data(is_ms=True):
 def gen_api_mapping_test_data(need_user_mapping=False):
     result_npu = json_data_template.copy()
     result_bench = json_data_template.copy()
-    ms_comparator = MSComparator()
+
+    stack_mode = True
+    auto_analyze = True
+    fuzzy_match = False
+    dump_mode = Const.SUMMARY
+
+    mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+    mapping_config = MappingConfig()
+    ms_comparator = MSComparator(mode_config, mapping_config)
+
     api_mapping = ms_comparator.load_internal_api()
     ms_api_list = np.random.choice(list(api_mapping.keys()), size=5, replace=False).astype(str).tolist()
     ms_api_data = {}
@@ -235,17 +245,31 @@ def gen_api_mapping_test_data(need_user_mapping=False):
 class TestUtilsMethods(unittest.TestCase):
 
     def test_check_op_ms(self):
+        stack_mode = True
+        auto_analyze = True
         fuzzy_match = False
-        ms_comparator = MSComparator()
-        result = ms_comparator.check_op(npu_dict, bench_dict, fuzzy_match)
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
+        result = ms_comparator.check_op(npu_dict, bench_dict)
         self.assertTrue(result)
 
     def test_data_mapping(self):
-        dump_mode = Const.SUMMARY
         stack_json_data = {}
-        ms_comparator = MSComparator(data_mapping=data_mapping)
 
-        npu_ops_all = ms_comparator.merge_data(npu_json_data, stack_json_data, dump_mode)
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.SUMMARY
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig(data_mapping=data_mapping)
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
+        npu_ops_all = ms_comparator.merge_data(npu_json_data, stack_json_data)
         npu_ops_all_correct = {
             'Functional.flash_attention_score.4.forward.input.0': {
                 'struct': ('BFloat16', [4096, 1, 2048]),
@@ -262,7 +286,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         self.assertDictEqual(npu_ops_all, npu_ops_all_correct)
 
-        bench_ops_all = ms_comparator.merge_data(bench_json_data, stack_json_data, dump_mode)
+        bench_ops_all = ms_comparator.merge_data(bench_json_data, stack_json_data)
         bench_ops_all_correct = {
             'NPU.npu_fusion_attention.4.forward.input.0': {
                 'struct': ('torch.bfloat16', [4096, 1, 2048]),
@@ -279,7 +303,7 @@ class TestUtilsMethods(unittest.TestCase):
         }
         self.assertDictEqual(bench_ops_all, bench_ops_all_correct)
 
-        result = ms_comparator.get_accuracy(npu_ops_all, bench_ops_all, dump_mode)
+        result = ms_comparator.get_accuracy(npu_ops_all, bench_ops_all)
         result_correct = [['Functional.flash_attention_score.4.forward.input.0',
                            'NPU.npu_fusion_attention.4.forward.input.0',
                            'BFloat16', 'torch.bfloat16', [4096, 1, 2048], [4096, 1, 2048], 0.0, 0.0,
@@ -311,9 +335,17 @@ class TestUtilsMethods(unittest.TestCase):
                 json.dump(bench_json_data, b_d_f)
             with open(npu_stack_path, 'w') as n_s_f:
                 json.dump({}, n_s_f)
-            ms_comparator = MSComparator()
-            result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path),
-                                                             False, dump_mode)
+
+            stack_mode = True
+            auto_analyze = True
+            fuzzy_match = False
+            dump_mode = Const.SUMMARY
+
+            mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+            mapping_config = MappingConfig()
+
+            ms_comparator = MSComparator(mode_config, mapping_config)
+            result_df = ms_comparator.compare_process_custom((npu_dump_path, bench_dump_path, npu_stack_path))
             self.assertListEqual(result_df.values.tolist(), [])
         finally:
             shutil.rmtree(data_path)
@@ -348,9 +380,16 @@ class TestUtilsMethods(unittest.TestCase):
                 json.dump(bench_data, b_d_f)
             with open(npu_stack_path, 'w', encoding='utf8') as n_s_f:
                 json.dump({}, n_s_f)
-            ms_comparator = MSComparator(api_mapping=True)
-            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
-                                                      Const.SUMMARY)
+
+            stack_mode = True
+            auto_analyze = True
+            fuzzy_match = False
+            dump_mode = Const.SUMMARY
+            mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+            mapping_config = MappingConfig(api_mapping=True)
+
+            ms_comparator = MSComparator(mode_config, mapping_config)
+            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path))
             self.assertTrue((result_df['Bench Name'] != 'N/A').all())
         finally:
             shutil.rmtree(data_path)
@@ -372,9 +411,16 @@ class TestUtilsMethods(unittest.TestCase):
                 json.dump({}, n_s_f)
             with open(user_mapping_path, 'w', encoding='utf8') as u_m_f:
                 yaml.safe_dump(user_mapping, u_m_f)
-            ms_comparator = MSComparator(api_mapping=user_mapping_path)
-            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path), False, True,
-                                                      Const.SUMMARY)
+
+            stack_mode = True
+            auto_analyze = True
+            fuzzy_match = False
+            dump_mode = Const.SUMMARY
+            mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+            mapping_config = MappingConfig(api_mapping=user_mapping_path)
+
+            ms_comparator = MSComparator(mode_config, mapping_config)
+            result_df = ms_comparator.compare_process((npu_dump_path, bench_dump_path, npu_stack_path))
             
             user_mapping_dict = {}
             for i in user_mapping:
@@ -391,7 +437,15 @@ class TestUtilsMethods(unittest.TestCase):
             shutil.rmtree(data_path)
 
     def test_load_internal_api(self):
-        ms_comparator = MSComparator()
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.SUMMARY
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
         api_dict = ms_comparator.load_internal_api()
         self.assertEqual(api_dict['Functional.abs'], 'Torch.abs')
 
@@ -399,12 +453,30 @@ class TestUtilsMethods(unittest.TestCase):
         self.base_test_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
         self.input_dir = os.path.join(self.base_test_dir, 'resources')
         cell_mapping_path = os.path.join(self.input_dir, 'common', 'cell_mapping.yaml')
-        ms_comparator = MSComparator(cell_mapping=cell_mapping_path)
+
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.SUMMARY
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig(cell_mapping=cell_mapping_path)
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
         npu_op_name = ms_comparator.process_cell_mapping(npu_cell_dict.get('op_name')[0])
         self.assertEqual(npu_op_name, 'Module.fc1.Linear.forward.0.input.0')
 
     def test_read_npy_data(self):
-        ms_comparator = MSComparator()
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
         self.temp_file = tempfile.NamedTemporaryFile(suffix='.pt')
         tensor = torch.Tensor([1, 2, 3])
         filename = self.temp_file.name.split('/')[-1]
@@ -422,7 +494,16 @@ class TestUtilsMethods(unittest.TestCase):
         self.temp_file.close()
 
     def test_process_internal_api_mapping(self):
-        ms_comparator = MSComparator(api_mapping=1)
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig(api_mapping=1)
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
         npu_op_name = "Mint.addcmul.0.forward.input.0"
         result = ms_comparator.process_internal_api_mapping(npu_op_name)
         self.assertEqual(result, "Torch.addcmul.0.forward.input.0")
@@ -436,7 +517,16 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(result, "Torch.abs")
 
     def test_get_api_name(self):
-        ms_comparator = MSComparator()
+        stack_mode = True
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+        mapping_config = MappingConfig()
+
+        ms_comparator = MSComparator(mode_config, mapping_config)
+
         api_list = ["Functional", "absolute", "0", "forward", "input", "0"]
         result = ms_comparator.get_api_name(api_list)
         self.assertEqual(result, "Functional.absolute")

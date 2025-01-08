@@ -1,19 +1,18 @@
 # coding=utf-8
-import json
+import multiprocessing
 import os
 import shutil
-import unittest
 import threading
+import unittest
+
 import pandas as pd
-import multiprocessing
-from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, read_dump_data, ComparisonResult, \
-    _save_cmp_result, check_accuracy
-from msprobe.core.compare.acc_compare import Comparator
-from msprobe.core.common.const import CompareConst
+
+from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.utils import CompareException
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig
+from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result, \
+    check_accuracy, read_dump_data
 from test_acc_compare import generate_dump_json
-
-
 
 data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
          'torch.float32', 'torch.float32', [2, 2], [2, 2],
@@ -47,7 +46,13 @@ class TestUtilsMethods(unittest.TestCase):
             shutil.rmtree(base_dir)
 
     def test_handle_multi_process(self):
-        func = Comparator().compare_ops
+        stack_mode = False
+        auto_analyze = True
+        fuzzy_match = False
+        dump_mode = Const.ALL
+        mode_config = ModeConfig(stack_mode, auto_analyze, fuzzy_match, dump_mode)
+
+        func = Comparator(mode_config).compare_ops
         generate_dump_json(base_dir)
         input_parma = {'bench_json_path': os.path.join(base_dir, 'dump.json')}
         lock = multiprocessing.Manager().RLock()
