@@ -13,9 +13,11 @@ import unittest
 from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
+from msprobe.core.common.utils import CompareException
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
     add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, \
-    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity, get_name_and_state, ApiBatch
+    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity, \
+    get_name_and_state, ApiBatch
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -196,7 +198,8 @@ class TestUtilsMethods(unittest.TestCase):
         api_batch.increment(Const.INPUT)
 
         self.assertTrue(api_batch.input_state)
-        self.assertEqual(api_batch.output_index, 2)
+        self.assertEqual(api_batch.input_len, 2)
+        self.assertEqual(api_batch.output_index, 4)
 
     def test_ApiBatch_increment_output(self):
         api_name = "functional.conv2d"
@@ -206,6 +209,7 @@ class TestUtilsMethods(unittest.TestCase):
         api_batch.increment(Const.OUTPUT)
 
         self.assertFalse(api_batch.input_state)
+        self.assertEqual(api_batch.input_len, 1)
         self.assertEqual(api_batch.output_index, 4)
 
     @patch("msprobe.core.compare.highlight.logger")
@@ -215,11 +219,11 @@ class TestUtilsMethods(unittest.TestCase):
         i = 1
         result_df_columns = CompareConst.COMPARE_RESULT_HEADER
 
-        value_check((value, api_name, i, result_df_columns))
+        value_check(value, api_name, i, result_df_columns)
 
         mock_logger.error.assert_called_once_with(
-            f"Malicious value [=functional.conv2d] at api_name [=functional.conv2d], column [Bench Name], "
-            f"is not allowed to be written into the compare result xlsx."
+            "Malicious value [=functional.conv2d] at api_name [=functional.conv2d], column [Bench Name], "
+            "is not allowed to be written into the compare result xlsx."
         )
 
     def test_df_malicious_value_check(self):
@@ -379,6 +383,49 @@ class TestUtilsMethods(unittest.TestCase):
         }
         result = update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
+
+    class TestGetNameAndState(unittest.TestCase):
+        def test_valid_forward_input(self):
+            name = 'conv2d.forward.1.input.0'
+            expected_api = 'conv2d.forward.1.'
+            expected_state = 'input'
+            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+        def test_valid_backward_output(self):
+            name = 'Functional.pad.0.backward.output.0'
+            expected_api = 'Functional.pad.0.backward.'
+            expected_state = 'output'
+            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+        def test_valid_with_kwargs(self):
+            name = 'layer.norm.2.forward.kwargs.attr'
+            expected_api = 'layer.norm.2.forward.'
+            expected_state = 'kwargs'
+            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+        def test_invalid_missing_state(self):
+            name = 'conv2d.forward.1.invalidstate.0'
+            with self.assertRaises(CompareException) as cm:
+                get_name_and_state(name)
+            self.assertIn('Invalid name string', str(cm.exception))
+
+        def test_invalid_format(self):
+            name = 'invalid.string.format'
+            with self.assertRaises(CompareException) as cm:
+                get_name_and_state(name)
+            self.assertIn('Invalid name string', str(cm.exception))
+
+        def test_no_numeric_index(self):
+            name = 'conv2d.forward.input.0'
+            expected_api = 'conv2d.forward.'
+            expected_state = 'input'
+            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+
+        def test_edge_case_empty_string(self):
+            name = ''
+            with self.assertRaises(CompareException) as cm:
+                get_name_and_state(name)
+            self.assertIn('Invalid name string', str(cm.exception))
 
 
 
