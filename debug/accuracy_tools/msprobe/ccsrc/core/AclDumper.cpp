@@ -458,6 +458,7 @@ void AclDumper::FinalizeDump(ExtArgs& args)
         return;
     }
 
+    CALL_ACL_API(aclrtSynchronizeDevice);
     aclError aclRet = CALL_ACL_API(aclmdlFinalizeDump);
     if (aclRet != ACL_SUCCESS) {
         LOG_ERROR(DebuggerErrno::ERROR_EXTERNAL_API_ERROR,
