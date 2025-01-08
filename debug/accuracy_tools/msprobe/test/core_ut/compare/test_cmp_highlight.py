@@ -15,7 +15,7 @@ from unittest.mock import patch
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
     add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, \
-    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity
+    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity, get_name_and_state, ApiBatch
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -177,8 +177,39 @@ class TestUtilsMethods(unittest.TestCase):
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
 
+    def test_find_error_rows_md5(self):
+        compare_result = []
+        last_len = 1
+        n_num_input = 2
+        highlight_dict = {}
+        dump_mode = Const.MD5
+
+        result = find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+
+        self.assertEqual(result, None)
+
+    def test_ApiBatch_increment_input(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.INPUT)
+
+        self.assertTrue(api_batch.input_state)
+        self.assertEqual(api_batch.output_index, 2)
+
+    def test_ApiBatch_increment_output(self):
+        api_name = "functional.conv2d"
+        start = 2
+        api_batch = ApiBatch(api_name, start)
+
+        api_batch.increment(Const.OUTPUT)
+
+        self.assertFalse(api_batch.input_state)
+        self.assertEqual(api_batch.output_index, 4)
+
     @patch("msprobe.core.compare.highlight.logger")
-    def test_value_check(self, mock_logger_error):
+    def test_value_check(self, mock_logger):
         value = "=functional.conv2d"
         api_name = "=functional.conv2d"
         i = 1
@@ -186,8 +217,8 @@ class TestUtilsMethods(unittest.TestCase):
 
         value_check((value, api_name, i, result_df_columns))
 
-        mock_logger_error.assert_called_once_with(
-            f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+        mock_logger.error.assert_called_once_with(
+            f"Malicious value [=functional.conv2d] at api_name [=functional.conv2d], column [Bench Name], "
             f"is not allowed to be written into the compare result xlsx."
         )
 
