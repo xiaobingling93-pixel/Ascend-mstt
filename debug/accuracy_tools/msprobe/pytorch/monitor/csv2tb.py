@@ -112,7 +112,11 @@ def check_process_num(process_num):
         raise ValueError(f"process_num({process_num}) is not a positive integer")
 
 
+all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
 def check_data_type_list(data_type_list):
+    if data_type_list is None:
+        logger.info(f"data_type_list is None, use defualt all_data_type_list: {all_data_type_list}")
+        return
     if not isinstance(data_type_list, list):
         raise ValueError(f"data_type_list({data_type_list}) is not a list")
     for data_type in data_type_list:
@@ -120,8 +124,7 @@ def check_data_type_list(data_type_list):
             raise ValueError(f"data type({data_type}) is not supported, supported data type: {all_data_type_list}")
 
 
-all_data_type_list = ["actv", "actv_grad", "exp_avg", "exp_avg_sq", "grad_unreduced", "grad_reduced", "param"]
-def csv2tensorboard_by_step(monitor_path, time_start, time_end, process_num=1, data_type_list=None):
+def csv2tensorboard_by_step(monitor_path, time_start=None, time_end=None, process_num=1, data_type_list=None):
     check_process_num(process_num)
     check_data_type_list(data_type_list)
     target_output_dirs = get_target_output_dir(monitor_path, time_start, time_end)
