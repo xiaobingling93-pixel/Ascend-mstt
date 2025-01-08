@@ -59,6 +59,7 @@ class Service:
         self.start_call = False
         self.check_level_valid()
         self.should_stop_service = False
+        self.params_grad_info = {}
 
     @staticmethod
     def check_model_valid(model):
@@ -106,17 +107,21 @@ class Service:
         def register_param_hook(cell_name, cell, params_dict):
             # data_mode为forward时，不注册参数hook
             if not (Const.FORWARD in self.config.data_mode and Const.BACKWARD not in self.config.data_mode):
-                # 判断参数是否已经注册过hook
-                if params_dict and hasattr(cell, 'has_param_hook') and not cell.has_param_hook:
-                    ori_name = cell_name.rsplit(Const.SEP, 2)[0]
-                    grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
-                    # 注册hook时，初始化grad_name的data_info
-                    data_info = {grad_name: {key: [None] for key in params_dict}}
+                ori_name = cell_name.rsplit(Const.SEP, 2)[0]
+                grad_name = ori_name + Const.SEP + Const.PARAMS_GRAD
+                # 注册hook时，初始化grad_name的data_info
+                data_info = {grad_name: {key: [None] for key, value in params_dict.items() if value.requires_grad}}
+                # 判断是否已经在cache_data中进行了占位, 若没有则先写入cache_data中
+                if not self.params_grad_info.get(grad_name):
                     # 将grad_name的data_info先写入cache_data中, 梯度计算后再更新
-                    self.data_collector.handle_data(grad_name, data_info, flush=self.data_collector.data_processor.is_terminated)
+                    self.data_collector.handle_data(grad_name, data_info, 
+                                                    flush=self.data_collector.data_processor.is_terminated)
+                    self.params_grad_info[grad_name] = True
+                # 判断参数是否已经注册过hook
+                if params_dict and hasattr(cell, 'has_param_hook') and cell.has_param_hook:
                     for param_name, param in params_dict.items():
-                        param.register_hook(grad_hook(ori_name, param_name))
-                    cell.has_param_hook = True
+                        if param.requires_grad:
+                            param.register_hook(grad_hook(ori_name, param_name))
 
         def forward_hook(api_or_cell_name, cell, input_data, output):
             if not self.should_excute_hook():
@@ -130,7 +135,7 @@ class Service:
                     setattr(module_input_output, Const.PARAMS, params_dict)
                     # 设置has_param_hook属性，避免重复注册hook
                     if not hasattr(cell, 'has_param_hook'):
-                        setattr(cell, 'has_param_hook', False)
+                        setattr(cell, 'has_param_hook', True)
                     self.data_collector.update_api_or_module_name(api_or_cell_name)
                     self.data_collector.forward_data_collect(api_or_cell_name, cell, pid, module_input_output)
                     register_param_hook(api_or_cell_name, cell, params_dict)
@@ -355,15 +360,9 @@ class Service:
         self.primitive_hook_service.primitive_counters.clear()
         self.data_collector.data_writer.reset_cache()
         JitDump.jit_count = defaultdict(int)
+        self.params_grad_info.clear()
 
         if self.config.step and self.current_iter not in self.config.step:
             return
         if self.config.rank and self.current_rank not in self.config.rank:
             return
-
-        if self.config.level in [Const.LEVEL_MIX, Const.LEVEL_L0] and self.model:
-            for _, cell in self.model.cells_and_names():
-                if cell == self.model:
-                    continue
-                if hasattr(cell, 'has_param_hook'):
-                    del cell.has_param_hook
