@@ -182,18 +182,18 @@ class TestUtilsMethods(unittest.TestCase):
     def test_find_error_rows_normal(self):
         compare_result = np.array([
             ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
-             "Yes", "", "Functional.linear.0.forward.input.0.pt"],
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
             ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
-             "Yes", "", "Functional.linear.0.forward.input.1.pt"],
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
             ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
-             "torch.float32", "torch.float32", [2], [2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
-             "Yes", "", "Functional.linear.0.forward.input.2.pt"],
+             "torch.float32", "torch.float32", [2], [2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
             ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
-             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
-             "Yes", "", "Functional.linear.0.forward.output.0.pt"],
-        ])
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 0.0, 0.0, 0.0, 0.0, "0.0%", "0.0%", "0.0%", "0.0%",
+             1, 1, 1, 1, 1, 1, 1, 1, "", ""],
+        ], dtype=object)
         last_len = 0
         n_num_input = 3
         highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
@@ -201,6 +201,7 @@ class TestUtilsMethods(unittest.TestCase):
 
         find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
 
+        self.assertEqual(highlight_dict, {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()})
 
     def test_find_error_rows_md5(self):
         compare_result = []
