@@ -14,7 +14,8 @@ from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
-    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio
+    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, \
+    df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio, CheckCosineSimilarity
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -88,21 +89,50 @@ class TestUtilsMethods(unittest.TestCase):
             shutil.rmtree(base_dir)
 
     def test_CheckOrderMagnitude_normal(self):
-        api_in = [1, 1, 1, 1, 1, 1, 1, 5, 1]
+        api_in = [1, 1, 1, 1, 1, 1, 5, 1, 1]
         api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.SUMMARY
+
         result = CheckOrderMagnitude().apply(info, color_columns, dump_mode)
+
         self.assertEqual(result, None)
 
-    def test_CheckOneThousandErrorRatio_normal(self):
-        api_in = [1, 1, 1, 1, 1, 1, 1, 5, 1]
-        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+    def test_CheckOneThousandErrorRatio_str(self):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, "unsupported"]
         info = (api_in, api_out, 1)
         color_columns = ()
         dump_mode = Const.ALL
+
         result = CheckOneThousandErrorRatio().apply(info, color_columns, dump_mode)
+
+        self.assertEqual(result, None)
+
+    @patch("msprobe.core.compare.highlight.add_highlight_row_info")
+    def test_CheckOneThousandErrorRatio_red(self, mock_add_highlight_row_info):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1, 0.5]
+        info = (api_in, api_out, 1)
+        ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
+        color_columns = ColorColumns(red=[], yellow=[])
+        dump_mode = Const.ALL
+
+        CheckOneThousandErrorRatio().apply(info, color_columns, dump_mode)
+
+        mock_add_highlight_row_info.assert_called_once()
+
+    def test_CheckCosineSimilarity_str(self):
+        api_in = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
+        api_out = [1, 1, 1, 1, 1, 1, "unsupported", 1, 1, "unsupported"]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.ALL
+
+        result = CheckCosineSimilarity().apply(info, color_columns, dump_mode)
+
+        self.assertEqual(result, None)
 
     def test_CheckMaxRelativeDiff_red(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
