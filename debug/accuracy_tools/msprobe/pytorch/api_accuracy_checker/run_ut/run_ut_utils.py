@@ -24,11 +24,10 @@ try:
     import torch_npu
 except ImportError:
     current_device = "cuda"
+    from torch.cuda.amp import autocast
 else:
     current_device = "npu"
-    from torch_npu.contrib import transfer_to_npu
-
-from torch.cuda.amp import autocast
+    from torch_npu.npu.amp import autocast
 
 from msprobe.core.common.const import FileCheckConst, Const, CompareConst
 from msprobe.core.common.file_utils import FileChecker
