@@ -14,7 +14,7 @@ from unittest.mock import patch
 
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.compare.highlight import CheckMaxRelativeDiff, highlight_rows_xlsx, \
-    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert
+    add_highlight_row_info, update_highlight_err_msg, compare_result_df_convert, find_error_rows, df_malicious_value_check, value_check, CheckOrderMagnitude, CheckOneThousandErrorRatio
 
 
 base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'test_highlight')
@@ -87,6 +87,23 @@ class TestUtilsMethods(unittest.TestCase):
         if os.path.exists(base_dir):
             shutil.rmtree(base_dir)
 
+    def test_CheckOrderMagnitude_normal(self):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 5, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.SUMMARY
+        result = CheckOrderMagnitude().apply(info, color_columns, dump_mode)
+        self.assertEqual(result, None)
+
+    def test_CheckOneThousandErrorRatio_normal(self):
+        api_in = [1, 1, 1, 1, 1, 1, 1, 5, 1]
+        api_out = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        info = (api_in, api_out, 1)
+        color_columns = ()
+        dump_mode = Const.ALL
+        result = CheckOneThousandErrorRatio().apply(info, color_columns, dump_mode)
+
     def test_CheckMaxRelativeDiff_red(self):
         ColorColumns = namedtuple('ColorColumns', ['red', 'yellow'])
 
@@ -129,6 +146,30 @@ class TestUtilsMethods(unittest.TestCase):
         info = (api_in, api_out, num)
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
+
+    @patch("msprobe.core.compare.highlight.logger")
+    def test_value_check(self, mock_logger_error):
+        value = "=functional.conv2d"
+        api_name = "=functional.conv2d"
+        i = 1
+        result_df_columns = CompareConst.COMPARE_RESULT_HEADER
+
+        value_check((value, api_name, i, result_df_columns))
+
+        mock_logger_error.assert_called_once_with(
+            f"Malicious value [{value}] at api_name [{api_name}], column [{result_df_columns[i]}], "
+            f"is not allowed to be written into the compare result xlsx."
+        )
+
+    def test_df_malicious_value_check(self):
+        columns = CompareConst.COMPARE_RESULT_HEADER
+        data = [['Functional.linear.0.forward.input.0', 'Functional.linear.0.forward.input.0',
+                 'torch.float32', 'torch.float32', [2, 2], [2, 2],
+                 '', '', '', '', '', 1, 1, 1, 1, 1, 1, 1, 1, 'Yes', '']
+                ]
+        result_df = pd.DataFrame(data, columns=columns)
+
+        df_malicious_value_check(result_df, columns)
 
     def test_compare_result_df_convert(self):
         value = float("nan")
@@ -277,3 +318,6 @@ class TestUtilsMethods(unittest.TestCase):
         }
         result = update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
+
+
+
