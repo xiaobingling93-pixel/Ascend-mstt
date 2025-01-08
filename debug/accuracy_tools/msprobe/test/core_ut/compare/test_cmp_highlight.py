@@ -412,6 +412,6 @@ class TestGetNameAndState(unittest.TestCase):
 
     def test_invalid__state(self):
         name = 'conv2d.forward.1.invalidstate.0'
-        with self.assertRaises(CompareException) as cm:
+        with self.assertRaises(CompareException) as context:
             get_name_and_state(name)
-        self.assertIn('Invalid name string', str(cm.exception))
+        self.assertIn('Invalid name string', str(context.exception.code))
