@@ -458,7 +458,7 @@ class TestUtilsMethods(unittest.TestCase):
         self.assertEqual(err_msg, "")
 
     def test_error_value_process_other(self):
-        n_value = np.array([1, 1])
+        n_value = "abc"
 
         result, err_msg = error_value_process(n_value)
 
