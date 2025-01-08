@@ -179,6 +179,29 @@ class TestUtilsMethods(unittest.TestCase):
         result = CheckMaxRelativeDiff().apply(info, color_columns, dump_mode=Const.SUMMARY)
         self.assertEqual(result, None)
 
+    def test_find_error_rows_normal(self):
+        compare_result = np.array([
+            ["Functional.linear.0.forward.input.0", "Functional.linear.0.forward.input.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
+             "Yes", "", "Functional.linear.0.forward.input.0.pt"],
+            ["Functional.linear.0.forward.input.1", "Functional.linear.0.forward.input.1",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
+             "Yes", "", "Functional.linear.0.forward.input.1.pt"],
+            ["Functional.linear.0.forward.input.2", "Functional.linear.0.forward.input.2",
+             "torch.float32", "torch.float32", [2], [2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
+             "Yes", "", "Functional.linear.0.forward.input.2.pt"],
+            ["Functional.linear.0.forward.output.0", "Functional.linear.0.forward.output.0",
+             "torch.float32", "torch.float32", [2, 2], [2, 2], 1.0, 0.0, 0.0, 1.0, 1.0, 1, 1, 1, 1, 1, 1, 1, 1,
+             "Yes", "", "Functional.linear.0.forward.output.0.pt"],
+        ])
+        last_len = 0
+        n_num_input = 3
+        highlight_dict = {"red_lines": [], "red_rows": set(), "yellow_lines": [], "yellow_rows": set()}
+        dump_mode = Const.ALL
+
+        find_error_rows(compare_result, last_len, n_num_input, highlight_dict, dump_mode)
+
+
     def test_find_error_rows_md5(self):
         compare_result = []
         last_len = 1
