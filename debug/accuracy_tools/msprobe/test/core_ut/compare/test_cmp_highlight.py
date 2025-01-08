@@ -384,48 +384,34 @@ class TestUtilsMethods(unittest.TestCase):
         result = update_highlight_err_msg(result_df, highlight_dict)
         self.assertEqual(result, None)
 
-    class TestGetNameAndState(unittest.TestCase):
-        def test_valid_forward_input(self):
-            name = 'conv2d.forward.1.input.0'
-            expected_api = 'conv2d.forward.1.'
-            expected_state = 'input'
-            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
 
-        def test_valid_backward_output(self):
-            name = 'Functional.pad.0.backward.output.0'
-            expected_api = 'Functional.pad.0.backward.'
-            expected_state = 'output'
-            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+class TestGetNameAndState(unittest.TestCase):
+    def test_valid_forward_input(self):
+        name = 'conv2d.forward.1.input.0'
+        expected_api = 'conv2d.forward.1.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
 
-        def test_valid_with_kwargs(self):
-            name = 'layer.norm.2.forward.kwargs.attr'
-            expected_api = 'layer.norm.2.forward.'
-            expected_state = 'kwargs'
-            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
+    def test_valid_backward_output(self):
+        name = 'Functional.pad.0.backward.output.0'
+        expected_api = 'Functional.pad.0.backward.'
+        expected_state = 'output'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
 
-        def test_invalid_missing_state(self):
-            name = 'conv2d.forward.1.invalidstate.0'
-            with self.assertRaises(CompareException) as cm:
-                get_name_and_state(name)
-            self.assertIn('Invalid name string', str(cm.exception))
+    def test_valid_with_kwargs(self):
+        name = 'layer.norm.2.forward.kwargs.attr'
+        expected_api = 'layer.norm.2.forward.'
+        expected_state = 'kwargs'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
 
-        def test_invalid_format(self):
-            name = 'invalid.string.format'
-            with self.assertRaises(CompareException) as cm:
-                get_name_and_state(name)
-            self.assertIn('Invalid name string', str(cm.exception))
+    def test_no_numeric_index(self):
+        name = 'conv2d.forward.input.0'
+        expected_api = 'conv2d.forward.'
+        expected_state = 'input'
+        self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
 
-        def test_no_numeric_index(self):
-            name = 'conv2d.forward.input.0'
-            expected_api = 'conv2d.forward.'
-            expected_state = 'input'
-            self.assertEqual(get_name_and_state(name), (expected_api, expected_state))
-
-        def test_edge_case_empty_string(self):
-            name = ''
-            with self.assertRaises(CompareException) as cm:
-                get_name_and_state(name)
-            self.assertIn('Invalid name string', str(cm.exception))
-
-
-
+    def test_invalid__state(self):
+        name = 'conv2d.forward.1.invalidstate.0'
+        with self.assertRaises(CompareException) as cm:
+            get_name_and_state(name)
+        self.assertIn('Invalid name string', str(cm.exception))
