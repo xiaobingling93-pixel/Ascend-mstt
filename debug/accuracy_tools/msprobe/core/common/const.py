@@ -219,7 +219,6 @@ class Const:
     REPLACEMENT_CHARACTER = "_"
 
 
-
 class CompareConst:
     """
     Class for compare module const

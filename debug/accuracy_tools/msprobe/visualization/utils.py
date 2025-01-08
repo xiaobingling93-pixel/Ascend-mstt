@@ -18,7 +18,7 @@ import re
 import json
 from msprobe.core.common.file_utils import FileOpen
 from msprobe.core.common.const import CompareConst, Const
-from msprobe.core.compare.acc_compare import Comparator
+from msprobe.core.compare.acc_compare import Comparator, ModeConfig
 
 
 def load_json_file(file_path):
@@ -50,12 +50,13 @@ def save_json_file(file_path, data):
         f.write(json.dumps(data, indent=4))
 
 
-def get_csv_df(stack, csv_data, compare_mode):
+def get_csv_df(stack_mode, csv_data, compare_mode):
     """
     调用acc接口写入csv
     """
     dump_mode = GraphConst.GRAPHCOMPARE_MODE_TO_DUMP_MODE_TO_MAPPING.get(compare_mode)
-    return Comparator.make_result_table(csv_data, stack, dump_mode)
+    mode_config = ModeConfig(stack_mode=stack_mode, dump_mode=dump_mode)
+    return Comparator(mode_config).make_result_table(csv_data)
 
 
 def str2float(percentage_str):
