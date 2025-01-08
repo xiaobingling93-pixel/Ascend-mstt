@@ -19,27 +19,37 @@ import re
 from copy import deepcopy
 
 import pandas as pd
+from tqdm import tqdm
+
 from msprobe.core.advisor.advisor import Advisor
 from msprobe.core.common.const import CompareConst, Const
 from msprobe.core.common.exceptions import FileCheckException
-from msprobe.core.common.file_utils import load_json
-from msprobe.core.common.file_utils import remove_path
+from msprobe.core.common.file_utils import load_json, remove_path
 from msprobe.core.common.log import logger
-from msprobe.core.common.utils import add_time_with_xlsx, CompareException, check_op_str_pattern_valid, safe_get_value
-from msprobe.core.compare.check import check_graph_mode, check_struct_match, fuzzy_check_op, check_dump_json_str, \
-    check_stack_json_str
+from msprobe.core.common.utils import CompareException, add_time_with_xlsx, check_op_str_pattern_valid, safe_get_value
+from msprobe.core.compare.check import check_dump_json_str, check_graph_mode, check_stack_json_str, \
+    check_struct_match, fuzzy_check_op
 from msprobe.core.compare.highlight import find_compare_result_error_rows, highlight_rows_xlsx
-from msprobe.core.compare.multiprocessing_compute import _handle_multi_process, ComparisonResult, _save_cmp_result
+from msprobe.core.compare.multiprocessing_compute import ComparisonResult, _handle_multi_process, _save_cmp_result
 from msprobe.core.compare.npy_compare import compare_ops_apply, get_error_flag_and_msg
-from msprobe.core.compare.utils import read_op, merge_tensor, get_un_match_accuracy, get_accuracy, \
-    get_rela_diff_summary_mode, print_compare_ends_info
-from tqdm import tqdm
+from msprobe.core.compare.utils import get_accuracy, get_rela_diff_summary_mode, get_un_match_accuracy, merge_tensor, \
+    print_compare_ends_info, read_op
+
+
+class ModeConfig:
+    def __init__(self, stack_mode=False, auto_analyze=True, fuzzy_match=False, dump_mode=None):
+        self.stack_mode = stack_mode
+        self.auto_analyze = auto_analyze
+        self.fuzzy_match = fuzzy_match
+        self.dump_mode = dump_mode
 
 
 class Comparator:
-
-    def __init__(self):
-        pass
+    def __init__(self, mode_config: ModeConfig):
+        self.stack_mode = mode_config.stack_mode
+        self.auto_analyze = mode_config.auto_analyze
+        self.fuzzy_match = mode_config.fuzzy_match
+        self.dump_mode = mode_config.dump_mode
 
     @staticmethod
     def get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all, bench_ops_all, *args):
@@ -84,16 +94,15 @@ class Comparator:
                 value[k] = CompareConst.N_A
         return value
 
-    @classmethod
-    def make_result_table(cls, result, stack_mode, dump_mode):
-        header = CompareConst.HEAD_OF_COMPARE_MODE[dump_mode][:]
+    def make_result_table(self, result):
+        header = CompareConst.HEAD_OF_COMPARE_MODE[self.dump_mode][:]
 
-        if stack_mode:
+        if self.stack_mode:
             header.append(CompareConst.STACK)
-            if dump_mode == Const.ALL:
+            if self.dump_mode == Const.ALL:
                 header.append(CompareConst.DATA_NAME)
         else:
-            if dump_mode == Const.ALL:
+            if self.dump_mode == Const.ALL:
                 for row in result:
                     del row[-2]  # 输出结果不要堆栈信息时，删除中间结果result中的stack info，真实数据时为倒数第2列
                 header.append(CompareConst.DATA_NAME)
@@ -103,24 +112,25 @@ class Comparator:
         result_df = pd.DataFrame(result, columns=header, dtype='object')
         return result_df
 
-    @classmethod
-    def gen_merge_list(cls, json_data, op_name, stack_json_data, dump_mode):
+    def gen_merge_list(self, json_data, op_name, stack_json_data):
         op_data = json_data['data'][op_name]
         check_dump_json_str(op_data, op_name)
         op_parsed_list = read_op(op_data, op_name)
 
-        stack_info = stack_json_data.get(op_name)
-        if stack_info is not None:
-            check_stack_json_str(stack_info, op_name)
-        op_parsed_list.append({
-            'full_op_name': op_name,
-            'full_info': stack_info
-        })
+        if self.stack_mode:
+            stack_info = stack_json_data.get(op_name)
+            if stack_info is not None:
+                check_stack_json_str(stack_info, op_name)
+            # append only when stack_mode is True,
+            op_parsed_list.append({
+                'full_op_name': op_name,
+                'full_info': stack_info
+            })
 
-        merge_list = merge_tensor(op_parsed_list, dump_mode)
+        merge_list = merge_tensor(op_parsed_list, self.dump_mode)
         return merge_list
 
-    def check_op(self, npu_dict, bench_dict, fuzzy_match):
+    def check_op(self, npu_dict, bench_dict):
         npu_op_name = npu_dict[CompareConst.OP_NAME]
         bench_op_name = bench_dict[CompareConst.OP_NAME]
         graph_mode = check_graph_mode(safe_get_value(npu_op_name, 0, "npu_op_name"),
@@ -132,9 +142,8 @@ class Comparator:
             if graph_mode:
                 return graph_mapping.match(npu_op_name[0], bench_op_name[0])
         struct_match = check_struct_match(npu_dict, bench_dict)
-        if not fuzzy_match:
+        if not self.fuzzy_match:
             return npu_op_name == bench_op_name and struct_match
-        is_match = True
         try:
             is_match = fuzzy_check_op(npu_op_name, bench_op_name)
         except Exception as err:
@@ -142,24 +151,24 @@ class Comparator:
             is_match = False
         return is_match and struct_match
 
-    def match_op(self, npu_queue, bench_queue, fuzzy_match):
+    def match_op(self, npu_queue, bench_queue):
         for b_index, b_op in enumerate(bench_queue[0: -1]):
-            if self.check_op(npu_queue[-1], b_op, fuzzy_match):
+            if self.check_op(npu_queue[-1], b_op):
                 return len(npu_queue) - 1, b_index
-        if self.check_op(npu_queue[-1], bench_queue[-1], fuzzy_match):
+        if self.check_op(npu_queue[-1], bench_queue[-1]):
             return len(npu_queue) - 1, len(bench_queue) - 1
         for n_index, n_op in enumerate(npu_queue[0: -1]):
-            if self.check_op(n_op, bench_queue[-1], fuzzy_match):
+            if self.check_op(n_op, bench_queue[-1]):
                 return n_index, len(bench_queue) - 1
         return -1, -1
 
-    def compare_process(self, file_lists, stack_mode, fuzzy_match, dump_mode):
+    def compare_process(self, file_lists):
         npu_json_path, bench_json_path, stack_json_path = file_lists
         npu_json_data = load_json(npu_json_path)
         bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path)
+        stack_json_data = load_json(stack_json_path) if self.stack_mode else None
 
-        if fuzzy_match:
+        if self.fuzzy_match:
             logger.warning("This task uses fuzzy matching, which may affect the accuracy of the comparison.")
 
         npu_ops_queue = []
@@ -184,7 +193,7 @@ class Comparator:
                 op_name_npu = next(ops_npu_iter)
                 check_op_str_pattern_valid(op_name_npu)
                 read_err_npu = True
-                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data, dump_mode)
+                npu_merge_list = self.gen_merge_list(npu_json_data, op_name_npu, stack_json_data)
                 if npu_merge_list:
                     npu_ops_queue.append(npu_merge_list)
             except StopIteration:
@@ -193,7 +202,7 @@ class Comparator:
                 last_bench_ops_len = len(bench_ops_queue)
                 op_name_bench = next(ops_bench_iter)
                 check_op_str_pattern_valid(op_name_bench)
-                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data, dump_mode)
+                bench_merge_list = self.gen_merge_list(bench_json_data, op_name_bench, stack_json_data)
                 if bench_merge_list:
                     bench_ops_queue.append(bench_merge_list)
             except StopIteration:
@@ -212,29 +221,29 @@ class Comparator:
                 logger.info("Please check whether the number and calls of APIs in NPU and Bench models are consistent.")
                 break
 
-            n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue, fuzzy_match)
+            n_match_point, b_match_point = self.match_op(npu_ops_queue, bench_ops_queue)
             if n_match_point == -1 and b_match_point == -1:
                 continue
             n_match_data = npu_ops_queue[n_match_point]
             b_match_data = bench_ops_queue[b_match_point]
             un_match_data = npu_ops_queue[0: n_match_point]
             for npu_data in un_match_data:
-                get_un_match_accuracy(result, npu_data, dump_mode)
-            get_accuracy(result, n_match_data, b_match_data, dump_mode)
+                get_un_match_accuracy(result, npu_data, self.dump_mode)
+            get_accuracy(result, n_match_data, b_match_data, self.dump_mode)
             del npu_ops_queue[0: n_match_point + 1]
             del bench_ops_queue[0: b_match_point + 1]
         progress_bar.close()
         if npu_ops_queue:
             for npu_data in npu_ops_queue:
-                get_un_match_accuracy(result, npu_data, dump_mode)
+                get_un_match_accuracy(result, npu_data, self.dump_mode)
 
-        result_df = self.make_result_table(result, stack_mode, dump_mode)
+        result_df = self.make_result_table(result)
         return result_df
 
-    def merge_data(self, json_data, stack_json_data, dump_mode):
+    def merge_data(self, json_data, stack_json_data):
         ops_all = {}
         for op_name in json_data.get('data', {}):
-            merge_list = self.gen_merge_list(json_data, op_name, stack_json_data, dump_mode)
+            merge_list = self.gen_merge_list(json_data, op_name, stack_json_data)
             if merge_list:
                 input_index, output_index = 0, 0
                 for index, input_or_output in enumerate(merge_list[CompareConst.OP_NAME]):
@@ -264,7 +273,7 @@ class Comparator:
                         output_index += 1
         return ops_all
 
-    def get_accuracy(self, npu_ops_all, bench_ops_all, dump_mode):
+    def get_accuracy(self, npu_ops_all, bench_ops_all):
         result = []
         bench_ops_all[CompareConst.N_A] = self._generate_na_data(bench_ops_all)
         for ms_op_name, bench_op_name in self.data_mapping_dict.items():
@@ -272,7 +281,7 @@ class Comparator:
                 npu_stack_info = npu_ops_all.get(ms_op_name).get("stack_info", None)
                 bench_stack_info = bench_ops_all.get(bench_op_name).get("stack_info", None)
                 has_stack = npu_stack_info and bench_stack_info
-                if dump_mode == Const.MD5:
+                if self.dump_mode == Const.MD5:
                     result.append(self.get_result_md5_compare(ms_op_name, bench_op_name, npu_ops_all,
                                                               bench_ops_all, has_stack, npu_stack_info))
                     continue
@@ -296,7 +305,7 @@ class Comparator:
                     bench_struct[1]
                 ]
 
-                if dump_mode == Const.SUMMARY:
+                if self.dump_mode == Const.SUMMARY:
                     result_item = base_result_item + [" "] * 8
                 else:
                     result_item = base_result_item + [" "] * 5
@@ -305,7 +314,7 @@ class Comparator:
                 result_item.extend(npu_summary_data)
                 bench_summary_data = bench_ops_all.get(bench_op_name).get("summary")
                 result_item.extend(bench_summary_data)
-                if dump_mode == Const.SUMMARY:
+                if self.dump_mode == Const.SUMMARY:
                     self.calculate_summary_data(npu_summary_data, bench_summary_data, result_item)
                 else:
                     result_item.append(CompareConst.ACCURACY_CHECK_YES)
@@ -314,7 +323,7 @@ class Comparator:
                     result_item.extend(npu_stack_info)
                 else:
                     result_item.append(CompareConst.NONE)
-                if dump_mode == Const.ALL:
+                if self.dump_mode == Const.ALL:
                     result_item.append(npu_ops_all.get(ms_op_name).get("data_name", None))
                 result.append(result_item)
             elif ms_op_name not in npu_ops_all:
@@ -323,17 +332,16 @@ class Comparator:
                 logger.warning(f'Can not find bench op name : `{bench_op_name}` in bench dump json file.')
         return result
 
-    def compare_process_custom(self, file_lists, stack_mode, dump_mode):
+    def compare_process_custom(self, file_lists):
         npu_json_path, bench_json_path, stack_json_path = file_lists
         npu_json_data = load_json(npu_json_path)
         bench_json_data = load_json(bench_json_path)
-        stack_json_data = load_json(stack_json_path)
+        stack_json_data = load_json(stack_json_path) if self.stack_mode else None
+        npu_ops_all = self.merge_data(npu_json_data, stack_json_data)
+        bench_ops_all = self.merge_data(bench_json_data, stack_json_data)
 
-        npu_ops_all = self.merge_data(npu_json_data, stack_json_data, dump_mode)
-        bench_ops_all = self.merge_data(bench_json_data, stack_json_data, dump_mode)
-
-        result = self.get_accuracy(npu_ops_all, bench_ops_all, dump_mode)
-        result_df = self.make_result_table(result, stack_mode, dump_mode)
+        result = self.get_accuracy(npu_ops_all, bench_ops_all)
+        result_df = self.make_result_table(result)
         return result_df
 
     def compare_by_op(self, npu_op_name, bench_op_name, op_name_mapping_dict, input_param, bench_data):
@@ -391,12 +399,12 @@ class Comparator:
         result_list.append(err_msg)
         return result_list
 
-    def compare_core(self, input_parma, output_path, **kwargs):
+    def compare_core(self, input_param, output_path, **kwargs):
         """
         Compares data from multiple JSON files and generates a comparison report.
 
         Args:
-            input_parma (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
+            input_param (dict): A dictionary containing paths to JSON files ("npu_path", "bench_path",
                                 "stack_path").
             output_path (str): The path where the output Excel report will be saved.
             **kwargs: Additional keyword arguments including:
@@ -409,11 +417,7 @@ class Comparator:
         Returns:
         """
         # get kwargs or set default value
-        stack_mode = kwargs.get('stack_mode', False)
-        auto_analyze = kwargs.get('auto_analyze', True)
         suffix = kwargs.get('suffix', '')
-        fuzzy_match = kwargs.get('fuzzy_match', False)
-        dump_mode = kwargs.get('dump_mode', None)
 
         logger.info("Please check whether the input data belongs to you. If not, there may be security risks.")
         file_name = add_time_with_xlsx("compare_result" + suffix)
@@ -421,30 +425,25 @@ class Comparator:
         remove_path(file_path)
         highlight_dict = {"red_rows": set(), "yellow_rows": set(), "red_lines": [], "yellow_lines": []}
 
-        npu_json = input_parma.get("npu_json_path")
-        bench_json = input_parma.get("bench_json_path")
-        stack_json = input_parma.get("stack_json_path")
+        npu_json = input_param.get("npu_json_path")
+        bench_json = input_param.get("bench_json_path")
+        stack_json = input_param.get("stack_json_path")
         if self.data_mapping:
-            result_df = self.compare_process_custom([npu_json, bench_json, stack_json], stack_mode, dump_mode)
+            result_df = self.compare_process_custom([npu_json, bench_json, stack_json])
         else:
-            result_df = self.compare_process(
-                [npu_json, bench_json, stack_json],
-                stack_mode,
-                fuzzy_match,
-                dump_mode
-            )
+            result_df = self.compare_process([npu_json, bench_json, stack_json])
 
         if not result_df.values.tolist():
             logger.warning("Can`t match any op.")
             return
 
-        if dump_mode == Const.ALL:
-            result_df = self.do_multi_process(input_parma, result_df)
+        if self.dump_mode == Const.ALL:
+            result_df = self.do_multi_process(input_param, result_df)
 
-        find_compare_result_error_rows(result_df, highlight_dict, dump_mode)
+        find_compare_result_error_rows(result_df, highlight_dict, self.dump_mode)
         highlight_rows_xlsx(result_df, highlight_dict, file_path)
 
-        if auto_analyze:
+        if self.auto_analyze:
             advisor = Advisor(result_df, output_path, suffix)
             advisor.analysis()
 
@@ -501,6 +500,7 @@ class Comparator:
             logger.error('result dataframe is not found.')
             raise CompareException(CompareException.INVALID_DATA_ERROR) from e
 
+
 def get_bench_data_name(bench_op_name, bench_data):
     bench_name_list = re.split(r'\.(input|output|kwargs)\.', bench_op_name)
     bench_data_bundle = bench_data.get(bench_name_list[0], {})
@@ -532,4 +532,3 @@ def get_bench_data_name(bench_op_name, bench_data):
         return get_by_layer(bench_data_bundle.get(Const.OUTPUT))
     else:
         return None
-
