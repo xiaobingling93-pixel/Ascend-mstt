@@ -318,7 +318,8 @@ def gen_kwargs(api_info, api_name, convert_type=None, real_data_path=None):
             elif isinstance(sparse_mode, int):
                 sparse_mode_value = sparse_mode
             else:
-                sparse_mode_value = 0
+                msg = f'The sparse_mode value is not int or dict, but {type(sparse_mode)}'
+                raise CompareException(CompareException.INVALID_PARAM_ERROR, msg)
             if sparse_mode_value in Const.FA_SPECIAL_SPARSE_MODE:
                 kwargs_params[key] = gen_atten_mask(value, convert_type, real_data_path)
             else:
